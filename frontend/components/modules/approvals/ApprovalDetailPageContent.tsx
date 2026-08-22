@@ -5,13 +5,12 @@ import {
   Alert,
   Button,
   Input,
-  Skeleton,
-  Space,
-  Timeline,
+  Spin,
   Typography,
 } from 'antd';
-import { ArrowLeft, CheckCircle2, Circle, Clock3 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import ApprovalDetailSidebar from '@/components/modules/approvals/ApprovalDetailSidebar';
 import GenericApprovalDetail from '@/components/modules/approvals/detail/GenericApprovalDetail';
 import BusinessTripDetail from '@/components/modules/approvals/detail/BusinessTripDetail';
 import ExpenseClaimDetail from '@/components/modules/approvals/detail/ExpenseClaimDetail';
@@ -35,6 +34,8 @@ import ReturnedBanner from '@/components/modules/approvals/ReturnedBanner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   ApprovalRequestDetail,
@@ -49,53 +50,19 @@ import {
   useReturnApprovalTier,
 } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
-import { tokens } from '@/lib/theme/tokens';
 import {
-  approvalTierDecisionVariant,
   findCurrentTier,
-  formatApprovalStatus,
   formatApprovalUserName,
   parseTierConditions,
   resolveDisplayStatus,
 } from '@/lib/utils/approval-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
-
 
 type ActionModalKind = 'approve' | 'conditional' | 'return' | 'reject' | null;
 
 function resolveCategoryCode(request: ApprovalRequestDetail): string {
   return (request.categoryCode ?? request.category?.code ?? '').trim();
-}
-
-function resolveWaitingMessage(
-  status: ApprovalRequestDetail['status'],
-  currentTier: ApprovalTier | undefined,
-  isRequester: boolean,
-): string {
-  if (status === 'APPROVED') {
-    return 'Fully approved — no further action required';
-  }
-  if (status === 'REJECTED') {
-    return 'Request rejected — no further action required';
-  }
-  if (status === 'CANCELLED') {
-    return 'Request cancelled — no further action required';
-  }
-  if (status === 'RETURNED') {
-    return isRequester
-      ? 'Returned — update and resubmit to continue'
-      : 'Returned to requester — waiting for resubmit';
-  }
-  if (
-    currentTier &&
-    (currentTier.decision === 'PENDING' ||
-      currentTier.decision === 'CONDITIONALLY_APPROVED')
-  ) {
-    return `Waiting on ${currentTier.label} (${formatApprovalUserName(currentTier.approver)})`;
-  }
-  return 'No active approval actions';
 }
 
 function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
@@ -258,6 +225,8 @@ export default function ApprovalDetailPageContent({
   const [note, setNote] = useState('');
   const [conditionText, setConditionText] = useState('');
 
+  useSetHeaderExtra(null);
+
   const request = detailQuery.data;
   const tiers = useMemo(
     () =>
@@ -411,8 +380,8 @@ export default function ApprovalDetailPageContent({
 
   if (detailQuery.isLoading && !request) {
     return (
-      <div className="min-w-0">
-        <Skeleton active paragraph={{ rows: 8 }} />
+      <div className="flex justify-center p-12">
+        <Spin />
       </div>
     );
   }
@@ -421,16 +390,16 @@ export default function ApprovalDetailPageContent({
     const message =
       detailQuery.error instanceof ApiRequestError
         ? detailQuery.error.message
-        : 'Approval request not found';
+        : t('pages.approvals.notFound');
     return (
-      <div className="min-w-0">
+      <div className="flex flex-col gap-4">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/approvals')}
-          className="mb-4"
+          style={{ borderRadius: 0 }}
         >
-          Back to Approvals
+          {t('pages.approvals.backToList')}
         </Button>
         <Alert type="error" showIcon title={message} />
       </div>
@@ -438,30 +407,32 @@ export default function ApprovalDetailPageContent({
   }
 
   return (
-    <div className="min-w-0">
-      <Button
-        type="text"
-        icon={<ArrowLeft size={16} />}
-        onClick={() => router.push('/approvals')}
-        className="mb-4"
-      >
-        Back to Approvals
-      </Button>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="text"
+          icon={<ArrowLeft size={16} />}
+          onClick={() => router.push('/approvals')}
+          style={{ borderRadius: 0 }}
+        >
+          {t('pages.approvals.backToList')}
+        </Button>
+      </div>
 
-      <div className="mb-4">
-        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-          <Typography.Text type="secondary">
-            {request.requestNumber}
-            {request.category?.name ? ` - ${request.category.name}` : ''}
-          </Typography.Text>
-          <Space wrap align="center">
-            <Typography.Title
-              level={3}
-              className="!mb-0 min-w-0 !text-lg break-words sm:!text-2xl"
-              style={{ margin: 0 }}
-            >
-              {request.title}
-            </Typography.Title>
+      <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="px-3 py-4 sm:px-5">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+              {request.requestNumber}
+            </span>
+            {request.category?.name ? (
+              <>
+                <span className="text-[var(--color-border-secondary)]">·</span>
+                <span className="text-xs text-[var(--color-text-secondary)]">
+                  {request.category.name}
+                </span>
+              </>
+            ) : null}
             {displayStatus ? (
               <StatusBadge
                 label={displayStatus.label}
@@ -469,19 +440,27 @@ export default function ApprovalDetailPageContent({
               />
             ) : null}
             {resubmitCount > 0 ? (
-              <Typography.Text type="secondary">
-                Resubmitted {resubmitCount} time{resubmitCount === 1 ? '' : 's'}
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {t('pages.approvals.resubmittedCount', {
+                  count: resubmitCount,
+                })}
               </Typography.Text>
             ) : null}
-          </Space>
-          <Typography.Text type="secondary">
-            Submitted by {formatApprovalUserName(request.requester)}
-            {' - '}
-            {formatProjectDate(
-              request.submittedAt ?? request.createdAt ?? null,
-            )}
-          </Typography.Text>
-        </Space>
+          </div>
+
+          <h1 className="m-0 text-lg font-semibold leading-snug text-[var(--color-text-primary)]">
+            {request.title}
+          </h1>
+
+          <p className="mb-0 mt-2 text-sm text-[var(--color-text-secondary)]">
+            {t('pages.approvals.submittedByOn', {
+              name: formatApprovalUserName(request.requester),
+              date: formatProjectDate(
+                request.submittedAt ?? request.createdAt ?? null,
+              ),
+            })}
+          </p>
+        </div>
       </div>
 
       {request.status === 'RETURNED' ? (
@@ -491,8 +470,8 @@ export default function ApprovalDetailPageContent({
         <RejectedBanner note={rejectNote} />
       ) : null}
 
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-6">
-        <div className="min-w-0">
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col gap-4">
           {renderTypedDetail(request)}
 
           {isRequester && request.status === 'RETURNED' ? (
@@ -520,274 +499,24 @@ export default function ApprovalDetailPageContent({
           ) : null}
         </div>
 
-        <aside
-          className="min-w-0 p-4 sm:p-5 xl:sticky xl:top-4"
-          style={{
-            background: tokens.colorCardBg,
-            border: `1px solid ${tokens.colorBorder}`,
-            borderRadius: 8,
-          }}
-        >
-          <Typography.Title level={5} style={{ marginTop: 0 }}>
-            Approval chain
-          </Typography.Title>
-
-          <Timeline
-            items={tiers.map((tier) => {
-              const conditions = parseTierConditions(tier.conditions);
-              const isCurrent = tier.id === currentTier?.id;
-              return {
-                color:
-                  tier.decision === 'APPROVED'
-                    ? 'green'
-                    : tier.decision === 'REJECTED'
-                      ? 'red'
-                      : tier.decision === 'RETURNED'
-                        ? 'orange'
-                        : isCurrent
-                          ? 'blue'
-                          : 'gray',
-                icon:
-                  tier.decision === 'APPROVED' ? (
-                    <CheckCircle2 size={16} color={tokens.colorGreen600} />
-                  ) : tier.decision === 'PENDING' ? (
-                    <Clock3 size={16} color={tokens.colorAmber400} />
-                  ) : (
-                    <Circle size={14} color={tokens.colorGray600} />
-                  ),
-                content: (
-                  <div style={{ paddingBottom: 8 }}>
-                    <Space wrap size={6}>
-                      <Typography.Text strong>{tier.label}</Typography.Text>
-                      <StatusBadge
-                        label={formatApprovalStatus(tier.decision, t)}
-                        variant={approvalTierDecisionVariant(tier.decision)}
-                      />
-                      {isCurrent ? (
-                        <StatusBadge label="Current" variant="cyan" />
-                      ) : null}
-                    </Space>
-                    <div style={{ marginTop: 4 }}>
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        {formatApprovalUserName(tier.approver)}
-                        {tier.resolver ? ` · ${tier.resolver}` : ''}
-                      </Typography.Text>
-                    </div>
-                    {tier.decidedAt ? (
-                      <div>
-                        <Typography.Text
-                          type="secondary"
-                          style={{ fontSize: 12 }}
-                        >
-                          Decided {formatProjectDate(tier.decidedAt)}
-                        </Typography.Text>
-                      </div>
-                    ) : null}
-                    {tier.comment ? (
-                      <Typography.Paragraph
-                        type="secondary"
-                        style={{ marginTop: 6, marginBottom: 0, fontSize: 12 }}
-                      >
-                        {tier.comment}
-                      </Typography.Paragraph>
-                    ) : null}
-                    {conditions.length > 0 ? (
-                      <div style={{ marginTop: 8 }}>
-                        <Typography.Text
-                          strong
-                          style={{ fontSize: 12, display: 'block' }}
-                        >
-                          Conditions
-                        </Typography.Text>
-                        {conditions.map((condition, index) => {
-                          const conditionHasResponse = responses.some(
-                            (r) =>
-                              r.responseType === 'CONDITION_RESPONSE' &&
-                              r.conditionIndex === index,
-                          );
-                          const canResolve =
-                            !condition.resolved &&
-                            currentUserId === tier.approverId;
-                          const resolveDisabled = !conditionHasResponse;
-                          const conditionResponses = responses.filter(
-                            (r) =>
-                              r.responseType === 'CONDITION_RESPONSE' &&
-                              r.conditionIndex === index,
-                          );
-                          return (
-                            <div
-                              key={`${tier.id}-c-${index}`}
-                              style={{
-                                marginTop: 6,
-                                padding: 8,
-                                borderRadius: 6,
-                                background: condition.resolved
-                                  ? tokens.colorGreen50
-                                  : tokens.colorAmber50,
-                              }}
-                            >
-                              <Space
-                                align="start"
-                                style={{
-                                  width: '100%',
-                                  justifyContent: 'space-between',
-                                }}
-                              >
-                                <Typography.Text style={{ fontSize: 12 }}>
-                                  {condition.resolved ? '✓ ' : '○ '}
-                                  {condition.text}
-                                </Typography.Text>
-                                {canResolve ? (
-                                  <Button
-                                    type="link"
-                                    size="small"
-                                    disabled={resolveDisabled}
-                                    title={
-                                      resolveDisabled
-                                        ? 'Waiting for employee response'
-                                        : undefined
-                                    }
-                                    loading={resolveConditionMutation.isPending}
-                                    onClick={() =>
-                                      void handleResolveCondition(tier, index)
-                                    }
-                                  >
-                                    Resolve
-                                  </Button>
-                                ) : null}
-                              </Space>
-                              {!condition.resolved ? (
-                                <Typography.Paragraph
-                                  style={{
-                                    marginTop: 4,
-                                    marginBottom: 0,
-                                    fontSize: 12,
-                                    color: conditionHasResponse
-                                      ? tokens.colorGreen600
-                                      : tokens.colorAmber400,
-                                  }}
-                                >
-                                  {conditionHasResponse
-                                    ? '✓ Employee responded — ready to resolve'
-                                    : '⏳ Waiting for employee response'}
-                                </Typography.Paragraph>
-                              ) : null}
-                              {conditionResponses.map((resp) => (
-                                <Typography.Paragraph
-                                  key={resp.id}
-                                  type="secondary"
-                                  style={{
-                                    marginTop: 6,
-                                    marginBottom: 0,
-                                    fontSize: 12,
-                                  }}
-                                >
-                                  Response:{' '}
-                                  {resp.note?.trim() || '(attachments only)'}
-                                  {(resp.documents?.length ?? 0) > 0
-                                    ? ` · ${resp.documents?.length} file(s)`
-                                    : ''}
-                                </Typography.Paragraph>
-                              ))}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                ),
-              };
-            })}
-          />
-
-          {isActiveApprover && currentTier ? (
-            <Space orientation="vertical" style={{ width: '100%', marginTop: 8 }}>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Actions for {currentTier.label}
-              </Typography.Text>
-              <Button
-                type="primary"
-                block
-                disabled={actionsDisabled}
-                title={
-                  actionsDisabled
-                    ? 'Resolve all conditions before approving'
-                    : undefined
-                }
-                onClick={() => setActionModal('approve')}
-              >
-                Approve
-              </Button>
-              <Button
-                block
-                disabled={actionsDisabled}
-                title={
-                  actionsDisabled
-                    ? 'Resolve all conditions before adding new ones'
-                    : undefined
-                }
-                onClick={() => setActionModal('conditional')}
-              >
-                Conditionally Approve
-              </Button>
-              <Button
-                block
-                disabled={actionsDisabled}
-                title={
-                  actionsDisabled
-                    ? 'Resolve all conditions before returning'
-                    : undefined
-                }
-                onClick={() => setActionModal('return')}
-              >
-                Return
-              </Button>
-              <Button
-                danger
-                block
-                disabled={actionsDisabled}
-                title={
-                  actionsDisabled
-                    ? 'Resolve all conditions before rejecting'
-                    : undefined
-                }
-                onClick={() => setActionModal('reject')}
-              >
-                Reject
-              </Button>
-              {actionsDisabled ? (
-                <Typography.Paragraph
-                  style={{
-                    marginBottom: 0,
-                    marginTop: 4,
-                    fontSize: 13,
-                    color: tokens.colorAmber400,
-                  }}
-                >
-                  All conditions must be resolved before taking action.
-                </Typography.Paragraph>
-              ) : null}
-            </Space>
-          ) : (
-            <Alert
-              type={
-                request.status === 'APPROVED'
-                  ? 'success'
-                  : request.status === 'REJECTED' ||
-                      request.status === 'CANCELLED'
-                    ? 'error'
-                    : 'info'
-              }
-              showIcon
-              style={{ marginTop: 8 }}
-              title={resolveWaitingMessage(
-                request.status,
-                currentTier,
-                isRequester,
-              )}
-            />
-          )}
-        </aside>
+        <ApprovalDetailSidebar
+          request={request}
+          tiers={tiers}
+          currentTier={currentTier}
+          isRequester={isRequester}
+          isActiveApprover={isActiveApprover}
+          currentUserId={currentUserId}
+          responses={responses}
+          actionsDisabled={actionsDisabled}
+          resolveLoading={resolveConditionMutation.isPending}
+          onApprove={() => setActionModal('approve')}
+          onConditionalApprove={() => setActionModal('conditional')}
+          onReturn={() => setActionModal('return')}
+          onReject={() => setActionModal('reject')}
+          onResolveCondition={(tier, index) =>
+            void handleResolveCondition(tier, index)
+          }
+        />
       </div>
 
       <ConfirmDialog

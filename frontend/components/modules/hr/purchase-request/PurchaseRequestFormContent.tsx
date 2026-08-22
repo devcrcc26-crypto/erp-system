@@ -1,9 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import { Button } from 'antd';
 import PurchaseRequestForm from '@/components/modules/hr/purchase-request/PurchaseRequestForm';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { PurchaseRequestDetail } from '@/lib/api/purchase-request.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
@@ -24,16 +23,13 @@ export default function PurchaseRequestFormContent(): React.ReactNode {
   }
 
   return (
-    <FormLayout
+    <HrFormPageShell
       title={t('hr.buttons.newPurchaseRequest')}
       description="Complete all three steps to submit your purchase request for approval."
-      extra={
-        <Button onClick={() => router.push('/approvals/new')}>
-          {t('hr.buttons.cancel')}
-        </Button>
-      }
+      cancelLabel={t('hr.buttons.cancel')}
+      cancelHref="/approvals/new"
     >
       <PurchaseRequestForm onSuccess={handleSuccess} />
-    </FormLayout>
+    </HrFormPageShell>
   );
 }

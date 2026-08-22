@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { Alert, Button, DatePicker, Form, Input, Select, Space } from 'antd';
+import { Alert, Button, DatePicker, Form, Input, Select } from 'antd';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useFlightApplications } from '@/lib/query/flight';
@@ -110,20 +110,20 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
   }
 
   return (
-    <FormLayout
+    <HrFormPageShell
       title={t('hr.buttons.newPerDiem')}
       description="Daily allowance based on your destination category. Amount auto-calculates from days × rate."
-      extra={
-        <Space>
-          <Button onClick={() => router.push('/approvals/new')}>{t('hr.buttons.cancel')}</Button>
-          <Button
-            type="primary"
-            loading={submitMutation.isPending}
-            onClick={() => form.submit()}
-          >
-            {t('hr.buttons.submitRequest')}
-          </Button>
-        </Space>
+      cancelLabel={t('hr.buttons.cancel')}
+      cancelHref="/approvals/new"
+      headerExtra={
+        <Button
+          type="primary"
+          loading={submitMutation.isPending}
+          onClick={() => form.submit()}
+          style={{ borderRadius: 0 }}
+        >
+          {t('hr.buttons.submitRequest')}
+        </Button>
       }
     >
       {submitMutation.isError ? (
@@ -230,6 +230,6 @@ export default function PerDiemRequestFormContent(): React.ReactNode {
           </SectionCard>
         ) : null}
       </div>
-    </FormLayout>
+    </HrFormPageShell>
   );
 }

@@ -16,7 +16,7 @@ export function SectionCard({
   bodyClassName?: string;
 }): React.ReactNode {
   return (
-    <div className="overflow-hidden rounded-lg border border-[rgba(0,0,0,0.08)] bg-white">
+    <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
         <h3 className="m-0 min-w-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
           {title}

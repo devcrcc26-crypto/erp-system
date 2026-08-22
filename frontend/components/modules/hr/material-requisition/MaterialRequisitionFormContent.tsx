@@ -1,9 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import { Button } from 'antd';
 import MaterialRequisitionForm from '@/components/modules/hr/material-requisition/MaterialRequisitionForm';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { MaterialRequisitionDetail } from '@/lib/api/material-requisition.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
@@ -23,16 +22,13 @@ export default function MaterialRequisitionFormContent(): React.ReactNode {
   }
 
   return (
-    <FormLayout
+    <HrFormPageShell
       title={t('hr.buttons.newMaterialRequisition')}
       description="Complete all three steps to submit your material requisition for approval."
-      extra={
-        <Button onClick={() => router.push('/approvals/new')}>
-          {t('hr.buttons.cancel')}
-        </Button>
-      }
+      cancelLabel={t('hr.buttons.cancel')}
+      cancelHref="/approvals/new"
     >
       <MaterialRequisitionForm onSuccess={handleSuccess} />
-    </FormLayout>
+    </HrFormPageShell>
   );
 }

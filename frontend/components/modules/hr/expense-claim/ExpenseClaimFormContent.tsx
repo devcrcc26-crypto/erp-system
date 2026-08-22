@@ -1,9 +1,9 @@
 'use client';
 
-import { Alert, Button, Form, Input, Space } from 'antd';
+import { Alert, Button, Form, Input } from 'antd';
 import { useRouter } from 'next/navigation';
 import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useCreateExpenseClaim } from '@/lib/query/expense-claim';
@@ -41,22 +41,20 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
   }
 
   return (
-    <FormLayout
+    <HrFormPageShell
       title={t('hr.buttons.newExpenseClaim')}
       description="Start with claim details, then add line items with receipts on the next page."
-      extra={
-        <Space>
-          <Button onClick={() => router.push('/approvals/new')}>
-            {t('hr.buttons.cancel')}
-          </Button>
-          <Button
-            type="primary"
-            loading={createMutation.isPending}
-            onClick={() => form.submit()}
-          >
-            {t('hr.buttons.next')}
-          </Button>
-        </Space>
+      cancelLabel={t('hr.buttons.cancel')}
+      cancelHref="/approvals/new"
+      headerExtra={
+        <Button
+          type="primary"
+          loading={createMutation.isPending}
+          onClick={() => form.submit()}
+          style={{ borderRadius: 0 }}
+        >
+          {t('hr.buttons.next')}
+        </Button>
       }
     >
       {createMutation.isError ? (
@@ -92,6 +90,6 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
           </Form>
         </SectionCard>
       </div>
-    </FormLayout>
+    </HrFormPageShell>
   );
 }

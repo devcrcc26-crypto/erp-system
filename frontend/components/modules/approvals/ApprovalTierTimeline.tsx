@@ -22,126 +22,128 @@ export interface ApprovalTierTimelineProps {
 }
 
 /**
- * Read-only approval tier chain timeline (shared by Approvals and Leave detail).
+ * Read-only approval tier chain timeline (shared by Approvals and HR detail).
  */
 export default function ApprovalTierTimeline({
   tiers,
   currentTier: currentTierOrder,
-  title = 'Approval chain',
+  title,
 }: ApprovalTierTimelineProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const sorted = [...tiers].sort((a, b) => a.tierOrder - b.tierOrder);
   const currentTier = findCurrentTier(sorted, currentTierOrder);
+  const resolvedTitle = title ?? t('hr.section.approvalChain');
 
   return (
-    <aside
-      className="min-w-0 p-4 sm:p-5 xl:sticky xl:top-4"
-      style={{
-        background: tokens.colorCardBg,
-        border: `1px solid ${tokens.colorBorder}`,
-        borderRadius: 8,
-      }}
-    >
-      <Typography.Title level={5} style={{ marginTop: 0 }}>
-        {title}
-      </Typography.Title>
-
-      {sorted.length === 0 ? (
-        <Typography.Text type="secondary">No approval tiers.</Typography.Text>
-      ) : (
-        <Timeline
-          items={sorted.map((tier) => {
-            const conditions = parseTierConditions(tier.conditions);
-            const isCurrent = tier.id === currentTier?.id;
-            return {
-              color:
-                tier.decision === 'APPROVED'
-                  ? 'green'
-                  : tier.decision === 'REJECTED'
-                    ? 'red'
-                    : tier.decision === 'RETURNED'
-                      ? 'orange'
-                      : isCurrent
-                        ? 'blue'
-                        : 'gray',
-              icon:
-                tier.decision === 'APPROVED' ? (
-                  <CheckCircle2 size={16} color={tokens.colorGreen600} />
-                ) : tier.decision === 'PENDING' ? (
-                  <Clock3 size={16} color={tokens.colorAmber400} />
-                ) : (
-                  <Circle size={14} color={tokens.colorGray600} />
-                ),
-              content: (
-                <div style={{ paddingBottom: 8 }}>
-                  <Space wrap size={6}>
-                    <Typography.Text strong>{tier.label}</Typography.Text>
-                    <StatusBadge
-                      label={formatApprovalStatus(tier.decision, t)}
-                      variant={approvalTierDecisionVariant(tier.decision)}
-                    />
-                    {isCurrent ? (
-                      <StatusBadge label="Current" variant="cyan" />
-                    ) : null}
-                  </Space>
-                  <div style={{ marginTop: 4 }}>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      {formatApprovalUserName(tier.approver)}
-                      {tier.resolver ? ` · ${tier.resolver}` : ''}
-                    </Typography.Text>
-                  </div>
-                  {tier.decidedAt ? (
-                    <div>
+    <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white lg:sticky lg:top-4">
+      <div className="border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
+        <h3 className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+          {resolvedTitle}
+        </h3>
+      </div>
+      <div className="px-3 py-4 sm:px-5">
+        {sorted.length === 0 ? (
+          <Typography.Text type="secondary">
+            {t('hr.empty.noApprovalChain')}
+          </Typography.Text>
+        ) : (
+          <Timeline
+            items={sorted.map((tier) => {
+              const conditions = parseTierConditions(tier.conditions);
+              const isCurrent = tier.id === currentTier?.id;
+              return {
+                color:
+                  tier.decision === 'APPROVED'
+                    ? 'green'
+                    : tier.decision === 'REJECTED'
+                      ? 'red'
+                      : tier.decision === 'RETURNED'
+                        ? 'orange'
+                        : isCurrent
+                          ? 'blue'
+                          : 'gray',
+                icon:
+                  tier.decision === 'APPROVED' ? (
+                    <CheckCircle2 size={16} color={tokens.colorGreen600} />
+                  ) : tier.decision === 'PENDING' ? (
+                    <Clock3 size={16} color={tokens.colorAmber400} />
+                  ) : (
+                    <Circle size={14} color={tokens.colorGray600} />
+                  ),
+                content: (
+                  <div style={{ paddingBottom: 8 }}>
+                    <Space wrap size={6}>
+                      <Typography.Text strong>{tier.label}</Typography.Text>
+                      <StatusBadge
+                        label={formatApprovalStatus(tier.decision, t)}
+                        variant={approvalTierDecisionVariant(tier.decision)}
+                      />
+                      {isCurrent ? (
+                        <StatusBadge label="Current" variant="cyan" />
+                      ) : null}
+                    </Space>
+                    <div style={{ marginTop: 4 }}>
                       <Typography.Text
                         type="secondary"
                         style={{ fontSize: 12 }}
                       >
-                        Decided {formatProjectDate(tier.decidedAt)}
+                        {formatApprovalUserName(tier.approver)}
+                        {tier.resolver ? ` · ${tier.resolver}` : ''}
                       </Typography.Text>
                     </div>
-                  ) : null}
-                  {tier.comment ? (
-                    <Typography.Paragraph
-                      type="secondary"
-                      style={{ marginTop: 6, marginBottom: 0, fontSize: 12 }}
-                    >
-                      {tier.comment}
-                    </Typography.Paragraph>
-                  ) : null}
-                  {conditions.length > 0 ? (
-                    <div style={{ marginTop: 8 }}>
-                      <Typography.Text
-                        strong
-                        style={{ fontSize: 12, display: 'block' }}
-                      >
-                        Conditions
-                      </Typography.Text>
-                      {conditions.map((condition, index) => (
-                        <div
-                          key={`${tier.id}-c-${index}`}
-                          style={{
-                            marginTop: 6,
-                            padding: 8,
-                            borderRadius: 6,
-                            background: condition.resolved
-                              ? tokens.colorGreen50
-                              : tokens.colorAmber50,
-                          }}
+                    {tier.decidedAt ? (
+                      <div>
+                        <Typography.Text
+                          type="secondary"
+                          style={{ fontSize: 12 }}
                         >
-                          <Typography.Text style={{ fontSize: 12 }}>
-                            {condition.resolved ? '✓ ' : '○ '}
-                            {condition.text}
-                          </Typography.Text>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ),
-            };
-          })}
-        />
-      )}
-    </aside>
+                          Decided {formatProjectDate(tier.decidedAt)}
+                        </Typography.Text>
+                      </div>
+                    ) : null}
+                    {tier.comment ? (
+                      <Typography.Paragraph
+                        type="secondary"
+                        style={{ marginTop: 6, marginBottom: 0, fontSize: 12 }}
+                      >
+                        {tier.comment}
+                      </Typography.Paragraph>
+                    ) : null}
+                    {conditions.length > 0 ? (
+                      <div style={{ marginTop: 8 }}>
+                        <Typography.Text
+                          strong
+                          style={{ fontSize: 12, display: 'block' }}
+                        >
+                          Conditions
+                        </Typography.Text>
+                        {conditions.map((condition, index) => (
+                          <div
+                            key={`${tier.id}-c-${index}`}
+                            style={{
+                              marginTop: 6,
+                              padding: 8,
+                              borderRadius: 0,
+                              background: condition.resolved
+                                ? tokens.colorGreen50
+                                : tokens.colorAmber50,
+                            }}
+                          >
+                            <Typography.Text style={{ fontSize: 12 }}>
+                              {condition.resolved ? '✓ ' : '○ '}
+                              {condition.text}
+                            </Typography.Text>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ),
+              };
+            })}
+          />
+        )}
+      </div>
+    </div>
   );
 }

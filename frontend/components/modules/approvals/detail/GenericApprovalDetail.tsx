@@ -1,6 +1,7 @@
 'use client';
 
 import { Descriptions, Empty, Typography } from 'antd';
+import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import type { ApprovalRequestDetail } from '@/lib/api/approvals.types';
 import {
   formatFormDataValue,
@@ -8,11 +9,10 @@ import {
   getFormFieldLabels,
 } from '@/lib/utils/approval-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { tokens } from '@/lib/theme/tokens';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Generic approval body — form data + comments (extracted from Approvals detail).
+ * Generic approval body — form data + comments.
  */
 export default function GenericApprovalDetail({
   request,
@@ -30,66 +30,59 @@ export default function GenericApprovalDetail({
     }));
 
   return (
-    <div
-      className="rounded-lg p-4 sm:p-6"
-      style={{
-        background: tokens.colorCardBg,
-        border: `1px solid ${tokens.colorBorder}`,
-      }}
-    >
-      <Typography.Title level={5} style={{ marginTop: 0 }}>
-        Request details
-      </Typography.Title>
-      {formEntries.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No form data"
-        />
-      ) : (
-        <Descriptions bordered size="small" column={1}>
-          {formEntries.map((entry) => (
-            <Descriptions.Item key={entry.key} label={entry.label}>
-              {entry.value}
-            </Descriptions.Item>
-          ))}
-        </Descriptions>
-      )}
+    <div className="flex flex-col gap-4">
+      <SectionCard
+        title={t('pages.approvals.requestDetails')}
+        bodyClassName="px-3 py-4 sm:px-5"
+      >
+        {formEntries.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={t('pages.approvals.noFormData')}
+          />
+        ) : (
+          <Descriptions bordered size="small" column={1}>
+            {formEntries.map((entry) => (
+              <Descriptions.Item key={entry.key} label={entry.label}>
+                {entry.value}
+              </Descriptions.Item>
+            ))}
+          </Descriptions>
+        )}
+      </SectionCard>
 
-      <Typography.Title level={5} style={{ marginTop: 28 }}>
-        Comments
-      </Typography.Title>
-      {(request.comments ?? []).length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No comments yet"
-        />
-      ) : (
-        <div className="flex flex-col gap-3">
-          {(request.comments ?? []).map((comment) => (
-            <div
-              key={comment.id}
-              style={{
-                border: `1px solid ${tokens.colorBorder}`,
-                borderRadius: 8,
-                padding: 12,
-                background: tokens.colorSurfaceSecondary,
-              }}
-            >
-              <div className="mb-1 flex justify-between gap-2">
-                <Typography.Text strong>
-                  {formatApprovalUserName(comment.commenter)}
-                </Typography.Text>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {formatProjectDate(comment.createdAt)}
-                </Typography.Text>
+      <SectionCard
+        title={t('pages.approvals.comments')}
+        bodyClassName="px-3 py-4 sm:px-5"
+      >
+        {(request.comments ?? []).length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={t('pages.approvals.noComments')}
+          />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {(request.comments ?? []).map((comment) => (
+              <div
+                key={comment.id}
+                className="rounded-none border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-secondary)] p-3"
+              >
+                <div className="mb-1 flex justify-between gap-2">
+                  <Typography.Text strong>
+                    {formatApprovalUserName(comment.commenter)}
+                  </Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {formatProjectDate(comment.createdAt)}
+                  </Typography.Text>
+                </div>
+                <Typography.Paragraph style={{ marginBottom: 0 }}>
+                  {comment.commentText}
+                </Typography.Paragraph>
               </div>
-              <Typography.Paragraph style={{ marginBottom: 0 }}>
-                {comment.commentText}
-              </Typography.Paragraph>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </SectionCard>
     </div>
   );
 }

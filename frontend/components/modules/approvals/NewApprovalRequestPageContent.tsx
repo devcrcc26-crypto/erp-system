@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Input, Skeleton, Typography } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { Alert, Button, Input, Skeleton, Spin, Typography } from 'antd';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import FormSchemaRenderer, {
   normalizeFormSchemaFields,
@@ -10,10 +10,11 @@ import FormSchemaRenderer, {
   type FormSchemaErrors,
   type FormSchemaValues,
 } from '@/components/form-renderer/FormSchemaRenderer';
-import FormLayout, {
-  PageLoadingSkeleton,
-} from '@/components/ui/FormLayout/FormLayout';
+import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalCategorySummary } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
@@ -42,10 +43,10 @@ const CATEGORY_ROUTES: Record<string, string> = {
 
 /**
  * Two-step flow: pick a category, then fill and submit a dynamic form.
- * Leave / overtime categories route to their typed HR form pages.
  */
 export default function NewApprovalRequestPageContent(): React.ReactNode {
   const router = useRouter();
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const categoriesQuery = useApprovalCategories();
   const submitMutation = useSubmitApprovalRequest();
@@ -55,6 +56,8 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
   const [formValues, setFormValues] = useState<FormSchemaValues>({});
   const [title, setTitle] = useState('');
   const [errors, setErrors] = useState<FormSchemaErrors>({});
+
+  useSetHeaderExtra(null);
 
   const fields = useMemo(
     () => normalizeFormSchemaFields(selectedCategory?.formSchema),
@@ -96,7 +99,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
     const nextErrors = validateFormSchemaFields(fields, formValues);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      messageApi.warning('Please fill in all required fields');
+      messageApi.warning(t('pages.approvals.fillRequiredFields'));
       return;
     }
 
@@ -107,29 +110,30 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
         title: resolvedTitle,
         formData: formValues,
       });
-      messageApi.success('Approval request submitted');
+      messageApi.success(t('pages.approvals.requestSubmitted'));
       router.push(`/approvals/${created.id}`);
     } catch (error) {
-      notifyApiError(error, 'Failed to submit approval request', messageApi);
+      notifyApiError(error, t('pages.approvals.failedToSubmit'), messageApi);
     }
   }
 
   if (categoriesQuery.isLoading && !categoriesQuery.data) {
-    return <PageLoadingSkeleton />;
+    return (
+      <div className="flex justify-center p-12">
+        <Spin />
+      </div>
+    );
   }
 
   if (categoriesQuery.isError) {
     const message =
       categoriesQuery.error instanceof ApiRequestError
         ? categoriesQuery.error.message
-        : 'Failed to load approval categories';
+        : t('pages.approvals.failedToLoadCategories');
     return (
-      <FormLayout
-        title="New approval request"
-        description="Choose a category and submit a request."
-      >
+      <div className="flex flex-col gap-4">
         <Alert type="error" showIcon title={message} />
-      </FormLayout>
+      </div>
     );
   }
 
@@ -137,18 +141,38 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
 
   if (!selectedCategory) {
     return (
-      <FormLayout
-        title="New approval request"
-        description="Select a category to continue."
-        extra={
-          <Button onClick={() => router.push('/approvals')}>Cancel</Button>
-        }
-      >
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1
+              className="m-0 text-xl font-semibold tracking-tight"
+              style={{
+                color: tokens.colorTextPrimary,
+                fontFamily: tokens.fontFamily,
+              }}
+            >
+              {t('pages.approvals.new')}
+            </h1>
+            <p
+              className="mb-0 mt-1 text-sm"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              {t('pages.approvals.newDescription')}
+            </p>
+          </div>
+          <Button
+            onClick={() => router.push('/approvals')}
+            style={{ borderRadius: 0 }}
+          >
+            {t('common.cancel')}
+          </Button>
+        </div>
+
         {categories.length === 0 ? (
           <Alert
             type="info"
             showIcon
-            message="No approval categories are available."
+            title={t('pages.approvals.noCategories')}
           />
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -157,26 +181,16 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
                 key={category.id}
                 type="button"
                 onClick={() => handleSelectCategory(category)}
-                className="rounded-[12px] border p-4 text-left transition-colors"
-                style={{
-                  borderColor: tokens.colorBorder,
-                  background: tokens.colorCardBg,
-                }}
-                onMouseEnter={(event) => {
-                  event.currentTarget.style.borderColor = tokens.colorPrimary;
-                }}
-                onMouseLeave={(event) => {
-                  event.currentTarget.style.borderColor = tokens.colorBorder;
-                }}
+                className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-4 text-left transition-colors hover:border-[var(--color-primary)] hover:bg-[#F8F7F4]"
               >
                 <div
-                  className="text-[14px] font-medium"
+                  className="text-sm font-semibold"
                   style={{ color: tokens.colorTextPrimary }}
                 >
                   {category.name}
                 </div>
                 <div
-                  className="mt-1 text-[12px] leading-[1.5]"
+                  className="mt-1 text-xs leading-relaxed"
                   style={{ color: tokens.colorTextSecondary }}
                 >
                   {category.description || category.code}
@@ -185,30 +199,49 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
             ))}
           </div>
         )}
-      </FormLayout>
+      </div>
     );
   }
 
   return (
-    <FormLayout
-      title={selectedCategory.name}
-      description={
-        selectedCategory.description ||
-        'Complete the form and submit for approval.'
-      }
-      extra={
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1
+            className="m-0 text-xl font-semibold tracking-tight"
+            style={{
+              color: tokens.colorTextPrimary,
+              fontFamily: tokens.fontFamily,
+            }}
+          >
+            {selectedCategory.name}
+          </h1>
+          <p
+            className="mb-0 mt-1 text-sm"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            {selectedCategory.description ||
+              t('pages.approvals.dynamicFormDescription')}
+          </p>
+        </div>
         <Button
           type="text"
-          icon={<ArrowLeftOutlined />}
+          icon={<ArrowLeft size={16} />}
           onClick={handleBackToCategories}
+          style={{ borderRadius: 0 }}
         >
-          Back to categories
+          {t('pages.approvals.backToCategories')}
         </Button>
-      }
-    >
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-        {submitMutation.isPending ? <Skeleton active paragraph={{ rows: 2 }} /> : null}
+      </div>
 
+      {submitMutation.isPending ? (
+        <Skeleton active paragraph={{ rows: 2 }} />
+      ) : null}
+
+      <SectionCard
+        title={t('pages.approvals.formSection')}
+        bodyClassName="px-3 py-4 sm:px-5"
+      >
         <FormSchemaRenderer
           fields={fields}
           values={formValues}
@@ -217,13 +250,13 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
           disabled={submitMutation.isPending}
         />
 
-        <div className="flex flex-col gap-1.5">
+        <div className="mt-4 flex flex-col gap-1.5">
           <label
             htmlFor="approval-request-title"
-            className="text-[13px] font-medium"
+            className="text-sm font-medium"
             style={{ color: tokens.colorTextPrimary }}
           >
-            Request title
+            {t('pages.approvals.requestTitle')}
           </label>
           <Input
             id="approval-request-title"
@@ -233,26 +266,19 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
             onChange={(event) => setTitle(event.target.value)}
           />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Leave blank to use “{defaultTitle}”.
+            {t('pages.approvals.requestTitleHint', { default: defaultTitle })}
           </Typography.Text>
         </div>
+      </SectionCard>
 
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            onClick={handleBackToCategories}
-            disabled={submitMutation.isPending}
-          >
-            Back
-          </Button>
-          <Button
-            type="primary"
-            loading={submitMutation.isPending}
-            onClick={() => void handleSubmit()}
-          >
-            Submit request
-          </Button>
-        </div>
-      </div>
-    </FormLayout>
+      <FormPageFooter
+        submitLabel={t('pages.approvals.submitRequest')}
+        onSubmit={() => void handleSubmit()}
+        isSubmitting={submitMutation.isPending}
+        secondaryLabel={t('pages.approvals.backToCategories')}
+        onSecondary={handleBackToCategories}
+        secondaryDisabled={submitMutation.isPending}
+      />
+    </div>
   );
 }

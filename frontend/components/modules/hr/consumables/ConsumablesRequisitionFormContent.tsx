@@ -1,9 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import { Button } from 'antd';
 import ConsumablesRequisitionForm from '@/components/modules/hr/consumables/ConsumablesRequisitionForm';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { ConsumablesRequisitionDetail } from '@/lib/api/consumables-requisition.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
@@ -23,16 +22,13 @@ export default function ConsumablesRequisitionFormContent(): React.ReactNode {
   }
 
   return (
-    <FormLayout
+    <HrFormPageShell
       title={t('hr.buttons.newConsumables')}
       description="Request low-value consumables (under ETB 5,000 per item) for HR Officer approval."
-      extra={
-        <Button onClick={() => router.push('/approvals/new')}>
-          {t('hr.buttons.cancel')}
-        </Button>
-      }
+      cancelLabel={t('hr.buttons.cancel')}
+      cancelHref="/approvals/new"
     >
       <ConsumablesRequisitionForm onSuccess={handleSuccess} />
-    </FormLayout>
+    </HrFormPageShell>
   );
 }

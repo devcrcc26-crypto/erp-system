@@ -210,7 +210,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
           </p>
         </div>
         <Button
-          onClick={() => router.push('/hr/leave-requests')}
+          onClick={() => router.push('/approvals/new')}
           className="shrink-0"
           style={{ borderRadius: 0 }}
         >
