@@ -35,6 +35,73 @@ function buildListQuery(params: ListEmployeeContractsParams): string {
   return toQueryString({ ...rest, status: statusValue });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for an employee contract list endpoint (filter locally).
+ */
+async function fetchAllEmployeeContractPages(
+  path: string,
+  params: Omit<ListEmployeeContractsParams, "page" | "limit" | "search"> = {},
+): Promise<EmployeeContractListItem[]> {
+  const first = await apiGetPaginated<EmployeeContractListItem>(
+    `${path}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<EmployeeContractListItem>(
+        `${path}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/**
+ * Company-wide employee contracts (all pages) for client-side filter/search.
+ */
+export function useEmployeeContractsAll(
+  params: Omit<ListEmployeeContractsParams, "page" | "limit" | "search"> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...employeeContractKeys.lists(), "all", params] as const,
+    queryFn: () => fetchAllEmployeeContractPages(CONTRACT_PATH, params),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Current user's employee contracts (all pages) for client-side filter/search.
+ */
+export function useMyEmployeeContractsAll(
+  params: Omit<ListEmployeeContractsParams, "page" | "limit" | "search"> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...employeeContractKeys.myLists(), "all", params] as const,
+    queryFn: () =>
+      fetchAllEmployeeContractPages(`${CONTRACT_PATH}/my`, params),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useEmployeeContracts(
   params: ListEmployeeContractsParams = { page: 1, limit: 20 },
   enabled = true,
@@ -135,20 +202,39 @@ export function useTerminateEmployeeContract(id: string) {
   });
 }
 
-export function useDeleteEmployeeContract(id: string){
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: () => apiDelete<{ success: boolean }>(`${CONTRACT_PATH}/${id}`),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: employeeContractKeys.lists(),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: employeeContractKeys.myLists(),
-            });
-            void queryClient.removeQueries({
-                queryKey: employeeContractKeys.detail(id),
-            });
-        },
-    });
+export function useDeleteEmployeeContract(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiDelete<{ success: boolean }>(`${CONTRACT_PATH}/${id}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.myLists(),
+      });
+      void queryClient.removeQueries({
+        queryKey: employeeContractKeys.detail(id),
+      });
+    },
+  });
+}
+
+export function useDeleteEmployeeContractRecord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiDelete<{ success: boolean }>(`${CONTRACT_PATH}/${id}`),
+    onSuccess: (_result, id) => {
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.myLists(),
+      });
+      void queryClient.removeQueries({
+        queryKey: employeeContractKeys.detail(id),
+      });
+    },
+  });
 }

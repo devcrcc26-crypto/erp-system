@@ -305,6 +305,13 @@ export function buildIconRailNav(
         visible: canManageUsers,
       },
       {
+        key: '/hr/employee-contract',
+        labelKey: 'nav.hr.employeeContract',
+        href: '/hr/employee-contract',
+        iconKey: 'hr-employee-contract',
+        visible: canViewHr,
+      },
+      {
         key: '/hr/leave-requests',
         labelKey: 'nav.hr.leaveRequests',
         href: '/hr/leave-requests',
@@ -316,13 +323,6 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.overtime',
         href: '/hr/overtime',
         iconKey: 'hr-overtime',
-        visible: canViewHr,
-      },
-      {
-        key: '/hr/employee-contract',
-        labelKey: 'nav.hr.employeeContract',
-        href: '/hr/employee-contract',
-        iconKey: 'hr-employee-contract',
         visible: canViewHr,
       },
       {

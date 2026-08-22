@@ -240,7 +240,10 @@
         "myListTitle": "我的合同",
         "listDescription": "创建并管理劳动合同。",
         "myListDescription": "查看您的劳动合同。",
-        "formDescription": "为员工登记劳动合同类型与日期。"
+        "formDescription": "为员工登记劳动合同类型与日期。",
+        "contractCount": "{{count}} 份合同",
+        "contractCountOne": "1 份合同",
+        "emptyFiltered": "没有符合筛选条件的劳动合同"
       },
       "officialSeal": {
         "new": "新建公章使用申请",
@@ -1465,6 +1468,12 @@
       "estimatedCost": "预计费用",
       "employee": "员工",
       "contractType": "合同类型",
+      "basicSalary": "基本工资",
+      "transportationAllowance": "交通补贴",
+      "monthlyBonus": "月度奖金",
+      "netSalary": "实发工资",
+      "probationEndDate": "试用期结束日期",
+      "governedBy": "适用法规",
       "signedAt": "签署日期",
       "openEnded": "无固定期限",
       "terminatedAt": "终止日期",
@@ -1840,6 +1849,7 @@
       "leaveType": "假期类型",
       "employee": "员工",
       "contractType": "合同类型",
+      "governedBy": "埃塞俄比亚劳动法第1156/2019号",
       "project": "项目",
       "vehicle": "车辆",
       "month": "月份",

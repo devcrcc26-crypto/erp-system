@@ -241,7 +241,10 @@
         "myListTitle": "My Contracts",
         "listDescription": "Create and manage employment contracts.",
         "myListDescription": "View your employment contracts.",
-        "formDescription": "Record employment contract dates and type for an employee."
+        "formDescription": "Record employment contract dates and type for an employee.",
+        "contractCount": "{{count}} contracts",
+        "contractCountOne": "1 contract",
+        "emptyFiltered": "No employee contracts match your filters"
       },
       "officialSeal": {
         "new": "New Official Seal",
@@ -1471,6 +1474,12 @@
       "estimatedCost": "Estimated Cost",
       "employee": "Employee",
       "contractType": "Contract Type",
+      "basicSalary": "Basic Salary",
+      "transportationAllowance": "Transportation Allowance",
+      "monthlyBonus": "Monthly Bonus",
+      "netSalary": "Net Salary",
+      "probationEndDate": "Probation End Date",
+      "governedBy": "Governed By",
       "signedAt": "Signed",
       "openEnded": "Open-ended",
       "terminatedAt": "Terminated",
@@ -1852,6 +1861,7 @@
       "leaveType": "Leave type",
       "employee": "Employee",
       "contractType": "Contract type",
+      "governedBy": "Ethiopian Labor Proclamation 1156/2019",
       "project": "Project",
       "vehicle": "Vehicle",
       "month": "Month",
