@@ -1,17 +1,31 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Alert, Button, Empty, Skeleton, Table } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Button,
+  Dropdown,
+  Empty,
+  Spin,
+} from 'antd';
+import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import ExpenseClaimItemModal from '@/components/modules/hr/expense-claim/ExpenseClaimItemModal';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
-import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import {
+  SectionCard,
+  SummaryStrip,
+} from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import DataTable from '@/components/ui/DataTable/DataTable';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ExpenseClaimItem } from '@/lib/api/expense-claim.types';
@@ -31,7 +45,6 @@ import {
 } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Expense claim detail — draft item editing, submission, and approval chain.
@@ -44,6 +57,7 @@ export default function ExpenseClaimDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useExpenseClaim(claimId);
   const submitMutation = useSubmitExpenseClaim(claimId);
@@ -56,6 +70,8 @@ export default function ExpenseClaimDetailPageContent({
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
+  useSetHeaderExtra(null);
+
   const claim = detailQuery.data;
   const isOwner = Boolean(claim) && claim?.employeeId === currentUser.data?.id;
   const isDraft = claim?.status === 'DRAFT';
@@ -63,6 +79,37 @@ export default function ExpenseClaimDetailPageContent({
   const canCancel =
     isOwner && (claim?.status === 'DRAFT' || claim?.status === 'SUBMITTED');
   const canSubmit = canEdit && (claim?.items.length ?? 0) > 0;
+
+  useEffect(() => {
+    if (canViewHr || detailQuery.isLoading) {
+      return;
+    }
+
+    if (
+      detailQuery.isError &&
+      detailQuery.error instanceof ApiRequestError &&
+      (detailQuery.error.status === 403 || detailQuery.error.status === 404)
+    ) {
+      router.replace('/approvals');
+      return;
+    }
+
+    if (
+      claim &&
+      currentUser.data?.id &&
+      claim.employeeId !== currentUser.data.id
+    ) {
+      router.replace('/approvals');
+    }
+  }, [
+    canViewHr,
+    claim,
+    currentUser.data?.id,
+    detailQuery.error,
+    detailQuery.isError,
+    detailQuery.isLoading,
+    router,
+  ]);
 
   const tiers = useMemo(
     () => (claim?.approvalRequest?.tiers ?? []) as ApprovalTier[],
@@ -80,33 +127,47 @@ export default function ExpenseClaimDetailPageContent({
   }
 
   async function handleDeleteItem(): Promise<void> {
-    if (!deleteItemId) return;
+    if (!deleteItemId) {
+      return;
+    }
     try {
       await deleteItemMutation.mutateAsync(deleteItemId);
-      messageApi.success('Item removed');
+      messageApi.success(t('hr.messages.expenseClaimItemDeleted'));
       setDeleteItemId(null);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to remove item', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToDeleteExpenseClaimItem'),
+        messageApi,
+      );
     }
   }
 
   async function handleSubmit(): Promise<void> {
     try {
       await submitMutation.mutateAsync();
-      messageApi.success('Expense claim submitted for approval');
+      messageApi.success(t('hr.messages.expenseClaimSubmitted'));
       setConfirmSubmit(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to submit claim', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToSubmitExpenseClaim'),
+        messageApi,
+      );
     }
   }
 
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
-      messageApi.success('Expense claim cancelled');
+      messageApi.success(t('hr.messages.expenseClaimCancelled'));
       setConfirmCancel(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to cancel claim', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToCancelExpenseClaim'),
+        messageApi,
+      );
     }
   }
 
@@ -145,7 +206,7 @@ export default function ExpenseClaimDetailPageContent({
         key: 'amountEtb',
         width: 140,
         align: 'right',
-        render: (v: number) => formatEtbAmount(v),
+        render: (v: number | string) => formatEtbAmount(v),
       },
       {
         title: t('hr.table.receipt'),
@@ -155,7 +216,9 @@ export default function ExpenseClaimDetailPageContent({
           row.receipt ? (
             <AttachmentDownloadList documents={[row.receipt]} />
           ) : (
-            <span className="text-[var(--color-red-400)] text-xs">Missing</span>
+            <span className="text-xs text-[var(--color-red-400)]">
+              {t('hr.labels.receiptMissing')}
+            </span>
           ),
       },
       ...(canEdit
@@ -163,24 +226,36 @@ export default function ExpenseClaimDetailPageContent({
             {
               title: t('hr.table.actions'),
               key: 'actions',
-              width: 90,
-              render: (_: unknown, row: ExpenseClaimItem) => (
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<Pencil size={14} />}
-                    onClick={() => openEditItem(row)}
-                  />
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<Trash2 size={14} />}
-                    onClick={() => setDeleteItemId(row.id)}
-                  />
-                </div>
-              ),
+              width: 140,
+              fixed: 'right' as const,
+              render: (_: unknown, row: ExpenseClaimItem) => {
+                const items: MenuProps['items'] = [
+                  {
+                    key: 'edit',
+                    label: t('common.update'),
+                    icon: <Pencil size={14} />,
+                    onClick: () => openEditItem(row),
+                  },
+                  {
+                    key: 'delete',
+                    label: t('common.delete'),
+                    icon: <Trash2 size={14} />,
+                    danger: true,
+                    onClick: () => setDeleteItemId(row.id),
+                  },
+                ];
+                return (
+                  <Dropdown menu={{ items }} trigger={['click']}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<MoreHorizontal size={16} />}
+                      onClick={(event) => event.stopPropagation()}
+                      style={{ borderRadius: 0 }}
+                    />
+                  </Dropdown>
+                );
+              },
             } satisfies ColumnsType<ExpenseClaimItem>[number],
           ]
         : []),
@@ -189,7 +264,11 @@ export default function ExpenseClaimDetailPageContent({
   );
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="flex justify-center p-12">
+        <Spin />
+      </div>
+    );
   }
 
   if (detailQuery.isError || !claim) {
@@ -200,73 +279,127 @@ export default function ExpenseClaimDetailPageContent({
         title={
           detailQuery.error instanceof ApiRequestError
             ? detailQuery.error.message
-            : 'Expense claim not found'
+            : t('hr.messages.expenseClaimNotFound')
         }
         action={
-          <Button onClick={() => router.push('/hr/expense-claims')}>
-            Back to list
+          <Button
+            onClick={() => router.push('/hr/expense-claims')}
+            style={{ borderRadius: 0 }}
+          >
+            {t('hr.buttons.backToList')}
           </Button>
         }
       />
     );
   }
 
+  if (
+    !canViewHr &&
+    currentUser.data?.id &&
+    claim.employeeId !== currentUser.data.id
+  ) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center">
+        <Spin />
+      </div>
+    );
+  }
+
+  const backHref = canViewHr ? '/hr/expense-claims' : '/approvals';
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Page header */}
-      <div className="mb-2">
-        <button
-          onClick={() => router.push('/hr/expense-claims')}
-          className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] mb-3 transition-colors"
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="text"
+          icon={<ArrowLeft size={16} />}
+          onClick={() => router.push(backHref)}
+          style={{ borderRadius: 0 }}
         >
-          <ArrowLeft size={14} />
-          <span>Expense Claims</span>
-        </button>
+          {t('hr.buttons.backToList')}
+        </Button>
+      </div>
 
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-1">
-              Expense Claims · {claim.claimNumber}
-            </p>
-            <h1 className="text-xl font-semibold text-[var(--color-text-primary)] leading-tight">
-              {claim.title}
-            </h1>
-            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+      <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="px-3 py-4 sm:px-5">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                {claim.claimNumber}
+              </span>
+              <StatusBadge
+                label={formatExpenseClaimStatus(claim.status, t)}
+                variant={expenseClaimStatusVariant(claim.status)}
+              />
+            </div>
+            <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+              {canCancel ? (
+                <Button
+                  danger
+                  size="small"
+                  onClick={() => setConfirmCancel(true)}
+                  style={{ borderRadius: 0 }}
+                >
+                  {t('hr.buttons.cancel')}
+                </Button>
+              ) : null}
+              {canEdit ? (
+                <Button
+                  type="primary"
+                  size="small"
+                  disabled={!canSubmit}
+                  onClick={() => setConfirmSubmit(true)}
+                  style={{ borderRadius: 0 }}
+                >
+                  {t('hr.buttons.submitClaim')}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          <h1 className="m-0 text-lg font-semibold leading-snug text-[var(--color-text-primary)]">
+            {claim.title}
+          </h1>
+
+          <p className="mb-0 mt-2 text-sm text-[var(--color-text-secondary)]">
+            <span className="font-medium text-[var(--color-text-primary)]">
               {formatExpenseClaimEmployeeName(claim.employee)}
-              {claim.submittedAt
-                ? ` · Submitted ${formatProjectDate(claim.submittedAt)}`
-                : null}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <StatusBadge
-              label={formatExpenseClaimStatus(claim.status, t)}
-              variant={expenseClaimStatusVariant(claim.status)}
-            />
-            {canCancel ? (
-              <Button danger size="small" onClick={() => setConfirmCancel(true)}>
-                {t('hr.buttons.cancel')}
-              </Button>
-            ) : null}
-            {canEdit ? (
-              <Button
-                type="primary"
-                size="small"
-                disabled={!canSubmit}
-                onClick={() => setConfirmSubmit(true)}
-              >
-                {t('hr.buttons.submitClaim')}
-              </Button>
-            ) : null}
-          </div>
+            </span>
+            {claim.submittedAt
+              ? ` · ${t('hr.labels.submittedOn', {
+                  date: formatProjectDate(claim.submittedAt),
+                })}`
+              : null}
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+      <SummaryStrip
+        items={[
+          {
+            label: t('hr.table.items'),
+            value: String(claim.items.length),
+          },
+          {
+            label: t('hr.table.total'),
+            value: formatEtbAmount(claim.totalAmountEtb),
+            emphasize: true,
+          },
+          {
+            label: t('hr.table.createdDate'),
+            value: formatProjectDate(claim.createdAt),
+          },
+        ]}
+      />
+
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[1fr_300px]">
         <div className="flex flex-col gap-4">
           {claim.description ? (
-            <SectionCard title={t('hr.form.description')} bodyClassName="px-5 py-4">
-              <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap m-0">
+            <SectionCard
+              title={t('hr.form.description')}
+              bodyClassName="px-3 py-4 sm:px-5"
+            >
+              <p className="m-0 whitespace-pre-wrap text-sm text-[var(--color-text-primary)]">
                 {claim.description}
               </p>
             </SectionCard>
@@ -274,60 +407,53 @@ export default function ExpenseClaimDetailPageContent({
 
           <SectionCard
             title={t('hr.section.items')}
+            bodyClassName="p-0"
             action={
               canEdit ? (
-                <Button type="primary" size="small" onClick={openAddItem}>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<Plus size={16} />}
+                  onClick={openAddItem}
+                  style={{ borderRadius: 0 }}
+                >
                   {t('hr.buttons.addItem')}
                 </Button>
               ) : undefined
             }
           >
-            <div className="px-5 py-4">
-              <Table<ExpenseClaimItem>
-                rowKey="id"
-                size="small"
-                columns={columns}
-                dataSource={claim.items}
-                pagination={false}
-                locale={{
-                  emptyText: (
-                    <Empty description={t('hr.empty.noItems')} />
-                  ),
-                }}
-              />
-              <div className="flex justify-end items-center gap-2 mt-3 pt-3 border-t border-[rgba(0,0,0,0.06)]">
-                <span className="text-sm text-[var(--color-text-secondary)]">
-                  {t('hr.table.total')} ({claim.items.length})
-                </span>
-                <span className="text-base font-bold text-[var(--color-text-primary)]">
-                  {formatEtbAmount(claim.totalAmountEtb)}
-                </span>
-              </div>
-            </div>
+            <DataTable<ExpenseClaimItem>
+              rowKey="id"
+              className="erp-pro-table"
+              size="small"
+              columns={columns}
+              dataSource={claim.items}
+              pagination={false}
+              scroll={{ x: 960 }}
+              locale={{
+                emptyText: <Empty description={t('hr.empty.noItems')} />,
+              }}
+            />
           </SectionCard>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
           {claim.approvalRequest ? (
             <ApprovalTierTimeline
               tiers={tiers}
               currentTier={claim.approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
-              <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                  {t('hr.section.approvalChain')}
-                </h3>
-              </div>
-              <div className="px-5 py-4">
-                <p className="text-sm text-[var(--color-text-tertiary)]">
-                  {t('hr.empty.noApprovalChain')}
-                </p>
-              </div>
-            </div>
+            <SectionCard
+              title={t('hr.section.approvalChain')}
+              bodyClassName="px-3 py-4 sm:px-5"
+            >
+              <p className="m-0 text-sm text-[var(--color-text-tertiary)]">
+                {t('hr.empty.noApprovalChain')}
+              </p>
+            </SectionCard>
           )}
-        </div>
+        </aside>
       </div>
 
       <ExpenseClaimItemModal
@@ -342,9 +468,9 @@ export default function ExpenseClaimDetailPageContent({
 
       <ConfirmDialog
         open={confirmSubmit}
-        title="Submit expense claim?"
-        description="This will start the approval workflow. You will not be able to edit items until the claim is returned."
-        confirmLabel="Submit"
+        title={t('hr.dialog.submitExpenseClaimTitle')}
+        description={t('hr.dialog.submitExpenseClaimDesc')}
+        confirmLabel={t('hr.buttons.submitClaim')}
         confirmLoading={submitMutation.isPending}
         onConfirm={() => void handleSubmit()}
         onCancel={() => setConfirmSubmit(false)}
@@ -352,9 +478,9 @@ export default function ExpenseClaimDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
-        title="Cancel expense claim?"
-        description="This cancels the claim and any linked approval request."
-        confirmLabel="Cancel claim"
+        title={t('hr.dialog.cancelExpenseClaimTitle')}
+        description={t('hr.dialog.cancelExpenseClaimDesc')}
+        confirmLabel={t('hr.buttons.cancelClaim')}
         danger
         confirmLoading={cancelMutation.isPending}
         onConfirm={() => void handleCancel()}
@@ -363,9 +489,9 @@ export default function ExpenseClaimDetailPageContent({
 
       <ConfirmDialog
         open={Boolean(deleteItemId)}
-        title="Remove item?"
-        description="This item and its receipt will be removed and the claim total recalculated."
-        confirmLabel="Remove"
+        title={t('hr.dialog.deleteExpenseClaimItemTitle')}
+        description={t('hr.dialog.deleteExpenseClaimItemDesc')}
+        confirmLabel={t('common.delete')}
         danger
         confirmLoading={deleteItemMutation.isPending}
         onConfirm={() => void handleDeleteItem()}

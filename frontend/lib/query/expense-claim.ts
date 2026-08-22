@@ -49,6 +49,54 @@ function buildListQuery(params: ListExpenseClaimsParams): string {
   return toQueryString({ ...rest, status: statusValue });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the expense claims list endpoint (filter locally).
+ */
+async function fetchAllExpenseClaimPages(
+  params: Omit<ListExpenseClaimsParams, 'page' | 'limit' | 'search'> = {},
+): Promise<ExpenseClaimListItem[]> {
+  const first = await apiGetPaginated<ExpenseClaimListItem>(
+    `${EXPENSE_CLAIM_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<ExpenseClaimListItem>(
+        `${EXPENSE_CLAIM_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All expense claims (all pages) for client-side filter/search. */
+export function useExpenseClaimsAll(
+  params: Omit<ListExpenseClaimsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...expenseClaimKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllExpenseClaimPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 /** Paginated expense claims. */
 export function useExpenseClaims(
   params: ListExpenseClaimsParams = { page: 1, limit: 20 },

@@ -226,7 +226,12 @@
         "listTitle": "Expense Claims",
         "myListTitle": "My Expense Claims",
         "listDescription": "Review and process employee reimbursement claims.",
-        "myListDescription": "Submit and track your expense claims through the approval workflow."
+        "myListDescription": "Submit and track your expense claims through the approval workflow.",
+        "formDescription": "Start with claim details, then add line items with receipts on the next page.",
+        "searchPlaceholder": "Search by claim #, title, or employee",
+        "claimCount": "{{count}} claims",
+        "claimCountOne": "1 claim",
+        "emptyFiltered": "No expense claims match your filters"
       },
       "purchaseRequest": {
         "new": "New Purchase Request",
@@ -1414,6 +1419,7 @@
       "failedToLoadLeaveBalances": "Failed to load leave balances",
       "failedToLoadLeaveRequests": "Failed to load leave requests",
       "failedToLoadOvertimeSheets": "Failed to load overtime sheets",
+      "failedToLoadExpenseClaims": "Failed to load expense claims",
       "failedToOpenOvertimeSheet": "Failed to open overtime sheet",
       "overtimeSheetNotFound": "Overtime sheet not found",
       "overtimeEntryAdded": "Entry added",
@@ -1425,6 +1431,19 @@
       "overtimeSheetCancelled": "Overtime sheet cancelled",
       "failedToSubmitOvertimeSheet": "Failed to submit sheet",
       "failedToCancelOvertimeSheet": "Failed to cancel sheet",
+      "expenseClaimNotFound": "Expense claim not found",
+      "expenseClaimSubmitted": "Expense claim submitted for approval",
+      "expenseClaimCancelled": "Expense claim cancelled",
+      "failedToSubmitExpenseClaim": "Failed to submit claim",
+      "failedToCancelExpenseClaim": "Failed to cancel claim",
+      "expenseClaimItemAdded": "Item added",
+      "expenseClaimItemUpdated": "Item updated",
+      "expenseClaimItemDeleted": "Item removed",
+      "failedToSaveExpenseClaimItem": "Failed to save item",
+      "failedToDeleteExpenseClaimItem": "Failed to remove item",
+      "draftClaimCreated": "Draft claim created. Add your expense items next.",
+      "failedToCreateExpenseClaim": "Failed to create expense claim",
+      "attachReceiptRequired": "Attach a receipt for this item",
       "selectFilesToUpload": "Select files to upload",
       "attachmentsUploaded": "Attachments uploaded",
       "failedToUploadAttachments": "Failed to upload attachments",
@@ -1595,6 +1614,8 @@
       "reviewBusinessTrip": "Review Your Business Trip Application",
       "ticketsRequired": "Tickets required",
       "ticketsRequiredDesc": "The trip is approved. Upload a combined ticket and/or individual passenger tickets below.",
+      "receiptMissing": "Missing",
+      "submittedOn": "Submitted {{date}}",
       "removeTicket": "Remove ticket?",
       "removeTicketDesc": "Passenger acknowledgement will be reset.",
       "removeCombinedTicket": "Remove combined ticket?",
@@ -1827,6 +1848,7 @@
       "submitApplication": "Submit Application",
       "submitRequest": "Submit Request",
       "submitClaim": "Submit Claim",
+      "cancelClaim": "Cancel claim",
       "submitSheet": "Submit Sheet",
       "submitBusinessTrip": "Submit Business Trip",
       "cancel": "Cancel",
@@ -1882,7 +1904,16 @@
       "terminationReasonRequired": "Enter a termination reason",
       "startTimeRequired": "Start time is required",
       "endTimeRequired": "End time is required",
-      "taskDescriptionRequired": "Describe the work performed"
+      "taskDescriptionRequired": "Describe the work performed",
+      "titleRequired": "Enter a title for this claim",
+      "categoryRequired": "Category is required",
+      "descriptionRequired": "Description is required",
+      "expenseDateRequired": "Expense date is required",
+      "amountRequired": "Amount is required",
+      "currencyRequired": "Currency is required"
+    },
+    "hints": {
+      "replaceReceipt": "Current receipt: {{name}}. Upload a new file to replace it."
     },
     "dialog": {
       "cancelOfficialSealTitle": "Cancel request?",
@@ -1898,7 +1929,15 @@
       "cancelOvertimeSheetTitle": "Cancel overtime sheet?",
       "cancelOvertimeSheetDesc": "This cancels the sheet and any linked approval request.",
       "deleteOvertimeEntryTitle": "Delete entry?",
-      "deleteOvertimeEntryDesc": "This entry will be removed and sheet totals recalculated."
+      "deleteOvertimeEntryDesc": "This entry will be removed and sheet totals recalculated.",
+      "submitExpenseClaimTitle": "Submit expense claim?",
+      "submitExpenseClaimDesc": "This will start the approval workflow. You will not be able to edit items until the claim is returned.",
+      "cancelExpenseClaimTitle": "Cancel expense claim?",
+      "cancelExpenseClaimDesc": "This cancels the claim and any linked approval request.",
+      "deleteExpenseClaimItemTitle": "Remove item?",
+      "deleteExpenseClaimItemDesc": "This item and its receipt will be removed and the claim total recalculated.",
+      "addExpenseItemTitle": "Add Expense Item",
+      "editExpenseItemTitle": "Edit Expense Item"
     },
     "form": {
       "leaveType": "Leave Type",

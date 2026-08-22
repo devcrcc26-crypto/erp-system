@@ -225,7 +225,12 @@
         "listTitle": "费用报销",
         "myListTitle": "我的费用报销",
         "listDescription": "审核并处理员工报销申请。",
-        "myListDescription": "提交并跟踪您的费用报销审批流程。"
+        "myListDescription": "提交并跟踪您的费用报销审批流程。",
+        "formDescription": "先填写报销基本信息，然后在下一页添加明细及收据。",
+        "searchPlaceholder": "按单号、标题或员工搜索",
+        "claimCount": "{{count}} 条报销",
+        "claimCountOne": "1 条报销",
+        "emptyFiltered": "没有符合筛选条件的报销记录"
       },
       "purchaseRequest": {
         "new": "新建采购申请",
@@ -1413,6 +1418,7 @@
       "failedToLoadLeaveBalances": "加载假期余额失败",
       "failedToLoadLeaveRequests": "加载请假申请失败",
       "failedToLoadOvertimeSheets": "加载加班表失败",
+      "failedToLoadExpenseClaims": "加载费用报销失败",
       "failedToOpenOvertimeSheet": "打开加班表失败",
       "overtimeSheetNotFound": "未找到加班表",
       "overtimeEntryAdded": "记录已添加",
@@ -1424,6 +1430,19 @@
       "overtimeSheetCancelled": "加班表已取消",
       "failedToSubmitOvertimeSheet": "提交加班表失败",
       "failedToCancelOvertimeSheet": "取消加班表失败",
+      "expenseClaimNotFound": "未找到费用报销记录",
+      "expenseClaimSubmitted": "费用报销已提交审批",
+      "expenseClaimCancelled": "费用报销已取消",
+      "failedToSubmitExpenseClaim": "提交报销失败",
+      "failedToCancelExpenseClaim": "取消报销失败",
+      "expenseClaimItemAdded": "明细已添加",
+      "expenseClaimItemUpdated": "明细已更新",
+      "expenseClaimItemDeleted": "明细已删除",
+      "failedToSaveExpenseClaimItem": "保存明细失败",
+      "failedToDeleteExpenseClaimItem": "删除明细失败",
+      "draftClaimCreated": "草稿已创建，请继续添加报销明细。",
+      "failedToCreateExpenseClaim": "创建费用报销失败",
+      "attachReceiptRequired": "请上传该明细的收据",
       "selectFilesToUpload": "请选择要上传的文件",
       "attachmentsUploaded": "附件已上传",
       "failedToUploadAttachments": "上传附件失败",
@@ -1589,6 +1608,8 @@
       "reviewBusinessTrip": "确认出差申请信息",
       "ticketsRequired": "需上传机票",
       "ticketsRequiredDesc": "出差已获批准，请上传合并机票或各乘客的单独机票。",
+      "receiptMissing": "缺失",
+      "submittedOn": "提交于 {{date}}",
       "removeTicket": "删除机票？",
       "removeTicketDesc": "乘客的确认状态将被重置。",
       "removeCombinedTicket": "删除合并机票？",
@@ -1818,6 +1839,7 @@
       "submitApplication": "提交申请",
       "submitRequest": "提交申请",
       "submitClaim": "提交报销",
+      "cancelClaim": "取消报销",
       "submitSheet": "提交表单",
       "submitBusinessTrip": "提交出差申请",
       "cancel": "取消",
@@ -1870,7 +1892,16 @@
       "terminationReasonRequired": "请填写终止原因",
       "startTimeRequired": "请填写开始时间",
       "endTimeRequired": "请填写结束时间",
-      "taskDescriptionRequired": "请描述完成的工作内容"
+      "taskDescriptionRequired": "请描述完成的工作内容",
+      "titleRequired": "请输入报销标题",
+      "categoryRequired": "请输入费用类别",
+      "descriptionRequired": "请输入说明",
+      "expenseDateRequired": "请选择费用日期",
+      "amountRequired": "请输入金额",
+      "currencyRequired": "请选择币种"
+    },
+    "hints": {
+      "replaceReceipt": "当前收据：{{name}}。上传新文件可替换。"
     },
     "dialog": {
       "cancelOfficialSealTitle": "取消申请？",
@@ -1886,7 +1917,15 @@
       "cancelOvertimeSheetTitle": "取消加班表？",
       "cancelOvertimeSheetDesc": "这将取消加班表及所有关联的审批申请。",
       "deleteOvertimeEntryTitle": "删除记录？",
-      "deleteOvertimeEntryDesc": "该记录将被删除，表内工时合计将重新计算。"
+      "deleteOvertimeEntryDesc": "该记录将被删除，表内工时合计将重新计算。",
+      "submitExpenseClaimTitle": "提交费用报销？",
+      "submitExpenseClaimDesc": "提交后将进入审批流程。退回前无法编辑明细。",
+      "cancelExpenseClaimTitle": "取消费用报销？",
+      "cancelExpenseClaimDesc": "将取消该报销及关联的审批请求。",
+      "deleteExpenseClaimItemTitle": "删除明细？",
+      "deleteExpenseClaimItemDesc": "该明细及收据将被删除，报销合计将重新计算。",
+      "addExpenseItemTitle": "添加报销明细",
+      "editExpenseItemTitle": "编辑报销明细"
     },
     "form": {
       "leaveType": "假期类型",

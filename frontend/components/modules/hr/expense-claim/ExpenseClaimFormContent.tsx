@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useCreateExpenseClaim } from '@/lib/query/expense-claim';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface ClaimFormValues {
   title: string;
@@ -33,17 +33,21 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
         title: values.title.trim(),
         description: values.description?.trim() || undefined,
       });
-      messageApi.success('Draft claim created. Add your expense items next');
+      messageApi.success(t('hr.messages.draftClaimCreated'));
       router.push(`/hr/expense-claims/${created.id}`);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to create expense claim', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToCreateExpenseClaim'),
+        messageApi,
+      );
     }
   }
 
   return (
     <HrFormPageShell
-      title={t('hr.buttons.newExpenseClaim')}
-      description="Start with claim details, then add line items with receipts on the next page."
+      title={t('pages.hr.expenseClaim.new')}
+      description={t('pages.hr.expenseClaim.formDescription')}
       cancelLabel={t('hr.buttons.cancel')}
       cancelHref="/approvals/new"
       headerExtra={
@@ -65,24 +69,36 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
           title={
             createMutation.error instanceof ApiRequestError
               ? createMutation.error.message
-              : 'Failed to create claim'
+              : t('hr.messages.failedToCreateExpenseClaim')
           }
         />
       ) : null}
 
-      <div className="mx-auto w-full max-w-2xl flex flex-col gap-4">
-        <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+        <SectionCard
+          title={t('hr.section.requestDetails')}
+          bodyClassName="px-3 py-4 sm:px-5"
+        >
           <Form
             form={form}
             layout="vertical"
+            requiredMark={false}
             onFinish={(values) => void handleSubmit(values)}
           >
             <Form.Item
               name="title"
               label={t('hr.form.title')}
-              rules={[{ required: true, message: 'Enter a title for this claim' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.titleRequired'),
+                },
+              ]}
             >
-              <Input placeholder={t('hr.placeholder.enterTitle')} maxLength={200} />
+              <Input
+                placeholder={t('hr.placeholder.enterTitle')}
+                maxLength={200}
+              />
             </Form.Item>
             <Form.Item name="description" label={t('hr.form.description')}>
               <Input.TextArea rows={4} maxLength={4000} showCount />

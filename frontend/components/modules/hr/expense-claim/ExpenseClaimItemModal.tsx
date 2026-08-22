@@ -5,6 +5,7 @@ import { Alert, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd
 import dayjs from 'dayjs';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ExpenseClaimItem, SupportedCurrency } from '@/lib/api/expense-claim.types';
 import { useCurrencyRates } from '@/lib/query/currency';
 import {
@@ -13,7 +14,6 @@ import {
 } from '@/lib/query/expense-claim';
 import { formatCurrencyAmount, formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface ItemFormValues {
   category: string;
@@ -55,7 +55,9 @@ export default function ExpenseClaimItemModal({
   const currency = Form.useWatch('currency', form) as SupportedCurrency | undefined;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     if (editingItem) {
       form.setFieldsValue({
         category: editingItem.category,
@@ -72,10 +74,16 @@ export default function ExpenseClaimItemModal({
   }, [open, editingItem, form]);
 
   const etbPreview = useMemo(() => {
-    if (!amount || !currency) return null;
-    if (currency === 'ETB') return amount;
+    if (!amount || !currency) {
+      return null;
+    }
+    if (currency === 'ETB') {
+      return amount;
+    }
     const rate = ratesQuery.data?.[currency];
-    if (!rate) return null;
+    if (!rate) {
+      return null;
+    }
     return amount * rate;
   }, [amount, currency, ratesQuery.data]);
 
@@ -91,18 +99,22 @@ export default function ExpenseClaimItemModal({
     try {
       if (editingItem) {
         await updateMutation.mutateAsync({ itemId: editingItem.id, payload });
-        messageApi.success('Item updated');
+        messageApi.success(t('hr.messages.expenseClaimItemUpdated'));
       } else {
         if (!payload.file) {
-          messageApi.warning('Attach a receipt for this item');
+          messageApi.warning(t('hr.messages.attachReceiptRequired'));
           return;
         }
         await addMutation.mutateAsync(payload);
-        messageApi.success('Item added');
+        messageApi.success(t('hr.messages.expenseClaimItemAdded'));
       }
       onClose();
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to save item', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToSaveExpenseClaimItem'),
+        messageApi,
+      );
     }
   }
 
@@ -110,13 +122,19 @@ export default function ExpenseClaimItemModal({
 
   return (
     <Modal
-      title={editingItem ? 'Edit Expense Item' : 'Add Expense Item'}
+      title={
+        editingItem
+          ? t('hr.dialog.editExpenseItemTitle')
+          : t('hr.dialog.addExpenseItemTitle')
+      }
       open={open}
       onCancel={onClose}
       onOk={() => form.submit()}
       confirmLoading={saving}
       destroyOnHidden
       width={520}
+      okButtonProps={{ style: { borderRadius: 0 } }}
+      cancelButtonProps={{ style: { borderRadius: 0 } }}
     >
       <Form
         form={form}
@@ -127,7 +145,12 @@ export default function ExpenseClaimItemModal({
         <Form.Item
           name="category"
           label={t('hr.form.category')}
-          rules={[{ required: true, message: 'Category is required' }]}
+          rules={[
+            {
+              required: true,
+              message: t('hr.validation.categoryRequired'),
+            },
+          ]}
         >
           <Input placeholder={t('hr.placeholder.enterCategory')} maxLength={100} />
         </Form.Item>
@@ -135,7 +158,12 @@ export default function ExpenseClaimItemModal({
         <Form.Item
           name="description"
           label={t('hr.form.description')}
-          rules={[{ required: true, message: 'Description is required' }]}
+          rules={[
+            {
+              required: true,
+              message: t('hr.validation.descriptionRequired'),
+            },
+          ]}
         >
           <Input.TextArea
             rows={2}
@@ -148,7 +176,12 @@ export default function ExpenseClaimItemModal({
         <Form.Item
           name="expenseDate"
           label={t('hr.form.expenseDate')}
-          rules={[{ required: true, message: 'Expense date is required' }]}
+          rules={[
+            {
+              required: true,
+              message: t('hr.validation.expenseDateRequired'),
+            },
+          ]}
         >
           <DatePicker className="w-full" format="DD/MM/YYYY" />
         </Form.Item>
@@ -157,14 +190,24 @@ export default function ExpenseClaimItemModal({
           <Form.Item
             name="amount"
             label={t('hr.form.amount')}
-            rules={[{ required: true, message: 'Amount is required' }]}
+            rules={[
+              {
+                required: true,
+                message: t('hr.validation.amountRequired'),
+              },
+            ]}
           >
             <InputNumber className="w-full" min={0.01} precision={2} />
           </Form.Item>
           <Form.Item
             name="currency"
             label={t('hr.form.currency')}
-            rules={[{ required: true, message: 'Currency is required' }]}
+            rules={[
+              {
+                required: true,
+                message: t('hr.validation.currencyRequired'),
+              },
+            ]}
           >
             <Select options={CURRENCY_OPTIONS} />
           </Form.Item>
@@ -188,7 +231,7 @@ export default function ExpenseClaimItemModal({
           required={!editingItem}
           extra={
             editingItem?.receipt
-              ? `Current receipt: ${editingItem.receipt.name}. Upload a new file to replace it`
+              ? t('hr.hints.replaceReceipt', { name: editingItem.receipt.name })
               : undefined
           }
         >
