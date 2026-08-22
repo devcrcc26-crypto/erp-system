@@ -369,15 +369,87 @@
     },
     "departments": {
       "title": "Departments",
-      "description": "Department portfolio overview, leaders, and project linkage."
+      "description": "Department portfolio overview, leaders, and project linkage.",
+      "accessDenied": "You do not have access to departments.",
+      "noLeaderAssigned": "No department assigned",
+      "noLeaderAssignedDesc": "You are not recorded as the leader of any department.",
+      "noLeaderWarning": "No leader assigned",
+      "noLeaderWarningDesc": "{{count}} department(s) have no leader assigned.",
+      "myDepartment": "My department",
+      "you": "You",
+      "addDepartment": "Add department",
+      "searchPlaceholder": "Search departments",
+      "empty": "No departments defined",
+      "emptyFiltered": "No departments match your filters",
+      "count": "{{count}} departments",
+      "countOne": "1 department",
+      "deleteTitle": "Delete department?",
+      "deleteDescription": "\"{{name}}\" will be removed. Linked users and projects will have their department cleared; positions in this department will also be deleted.",
+      "deleted": "Department deleted",
+      "deleteFailed": "Failed to delete department",
+      "stats": {
+        "departmentsTotal": "Departments",
+        "totalProjects": "Total projects",
+        "activeProjects": "Active projects",
+        "totalTasks": "Total tasks",
+        "totalSubtasks": "Total subtasks",
+        "openSubtasks": "Open subtasks",
+        "disciplinesInUse": "Disciplines in use"
+      },
+      "table": {
+        "department": "Department",
+        "leader": "Leader",
+        "projects": "Projects",
+        "activeProjects": "Active",
+        "noLeader": "No leader"
+      }
     },
     "positions": {
       "title": "Positions",
-      "description": "Job titles and grades linked to departments for user assignment."
+      "description": "Job titles and grades linked to departments for user assignment.",
+      "accessDenied": "You do not have access to positions.",
+      "loadFailed": "Failed to load positions",
+      "addPosition": "Add position",
+      "searchPlaceholder": "Search title, grade, or department",
+      "empty": "No positions defined",
+      "emptyFiltered": "No positions match your filters",
+      "count": "{{count}} positions",
+      "countOne": "1 position",
+      "deleteTitle": "Delete position?",
+      "deleteDescription": "\"{{title}}\" will be removed. Users assigned to this position will have their position cleared.",
+      "deleted": "Position deleted",
+      "deleteFailed": "Failed to delete position",
+      "stats": {
+        "total": "Total"
+      },
+      "table": {
+        "title": "Title",
+        "department": "Department",
+        "grade": "Grade"
+      }
     },
     "disciplinesCatalog": {
       "title": "Disciplines",
-      "description": "Company engineering discipline catalog used on tasks and subtasks."
+      "description": "Company engineering discipline catalog used on tasks and subtasks.",
+      "accessDenied": "You do not have access to disciplines.",
+      "addDiscipline": "Add discipline",
+      "searchPlaceholder": "Search disciplines or leaders",
+      "empty": "No disciplines defined",
+      "emptyFiltered": "No disciplines match your filters",
+      "count": "{{count}} disciplines",
+      "countOne": "1 discipline",
+      "deleteTitle": "Delete discipline?",
+      "deleteDescription": "\"{{name}}\" will be removed. Task subtasks and users linked to this discipline will have their discipline cleared.",
+      "deleted": "Discipline deleted",
+      "deleteFailed": "Failed to delete discipline",
+      "stats": {
+        "total": "Total"
+      },
+      "table": {
+        "discipline": "Discipline",
+        "leader": "Leader",
+        "taskAssignments": "Active task assignments"
+      }
     },
     "statusBoard": {
       "title": "Status Board",
@@ -654,6 +726,8 @@
     "done": "Done",
     "delete": "Delete",
     "update": "Update",
+    "view": "View",
+    "assigned": "Assigned",
     "reset": "Reset",
     "query": "Query",
     "refresh": "Refresh",

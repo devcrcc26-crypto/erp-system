@@ -368,15 +368,87 @@
     },
     "departments": {
       "title": "部门",
-      "description": "部门项目概况、负责人与项目关联。"
+      "description": "部门项目概况、负责人与项目关联。",
+      "accessDenied": "您无权访问部门。",
+      "noLeaderAssigned": "未分配部门",
+      "noLeaderAssignedDesc": "系统中未记录您为任何部门的负责人。",
+      "noLeaderWarning": "未指定负责人",
+      "noLeaderWarningDesc": "有 {{count}} 个部门尚未指定负责人。",
+      "myDepartment": "我的部门",
+      "you": "您",
+      "addDepartment": "添加部门",
+      "searchPlaceholder": "搜索部门",
+      "empty": "暂无部门",
+      "emptyFiltered": "没有符合筛选条件的部门",
+      "count": "{{count}} 个部门",
+      "countOne": "1 个部门",
+      "deleteTitle": "删除部门？",
+      "deleteDescription": "将删除「{{name}}」。关联用户与项目的部门将被清空；该部门下的职位也将被删除。",
+      "deleted": "部门已删除",
+      "deleteFailed": "删除部门失败",
+      "stats": {
+        "departmentsTotal": "部门",
+        "totalProjects": "项目总数",
+        "activeProjects": "进行中项目",
+        "totalTasks": "任务总数",
+        "totalSubtasks": "子任务总数",
+        "openSubtasks": "未关闭子任务",
+        "disciplinesInUse": "使用中的专业"
+      },
+      "table": {
+        "department": "部门",
+        "leader": "负责人",
+        "projects": "项目",
+        "activeProjects": "进行中",
+        "noLeader": "无负责人"
+      }
     },
     "positions": {
       "title": "职位",
-      "description": "与部门关联的职务名称与职级，用于用户分配。"
+      "description": "与部门关联的职务名称与职级，用于用户分配。",
+      "accessDenied": "您无权访问职位。",
+      "loadFailed": "加载职位失败",
+      "addPosition": "添加职位",
+      "searchPlaceholder": "搜索职务、职级或部门",
+      "empty": "暂无职位",
+      "emptyFiltered": "没有符合筛选条件的职位",
+      "count": "{{count}} 个职位",
+      "countOne": "1 个职位",
+      "deleteTitle": "删除职位？",
+      "deleteDescription": "将删除「{{title}}」。已分配该职位的用户将被清空职位。",
+      "deleted": "职位已删除",
+      "deleteFailed": "删除职位失败",
+      "stats": {
+        "total": "全部"
+      },
+      "table": {
+        "title": "职务",
+        "department": "部门",
+        "grade": "职级"
+      }
     },
     "disciplinesCatalog": {
       "title": "专业",
-      "description": "公司工程专业目录，用于任务与子任务。"
+      "description": "公司工程专业目录，用于任务与子任务。",
+      "accessDenied": "您无权访问专业目录。",
+      "addDiscipline": "添加专业",
+      "searchPlaceholder": "搜索专业或负责人",
+      "empty": "暂无专业",
+      "emptyFiltered": "没有符合筛选条件的专业",
+      "count": "{{count}} 个专业",
+      "countOne": "1 个专业",
+      "deleteTitle": "删除专业？",
+      "deleteDescription": "将删除「{{name}}」。关联子任务与用户的该专业将被清空。",
+      "deleted": "专业已删除",
+      "deleteFailed": "删除专业失败",
+      "stats": {
+        "total": "全部"
+      },
+      "table": {
+        "discipline": "专业",
+        "leader": "负责人",
+        "taskAssignments": "活跃任务分配"
+      }
     },
     "statusBoard": {
       "title": "状态看板",
@@ -653,6 +725,8 @@
     "done": "完成",
     "delete": "删除",
     "update": "更新",
+    "view": "查看",
+    "assigned": "已分配",
     "reset": "重置",
     "query": "查询",
     "refresh": "刷新",

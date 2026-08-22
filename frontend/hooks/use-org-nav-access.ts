@@ -51,12 +51,14 @@ export function useCanManageDepartments(): boolean {
 
 /**
  * True when the session may open the engineering Disciplines catalog page.
+ * HR Officers also see the catalog via hr.view (backend: departments.view).
  */
 export function useCanViewDisciplinesCatalogNav(): boolean {
   const permLoading = usePermissionsLoading();
   const isSystemAdministrator = useAuthStore(
     (state) => state.capabilities.isSystemAdministrator,
   );
+  const canViewHr = useAuthStore((state) => state.capabilities.canViewHr);
   const epc = useEpcCapabilities();
   const profileQuery = useCurrentUser();
 
@@ -64,12 +66,13 @@ export function useCanViewDisciplinesCatalogNav(): boolean {
     if (permLoading) {
       return false;
     }
-    if (isSystemAdministrator || epc.navFullAccess) {
+    if (isSystemAdministrator || epc.navFullAccess || canViewHr) {
       return true;
     }
     const roles = profileQuery.data?.roles ?? [];
     return roles.some((role) => role.name === PROJECT_ADMINISTRATOR_ROLE);
   }, [
+    canViewHr,
     epc.navFullAccess,
     isSystemAdministrator,
     permLoading,
