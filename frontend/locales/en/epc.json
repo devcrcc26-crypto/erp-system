@@ -151,7 +151,10 @@
         "listTitle": "Overtime Sheets",
         "myListTitle": "My Overtime Sheets",
         "listDescription": "Monthly overtime sheets with hour categories and approval workflow.",
-        "myListDescription": "Log overtime sessions for each month and submit for approval."
+        "myListDescription": "Log overtime sessions for each month and submit for approval.",
+        "sheetCount": "{{count}} sheets",
+        "sheetCountOne": "1 sheet",
+        "emptyFiltered": "No overtime sheets match your filters"
       },
       "flight": {
         "new": "New Flight Application",
@@ -1288,6 +1291,7 @@
       "failedToLoadEmployeeContracts": "Failed to load employee contracts",
       "failedToLoadLeaveBalances": "Failed to load leave balances",
       "failedToLoadLeaveRequests": "Failed to load leave requests",
+      "failedToLoadOvertimeSheets": "Failed to load overtime sheets",
       "failedToLoadLeaveBalance": "Failed to load leave balance",
       "leaveRequestSubmitted": "Leave request submitted",
       "leaveRequestUpdated": "Leave request updated",

@@ -46,6 +46,56 @@ function buildListQuery(params: ListOvertimeSheetsParams): string {
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the overtime list endpoint (filter locally).
+ */
+async function fetchAllOvertimeSheetPages(
+  params: Omit<ListOvertimeSheetsParams, 'page' | 'limit' | 'search'> = {},
+): Promise<OvertimeSheetListItem[]> {
+  const first = await apiGetPaginated<OvertimeSheetListItem>(
+    `${OVERTIME_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<OvertimeSheetListItem>(
+        `${OVERTIME_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/**
+ * All overtime sheets (all pages) for client-side filter/search.
+ */
+export function useOvertimeSheetsAll(
+  params: Omit<ListOvertimeSheetsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...overtimeKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllOvertimeSheetPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 /**
  * Paginated overtime sheets (company-wide for HR; own records otherwise).
  */

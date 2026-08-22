@@ -150,7 +150,10 @@
         "listTitle": "加班表",
         "myListTitle": "我的加班表",
         "listDescription": "按月登记加班时长（平时/夜班/周末/节假日）并提交审批。",
-        "myListDescription": "按月登记加班时段并提交审批。"
+        "myListDescription": "按月登记加班时段并提交审批。",
+        "sheetCount": "{{count}} 张加班表",
+        "sheetCountOne": "1 张加班表",
+        "emptyFiltered": "没有符合筛选条件的加班表"
       },
       "flight": {
         "new": "新建机票申请",
@@ -1287,6 +1290,7 @@
       "failedToLoadEmployeeContracts": "加载劳动合同失败",
       "failedToLoadLeaveBalances": "加载假期余额失败",
       "failedToLoadLeaveRequests": "加载请假申请失败",
+      "failedToLoadOvertimeSheets": "加载加班表失败",
       "failedToLoadLeaveBalance": "加载假期余额失败",
       "leaveRequestSubmitted": "请假申请已提交",
       "failedToSubmitLeaveRequest": "提交请假申请失败",
