@@ -1,12 +1,13 @@
 'use client';
 
-import { Alert, Skeleton, Table, Tag } from 'antd';
+import { Alert, Skeleton, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   MetaItem,
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -41,7 +42,7 @@ export default function PurchaseRequestDetail({
   if (detailQuery.isLoading && !request) {
     return (
       <div
-        className="rounded-lg p-6"
+        className="rounded-none p-6"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
@@ -109,10 +110,10 @@ export default function PurchaseRequestDetail({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {/* Header */}
       <div
-        className="rounded-lg overflow-hidden"
+        className="rounded-none overflow-hidden"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
@@ -200,12 +201,14 @@ export default function PurchaseRequestDetail({
       </SectionCard>
 
       <SectionCard title="Line Items" bodyClassName="px-3 py-4 sm:px-5">
-        <Table<PurchaseRequestItem>
+        <DataTable<PurchaseRequestItem>
           rowKey="id"
+          className="erp-pro-table"
           size="small"
           columns={columns}
           dataSource={request.items}
           pagination={false}
+          scroll={false}
           footer={
             request.items.length > 0
               ? () => (

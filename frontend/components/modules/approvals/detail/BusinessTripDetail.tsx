@@ -50,7 +50,7 @@ function SectionCard({
   bodyClassName?: string;
 }): React.ReactNode {
   return (
-    <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+    <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
           {title}
@@ -134,7 +134,7 @@ function TripSummaryStrip({
       {items.map(({ label, value, emphasize }) => (
         <div
           key={label}
-          className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3"
+          className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] px-4 py-3"
         >
           <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
             {label}
@@ -205,7 +205,7 @@ export default function BusinessTripDetail({
 
   if (detailQuery.isLoading && !trip) {
     return (
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-6">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] p-6">
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -272,9 +272,9 @@ export default function BusinessTripDetail({
         : [];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {/* Header */}
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
         <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
@@ -337,9 +337,9 @@ export default function BusinessTripDetail({
       </div>
 
       {canAcknowledge && currentUserPassenger ? (
-        <div className="rounded-lg border border-[var(--color-amber-400)] bg-[var(--color-amber-50)] px-3 py-4 sm:px-5">
+        <div className="rounded-none border border-[var(--color-amber-400)] bg-[var(--color-amber-50)] px-3 py-4 sm:px-5">
           <p className="text-sm font-semibold text-[var(--color-amber-400)] m-0 mb-1">
-            Your ticket is ready â€” please acknowledge receipt
+            Your ticket is ready â€?please acknowledge receipt
           </p>
           <p className="text-xs text-[var(--color-text-secondary)] m-0 mb-3">
             Download your ticket below, then confirm you have received it.
@@ -429,7 +429,7 @@ export default function BusinessTripDetail({
                   {formatProjectDate(trip.returnDate)}
                 </span>
               ) : (
-                'â€”'
+                'â€?
               )}
             </MetaItem>
           </div>

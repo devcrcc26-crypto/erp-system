@@ -89,7 +89,7 @@ export default function ApprovalDetailSidebar({
   const activeCurrent = findCurrentTier(sorted, request.currentTier);
 
   return (
-    <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
+    <aside className="flex flex-col gap-3 lg:sticky lg:top-4">
       <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
         <div className="border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
           <h3 className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">

@@ -32,7 +32,7 @@ export default function VehicleRefuelingDetail({
   if (detailQuery.isLoading && !refueling) {
     return (
       <div
-        className="rounded-lg p-6"
+        className="rounded-none p-6"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
@@ -58,9 +58,9 @@ export default function VehicleRefuelingDetail({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div
-        className="rounded-lg overflow-hidden"
+        className="rounded-none overflow-hidden"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
@@ -87,7 +87,7 @@ export default function VehicleRefuelingDetail({
             className="text-lg font-semibold leading-snug m-0"
             style={{ color: tokens.colorTextPrimary }}
           >
-            Vehicle Refueling â€” {refueling.vehicle?.plateNumber}
+            Vehicle Refueling â€?{refueling.vehicle?.plateNumber}
           </h2>
           <p
             className="mt-1 text-sm m-0"
@@ -126,7 +126,7 @@ export default function VehicleRefuelingDetail({
           </MetaItem>
           <MetaItem label="Vehicle">
             {refueling.vehicle
-              ? `${refueling.vehicle.plateNumber} â€” ${refueling.vehicle.make} ${refueling.vehicle.model}`
+              ? `${refueling.vehicle.plateNumber} â€?${refueling.vehicle.make} ${refueling.vehicle.model}`
               : '-'}
           </MetaItem>
           {refueling.driver ? (

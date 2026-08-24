@@ -14,7 +14,7 @@ export default function RejectedBanner({
     <Alert
       type="error"
       showIcon
-      style={{ marginBottom: 16 }}
+      style={{ marginBottom: 0 }}
       title="This request was rejected"
       description={
         note?.trim() ? (

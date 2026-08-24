@@ -25,6 +25,7 @@ import VehicleApplicationDetail from '@/components/modules/approvals/detail/Vehi
 import VehicleRefuelingDetail from '@/components/modules/approvals/detail/VehicleRefuelingDetail';
 import OfficialSealDetail from '@/components/modules/approvals/detail/OfficialSealDetail';
 import ProjectSealDetail from '@/components/modules/approvals/detail/ProjectSealDetail';
+import InspectionRepairDetail from '@/components/modules/approvals/detail/InspectionRepairDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
@@ -190,6 +191,16 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       }
       return (
         <ProjectSealDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    case 'INSPECTION_REPAIR':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <InspectionRepairDetail
           approvalRequestId={request.id}
           sourceId={sourceId}
         />
@@ -380,7 +391,7 @@ export default function ApprovalDetailPageContent({
 
   if (detailQuery.isLoading && !request) {
     return (
-      <div className="flex justify-center p-12">
+      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
         <Spin />
       </div>
     );
@@ -392,7 +403,7 @@ export default function ApprovalDetailPageContent({
         ? detailQuery.error.message
         : t('pages.approvals.notFound');
     return (
-      <div className="flex flex-col gap-4">
+      <div className="erp-pro-list-page flex flex-col gap-3">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
@@ -407,7 +418,7 @@ export default function ApprovalDetailPageContent({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="text"
@@ -470,8 +481,8 @@ export default function ApprovalDetailPageContent({
         <RejectedBanner note={rejectNote} />
       ) : null}
 
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-w-0 flex-col gap-4">
+      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col gap-3">
           {renderTypedDetail(request)}
 
           {isRequester && request.status === 'RETURNED' ? (

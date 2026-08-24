@@ -40,7 +40,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Typed leave body for Approvals detail â€” editable when RETURNED by requester.
+ * Typed leave body for Approvals detail â€?editable when RETURNED by requester.
  */
 export default function LeaveRequestDetail({
   sourceId,
@@ -59,7 +59,7 @@ export default function LeaveRequestDetail({
 
   if (detailQuery.isLoading && !leave) {
     return (
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-6">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] p-6">
         <Skeleton active paragraph={{ rows: 6 }} />
       </div>
     );
@@ -106,8 +106,8 @@ export default function LeaveRequestDetail({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+    <div className="flex flex-col gap-3">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
         <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -215,7 +215,7 @@ export default function LeaveRequestDetail({
               </MetaItem>
               <MetaItem label="Reason">
                 {leave.reason?.trim() || (
-                  <span className="text-[var(--color-text-tertiary)]">â€”</span>
+                  <span className="text-[var(--color-text-tertiary)]">â€?/span>
                 )}
               </MetaItem>
             </div>

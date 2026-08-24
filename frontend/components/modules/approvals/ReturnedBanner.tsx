@@ -16,7 +16,7 @@ export default function ReturnedBanner({
       type="warning"
       showIcon
       style={{
-        marginBottom: 16,
+        marginBottom: 0,
         borderColor: tokens.colorPrimary,
         background: tokens.colorPrimaryLight,
       }}

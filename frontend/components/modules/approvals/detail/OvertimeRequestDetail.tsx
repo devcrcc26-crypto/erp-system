@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Skeleton, Table } from 'antd';
+import { Alert, Button, Skeleton } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
 import {
@@ -8,6 +8,7 @@ import {
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -41,7 +42,7 @@ export default function OvertimeRequestDetail({
 
   if (detailQuery.isLoading && !sheet) {
     return (
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-3 py-4 sm:px-5">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] px-3 py-4 sm:px-5">
         <Skeleton active paragraph={{ rows: 6 }} />
       </div>
     );
@@ -95,14 +96,14 @@ export default function OvertimeRequestDetail({
       render: (_: unknown, row: OvertimeEntry) => (
         <AttachmentDownloadList
           documents={row.documents}
-          emptyLabel="â€”"
+          emptyLabel="??
         />
       ),
     },
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {canEdit ? (
         <Alert
           type="info"
@@ -168,10 +169,12 @@ export default function OvertimeRequestDetail({
       />
 
       <SectionCard title="Entries" bodyClassName="px-3 py-4 sm:px-5">
-        <Table<OvertimeEntry>
+        <DataTable<OvertimeEntry>
           rowKey="id"
+          className="erp-pro-table"
           size="small"
           pagination={false}
+          scroll={false}
           columns={columns}
           dataSource={sheet.entries ?? []}
         />

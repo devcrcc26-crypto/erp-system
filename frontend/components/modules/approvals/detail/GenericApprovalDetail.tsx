@@ -30,7 +30,7 @@ export default function GenericApprovalDetail({
     }));
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <SectionCard
         title={t('pages.approvals.requestDetails')}
         bodyClassName="px-3 py-4 sm:px-5"

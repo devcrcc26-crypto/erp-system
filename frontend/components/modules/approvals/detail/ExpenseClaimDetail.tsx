@@ -1,12 +1,13 @@
 'use client';
 
-import { Alert, Skeleton, Table } from 'antd';
+import { Alert, Skeleton } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   MetaItem,
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -37,7 +38,7 @@ export default function ExpenseClaimDetail({
 
   if (detailQuery.isLoading && !claim) {
     return (
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-6">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] p-6">
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -93,9 +94,9 @@ export default function ExpenseClaimDetail({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {/* Header */}
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
         <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
@@ -140,12 +141,14 @@ export default function ExpenseClaimDetail({
       ) : null}
 
       <SectionCard title="Expense Items" bodyClassName="px-3 py-4 sm:px-5">
-        <Table<ExpenseClaimItem>
+        <DataTable<ExpenseClaimItem>
           rowKey="id"
+          className="erp-pro-table"
           size="small"
           columns={columns}
           dataSource={claim.items}
           pagination={false}
+          scroll={false}
         />
       </SectionCard>
     </div>

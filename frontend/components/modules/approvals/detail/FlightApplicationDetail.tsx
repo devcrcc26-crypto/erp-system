@@ -92,7 +92,7 @@ export default function FlightApplicationDetail({
 
   if (detailQuery.isLoading && !application) {
     return (
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-6">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] p-6">
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -142,9 +142,9 @@ export default function FlightApplicationDetail({
         : [];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {/* Header */}
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
         <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
@@ -212,9 +212,9 @@ export default function FlightApplicationDetail({
       </div>
 
       {canAcknowledge && currentUserPassenger ? (
-        <div className="rounded-lg border border-[var(--color-amber-400)] bg-[var(--color-amber-50)] px-3 py-4 sm:px-5">
+        <div className="rounded-none border border-[var(--color-amber-400)] bg-[var(--color-amber-50)] px-3 py-4 sm:px-5">
           <p className="text-sm font-semibold text-[var(--color-amber-400)] m-0 mb-1">
-            Your ticket is ready â€” please acknowledge receipt
+            Your ticket is ready â€?please acknowledge receipt
           </p>
           <p className="text-xs text-[var(--color-text-secondary)] m-0 mb-3">
             Download your ticket below, then confirm you have received it.
@@ -321,7 +321,7 @@ export default function FlightApplicationDetail({
                   {formatProjectDate(application.returnDate)}
                 </span>
               ) : (
-                'â€”'
+                'â€?
               )}
             </MetaItem>
           </div>
@@ -382,7 +382,7 @@ export default function FlightApplicationDetail({
             icon={<FileText size={15} />}
             title="Purpose & Notes"
           />
-          <div className="ml-0 sm:ml-[23px] flex flex-col gap-4">
+          <div className="ml-0 sm:ml-[23px] flex flex-col gap-3">
             <MetaItem label="Purpose">
               <p className="whitespace-pre-wrap leading-relaxed m-0">
                 {application.purpose}

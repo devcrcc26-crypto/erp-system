@@ -1,12 +1,13 @@
 'use client';
 
-import { Alert, Skeleton, Table } from 'antd';
+import { Alert, Skeleton } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   MetaItem,
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -37,7 +38,7 @@ export default function MaterialRequisitionDetail({
   if (detailQuery.isLoading && !requisition) {
     return (
       <div
-        className="rounded-lg p-6"
+        className="rounded-none p-6"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
@@ -94,9 +95,9 @@ export default function MaterialRequisitionDetail({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div
-        className="rounded-lg overflow-hidden"
+        className="rounded-none overflow-hidden"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
@@ -166,12 +167,14 @@ export default function MaterialRequisitionDetail({
       </SectionCard>
 
       <SectionCard title="Items" bodyClassName="px-3 py-4 sm:px-5">
-        <Table<MaterialRequisitionItem>
+        <DataTable<MaterialRequisitionItem>
           rowKey="id"
+          className="erp-pro-table"
           size="small"
           columns={columns}
           dataSource={requisition.items}
           pagination={false}
+          scroll={false}
         />
       </SectionCard>
 

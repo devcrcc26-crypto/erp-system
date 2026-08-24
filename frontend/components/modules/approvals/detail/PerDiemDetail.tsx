@@ -33,7 +33,7 @@ export default function PerDiemDetail({
 
   if (detailQuery.isLoading && !request) {
     return (
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] p-6">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] p-6">
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -60,9 +60,9 @@ export default function PerDiemDetail({
       : null;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {/* Header */}
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
+      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
         <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
@@ -110,7 +110,7 @@ export default function PerDiemDetail({
             {request.destinationCategory}
           </MetaItem>
           <MetaItem label="Dates">
-            {formatProjectDate(request.startDate)} â€“ {formatProjectDate(request.endDate)}
+            {formatProjectDate(request.startDate)} â€?{formatProjectDate(request.endDate)}
           </MetaItem>
           {linkedTravel ? (
             <div className="col-span-1 sm:col-span-2">

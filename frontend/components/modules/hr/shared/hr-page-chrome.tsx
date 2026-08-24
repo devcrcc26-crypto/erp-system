@@ -94,7 +94,7 @@ export function SummaryStrip({
       {items.map(({ label, value, emphasize }) => (
         <div
           key={label}
-          className="min-w-0 rounded-lg border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-4"
+          className="min-w-0 rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-4"
         >
           <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
             {label}

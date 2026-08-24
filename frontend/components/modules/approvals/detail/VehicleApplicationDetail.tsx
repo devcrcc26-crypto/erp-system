@@ -32,7 +32,7 @@ export default function VehicleApplicationDetail({
   if (detailQuery.isLoading && !application) {
     return (
       <div
-        className="rounded-lg p-6"
+        className="rounded-none p-6"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
@@ -58,9 +58,9 @@ export default function VehicleApplicationDetail({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div
-        className="rounded-lg overflow-hidden"
+        className="rounded-none overflow-hidden"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
@@ -87,7 +87,7 @@ export default function VehicleApplicationDetail({
             className="text-lg font-semibold leading-snug m-0"
             style={{ color: tokens.colorTextPrimary }}
           >
-            Vehicle Application â€” {application.vehicle?.plateNumber}
+            Vehicle Application â€?{application.vehicle?.plateNumber}
           </h2>
           <p
             className="mt-1 text-sm m-0"
@@ -143,7 +143,7 @@ export default function VehicleApplicationDetail({
           ) : null}
           {application.project ? (
             <MetaItem label="Project">
-              {application.project.projectCode} â€” {application.project.name}
+              {application.project.projectCode} â€?{application.project.name}
             </MetaItem>
           ) : null}
           {application.notes ? (

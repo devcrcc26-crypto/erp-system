@@ -24,7 +24,7 @@ export default function ProjectSealDetail({
 
     if(detailQuery.isLoading && !seal) {
         return (
-            <div className="rounded-lg p-6" style={{ 
+            <div className="rounded-none p-6" style={{ 
                 background: tokens.colorCardBg, 
                 border: `1px solid ${tokens.colorBorder}`,
             }}>
@@ -53,8 +53,8 @@ export default function ProjectSealDetail({
     ) : '-';
 
     return(
-        <div className="flex flex-col gap-4">
-            <div className="rounded-lg overflow-hidden"
+        <div className="flex flex-col gap-3">
+            <div className="rounded-none overflow-hidden"
                 style={{
                     background: tokens.colorCardBg,
                     border: `1px solid ${tokens.colorBorder}`,
