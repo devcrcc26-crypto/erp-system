@@ -11,7 +11,6 @@ import {
   Modal,
   Skeleton,
   Space,
-  Table,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -24,6 +23,7 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -223,7 +223,7 @@ export default function MaterialRequisitionDetailPageContent({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Button
           type="text"
@@ -328,12 +328,14 @@ export default function MaterialRequisitionDetailPageContent({
             {requisition.items.length === 0 ? (
               <Empty description={t('hr.empty.noItems')} />
             ) : (
-              <Table<MaterialRequisitionItem>
+              <DataTable<MaterialRequisitionItem>
                 rowKey="id"
+                className="erp-pro-table"
                 size="small"
                 columns={itemColumns}
                 dataSource={requisition.items}
                 pagination={false}
+                scroll={false}
               />
             )}
           </SectionCard>

@@ -11,7 +11,6 @@ import {
   Modal,
   Skeleton,
   Space,
-  Table,
   Tag,
   Typography,
 } from 'antd';
@@ -24,6 +23,7 @@ import {
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -225,7 +225,7 @@ export default function ConsumablesRequisitionDetailPageContent({
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Button
           type="text"
@@ -342,12 +342,14 @@ export default function ConsumablesRequisitionDetailPageContent({
               <Empty description={t('hr.empty.noItems')} />
             ) : (
               <>
-                <Table<ConsumablesRequisitionItem>
+                <DataTable<ConsumablesRequisitionItem>
                   rowKey="id"
+                  className="erp-pro-table"
                   size="small"
                   columns={itemColumns}
                   dataSource={requisition.items}
                   pagination={false}
+                  scroll={false}
                 />
                 {requisition.items.length >= CONSUMABLES_MAX_ITEMS ? (
                   <Typography.Text type="secondary" className="mt-2 block">

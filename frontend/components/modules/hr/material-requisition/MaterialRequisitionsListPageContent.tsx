@@ -1,13 +1,20 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Select } from 'antd';
-import { InboxOutlined, PlusOutlined } from '@ant-design/icons';
+import { Alert, Button, DatePicker, Select, Spin, Tooltip } from 'antd';
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
+  InboxOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
+import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -29,6 +36,7 @@ import {
 } from '@/lib/utils/material-requisition-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { tokens } from '@/lib/theme/tokens';
 
 const { RangePicker } = DatePicker;
 
@@ -91,9 +99,59 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
     { enabled: canViewHr },
   );
   const projectsQuery = useAllProjects({}, canViewHr);
+  const pendingStatuses = useMemo(
+    () => ['DRAFT', 'SUBMITTED', 'IN_REVIEW'] as MaterialRequisitionStatus[],
+    [],
+  );
+  const countsBaseParams = useMemo(
+    () => ({
+      search: search.trim() || undefined,
+      employeeId: canViewHr ? employeeId : undefined,
+      projectId: projectFilter,
+      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+    }),
+    [search, canViewHr, employeeId, projectFilter, dateRange],
+  );
+  const totalCountQuery = useMaterialRequisitions(
+    { page: 1, limit: 1, ...countsBaseParams },
+    true,
+  );
+  const pendingCountQuery = useMaterialRequisitions(
+    { page: 1, limit: 1, status: pendingStatuses, ...countsBaseParams },
+    true,
+  );
+  const approvedCountQuery = useMaterialRequisitions(
+    { page: 1, limit: 1, status: ['APPROVED'], ...countsBaseParams },
+    true,
+  );
+  const rejectedCountQuery = useMaterialRequisitions(
+    { page: 1, limit: 1, status: ['REJECTED'], ...countsBaseParams },
+    true,
+  );
 
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
+  const pageTitle = useMemo(
+    () =>
+      canViewHr
+        ? t('pages.hr.materialRequisition.listTitle')
+        : t('pages.hr.materialRequisition.myListTitle'),
+    [canViewHr, t],
+  );
+  const pageDescription = useMemo(
+    () =>
+      canViewHr
+        ? t('pages.hr.materialRequisition.listDescription')
+        : t('pages.hr.materialRequisition.myListDescription'),
+    [canViewHr, t],
+  );
+  const statusCounts = {
+    all: totalCountQuery.data?.meta?.total ?? rows.length,
+    pending: pendingCountQuery.data?.meta?.total ?? 0,
+    approved: approvedCountQuery.data?.meta?.total ?? 0,
+    rejected: rejectedCountQuery.data?.meta?.total ?? 0,
+  };
 
   const columns: ColumnsType<MaterialRequisitionListItem> = useMemo(
     () => [
@@ -167,16 +225,26 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
   );
 
   if (listQuery.isLoading && !listQuery.data) {
-    return <PageLoadingSkeleton />;
+    return (
+      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+        <Spin />
+      </div>
+    );
   }
 
+  const hasFilters =
+    Boolean(search.trim()) ||
+    statusFilter.length > 0 ||
+    employeeId !== undefined ||
+    projectFilter !== undefined ||
+    Boolean(dateRange?.[0] || dateRange?.[1]);
+
   return (
-    <div>
+    <div className="erp-pro-list-page flex flex-col gap-3">
       {listQuery.isError ? (
         <Alert
           type="error"
           showIcon
-          style={{ marginBottom: 16 }}
           message={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
@@ -185,105 +253,160 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
-        <ListSearchInput
-          committedValue={search}
-          onCommit={(value) => {
-            setSearch(value);
-            resetPage();
-          }}
-          placeholder={t('hr.placeholder.searchMaterial')}
-          style={{ width: 220 }}
-        />
+      <div>
+        <h1
+          className="m-0 text-xl font-semibold tracking-tight"
+          style={{ color: tokens.colorTextPrimary, fontFamily: tokens.fontFamily }}
+        >
+          {pageTitle}
+        </h1>
+        <p className="mb-0 mt-1 text-sm" style={{ color: tokens.colorTextSecondary }}>
+          {pageDescription}
+        </p>
+      </div>
 
-        <Select
-          mode="multiple"
-          allowClear
-          placeholder={t('hr.placeholder.status')}
-          options={statusOptions}
-          value={statusFilter}
-          onChange={(v) => {
-            setStatusFilter(v);
-            resetPage();
-          }}
-          style={{ minWidth: 160 }}
-          maxTagCount="responsive"
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard
+          label={t('pages.approvals.stats.total')}
+          value={statusCounts.all}
+          color="teal"
+          icon={<InboxOutlined size={14} />}
         />
+        <StatCard
+          label={t('pages.approvals.stats.pending')}
+          value={statusCounts.pending}
+          color="amber"
+          icon={<ClockCircleOutlined size={14} />}
+        />
+        <StatCard
+          label={t('pages.approvals.stats.approved')}
+          value={statusCounts.approved}
+          color="blue"
+          icon={<CheckCircleOutlined size={14} />}
+        />
+        <StatCard
+          label={t('pages.approvals.stats.rejected')}
+          value={statusCounts.rejected}
+          color="red"
+          icon={<CloseCircleOutlined size={14} />}
+        />
+      </div>
 
-        {canViewHr ? (
-          <Select
-            showSearch
-            allowClear
-            placeholder={t('hr.placeholder.employee')}
-            loading={usersQuery.isLoading}
-            value={employeeId}
-            onChange={(v) => {
-              setEmployeeId(v);
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
+        <div className="erp-filter-bar">
+          <ListSearchInput
+            committedValue={search}
+            onCommit={(value) => {
+              setSearch(value);
               resetPage();
             }}
-            style={{ width: 200 }}
-            filterOption={(input, option) =>
-              String(option?.label ?? '')
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-            options={
-              usersQuery.data?.data?.map((u) => ({
-                value: u.id,
-                label: `${u.firstName} ${u.lastName}`,
-              })) ?? []
-            }
+            placeholder={t('hr.placeholder.searchMaterial')}
+            className="w-full min-w-0 sm:w-72"
           />
-        ) : null}
 
-        {canViewHr ? (
           <Select
-            showSearch
+            mode="multiple"
             allowClear
-            placeholder={t('hr.placeholder.project')}
-            loading={projectsQuery.isLoading}
-            value={projectFilter}
+            placeholder={t('hr.placeholder.status')}
+            options={statusOptions}
+            value={statusFilter}
             onChange={(v) => {
-              setProjectFilter(v);
+              setStatusFilter(v);
               resetPage();
             }}
-            style={{ width: 200 }}
-            filterOption={(input, option) =>
-              String(option?.label ?? '')
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-            options={
-              projectsQuery.data?.data?.map((p) => ({
-                value: p.id,
-                label: p.projectCode ? `[${p.projectCode}] ${p.name}` : p.name,
-              })) ?? []
-            }
+            maxTagCount="responsive"
+            className="w-full min-w-0 sm:min-w-[180px] sm:w-auto"
           />
-        ) : null}
 
-        <RangePicker
-          style={{ width: 230 }}
-          value={dateRange}
-          onChange={(v) => {
-            setDateRange(
-              v as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null,
-            );
-            resetPage();
-          }}
-          placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
-        />
+          {canViewHr ? (
+            <Select
+              showSearch
+              allowClear
+              placeholder={t('hr.placeholder.employee')}
+              loading={usersQuery.isLoading}
+              value={employeeId}
+              onChange={(v) => {
+                setEmployeeId(v);
+                resetPage();
+              }}
+              className="w-full min-w-0 sm:w-56"
+              filterOption={(input, option) =>
+                String(option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              options={
+                usersQuery.data?.data?.map((u) => ({
+                  value: u.id,
+                  label: `${u.firstName} ${u.lastName}`,
+                })) ?? []
+              }
+            />
+          ) : null}
 
-        <div className="ml-auto">
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() =>
-              router.push('/approvals/new/material-requisition')
-            }
-          >
-            {t('hr.buttons.newMaterialRequisition')}
-          </Button>
+          {canViewHr ? (
+            <Select
+              showSearch
+              allowClear
+              placeholder={t('hr.placeholder.project')}
+              loading={projectsQuery.isLoading}
+              value={projectFilter}
+              onChange={(v) => {
+                setProjectFilter(v);
+                resetPage();
+              }}
+              className="w-full min-w-0 sm:w-56"
+              filterOption={(input, option) =>
+                String(option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              options={
+                projectsQuery.data?.data?.map((p) => ({
+                  value: p.id,
+                  label: p.projectCode ? `[${p.projectCode}] ${p.name}` : p.name,
+                })) ?? []
+              }
+            />
+          ) : null}
+
+          <RangePicker
+            value={dateRange}
+            className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
+            onChange={(v) => {
+              setDateRange(v as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null);
+              resetPage();
+            }}
+            placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
+          />
+
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              onClick={() => {
+                setSearch('');
+                setStatusFilter([]);
+                setEmployeeId(undefined);
+                setProjectFilter(undefined);
+                setDateRange(null);
+                resetPage();
+              }}
+              disabled={!hasFilters}
+              style={{ borderRadius: 0 }}
+            >
+              {t('common.reset')}
+            </Button>
+
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                style={{ borderRadius: 0 }}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+          </div>
         </div>
       </div>
 
@@ -291,25 +414,80 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
         <TableUpdatingIndicator active={listQuery.isFetching} />
       ) : null}
 
-      <DataTable<MaterialRequisitionListItem>
-        rowKey="id"
-        columns={columns}
-        dataSource={rows}
-        loading={listQuery.isLoading}
-        pagination={meta ? bindMeta(meta) : false}
-        onRow={(row) => ({
-          onClick: () => router.push(`/hr/material-requisition/${row.id}`),
-          style: { cursor: 'pointer' },
-        })}
-        locale={{
-          emptyText: (
-            <TableEmptyState
-              icon={<InboxOutlined />}
-              title={t('hr.empty.noMaterialRequisitions')}
-            />
-          ),
-        }}
-      />
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <InboxOutlined style={{ color: tokens.colorPrimary, fontSize: 16 }} />
+            <h3 className="m-0 text-sm font-semibold" style={{ color: tokens.colorTextPrimary }}>
+              {pageTitle}
+            </h3>
+            <span className="text-xs" style={{ color: tokens.colorTextTertiary }}>
+              {meta?.total ?? rows.length}
+            </span>
+          </div>
+
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => router.push('/approvals/new/material-requisition')}
+            style={{ borderRadius: 0 }}
+          >
+            {t('hr.buttons.newMaterialRequisition')}
+          </Button>
+        </div>
+
+        <div className="px-0">
+          <DataTable<MaterialRequisitionListItem>
+            rowKey="id"
+            className="erp-pro-table"
+            size="small"
+            columns={columns}
+            dataSource={rows}
+            scroll={false}
+            loading={listQuery.isFetching && !listQuery.isLoading}
+            pagination={
+              meta
+                ? {
+                    ...bindMeta(meta),
+                    pageSizeOptions: ['10', '20', '50', '100'],
+                  }
+                : undefined
+            }
+            onRow={(row) => ({
+              onClick: () => router.push(`/hr/material-requisition/${row.id}`),
+              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+            })}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<InboxOutlined />}
+                  title={t('hr.empty.noMaterialRequisitions')}
+                  description={pageDescription}
+                  action={
+                    hasFilters
+                      ? {
+                          label: t('common.reset'),
+                          onClick: () => {
+                            setSearch('');
+                            setStatusFilter([]);
+                            setEmployeeId(undefined);
+                            setProjectFilter(undefined);
+                            setDateRange(null);
+                            resetPage();
+                          },
+                        }
+                      : {
+                          label: t('hr.buttons.newMaterialRequisition'),
+                          onClick: () =>
+                            router.push('/approvals/new/material-requisition'),
+                        }
+                  }
+                />
+              ),
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
