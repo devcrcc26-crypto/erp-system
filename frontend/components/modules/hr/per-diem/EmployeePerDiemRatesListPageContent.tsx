@@ -10,7 +10,7 @@ import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanManageEmployeePerDiemRates } from '@/hooks/use-auth-capabilities';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -37,7 +37,7 @@ function toRateNumber(value: number | string | null | undefined): number | null 
 export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
-  const canViewHr = useCanViewHr();
+  const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
     [params, search],
   );
 
-  const listQuery = useEmployeePerDiemRatesList(listParams, canViewHr);
+  const listQuery = useEmployeePerDiemRatesList(listParams, canManagePerDiemRates);
 
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
@@ -147,7 +147,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
     [categoryColumns, router, t],
   );
 
-  if (!canViewHr) {
+  if (!canManagePerDiemRates) {
     return (
       <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
     );
@@ -205,7 +205,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
         title={t('hr.dialog.editEmployeePerDiemRates', {
           name: editingEmployeeName,
         })}
-        width={720}
+        size={720}
         destroyOnHidden
         onClose={() => {
           setEditingEmployeeId(null);

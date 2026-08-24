@@ -17,7 +17,7 @@ import {
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanManageEmployeePerDiemRates, useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { EmergencyContact, UserDetail } from '@/lib/api/types';
@@ -82,6 +82,7 @@ export default function EmployeeDetailPageContent({
   const searchParams = useSearchParams();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
+  const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
   const currentUserQuery = useCurrentUser();
   const detailQuery = useUser(userId);
   const deleteUser = useDeleteUser();
@@ -90,7 +91,7 @@ export default function EmployeeDetailPageContent({
 
   const activeTab = resolveProfileTab(searchParams.get('tab'));
   const isOwnProfile = currentUserQuery.data?.id === userId;
-  const showPerDiemTab = canViewHr || isOwnProfile;
+  const showPerDiemTab = isOwnProfile || canManagePerDiemRates;
 
   function setActiveTab(tab: ProfileTab): void {
     const params = new URLSearchParams(searchParams.toString());
@@ -363,7 +364,7 @@ export default function EmployeeDetailPageContent({
       ) : activeTab === 'perDiem' ? (
         <EmployeePerDiemRatesSection
           employeeId={user.id}
-          editable={canViewHr}
+          editable={canManagePerDiemRates}
         />
       ) : (
               <div className="flex flex-col gap-3">

@@ -9,8 +9,10 @@ import {
 import type { SupportedCurrency } from '@/lib/api/per-diem.types';
 import {
   useEmployeePerDiemRate,
+  useMyEmployeePerDiemRate,
   useUpsertEmployeePerDiemRate,
 } from '@/lib/query/per-diem';
+import { useCurrentUser } from '@/lib/query/profile';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
@@ -42,7 +44,14 @@ export default function EmployeePerDiemRatesSection({
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<FormValues>();
-  const rateQuery = useEmployeePerDiemRate(employeeId, Boolean(employeeId));
+  const currentUserQuery = useCurrentUser();
+  const isSelf = currentUserQuery.data?.id === employeeId;
+  const hrRateQuery = useEmployeePerDiemRate(
+    employeeId,
+    Boolean(employeeId) && !isSelf,
+  );
+  const selfRateQuery = useMyEmployeePerDiemRate(Boolean(employeeId) && isSelf);
+  const rateQuery = isSelf ? selfRateQuery : hrRateQuery;
   const saveMutation = useUpsertEmployeePerDiemRate(employeeId);
   const currency =
     Form.useWatch('currency', form) ?? rateQuery.data?.currency ?? 'ETB';

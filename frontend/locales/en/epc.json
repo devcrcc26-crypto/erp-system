@@ -1145,7 +1145,8 @@
     "dateMdy": "MM/DD/YYYY",
     "dateIso": "YYYY-MM-DD",
     "tabAccount": "Account",
-    "tabLeave": "Leave"
+    "tabLeave": "Leave",
+    "tabPerDiem": "Per Diem"
   },
   "settings": {
     "title": "Settings",

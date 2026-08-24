@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { Alert, Button, Form, Input, Select, Spin } from 'antd';
-import { CalendarOutlined, MailOutlined, UserOutlined } from '@ant-design/icons';
+import { CalendarOutlined, MailOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import { User } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
+import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import {
   MetaItem,
@@ -14,6 +15,7 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import { useCanManageEmployeePerDiemRates } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import { tokens } from '@/lib/theme/tokens';
@@ -131,6 +133,7 @@ function ProfileIdentityHero({
 
 export default function ProfilePageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
   const [accountForm] = Form.useForm<AccountFormValues>();
   const [prefsForm] = Form.useForm<PreferencesFormValues>();
   const [passwordForm] = Form.useForm<PasswordFormValues>();
@@ -145,7 +148,7 @@ export default function ProfilePageContent(): React.ReactNode {
 
   const profile = profileQuery.data;
 
-  const [activeTab, setActiveTab] = useState<'account' | 'leave'>('account');
+  const [activeTab, setActiveTab] = useState<'account' | 'leave' | 'perDiem'>('account');
   const [showChangeEmail, setShowChangeEmail] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [accountSuccess, setAccountSuccess] = useState<string | null>(null);
@@ -676,9 +679,25 @@ export default function ProfilePageContent(): React.ReactNode {
           <CalendarOutlined />
           {t('profile.tabLeave')}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'perDiem'}
+          onClick={() => setActiveTab('perDiem')}
+        >
+          <WalletOutlined />
+          {t('profile.tabPerDiem')}
+        </button>
       </div>
       {activeTab === 'leave' ? (
         <EmployeeLeaveProfileSection mode="self" />
+      ) : activeTab === 'perDiem' ? (
+        profile ? (
+          <EmployeePerDiemRatesSection
+            employeeId={profile.id}
+            editable={canManagePerDiemRates}
+          />
+        ) : null
       ) : (
         accountTab
       )}

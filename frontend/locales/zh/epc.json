@@ -1144,7 +1144,8 @@
     "dateMdy": "月/日/年",
     "dateIso": "年-月-日",
     "tabAccount": "账户",
-    "tabLeave": "请假"
+    "tabLeave": "请假",
+    "tabPerDiem": "差旅补贴"
   },
   "settings": {
     "title": "设置",

@@ -356,7 +356,7 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.employeePerDiemRates',
         href: '/hr/employee-per-diem-rates',
         iconKey: 'hr-per-diem-rates',
-        visible: canViewHr,
+        visible: canViewHr || canManageUsers,
       },
       {
         key: '/hr/purchase-requests',

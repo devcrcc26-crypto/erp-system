@@ -139,7 +139,16 @@ export function useCanManageUsers(): boolean {
   return useAuthStore((state) => state.capabilities.canManageUsers);
 }
 
-/** True when the session can manage per diem destination rates (HR Officer / System Administrator). */
+/**
+ * True when the session can manage employee per diem rates (HR module or user admin).
+ */
+export function useCanManageEmployeePerDiemRates(): boolean {
+  return useAuthStore(
+    (state) =>
+      state.capabilities.canViewHr || state.capabilities.canManageUsers,
+  );
+}
+
 /** True when the session can view roles / settings administration. */
 export function useCanManageRoles(): boolean {
   const caps = useAuthStore((state) => state.capabilities);
