@@ -76,27 +76,29 @@ export class InspectionRepairService {
     const id = randomUUID();
     const now = new Date();
 
+    const data = {
+      id,
+      companyId,
+      employeeId: userId,
+      assetId: resolved.assetId,
+      deviceName: resolved.deviceName,
+      location: dto.location.trim(),
+      make: resolved.make,
+      model: resolved.model,
+      year: resolved.year,
+      description: dto.description.trim(),
+      solution: dto.solution?.trim() || null,
+      urgency: dto.urgency,
+      inspectionType: dto.inspectionType,
+      requestNumber,
+      status: InspectionRepairStatus.SUBMITTED,
+      submittedAt: now,
+      createdBy: userId,
+      updatedBy: userId,
+    } as Prisma.InspectionRepairUncheckedCreateInput;
+
     return this.prisma.inspectionRepair.create({
-      data: {
-        id,
-        companyId,
-        employeeId: userId,
-        assetId: resolved.assetId,
-        deviceName: resolved.deviceName,
-        location: dto.location.trim(),
-        make: resolved.make,
-        model: resolved.model,
-        year: resolved.year,
-        description: dto.description.trim(),
-        solution: dto.solution?.trim() || null,
-        urgency: dto.urgency,
-        inspectionType: dto.inspectionType,
-        requestNumber,
-        status: InspectionRepairStatus.SUBMITTED,
-        submittedAt: now,
-        createdBy: userId,
-        updatedBy: userId,
-      },
+      data,
       include: this.detailInclude(),
     });
   }
@@ -177,30 +179,32 @@ export class InspectionRepairService {
 
     const resolved = await this.resolveAssetDetails(dto, companyId, request.employeeId);
 
+    const data = {
+      assetId: resolved.assetId,
+      deviceName: resolved.deviceName,
+      location: dto.location.trim(),
+      make: resolved.make,
+      model: resolved.model,
+      year: resolved.year,
+      description: dto.description.trim(),
+      solution: dto.solution?.trim() || null,
+      urgency: dto.urgency,
+      inspectionType: dto.inspectionType,
+      updatedBy: userId,
+      ...(dto.status ? { status: dto.status } : {}),
+      ...(dto.completedAt
+        ? { completedAt: new Date(dto.completedAt) }
+        : dto.status === InspectionRepairStatus.REPAIRED
+          ? { completedAt: new Date() }
+          : {}),
+      ...(dto.status === InspectionRepairStatus.IN_REPAIR
+        ? { completedAt: null }
+        : {}),
+    } as Prisma.InspectionRepairUncheckedUpdateInput;
+
     return this.prisma.inspectionRepair.update({
       where: { id },
-      data: {
-        assetId: resolved.assetId,
-        deviceName: resolved.deviceName,
-        location: dto.location.trim(),
-        make: resolved.make,
-        model: resolved.model,
-        year: resolved.year,
-        description: dto.description.trim(),
-        solution: dto.solution?.trim() || null,
-        urgency: dto.urgency,
-        inspectionType: dto.inspectionType,
-        ...(dto.status ? { status: dto.status } : {}),
-        ...(dto.completedAt
-          ? { completedAt: new Date(dto.completedAt) }
-          : dto.status === InspectionRepairStatus.REPAIRED
-            ? { completedAt: new Date() }
-            : {}),
-        ...(dto.status === InspectionRepairStatus.IN_REPAIR
-          ? { completedAt: null }
-          : {}),
-        updatedBy: userId,
-      },
+      data,
       include: this.detailInclude(),
     });
   }
@@ -286,7 +290,7 @@ export class InspectionRepairService {
           },
         },
       },
-    } satisfies Prisma.InspectionRepairInclude;
+    } as Prisma.InspectionRepairInclude;
   }
 
   private async resolveAssetDetails(
@@ -296,8 +300,8 @@ export class InspectionRepairService {
   ): Promise<{
     assetId: string | null;
     deviceName: string;
-    make: string | null;
-    model: string | null;
+    make: string;
+    model: string;
     year: number | null;
   }> {
     if (dto.assetId) {
@@ -332,8 +336,8 @@ export class InspectionRepairService {
     return {
       assetId: null,
       deviceName: dto.deviceName.trim(),
-      make: dto.make?.trim() || null,
-      model: dto.model?.trim() || null,
+      make: dto.make?.trim() ?? '',
+      model: dto.model?.trim() ?? '',
       year: dto.year ?? null,
     };
   }
