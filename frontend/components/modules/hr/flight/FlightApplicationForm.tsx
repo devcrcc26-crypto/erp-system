@@ -244,7 +244,7 @@ export function FlightApplicationForm({
         <Alert
           type="error"
           showIcon
-          className="mx-6 mt-4 sm:mx-8"
+          className="mx-0 mt-0"
           message={
             submitMutation.error instanceof ApiRequestError
               ? submitMutation.error.message
@@ -257,6 +257,8 @@ export function FlightApplicationForm({
         onSubmit={handleSubmit}
         submitLabel={resolvedSubmitLabel}
         isSubmitting={submitMutation.isPending}
+        contentVariant="sections"
+        compact
       />
     </div>
   );

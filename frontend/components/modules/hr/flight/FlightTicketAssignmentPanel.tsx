@@ -332,7 +332,7 @@ export default function FlightTicketAssignmentPanel({
 
   return (
     <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-      <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)] flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] m-0">
           {t('hr.table.ticket')}
         </h3>
@@ -359,7 +359,7 @@ export default function FlightTicketAssignmentPanel({
       </div>
 
       {/* Combined ticket */}
-      <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+      <div className="border-b border-[rgba(0,0,0,0.06)] px-3 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
@@ -465,7 +465,7 @@ export default function FlightTicketAssignmentPanel({
 
       {/* Individual tickets */}
       <div>
-        <div className="px-5 py-3 bg-[var(--color-surface-secondary)] border-b border-[rgba(0,0,0,0.06)]">
+        <div className="border-b border-[rgba(0,0,0,0.06)] bg-[var(--color-surface-secondary)] px-3 py-3 sm:px-5">
           <div className="flex items-center gap-2 mb-0.5">
             <Users
               size={15}
@@ -488,7 +488,7 @@ export default function FlightTicketAssignmentPanel({
               hasOwnTicket || Boolean(application.combinedTicketDocumentId);
 
             return (
-              <li key={row.id} className="px-5 py-4">
+              <li key={row.id} className="px-3 py-4 sm:px-5">
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">

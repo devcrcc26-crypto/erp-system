@@ -37,8 +37,8 @@ export default function FlightCurrentStepBanner({
     <div
       className={
         embedded
-          ? 'flex items-start gap-3 px-5 py-3'
-          : 'flex items-start gap-3 px-5 py-3 rounded-lg border'
+          ? 'flex items-start gap-3 px-3 py-3 sm:px-5'
+          : 'flex items-start gap-3 rounded-lg border px-3 py-3 sm:px-5'
       }
       style={{
         background: style.background,

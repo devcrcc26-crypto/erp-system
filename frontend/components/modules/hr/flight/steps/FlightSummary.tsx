@@ -35,7 +35,7 @@ export default function FlightSummary({
         body: { background: tokens.colorGray50 },
       }}
     >
-      <Descriptions column={2} bordered size="small">
+      <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
         <Descriptions.Item label={t('hr.labels.tripType')}>
           {formatTripType(tripDetails.tripType, t)}
         </Descriptions.Item>

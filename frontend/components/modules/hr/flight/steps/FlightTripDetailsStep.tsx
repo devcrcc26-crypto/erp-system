@@ -41,7 +41,7 @@ export default function FlightTripDetailsStep({
 
   return (
     <div
-      className="rounded-lg p-4"
+      className="rounded-lg p-3 sm:p-4"
       style={{
         border: `1px solid ${tokens.colorBorder}`,
         background: tokens.colorCardBg,

@@ -25,7 +25,7 @@ export default function FlightApplicationFormContent(): React.ReactNode {
   return (
     <HrFormPageShell
       title={t('hr.buttons.newFlightApplication')}
-      description="Complete all steps to submit your flight application for approval."
+      description={t('pages.hr.flight.listDescription')}
       cancelLabel={t('hr.buttons.cancel')}
       cancelHref="/approvals/new"
     >

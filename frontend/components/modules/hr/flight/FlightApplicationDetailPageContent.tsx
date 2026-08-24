@@ -145,17 +145,19 @@ export default function FlightApplicationDetailPageContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <button
-        type="button"
-        onClick={() => router.push('/hr/flight-applications')}
-        className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] self-start transition-colors"
-      >
-        <ArrowLeft size={14} />
-        <span>Flight Applications</span>
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="text"
+          icon={<ArrowLeft size={16} />}
+          onClick={() => router.push('/hr/flight-applications')}
+          style={{ borderRadius: 0 }}
+        >
+          {t('hr.buttons.backToList')}
+        </Button>
+      </div>
 
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-5 py-4">
+      <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
               <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
@@ -281,7 +283,7 @@ export default function FlightApplicationDetailPageContent({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
         <div className="flex flex-col gap-4 min-w-0">
           <SectionCard title={t('hr.labels.travelDetails')}>
-            <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+            <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
               <SubsectionHeader
                 icon={<MapPin size={15} />}
                 title={t('hr.labels.routeSchedule')}
@@ -336,7 +338,7 @@ export default function FlightApplicationDetailPageContent({
               </div>
             </div>
 
-            <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+            <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
               <SubsectionHeader icon={<Plane size={15} />} title={t('hr.labels.flight')} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
                 <MetaItem label={t('hr.labels.tripType')}>
@@ -357,7 +359,7 @@ export default function FlightApplicationDetailPageContent({
               </div>
             </div>
 
-            <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+            <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
               <SubsectionHeader
                 icon={<BedDouble size={15} />}
                 title={t('hr.labels.stayAllowances')}
@@ -395,7 +397,7 @@ export default function FlightApplicationDetailPageContent({
               </div>
             </div>
 
-            <div className="px-5 py-4">
+            <div className="px-3 py-4 sm:px-5">
               <SubsectionHeader
                 icon={<FileText size={15} />}
                 title={t('hr.labels.purpose')}
@@ -449,7 +451,7 @@ export default function FlightApplicationDetailPageContent({
                   (row.tickets?.length ?? 0) > 0;
 
                 return (
-                  <li key={row.id} className="px-5 py-4">
+                  <li key={row.id} className="px-3 py-4 sm:px-5">
                     <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">
@@ -514,7 +516,7 @@ export default function FlightApplicationDetailPageContent({
 
           <SectionCard
             title={t('hr.labels.supportingAttachments')}
-            bodyClassName="px-5 py-4"
+            bodyClassName="px-3 py-4 sm:px-5"
           >
             {application.documents.length > 0 ? (
               <AttachmentDownloadList documents={application.documents} />
@@ -533,7 +535,7 @@ export default function FlightApplicationDetailPageContent({
               currentTier={application.approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-3 py-4 sm:px-5">
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
                 {t('hr.empty.noApprovalChain')}
               </p>
