@@ -88,7 +88,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   const statsQuery = useEmployeePerDiemRatesList(
     {
       page: 1,
-      limit: 500,
+      limit: 100,
       search: search.trim() || undefined,
       sortBy: 'lastName',
       sortOrder: 'asc',

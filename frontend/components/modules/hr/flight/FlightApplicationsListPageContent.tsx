@@ -128,7 +128,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   const needsTicketTab = listTab === 'NEEDS_TICKET' && canViewHr;
 
   const statsQuery = useFlightApplications(
-    { page: 1, limit: 500 },
+    { page: 1, limit: 100 },
     canViewHr || canAccess,
   );
 

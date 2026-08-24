@@ -101,7 +101,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
     [Dayjs | null, Dayjs | null] | null
   >(null);
 
-  const statsQuery = usePerDiemRequests({ page: 1, limit: 500 }, true);
+  const statsQuery = usePerDiemRequests({ page: 1, limit: 100 }, true);
 
   const listParams = useMemo(
     () => ({

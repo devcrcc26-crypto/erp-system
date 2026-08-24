@@ -35,6 +35,8 @@ services:
 
     # NODE_ENV=production omits devDependencies; --include=dev is required for nest build + prisma.
     buildCommand: npm ci --include=dev && npm run build
+    # Apply pending Prisma migrations before traffic (requires DATABASE_URL on session pooler :5432).
+    preDeployCommand: npx prisma migrate deploy
     startCommand: npm run start:prod
 
     healthCheckPath: /api/health

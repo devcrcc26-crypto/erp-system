@@ -2,12 +2,13 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
-  AssetStatus,
-  FolderContextType,
   InspectionRepairStatus,
+  InspectionRepairType,
+  InspectionRepairUrgency,
   Prisma,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -32,8 +33,34 @@ const USER_SELECT = {
   email: true,
 } as const;
 
+type CompatibleInspectionRepairRow = {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  location: string;
+  deviceName: string;
+  description: string;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  urgency: string;
+  solution: string | null;
+  requestNumber: string;
+  inspectionType: string;
+  status: string;
+  submittedAt: Date | null;
+  completedAt: Date | null;
+  createdAt: Date;
+  employeeIdJoin: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+};
+
 @Injectable()
 export class InspectionRepairService {
+  private readonly logger = new Logger(InspectionRepairService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionService: PermissionService,
@@ -79,90 +106,17 @@ export class InspectionRepairService {
     companyId: string,
     userId: string,
   ): Promise<PaginatedResult<unknown>> {
-    const page = filters.page ?? 1;
-    const limit = filters.limit ?? 20;
-    const { skip, take } = buildPrismaPagination(page, limit);
-    const statuses = this.normalizeStatuses(filters.status);
-    const isHrViewer = await this.permissionService.hasPermission(
-      userId,
-      companyId,
-      'hr',
-      'view',
-    );
-
-    const where: Prisma.InspectionRepairWhereInput = {
-      companyId,
-      deletedAt: null,
-      ...(isHrViewer ? {} : { employeeId: userId }),
-      ...(statuses ? { status: { in: statuses } } : {}),
-      ...(isHrViewer && filters.employeeId ? { employeeId: filters.employeeId } : {}),
-      ...(filters.urgency ? { urgency: filters.urgency } : {}),
-      ...(filters.inspectionType ? { inspectionType: filters.inspectionType } : {}),
-      ...(filters.search?.trim()
-        ? {
-            OR: [
-              {
-                requestNumber: {
-                  contains: filters.search.trim(),
-                  mode: 'insensitive',
-                },
-              },
-              {
-                deviceName: {
-                  contains: filters.search.trim(),
-                  mode: 'insensitive',
-                },
-              },
-              {
-                location: {
-                  contains: filters.search.trim(),
-                  mode: 'insensitive',
-                },
-              },
-              {
-                description: {
-                  contains: filters.search.trim(),
-                  mode: 'insensitive',
-                },
-              },
-            ],
-          }
-        : {}),
-      ...(filters.dateFrom || filters.dateTo
-        ? {
-            createdAt: {
-              ...(filters.dateFrom ? { gte: new Date(filters.dateFrom) } : {}),
-              ...(filters.dateTo ? { lte: new Date(filters.dateTo) } : {}),
-            },
-          }
-        : {}),
-    };
-
-    const [rows, total] = await Promise.all([
-      this.prisma.inspectionRepair.findMany({
-        where,
-        skip,
-        take,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          employee: { select: USER_SELECT },
-          asset: {
-            select: {
-              id: true,
-              serialNumber: true,
-              brand: true,
-              model: true,
-              year: true,
-              type: true,
-              status: true,
-            },
-          },
-        },
-      }),
-      this.prisma.inspectionRepair.count({ where }),
-    ]);
-
-    return buildPaginatedResult(rows, total, page, limit);
+    try {
+      return await this.listRequestsViaPrisma(filters, companyId, userId);
+    } catch (error) {
+      if (!this.isSchemaMismatch(error)) {
+        throw error;
+      }
+      this.logger.warn(
+        'InspectionRepair schema is behind the Prisma client; listing without asset join',
+      );
+      return this.listRequestsCompatible(filters, companyId, userId);
+    }
   }
 
   async getRequest(
@@ -170,16 +124,30 @@ export class InspectionRepairService {
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const request = await this.prisma.inspectionRepair.findFirst({
-      where: activeOnly({ id, companyId }),
-      include: this.detailInclude(),
-    });
-    if (!request) {
-      throw new NotFoundException('Inspection and repair request not found');
+    try {
+      const request = await this.prisma.inspectionRepair.findFirst({
+        where: activeOnly({ id, companyId }),
+        include: this.detailInclude(),
+      });
+      if (!request) {
+        throw new NotFoundException('Inspection and repair request not found');
+      }
+      await this.assertCanView(request.employeeId, companyId, userId);
+      return request;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      if (!this.isSchemaMismatch(error)) {
+        throw error;
+      }
+      const request = await this.getRequestCompatible(id, companyId);
+      if (!request) {
+        throw new NotFoundException('Inspection and repair request not found');
+      }
+      await this.assertCanView(request.employeeId as string, companyId, userId);
+      return request;
     }
-
-    await this.assertCanView(request.employeeId, companyId, userId);
-    return request;
   }
 
   async updateRequest(
@@ -398,6 +366,343 @@ export class InspectionRepairService {
         .filter(Boolean) as InspectionRepairStatus[];
     }
     return [status as InspectionRepairStatus];
+  }
+
+  private expandLegacyStatuses(statuses: InspectionRepairStatus[]): string[] {
+    const values = new Set<string>(statuses);
+    if (statuses.includes(InspectionRepairStatus.IN_REPAIR)) {
+      values.add('APPROVED');
+    }
+    if (statuses.includes(InspectionRepairStatus.REJECTED)) {
+      values.add('RETURNED');
+    }
+    return [...values];
+  }
+
+  private mapLegacyStatus(status: string): InspectionRepairStatus {
+    if (status === 'APPROVED') {
+      return InspectionRepairStatus.IN_REPAIR;
+    }
+    if (status === 'RETURNED') {
+      return InspectionRepairStatus.REJECTED;
+    }
+    return status as InspectionRepairStatus;
+  }
+
+  private isSchemaMismatch(error: unknown): boolean {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return ['P2010', 'P2022', 'P2023'].includes(error.code);
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    return /asset_id|InspectionRepairStatus|incompatible value|does not exist/i.test(
+      message,
+    );
+  }
+
+  private async listRequestsViaPrisma(
+    filters: ListInspectionRepairsDto,
+    companyId: string,
+    userId: string,
+  ): Promise<PaginatedResult<unknown>> {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const { skip, take } = buildPrismaPagination(page, limit);
+    const statuses = this.normalizeStatuses(filters.status);
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+
+    const where: Prisma.InspectionRepairWhereInput = {
+      companyId,
+      deletedAt: null,
+      ...(isHrViewer ? {} : { employeeId: userId }),
+      ...(statuses ? { status: { in: statuses } } : {}),
+      ...(isHrViewer && filters.employeeId ? { employeeId: filters.employeeId } : {}),
+      ...(filters.urgency ? { urgency: filters.urgency } : {}),
+      ...(filters.inspectionType ? { inspectionType: filters.inspectionType } : {}),
+      ...(filters.search?.trim()
+        ? {
+            OR: [
+              {
+                requestNumber: {
+                  contains: filters.search.trim(),
+                  mode: 'insensitive',
+                },
+              },
+              {
+                deviceName: {
+                  contains: filters.search.trim(),
+                  mode: 'insensitive',
+                },
+              },
+              {
+                location: {
+                  contains: filters.search.trim(),
+                  mode: 'insensitive',
+                },
+              },
+              {
+                description: {
+                  contains: filters.search.trim(),
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          }
+        : {}),
+      ...(filters.dateFrom || filters.dateTo
+        ? {
+            createdAt: {
+              ...(filters.dateFrom ? { gte: new Date(filters.dateFrom) } : {}),
+              ...(filters.dateTo ? { lte: new Date(filters.dateTo) } : {}),
+            },
+          }
+        : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.inspectionRepair.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          employee: { select: USER_SELECT },
+          asset: {
+            select: {
+              id: true,
+              serialNumber: true,
+              brand: true,
+              model: true,
+              year: true,
+              type: true,
+              status: true,
+            },
+          },
+        },
+      }),
+      this.prisma.inspectionRepair.count({ where }),
+    ]);
+
+    return buildPaginatedResult(rows, total, page, limit);
+  }
+
+  private async listRequestsCompatible(
+    filters: ListInspectionRepairsDto,
+    companyId: string,
+    userId: string,
+  ): Promise<PaginatedResult<unknown>> {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const { skip, take } = buildPrismaPagination(page, limit);
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    const whereSql = this.buildCompatibleWhereSql(
+      filters,
+      companyId,
+      userId,
+      isHrViewer,
+    );
+
+    const [rows, countRows] = await Promise.all([
+      this.prisma.$queryRaw<CompatibleInspectionRepairRow[]>`
+        SELECT
+          ir.id,
+          ir.company_id AS "companyId",
+          ir.employee_id AS "employeeId",
+          ir.location,
+          ir.device_name AS "deviceName",
+          ir.description,
+          ir.make,
+          ir.model,
+          ir.year,
+          ir.urgency::text AS urgency,
+          ir.solution,
+          ir.inspection_repair_number AS "requestNumber",
+          ir.inspection_type::text AS "inspectionType",
+          ir.status::text AS status,
+          ir.submitted_at AS "submittedAt",
+          ir.completed_at AS "completedAt",
+          ir.created_at AS "createdAt",
+          u.id AS "employeeIdJoin",
+          u.first_name AS "firstName",
+          u.last_name AS "lastName",
+          u.email
+        FROM inspection_repair ir
+        INNER JOIN "user" u ON u.id = ir.employee_id
+        WHERE ${whereSql}
+        ORDER BY ir.created_at DESC
+        LIMIT ${take} OFFSET ${skip}
+      `,
+      this.prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*)::bigint AS count
+        FROM inspection_repair ir
+        WHERE ${whereSql}
+      `,
+    ]);
+
+    const mapped = rows.map((row) => ({
+      id: row.id,
+      companyId: row.companyId,
+      employeeId: row.employeeId,
+      requestNumber: row.requestNumber,
+      location: row.location,
+      deviceName: row.deviceName,
+      description: row.description,
+      make: row.make,
+      model: row.model,
+      year: row.year,
+      solution: row.solution,
+      urgency: row.urgency as InspectionRepairUrgency,
+      inspectionType: row.inspectionType as InspectionRepairType,
+      status: this.mapLegacyStatus(row.status),
+      submittedAt: row.submittedAt,
+      completedAt: row.completedAt,
+      createdAt: row.createdAt,
+      assetId: null,
+      asset: null,
+      employee: {
+        id: row.employeeIdJoin,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+      },
+    }));
+
+    return buildPaginatedResult(
+      mapped,
+      Number(countRows[0]?.count ?? 0),
+      page,
+      limit,
+    );
+  }
+
+  private async getRequestCompatible(
+    id: string,
+    companyId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const rows = await this.prisma.$queryRaw<CompatibleInspectionRepairRow[]>`
+      SELECT
+        ir.id,
+        ir.company_id AS "companyId",
+        ir.employee_id AS "employeeId",
+        ir.location,
+        ir.device_name AS "deviceName",
+        ir.description,
+        ir.make,
+        ir.model,
+        ir.year,
+        ir.urgency::text AS urgency,
+        ir.solution,
+        ir.inspection_repair_number AS "requestNumber",
+        ir.inspection_type::text AS "inspectionType",
+        ir.status::text AS status,
+        ir.submitted_at AS "submittedAt",
+        ir.completed_at AS "completedAt",
+        ir.created_at AS "createdAt",
+        u.id AS "employeeIdJoin",
+        u.first_name AS "firstName",
+        u.last_name AS "lastName",
+        u.email
+      FROM inspection_repair ir
+      INNER JOIN "user" u ON u.id = ir.employee_id
+      WHERE ir.id = ${id}
+        AND ir.company_id = ${companyId}
+        AND ir.deleted_at IS NULL
+      LIMIT 1
+    `;
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+    return {
+      id: row.id,
+      companyId: row.companyId,
+      employeeId: row.employeeId,
+      requestNumber: row.requestNumber,
+      location: row.location,
+      deviceName: row.deviceName,
+      description: row.description,
+      make: row.make,
+      model: row.model,
+      year: row.year,
+      solution: row.solution,
+      urgency: row.urgency as InspectionRepairUrgency,
+      inspectionType: row.inspectionType as InspectionRepairType,
+      status: this.mapLegacyStatus(row.status),
+      submittedAt: row.submittedAt,
+      completedAt: row.completedAt,
+      createdAt: row.createdAt,
+      assetId: null,
+      asset: null,
+      approvalRequest: null,
+      employee: {
+        id: row.employeeIdJoin,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+      },
+    };
+  }
+
+  private buildCompatibleWhereSql(
+    filters: ListInspectionRepairsDto,
+    companyId: string,
+    userId: string,
+    isHrViewer: boolean,
+  ): Prisma.Sql {
+    const parts: Prisma.Sql[] = [
+      Prisma.sql`ir.company_id = ${companyId}`,
+      Prisma.sql`ir.deleted_at IS NULL`,
+    ];
+
+    if (!isHrViewer) {
+      parts.push(Prisma.sql`ir.employee_id = ${userId}`);
+    } else if (filters.employeeId) {
+      parts.push(Prisma.sql`ir.employee_id = ${filters.employeeId}`);
+    }
+
+    const statuses = this.normalizeStatuses(filters.status);
+    if (statuses?.length) {
+      parts.push(
+        Prisma.sql`ir.status::text IN (${Prisma.join(this.expandLegacyStatuses(statuses))})`,
+      );
+    }
+    if (filters.urgency) {
+      parts.push(Prisma.sql`ir.urgency::text = ${filters.urgency}`);
+    }
+    if (filters.inspectionType) {
+      parts.push(Prisma.sql`ir.inspection_type::text = ${filters.inspectionType}`);
+    }
+
+    const search = filters.search?.trim();
+    if (search) {
+      const pattern = `%${search}%`;
+      parts.push(
+        Prisma.sql`(
+          ir.inspection_repair_number ILIKE ${pattern}
+          OR ir.device_name ILIKE ${pattern}
+          OR ir.location ILIKE ${pattern}
+          OR ir.description ILIKE ${pattern}
+        )`,
+      );
+    }
+
+    if (filters.dateFrom) {
+      parts.push(Prisma.sql`ir.created_at >= ${new Date(filters.dateFrom)}`);
+    }
+    if (filters.dateTo) {
+      parts.push(Prisma.sql`ir.created_at <= ${new Date(filters.dateTo)}`);
+    }
+
+    return Prisma.join(parts, ' AND ');
   }
 
   private async nextRequestNumber(): Promise<string> {

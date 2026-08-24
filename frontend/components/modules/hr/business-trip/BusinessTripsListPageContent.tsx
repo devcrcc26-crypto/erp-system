@@ -125,7 +125,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   const needsTicketTab = listTab === 'NEEDS_TICKET' && canViewHr;
 
   const statsQuery = useBusinessTrips(
-    { page: 1, limit: 500 },
+    { page: 1, limit: 100 },
     canViewHr || canAccess,
   );
 

@@ -88,41 +88,59 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
     [t],
   );
 
-  const statsQuery = useInspectionRepairs({ page: 1, limit: 500 }, true);
+  const countsBaseParams = useMemo(
+    () => ({
+      search: search.trim() || undefined,
+      employeeId: canViewHr ? employeeId : undefined,
+      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+    }),
+    [search, canViewHr, employeeId, dateRange],
+  );
 
   const listParams = useMemo(
     () => ({
       ...params,
-      search: search.trim() || undefined,
+      ...countsBaseParams,
       status:
         statusFilter.length > 0
           ? statusFilter
           : statusesForMode(statusMode).length > 0
             ? statusesForMode(statusMode)
             : undefined,
-      employeeId: canViewHr ? employeeId : undefined,
-      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
-      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
     }),
-    [params, search, statusFilter, statusMode, employeeId, dateRange, canViewHr],
+    [params, countsBaseParams, statusFilter, statusMode],
   );
 
   const listQuery = useInspectionRepairs(listParams, true);
+  const totalCountQuery = useInspectionRepairs(
+    { page: 1, limit: 1, ...countsBaseParams },
+    true,
+  );
+  const pendingCountQuery = useInspectionRepairs(
+    { page: 1, limit: 1, status: PENDING_STATUSES, ...countsBaseParams },
+    true,
+  );
+  const activeCountQuery = useInspectionRepairs(
+    { page: 1, limit: 1, status: ACTIVE_STATUSES, ...countsBaseParams },
+    true,
+  );
+  const doneCountQuery = useInspectionRepairs(
+    { page: 1, limit: 1, status: DONE_STATUSES, ...countsBaseParams },
+    true,
+  );
   const usersQuery = useUsersDirectory({ page: 1, limit: 100 }, { enabled: canViewHr });
 
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
   const totalCount = meta?.total ?? rows.length;
 
-  const statusCounts = useMemo(() => {
-    const allRows = statsQuery.data?.data ?? [];
-    return {
-      all: statsQuery.data?.meta?.total ?? allRows.length,
-      pending: allRows.filter((row) => PENDING_STATUSES.includes(row.status)).length,
-      active: allRows.filter((row) => ACTIVE_STATUSES.includes(row.status)).length,
-      done: allRows.filter((row) => DONE_STATUSES.includes(row.status)).length,
-    };
-  }, [statsQuery.data]);
+  const statusCounts = {
+    all: totalCountQuery.data?.meta?.total ?? totalCount,
+    pending: pendingCountQuery.data?.meta?.total ?? 0,
+    active: activeCountQuery.data?.meta?.total ?? 0,
+    done: doneCountQuery.data?.meta?.total ?? 0,
+  };
 
   const columns: ColumnsType<InspectionRepairListItem> = useMemo(
     () => [
