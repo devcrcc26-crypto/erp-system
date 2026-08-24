@@ -12,7 +12,6 @@ import {
   Select,
   Skeleton,
   Space,
-  Table,
   Tag,
   Typography,
 } from 'antd';
@@ -26,6 +25,7 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -389,13 +389,15 @@ export default function PurchaseRequestDetailPageContent({
 
           {/* Line Items */}
           <SectionCard title={t('hr.section.items')} bodyClassName="px-5 py-4">
-            <Table<PurchaseRequestItem>
+            <DataTable<PurchaseRequestItem>
               rowKey="id"
+              className="erp-pro-table"
               size="small"
               columns={itemColumns}
               dataSource={request.items}
               pagination={false}
               locale={{ emptyText: <Empty description={t('hr.empty.noItems')} /> }}
+              scroll={false}
               footer={
                 request.items.length > 0
                   ? () => (

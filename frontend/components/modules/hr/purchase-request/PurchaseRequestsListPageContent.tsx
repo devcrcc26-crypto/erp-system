@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, InputNumber, Select, Spin, Tooltip } from 'antd';
+import { Alert, Button, DatePicker, InputNumber, Select, Space, Spin, Tooltip } from 'antd';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -452,15 +452,6 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/approvals/new/purchase-request')}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.buttons.newPurchaseRequest')}
-            </Button>
           </div>
         </div>
       </div>
@@ -469,47 +460,86 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
         <TableUpdatingIndicator active={listQuery.isFetching} />
       ) : null}
 
-      <DataTable<PurchaseRequestListItem>
-        rowKey="id"
-        className="erp-pro-table"
-        columns={columns}
-        dataSource={rows}
-        loading={listQuery.isFetching && !listQuery.isLoading}
-        pagination={meta ? bindMeta(meta) : false}
-        onRow={(row) => ({
-          onClick: () => router.push(`/hr/purchase-requests/${row.id}`),
-          className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
-        })}
-        locale={{
-          emptyText: (
-            <TableEmptyState
-              icon={<ShoppingCartOutlined />}
-              title={t('hr.empty.noPurchaseRequests')}
-              description={pageDescription}
-              action={
-                hasFilters
-                  ? {
-                      label: t('common.reset'),
-                      onClick: () => {
-                        setSearch('');
-                        setStatusFilter([]);
-                        setEmployeeId(undefined);
-                        setProjectFilter(undefined);
-                        setDateRange(null);
-                        setAmountMin(undefined);
-                        setAmountMax(undefined);
-                        resetPage();
-                      },
-                    }
-                  : {
-                      label: t('hr.buttons.newPurchaseRequest'),
-                      onClick: () => router.push('/approvals/new/purchase-request'),
-                    }
-              }
-            />
-          ),
-        }}
-      />
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <ShoppingCartOutlined style={{ color: tokens.colorPrimary, fontSize: 16 }} />
+            <h3
+              className="m-0 text-sm font-semibold"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {pageTitle}
+            </h3>
+            <span className="text-xs" style={{ color: tokens.colorTextTertiary }}>
+              {meta?.total ?? rows.length}
+            </span>
+          </div>
+
+          <Space wrap size={8}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/approvals/new/purchase-request')}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.newPurchaseRequest')}
+            </Button>
+          </Space>
+        </div>
+
+        <div className="px-0">
+          <DataTable<PurchaseRequestListItem>
+            rowKey="id"
+            className="erp-pro-table"
+            size="small"
+            columns={columns}
+            dataSource={rows}
+            scroll={false}
+            loading={listQuery.isFetching && !listQuery.isLoading}
+            pagination={
+              meta
+                ? {
+                    ...bindMeta(meta),
+                    pageSizeOptions: ['10', '20', '50', '100'],
+                  }
+                : undefined
+            }
+            onRow={(row) => ({
+              onClick: () => router.push(`/hr/purchase-requests/${row.id}`),
+              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+            })}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<ShoppingCartOutlined />}
+                  title={t('hr.empty.noPurchaseRequests')}
+                  description={pageDescription}
+                  action={
+                    hasFilters
+                      ? {
+                          label: t('common.reset'),
+                          onClick: () => {
+                            setSearch('');
+                            setStatusFilter([]);
+                            setEmployeeId(undefined);
+                            setProjectFilter(undefined);
+                            setDateRange(null);
+                            setAmountMin(undefined);
+                            setAmountMax(undefined);
+                            resetPage();
+                          },
+                        }
+                      : {
+                          label: t('hr.buttons.newPurchaseRequest'),
+                          onClick: () => router.push('/approvals/new/purchase-request'),
+                        }
+                  }
+                />
+              ),
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

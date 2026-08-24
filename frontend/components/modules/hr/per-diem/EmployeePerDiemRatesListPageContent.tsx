@@ -6,12 +6,14 @@ import {
   Button,
   Drawer,
   Spin,
+  Space,
   Tooltip,
 } from 'antd';
 import {
   BankOutlined,
   CheckCircleOutlined,
   EditOutlined,
+  PlusOutlined,
   ReloadOutlined,
   TeamOutlined,
   WarningOutlined,
@@ -427,6 +429,17 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
                   : t('pages.hr.employeePerDiemRates.employeePlural')}
             </span>
           </div>
+
+          <Space wrap size={8}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/hr/employee-per-diem-rates/new')}
+              style={{ borderRadius: 0 }}
+            >
+              {t('common.update')}
+            </Button>
+          </Space>
         </div>
 
         <div className="px-0">
@@ -464,10 +477,14 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
                 />
               ),
             }}
-            pagination={{
-              ...bindMeta(meta),
-              pageSizeOptions: ['10', '20', '50', '100'],
-            }}
+            pagination={
+              meta
+                ? {
+                    ...bindMeta(meta),
+                    pageSizeOptions: ['10', '20', '50', '100'],
+                  }
+                : undefined
+            }
           />
         </div>
       </div>

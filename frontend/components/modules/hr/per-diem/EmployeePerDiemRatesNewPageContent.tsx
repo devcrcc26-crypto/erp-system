@@ -8,7 +8,6 @@ import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/Employ
 import { useCanManageEmployeePerDiemRates } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useUsersDirectory } from '@/lib/query/users';
-import type { User } from '@/lib/api/types';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -17,16 +16,17 @@ export default function EmployeePerDiemRatesNewPageContent(): React.ReactNode {
   const router = useRouter();
   const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
 
-  const { data: users, isLoading, isError } = useUsersDirectory(
+  const usersQuery = useUsersDirectory(
     { page: 1, limit: 100, sortBy: 'lastName', sortOrder: 'asc' },
     { enabled: canManagePerDiemRates },
   );
+  const users = usersQuery.data?.data ?? [];
 
   const [employeeId, setEmployeeId] = useState<string>('');
 
   const selectedEmployee = useMemo(() => {
     if (!employeeId) return null;
-    return users?.find((u) => u.id === employeeId) ?? null;
+    return users.find((u) => u.id === employeeId) ?? null;
   }, [employeeId, users]);
 
   if (!canManagePerDiemRates) {
@@ -66,12 +66,12 @@ export default function EmployeePerDiemRatesNewPageContent(): React.ReactNode {
               placeholder={t('hr.validation.selectEmployee')}
               value={employeeId || undefined}
               onChange={(v) => setEmployeeId(v)}
-              options={(users ?? []).map((u: User) => ({
+              options={users.map((u) => ({
                 value: u.id,
                 label: formatUserName(u),
               }))}
-              loading={isLoading}
-              disabled={isLoading || isError}
+              loading={usersQuery.isLoading}
+              disabled={usersQuery.isLoading || usersQuery.isError}
               filterOption={(input, option) => {
                 const label = String(option?.label ?? '');
                 return label.toLowerCase().includes(input.toLowerCase());
