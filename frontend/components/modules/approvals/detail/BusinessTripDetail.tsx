@@ -51,7 +51,7 @@ function SectionCard({
 }): React.ReactNode {
   return (
     <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-      <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
           {title}
         </h3>
@@ -553,7 +553,7 @@ export default function BusinessTripDetail({
           {budgetRows.map(({ label, value }) => (
             <div
               key={label}
-              className="flex justify-between items-center px-5 py-2.5 gap-3"
+                  className="flex justify-between items-center px-3 py-2.5 sm:px-5 gap-3"
             >
               <span className="text-sm text-[var(--color-text-secondary)]">
                 {label}
@@ -563,7 +563,7 @@ export default function BusinessTripDetail({
               </span>
             </div>
           ))}
-          <div className="flex justify-between items-center px-5 py-3 bg-[var(--color-surface-secondary)] gap-3">
+          <div className="flex justify-between items-center px-3 py-3 sm:px-5 bg-[var(--color-surface-secondary)] gap-3">
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               Total
             </span>

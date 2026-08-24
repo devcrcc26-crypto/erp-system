@@ -25,7 +25,7 @@ export default function BusinessTripFormContent(): React.ReactNode {
   return (
     <HrFormPageShell
       title={t('hr.buttons.newBusinessTrip')}
-      description="Complete all steps to submit your business trip for approval."
+      description={t('pages.hr.businessTrip.listDescription')}
       cancelLabel={t('hr.buttons.cancel')}
       cancelHref="/approvals/new"
     >

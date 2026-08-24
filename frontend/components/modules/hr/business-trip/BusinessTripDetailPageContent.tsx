@@ -18,6 +18,12 @@ import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import BusinessTripCurrentStepBanner from '@/components/modules/hr/business-trip/BusinessTripCurrentStepBanner';
 import BusinessTripTicketAssignmentPanel from '@/components/modules/hr/business-trip/BusinessTripTicketAssignmentPanel';
+import {
+  MetaItem,
+  SectionCard,
+  SubsectionHeader,
+  SummaryStrip,
+} from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -47,138 +53,6 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-
-function SectionCard({
-  title,
-  children,
-  action,
-  bodyClassName = 'p-0',
-}: {
-  title: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
-  bodyClassName?: string;
-}): React.ReactNode {
-  return (
-    <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-      <div className="px-5 py-3 border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between gap-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-          {title}
-        </h3>
-        {action}
-      </div>
-      <div className={bodyClassName}>{children}</div>
-    </div>
-  );
-}
-
-function SubsectionHeader({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description?: string;
-}): React.ReactNode {
-  return (
-    <div className="mb-3">
-      <div className="flex items-center gap-2 mb-0.5">
-        <span className="text-[var(--color-text-tertiary)] flex-shrink-0">
-          {icon}
-        </span>
-        <h4 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
-          {title}
-        </h4>
-      </div>
-      {description ? (
-        <p className="text-xs text-[var(--color-text-tertiary)] ml-[23px] m-0">
-          {description}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function MetaItem({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}): React.ReactNode {
-  return (
-    <div className="min-w-0">
-      <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
-        {label}
-      </p>
-      <div className="text-sm text-[var(--color-text-primary)]">{children}</div>
-    </div>
-  );
-}
-
-function TripSummaryStrip({
-  departureDate,
-  returnDate,
-  passengerCount,
-  ticketClass,
-  estimatedTotalCost,
-}: {
-  departureDate: string;
-  returnDate?: string | null;
-  passengerCount: number;
-  ticketClass: string;
-  estimatedTotalCost?: number | null;
-}): React.ReactNode {
-  const { t } = useEpcTranslation();
-  const items = [
-    {
-      label: t('hr.labels.departure'),
-      value: formatProjectDate(departureDate),
-    },
-    {
-      label: t('hr.labels.return'),
-      value: returnDate ? formatProjectDate(returnDate) : t('hr.tripType.ONE_WAY'),
-    },
-    {
-      label: t('hr.labels.passengers'),
-      value: String(passengerCount),
-    },
-    {
-      label: t('hr.labels.ticketClass'),
-      value: formatTicketClass(ticketClass, t),
-    },
-    {
-      label: t('hr.labels.estimatedTotal'),
-      value: formatEtb(estimatedTotalCost),
-      emphasize: true,
-    },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      {items.map(({ label, value, emphasize }) => (
-        <div
-          key={label}
-          className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] px-4 py-3"
-        >
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
-            {label}
-          </p>
-          <p
-            className={`text-sm leading-snug ${
-              emphasize
-                ? 'text-base font-bold text-[var(--color-text-primary)]'
-                : 'font-semibold text-[var(--color-text-primary)]'
-            }`}
-          >
-            {value}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function passengerHasTicket(
   row: BusinessTripPassenger,
@@ -295,17 +169,19 @@ export default function BusinessTripDetailPageContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <button
-        type="button"
-        onClick={() => router.push('/hr/business-trips')}
-        className="flex items-center gap-1.5 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] self-start transition-colors"
-      >
-        <ArrowLeft size={14} />
-        <span>Business Trips</span>
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="text"
+          icon={<ArrowLeft size={16} />}
+          onClick={() => router.push('/hr/business-trips')}
+          style={{ borderRadius: 0 }}
+        >
+          {t('hr.buttons.backToList')}
+        </Button>
+      </div>
 
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-5 py-4">
+      <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="px-3 py-4 sm:px-5">
           <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
               <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
@@ -400,19 +276,39 @@ export default function BusinessTripDetailPageContent({
         />
       ) : null}
 
-      <TripSummaryStrip
-        departureDate={trip.departureDate}
-        returnDate={trip.returnDate}
-        passengerCount={trip.passengerCount}
-        ticketClass={trip.ticketClass}
-        estimatedTotalCost={trip.estimatedTotalCost}
+      <SummaryStrip
+        items={[
+          {
+            label: t('hr.labels.departure'),
+            value: formatProjectDate(trip.departureDate),
+          },
+          {
+            label: t('hr.labels.return'),
+            value: trip.returnDate
+              ? formatProjectDate(trip.returnDate)
+              : t('hr.tripType.ONE_WAY'),
+          },
+          {
+            label: t('hr.labels.passengers'),
+            value: String(trip.passengerCount),
+          },
+          {
+            label: t('hr.labels.ticketClass'),
+            value: formatTicketClass(trip.ticketClass, t),
+          },
+          {
+            label: t('hr.labels.estimatedTotal'),
+            value: formatEtb(trip.estimatedTotalCost),
+            emphasize: true,
+          },
+        ]}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
         <div className="flex flex-col gap-4 min-w-0">
           {/* Travel Details */}
           <SectionCard title={t('hr.labels.travelDetails')}>
-            <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+            <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
               <SubsectionHeader
                 icon={<MapPin size={15} />}
                 title={t('hr.labels.routeSchedule')}
@@ -467,7 +363,7 @@ export default function BusinessTripDetailPageContent({
               </div>
             </div>
 
-            <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+            <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
               <SubsectionHeader icon={<Plane size={15} />} title={t('hr.labels.flight')} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
                 <MetaItem label={t('hr.labels.tripType')}>
@@ -479,7 +375,7 @@ export default function BusinessTripDetailPageContent({
               </div>
             </div>
 
-            <div className="px-5 py-4">
+            <div className="px-3 py-4 sm:px-5">
               <SubsectionHeader
                 icon={<BedDouble size={15} />}
                 title={t('hr.labels.stayAllowances')}
@@ -530,7 +426,7 @@ export default function BusinessTripDetailPageContent({
           {/* Purpose & Host */}
           {hasPurposeContent ? (
             <SectionCard title={t('hr.labels.purposeHost')}>
-              <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+              <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
                 <SubsectionHeader
                   icon={<FileText size={15} />}
                   title={t('hr.labels.purpose')}
@@ -541,7 +437,7 @@ export default function BusinessTripDetailPageContent({
               </div>
 
               {hasHost ? (
-                <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
+                <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
                   <SubsectionHeader
                     icon={<Building2 size={15} />}
                     title={t('hr.labels.host')}
@@ -560,7 +456,7 @@ export default function BusinessTripDetailPageContent({
               ) : null}
 
               {trip.expectedOutcomes ? (
-                <div className="px-5 py-4 border-b border-[rgba(0,0,0,0.06)] last:border-b-0">
+                <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)] last:border-b-0">
                   <SubsectionHeader
                     icon={<Target size={15} />}
                     title={t('hr.labels.expectedOutcomes')}
@@ -572,7 +468,7 @@ export default function BusinessTripDetailPageContent({
               ) : null}
 
               {trip.itinerary ? (
-                <div className="px-5 py-4">
+                <div className="px-3 py-4 sm:px-5">
                   <SubsectionHeader
                     icon={<Calendar size={15} />}
                     title={t('hr.labels.itinerary')}
@@ -618,7 +514,7 @@ export default function BusinessTripDetailPageContent({
                   (row.tickets?.length ?? 0) > 0;
 
                 return (
-                  <li key={row.id} className="px-5 py-4">
+                  <li key={row.id} className="px-3 py-4 sm:px-5">
                     <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">
@@ -683,7 +579,7 @@ export default function BusinessTripDetailPageContent({
 
           <SectionCard
             title={t('hr.labels.supportingAttachments')}
-            bodyClassName="px-5 py-4"
+            bodyClassName="px-3 py-4 sm:px-5"
           >
             {trip.documents.length > 0 ? (
               <AttachmentDownloadList documents={trip.documents} />
@@ -701,7 +597,7 @@ export default function BusinessTripDetailPageContent({
               {budgetRows.map(({ label, value }) => (
                 <div
                   key={label}
-                  className="flex justify-between items-center px-5 py-2.5 gap-3"
+                  className="flex justify-between items-center px-3 py-2.5 sm:px-5 gap-3"
                 >
                   <span className="text-sm text-[var(--color-text-secondary)]">
                     {label}
@@ -711,7 +607,7 @@ export default function BusinessTripDetailPageContent({
                   </span>
                 </div>
               ))}
-              <div className="flex justify-between items-center px-5 py-3 bg-[var(--color-surface-secondary)] gap-3">
+              <div className="flex justify-between items-center px-3 py-3 sm:px-5 bg-[var(--color-surface-secondary)] gap-3">
                 <span className="text-sm font-semibold text-[var(--color-text-primary)]">
                   {t('hr.labels.estimatedTotal')}
                 </span>
@@ -728,7 +624,7 @@ export default function BusinessTripDetailPageContent({
               currentTier={trip.approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-5 py-4">
+            <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-3 py-4 sm:px-5">
               <p className="text-sm text-[var(--color-text-tertiary)] m-0">
                 {t('hr.empty.noApprovalChain')}
               </p>

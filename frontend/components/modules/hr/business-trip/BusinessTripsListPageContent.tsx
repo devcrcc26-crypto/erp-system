@@ -1,18 +1,36 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Input, Select, Tabs, Tag } from 'antd';
-import { SendOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  Alert,
+  Button,
+  DatePicker,
+  Input,
+  Select,
+  Space,
+  Spin,
+  Tabs,
+  Tag,
+  Tooltip,
+} from 'antd';
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SendOutlined,
+} from '@ant-design/icons';
+import { Globe } from 'lucide-react';
 import { tokens } from '@/lib/theme/tokens';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import {
   useCanAccessBusinessTrip,
   useCanCreateBusinessTrip,
@@ -44,9 +62,32 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 type ListTab = 'ALL' | 'NEEDS_TICKET';
+type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
+
+const PENDING_STATUSES: BusinessTripStatus[] = [
+  'SUBMITTED',
+  'IN_REVIEW',
+  'RETURNED',
+  'DRAFT',
+];
+const APPROVED_STATUSES: BusinessTripStatus[] = ['APPROVED'];
+const REJECTED_STATUSES: BusinessTripStatus[] = ['REJECTED', 'CANCELLED'];
+
+function statusesForMode(mode: StatusMode): BusinessTripStatus[] {
+  switch (mode) {
+    case 'pending':
+      return PENDING_STATUSES;
+    case 'approved':
+      return APPROVED_STATUSES;
+    case 'rejected':
+      return REJECTED_STATUSES;
+    default:
+      return [];
+  }
+}
 
 /**
- * Company or personal business trip list with filters.
+ * Company or personal business trip list — layout aligned with Flight Applications.
  */
 export default function BusinessTripsListPageContent(): React.ReactNode {
   const router = useRouter();
@@ -64,13 +105,15 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
     ],
     [t],
   );
+
   const canAccess = useCanAccessBusinessTrip();
   const canViewHr = useCanViewHr();
   const canCreate = useCanCreateBusinessTrip();
   const canManage = useCanManageBusinessTrip();
-  const { params, resetPage, bindMeta } = useTablePagination();
+  const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [listTab, setListTab] = useState<ListTab>('ALL');
+  const [statusMode, setStatusMode] = useState<StatusMode>('all');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<BusinessTripStatus[]>([]);
   const [destinationCountry, setDestinationCountry] = useState('');
@@ -81,14 +124,22 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
 
   const needsTicketTab = listTab === 'NEEDS_TICKET' && canViewHr;
 
+  const statsQuery = useBusinessTrips(
+    { page: 1, limit: 500 },
+    canViewHr || canAccess,
+  );
+
   const listParams = useMemo(
     () => ({
       ...params,
       search: search.trim() || undefined,
-      status:
-        needsTicketTab || statusFilter.length === 0
-          ? undefined
-          : statusFilter,
+      status: needsTicketTab
+        ? undefined
+        : statusFilter.length > 0
+          ? statusFilter
+          : statusesForMode(statusMode).length > 0
+            ? statusesForMode(statusMode)
+            : undefined,
       needsTicket: needsTicketTab ? true : undefined,
       destinationCountry: destinationCountry.trim() || undefined,
       submittedById: canViewHr ? submittedById : undefined,
@@ -99,6 +150,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
       params,
       search,
       statusFilter,
+      statusMode,
       destinationCountry,
       submittedById,
       dateRange,
@@ -119,6 +171,27 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
 
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
+  const totalCount = meta?.total ?? rows.length;
+
+  const statusCounts = useMemo(() => {
+    const allRows = statsQuery.data?.data ?? [];
+    const pending = allRows.filter((row) =>
+      PENDING_STATUSES.includes(row.status),
+    ).length;
+    const approved = allRows.filter((row) =>
+      APPROVED_STATUSES.includes(row.status),
+    ).length;
+    const rejected = allRows.filter((row) =>
+      REJECTED_STATUSES.includes(row.status),
+    ).length;
+    return {
+      all: statsQuery.data?.meta?.total ?? allRows.length,
+      pending,
+      approved,
+      rejected,
+      needsTicket: needsTicketCount,
+    };
+  }, [statsQuery.data, needsTicketCount]);
 
   const columns: ColumnsType<BusinessTripListItem> = useMemo(
     () => [
@@ -126,35 +199,58 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         title: t('hr.table.tripNumber'),
         dataIndex: 'tripNumber',
         key: 'tripNumber',
-        width: 140,
+        width: 130,
+        render: (value: string) => (
+          <span
+            className="font-[family-name:var(--font-mono)] text-xs font-medium"
+            style={{ color: tokens.colorPrimary }}
+          >
+            {value}
+          </span>
+        ),
       },
       ...(canViewHr
         ? [
             {
               title: t('hr.table.submittedBy'),
               key: 'submitter',
-              render: (_: unknown, row: BusinessTripListItem) =>
-                formatBusinessTripSubmitterName(row.submitter),
+              width: 200,
+              responsive: ['md'],
+              render: (_: unknown, row: BusinessTripListItem) => (
+                <div className="min-w-0 py-0.5">
+                  <p
+                    className="m-0 text-sm font-medium"
+                    style={{ color: tokens.colorTextPrimary }}
+                  >
+                    {formatBusinessTripSubmitterName(row.submitter)}
+                  </p>
+                  {row.submitter?.email ? (
+                    <p
+                      className="m-0 truncate text-xs"
+                      style={{ color: tokens.colorTextTertiary }}
+                    >
+                      {row.submitter.email}
+                    </p>
+                  ) : null}
+                </div>
+              ),
             } satisfies ColumnsType<BusinessTripListItem>[number],
           ]
         : []),
       {
         title: t('hr.table.destination'),
         key: 'destination',
+        ellipsis: { showTitle: true },
         render: (_: unknown, row: BusinessTripListItem) => (
-          <span>
-            {row.destinationCountry}
-            {row.destinationCity ? (
-              <>
-                <span
-                  style={{ margin: '0 4px', color: tokens.colorTextSecondary }}
-                >
-                  -
-                </span>
-                {row.destinationCity}
-              </>
-            ) : null}
-          </span>
+          <div className="min-w-0">
+            <p
+              className="m-0 truncate text-sm"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {row.destinationCountry}
+              {row.destinationCity ? ` · ${row.destinationCity}` : ''}
+            </p>
+          </div>
         ),
       },
       {
@@ -162,6 +258,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         dataIndex: 'departureDate',
         key: 'departureDate',
         width: 120,
+        responsive: ['md'],
         render: (value: string) => formatProjectDate(value),
       },
       {
@@ -169,6 +266,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         dataIndex: 'tripType',
         key: 'tripType',
         width: 120,
+        responsive: ['lg'],
         render: (value: string) => (
           <StatusBadge
             label={formatTripType(value, t)}
@@ -180,14 +278,16 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         title: t('hr.table.passengers'),
         dataIndex: 'passengerCount',
         key: 'passengerCount',
-        width: 100,
+        width: 90,
         align: 'center' as const,
+        responsive: ['md'],
       },
       {
         title: t('hr.table.estimatedTotal'),
         dataIndex: 'estimatedTotalCost',
         key: 'estimatedTotalCost',
-        width: 140,
+        width: 130,
+        responsive: ['lg'],
         render: (value: number | null | undefined) => formatEtb(value),
       },
       {
@@ -205,7 +305,8 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
       {
         title: t('hr.table.currentStep'),
         key: 'currentStep',
-        width: 180,
+        width: 160,
+        responsive: ['lg'],
         render: (_: unknown, row: BusinessTripListItem) => {
           const label = getCurrentStepLabel(row, t);
           if (!label || label === '—') {
@@ -235,7 +336,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
                   <Tag
                     color="orange"
                     icon={<SendOutlined />}
-                    style={{ cursor: 'pointer' }}
+                    className="cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       router.push(`/hr/business-trips/${row.id}`);
@@ -250,28 +351,69 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
     ],
     [canManage, canViewHr, router, t],
   );
+
+  function handleStatusMode(mode: StatusMode): void {
+    setListTab('ALL');
+    setStatusMode(mode);
+    setStatusFilter([]);
+    resetPage();
+  }
+
+  function handleNeedsTicketTab(): void {
+    setListTab('NEEDS_TICKET');
+    setStatusMode('all');
+    setStatusFilter([]);
+    resetPage();
+  }
+
+  function handleResetFilters(): void {
+    setSearch('');
+    setStatusFilter([]);
+    setStatusMode('all');
+    setDestinationCountry('');
+    setSubmittedById(undefined);
+    setDateRange(null);
+    resetPage();
+  }
+
+  const hasFilters =
+    Boolean(search.trim()) ||
+    statusFilter.length > 0 ||
+    statusMode !== 'all' ||
+    Boolean(destinationCountry.trim()) ||
+    submittedById !== undefined ||
+    Boolean(dateRange?.[0] || dateRange?.[1]);
+
   if (!canAccess) {
     return (
-      <Alert
-        type="warning"
-        showIcon
-        message={t('pages.hr.accessDenied')}
-      />
+      <div className="flex flex-col gap-4">
+        <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
+      </div>
     );
   }
 
+  const pageTitle = canViewHr
+    ? t('pages.hr.businessTrip.listTitle')
+    : t('pages.hr.businessTrip.myListTitle');
+  const pageDescription = canViewHr
+    ? t('pages.hr.businessTrip.listDescription')
+    : t('pages.hr.businessTrip.myListDescription');
+
   if (listQuery.isLoading && !listQuery.data) {
-    return <PageLoadingSkeleton />;
+    return (
+      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+        <Spin />
+      </div>
+    );
   }
 
   return (
-    <div>
+    <div className="flex flex-col gap-4">
       {listQuery.isError ? (
         <Alert
           type="error"
           showIcon
-          style={{ marginBottom: 16 }}
-          message={
+          title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
               : 'Failed to load business trips'
@@ -279,11 +421,100 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         />
       ) : null}
 
+      <div>
+        <h1
+          className="m-0 text-xl font-semibold tracking-tight"
+          style={{
+            color: tokens.colorTextPrimary,
+            fontFamily: tokens.fontFamily,
+          }}
+        >
+          {pageTitle}
+        </h1>
+        <p
+          className="mb-0 mt-1 text-sm"
+          style={{ color: tokens.colorTextSecondary }}
+        >
+          {pageDescription}
+        </p>
+      </div>
+
+      <div
+        className={`mb-1 grid grid-cols-2 gap-3 ${canViewHr ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}
+      >
+        <button
+          type="button"
+          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+          onClick={() => handleStatusMode('all')}
+        >
+          <StatCard
+            label="Total"
+            value={statusCounts.all}
+            color="teal"
+            icon={<Globe size={14} />}
+          />
+        </button>
+        <button
+          type="button"
+          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+          onClick={() => handleStatusMode('pending')}
+        >
+          <StatCard
+            label="Pending"
+            value={statusCounts.pending}
+            color="amber"
+            icon={<ClockCircleOutlined />}
+          />
+        </button>
+        <button
+          type="button"
+          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+          onClick={() => handleStatusMode('approved')}
+        >
+          <StatCard
+            label="Approved"
+            value={statusCounts.approved}
+            color="green"
+            icon={<CheckCircleOutlined />}
+          />
+        </button>
+        <button
+          type="button"
+          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+          onClick={() => handleStatusMode('rejected')}
+        >
+          <StatCard
+            label="Rejected"
+            value={statusCounts.rejected}
+            color="red"
+            icon={<CloseCircleOutlined />}
+          />
+        </button>
+        {canViewHr ? (
+          <button
+            type="button"
+            className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+            onClick={handleNeedsTicketTab}
+          >
+            <StatCard
+              label={t('hr.tabs.needsTicket')}
+              value={statusCounts.needsTicket}
+              color="blue"
+              icon={<SendOutlined />}
+            />
+          </button>
+        ) : null}
+      </div>
+
       {canViewHr ? (
         <Tabs
+          className="erp-list-tabs"
           activeKey={listTab}
           onChange={(key) => {
             setListTab(key as ListTab);
+            if (key === 'ALL') {
+              setStatusMode('all');
+            }
             resetPage();
           }}
           items={[
@@ -305,103 +536,168 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
               ),
             },
           ]}
-          className="mb-2"
         />
       ) : null}
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
-        <ListSearchInput
-          committedValue={search}
-          onCommit={(value) => {
-            setSearch(value);
-            resetPage();
-          }}
-          placeholder={t('hr.placeholder.searchBusinessTrip')}
-        />
-        {!needsTicketTab ? (
-          <Select
-            mode="multiple"
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
+        <div className="erp-filter-bar">
+          <ListSearchInput
+            committedValue={search}
+            onCommit={(value) => {
+              setSearch(value);
+              resetPage();
+            }}
+            placeholder={t('hr.placeholder.searchBusinessTrip')}
+            className="w-full min-w-0 sm:w-72"
+          />
+          {!needsTicketTab ? (
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder={t('hr.placeholder.status')}
+              className="w-full min-w-0 sm:min-w-[180px] sm:w-auto"
+              options={statusOptions}
+              value={statusFilter}
+              onChange={(value: BusinessTripStatus[]) => {
+                setStatusFilter(value);
+                setStatusMode('all');
+                resetPage();
+              }}
+              maxTagCount="responsive"
+            />
+          ) : null}
+          <Input
             allowClear
-            placeholder={t('hr.placeholder.status')}
-            style={{ minWidth: 180 }}
-            options={statusOptions}
-            value={statusFilter}
-            onChange={(value: BusinessTripStatus[]) => {
-              setStatusFilter(value);
+            placeholder={t('hr.form.destinationCountry')}
+            className="w-full min-w-0 sm:w-48"
+            value={destinationCountry}
+            onChange={(e) => {
+              setDestinationCountry(e.target.value);
               resetPage();
             }}
           />
-        ) : null}
-        <Input
-          allowClear
-          placeholder={t('hr.form.destinationCountry')}
-          style={{ width: 180 }}
-          value={destinationCountry}
-          onChange={(e) => {
-            setDestinationCountry(e.target.value);
-            resetPage();
-          }}
-        />
-        {canViewHr ? (
-          <Select
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            placeholder={t('hr.placeholder.employee')}
-            style={{ minWidth: 200 }}
-            options={(usersQuery.data?.data ?? []).map((user) => ({
-              value: user.id,
-              label: formatUserName(user),
-            }))}
-            value={submittedById}
-            onChange={(value: string | undefined) => {
-              setSubmittedById(value);
+          {canViewHr ? (
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder={t('hr.placeholder.employee')}
+              className="w-full min-w-0 sm:w-48"
+              options={(usersQuery.data?.data ?? []).map((user) => ({
+                value: user.id,
+                label: formatUserName(user),
+              }))}
+              value={submittedById}
+              onChange={(value: string | undefined) => {
+                setSubmittedById(value);
+                resetPage();
+              }}
+            />
+          ) : null}
+          <DatePicker.RangePicker
+            value={dateRange}
+            className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
+            onChange={(value) => {
+              setDateRange(value);
               resetPage();
             }}
           />
-        ) : null}
-        <DatePicker.RangePicker
-          value={dateRange}
-          onChange={(value) => {
-            setDateRange(value);
-            resetPage();
-          }}
-        />
-        <TableUpdatingIndicator active={listQuery.isFetching} />
-        {canCreate ? (
           <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            className="ml-auto"
-            onClick={() => router.push('/approvals/new/business-trip')}
+            onClick={handleResetFilters}
+            disabled={!hasFilters && listTab === 'ALL'}
+            style={{ borderRadius: 0 }}
           >
-            {t('hr.buttons.newBusinessTrip')}
+            {t('common.reset')}
           </Button>
-        ) : null}
+          <Tooltip title={t('common.refresh')}>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              loading={listQuery.isFetching && !listQuery.isLoading}
+              onClick={() => void listQuery.refetch()}
+              aria-label={t('common.refresh')}
+              style={{ borderRadius: 0 }}
+            />
+          </Tooltip>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <DataTable<BusinessTripListItem>
-          rowKey="id"
-          columns={columns}
-          dataSource={rows}
-          loading={listQuery.isFetching}
-          onRow={(record) => ({
-            onClick: () => router.push(`/hr/business-trips/${record.id}`),
-            style: { cursor: 'pointer' },
-          })}
-          locale={{
-            emptyText: (
-              <TableEmptyState
-                icon={<SendOutlined />}
-                title={t('hr.empty.noBusinessTrips')}
-              />
-            ),
-          }}
-          pagination={bindMeta(meta)}
-        />
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Globe size={16} style={{ color: tokens.colorPrimary }} />
+            <h3
+              className="m-0 text-sm font-semibold"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {pageTitle}
+            </h3>
+            <span
+              className="text-xs"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              {totalCount} {totalCount === 1 ? 'trip' : 'trips'}
+            </span>
+          </div>
+          <Space wrap size={8}>
+            {canCreate ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => router.push('/approvals/new/business-trip')}
+                style={{ borderRadius: 0 }}
+              >
+                {t('hr.buttons.newBusinessTrip')}
+              </Button>
+            ) : null}
+          </Space>
+        </div>
+
+        <div className="px-0">
+          <DataTable<BusinessTripListItem>
+            rowKey="id"
+            className="erp-pro-table"
+            size="small"
+            columns={columns}
+            dataSource={rows}
+            loading={listQuery.isFetching && !listQuery.isLoading}
+            scroll={false}
+            onRow={(record) => ({
+              onClick: () => router.push(`/hr/business-trips/${record.id}`),
+              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+            })}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<Globe size={24} />}
+                  title={t('hr.empty.noBusinessTrips')}
+                  description={pageDescription}
+                  action={
+                    hasFilters || listTab !== 'ALL'
+                      ? {
+                          label: t('common.reset'),
+                          onClick: () => {
+                            handleResetFilters();
+                            setListTab('ALL');
+                          },
+                        }
+                      : canCreate
+                        ? {
+                            label: t('hr.buttons.newBusinessTrip'),
+                            onClick: () =>
+                              router.push('/approvals/new/business-trip'),
+                          }
+                        : undefined
+                  }
+                />
+              ),
+            }}
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+            }}
+          />
+        </div>
       </div>
     </div>
   );
