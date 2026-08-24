@@ -248,7 +248,7 @@ export default function PurchaseRequestDetailPageContent({
   ];
 
   return (
-    <div>
+    <div className="erp-pro-list-page flex flex-col gap-3">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <Button
@@ -258,6 +258,19 @@ export default function PurchaseRequestDetailPageContent({
         >
           {t('hr.buttons.back')}
         </Button>
+
+        {canEdit ? (
+          <div className="ml-auto">
+            <Button
+              type="text"
+              icon={<Pencil size={14} />}
+              onClick={() => router.push(`/hr/purchase-requests/${requestId}/edit`)}
+              style={{ color: tokens.colorPrimary }}
+            >
+              {t('common.update')}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">

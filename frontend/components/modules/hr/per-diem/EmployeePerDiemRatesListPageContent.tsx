@@ -182,7 +182,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
             className="m-0 min-w-0 border-0 bg-transparent p-0 text-left"
             onClick={(event) => {
               event.stopPropagation();
-              router.push(`/users/${row.employeeId}?tab=perDiem`);
+              router.push(`/hr/employee-per-diem-rates/${row.employeeId}`);
             }}
           >
             <p
@@ -252,8 +252,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
             icon={<EditOutlined />}
             onClick={(event) => {
               event.stopPropagation();
-              setEditingEmployeeId(row.employeeId);
-              setEditingEmployeeName(formatUserName(row.employee));
+              router.push(`/hr/employee-per-diem-rates/${row.employeeId}/edit`);
             }}
           >
             {t('common.update')}
@@ -282,7 +281,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
 
   if (!canManagePerDiemRates) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="erp-pro-list-page flex flex-col gap-3">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -297,7 +296,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page flex flex-col gap-3">
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -441,8 +440,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
             scroll={{ x: 1200 }}
             onRow={(record) => ({
               onClick: () => {
-                setEditingEmployeeId(record.employeeId);
-                setEditingEmployeeName(formatUserName(record.employee));
+                router.push(`/hr/employee-per-diem-rates/${record.employeeId}`);
               },
               className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
             })}
@@ -458,7 +456,10 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
                           label: t('common.reset'),
                           onClick: handleResetFilters,
                         }
-                      : undefined
+                      : {
+                          label: t('common.update'),
+                          onClick: () => router.push('/hr/employee-per-diem-rates/new'),
+                        }
                   }
                 />
               ),
@@ -488,7 +489,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
               type="link"
               className="px-0"
               onClick={() =>
-                router.push(`/users/${editingEmployeeId}?tab=perDiem`)
+                router.push(`/hr/employee-per-diem-rates/${editingEmployeeId}`)
               }
             >
               {t('pages.hr.employeePerDiemRates.openProfile')}

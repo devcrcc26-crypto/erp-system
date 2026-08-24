@@ -886,6 +886,20 @@ export function resolveRouteMeta(
     };
   }
 
+  if (pathname.startsWith('/hr/employee-per-diem-rates/')) {
+    return {
+      titleKey: 'pages.hr.employeePerDiemRates.listTitle',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.employeePerDiemRates'),
+          href: '/hr/employee-per-diem-rates',
+        },
+        { label: t('pages.hr.employeePerDiemRates.listTitle') },
+      ],
+    };
+  }
+
   if (pathname.startsWith('/hr/purchase-requests/')) {
     return {
       titleKey: 'pages.hr.purchaseRequest.detail',
