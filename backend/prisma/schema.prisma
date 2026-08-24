@@ -4609,9 +4609,7 @@ enum InspectionRepairStatus {
   DRAFT
   SUBMITTED
   IN_REPAIR
-  APPROVED
   REPAIRED
-  RETURNED
   REJECTED
 }
 
@@ -4625,12 +4623,13 @@ model InspectionRepair {
   id                 String                  @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId          String                  @map("company_id")
   employeeId         String                  @map("employee_id")
+  assetId            String?                 @map("asset_id")
   location           String
   deviceName         String                  @map("device_name")
   description        String
-  make               String
-  model              String
-  year               Int
+  make               String?
+  model              String?
+  year               Int?
   urgency            InspectionRepairUrgency @default(MINOR)
   solution           String?
   requestNumber      String                  @map("inspection_repair_number")
@@ -4649,6 +4648,7 @@ model InspectionRepair {
 
   company          Company         @relation(fields: [companyId], references: [id])
   employee         User            @relation("InspectionRepairEmployee", fields: [employeeId], references: [id])
+  asset            CompanyAsset?   @relation(fields: [assetId], references: [id])
   approvalRequest  ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
   attachmentFolder DocumentFolder? @relation(fields: [attachmentFolderId], references: [id])
   creator          User            @relation("InspectionRepairCreator", fields: [createdBy], references: [id])
@@ -4656,6 +4656,7 @@ model InspectionRepair {
   @@unique([companyId, requestNumber], map: "uq_inspection_repair_company_number")
   @@index([companyId], map: "idx_inspection_repair_company")
   @@index([employeeId], map: "idx_inspection_repair_employee")
+  @@index([assetId], map: "idx_inspection_repair_asset")
   @@index([status], map: "idx_inspection_repair_status")
   @@index([companyId, deletedAt], map: "idx_inspection_repair_deleted")
   @@index([attachmentFolderId], map: "idx_inspection_repair_attachment_folder")
@@ -4867,6 +4868,7 @@ model CompanyAsset {
     photoDocument Document? @relation("CompanyAssetPhotoDocument", fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
     assetAssignments AssetAssignment[] @relation("AssetAssignment")
+    inspectionRepairs InspectionRepair[]
 
 
     @@unique([companyId, serialNumber])

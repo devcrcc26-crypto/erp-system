@@ -89,7 +89,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/employee-contract': 'nav.hr.employeeContract',
   '/hr/employee-contract/new': 'pages.hr.employeeContract.new',
   '/organization/vehicles': 'nav.organization.vehicles',
-  '/hr/inspection-repair': 'nav.hr.inspectionRepair',
+  '/hr/inspection-repair': 'pages.hr.inspectionRepair.listTitle',
   '/hr/business-trips': 'nav.hr.businessTrips',
   '/hr/reports': 'nav.hr.reports',
   '/hr/per-diem': 'nav.hr.perDiem',
@@ -692,6 +692,7 @@ export function resolveRouteMeta(
     pathname === '/approvals/new/consumables' ||
     pathname === '/approvals/new/vehicle-application' ||
     pathname === '/approvals/new/vehicle-refueling' ||
+    pathname === '/approvals/new/inspection-repair' ||
     pathname === '/approvals/new/official-seal' ||
     pathname === '/approvals/new/project-seal'
   ) {
@@ -993,6 +994,20 @@ export function resolveRouteMeta(
           href: '/hr/vehicle-refueling',
         },
         { label: t('pages.hr.vehicleRefueling.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/inspection-repair/')) {
+    return {
+      titleKey: 'pages.hr.inspectionRepair.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.inspectionRepair'),
+          href: '/hr/inspection-repair',
+        },
+        { label: t('pages.hr.inspectionRepair.detail') },
       ],
     };
   }

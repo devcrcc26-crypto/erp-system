@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import InspectionRepairListPageContent from '@/components/modules/hr/inspection-repair/InspectionRepairListPageContent';
 
 export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.inspectionRepair" />;
+  return <InspectionRepairListPageContent />;
 }

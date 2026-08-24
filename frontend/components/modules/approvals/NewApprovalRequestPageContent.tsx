@@ -37,6 +37,7 @@ const CATEGORY_ROUTES: Record<string, string> = {
   CONSUMABLES_REQUISITION: '/approvals/new/consumables',
   VEHICLE_APPLICATION: '/approvals/new/vehicle-application',
   VEHICLE_REFUELING: '/approvals/new/vehicle-refueling',
+  INSPECTION_REPAIR: '/approvals/new/inspection-repair',
   OFFICIAL_SEAL_USAGE: '/approvals/new/official-seal',
   PROJECT_SEAL_USAGE: '/approvals/new/project-seal',
 };
