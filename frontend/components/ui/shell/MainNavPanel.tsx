@@ -34,7 +34,6 @@ import {
   usePmCapabilities,
 } from '@/hooks/use-pm-capabilities';
 import {
-  useCanManagePerDiemRates,
   useCanViewAuditLogs,
   useCanManageRoles,
   useCanManageUsers,
@@ -267,7 +266,6 @@ export default function MainNavPanel({
   const canViewDepartments = useCanViewDepartmentsNav();
   const canViewPositions = useCanViewDepartmentsNav();
   const canViewDisciplinesCatalog = useCanViewDisciplinesCatalogNav();
-  const canManagePerDiemRates = useCanManagePerDiemRates();
 
   const navStructure = buildIconRailNav({
     canViewReviewInbox: !permLoading && canViewReviewInbox,
@@ -292,7 +290,6 @@ export default function MainNavPanel({
     canViewDepartments: !permLoading && canViewDepartments,
     canViewPositions: !permLoading && canViewPositions,
     canViewDisciplinesCatalog: !permLoading && canViewDisciplinesCatalog,
-    canManagePerDiemRates: !permLoading && canManagePerDiemRates,
   });
 
   function isItemVisible(item: IconRailItem): boolean {

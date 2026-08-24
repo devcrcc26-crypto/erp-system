@@ -4,6 +4,8 @@ import { useMemo } from 'react';
 import { Button, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import AddEmployeeForm from '@/components/modules/users/add-employee/AddEmployeeForm';
+import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
@@ -18,6 +20,7 @@ export default function EditEmployeeFormContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const canViewHr = useCanViewHr();
   const userQuery = useUser(userId);
 
   const headerExtra = useMemo(
@@ -58,6 +61,11 @@ export default function EditEmployeeFormContent({
           : t('users.form.editEmployeeDescription')}
       </p>
       <AddEmployeeForm userId={userId} onSuccess={handleSuccess} />
+      {canViewHr ? (
+        <div className="mt-6">
+          <EmployeePerDiemRatesSection employeeId={userId} editable />
+        </div>
+      ) : null}
     </div>
   );
 }

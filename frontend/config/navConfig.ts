@@ -93,7 +93,6 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/business-trips': 'nav.hr.businessTrips',
   '/hr/reports': 'nav.hr.reports',
   '/hr/per-diem': 'nav.hr.perDiem',
-  '/hr/per-diem-rates': 'nav.hr.perDiemRates',
   '/hr/leave-policy': 'nav.hr.leavePolicy',
   '/hr/leave-policy/new': 'pages.hr.leavePolicy.new',
   '/hr/company-asset': 'nav.hr.companyAssets',
@@ -125,7 +124,6 @@ export interface IconRailVisibility {
   canViewDepartments: boolean;
   canViewPositions: boolean;
   canViewDisciplinesCatalog: boolean;
-  canManagePerDiemRates: boolean;
 }
 
 /**
@@ -157,7 +155,6 @@ export function buildIconRailNav(
     canViewDepartments,
     canViewPositions,
     canViewDisciplinesCatalog,
-    canManagePerDiemRates,
   } = visibility;
 
   const topItems: IconRailItem[] = [
@@ -490,13 +487,6 @@ export function buildIconRailNav(
         iconKey: 'hr-leave-policy',
         visible: canViewHr,
       },
-      {
-        key: '/hr/per-diem-rates',
-        labelKey: 'nav.hr.perDiemRates',
-        href: '/hr/per-diem-rates',
-        iconKey: 'hr-per-diem-rates',
-        visible: canManagePerDiemRates,
-      },
     ],
   };
 
@@ -530,7 +520,7 @@ export function buildIconRailNav(
     canViewDisciplinesCatalog ||
     canViewHr;
 
-  const showHrConfiguration = canViewHr || canManagePerDiemRates;
+  const showHrConfiguration = canViewHr;
 
   return {
     topItems,

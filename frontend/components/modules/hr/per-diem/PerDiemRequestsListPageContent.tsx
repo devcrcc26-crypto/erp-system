@@ -11,7 +11,7 @@ import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
-import { useCanManagePerDiemRates, useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -50,7 +50,6 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   );
   const router = useRouter();
   const canViewHr = useCanViewHr();
-  const canManageRates = useCanManagePerDiemRates();
   const { params, resetPage, bindMeta } = useTablePagination();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<PerDiemStatus[]>([]);
@@ -198,11 +197,6 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         ) : null}
         <TableUpdatingIndicator active={listQuery.isFetching} />
         <div className="flex items-center gap-2 ml-auto">
-          {canManageRates ? (
-            <Button onClick={() => router.push('/hr/per-diem-rates')}>
-              {t('hr.labels.perDiemRates')}
-            </Button>
-          ) : null}
           <Button
             type="primary"
             icon={<PlusOutlined />}

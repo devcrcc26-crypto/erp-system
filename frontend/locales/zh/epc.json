@@ -57,7 +57,6 @@
       "businessTrips": "第三国出差",
       "reports": "人力资源报表",
       "perDiem": "差旅补贴",
-      "perDiemRates": "差旅补贴标准",
       "leavePolicy": "假期政策",
       "noApprovalChain": "无需审批链",
       "directApproved": "已直接批准 - 无需审批",
@@ -264,7 +263,8 @@
         "listTitle": "差旅补贴申请",
         "myListTitle": "我的差旅补贴申请",
         "listDescription": "审核并处理员工差旅补贴申请。",
-        "myListDescription": "提交并跟踪您的差旅补贴审批流程。"
+        "myListDescription": "提交并跟踪您的差旅补贴审批流程。",
+        "formDescription": "根据您个人的目的地类别日补贴标准自动计算金额（天数 × 日标准）。"
       },
       "vehicleApplication": {
         "new": "新建用车申请",
@@ -1726,10 +1726,7 @@
       "needsTicket": "待上传机票",
       "international": "国际",
       "domestic": "国内",
-      "perDiemRates": "差旅补贴标准",
-      "destinationCategory": "目的地类别",
-      "addRate": "添加标准",
-      "editRate": "编辑标准"
+      "destinationCategory": "目的地类别"
     },
     "table": {
       "requestNumber": "申请编号",
@@ -1869,8 +1866,6 @@
       "acknowledgeReceipt": "确认收到",
       "releaseVehicle": "释放车辆",
       "attachReceipt": "上传票据",
-      "addRate": "添加标准",
-      "editRate": "编辑标准",
       "approve": "批准",
       "reject": "拒绝",
       "return": "退回",
@@ -1907,7 +1902,27 @@
       "descriptionRequired": "请输入说明",
       "expenseDateRequired": "请选择费用日期",
       "amountRequired": "请输入金额",
-      "currencyRequired": "请选择币种"
+      "currencyRequired": "请选择币种",
+      "selectDestinationCategory": "请选择目的地类别",
+      "enterDestination": "请输入具体目的地"
+    },
+    "perDiemCategory": {
+      "americas": "美洲",
+      "asia": "亚洲",
+      "domestic": "国内",
+      "eastAfrica": "东非",
+      "europe": "欧洲",
+      "middleEast": "中东",
+      "otherAfrica": "其他非洲地区"
+    },
+    "messages": {
+      "employeePerDiemRatesSaved": "员工差旅补贴标准已保存",
+      "employeePerDiemRatesSaveFailed": "保存员工差旅补贴标准失败",
+      "employeePerDiemRatesLoadFailed": "加载员工差旅补贴标准失败",
+      "noActiveEmployeePerDiemRates": "未配置有效的差旅补贴标准",
+      "noActiveEmployeePerDiemRatesDesc": "请先联系人力资源在员工档案中配置您的差旅补贴标准，然后再提交申请。",
+      "perDiemSubmitted": "差旅补贴申请已提交",
+      "perDiemSubmitFailed": "提交差旅补贴申请失败"
     },
     "hints": {
       "replaceReceipt": "当前收据：{{name}}。上传新文件可替换。"
@@ -1999,6 +2014,7 @@
       "unit": "单位",
       "unitPrice": "单价",
       "currency": "货币",
+      "active": "启用",
       "amount": "金额",
       "category": "类别",
       "expenseDate": "费用日期",
@@ -2101,7 +2117,6 @@
       "noVehicleApplications": "暂无用车申请。",
       "noRefuelingRequests": "暂无加油申请。",
       "noVehicles": "暂无注册车辆。",
-      "noPerDiemRates": "暂无差旅补贴标准。",
       "noItems": "暂未添加物品。",
       "noEntries": "请添加本月加班记录。",
       "noAttachments": "暂无附件。",
@@ -2129,7 +2144,8 @@
       "additionalOptions": "其他选项",
       "combinedTicket": "合并机票",
       "individualTickets": "个人机票",
-      "perDiemRates": "差旅补贴标准",
+      "employeePerDiemRates": "差旅补贴标准",
+      "employeePerDiemRatesDescription": "按目的地类别配置该员工的日补贴标准。未启用的类别不会出现在员工的差旅补贴申请表单中。",
       "vehicleAvailability": "车辆可用性",
       "hourSummary": "加班时长汇总",
       "officialSealDetails": "公章使用详情",

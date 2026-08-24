@@ -191,12 +191,6 @@ export class CapabilitiesDto {
 
   @ApiProperty({
     description:
-      'Can manage per diem destination rates (per-diem-rates.edit) — HR Officer / System Administrator',
-  })
-  canManagePerDiemRates!: boolean;
-
-  @ApiProperty({
-    description:
       'System Administrator — bypasses project team module gates and receives full RBAC.',
   })
   isSystemAdministrator!: boolean;

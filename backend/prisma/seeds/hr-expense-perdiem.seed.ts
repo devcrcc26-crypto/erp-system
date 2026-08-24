@@ -3,7 +3,7 @@
  * records each, including full approval chains and ETB totals.
  *
  * Prerequisites: HR users (Wei Chen, Xiaoming Li, Jinxia, David Wu),
- * approval categories EXPENSE_CLAIM + PER_DIEM, and per diem rates.
+ * approval categories EXPENSE_CLAIM + PER_DIEM, and employee per diem rates.
  *
  * Run: npx ts-node --transpile-only prisma/seeds/hr-expense-perdiem.seed.ts
  */
@@ -544,13 +544,73 @@ async function seedExpenseClaims(
 // Per diem requests
 // ────────────────────────────────────────────────────────────────────────────
 
+async function ensureEmployeePerDiemRate(
+  companyId: string,
+  employeeId: string,
+  actorUserId: string,
+): Promise<{ id: string; currency: SupportedCurrency }> {
+  const existing = await prisma.employeePerDiemRate.findFirst({
+    where: { companyId, employeeId, deletedAt: null },
+  });
+  if (existing) {
+    return { id: existing.id, currency: existing.currency };
+  }
+
+  const created = await prisma.employeePerDiemRate.create({
+    data: {
+      id: randomUUID(),
+      companyId,
+      employeeId,
+      domesticRate: 500,
+      eastAfricaRate: 30,
+      otherAfricaRate: 50,
+      middleEastRate: 60,
+      asiaRate: 70,
+      europeRate: 80,
+      americasRate: 80,
+      currency: SupportedCurrency.ETB,
+      createdBy: actorUserId,
+      updatedBy: actorUserId,
+    },
+  });
+  return { id: created.id, currency: created.currency };
+}
+
+function resolveCategoryRate(
+  row: {
+    americasRate: { toString(): string } | null;
+    asiaRate: { toString(): string } | null;
+    domesticRate: { toString(): string } | null;
+    eastAfricaRate: { toString(): string } | null;
+    europeRate: { toString(): string } | null;
+    middleEastRate: { toString(): string } | null;
+    otherAfricaRate: { toString(): string } | null;
+    currency: SupportedCurrency;
+  },
+  destinationCategory: string,
+): { dailyRate: number; currency: SupportedCurrency } | null {
+  const map: Record<string, { toString(): string } | null> = {
+    Americas: row.americasRate,
+    Asia: row.asiaRate,
+    Domestic: row.domesticRate,
+    'East Africa': row.eastAfricaRate,
+    Europe: row.europeRate,
+    'Middle East': row.middleEastRate,
+    'Other Africa': row.otherAfricaRate,
+  };
+  const value = map[destinationCategory];
+  if (value == null) {
+    return null;
+  }
+  return { dailyRate: Number(value), currency: row.currency };
+}
+
 async function seedPerDiemRequests(
   ctx: ChainContext,
   companyId: string,
   weiChen: User,
   xiaomingLi: User,
   otherEmployees: User[],
-  rateByCategory: Record<string, { id: string; dailyRate: { toString(): string }; currency: SupportedCurrency }>,
   usdRate: number,
   cnyRate: number,
   approvedFlights: Array<{ id: string }>,
@@ -682,7 +742,19 @@ async function seedPerDiemRequests(
   ];
 
   for (const pd of perDiemRequests) {
-    const rate = rateByCategory[pd.destinationCategory];
+    const employeeRateRow = await prisma.employeePerDiemRate.findFirst({
+      where: {
+        companyId,
+        employeeId: pd.employee.id,
+        deletedAt: null,
+      },
+    });
+    if (!employeeRateRow) {
+      console.warn(`⚠ No employee per diem rate for ${pd.employee.id} - skipping`);
+      continue;
+    }
+
+    const rate = resolveCategoryRate(employeeRateRow, pd.destinationCategory);
     if (!rate) {
       console.warn(`⚠ No rate found for ${pd.destinationCategory} - skipping`);
       continue;
@@ -692,7 +764,7 @@ async function seedPerDiemRequests(
     const end = new Date(pd.endDate);
     const days =
       Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const dailyRate = Number(rate.dailyRate);
+    const dailyRate = rate.dailyRate;
     const totalAmount = dailyRate * days;
     const exchangeRate =
       rate.currency === SupportedCurrency.USD
@@ -721,7 +793,7 @@ async function seedPerDiemRequests(
         companyId,
         requestNumber,
         employeeId: pd.employee.id,
-        perDiemRateId: rate.id,
+        employeePerDiemRateId: employeeRateRow.id,
         destinationCategory: pd.destinationCategory,
         destination: pd.destination,
         startDate: start,
@@ -813,18 +885,10 @@ async function main(): Promise<void> {
     take: 3,
   });
 
-  const perDiemRates = await prisma.perDiemRate.findMany({
-    where: { companyId, isActive: true, deletedAt: null },
-  });
-  if (perDiemRates.length === 0) {
-    throw new Error(
-      'No active per diem rates found. Run seed-per-diem-category-and-rates.ts first.',
-    );
+  const allEmployees = [weiChen, xiaomingLi, ...otherEmployees];
+  for (const employee of allEmployees) {
+    await ensureEmployeePerDiemRate(companyId, employee.id, weiChen.id);
   }
-
-  const rateByCategory = Object.fromEntries(
-    perDiemRates.map((r) => [r.destinationCategory, r]),
-  );
 
   const usdRate = await getExchangeRate(SupportedCurrency.USD, companyId);
   const cnyRate = await getExchangeRate(SupportedCurrency.CNY, companyId);
@@ -848,7 +912,6 @@ async function main(): Promise<void> {
     weiChen,
     xiaomingLi,
     otherEmployees,
-    rateByCategory,
     usdRate,
     cnyRate,
     approvedFlights,

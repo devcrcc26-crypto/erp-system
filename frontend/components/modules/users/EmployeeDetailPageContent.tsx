@@ -6,6 +6,7 @@ import { CalendarOutlined, UserOutlined } from '@ant-design/icons';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
+import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import {
@@ -527,6 +528,10 @@ export default function EmployeeDetailPageContent({
       <SectionCard title={t('users.form.profileDocuments')} bodyClassName="p-4">
         <EmployeeProfileDocuments userId={user.id} />
       </SectionCard>
+
+      {canViewHr ? (
+        <EmployeePerDiemRatesSection employeeId={user.id} editable={false} />
+      ) : null}
               </div>
       )}
 

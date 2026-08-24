@@ -56,7 +56,7 @@ const indexSyncModels = [
   'OvertimeSheet',
   'DesignPackage',
   'ExchangeRate',
-  'PerDiemRate',
+  'EmployeePerDiemRate',
 ];
 
 for (const model of indexSyncModels) {

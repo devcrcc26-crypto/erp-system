@@ -82,7 +82,6 @@ export class SessionCapabilitiesService {
       'overtime',
       'flight',
       'business-trip',
-      'per-diem-rates',
       'schedule',
       'engineering_documents',
       'review_sessions',
@@ -110,7 +109,6 @@ export class SessionCapabilitiesService {
     const overtime = permissionMap.overtime;
     const flight = permissionMap.flight;
     const businessTrip = permissionMap['business-trip'];
-    const perDiemRates = permissionMap['per-diem-rates'];
     const schedule = permissionMap.schedule;
     const engineeringDocuments = permissionMap.engineering_documents;
     const reviewSessions = permissionMap.review_sessions;
@@ -134,7 +132,6 @@ export class SessionCapabilitiesService {
       canViewBusinessTrip: businessTrip.canView,
       canCreateBusinessTrip: businessTrip.canCreate,
       canManageBusinessTrip: businessTrip.canEdit,
-      canManagePerDiemRates: perDiemRates.canEdit,
       isSystemAdministrator: systemAdministrator,
       pm,
       epc: this.resolveEpcCapabilities(

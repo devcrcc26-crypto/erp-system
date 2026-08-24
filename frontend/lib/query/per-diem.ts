@@ -6,20 +6,20 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
-  apiDelete,
   apiGet,
   apiGetPaginated,
   apiPatch,
   apiPost,
+  apiPut,
 } from '@/lib/api/client';
 import type {
-  CreatePerDiemRatePayload,
+  EmployeePerDiemActiveCategory,
+  EmployeePerDiemRate,
   ListPerDiemRequestsParams,
-  PerDiemRate,
   PerDiemRequestDetail,
   PerDiemRequestListItem,
   SubmitPerDiemRequestPayload,
-  UpdatePerDiemRatePayload,
+  UpsertEmployeePerDiemRatePayload,
 } from '@/lib/api/per-diem.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
@@ -27,13 +27,14 @@ import { toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
-const RATES_PATH = '/hr/per-diem-rates';
+const EMPLOYEE_RATES_PATH = '/hr/employee-per-diem-rates';
 const REQUESTS_PATH = '/hr/per-diem';
 
-export const perDiemRateKeys = {
-  all: ['per-diem-rate'] as const,
-  list: () => [...perDiemRateKeys.all, 'list'] as const,
-  active: () => [...perDiemRateKeys.all, 'active'] as const,
+export const employeePerDiemRateKeys = {
+  all: ['employee-per-diem-rate'] as const,
+  employee: (employeeId: string) =>
+    [...employeePerDiemRateKeys.all, employeeId] as const,
+  myActive: () => [...employeePerDiemRateKeys.all, 'me', 'active'] as const,
 };
 
 export const perDiemKeys = {
@@ -45,67 +46,52 @@ export const perDiemKeys = {
   detail: (id: string) => [...perDiemKeys.details(), id] as const,
 };
 
-// ─── Rates (HR config) ──────────────────────────────────────────────────────
-
-/** All per diem rates (HR management table). */
-export function usePerDiemRates(enabled = true) {
+/** Active destination categories for the current employee (submission form). */
+export function useMyActiveEmployeePerDiemCategories(enabled = true) {
   return useQuery({
-    queryKey: perDiemRateKeys.list(),
-    queryFn: () => apiGet<PerDiemRate[]>(RATES_PATH),
+    queryKey: employeePerDiemRateKeys.myActive(),
+    queryFn: () =>
+      apiGet<EmployeePerDiemActiveCategory[]>(`${EMPLOYEE_RATES_PATH}/me/active`),
     enabled,
     retry: false,
   });
 }
 
-/** Active per diem rates (submission form dropdown; any authenticated user). */
-export function useActivePerDiemRates(enabled = true) {
+/** Full per diem rate row for an employee (HR profile). */
+export function useEmployeePerDiemRate(employeeId: string, enabled = true) {
   return useQuery({
-    queryKey: perDiemRateKeys.active(),
-    queryFn: () => apiGet<PerDiemRate[]>(`${RATES_PATH}/active`),
-    enabled,
+    queryKey: employeePerDiemRateKeys.employee(employeeId),
+    queryFn: () =>
+      apiGet<EmployeePerDiemRate>(
+        `${EMPLOYEE_RATES_PATH}/employee/${employeeId}`,
+      ),
+    enabled: Boolean(employeeId) && enabled,
     retry: false,
   });
 }
 
-export function useCreatePerDiemRate() {
+export function useUpsertEmployeePerDiemRate(employeeId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreatePerDiemRatePayload) =>
-      apiPost<PerDiemRate>(RATES_PATH, payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: perDiemRateKeys.all });
+    mutationFn: (payload: UpsertEmployeePerDiemRatePayload) =>
+      apiPut<EmployeePerDiemRate>(
+        `${EMPLOYEE_RATES_PATH}/employee/${employeeId}`,
+        payload,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: employeePerDiemRateKeys.employee(employeeId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeePerDiemRateKeys.myActive(),
+      });
+      queryClient.setQueryData(
+        employeePerDiemRateKeys.employee(employeeId),
+        updated,
+      );
     },
   });
 }
-
-export function useUpdatePerDiemRate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      id,
-      payload,
-    }: {
-      id: string;
-      payload: UpdatePerDiemRatePayload;
-    }) => apiPatch<PerDiemRate>(`${RATES_PATH}/${id}`, payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: perDiemRateKeys.all });
-    },
-  });
-}
-
-export function useDeletePerDiemRate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiDelete<{ message: string }>(`${RATES_PATH}/${id}`),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: perDiemRateKeys.all });
-    },
-  });
-}
-
-// ─── Requests ───────────────────────────────────────────────────────────────
 
 function buildListQuery(params: ListPerDiemRequestsParams): string {
   const { status, ...rest } = params;

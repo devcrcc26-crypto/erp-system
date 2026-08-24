@@ -271,7 +271,7 @@ model Company {
   flightApplications       FlightApplication[]
   businessTrips            BusinessTrip[]
   exchangeRates            ExchangeRate[]
-  perDiemRates             PerDiemRate[]
+  employeePerDiemRates     EmployeePerDiemRate[]
   expenseClaims            ExpenseClaim[]
   perDiemRequests          PerDiemRequest[]
   purchaseRequests         PurchaseRequest[]
@@ -712,8 +712,9 @@ model User {
   perDiemRequestsAsEmployee   PerDiemRequest[]    @relation("PerDiemEmployee")
   perDiemRequestsCreated      PerDiemRequest[]    @relation("PerDiemCreator")
   perDiemRequestsUpdated      PerDiemRequest[]    @relation("PerDiemUpdater")
-  perDiemRatesCreated         PerDiemRate[]       @relation("PerDiemRateCreator")
-  perDiemRatesUpdated         PerDiemRate[]       @relation("PerDiemRateUpdater")
+  employeePerDiemRate         EmployeePerDiemRate? @relation("EmployeePerDiemRateEmployee")
+  employeePerDiemRatesCreated EmployeePerDiemRate[] @relation("EmployeePerDiemRateCreator")
+  employeePerDiemRatesUpdated EmployeePerDiemRate[] @relation("EmployeePerDiemRateUpdater")
   purchaseRequestsAsEmployee  PurchaseRequest[]   @relation("PurchaseRequestEmployee")
   purchaseRequestsCreated     PurchaseRequest[]   @relation("PurchaseRequestCreator")
   purchaseRequestsUpdated       PurchaseRequest[]   @relation("PurchaseRequestUpdater")
@@ -4014,29 +4015,43 @@ model ExchangeRate {
   @@map("exchange_rate")
 }
 
-model PerDiemRate {
-  id                  String            @id @default(dbgenerated("(gen_random_uuid())::text"))
-  companyId           String            @map("company_id")
-  destinationCategory String            @map("destination_category")
-  dailyRate           Decimal           @map("daily_rate") @db.Decimal(12, 2)
-  currency            SupportedCurrency @default(ETB)
-  description         String?
-  isActive            Boolean           @default(true) @map("is_active")
-  createdAt           DateTime          @default(now()) @map("created_at")
-  createdBy           String            @map("created_by")
-  updatedAt           DateTime          @default(now()) @updatedAt @map("updated_at")
-  updatedBy           String            @map("updated_by")
-  deletedAt           DateTime?         @map("deleted_at")
-  deletedBy           String?           @map("deleted_by")
+model EmployeePerDiemRate {
+  id                String            @id @default(dbgenerated("(gen_random_uuid())::text"))
+  companyId         String            @map("company_id")
+  employeeId        String            @unique @map("employee_id")
+  americasRate      Decimal?          @map("americas_rate") @db.Decimal(12, 2)
+  asiaRate          Decimal?          @map("asia_rate") @db.Decimal(12, 2)
+  domesticRate      Decimal?          @map("domestic_rate") @db.Decimal(12, 2)
+  eastAfricaRate    Decimal?          @map("east_africa_rate") @db.Decimal(12, 2)
+  europeRate        Decimal?          @map("europe_rate") @db.Decimal(12, 2)
+  middleEastRate    Decimal?          @map("middle_east_rate") @db.Decimal(12, 2)
+  otherAfricaRate   Decimal?          @map("other_africa_rate") @db.Decimal(12, 2)
+  americasActive    Boolean           @default(true) @map("americas_active")
+  asiaActive        Boolean           @default(true) @map("asia_active")
+  domesticActive    Boolean           @default(true) @map("domestic_active")
+  eastAfricaActive  Boolean           @default(true) @map("east_africa_active")
+  europeActive      Boolean           @default(true) @map("europe_active")
+  middleEastActive  Boolean           @default(true) @map("middle_east_active")
+  otherAfricaActive Boolean           @default(true) @map("other_africa_active")
+  currency          SupportedCurrency @default(ETB)
+  createdAt         DateTime          @default(now()) @map("created_at")
+  createdBy         String            @map("created_by")
+  updatedAt         DateTime          @default(now()) @updatedAt @map("updated_at")
+  updatedBy         String            @map("updated_by")
+  deletedAt         DateTime?         @map("deleted_at")
+  deletedBy         String?           @map("deleted_by")
 
-  company  Company          @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  creator  User             @relation("PerDiemRateCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  updater          User               @relation("PerDiemRateUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  perDiems PerDiemRequest[]
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee        User             @relation("EmployeePerDiemRateEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator         User             @relation("EmployeePerDiemRateCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater         User             @relation("EmployeePerDiemRateUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  perDiemRequests PerDiemRequest[]
 
-  @@unique([companyId, destinationCategory])
-  @@index([companyId], map: "idx_per_diem_rate_company")
-  @@map("per_diem_rate")
+  @@unique([companyId, employeeId])
+  @@index([companyId], map: "idx_employee_per_diem_rate_company")
+  @@index([companyId, deletedAt], map: "idx_employee_per_diem_rate_company_deleted")
+  @@index([employeeId], map: "idx_employee_per_diem_rate_employee")
+  @@map("employee_per_diem_rate")
 }
 
 // ─── Expense Claims ─────────────────────────────────────────────────────────
@@ -4123,9 +4138,9 @@ model PerDiemRequest {
   id                   String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId            String            @map("company_id")
   requestNumber        String            @map("request_number")
-  employeeId           String            @map("employee_id")
-  perDiemRateId        String?           @map("per_diem_rate_id")
-  destinationCategory  String            @map("destination_category")
+  employeeId              String            @map("employee_id")
+  employeePerDiemRateId   String?           @map("employee_per_diem_rate_id")
+  destinationCategory     String            @map("destination_category")
   destination          String
   startDate            DateTime          @map("start_date") @db.Date
   endDate              DateTime          @map("end_date") @db.Date
@@ -4151,8 +4166,8 @@ model PerDiemRequest {
   deletedBy            String?           @map("deleted_by")
 
   company         Company            @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  employee        User               @relation("PerDiemEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  perDiemRate     PerDiemRate?       @relation(fields: [perDiemRateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee              User                 @relation("PerDiemEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employeePerDiemRate   EmployeePerDiemRate? @relation(fields: [employeePerDiemRateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   linkedFlight    FlightApplication? @relation(fields: [linkedFlightId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   linkedTrip      BusinessTrip?      @relation(fields: [linkedBusinessTripId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   approvalRequest ApprovalRequest?   @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)

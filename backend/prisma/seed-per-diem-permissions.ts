@@ -1,6 +1,6 @@
 /**
- * Upserts per-diem.view / per-diem.create (all roles) and
- * per-diem-rates.view / per-diem-rates.edit (HR Officer + System Administrator only).
+ * Upserts per-diem.view / per-diem.create (all roles).
+ * Legacy per-diem-rates permissions are no longer used.
  * Usage: npx ts-node --transpile-only prisma/seed-per-diem-permissions.ts
  */
 import { PrismaClient } from '@prisma/client';
@@ -23,33 +23,9 @@ async function main(): Promise<void> {
       },
     ] as const;
 
-    const rateDefs = [
-      {
-        module: 'per-diem-rates',
-        action: 'view',
-        description: 'View per diem destination rates',
-      },
-      {
-        module: 'per-diem-rates',
-        action: 'edit',
-        description: 'Create, update, and delete per diem destination rates',
-      },
-    ] as const;
-
     const requestPermissions = [];
     for (const def of requestDefs) {
       requestPermissions.push(
-        await prisma.permission.upsert({
-          where: { module_action: { module: def.module, action: def.action } },
-          update: { description: def.description },
-          create: { ...def },
-        }),
-      );
-    }
-
-    const ratePermissions = [];
-    for (const def of rateDefs) {
-      ratePermissions.push(
         await prisma.permission.upsert({
           where: { module_action: { module: def.module, action: def.action } },
           update: { description: def.description },
@@ -74,7 +50,6 @@ async function main(): Promise<void> {
 
     for (const role of roles) {
       const isAdmin = role.name === 'System Administrator';
-      const isHr = role.name === 'HR Officer';
 
       for (const permission of requestPermissions) {
         await prisma.rolePermission.upsert({
@@ -103,37 +78,6 @@ async function main(): Promise<void> {
             updatedBy: SYSTEM_USER_ID,
           },
         });
-      }
-
-      if (isAdmin || isHr) {
-        for (const permission of ratePermissions) {
-          await prisma.rolePermission.upsert({
-            where: {
-              roleId_permissionId: { roleId: role.id, permissionId: permission.id },
-            },
-            update: {
-              canView: true,
-              canCreate: true,
-              canEdit: true,
-              canDelete: isAdmin,
-              canApprove: isAdmin,
-              canExport: isAdmin,
-              updatedBy: SYSTEM_USER_ID,
-            },
-            create: {
-              roleId: role.id,
-              permissionId: permission.id,
-              canView: true,
-              canCreate: true,
-              canEdit: true,
-              canDelete: isAdmin,
-              canApprove: isAdmin,
-              canExport: isAdmin,
-              createdBy: SYSTEM_USER_ID,
-              updatedBy: SYSTEM_USER_ID,
-            },
-          });
-        }
       }
     }
 

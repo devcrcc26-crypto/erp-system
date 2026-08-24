@@ -16,30 +16,52 @@ export interface PerDiemUserSummary {
   email?: string | null;
 }
 
-export interface PerDiemRate {
+export interface EmployeePerDiemRate {
   id: string;
   companyId: string;
-  destinationCategory: string;
-  dailyRate: number | string;
+  employeeId: string;
+  americasRate?: number | string | null;
+  asiaRate?: number | string | null;
+  domesticRate?: number | string | null;
+  eastAfricaRate?: number | string | null;
+  europeRate?: number | string | null;
+  middleEastRate?: number | string | null;
+  otherAfricaRate?: number | string | null;
+  americasActive: boolean;
+  asiaActive: boolean;
+  domesticActive: boolean;
+  eastAfricaActive: boolean;
+  europeActive: boolean;
+  middleEastActive: boolean;
+  otherAfricaActive: boolean;
   currency: SupportedCurrency;
-  description?: string | null;
-  isActive: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
-export interface CreatePerDiemRatePayload {
+export interface EmployeePerDiemActiveCategory {
   destinationCategory: string;
   dailyRate: number;
   currency: SupportedCurrency;
-  description?: string;
+  isActive: boolean;
 }
 
-export interface UpdatePerDiemRatePayload {
-  destinationCategory?: string;
-  dailyRate?: number;
+export interface UpsertEmployeePerDiemRatePayload {
+  americasRate?: number | null;
+  asiaRate?: number | null;
+  domesticRate?: number | null;
+  eastAfricaRate?: number | null;
+  europeRate?: number | null;
+  middleEastRate?: number | null;
+  otherAfricaRate?: number | null;
+  americasActive?: boolean;
+  asiaActive?: boolean;
+  domesticActive?: boolean;
+  eastAfricaActive?: boolean;
+  europeActive?: boolean;
+  middleEastActive?: boolean;
+  otherAfricaActive?: boolean;
   currency?: SupportedCurrency;
-  description?: string;
-  isActive?: boolean;
 }
 
 export interface PerDiemRequestListItem {
@@ -66,7 +88,7 @@ export interface PerDiemRequestListItem {
 
 export interface PerDiemRequestDetail extends PerDiemRequestListItem {
   notes?: string | null;
-  perDiemRate?: PerDiemRate | null;
+  employeePerDiemRate?: EmployeePerDiemRate | null;
   linkedFlight?: {
     id: string;
     applicationNumber: string;

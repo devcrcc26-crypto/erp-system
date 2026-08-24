@@ -493,7 +493,6 @@ export interface AuthCapabilities {
   canViewBusinessTrip: boolean;
   canCreateBusinessTrip: boolean;
   canManageBusinessTrip: boolean;
-  canManagePerDiemRates: boolean;
   isSystemAdministrator: boolean;
 }
 
@@ -551,7 +550,6 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canViewBusinessTrip: false,
   canCreateBusinessTrip: false,
   canManageBusinessTrip: false,
-  canManagePerDiemRates: false,
   isSystemAdministrator: false,
   pm: createEmptyPmCapabilities(),
   epc: { ...EMPTY_EPC_CAPABILITIES },

@@ -30,7 +30,7 @@ function addNoActionToModelRelations(modelName) {
 const hrModels = [
   'ExpenseClaim',
   'PerDiemRequest',
-  'PerDiemRate',
+  'EmployeePerDiemRate',
   'ConsumablesRequisition',
   'MaterialRequisition',
   'PurchaseRequest',

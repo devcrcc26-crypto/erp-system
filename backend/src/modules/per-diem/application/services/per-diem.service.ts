@@ -25,6 +25,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { EmployeePerDiemRateService } from './employee-per-diem-rate.service';
 import {
   ListPerDiemRequestsDto,
   SubmitPerDiemRequestDto,
@@ -39,7 +40,7 @@ const USER_SELECT = {
 
 const REQUEST_DETAIL_INCLUDE = {
   employee: { select: USER_SELECT },
-  perDiemRate: true,
+  employeePerDiemRate: true,
   linkedFlight: {
     select: { id: true, applicationNumber: true, destination: true },
   },
@@ -72,6 +73,7 @@ export class PerDiemService
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly currencyService: CurrencyService,
+    private readonly employeePerDiemRateService: EmployeePerDiemRateService,
   ) {}
 
   onModuleInit(): void {
@@ -98,18 +100,13 @@ export class PerDiemService
     const days =
       Math.round((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1;
 
-    const rate = await this.prisma.perDiemRate.findFirst({
-      where: activeOnly({
+    const resolvedRate =
+      await this.employeePerDiemRateService.resolveRateForSubmission(
         companyId,
-        destinationCategory: dto.destinationCategory,
-        isActive: true,
-      }),
-    });
-    if (!rate) {
-      throw new BadRequestException(
-        `No active per diem rate configured for "${dto.destinationCategory}"`,
+        userId,
+        dto.destinationCategory,
+        userId,
       );
-    }
 
     if (dto.linkedFlightId) {
       const flight = await this.prisma.flightApplication.findFirst({
@@ -142,12 +139,16 @@ export class PerDiemService
       }
     }
 
-    const dailyRate = Number(rate.dailyRate);
+    const dailyRate = resolvedRate.dailyRate;
     const totalAmount = dailyRate * days;
     const exchangeRate =
-      rate.currency === 'ETB'
+      resolvedRate.currency === 'ETB'
         ? 1
-        : await this.currencyService.getRate(rate.currency, 'ETB', companyId);
+        : await this.currencyService.getRate(
+            resolvedRate.currency,
+            'ETB',
+            companyId,
+          );
     const totalAmountEtb = totalAmount * exchangeRate;
 
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
@@ -189,14 +190,14 @@ export class PerDiemService
           companyId,
           requestNumber: approval.requestNumber,
           employeeId: userId,
-          perDiemRateId: rate.id,
+          employeePerDiemRateId: resolvedRate.employeePerDiemRateId,
           destinationCategory: dto.destinationCategory,
           destination: dto.destination.trim(),
           startDate,
           endDate,
           days,
           dailyRate: new Prisma.Decimal(dailyRate),
-          currency: rate.currency,
+          currency: resolvedRate.currency,
           totalAmount: new Prisma.Decimal(totalAmount),
           totalAmountEtb: new Prisma.Decimal(totalAmountEtb),
           exchangeRate: new Prisma.Decimal(exchangeRate),

@@ -60,7 +60,7 @@ async function main(): Promise<void> {
         update: {
           canView: true,
           canCreate: isAdmin,
-          canEdit: isAdmin,
+          canEdit: isAdmin || role.name === 'HR Officer',
           canDelete: isAdmin,
           canApprove: isAdmin,
           canExport: isAdmin,
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
           permissionId: permission.id,
           canView: true,
           canCreate: isAdmin,
-          canEdit: isAdmin,
+          canEdit: isAdmin || role.name === 'HR Officer',
           canDelete: isAdmin,
           canApprove: isAdmin,
           canExport: isAdmin,

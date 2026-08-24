@@ -56,7 +56,7 @@ s = s.replace(
 const hrUpdatedAtModels = [
   'ExpenseClaim',
   'PerDiemRequest',
-  'PerDiemRate',
+  'EmployeePerDiemRate',
   'ConsumablesRequisition',
   'ConsumablesRequisitionItem',
   'MaterialRequisition',
