@@ -266,7 +266,23 @@
         "myListTitle": "My Per Diem Requests",
         "listDescription": "Review and process employee per diem requests.",
         "myListDescription": "Submit and track your per diem requests through the approval workflow.",
-        "formDescription": "Daily allowance based on your assigned destination rates. Amount auto-calculates from days × rate."
+        "formDescription": "Daily allowance based on your assigned destination rates. Amount auto-calculates from days × rate.",
+        "requestSingular": "request",
+        "requestPlural": "requests"
+      },
+      "employeePerDiemRates": {
+        "listTitle": "Employee Per Diem Rates",
+        "listDescription": "Manage daily allowance rates by destination category for each employee.",
+        "notConfigured": "Not set",
+        "openProfile": "Open profile",
+        "employeeSingular": "employee",
+        "employeePlural": "employees",
+        "stats": {
+          "total": "Employees",
+          "configured": "Configured",
+          "pendingSetup": "Not configured",
+          "activeCategories": "Active categories"
+        }
       },
       "vehicleApplication": {
         "new": "New Vehicle Application",

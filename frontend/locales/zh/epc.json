@@ -265,7 +265,23 @@
         "myListTitle": "我的差旅补贴申请",
         "listDescription": "审核并处理员工差旅补贴申请。",
         "myListDescription": "提交并跟踪您的差旅补贴审批流程。",
-        "formDescription": "根据您个人的目的地类别日补贴标准自动计算金额（天数 × 日标准）。"
+        "formDescription": "根据您个人的目的地类别日补贴标准自动计算金额（天数 × 日标准）。",
+        "requestSingular": "条申请",
+        "requestPlural": "条申请"
+      },
+      "employeePerDiemRates": {
+        "listTitle": "员工差旅补贴标准",
+        "listDescription": "按目的地类别管理每位员工的日补贴标准。",
+        "notConfigured": "未配置",
+        "openProfile": "打开档案",
+        "employeeSingular": "名员工",
+        "employeePlural": "名员工",
+        "stats": {
+          "total": "员工总数",
+          "configured": "已配置",
+          "pendingSetup": "未配置",
+          "activeCategories": "启用类别数"
+        }
       },
       "vehicleApplication": {
         "new": "新建用车申请",

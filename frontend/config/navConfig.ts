@@ -93,7 +93,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/business-trips': 'nav.hr.businessTrips',
   '/hr/reports': 'nav.hr.reports',
   '/hr/per-diem': 'nav.hr.perDiem',
-  '/hr/employee-per-diem-rates': 'nav.hr.employeePerDiemRates',
+  '/hr/employee-per-diem-rates': 'pages.hr.employeePerDiemRates.listTitle',
   '/hr/leave-policy': 'nav.hr.leavePolicy',
   '/hr/leave-policy/new': 'pages.hr.leavePolicy.new',
   '/hr/company-asset': 'nav.hr.companyAssets',

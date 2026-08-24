@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Alert, Button, Form, InputNumber, Select, Switch, Table } from 'antd';
+import { Alert, Button, Form, InputNumber, Select, Switch } from 'antd';
 import {
   PER_DIEM_CATEGORY_FIELDS,
   PER_DIEM_DESTINATION_CATEGORIES,
@@ -15,9 +15,15 @@ import {
 import { useCurrentUser } from '@/lib/query/profile';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import {
+  SectionCard,
+  SubsectionHeader,
+} from '@/components/modules/hr/shared/hr-page-chrome';
+import DataTable from '@/components/ui/DataTable/DataTable';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
+import { tokens } from '@/lib/theme/tokens';
 
 type FormValues = {
   currency: SupportedCurrency;
@@ -37,9 +43,11 @@ function toNumber(value: number | string | null | undefined): number | null {
 export default function EmployeePerDiemRatesSection({
   employeeId,
   editable = false,
+  embedded = false,
 }: {
   employeeId: string;
   editable?: boolean;
+  embedded?: boolean;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -96,11 +104,17 @@ export default function EmployeePerDiemRatesSection({
   }
 
   if (rateQuery.isLoading) {
+    const loadingBody = (
+      <p className="m-0 text-sm" style={{ color: tokens.colorTextTertiary }}>
+        {t('common.loading')}
+      </p>
+    );
+    if (embedded) {
+      return loadingBody;
+    }
     return (
       <SectionCard title={t('hr.section.employeePerDiemRates')} bodyClassName="px-3 py-4 sm:px-5">
-        <p className="m-0 text-sm text-[var(--color-text-tertiary)]">
-          {t('common.loading')}
-        </p>
+        {loadingBody}
       </SectionCard>
     );
   }
@@ -126,6 +140,143 @@ export default function EmployeePerDiemRatesSection({
     };
   });
 
+  const formContent = (
+    <>
+      {embedded ? (
+        <SubsectionHeader
+          title={t('hr.section.employeePerDiemRates')}
+          description={t('hr.section.employeePerDiemRatesDescription')}
+        />
+      ) : (
+        <p
+          className="mb-4 mt-0 text-sm"
+          style={{ color: tokens.colorTextSecondary }}
+        >
+          {t('hr.section.employeePerDiemRatesDescription')}
+        </p>
+      )}
+
+      <Form form={form} layout="vertical" onFinish={(values) => void handleSave(values)}>
+        <div
+          className={`mb-4 flex flex-wrap items-end gap-3 ${embedded ? 'justify-between' : ''}`}
+        >
+          {editable ? (
+            <Form.Item
+              name="currency"
+              label={t('hr.form.currency')}
+              className="mb-0 min-w-[140px] max-w-xs flex-1"
+              rules={[{ required: true }]}
+            >
+              <Select
+                options={[
+                  { value: 'ETB', label: 'ETB' },
+                  { value: 'USD', label: 'USD' },
+                  { value: 'CNY', label: 'CNY' },
+                ]}
+              />
+            </Form.Item>
+          ) : (
+            <div className="min-w-[140px]">
+              <p
+                className="m-0 mb-1 text-xs font-medium uppercase tracking-wide"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                {t('hr.form.currency')}
+              </p>
+              <p
+                className="m-0 text-sm font-semibold"
+                style={{ color: tokens.colorTextPrimary }}
+              >
+                {row?.currency ?? 'ETB'}
+              </p>
+            </div>
+          )}
+
+          {editable && embedded ? (
+            <Button
+              type="primary"
+              loading={saveMutation.isPending}
+              onClick={() => form.submit()}
+              style={{ borderRadius: 0 }}
+            >
+              {t('common.save')}
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)]">
+          <DataTable
+            rowKey="key"
+            className="erp-pro-table"
+            size="small"
+            pagination={false}
+            scroll={false}
+            dataSource={tableData}
+            columns={[
+              {
+                title: t('hr.form.destinationCategory'),
+                dataIndex: 'label',
+                key: 'label',
+                render: (value: string) => (
+                  <span className="text-sm font-medium">{value}</span>
+                ),
+              },
+              {
+                title: t('hr.form.dailyRate'),
+                key: 'rate',
+                width: 160,
+                align: 'right',
+                render: (_, record) =>
+                  editable ? (
+                    <Form.Item name={record.rateField} className="mb-0">
+                      <InputNumber
+                        min={0}
+                        precision={2}
+                        className="w-full min-w-[120px]"
+                      />
+                    </Form.Item>
+                  ) : (
+                    <span className="text-sm font-medium">
+                      {record.rateValue != null
+                        ? formatCurrencyAmount(record.rateValue, currency)
+                        : '—'}
+                    </span>
+                  ),
+              },
+              {
+                title: t('hr.form.active'),
+                key: 'active',
+                width: 120,
+                align: 'center',
+                render: (_, record) =>
+                  editable ? (
+                    <Form.Item
+                      name={record.activeField}
+                      valuePropName="checked"
+                      className="mb-0 flex justify-center"
+                    >
+                      <Switch />
+                    </Form.Item>
+                  ) : (
+                    <StatusBadge
+                      label={
+                        record.activeValue ? t('common.active') : t('common.inactive')
+                      }
+                      variant={record.activeValue ? 'approved' : 'draft'}
+                    />
+                  ),
+              },
+            ]}
+          />
+        </div>
+      </Form>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex flex-col gap-2">{formContent}</div>;
+  }
+
   return (
     <SectionCard
       title={t('hr.section.employeePerDiemRates')}
@@ -143,81 +294,7 @@ export default function EmployeePerDiemRatesSection({
         ) : null
       }
     >
-      <p className="mb-4 mt-0 text-sm text-[var(--color-text-secondary)]">
-        {t('hr.section.employeePerDiemRatesDescription')}
-      </p>
-
-      <Form form={form} layout="vertical" onFinish={(values) => void handleSave(values)}>
-        {editable ? (
-          <Form.Item
-            name="currency"
-            label={t('hr.form.currency')}
-            className="mb-4 max-w-xs"
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={[
-                { value: 'ETB', label: 'ETB' },
-                { value: 'USD', label: 'USD' },
-                { value: 'CNY', label: 'CNY' },
-              ]}
-            />
-          </Form.Item>
-        ) : (
-          <p className="mb-4 text-sm text-[var(--color-text-primary)]">
-            {t('hr.form.currency')}: <strong>{row?.currency ?? 'ETB'}</strong>
-          </p>
-        )}
-
-        <div className="overflow-x-auto">
-          <Table
-            rowKey="key"
-            size="small"
-            pagination={false}
-            dataSource={tableData}
-            columns={[
-              {
-                title: t('hr.form.destinationCategory'),
-                dataIndex: 'label',
-                key: 'label',
-              },
-              {
-                title: t('hr.form.dailyRate'),
-                key: 'rate',
-                render: (_, record) =>
-                  editable ? (
-                    <Form.Item name={record.rateField} className="mb-0">
-                      <InputNumber min={0} precision={2} className="w-full min-w-[120px]" />
-                    </Form.Item>
-                  ) : (
-                    <span>
-                      {record.rateValue != null
-                        ? formatCurrencyAmount(record.rateValue, currency)
-                        : '—'}
-                    </span>
-                  ),
-              },
-              {
-                title: t('hr.form.active'),
-                key: 'active',
-                width: 100,
-                render: (_, record) =>
-                  editable ? (
-                    <Form.Item
-                      name={record.activeField}
-                      valuePropName="checked"
-                      className="mb-0"
-                    >
-                      <Switch />
-                    </Form.Item>
-                  ) : (
-                    <span>{record.activeValue ? t('common.yes') : t('common.no')}</span>
-                  ),
-              },
-            ]}
-          />
-        </div>
-      </Form>
+      {formContent}
     </SectionCard>
   );
 }
