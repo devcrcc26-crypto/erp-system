@@ -64,6 +64,28 @@ export interface UpsertEmployeePerDiemRatePayload {
   currency?: SupportedCurrency;
 }
 
+export interface EmployeePerDiemRateListEmployee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string | null;
+  department?: { id: string; name: string } | null;
+}
+
+export interface EmployeePerDiemRateListItem {
+  employeeId: string;
+  employee: EmployeePerDiemRateListEmployee;
+  rate: EmployeePerDiemRate | null;
+}
+
+export interface ListEmployeePerDiemRatesParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
 export interface PerDiemRequestListItem {
   id: string;
   companyId: string;

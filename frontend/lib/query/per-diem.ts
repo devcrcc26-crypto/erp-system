@@ -15,6 +15,8 @@ import {
 import type {
   EmployeePerDiemActiveCategory,
   EmployeePerDiemRate,
+  EmployeePerDiemRateListItem,
+  ListEmployeePerDiemRatesParams,
   ListPerDiemRequestsParams,
   PerDiemRequestDetail,
   PerDiemRequestListItem,
@@ -32,9 +34,13 @@ const REQUESTS_PATH = '/hr/per-diem';
 
 export const employeePerDiemRateKeys = {
   all: ['employee-per-diem-rate'] as const,
+  lists: () => [...employeePerDiemRateKeys.all, 'list'] as const,
+  list: (params: ListEmployeePerDiemRatesParams) =>
+    [...employeePerDiemRateKeys.lists(), params] as const,
   employee: (employeeId: string) =>
     [...employeePerDiemRateKeys.all, employeeId] as const,
   myActive: () => [...employeePerDiemRateKeys.all, 'me', 'active'] as const,
+  myFull: () => [...employeePerDiemRateKeys.all, 'me', 'full'] as const,
 };
 
 export const perDiemKeys = {
@@ -52,6 +58,38 @@ export function useMyActiveEmployeePerDiemCategories(enabled = true) {
     queryKey: employeePerDiemRateKeys.myActive(),
     queryFn: () =>
       apiGet<EmployeePerDiemActiveCategory[]>(`${EMPLOYEE_RATES_PATH}/me/active`),
+    enabled,
+    retry: false,
+  });
+}
+
+/** Paginated employee per diem rates (HR list page). */
+export function useEmployeePerDiemRatesList(
+  params: ListEmployeePerDiemRatesParams = {
+    page: 1,
+    limit: 20,
+    sortBy: 'lastName',
+    sortOrder: 'asc',
+  },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: employeePerDiemRateKeys.list(params),
+    queryFn: () =>
+      apiGetPaginated<EmployeePerDiemRateListItem>(
+        `${EMPLOYEE_RATES_PATH}${toQueryString(params)}`,
+      ) as Promise<PaginatedResult<EmployeePerDiemRateListItem>>,
+    enabled,
+    retry: false,
+  });
+}
+
+/** Full per diem rate row for the current employee (self profile). */
+export function useMyEmployeePerDiemRate(enabled = true) {
+  return useQuery({
+    queryKey: employeePerDiemRateKeys.myFull(),
+    queryFn: () =>
+      apiGet<EmployeePerDiemRate>(`${EMPLOYEE_RATES_PATH}/me`),
     enabled,
     retry: false,
   });
@@ -81,6 +119,12 @@ export function useUpsertEmployeePerDiemRate(employeeId: string) {
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({
         queryKey: employeePerDiemRateKeys.employee(employeeId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeePerDiemRateKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeePerDiemRateKeys.myFull(),
       });
       void queryClient.invalidateQueries({
         queryKey: employeePerDiemRateKeys.myActive(),

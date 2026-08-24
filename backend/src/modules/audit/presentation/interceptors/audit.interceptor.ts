@@ -12,7 +12,7 @@ import { AuditSnapshotService } from '../../application/services/audit-snapshot.
 import { AuditService } from '../../application/services/audit.service';
 import {
   looksLikeEntityUuid,
-  sanitizeAuditValue,
+  toAuditJsonSnapshot,
 } from '../../application/utils/audit-value.util';
 
 const EXCLUDED_PATH_PREFIXES = [
@@ -116,7 +116,7 @@ export class AuditInterceptor implements NestInterceptor {
       action === 'delete'
         ? undefined
         : data
-          ? (sanitizeAuditValue(data) as Prisma.InputJsonValue)
+          ? toAuditJsonSnapshot(data)
           : undefined;
 
     await this.auditService.create(

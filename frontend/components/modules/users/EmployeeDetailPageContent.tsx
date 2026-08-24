@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { Alert, Button, Skeleton, Space, Tag } from 'antd';
-import { CalendarOutlined, UserOutlined } from '@ant-design/icons';
+import { CalendarOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
@@ -21,6 +21,7 @@ import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { EmergencyContact, UserDetail } from '@/lib/api/types';
+import { useCurrentUser } from '@/lib/query/profile';
 import {
   useDeleteUser,
   useResendInvitation,
@@ -58,6 +59,18 @@ function formatAddress(user: UserDetail): string {
   return parts.length > 0 ? parts.join(', ') : '-';
 }
 
+type ProfileTab = 'overview' | 'leave' | 'perDiem';
+
+function resolveProfileTab(value: string | null): ProfileTab {
+  if (value === 'leave') {
+    return 'leave';
+  }
+  if (value === 'perDiem') {
+    return 'perDiem';
+  }
+  return 'overview';
+}
+
 export default function EmployeeDetailPageContent({
   userId,
 }: {
@@ -65,13 +78,30 @@ export default function EmployeeDetailPageContent({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
+  const currentUserQuery = useCurrentUser();
   const detailQuery = useUser(userId);
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'leave'>('overview');
+
+  const activeTab = resolveProfileTab(searchParams.get('tab'));
+  const isOwnProfile = currentUserQuery.data?.id === userId;
+  const showPerDiemTab = canViewHr || isOwnProfile;
+
+  function setActiveTab(tab: ProfileTab): void {
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === 'overview') {
+      params.delete('tab');
+    } else {
+      params.set('tab', tab);
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
 
   const user = detailQuery.data;
   const showResend =
@@ -312,6 +342,17 @@ export default function EmployeeDetailPageContent({
           <CalendarOutlined />
           {t('users.tabLeave')}
         </button>
+        {showPerDiemTab ? (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'perDiem'}
+            onClick={() => setActiveTab('perDiem')}
+          >
+            <WalletOutlined />
+            {t('users.tabPerDiem')}
+          </button>
+        ) : null}
       </div>
       {activeTab === 'leave' ? (
         canViewHr ? (
@@ -319,6 +360,11 @@ export default function EmployeeDetailPageContent({
         ) : (
           <EmployeeLeaveProfileSection mode="self" />
         )
+      ) : activeTab === 'perDiem' ? (
+        <EmployeePerDiemRatesSection
+          employeeId={user.id}
+          editable={canViewHr}
+        />
       ) : (
               <div className="flex flex-col gap-3">
       <div className="grid gap-3 lg:grid-cols-2">
@@ -528,10 +574,6 @@ export default function EmployeeDetailPageContent({
       <SectionCard title={t('users.form.profileDocuments')} bodyClassName="p-4">
         <EmployeeProfileDocuments userId={user.id} />
       </SectionCard>
-
-      {canViewHr ? (
-        <EmployeePerDiemRatesSection employeeId={user.id} editable={false} />
-      ) : null}
               </div>
       )}
 

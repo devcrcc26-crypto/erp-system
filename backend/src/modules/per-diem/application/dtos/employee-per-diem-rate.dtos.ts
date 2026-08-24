@@ -4,9 +4,18 @@ import {
   IsEnum,
   IsNumber,
   IsOptional,
+  IsString,
   Min,
 } from 'class-validator';
 import { SupportedCurrency } from '@prisma/client';
+import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+
+export class ListEmployeePerDiemRatesQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ description: 'Search by employee name or email' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+}
 
 /**
  * Upsert payload for an employee's per-destination daily rates.

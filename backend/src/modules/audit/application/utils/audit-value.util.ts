@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 
 const SENSITIVE_KEYS = new Set([
   'password',
@@ -22,6 +23,15 @@ export function looksLikeEntityUuid(value: string | undefined): boolean {
  * Strips sensitive fields from values persisted in audit logs.
  */
 export function sanitizeAuditValue(value: unknown): unknown {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+  if (Decimal.isDecimal(value)) {
+    return value.toString();
+  }
   if (Array.isArray(value)) {
     return value.map((item) => sanitizeAuditValue(item));
   }

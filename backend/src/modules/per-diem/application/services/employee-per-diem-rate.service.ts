@@ -6,12 +6,24 @@ import {
 import { Prisma, SupportedCurrency } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import {
+  buildPaginatedResult,
+  buildPrismaPagination,
+  buildOrderBy,
+} from '../../../../shared/utils/pagination.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
   listActiveEmployeePerDiemCategories,
   resolveEmployeePerDiemCategoryRate,
 } from '../../domain/per-diem-destination-categories';
-import { UpsertEmployeePerDiemRateDto } from '../dtos/employee-per-diem-rate.dtos';
+import {
+  ListEmployeePerDiemRatesQueryDto,
+  UpsertEmployeePerDiemRateDto,
+} from '../dtos/employee-per-diem-rate.dtos';
+import {
+  EmployeePerDiemRateResponse,
+  mapEmployeePerDiemRateResponse,
+} from '../../infrastructure/mappers/employee-per-diem-rate.mapper';
 
 const DEFAULT_RATES: Omit<
   UpsertEmployeePerDiemRateDto,
@@ -35,6 +47,92 @@ export class EmployeePerDiemRateService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Paginated list of employees with their per diem rate configuration (HR).
+   */
+  async listForHr(
+    companyId: string,
+    query: ListEmployeePerDiemRatesQueryDto,
+  ): Promise<{
+    data: Array<{
+      employeeId: string;
+      employee: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string | null;
+        department: { id: string; name: string } | null;
+      };
+      rate: EmployeePerDiemRateResponse | null;
+    }>;
+    meta: { total: number; page: number; limit: number; pages: number };
+  }> {
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.max(1, query.limit ?? 20);
+    const { skip, take } = buildPrismaPagination(page, limit);
+    const search = query.search?.trim();
+
+    const where: Prisma.UserWhereInput = activeOnly({
+      companyId,
+      isActive: true,
+      ...(search
+        ? {
+            OR: [
+              {
+                firstName: { contains: search, mode: 'insensitive' },
+              },
+              {
+                lastName: { contains: search, mode: 'insensitive' },
+              },
+              {
+                email: { contains: search, mode: 'insensitive' },
+              },
+            ],
+          }
+        : {}),
+    });
+
+    const orderBy = buildOrderBy(query.sortBy ?? 'lastName', query.sortOrder ?? 'asc');
+
+    const [total, users] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          department: {
+            select: { id: true, name: true },
+          },
+          employeePerDiemRate: true,
+        },
+      }),
+    ]);
+
+    const data = users.map((user) => ({
+      employeeId: user.id,
+      employee: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        department: user.department,
+      },
+      rate:
+        user.employeePerDiemRate &&
+        user.employeePerDiemRate.deletedAt == null
+          ? mapEmployeePerDiemRateResponse(user.employeePerDiemRate)
+          : null,
+    }));
+
+    return buildPaginatedResult(data, total, page, limit);
+  }
+
+  /**
    * Returns the authenticated employee's rate row with active categories only.
    */
   async getMyActiveCategories(
@@ -55,9 +153,14 @@ export class EmployeePerDiemRateService {
   async getForEmployee(
     employeeId: string,
     companyId: string,
-  ): Promise<unknown> {
+  ): Promise<EmployeePerDiemRateResponse> {
     await this.assertEmployeeInCompany(employeeId, companyId);
-    return this.findOrCreateForEmployee(companyId, employeeId, employeeId);
+    const row = await this.findOrCreateForEmployee(
+      companyId,
+      employeeId,
+      employeeId,
+    );
+    return mapEmployeePerDiemRateResponse(row);
   }
 
   /**
@@ -68,7 +171,7 @@ export class EmployeePerDiemRateService {
     dto: UpsertEmployeePerDiemRateDto,
     companyId: string,
     userId: string,
-  ): Promise<unknown> {
+  ): Promise<EmployeePerDiemRateResponse> {
     await this.assertEmployeeInCompany(employeeId, companyId);
 
     const existing = await this.prisma.employeePerDiemRate.findFirst({
@@ -77,26 +180,26 @@ export class EmployeePerDiemRateService {
 
     const rateFields = this.buildRateFields(dto);
 
-    if (existing) {
-      return this.prisma.employeePerDiemRate.update({
-        where: { id: existing.id },
-        data: {
-          ...rateFields,
-          updatedBy: userId,
-        },
-      });
-    }
+    const row = existing
+      ? await this.prisma.employeePerDiemRate.update({
+          where: { id: existing.id },
+          data: {
+            ...rateFields,
+            updatedBy: userId,
+          },
+        })
+      : await this.prisma.employeePerDiemRate.create({
+          data: {
+            id: randomUUID(),
+            companyId,
+            employeeId,
+            createdBy: userId,
+            updatedBy: userId,
+            ...rateFields,
+          },
+        });
 
-    return this.prisma.employeePerDiemRate.create({
-      data: {
-        id: randomUUID(),
-        companyId,
-        employeeId,
-        createdBy: userId,
-        updatedBy: userId,
-        ...rateFields,
-      },
-    });
+    return mapEmployeePerDiemRateResponse(row);
   }
 
   /**

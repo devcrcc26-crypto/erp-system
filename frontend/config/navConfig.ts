@@ -93,6 +93,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/business-trips': 'nav.hr.businessTrips',
   '/hr/reports': 'nav.hr.reports',
   '/hr/per-diem': 'nav.hr.perDiem',
+  '/hr/employee-per-diem-rates': 'nav.hr.employeePerDiemRates',
   '/hr/leave-policy': 'nav.hr.leavePolicy',
   '/hr/leave-policy/new': 'pages.hr.leavePolicy.new',
   '/hr/company-asset': 'nav.hr.companyAssets',
@@ -348,6 +349,13 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.perDiem',
         href: '/hr/per-diem',
         iconKey: 'hr-per-diem',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/employee-per-diem-rates',
+        labelKey: 'nav.hr.employeePerDiemRates',
+        href: '/hr/employee-per-diem-rates',
+        iconKey: 'hr-per-diem-rates',
         visible: canViewHr,
       },
       {

@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -13,7 +14,10 @@ import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
-import { UpsertEmployeePerDiemRateDto } from '../../application/dtos/employee-per-diem-rate.dtos';
+import {
+  ListEmployeePerDiemRatesQueryDto,
+  UpsertEmployeePerDiemRateDto,
+} from '../../application/dtos/employee-per-diem-rate.dtos';
 import { EmployeePerDiemRateService } from '../../application/services/employee-per-diem-rate.service';
 
 @ApiTags('HR Employee Per Diem Rates')
@@ -24,6 +28,29 @@ export class EmployeePerDiemRateController {
   constructor(
     private readonly employeePerDiemRateService: EmployeePerDiemRateService,
   ) {}
+
+  @Get()
+  @RequirePermission('hr', 'view')
+  @ApiOperation({ summary: 'List employee per diem rates (HR)' })
+  list(
+    @Query() query: ListEmployeePerDiemRatesQueryDto,
+    @CurrentCompany() companyId: string,
+  ): Promise<unknown> {
+    return this.employeePerDiemRateService.listForHr(companyId, query);
+  }
+
+  @Get('me')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Get per diem rates for the current employee' })
+  getMyRate(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+  ): Promise<unknown> {
+    return this.employeePerDiemRateService.getForEmployee(
+      user.userId,
+      companyId,
+    );
+  }
 
   @Get('me/active')
   @DelegatePermissionCheck()
