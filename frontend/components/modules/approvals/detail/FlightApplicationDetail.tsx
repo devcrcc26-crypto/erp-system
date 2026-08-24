@@ -214,7 +214,7 @@ export default function FlightApplicationDetail({
       {canAcknowledge && currentUserPassenger ? (
         <div className="rounded-none border border-[var(--color-amber-400)] bg-[var(--color-amber-50)] px-3 py-4 sm:px-5">
           <p className="text-sm font-semibold text-[var(--color-amber-400)] m-0 mb-1">
-            Your ticket is ready â€?please acknowledge receipt
+            Your ticket is ready  - please acknowledge receipt
           </p>
           <p className="text-xs text-[var(--color-text-secondary)] m-0 mb-3">
             Download your ticket below, then confirm you have received it.
@@ -321,7 +321,7 @@ export default function FlightApplicationDetail({
                   {formatProjectDate(application.returnDate)}
                 </span>
               ) : (
-                'â€?
+                '-'
               )}
             </MetaItem>
           </div>

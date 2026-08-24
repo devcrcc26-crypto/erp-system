@@ -40,7 +40,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Typed leave body for Approvals detail â€?editable when RETURNED by requester.
+ * Typed leave body for Approvals detail  - editable when RETURNED by requester.
  */
 export default function LeaveRequestDetail({
   sourceId,
@@ -215,7 +215,7 @@ export default function LeaveRequestDetail({
               </MetaItem>
               <MetaItem label="Reason">
                 {leave.reason?.trim() || (
-                  <span className="text-[var(--color-text-tertiary)]">â€?/span>
+                  <span className="text-[var(--color-text-tertiary)]">-</span>
                 )}
               </MetaItem>
             </div>

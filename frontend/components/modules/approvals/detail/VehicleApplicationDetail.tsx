@@ -87,7 +87,7 @@ export default function VehicleApplicationDetail({
             className="text-lg font-semibold leading-snug m-0"
             style={{ color: tokens.colorTextPrimary }}
           >
-            Vehicle Application â€?{application.vehicle?.plateNumber}
+            Vehicle Application  - {application.vehicle?.plateNumber}
           </h2>
           <p
             className="mt-1 text-sm m-0"
@@ -143,7 +143,7 @@ export default function VehicleApplicationDetail({
           ) : null}
           {application.project ? (
             <MetaItem label="Project">
-              {application.project.projectCode} â€?{application.project.name}
+              {application.project.projectCode}  - {application.project.name}
             </MetaItem>
           ) : null}
           {application.notes ? (

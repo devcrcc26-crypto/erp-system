@@ -110,7 +110,7 @@ export default function PerDiemDetail({
             {request.destinationCategory}
           </MetaItem>
           <MetaItem label="Dates">
-            {formatProjectDate(request.startDate)} â€?{formatProjectDate(request.endDate)}
+            {formatProjectDate(request.startDate)}  - {formatProjectDate(request.endDate)}
           </MetaItem>
           {linkedTravel ? (
             <div className="col-span-1 sm:col-span-2">

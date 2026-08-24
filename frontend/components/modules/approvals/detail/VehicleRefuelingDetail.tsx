@@ -87,7 +87,7 @@ export default function VehicleRefuelingDetail({
             className="text-lg font-semibold leading-snug m-0"
             style={{ color: tokens.colorTextPrimary }}
           >
-            Vehicle Refueling â€?{refueling.vehicle?.plateNumber}
+            Vehicle Refueling  - {refueling.vehicle?.plateNumber}
           </h2>
           <p
             className="mt-1 text-sm m-0"
@@ -126,7 +126,7 @@ export default function VehicleRefuelingDetail({
           </MetaItem>
           <MetaItem label="Vehicle">
             {refueling.vehicle
-              ? `${refueling.vehicle.plateNumber} â€?${refueling.vehicle.make} ${refueling.vehicle.model}`
+              ? `${refueling.vehicle.plateNumber}  - ${refueling.vehicle.make} ${refueling.vehicle.model}`
               : '-'}
           </MetaItem>
           {refueling.driver ? (

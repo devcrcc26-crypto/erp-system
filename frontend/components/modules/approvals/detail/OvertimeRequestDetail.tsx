@@ -96,7 +96,7 @@ export default function OvertimeRequestDetail({
       render: (_: unknown, row: OvertimeEntry) => (
         <AttachmentDownloadList
           documents={row.documents}
-          emptyLabel="??
+          emptyLabel="-"
         />
       ),
     },
