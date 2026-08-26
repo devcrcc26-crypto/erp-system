@@ -64,6 +64,7 @@
       "assetManagement": "Asset Management",
       "companyAssets": "Company Assets",
       "attendance": "Attendance",
+      "employeeEvaluation": "Employee Evaluation",
       "employeeContract": "Employee Contracts"
     }
   },

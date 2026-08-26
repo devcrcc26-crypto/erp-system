@@ -100,6 +100,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/company-asset/new': 'pages.hr.companyAsset.new',
   '/hr/asset-management': 'nav.hr.assetManagement',
   '/hr/attendance': 'nav.hr.attendance',
+  '/hr/employee-evaluation': 'nav.hr.employeeEvaluation',
 };
 
 export interface IconRailVisibility {
@@ -433,6 +434,13 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.attendance',
         href: '/hr/attendance',
         iconKey: 'hr-attendance',
+        visible: canViewHr,
+      },
+      {
+        key: '/hr/employee-evaluation',
+        labelKey: 'nav.hr.employeeEvaluation',
+        href: '/hr/employee-evaluation',
+        iconKey: 'hr-employee-evaluation',
         visible: canViewHr,
       },
       {
