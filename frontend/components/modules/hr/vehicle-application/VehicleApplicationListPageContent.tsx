@@ -293,7 +293,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         <Alert
           type="error"
           showIcon
-          message={
+          title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
               : t('hr.messages.vehicleApplicationLoadFailed')

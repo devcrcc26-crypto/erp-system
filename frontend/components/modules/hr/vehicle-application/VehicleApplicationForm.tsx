@@ -53,13 +53,21 @@ interface VehicleApplicationFormProps {
   onSuccess: (result: VehicleApplicationDetail) => void;
 }
 
-const SCHEDULE_FIELDS = ['departureDatetime', 'returnDatetime'] as const;
 const DETAILS_FIELDS = [
   'driveType',
   'destination',
   'purpose',
   'passengerCount',
 ] as const;
+
+function resolveVehicleDriverId(
+  vehicle: AvailableVehicle | null,
+): string | undefined {
+  if (!vehicle) {
+    return undefined;
+  }
+  return vehicle.assignedDriver?.id ?? vehicle.assignedDriverId ?? undefined;
+}
 
 /**
  * Stepped vehicle application create form — same chrome as Add Employee.
@@ -75,25 +83,31 @@ export default function VehicleApplicationForm({
   const [selectedVehicle, setSelectedVehicle] = useState<AvailableVehicle | null>(
     null,
   );
+  /** Kept in React state so dates survive schedule-step unmount (useWatch goes empty). */
+  const [departureAt, setDepartureAt] = useState<dayjs.Dayjs | null>(null);
+  const [returnAt, setReturnAt] = useState<dayjs.Dayjs | null>(null);
 
   const submitMutation = useSubmitVehicleApplication();
   const projectsQuery = useAllProjects();
 
-  const departureDatetime = Form.useWatch('departureDatetime', form);
-  const returnDatetime = Form.useWatch('returnDatetime', form);
   const driveType = Form.useWatch('driveType', form) ?? 'COMPANY_DRIVER';
   const formValues = Form.useWatch([], form) as
     | VehicleApplicationFormValues
     | undefined;
 
+  const datesReady = Boolean(
+    departureAt && returnAt && !returnAt.isBefore(departureAt),
+  );
+
   const availableParams = useMemo(() => {
-    if (!departureDatetime || !returnDatetime) return null;
-    if (returnDatetime.isBefore(departureDatetime)) return null;
+    if (!departureAt || !returnAt || returnAt.isBefore(departureAt)) {
+      return null;
+    }
     return {
-      departureDatetime: departureDatetime.toISOString(),
-      returnDatetime: returnDatetime.toISOString(),
+      departureDatetime: departureAt.toISOString(),
+      returnDatetime: returnAt.toISOString(),
     };
-  }, [departureDatetime, returnDatetime]);
+  }, [departureAt, returnAt]);
 
   const availableQuery = useAvailableVehicles(availableParams);
   const vehicles = availableQuery.data ?? [];
@@ -107,32 +121,54 @@ export default function VehicleApplicationForm({
 
   function clearVehicleSelection(): void {
     setSelectedVehicle(null);
-    form.setFieldValue('vehicleId', undefined);
+    form.setFieldsValue({
+      vehicleId: undefined,
+      driverId: undefined,
+    });
+  }
+
+  function handleDepartureChange(value: dayjs.Dayjs | null): void {
+    setDepartureAt(value);
+    form.setFieldValue('departureDatetime', value ?? undefined);
+    clearVehicleSelection();
+  }
+
+  function handleReturnChange(value: dayjs.Dayjs | null): void {
+    setReturnAt(value);
+    form.setFieldValue('returnDatetime', value ?? undefined);
+    clearVehicleSelection();
   }
 
   function handleVehicleSelect(vehicle: AvailableVehicle): void {
     if (!vehicle.isAvailable) return;
     setSelectedVehicle(vehicle);
-    form.setFieldValue('vehicleId', vehicle.id);
-    if (vehicle.assignedDriver) {
-      form.setFieldsValue({
-        driveType: 'COMPANY_DRIVER',
-        driverId: vehicle.assignedDriver.id,
-      });
-    }
+    const driverId = resolveVehicleDriverId(vehicle);
+    form.setFieldsValue({
+      vehicleId: vehicle.id,
+      driveType: driverId ? 'COMPANY_DRIVER' : 'SELF_DRIVE',
+      driverId,
+    });
   }
 
   function handleDriveTypeChange(value: DriveType): void {
     if (value === 'SELF_DRIVE') {
       form.setFieldValue('driverId', undefined);
-    } else if (selectedVehicle?.assignedDriver) {
-      form.setFieldValue('driverId', selectedVehicle.assignedDriver.id);
+      return;
     }
+    const driverId = resolveVehicleDriverId(selectedVehicle);
+    if (!driverId) {
+      messageApi.warning(t('hr.validation.companyDriverRequired'));
+      form.setFieldValue('driveType', 'SELF_DRIVE');
+      return;
+    }
+    form.setFieldValue('driverId', driverId);
   }
 
   function resetForm(): void {
     form.resetFields();
     form.setFieldsValue({ driveType: 'COMPANY_DRIVER', passengerCount: 1 });
+    setDepartureAt(null);
+    setReturnAt(null);
     setSelectedVehicle(null);
     setFormError(null);
   }
@@ -148,50 +184,121 @@ export default function VehicleApplicationForm({
     }
   }
 
+  async function validateScheduleStep(): Promise<boolean> {
+    if (!departureAt || !returnAt) {
+      messageApi.error(
+        !departureAt
+          ? t('hr.validation.selectDeparture')
+          : t('hr.validation.selectReturn'),
+      );
+      return false;
+    }
+    if (returnAt.isBefore(departureAt)) {
+      messageApi.error(t('hr.validation.returnAfterDeparture'));
+      return false;
+    }
+    form.setFieldsValue({
+      departureDatetime: departureAt,
+      returnDatetime: returnAt,
+    });
+    return true;
+  }
+
   async function validateVehicleStep(): Promise<boolean> {
     if (!selectedVehicle) {
       messageApi.error(t('hr.validation.selectVehicle'));
       return false;
     }
-    return validateFields(['vehicleId']);
+    const driverId = resolveVehicleDriverId(selectedVehicle);
+    const currentDriveType =
+      (form.getFieldValue('driveType') as DriveType | undefined) ??
+      (driverId ? 'COMPANY_DRIVER' : 'SELF_DRIVE');
+    const driveType =
+      currentDriveType === 'COMPANY_DRIVER' && !driverId
+        ? 'SELF_DRIVE'
+        : currentDriveType;
+    form.setFieldsValue({
+      vehicleId: selectedVehicle.id,
+      driverId: driveType === 'COMPANY_DRIVER' ? driverId : undefined,
+      driveType,
+    });
+    return true;
+  }
+
+  async function validateDetailsStep(): Promise<boolean> {
+    const ok = await validateFields(DETAILS_FIELDS);
+    if (!ok) {
+      return false;
+    }
+    const driveTypeValue =
+      (form.getFieldValue('driveType') as DriveType | undefined) ??
+      'COMPANY_DRIVER';
+    const driverId = resolveVehicleDriverId(selectedVehicle);
+    if (driveTypeValue === 'COMPANY_DRIVER') {
+      if (!driverId) {
+        messageApi.error(t('hr.validation.companyDriverRequired'));
+        return false;
+      }
+      form.setFieldValue('driverId', driverId);
+    } else {
+      form.setFieldValue('driverId', undefined);
+    }
+    return true;
   }
 
   async function handleSubmit(): Promise<void> {
     setFormError(null);
-    let values: VehicleApplicationFormValues;
-    try {
-      values = await form.validateFields();
-    } catch {
-      messageApi.error(t('hr.validation.required'));
+
+    if (!departureAt || !returnAt || returnAt.isBefore(departureAt)) {
+      messageApi.error(
+        !departureAt || !returnAt
+          ? t('hr.validation.selectDeparture')
+          : t('hr.validation.returnAfterDeparture'),
+      );
       return;
     }
 
-    if (
-      !values.departureDatetime ||
-      !values.returnDatetime ||
-      !values.vehicleId ||
-      !values.destination ||
-      !values.purpose
-    ) {
-      messageApi.error(t('hr.validation.required'));
+    if (!selectedVehicle) {
+      messageApi.error(t('hr.validation.selectVehicle'));
+      return;
+    }
+
+    const stored = form.getFieldsValue(true) as VehicleApplicationFormValues;
+    const destination = stored.destination?.trim();
+    const purpose = stored.purpose?.trim();
+    const driveTypeValue = stored.driveType ?? 'COMPANY_DRIVER';
+    const driverId =
+      driveTypeValue === 'COMPANY_DRIVER'
+        ? resolveVehicleDriverId(selectedVehicle) ?? stored.driverId
+        : undefined;
+
+    if (!destination) {
+      messageApi.error(t('hr.validation.enterDestination'));
+      return;
+    }
+    if (!purpose) {
+      messageApi.error(t('hr.validation.enterPurpose'));
+      return;
+    }
+    if (driveTypeValue === 'COMPANY_DRIVER' && !driverId) {
+      messageApi.error(t('hr.validation.companyDriverRequired'));
       return;
     }
 
     setSubmitting(true);
     try {
       const result = await submitMutation.mutateAsync({
-        vehicleId: values.vehicleId,
-        driveType: values.driveType,
-        driverId:
-          values.driveType === 'COMPANY_DRIVER' ? values.driverId : undefined,
-        departureDatetime: values.departureDatetime.toISOString(),
-        returnDatetime: values.returnDatetime.toISOString(),
-        destination: values.destination.trim(),
-        purpose: values.purpose.trim(),
-        passengerCount: values.passengerCount ?? 1,
-        passengerNames: values.passengerNames?.trim() || undefined,
-        projectId: values.projectId || undefined,
-        notes: values.notes?.trim() || undefined,
+        vehicleId: selectedVehicle.id,
+        driveType: driveTypeValue,
+        driverId,
+        departureDatetime: departureAt.toISOString(),
+        returnDatetime: returnAt.toISOString(),
+        destination,
+        purpose,
+        passengerCount: stored.passengerCount ?? 1,
+        passengerNames: stored.passengerNames?.trim() || undefined,
+        projectId: stored.projectId || undefined,
+        notes: stored.notes?.trim() || undefined,
       });
 
       messageApi.success(
@@ -210,60 +317,58 @@ export default function VehicleApplicationForm({
     }
   }
 
-  const datesReady = Boolean(
-    departureDatetime &&
-      returnDatetime &&
-      returnDatetime.isAfter(departureDatetime),
-  );
-
   const steps = useMemo(
     () => [
       {
         title: t('hr.form.tripSchedule'),
-        validate: () => validateFields(SCHEDULE_FIELDS),
+        validate: () => validateScheduleStep(),
         content: (
           <FormLayout
             variant="pro"
             title={t('hr.form.tripSchedule')}
-            description={t('hr.messages.selectDatesForVehicles')}
+            description={
+              datesReady && departureAt && returnAt
+                ? `${formatProjectDate(departureAt.toISOString())} → ${formatProjectDate(returnAt.toISOString())}`
+                : t('pages.hr.vehicleApplication.scheduleStepDescription')
+            }
           >
             <div className="erp-form-grid-2">
               <Form.Item
-                name="departureDatetime"
                 label={t('hr.form.departureDateTime')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.selectDeparture'),
-                  },
-                ]}
+                required
               >
                 <DatePicker
-                  showTime
+                  showTime={{ format: 'HH:mm' }}
                   format="YYYY-MM-DD HH:mm"
                   className="w-full"
+                  value={departureAt}
                   disabledDate={(d) => d.isBefore(dayjs(), 'day')}
-                  onChange={() => clearVehicleSelection()}
+                  onChange={(value) => handleDepartureChange(value)}
                 />
               </Form.Item>
               <Form.Item
-                name="returnDatetime"
                 label={t('hr.form.returnDateTime')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.selectReturn'),
-                  },
-                ]}
+                required
+                validateStatus={
+                  departureAt && returnAt && returnAt.isBefore(departureAt)
+                    ? 'error'
+                    : undefined
+                }
+                help={
+                  departureAt && returnAt && returnAt.isBefore(departureAt)
+                    ? t('hr.validation.returnAfterDeparture')
+                    : undefined
+                }
               >
                 <DatePicker
-                  showTime
+                  showTime={{ format: 'HH:mm' }}
                   format="YYYY-MM-DD HH:mm"
                   className="w-full"
+                  value={returnAt}
                   disabledDate={(d) =>
-                    d.isBefore(departureDatetime ?? dayjs(), 'day')
+                    d.isBefore(departureAt ?? dayjs(), 'day')
                   }
-                  onChange={() => clearVehicleSelection()}
+                  onChange={(value) => handleReturnChange(value)}
                 />
               </Form.Item>
             </div>
@@ -300,17 +405,27 @@ export default function VehicleApplicationForm({
               <Alert
                 type="info"
                 showIcon
-                message={t('hr.messages.selectDatesForVehicles')}
+                title={t('hr.messages.selectDatesForVehicles')}
               />
-            ) : availableQuery.isLoading ? (
+            ) : availableQuery.isLoading || availableQuery.isFetching ? (
               <div className="flex justify-center py-10">
                 <Spin />
               </div>
+            ) : availableQuery.isError ? (
+              <Alert
+                type="error"
+                showIcon
+                title={
+                  availableQuery.error instanceof Error
+                    ? availableQuery.error.message
+                    : t('hr.empty.noVehicles')
+                }
+              />
             ) : vehicles.length === 0 ? (
               <Alert
                 type="warning"
                 showIcon
-                message={t('hr.empty.noVehicles')}
+                title={t('hr.empty.noVehicles')}
               />
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -403,7 +518,7 @@ export default function VehicleApplicationForm({
       },
       {
         title: t('hr.section.tripDetails'),
-        validate: () => validateFields(DETAILS_FIELDS),
+        validate: () => validateDetailsStep(),
         content: (
           <FormLayout variant="pro" title={t('hr.section.tripDetails')}>
             <Form.Item
@@ -416,7 +531,10 @@ export default function VehicleApplicationForm({
                   handleDriveTypeChange(e.target.value as DriveType)
                 }
               >
-                <Radio value="COMPANY_DRIVER">
+                <Radio
+                  value="COMPANY_DRIVER"
+                  disabled={!resolveVehicleDriverId(selectedVehicle)}
+                >
                   {t('hr.driveType.COMPANY_DRIVER')}
                 </Radio>
                 <Radio value="SELF_DRIVE">{t('hr.driveType.SELF_DRIVE')}</Radio>
@@ -434,7 +552,7 @@ export default function VehicleApplicationForm({
                     value={
                       selectedVehicle?.assignedDriver
                         ? formatDriverName(selectedVehicle.assignedDriver)
-                        : ''
+                        : resolveVehicleDriverId(selectedVehicle) ?? ''
                     }
                     placeholder={t('hr.placeholder.driverAutoFilled')}
                   />
@@ -540,17 +658,15 @@ export default function VehicleApplicationForm({
               <ReviewItem
                 label={t('hr.labels.departure')}
                 value={
-                  departureDatetime
-                    ? formatProjectDate(departureDatetime.toISOString())
+                  departureAt
+                    ? formatProjectDate(departureAt.toISOString())
                     : '—'
                 }
               />
               <ReviewItem
                 label={t('hr.labels.return')}
                 value={
-                  returnDatetime
-                    ? formatProjectDate(returnDatetime.toISOString())
-                    : '—'
+                  returnAt ? formatProjectDate(returnAt.toISOString()) : '—'
                 }
               />
               <ReviewItem
@@ -601,10 +717,14 @@ export default function VehicleApplicationForm({
     ],
     [
       t,
-      departureDatetime,
-      returnDatetime,
+      form,
+      departureAt,
+      returnAt,
       datesReady,
       availableQuery.isLoading,
+      availableQuery.isFetching,
+      availableQuery.isError,
+      availableQuery.error,
       vehicles,
       selectedVehicle,
       driveType,
@@ -620,6 +740,7 @@ export default function VehicleApplicationForm({
       form={form}
       layout="vertical"
       requiredMark={false}
+      preserve
       className="flex min-h-0 flex-1 flex-col"
       initialValues={{ driveType: 'COMPANY_DRIVER', passengerCount: 1 }}
     >
@@ -627,7 +748,7 @@ export default function VehicleApplicationForm({
         <Alert
           type="error"
           showIcon
-          message={formError}
+          title={formError}
           className="mb-4"
           closable
           onClose={() => setFormError(null)}

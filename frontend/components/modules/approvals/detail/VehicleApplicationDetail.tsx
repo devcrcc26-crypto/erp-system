@@ -45,7 +45,7 @@ export default function VehicleApplicationDetail({
       <Alert
         type="error"
         showIcon
-        message={
+        title={
           detailQuery.error instanceof ApiRequestError
             ? detailQuery.error.message
             : t('hr.messages.vehicleApplicationNotFound')

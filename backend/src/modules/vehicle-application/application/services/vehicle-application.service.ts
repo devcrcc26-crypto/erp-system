@@ -107,17 +107,22 @@ export class VehicleApplicationService
       );
     }
 
-    if (dto.driveType === DriveType.COMPANY_DRIVER && !dto.driverId) {
-      throw new BadRequestException(
-        'driverId is required when driveType is COMPANY_DRIVER',
-      );
-    }
-
     const vehicle = await this.prisma.companyVehicle.findFirst({
       where: activeOnly({ id: dto.vehicleId, companyId }),
     });
     if (!vehicle) {
       throw new NotFoundException('Vehicle not found');
+    }
+
+    const driverId =
+      dto.driveType === DriveType.COMPANY_DRIVER
+        ? dto.driverId || vehicle.assignedDriverId || null
+        : null;
+
+    if (dto.driveType === DriveType.COMPANY_DRIVER && !driverId) {
+      throw new BadRequestException(
+        'driverId is required when driveType is COMPANY_DRIVER',
+      );
     }
 
     await this.assertVehicleAvailable(
@@ -148,7 +153,7 @@ export class VehicleApplicationService
             employeeId: userId,
             vehicleId: dto.vehicleId,
             driveType: dto.driveType,
-            driverId: dto.driverId || null,
+            driverId,
             departureDatetime: departure,
             returnDatetime: returnDt,
             destination: dto.destination.trim(),
@@ -210,7 +215,7 @@ export class VehicleApplicationService
         employeeId: userId,
         vehicleId: dto.vehicleId,
         driveType: dto.driveType,
-        driverId: dto.driverId || null,
+        driverId,
         departureDatetime: departure,
         returnDatetime: returnDt,
         destination: dto.destination.trim(),

@@ -100,7 +100,7 @@ export default function VehicleApplicationDetailPageContent({
         <Alert
           type="error"
           showIcon
-          message={
+          title={
             detailQuery.error instanceof ApiRequestError
               ? detailQuery.error.message
               : 'Vehicle application not found'

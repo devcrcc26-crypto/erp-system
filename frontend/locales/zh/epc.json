@@ -291,6 +291,7 @@
         "listDescription": "审核并处理公司车辆使用申请。",
         "myListDescription": "提交并跟踪您的用车审批流程。",
         "formDescription": "请先选择出行时间以查看可用车辆，然后选择车辆并填写行程详情。",
+        "scheduleStepDescription": "请选择本次出行的出发和返回日期时间。",
         "applicationSingular": "条申请",
         "applicationPlural": "条申请"
       },
@@ -1947,7 +1948,9 @@
       "selectDeparture": "请选择出发日期和时间",
       "selectReturn": "请选择返回日期和时间",
       "selectVehicle": "请选择车辆",
-      "enterPurpose": "请输入出行目的"
+      "enterPurpose": "请输入出行目的",
+      "returnAfterDeparture": "返回时间必须晚于或等于出发时间",
+      "companyDriverRequired": "所选车辆未分配公司司机。请选择自行驾驶，或更换车辆。"
     },
     "perDiemCategory": {
       "americas": "美洲",
