@@ -3,21 +3,25 @@
 import { useMemo, useState } from 'react';
 import {
   Alert,
-  Button,
-  Card,
   DatePicker,
   Form,
   Input,
   InputNumber,
   Radio,
   Select,
+  Spin,
   Tooltip,
-  Typography,
 } from 'antd';
-import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import {
+  CarOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { AvailableVehicle } from '@/lib/api/company-vehicle.types';
 import type {
   DriveType,
@@ -27,21 +31,18 @@ import { useAvailableVehicles } from '@/lib/query/company-vehicle';
 import { useSubmitVehicleApplication } from '@/lib/query/vehicle-application';
 import { useAllProjects } from '@/lib/query/projects';
 import { tokens } from '@/lib/theme/tokens';
-import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { formatDriverName } from '@/lib/utils/company-vehicle-display';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatProjectDate } from '@/lib/utils/project-display';
 
-interface TripValues {
-  departureDatetime: dayjs.Dayjs;
-  returnDatetime: dayjs.Dayjs;
-}
-
-interface FormValues {
-  vehicleId: string;
+interface VehicleApplicationFormValues {
+  departureDatetime?: dayjs.Dayjs;
+  returnDatetime?: dayjs.Dayjs;
+  vehicleId?: string;
   driveType: DriveType;
   driverId?: string;
-  destination: string;
-  purpose: string;
+  destination?: string;
+  purpose?: string;
   passengerCount?: number;
   passengerNames?: string;
   projectId?: string;
@@ -52,22 +53,38 @@ interface VehicleApplicationFormProps {
   onSuccess: (result: VehicleApplicationDetail) => void;
 }
 
+const SCHEDULE_FIELDS = ['departureDatetime', 'returnDatetime'] as const;
+const DETAILS_FIELDS = [
+  'driveType',
+  'destination',
+  'purpose',
+  'passengerCount',
+] as const;
+
+/**
+ * Stepped vehicle application create form — same chrome as Add Employee.
+ */
 export default function VehicleApplicationForm({
   onSuccess,
 }: VehicleApplicationFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
-  const [tripForm] = Form.useForm<TripValues>();
-  const [mainForm] = Form.useForm<FormValues>();
+  const [form] = Form.useForm<VehicleApplicationFormValues>();
   const [submitting, setSubmitting] = useState(false);
-
-  const [departureDatetime, setDepartureDatetime] = useState<dayjs.Dayjs | null>(null);
-  const [returnDatetime, setReturnDatetime] = useState<dayjs.Dayjs | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<AvailableVehicle | null>(null);
-  const [driveType, setDriveType] = useState<DriveType>('COMPANY_DRIVER');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<AvailableVehicle | null>(
+    null,
+  );
 
   const submitMutation = useSubmitVehicleApplication();
   const projectsQuery = useAllProjects();
+
+  const departureDatetime = Form.useWatch('departureDatetime', form);
+  const returnDatetime = Form.useWatch('returnDatetime', form);
+  const driveType = Form.useWatch('driveType', form) ?? 'COMPANY_DRIVER';
+  const formValues = Form.useWatch([], form) as
+    | VehicleApplicationFormValues
+    | undefined;
 
   const availableParams = useMemo(() => {
     if (!departureDatetime || !returnDatetime) return null;
@@ -81,22 +98,24 @@ export default function VehicleApplicationForm({
   const availableQuery = useAvailableVehicles(availableParams);
   const vehicles = availableQuery.data ?? [];
 
-  function handleDatesChange(): void {
-    const dep = tripForm.getFieldValue('departureDatetime') as dayjs.Dayjs | null;
-    const ret = tripForm.getFieldValue('returnDatetime') as dayjs.Dayjs | null;
-    setDepartureDatetime(dep);
-    setReturnDatetime(ret);
+  const projectLabel = useMemo(() => {
+    const projectId = formValues?.projectId;
+    if (!projectId) return '—';
+    const project = projectsQuery.data?.data?.find((row) => row.id === projectId);
+    return project ? `${project.projectCode} — ${project.name}` : '—';
+  }, [formValues?.projectId, projectsQuery.data?.data]);
+
+  function clearVehicleSelection(): void {
     setSelectedVehicle(null);
-    mainForm.setFieldValue('vehicleId', undefined);
+    form.setFieldValue('vehicleId', undefined);
   }
 
   function handleVehicleSelect(vehicle: AvailableVehicle): void {
     if (!vehicle.isAvailable) return;
     setSelectedVehicle(vehicle);
-    mainForm.setFieldValue('vehicleId', vehicle.id);
+    form.setFieldValue('vehicleId', vehicle.id);
     if (vehicle.assignedDriver) {
-      setDriveType('COMPANY_DRIVER');
-      mainForm.setFieldsValue({
+      form.setFieldsValue({
         driveType: 'COMPANY_DRIVER',
         driverId: vehicle.assignedDriver.id,
       });
@@ -104,254 +123,549 @@ export default function VehicleApplicationForm({
   }
 
   function handleDriveTypeChange(value: DriveType): void {
-    setDriveType(value);
     if (value === 'SELF_DRIVE') {
-      mainForm.setFieldValue('driverId', undefined);
+      form.setFieldValue('driverId', undefined);
     } else if (selectedVehicle?.assignedDriver) {
-      mainForm.setFieldValue('driverId', selectedVehicle.assignedDriver.id);
+      form.setFieldValue('driverId', selectedVehicle.assignedDriver.id);
     }
   }
 
-  async function handleSubmit(): Promise<void> {
-    let tripValues: TripValues;
-    let formValues: FormValues;
+  function resetForm(): void {
+    form.resetFields();
+    form.setFieldsValue({ driveType: 'COMPANY_DRIVER', passengerCount: 1 });
+    setSelectedVehicle(null);
+    setFormError(null);
+  }
+
+  async function validateFields(
+    fields: readonly string[],
+  ): Promise<boolean> {
     try {
-      tripValues = await tripForm.validateFields();
-      formValues = await mainForm.validateFields();
+      await form.validateFields([...fields]);
+      return true;
     } catch {
+      return false;
+    }
+  }
+
+  async function validateVehicleStep(): Promise<boolean> {
+    if (!selectedVehicle) {
+      messageApi.error(t('hr.validation.selectVehicle'));
+      return false;
+    }
+    return validateFields(['vehicleId']);
+  }
+
+  async function handleSubmit(): Promise<void> {
+    setFormError(null);
+    let values: VehicleApplicationFormValues;
+    try {
+      values = await form.validateFields();
+    } catch {
+      messageApi.error(t('hr.validation.required'));
+      return;
+    }
+
+    if (
+      !values.departureDatetime ||
+      !values.returnDatetime ||
+      !values.vehicleId ||
+      !values.destination ||
+      !values.purpose
+    ) {
+      messageApi.error(t('hr.validation.required'));
       return;
     }
 
     setSubmitting(true);
     try {
       const result = await submitMutation.mutateAsync({
-        vehicleId: formValues.vehicleId,
-        driveType: formValues.driveType,
-        driverId: formValues.driveType === 'COMPANY_DRIVER' ? formValues.driverId : undefined,
-        departureDatetime: tripValues.departureDatetime.toISOString(),
-        returnDatetime: tripValues.returnDatetime.toISOString(),
-        destination: formValues.destination.trim(),
-        purpose: formValues.purpose.trim(),
-        passengerCount: formValues.passengerCount ?? 1,
-        passengerNames: formValues.passengerNames?.trim() || undefined,
-        projectId: formValues.projectId || undefined,
-        notes: formValues.notes?.trim() || undefined,
+        vehicleId: values.vehicleId,
+        driveType: values.driveType,
+        driverId:
+          values.driveType === 'COMPANY_DRIVER' ? values.driverId : undefined,
+        departureDatetime: values.departureDatetime.toISOString(),
+        returnDatetime: values.returnDatetime.toISOString(),
+        destination: values.destination.trim(),
+        purpose: values.purpose.trim(),
+        passengerCount: values.passengerCount ?? 1,
+        passengerNames: values.passengerNames?.trim() || undefined,
+        projectId: values.projectId || undefined,
+        notes: values.notes?.trim() || undefined,
       });
 
       messageApi.success(
-        result.directApproved || (result.status === 'APPROVED' && !result.approvalRequestId)
-          ? 'Vehicle application approved'
-          : 'Vehicle application submitted for approval',
+        result.directApproved ||
+          (result.status === 'APPROVED' && !result.approvalRequestId)
+          ? t('hr.messages.vehicleApplicationApproved')
+          : t('hr.messages.vehicleApplicationSubmitted'),
       );
       onSuccess(result);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to submit vehicle application', messageApi);
+      const message = t('hr.messages.vehicleApplicationSubmitFailed');
+      notifyApiError(error, message, messageApi);
+      setFormError(message);
     } finally {
       setSubmitting(false);
     }
   }
 
-  const datesReady = Boolean(departureDatetime && returnDatetime && returnDatetime.isAfter(departureDatetime));
+  const datesReady = Boolean(
+    departureDatetime &&
+      returnDatetime &&
+      returnDatetime.isAfter(departureDatetime),
+  );
 
-  return (
-    <div className="mx-auto w-full max-w-3xl flex flex-col gap-6 pb-8">
-      <SectionCard title={t('hr.form.tripDetails')} bodyClassName="px-5 py-4">
-        <Form form={tripForm} layout="vertical">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+  const steps = useMemo(
+    () => [
+      {
+        title: t('hr.form.tripSchedule'),
+        validate: () => validateFields(SCHEDULE_FIELDS),
+        content: (
+          <FormLayout
+            variant="pro"
+            title={t('hr.form.tripSchedule')}
+            description={t('hr.messages.selectDatesForVehicles')}
+          >
+            <div className="erp-form-grid-2">
+              <Form.Item
+                name="departureDatetime"
+                label={t('hr.form.departureDateTime')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.selectDeparture'),
+                  },
+                ]}
+              >
+                <DatePicker
+                  showTime
+                  format="YYYY-MM-DD HH:mm"
+                  className="w-full"
+                  disabledDate={(d) => d.isBefore(dayjs(), 'day')}
+                  onChange={() => clearVehicleSelection()}
+                />
+              </Form.Item>
+              <Form.Item
+                name="returnDatetime"
+                label={t('hr.form.returnDateTime')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.selectReturn'),
+                  },
+                ]}
+              >
+                <DatePicker
+                  showTime
+                  format="YYYY-MM-DD HH:mm"
+                  className="w-full"
+                  disabledDate={(d) =>
+                    d.isBefore(departureDatetime ?? dayjs(), 'day')
+                  }
+                  onChange={() => clearVehicleSelection()}
+                />
+              </Form.Item>
+            </div>
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.form.selectVehicle'),
+        validate: validateVehicleStep,
+        content: (
+          <FormLayout
+            variant="pro"
+            title={t('hr.form.selectVehicle')}
+            description={
+              selectedVehicle
+                ? `${selectedVehicle.plateNumber} — ${selectedVehicle.make} ${selectedVehicle.model}`
+                : t('hr.placeholder.selectVehicle')
+            }
+          >
             <Form.Item
-              name="departureDatetime"
-              label={t('hr.form.departureDateTime')}
-              rules={[{ required: true, message: 'Select departure' }]}
+              name="vehicleId"
+              hidden
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.selectVehicle'),
+                },
+              ]}
             >
-              <DatePicker
-                showTime
-                format="YYYY-MM-DD HH:mm"
-                style={{ width: '100%' }}
-                disabledDate={(d) => d.isBefore(dayjs(), 'day')}
-                onChange={() => handleDatesChange()}
-              />
+              <Input />
             </Form.Item>
-            <Form.Item
-              name="returnDatetime"
-              label={t('hr.form.returnDateTime')}
-              rules={[{ required: true, message: 'Select return' }]}
-            >
-              <DatePicker
-                showTime
-                format="YYYY-MM-DD HH:mm"
-                style={{ width: '100%' }}
-                disabledDate={(d) =>
-                  d.isBefore(departureDatetime ?? dayjs(), 'day')
-                }
-                onChange={() => handleDatesChange()}
-              />
-            </Form.Item>
-          </div>
-        </Form>
-      </SectionCard>
 
-      <SectionCard title={t('hr.form.vehicle')} bodyClassName="px-5 py-4">
-        {!datesReady ? (
-          <Alert
-            type="info"
-            showIcon
-            title="Select departure and return dates above to see available vehicles."
-          />
-        ) : availableQuery.isLoading ? (
-          <Typography.Text type="secondary">Loading vehicles...</Typography.Text>
-        ) : vehicles.length === 0 ? (
-          <Alert type="warning" showIcon title={t('hr.empty.noVehicles')} />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {vehicles.map((v) => (
-              <Tooltip
-                key={v.id}
-                title={
-                  v.conflictPeriod
-                    ? `Conflicts with ${v.conflictPeriod.applicationNumber}`
-                    : undefined
+            {!datesReady ? (
+              <Alert
+                type="info"
+                showIcon
+                message={t('hr.messages.selectDatesForVehicles')}
+              />
+            ) : availableQuery.isLoading ? (
+              <div className="flex justify-center py-10">
+                <Spin />
+              </div>
+            ) : vehicles.length === 0 ? (
+              <Alert
+                type="warning"
+                showIcon
+                message={t('hr.empty.noVehicles')}
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {vehicles.map((vehicle) => {
+                  const selected = selectedVehicle?.id === vehicle.id;
+                  const available = vehicle.isAvailable;
+                  return (
+                    <Tooltip
+                      key={vehicle.id}
+                      title={
+                        vehicle.conflictPeriod
+                          ? t('hr.messages.vehicleConflict', {
+                              number: vehicle.conflictPeriod.applicationNumber,
+                            })
+                          : undefined
+                      }
+                    >
+                      <button
+                        type="button"
+                        disabled={!available}
+                        onClick={() => handleVehicleSelect(vehicle)}
+                        className="w-full border bg-white p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{
+                          borderRadius: 2,
+                          borderColor: selected
+                            ? tokens.colorPrimary
+                            : 'rgba(0,0,0,0.08)',
+                          borderWidth: selected ? 2 : 1,
+                          background: selected
+                            ? tokens.colorPrimaryLight
+                            : '#FFFFFF',
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <CarOutlined
+                                style={{
+                                  color: selected
+                                    ? tokens.colorPrimary
+                                    : tokens.colorTextTertiary,
+                                }}
+                              />
+                              <p
+                                className="m-0 truncate text-sm font-semibold"
+                                style={{ color: tokens.colorTextPrimary }}
+                              >
+                                {vehicle.plateNumber}
+                              </p>
+                            </div>
+                            <p
+                              className="mb-0 mt-1 truncate text-xs"
+                              style={{ color: tokens.colorTextSecondary }}
+                            >
+                              {vehicle.make} {vehicle.model}
+                            </p>
+                            {vehicle.assignedDriver ? (
+                              <p
+                                className="mb-0 mt-1 truncate text-xs"
+                                style={{ color: tokens.colorTextTertiary }}
+                              >
+                                {t('hr.labels.driver')}:{' '}
+                                {formatDriverName(vehicle.assignedDriver)}
+                              </p>
+                            ) : null}
+                          </div>
+                          {available ? (
+                            <CheckCircleOutlined
+                              style={{
+                                color: selected
+                                  ? tokens.colorPrimary
+                                  : '#52c41a',
+                                fontSize: 16,
+                              }}
+                            />
+                          ) : (
+                            <CloseCircleOutlined
+                              style={{ color: '#ff4d4f', fontSize: 16 }}
+                            />
+                          )}
+                        </div>
+                      </button>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            )}
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.section.tripDetails'),
+        validate: () => validateFields(DETAILS_FIELDS),
+        content: (
+          <FormLayout variant="pro" title={t('hr.section.tripDetails')}>
+            <Form.Item
+              name="driveType"
+              label={t('hr.form.driveType')}
+              rules={[{ required: true }]}
+            >
+              <Radio.Group
+                onChange={(e) =>
+                  handleDriveTypeChange(e.target.value as DriveType)
                 }
               >
-                <Card
-                  size="small"
-                  hoverable={v.isAvailable}
-                  onClick={() => handleVehicleSelect(v)}
-                  style={{
-                    opacity: v.isAvailable ? 1 : 0.5,
-                    cursor: v.isAvailable ? 'pointer' : 'not-allowed',
-                    border:
-                      selectedVehicle?.id === v.id
-                        ? `2px solid ${tokens.colorPrimary}`
-                        : undefined,
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Typography.Text strong>
-                        {v.plateNumber}
-                      </Typography.Text>
-                      <Typography.Text
-                        type="secondary"
-                        className="ml-2"
-                      >
-                        {v.make} {v.model}
-                      </Typography.Text>
-                    </div>
-                    {v.isAvailable ? (
-                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                    ) : (
-                      <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
-                    )}
-                  </div>
-                  {v.assignedDriver ? (
-                    <Typography.Text type="secondary" className="text-xs block mt-1">
-                      Driver: {formatDriverName(v.assignedDriver)}
-                    </Typography.Text>
-                  ) : null}
-                </Card>
-              </Tooltip>
-            ))}
-          </div>
-        )}
-      </SectionCard>
+                <Radio value="COMPANY_DRIVER">
+                  {t('hr.driveType.COMPANY_DRIVER')}
+                </Radio>
+                <Radio value="SELF_DRIVE">{t('hr.driveType.SELF_DRIVE')}</Radio>
+              </Radio.Group>
+            </Form.Item>
 
-      <SectionCard title={t('hr.section.tripDetails')} bodyClassName="px-5 py-4">
-        <Form form={mainForm} layout="vertical" initialValues={{ driveType: 'COMPANY_DRIVER', passengerCount: 1 }}>
-          <Form.Item name="vehicleId" hidden rules={[{ required: true, message: 'Select a vehicle above' }]}>
-            <Input />
-          </Form.Item>
+            {driveType === 'COMPANY_DRIVER' ? (
+              <>
+                <Form.Item name="driverId" hidden>
+                  <Input />
+                </Form.Item>
+                <Form.Item label={t('hr.labels.driver')}>
+                  <Input
+                    disabled
+                    value={
+                      selectedVehicle?.assignedDriver
+                        ? formatDriverName(selectedVehicle.assignedDriver)
+                        : ''
+                    }
+                    placeholder={t('hr.placeholder.driverAutoFilled')}
+                  />
+                </Form.Item>
+              </>
+            ) : null}
 
-          <Form.Item name="driveType" label={t('hr.form.driveType')} rules={[{ required: true }]}>
-            <Radio.Group onChange={(e) => handleDriveTypeChange(e.target.value as DriveType)}>
-              <Radio value="COMPANY_DRIVER">{t('hr.driveType.COMPANY_DRIVER')}</Radio>
-              <Radio value="SELF_DRIVE">{t('hr.driveType.SELF_DRIVE')}</Radio>
-            </Radio.Group>
-          </Form.Item>
+            <div className="erp-form-grid-2">
+              <Form.Item
+                name="destination"
+                label={t('hr.form.destination')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.enterDestination'),
+                  },
+                ]}
+              >
+                <Input
+                  maxLength={200}
+                  placeholder={t('hr.placeholder.enterDestination')}
+                />
+              </Form.Item>
+              <Form.Item
+                name="passengerCount"
+                label={t('hr.form.passengerCount')}
+              >
+                <InputNumber min={1} max={50} className="w-full" />
+              </Form.Item>
+            </div>
 
-          {driveType === 'COMPANY_DRIVER' ? (
-            <Form.Item name="driverId" label={t('hr.labels.driver')}>
-              <Input
-                disabled
+            <Form.Item
+              name="purpose"
+              label={t('hr.form.purpose')}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.enterPurpose'),
+                },
+              ]}
+            >
+              <Input.TextArea
+                rows={3}
+                maxLength={4000}
+                showCount
+                placeholder={t('hr.placeholder.enterPurpose')}
+              />
+            </Form.Item>
+
+            <div className="erp-form-grid-2">
+              <Form.Item name="projectId" label={t('hr.form.project')}>
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder={t('hr.placeholder.selectProject')}
+                  loading={projectsQuery.isLoading}
+                  filterOption={(input, option) =>
+                    String(option?.label ?? '')
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  options={
+                    projectsQuery.data?.data?.map((project) => ({
+                      value: project.id,
+                      label: `${project.projectCode} — ${project.name}`,
+                    })) ?? []
+                  }
+                />
+              </Form.Item>
+              <Form.Item
+                name="passengerNames"
+                label={t('hr.form.passengerNames')}
+              >
+                <Input.TextArea
+                  rows={2}
+                  maxLength={2000}
+                  placeholder={t('hr.placeholder.enterPassengerNames')}
+                />
+              </Form.Item>
+            </div>
+
+            <Form.Item name="notes" label={t('hr.form.notes')}>
+              <Input.TextArea
+                rows={2}
+                maxLength={2000}
+                showCount
+                placeholder={t('hr.placeholder.enterNotes')}
+              />
+            </Form.Item>
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.form.reviewSubmit'),
+        validate: () => true,
+        content: (
+          <FormLayout
+            variant="pro"
+            title={t('hr.labels.reviewApplication')}
+            description={t('pages.hr.vehicleApplication.formDescription')}
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <ReviewItem
+                label={t('hr.labels.departure')}
                 value={
-                  selectedVehicle?.assignedDriver
-                    ? formatDriverName(selectedVehicle.assignedDriver)
-                    : ''
-                }
-                placeholder={
-                  selectedVehicle?.assignedDriver
-                    ? formatDriverName(selectedVehicle.assignedDriver)
-                    : 'Auto-filled from vehicle'
+                  departureDatetime
+                    ? formatProjectDate(departureDatetime.toISOString())
+                    : '—'
                 }
               />
-            </Form.Item>
-          ) : null}
-
-          <Form.Item
-            name="destination"
-            label={t('hr.form.destination')}
-            rules={[{ required: true, message: 'Enter destination' }]}
-          >
-            <Input maxLength={200} placeholder={t('hr.placeholder.enterDestination')} />
-          </Form.Item>
-
-          <Form.Item
-            name="purpose"
-            label={t('hr.form.purpose')}
-            rules={[{ required: true, message: 'Enter purpose' }]}
-          >
-            <Input.TextArea rows={3} maxLength={4000} showCount placeholder={t('hr.placeholder.enterPurpose')} />
-          </Form.Item>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <Form.Item name="passengerCount" label={t('hr.form.passengerCount')}>
-              <InputNumber min={1} max={50} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="projectId" label={t('hr.form.project')}>
-              <Select
-                showSearch
-                allowClear
-                placeholder={t('hr.placeholder.selectProject')}
-                loading={projectsQuery.isLoading}
-                filterOption={(input, option) =>
-                  String(option?.label ?? '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-                options={
-                  projectsQuery.data?.data?.map((p) => ({
-                    value: p.id,
-                    label: `${p.projectCode} - ${p.name}`,
-                  })) ?? []
+              <ReviewItem
+                label={t('hr.labels.return')}
+                value={
+                  returnDatetime
+                    ? formatProjectDate(returnDatetime.toISOString())
+                    : '—'
                 }
               />
-            </Form.Item>
-          </div>
+              <ReviewItem
+                label={t('hr.labels.vehicle')}
+                value={
+                  selectedVehicle
+                    ? `${selectedVehicle.plateNumber} (${selectedVehicle.make} ${selectedVehicle.model})`
+                    : '—'
+                }
+              />
+              <ReviewItem
+                label={t('hr.form.driveType')}
+                value={
+                  driveType === 'SELF_DRIVE'
+                    ? t('hr.driveType.SELF_DRIVE')
+                    : t('hr.driveType.COMPANY_DRIVER')
+                }
+              />
+              <ReviewItem
+                label={t('hr.labels.destination')}
+                value={formValues?.destination?.trim() || '—'}
+              />
+              <ReviewItem
+                label={t('hr.labels.passengers')}
+                value={String(formValues?.passengerCount ?? 1)}
+              />
+              <ReviewItem label={t('hr.labels.project')} value={projectLabel} />
+              <ReviewItem
+                label={t('hr.labels.purpose')}
+                value={formValues?.purpose?.trim() || '—'}
+              />
+              {formValues?.passengerNames?.trim() ? (
+                <ReviewItem
+                  label={t('hr.form.passengerNames')}
+                  value={formValues.passengerNames.trim()}
+                />
+              ) : null}
+              {formValues?.notes?.trim() ? (
+                <ReviewItem
+                  label={t('hr.labels.notes')}
+                  value={formValues.notes.trim()}
+                />
+              ) : null}
+            </div>
+          </FormLayout>
+        ),
+      },
+    ],
+    [
+      t,
+      departureDatetime,
+      returnDatetime,
+      datesReady,
+      availableQuery.isLoading,
+      vehicles,
+      selectedVehicle,
+      driveType,
+      formValues,
+      projectLabel,
+      projectsQuery.isLoading,
+      projectsQuery.data?.data,
+    ],
+  );
 
-          <Form.Item name="passengerNames" label={t('hr.form.passengerNames')}>
-            <Input.TextArea rows={2} maxLength={2000} placeholder={t('hr.placeholder.enterPassengerNames')} />
-          </Form.Item>
+  return (
+    <Form<VehicleApplicationFormValues>
+      form={form}
+      layout="vertical"
+      requiredMark={false}
+      className="flex min-h-0 flex-1 flex-col"
+      initialValues={{ driveType: 'COMPANY_DRIVER', passengerCount: 1 }}
+    >
+      {formError ? (
+        <Alert
+          type="error"
+          showIcon
+          message={formError}
+          className="mb-4"
+          closable
+          onClose={() => setFormError(null)}
+        />
+      ) : null}
+      <StepperForm
+        steps={steps}
+        onSubmit={handleSubmit}
+        onReset={resetForm}
+        isSubmitting={submitting}
+        contentVariant="sections"
+        submitLabel={t('hr.buttons.submitApplication')}
+      />
+    </Form>
+  );
+}
 
-          <Form.Item name="notes" label={t('hr.form.notes')}>
-            <Input.TextArea
-              rows={2}
-              maxLength={2000}
-              showCount
-              placeholder={t('hr.placeholder.enterNotes')}
-            />
-          </Form.Item>
-        </Form>
-      </SectionCard>
-
-      <div className="flex justify-end">
-        <Button
-          type="primary"
-          loading={submitting}
-          disabled={!selectedVehicle}
-          onClick={() => void handleSubmit()}
-        >
-          {t('hr.buttons.submitApplication')}
-        </Button>
-      </div>
+function ReviewItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): React.ReactNode {
+  return (
+    <div className="min-w-0">
+      <p
+        className="mb-0.5 text-xs font-medium uppercase tracking-wide"
+        style={{ color: tokens.colorTextTertiary }}
+      >
+        {label}
+      </p>
+      <p
+        className="m-0 whitespace-pre-wrap text-sm"
+        style={{ color: tokens.colorTextPrimary }}
+      >
+        {value}
+      </p>
     </div>
   );
 }

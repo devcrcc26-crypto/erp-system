@@ -292,6 +292,7 @@
         "myListTitle": "My Vehicle Applications",
         "listDescription": "Review and process company vehicle requests.",
         "myListDescription": "Submit and track your vehicle applications through the approval workflow.",
+        "formDescription": "Select trip dates first to check vehicle availability, then choose a vehicle and complete the trip details.",
         "applicationSingular": "application",
         "applicationPlural": "applications"
       },
@@ -1697,6 +1698,8 @@
       "issuedBy": "Issued by",
       "completed": "Completed",
       "directApproval": "Direct approval",
+      "released": "Released",
+      "releasedAt": "Released At",
       "sealAttached": "Seal attached",
       "sealedDocumentAttached": "Sealed document attached",
       "sealedDocument": "Sealed Document",
@@ -1957,7 +1960,11 @@
       "amountRequired": "Amount is required",
       "currencyRequired": "Currency is required",
       "selectDestinationCategory": "Select a destination category",
-      "enterDestination": "Enter the specific destination"
+      "enterDestination": "Enter the specific destination",
+      "selectDeparture": "Select departure date and time",
+      "selectReturn": "Select return date and time",
+      "selectVehicle": "Select a vehicle",
+      "enterPurpose": "Enter the purpose of travel"
     },
     "perDiemCategory": {
       "americas": "Americas",
@@ -1990,7 +1997,13 @@
       "noActiveEmployeePerDiemRatesDesc": "Ask HR to configure your per diem rates on your employee profile before submitting a request.",
       "perDiemSubmitted": "Per diem request submitted",
       "perDiemSubmitFailed": "Failed to submit per diem request",
-      "vehicleApplicationLoadFailed": "Failed to load vehicle applications"
+      "vehicleApplicationLoadFailed": "Failed to load vehicle applications",
+      "vehicleApplicationSubmitted": "Vehicle application submitted for approval",
+      "vehicleApplicationApproved": "Vehicle application approved",
+      "vehicleApplicationSubmitFailed": "Failed to submit vehicle application",
+      "vehicleApplicationNotFound": "Vehicle application not found",
+      "selectDatesForVehicles": "Select departure and return dates above to see available vehicles.",
+      "vehicleConflict": "Conflicts with {{number}}"
     },
     "hints": {
       "replaceReceipt": "Current receipt: {{name}}. Upload a new file to replace it."
@@ -2104,6 +2117,8 @@
       "driver": "Driver",
       "passengerCount": "Number of Passengers",
       "passengerNames": "Passenger Names",
+      "tripSchedule": "Trip Schedule",
+      "selectVehicle": "Select Vehicle",
       "fuelDate": "Fuel Date",
       "fuelType": "Fuel Type",
       "fuelStation": "Fuel Station",
@@ -2162,6 +2177,7 @@
       "selectDriver": "Select driver",
       "selectProject": "Select project",
       "selectPassengers": "Select passengers",
+      "driverAutoFilled": "Auto-filled from selected vehicle",
       "selectDestinationCategory": "Select destination",
       "selectLinkedTravel": "Select flight or business trip",
       "enterTitle": "Enter a short title for this request",

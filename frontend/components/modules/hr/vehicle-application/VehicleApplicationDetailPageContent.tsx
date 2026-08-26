@@ -177,10 +177,10 @@ export default function VehicleApplicationDetailPageContent({
                   variant={vehicleApplicationStatusVariant(application.status)}
                 />
                 {isDirectApproved ? (
-                  <Tag color="blue">Direct approval</Tag>
+                  <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
                 ) : null}
                 {application.releasedAt ? (
-                  <Tag color="green">Released</Tag>
+                  <Tag color="green">{t('hr.labels.released')}</Tag>
                 ) : null}
               </div>
               <h2
@@ -261,7 +261,7 @@ export default function VehicleApplicationDetailPageContent({
                 </MetaItem>
               ) : null}
               {application.releasedAt ? (
-                <MetaItem label="Released At">
+                <MetaItem label={t('hr.labels.releasedAt')}>
                   {formatProjectDate(application.releasedAt)}
                 </MetaItem>
               ) : null}
@@ -276,7 +276,7 @@ export default function VehicleApplicationDetailPageContent({
           >
             {isDirectApproved ? (
               <Typography.Text type="secondary">
-                Approved directly — no approval required
+                {t('hr.messages.directApprovalNoChain')}
               </Typography.Text>
             ) : tiers.length > 0 ? (
               <ApprovalTierTimeline

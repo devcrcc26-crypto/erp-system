@@ -290,6 +290,7 @@
         "myListTitle": "我的用车申请",
         "listDescription": "审核并处理公司车辆使用申请。",
         "myListDescription": "提交并跟踪您的用车审批流程。",
+        "formDescription": "请先选择出行时间以查看可用车辆，然后选择车辆并填写行程详情。",
         "applicationSingular": "条申请",
         "applicationPlural": "条申请"
       },
@@ -1687,6 +1688,8 @@
       "issued": "用印日期",
       "issuedBy": "用印人",
       "directApproval": "直接批准",
+      "released": "已放行",
+      "releasedAt": "放行时间",
       "sealAttached": "已用印",
       "sealedDocumentAttached": "已附加用印文件",
       "sealedDocument": "用印文件",
@@ -1940,7 +1943,11 @@
       "amountRequired": "请输入金额",
       "currencyRequired": "请选择币种",
       "selectDestinationCategory": "请选择目的地类别",
-      "enterDestination": "请输入具体目的地"
+      "enterDestination": "请输入具体目的地",
+      "selectDeparture": "请选择出发日期和时间",
+      "selectReturn": "请选择返回日期和时间",
+      "selectVehicle": "请选择车辆",
+      "enterPurpose": "请输入出行目的"
     },
     "perDiemCategory": {
       "americas": "美洲",
@@ -1973,7 +1980,13 @@
       "noActiveEmployeePerDiemRatesDesc": "请先联系人力资源在员工档案中配置您的差旅补贴标准，然后再提交申请。",
       "perDiemSubmitted": "差旅补贴申请已提交",
       "perDiemSubmitFailed": "提交差旅补贴申请失败",
-      "vehicleApplicationLoadFailed": "加载用车申请失败"
+      "vehicleApplicationLoadFailed": "加载用车申请失败",
+      "vehicleApplicationSubmitted": "用车申请已提交审批",
+      "vehicleApplicationApproved": "用车申请已批准",
+      "vehicleApplicationSubmitFailed": "提交用车申请失败",
+      "vehicleApplicationNotFound": "未找到用车申请",
+      "selectDatesForVehicles": "请先在上方选择出发和返回时间，以查看可用车辆。",
+      "vehicleConflict": "与 {{number}} 冲突"
     },
     "hints": {
       "replaceReceipt": "当前收据：{{name}}。上传新文件可替换。"
@@ -2087,6 +2100,8 @@
       "driver": "司机",
       "passengerCount": "乘客人数",
       "passengerNames": "乘客姓名",
+      "tripSchedule": "行程时间",
+      "selectVehicle": "选择车辆",
       "fuelDate": "加油日期",
       "fuelType": "燃油类型",
       "fuelStation": "加油站",
@@ -2145,6 +2160,7 @@
       "selectDriver": "选择司机",
       "selectProject": "选择项目",
       "selectPassengers": "选择乘客",
+      "driverAutoFilled": "根据所选车辆自动填写",
       "selectDestinationCategory": "选择目的地类别",
       "selectLinkedTravel": "选择关联航班或出差",
       "enterTitle": "请输入申请标题",

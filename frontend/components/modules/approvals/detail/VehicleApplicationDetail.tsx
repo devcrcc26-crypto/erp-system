@@ -19,6 +19,9 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
+/**
+ * Vehicle application body for the Approvals detail inbox (read-only).
+ */
 export default function VehicleApplicationDetail({
   sourceId,
 }: {
@@ -31,13 +34,7 @@ export default function VehicleApplicationDetail({
 
   if (detailQuery.isLoading && !application) {
     return (
-      <div
-        className="rounded-none p-6"
-        style={{
-          background: tokens.colorCardBg,
-          border: `1px solid ${tokens.colorBorder}`,
-        }}
-      >
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -51,7 +48,7 @@ export default function VehicleApplicationDetail({
         message={
           detailQuery.error instanceof ApiRequestError
             ? detailQuery.error.message
-            : 'Vehicle application not found'
+            : t('hr.messages.vehicleApplicationNotFound')
         }
       />
     );
@@ -60,14 +57,14 @@ export default function VehicleApplicationDetail({
   return (
     <div className="flex flex-col gap-3">
       <div
-        className="rounded-none overflow-hidden"
+        className="overflow-hidden rounded-none"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
         <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             <span
               className="text-xs font-semibold uppercase tracking-wide"
               style={{ color: tokens.colorTextTertiary }}
@@ -79,27 +76,25 @@ export default function VehicleApplicationDetail({
               label={formatVehicleApplicationStatus(application.status, t)}
               variant={vehicleApplicationStatusVariant(application.status)}
             />
+            {application.directApproved ? (
+              <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
+            ) : null}
             {application.releasedAt ? (
-              <Tag color="green">Released</Tag>
+              <Tag color="green">{t('hr.labels.released')}</Tag>
             ) : null}
           </div>
           <h2
-            className="text-lg font-semibold leading-snug m-0"
+            className="m-0 text-lg font-semibold leading-snug"
             style={{ color: tokens.colorTextPrimary }}
           >
-            Vehicle Application  - {application.vehicle?.plateNumber}
+            {t('pages.hr.vehicleApplication.detail')} —{' '}
+            {application.vehicle?.plateNumber ?? t('hr.labels.noVehicle')}
           </h2>
           <p
-            className="mt-1 text-sm m-0"
+            className="mb-0 mt-1 text-sm"
             style={{ color: tokens.colorTextSecondary }}
           >
-            Submitted by{' '}
-            <span
-              className="font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {formatVehicleApplicationEmployeeName(application.employee)}
-            </span>
+            {formatVehicleApplicationEmployeeName(application.employee)}
             {application.submittedAt
               ? ` · ${formatProjectDate(application.submittedAt)}`
               : null}
@@ -109,9 +104,18 @@ export default function VehicleApplicationDetail({
 
       <SummaryStrip
         items={[
-          { label: t('hr.labels.destination'), value: application.destination },
-          { label: 'Drive Type', value: formatDriveType(application.driveType, t) },
-          { label: t('hr.labels.passengers'), value: String(application.passengerCount) },
+          {
+            label: t('hr.labels.destination'),
+            value: application.destination,
+          },
+          {
+            label: t('hr.form.driveType'),
+            value: formatDriveType(application.driveType, t),
+          },
+          {
+            label: t('hr.labels.passengers'),
+            value: String(application.passengerCount),
+          },
           {
             label: t('hr.labels.vehicle'),
             value: application.vehicle
@@ -121,8 +125,11 @@ export default function VehicleApplicationDetail({
         ]}
       />
 
-      <SectionCard title="Trip Details" bodyClassName="px-3 py-4 sm:px-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <SectionCard
+        title={t('hr.section.tripDetails')}
+        bodyClassName="px-3 py-4 sm:px-5"
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <MetaItem label={t('hr.labels.departure')}>
             {formatProjectDate(application.departureDatetime)}
           </MetaItem>
@@ -130,27 +137,32 @@ export default function VehicleApplicationDetail({
             {formatProjectDate(application.returnDatetime)}
           </MetaItem>
           <MetaItem label={t('hr.labels.purpose')}>
-            <p className="whitespace-pre-wrap leading-relaxed m-0">
+            <p className="m-0 whitespace-pre-wrap leading-relaxed">
               {application.purpose}
             </p>
           </MetaItem>
           {application.passengerNames ? (
-            <MetaItem label="Passenger Names">
-              <p className="whitespace-pre-wrap leading-relaxed m-0">
+            <MetaItem label={t('hr.form.passengerNames')}>
+              <p className="m-0 whitespace-pre-wrap leading-relaxed">
                 {application.passengerNames}
               </p>
             </MetaItem>
           ) : null}
           {application.project ? (
-            <MetaItem label="Project">
-              {application.project.projectCode}  - {application.project.name}
+            <MetaItem label={t('hr.labels.project')}>
+              {application.project.projectCode} — {application.project.name}
             </MetaItem>
           ) : null}
           {application.notes ? (
-            <MetaItem label="Notes">
-              <p className="whitespace-pre-wrap leading-relaxed m-0">
+            <MetaItem label={t('hr.labels.notes')}>
+              <p className="m-0 whitespace-pre-wrap leading-relaxed">
                 {application.notes}
               </p>
+            </MetaItem>
+          ) : null}
+          {application.releasedAt ? (
+            <MetaItem label={t('hr.labels.releasedAt')}>
+              {formatProjectDate(application.releasedAt)}
             </MetaItem>
           ) : null}
         </div>
