@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Popconfirm, Skeleton, Tag, Typography } from 'antd';
+import { Alert, Button, Popconfirm, Skeleton, Space, Tag, Typography } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
@@ -32,6 +32,9 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
+/**
+ * Vehicle application detail with trip summary, release, and approval chain.
+ */
 export default function VehicleApplicationDetailPageContent({
   applicationId,
 }: {
@@ -82,79 +85,93 @@ export default function VehicleApplicationDetailPageContent({
   }
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !application) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        title={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : 'Vehicle application not found'
-        }
-        action={
-          <Button onClick={() => router.push('/hr/vehicle-applications')}>
-            Back to list
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <Alert
+          type="error"
+          showIcon
+          message={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : 'Vehicle application not found'
+          }
+          action={
+            <Button
+              onClick={() => router.push('/hr/vehicle-applications')}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.back')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
+    <div className="erp-pro-list-page flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/hr/vehicle-applications')}
+          style={{ borderRadius: 0 }}
         >
           {t('hr.buttons.back')}
         </Button>
-        {canRelease ? (
-          <Popconfirm
-            title={t('hr.labels.releaseVehicle')}
-            description={t('hr.labels.releaseVehicleDesc')}
-            onConfirm={() => void handleRelease()}
-            okButtonProps={{ loading: releaseMutation.isPending }}
-          >
-            <Button type="primary" className="ml-auto">
-              {t('hr.buttons.releaseVehicle')}
+        <Space wrap size={8} className="ml-auto">
+          {canRelease ? (
+            <Popconfirm
+              title={t('hr.labels.releaseVehicle')}
+              description={t('hr.labels.releaseVehicleDesc')}
+              onConfirm={() => void handleRelease()}
+              okButtonProps={{ loading: releaseMutation.isPending }}
+            >
+              <Button type="primary" style={{ borderRadius: 0 }}>
+                {t('hr.buttons.releaseVehicle')}
+              </Button>
+            </Popconfirm>
+          ) : null}
+          {canCancel ? (
+            <Button
+              danger
+              onClick={() => setConfirmCancel(true)}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.cancel')}
             </Button>
-          </Popconfirm>
-        ) : null}
-        {canCancel ? (
-          <Button
-            danger
-            className={canRelease ? '' : 'ml-auto'}
-            onClick={() => setConfirmCancel(true)}
-          >
-            {t('hr.buttons.cancel')}
-          </Button>
-        ) : null}
+          ) : null}
+        </Space>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
-        <div className="flex flex-col gap-4 min-w-0">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_320px]">
+        <div className="flex min-w-0 flex-col gap-3">
           <div
-            className="rounded-lg overflow-hidden"
+            className="overflow-hidden rounded-none"
             style={{
               background: tokens.colorCardBg,
               border: `1px solid ${tokens.colorBorder}`,
             }}
           >
-            <div className="px-5 py-4">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="px-3 py-4 sm:px-5">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span
                   className="text-xs font-semibold uppercase tracking-wide"
                   style={{ color: tokens.colorTextTertiary }}
                 >
                   {application.applicationNumber}
                 </span>
-                <span style={{ color: tokens.colorBorder }}>|</span>
+                <span style={{ color: tokens.colorBorder }}>·</span>
                 <StatusBadge
                   label={formatVehicleApplicationStatus(application.status, t)}
                   variant={vehicleApplicationStatusVariant(application.status)}
@@ -167,18 +184,19 @@ export default function VehicleApplicationDetailPageContent({
                 ) : null}
               </div>
               <h2
-                className="text-lg font-semibold leading-snug m-0"
+                className="m-0 text-lg font-semibold leading-snug"
                 style={{ color: tokens.colorTextPrimary }}
               >
-                Vehicle Application - {application.vehicle?.plateNumber}
+                {t('pages.hr.vehicleApplication.detail')} —{' '}
+                {application.vehicle?.plateNumber ?? t('hr.labels.noVehicle')}
               </h2>
               <p
-                className="mt-1 text-sm m-0"
+                className="m-0 mt-1 text-sm"
                 style={{ color: tokens.colorTextSecondary }}
               >
                 {formatVehicleApplicationEmployeeName(application.employee)}
                 {application.submittedAt
-                  ? ` | Submitted ${formatProjectDate(application.submittedAt)}`
+                  ? ` · Submitted ${formatProjectDate(application.submittedAt)}`
                   : null}
               </p>
             </div>
@@ -186,7 +204,10 @@ export default function VehicleApplicationDetailPageContent({
 
           <SummaryStrip
             items={[
-              { label: t('hr.labels.destination'), value: application.destination },
+              {
+                label: t('hr.labels.destination'),
+                value: application.destination,
+              },
               {
                 label: t('hr.form.driveType'),
                 value: formatDriveType(application.driveType, t),
@@ -204,8 +225,11 @@ export default function VehicleApplicationDetailPageContent({
             ]}
           />
 
-          <SectionCard title={t('hr.section.tripDetails')} bodyClassName="px-5 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SectionCard
+            title={t('hr.section.tripDetails')}
+            bodyClassName="px-3 py-4 sm:px-5"
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <MetaItem label={t('hr.labels.departure')}>
                 {formatProjectDate(application.departureDatetime)}
               </MetaItem>
@@ -213,25 +237,25 @@ export default function VehicleApplicationDetailPageContent({
                 {formatProjectDate(application.returnDatetime)}
               </MetaItem>
               <MetaItem label={t('hr.labels.purpose')}>
-                <p className="whitespace-pre-wrap leading-relaxed m-0">
+                <p className="m-0 whitespace-pre-wrap leading-relaxed">
                   {application.purpose}
                 </p>
               </MetaItem>
               {application.passengerNames ? (
                 <MetaItem label={t('hr.labels.passengers')}>
-                  <p className="whitespace-pre-wrap leading-relaxed m-0">
+                  <p className="m-0 whitespace-pre-wrap leading-relaxed">
                     {application.passengerNames}
                   </p>
                 </MetaItem>
               ) : null}
               {application.project ? (
                 <MetaItem label={t('hr.labels.project')}>
-                  {application.project.projectCode} - {application.project.name}
+                  {application.project.projectCode} — {application.project.name}
                 </MetaItem>
               ) : null}
               {application.notes ? (
                 <MetaItem label={t('hr.labels.notes')}>
-                  <p className="whitespace-pre-wrap leading-relaxed m-0">
+                  <p className="m-0 whitespace-pre-wrap leading-relaxed">
                     {application.notes}
                   </p>
                 </MetaItem>
@@ -246,10 +270,13 @@ export default function VehicleApplicationDetailPageContent({
         </div>
 
         <div className="min-w-0">
-          <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-4 py-4">
+          <SectionCard
+            title={t('hr.section.approvalChain')}
+            bodyClassName="px-3 py-4 sm:px-4"
+          >
             {isDirectApproved ? (
               <Typography.Text type="secondary">
-                Approved directly - no approval required
+                Approved directly — no approval required
               </Typography.Text>
             ) : tiers.length > 0 ? (
               <ApprovalTierTimeline

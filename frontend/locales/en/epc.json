@@ -291,7 +291,9 @@
         "listTitle": "Vehicle Applications",
         "myListTitle": "My Vehicle Applications",
         "listDescription": "Review and process company vehicle requests.",
-        "myListDescription": "Submit and track your vehicle applications through the approval workflow."
+        "myListDescription": "Submit and track your vehicle applications through the approval workflow.",
+        "applicationSingular": "application",
+        "applicationPlural": "applications"
       },
       "vehicleRefueling": {
         "new": "New Vehicle Refueling",
@@ -1987,7 +1989,8 @@
       "noActiveEmployeePerDiemRates": "No active per diem rates configured",
       "noActiveEmployeePerDiemRatesDesc": "Ask HR to configure your per diem rates on your employee profile before submitting a request.",
       "perDiemSubmitted": "Per diem request submitted",
-      "perDiemSubmitFailed": "Failed to submit per diem request"
+      "perDiemSubmitFailed": "Failed to submit per diem request",
+      "vehicleApplicationLoadFailed": "Failed to load vehicle applications"
     },
     "hints": {
       "replaceReceipt": "Current receipt: {{name}}. Upload a new file to replace it."

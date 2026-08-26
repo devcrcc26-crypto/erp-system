@@ -289,7 +289,9 @@
         "listTitle": "用车申请",
         "myListTitle": "我的用车申请",
         "listDescription": "审核并处理公司车辆使用申请。",
-        "myListDescription": "提交并跟踪您的用车审批流程。"
+        "myListDescription": "提交并跟踪您的用车审批流程。",
+        "applicationSingular": "条申请",
+        "applicationPlural": "条申请"
       },
       "vehicleRefueling": {
         "new": "新建车辆加油申请",
@@ -1970,7 +1972,8 @@
       "noActiveEmployeePerDiemRates": "未配置有效的差旅补贴标准",
       "noActiveEmployeePerDiemRatesDesc": "请先联系人力资源在员工档案中配置您的差旅补贴标准，然后再提交申请。",
       "perDiemSubmitted": "差旅补贴申请已提交",
-      "perDiemSubmitFailed": "提交差旅补贴申请失败"
+      "perDiemSubmitFailed": "提交差旅补贴申请失败",
+      "vehicleApplicationLoadFailed": "加载用车申请失败"
     },
     "hints": {
       "replaceReceipt": "当前收据：{{name}}。上传新文件可替换。"
