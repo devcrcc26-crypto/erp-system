@@ -152,6 +152,8 @@ export default function FlightTripDetailsStep({
             </Typography.Text>
             <DatePicker
               className="w-full"
+              showTime={{ format: 'HH:mm' }}
+              format="YYYY-MM-DD HH:mm"
               value={values.departureDate}
               onChange={(date) => patch({ departureDate: date })}
             />
@@ -168,6 +170,8 @@ export default function FlightTripDetailsStep({
               </Typography.Text>
               <DatePicker
                 className="w-full"
+                showTime={{ format: 'HH:mm' }}
+                format="YYYY-MM-DD HH:mm"
                 value={values.returnDate}
                 onChange={(date) => patch({ returnDate: date })}
               />
@@ -175,6 +179,69 @@ export default function FlightTripDetailsStep({
           </Col>
         ) : null}
       </Row>
+
+      <Row gutter={16}>
+        <Col xs={24} sm={12}>
+          <div className="mb-4">
+            <Typography.Text
+              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
+            >
+              {t('hr.form.kmAtDeparture')}
+            </Typography.Text>
+            <Input
+              type="number"
+              min={0}
+              value={values.kmAtDeparture ?? ''}
+              onChange={(e) => {
+                const raw = e.target.value;
+                patch({
+                  kmAtDeparture:
+                    raw === '' ? null : Number(raw),
+                });
+              }}
+              placeholder={t('hr.placeholder.enterKmReading')}
+            />
+          </div>
+        </Col>
+        <Col xs={24} sm={12}>
+          <div className="mb-4">
+            <Typography.Text
+              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
+            >
+              {t('hr.form.kmAtReturn')}
+            </Typography.Text>
+            <Input
+              type="number"
+              min={0}
+              value={values.kmAtReturn ?? ''}
+              onChange={(e) => {
+                const raw = e.target.value;
+                patch({
+                  kmAtReturn: raw === '' ? null : Number(raw),
+                });
+              }}
+              placeholder={t('hr.placeholder.enterKmReading')}
+            />
+          </div>
+        </Col>
+      </Row>
+
+      {values.kmAtDeparture != null &&
+      values.kmAtReturn != null &&
+      Number.isFinite(values.kmAtDeparture) &&
+      Number.isFinite(values.kmAtReturn) ? (
+        <div className="mb-4">
+          <Typography.Text
+            style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
+          >
+            {t('hr.form.kmDifference')}
+          </Typography.Text>
+          <Input
+            disabled
+            value={String(values.kmAtReturn - values.kmAtDeparture)}
+          />
+        </div>
+      ) : null}
 
       <div className="mb-4">
         <Typography.Text

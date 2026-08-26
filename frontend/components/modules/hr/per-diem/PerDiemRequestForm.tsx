@@ -18,12 +18,12 @@ import {
   useSubmitPerDiemRequest,
 } from '@/lib/query/per-diem';
 import { tokens } from '@/lib/theme/tokens';
+import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import {
   formatCurrencyAmount,
   formatEtbAmount,
 } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatProjectDate } from '@/lib/utils/project-display';
 
 interface PerDiemFormValues {
   destinationCategory?: string;
@@ -39,6 +39,13 @@ interface PerDiemRequestFormProps {
 
 const DESTINATION_FIELDS = ['destinationCategory', 'destination'] as const;
 const DATES_FIELDS = ['dateRange'] as const;
+
+function calcInclusiveCalendarDays(
+  start: dayjs.Dayjs,
+  end: dayjs.Dayjs,
+): number {
+  return end.startOf('day').diff(start.startOf('day'), 'day') + 1;
+}
 
 /**
  * Per diem create form — same StepperForm chrome as Add Employee.
@@ -77,9 +84,7 @@ export default function PerDiemRequestForm({
     if (!dateRange?.[0] || !dateRange?.[1]) {
       return 0;
     }
-    return (
-      dateRange[1].startOf('day').diff(dateRange[0].startOf('day'), 'day') + 1
-    );
+    return calcInclusiveCalendarDays(dateRange[0], dateRange[1]);
   }, [dateRange]);
 
   const totalAmount = selectedRate ? Number(selectedRate.dailyRate) * days : 0;
@@ -196,8 +201,8 @@ export default function PerDiemRequestForm({
       const created = await submitMutation.mutateAsync({
         destinationCategory: values.destinationCategory,
         destination: values.destination.trim(),
-        startDate: values.dateRange[0].format('YYYY-MM-DD'),
-        endDate: values.dateRange[1].format('YYYY-MM-DD'),
+        startDate: values.dateRange[0].toISOString(),
+        endDate: values.dateRange[1].toISOString(),
         linkedFlightId: kind === 'flight' ? id : undefined,
         linkedBusinessTripId: kind === 'trip' ? id : undefined,
         notes: values.notes?.trim() || undefined,
@@ -218,7 +223,10 @@ export default function PerDiemRequestForm({
   const estimateBlock =
     selectedRate && days > 0 ? (
       <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-[rgba(0,0,0,0.06)] pt-4">
-        <EstimateItem label={t('hr.table.days')} value={String(days)} />
+        <EstimateItem
+          label={t('hr.form.totalDays')}
+          value={String(days)}
+        />
         <EstimateItem
           label={t('hr.form.dailyRate')}
           value={formatCurrencyAmount(
@@ -229,11 +237,11 @@ export default function PerDiemRequestForm({
         <EstimateItem
           label={t('hr.form.totalAmount')}
           value={formatCurrencyAmount(totalAmount, selectedRate.currency)}
+          emphasize
         />
         <EstimateItem
           label={t('hr.form.etbEquivalent')}
           value={formatEtbAmount(totalAmountEtb)}
-          emphasize
         />
       </div>
     ) : null;
@@ -304,8 +312,17 @@ export default function PerDiemRequestForm({
                   message: t('hr.validation.selectLeaveDates'),
                 },
               ]}
+              extra={
+                days > 0
+                  ? t('hr.form.totalDaysCalculated', { days })
+                  : undefined
+              }
             >
-              <DatePicker.RangePicker className="w-full" />
+              <DatePicker.RangePicker
+                className="w-full"
+                showTime={{ format: 'HH:mm' }}
+                format="YYYY-MM-DD HH:mm"
+              />
             </Form.Item>
 
             <Form.Item name="linkedTravel" label={t('hr.form.linkedTravel')}>
@@ -350,7 +367,7 @@ export default function PerDiemRequestForm({
                 label={t('hr.form.startDate')}
                 value={
                   dateRange?.[0]
-                    ? formatProjectDate(dateRange[0].toISOString())
+                    ? formatDisplayDateTime(dateRange[0].toISOString())
                     : '—'
                 }
               />
@@ -358,7 +375,30 @@ export default function PerDiemRequestForm({
                 label={t('hr.form.endDate')}
                 value={
                   dateRange?.[1]
-                    ? formatProjectDate(dateRange[1].toISOString())
+                    ? formatDisplayDateTime(dateRange[1].toISOString())
+                    : '—'
+                }
+              />
+              <ReviewItem
+                label={t('hr.form.totalDays')}
+                value={days > 0 ? String(days) : '—'}
+              />
+              <ReviewItem
+                label={t('hr.form.dailyRate')}
+                value={
+                  selectedRate
+                    ? formatCurrencyAmount(
+                        selectedRate.dailyRate,
+                        selectedRate.currency,
+                      )
+                    : '—'
+                }
+              />
+              <ReviewItem
+                label={t('hr.form.totalAmount')}
+                value={
+                  selectedRate && days > 0
+                    ? formatCurrencyAmount(totalAmount, selectedRate.currency)
                     : '—'
                 }
               />
@@ -389,6 +429,9 @@ export default function PerDiemRequestForm({
       formValues,
       dateRange,
       linkedTravelLabel,
+      days,
+      selectedRate,
+      totalAmount,
     ],
   );
 

@@ -132,6 +132,12 @@ export function useSubmitFlightApplication() {
       if (payload.returnDate) {
         formData.append('returnDate', payload.returnDate);
       }
+      if (payload.kmAtDeparture != null) {
+        formData.append('kmAtDeparture', String(payload.kmAtDeparture));
+      }
+      if (payload.kmAtReturn != null) {
+        formData.append('kmAtReturn', String(payload.kmAtReturn));
+      }
       formData.append('purpose', payload.purpose);
       formData.append('ticketClass', payload.ticketClass);
       formData.append(

@@ -205,10 +205,20 @@ export function FlightApplicationForm({
         originCountry: tripDetails.originCountry.trim(),
         originCity: tripDetails.originCity.trim(),
         destination: tripDetails.destination.trim(),
-        departureDate: tripDetails.departureDate.format('YYYY-MM-DD'),
+        departureDate: tripDetails.departureDate.toISOString(),
         returnDate:
           tripDetails.tripType === 'ROUND_TRIP' && tripDetails.returnDate
-            ? tripDetails.returnDate.format('YYYY-MM-DD')
+            ? tripDetails.returnDate.toISOString()
+            : undefined,
+        kmAtDeparture:
+          tripDetails.kmAtDeparture != null &&
+          Number.isFinite(tripDetails.kmAtDeparture)
+            ? tripDetails.kmAtDeparture
+            : undefined,
+        kmAtReturn:
+          tripDetails.kmAtReturn != null &&
+          Number.isFinite(tripDetails.kmAtReturn)
+            ? tripDetails.kmAtReturn
             : undefined,
         purpose: tripDetails.purpose.trim(),
         ticketClass: tripDetails.ticketClass,

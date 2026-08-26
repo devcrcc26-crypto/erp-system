@@ -58,6 +58,8 @@ export interface FlightApplicationListItem {
   destination: string;
   departureDate: string;
   returnDate?: string | null;
+  kmAtDeparture?: number | string | null;
+  kmAtReturn?: number | string | null;
   status: FlightApplicationStatus;
   passengerCount: number;
   currentTierLabel?: string | null;
@@ -111,6 +113,8 @@ export interface SubmitFlightApplicationPayload {
   destination: string;
   departureDate: string;
   returnDate?: string;
+  kmAtDeparture?: number;
+  kmAtReturn?: number;
   purpose: string;
   ticketClass: FlightTicketClass;
   accommodationRequired: boolean;

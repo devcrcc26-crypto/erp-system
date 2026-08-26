@@ -3821,8 +3821,10 @@ model FlightApplication {
   originCountry            String                  @map("origin_country")
   originCity               String                  @map("origin_city")
   destination              String
-  departureDate            DateTime                @map("departure_date") @db.Date
-  returnDate               DateTime?               @map("return_date") @db.Date
+  departureDate            DateTime                @map("departure_date")
+  returnDate               DateTime?               @map("return_date")
+  kmAtDeparture            Decimal?                @map("km_at_departure") @db.Decimal(12, 2)
+  kmAtReturn               Decimal?                @map("km_at_return") @db.Decimal(12, 2)
   purpose                  String
   ticketClass              FlightTicketClass       @default(ECONOMY) @map("ticket_class")
   accommodationRequired    Boolean                 @default(false) @map("accommodation_required")
@@ -3919,8 +3921,10 @@ model BusinessTrip {
   originCity                 String             @map("origin_city")
   destinationCountry         String             @map("destination_country")
   destinationCity            String             @map("destination_city")
-  departureDate              DateTime           @map("departure_date") @db.Date
-  returnDate                 DateTime?          @map("return_date") @db.Date
+  departureDate              DateTime           @map("departure_date")
+  returnDate                 DateTime?          @map("return_date")
+  kmAtDeparture              Decimal?           @map("km_at_departure") @db.Decimal(12, 2)
+  kmAtReturn                 Decimal?           @map("km_at_return") @db.Decimal(12, 2)
   purpose                    String
   hostOrganization           String?            @map("host_organization")
   hostContact                String?            @map("host_contact")
@@ -4142,9 +4146,10 @@ model PerDiemRequest {
   employeePerDiemRateId   String?           @map("employee_per_diem_rate_id")
   destinationCategory     String            @map("destination_category")
   destination          String
-  startDate            DateTime          @map("start_date") @db.Date
-  endDate              DateTime          @map("end_date") @db.Date
+  startDate            DateTime          @map("start_date")
+  endDate              DateTime          @map("end_date")
   days                 Int
+  totalDays            Int?              @map("total_days")
   dailyRate            Decimal           @map("daily_rate") @db.Decimal(12, 2)
   currency             SupportedCurrency @default(ETB)
   totalAmount          Decimal           @map("total_amount") @db.Decimal(14, 2)

@@ -8,6 +8,7 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -104,11 +105,11 @@ export class SubmitFlightApplicationDto {
   @MaxLength(200)
   destination!: string;
 
-  @ApiProperty({ example: '2026-09-01' })
+  @ApiProperty({ example: '2026-09-01T08:00:00.000Z' })
   @IsDateString()
   departureDate!: string;
 
-  @ApiPropertyOptional({ example: '2026-09-10' })
+  @ApiPropertyOptional({ example: '2026-09-10T18:00:00.000Z' })
   @IsOptional()
   @Transform(({ value }) => emptyToUndefined(value))
   @ValidateIf(
@@ -116,6 +117,20 @@ export class SubmitFlightApplicationDto {
   )
   @IsDateString()
   returnDate?: string;
+
+  @ApiPropertyOptional({ description: 'Odometer reading at departure (km)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  kmAtDeparture?: number;
+
+  @ApiPropertyOptional({ description: 'Odometer reading at return (km)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  kmAtReturn?: number;
 
   @ApiProperty()
   @IsString()

@@ -138,19 +138,38 @@ export class FlightService
     userId: string,
   ): Promise<unknown> {
     // --- Validation ---
-    const departureDate = this.parseDateOnly(dto.departureDate);
+    const departureDate = this.parseDateTime(dto.departureDate);
+    const returnDate = dto.returnDate
+      ? this.parseDateTime(dto.returnDate)
+      : null;
 
     if (dto.tripType === FlightTripType.ROUND_TRIP) {
-      if (!dto.returnDate) {
+      if (!returnDate) {
         throw new BadRequestException('ROUND_TRIP requires returnDate');
       }
-      const returnDate = this.parseDateOnly(dto.returnDate);
       if (returnDate.getTime() < departureDate.getTime()) {
         throw new BadRequestException(
           'returnDate must be on or after departureDate',
         );
       }
     }
+
+    if (
+      dto.kmAtDeparture != null &&
+      dto.kmAtReturn != null &&
+      dto.kmAtReturn < dto.kmAtDeparture
+    ) {
+      throw new BadRequestException(
+        'kmAtReturn must be greater than or equal to kmAtDeparture',
+      );
+    }
+
+    const kmAtDeparture =
+      dto.kmAtDeparture != null
+        ? new Prisma.Decimal(dto.kmAtDeparture)
+        : null;
+    const kmAtReturn =
+      dto.kmAtReturn != null ? new Prisma.Decimal(dto.kmAtReturn) : null;
 
     const passengerIds = dto.passengers.map((p) => p.employeeId);
     const uniqueIds = new Set(passengerIds);
@@ -196,9 +215,9 @@ export class FlightService
               originCity: dto.originCity.trim(),
               destination: dto.destination.trim(),
               departureDate,
-              returnDate: dto.returnDate
-                ? this.parseDateOnly(dto.returnDate)
-                : null,
+              returnDate,
+              kmAtDeparture,
+              kmAtReturn,
               purpose: dto.purpose.trim(),
               ticketClass: dto.ticketClass,
               accommodationRequired: dto.accommodationRequired ?? false,
@@ -300,9 +319,9 @@ export class FlightService
               originCity: dto.originCity.trim(),
               destination: dto.destination.trim(),
               departureDate,
-              returnDate: dto.returnDate
-                ? this.parseDateOnly(dto.returnDate)
-                : null,
+              returnDate,
+              kmAtDeparture,
+              kmAtReturn,
               purpose: dto.purpose.trim(),
               ticketClass: dto.ticketClass,
               accommodationRequired: dto.accommodationRequired ?? false,
@@ -1717,6 +1736,17 @@ export class FlightService
         .filter(Boolean) as FlightApplicationStatus[];
     }
     return [status as FlightApplicationStatus];
+  }
+
+  /**
+   * Parses an ISO datetime string to a Date.
+   */
+  private parseDateTime(value: string): Date {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) {
+      throw new BadRequestException(`Invalid datetime: ${value}`);
+    }
+    return d;
   }
 
   /**

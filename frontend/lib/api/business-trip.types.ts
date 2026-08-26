@@ -58,6 +58,8 @@ export interface BusinessTripListItem {
   destinationCity: string;
   departureDate: string;
   returnDate?: string | null;
+  kmAtDeparture?: number | string | null;
+  kmAtReturn?: number | string | null;
   status: BusinessTripStatus;
   passengerCount: number;
   estimatedTotalCost?: number | null;
@@ -121,6 +123,8 @@ export interface SubmitBusinessTripPayload {
   destinationCity: string;
   departureDate: string;
   returnDate?: string;
+  kmAtDeparture?: number;
+  kmAtReturn?: number;
   purpose: string;
   hostOrganization?: string;
   hostContact?: string;

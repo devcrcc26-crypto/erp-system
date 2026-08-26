@@ -28,11 +28,11 @@ export class SubmitPerDiemRequestDto {
   @MaxLength(200)
   destination!: string;
 
-  @ApiProperty({ example: '2026-09-01' })
+  @ApiProperty({ example: '2026-09-01T08:00:00.000Z' })
   @IsDateString()
   startDate!: string;
 
-  @ApiProperty({ example: '2026-09-05' })
+  @ApiProperty({ example: '2026-09-05T18:00:00.000Z' })
   @IsDateString()
   endDate!: string;
 

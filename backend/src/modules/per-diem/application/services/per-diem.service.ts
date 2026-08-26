@@ -92,13 +92,24 @@ export class PerDiemService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const startDate = this.parseDateOnly(dto.startDate);
-    const endDate = this.parseDateOnly(dto.endDate);
+    const startDate = this.parseDateTime(dto.startDate);
+    const endDate = this.parseDateTime(dto.endDate);
     if (endDate.getTime() < startDate.getTime()) {
       throw new BadRequestException('endDate must be on or after startDate');
     }
-    const days =
-      Math.round((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1;
+    const startDay = Date.UTC(
+      startDate.getUTCFullYear(),
+      startDate.getUTCMonth(),
+      startDate.getUTCDate(),
+    );
+    const endDay = Date.UTC(
+      endDate.getUTCFullYear(),
+      endDate.getUTCMonth(),
+      endDate.getUTCDate(),
+    );
+    const totalDays =
+      Math.round((endDay - startDay) / 86_400_000) + 1;
+    const days = totalDays;
 
     const resolvedRate =
       await this.employeePerDiemRateService.resolveRateForSubmission(
@@ -140,7 +151,7 @@ export class PerDiemService
     }
 
     const dailyRate = resolvedRate.dailyRate;
-    const totalAmount = dailyRate * days;
+    const totalAmount = dailyRate * totalDays;
     const exchangeRate =
       resolvedRate.currency === 'ETB'
         ? 1
@@ -167,6 +178,7 @@ export class PerDiemService
           startDate: dto.startDate,
           endDate: dto.endDate,
           days,
+          totalDays,
           totalAmountEtb,
         },
       },
@@ -196,6 +208,7 @@ export class PerDiemService
           startDate,
           endDate,
           days,
+          totalDays,
           dailyRate: new Prisma.Decimal(dailyRate),
           currency: resolvedRate.currency,
           totalAmount: new Prisma.Decimal(totalAmount),
@@ -460,6 +473,17 @@ export class PerDiemService
         .filter(Boolean) as PerDiemStatus[];
     }
     return [status as PerDiemStatus];
+  }
+
+  /**
+   * Parses an ISO datetime string to a Date.
+   */
+  private parseDateTime(value: string): Date {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) {
+      throw new BadRequestException(`Invalid datetime: ${value}`);
+    }
+    return d;
   }
 
   private parseDateOnly(value: string): Date {

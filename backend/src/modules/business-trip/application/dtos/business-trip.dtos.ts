@@ -112,11 +112,11 @@ export class SubmitBusinessTripDto {
   @MaxLength(200)
   destinationCity!: string;
 
-  @ApiProperty({ example: '2026-09-01' })
+  @ApiProperty({ example: '2026-09-01T08:00:00.000Z' })
   @IsDateString()
   departureDate!: string;
 
-  @ApiPropertyOptional({ example: '2026-09-10' })
+  @ApiPropertyOptional({ example: '2026-09-10T18:00:00.000Z' })
   @IsOptional()
   @Transform(({ value }) => emptyToUndefined(value))
   @ValidateIf(
@@ -124,6 +124,20 @@ export class SubmitBusinessTripDto {
   )
   @IsDateString()
   returnDate?: string;
+
+  @ApiPropertyOptional({ description: 'Odometer reading at departure (km)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  kmAtDeparture?: number;
+
+  @ApiPropertyOptional({ description: 'Odometer reading at return (km)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  kmAtReturn?: number;
 
   @ApiProperty()
   @IsString()

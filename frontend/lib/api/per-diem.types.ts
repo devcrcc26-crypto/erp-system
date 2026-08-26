@@ -96,6 +96,7 @@ export interface PerDiemRequestListItem {
   startDate: string;
   endDate: string;
   days: number;
+  totalDays?: number | null;
   dailyRate: number | string;
   currency: SupportedCurrency;
   totalAmount: number | string;

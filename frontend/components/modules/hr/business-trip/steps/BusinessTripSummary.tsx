@@ -7,7 +7,7 @@ import {
   formatTicketClass,
   formatTripType,
 } from '@/lib/utils/business-trip-display';
-import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import type {
   BusinessTripAdditionalValues,
   BusinessTripDetailsValues,
@@ -61,13 +61,29 @@ export default function BusinessTripSummary({
         </Descriptions.Item>
         <Descriptions.Item label={t('hr.labels.departure')}>
           {tripDetails.departureDate
-            ? formatProjectDate(tripDetails.departureDate.format('YYYY-MM-DD'))
+            ? formatDisplayDateTime(tripDetails.departureDate.toISOString())
             : '—'}
         </Descriptions.Item>
         <Descriptions.Item label={t('hr.labels.return')}>
           {tripDetails.returnDate
-            ? formatProjectDate(tripDetails.returnDate.format('YYYY-MM-DD'))
+            ? formatDisplayDateTime(tripDetails.returnDate.toISOString())
             : t('hr.tripType.ONE_WAY')}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('hr.form.kmAtDeparture')}>
+          {tripDetails.kmAtDeparture != null
+            ? String(tripDetails.kmAtDeparture)
+            : '—'}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('hr.form.kmAtReturn')}>
+          {tripDetails.kmAtReturn != null
+            ? String(tripDetails.kmAtReturn)
+            : '—'}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('hr.form.kmDifference')}>
+          {tripDetails.kmAtDeparture != null &&
+          tripDetails.kmAtReturn != null
+            ? String(tripDetails.kmAtReturn - tripDetails.kmAtDeparture)
+            : '—'}
         </Descriptions.Item>
         <Descriptions.Item label={t('hr.labels.ticketClass')}>
           {formatTicketClass(tripDetails.ticketClass, t)}
