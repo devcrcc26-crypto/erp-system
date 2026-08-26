@@ -301,7 +301,10 @@
         "listTitle": "车辆加油申请",
         "myListTitle": "我的加油申请",
         "listDescription": "审核并处理车辆加油申请。",
-        "myListDescription": "提交并跟踪您的车辆加油审批流程。"
+        "myListDescription": "提交并跟踪您的车辆加油审批流程。",
+        "formDescription": "选择车辆并填写加油信息。审批通过后请上传油费收据。",
+        "requestSingular": "条申请",
+        "requestPlural": "条申请"
       },
       "inspectionRepair": {
         "new": "新建检修申请",
@@ -1527,7 +1530,17 @@
       "vehicleApplicationSubmitFailed": "提交用车申请失败",
       "vehicleApplicationNotFound": "未找到用车申请",
       "selectDatesForVehicles": "请先在上方选择出发和返回时间，以查看可用车辆。",
-      "vehicleConflict": "与 {{number}} 冲突"
+      "vehicleConflict": "与 {{number}} 冲突",
+      "vehicleRefuelingLoadFailed": "加载用车加油申请失败",
+      "vehicleRefuelingSubmitted": "加油申请已提交审批",
+      "vehicleRefuelingApproved": "加油申请已批准",
+      "vehicleRefuelingSubmitFailed": "提交加油申请失败",
+      "vehicleRefuelingNotFound": "未找到车辆加油申请",
+      "vehicleRefuelingCancelled": "加油申请已取消",
+      "vehicleRefuelingCancelFailed": "取消加油申请失败",
+      "vehicleRefuelingReceiptUploaded": "收据上传成功",
+      "vehicleRefuelingReceiptUploadFailed": "上传收据失败",
+      "vehicleRefuelingReceiptRequired": "申请已批准，请上传油费收据。"
     },
     "urgency": {
       "MINOR": "一般",
@@ -1712,6 +1725,7 @@
       "issued": "用印日期",
       "issuedBy": "用印人",
       "directApproval": "直接批准",
+      "receiptAttached": "已附收据",
       "released": "已放行",
       "releasedAt": "放行时间",
       "sealAttached": "已用印",
@@ -1973,7 +1987,8 @@
       "selectVehicle": "请选择车辆",
       "enterPurpose": "请输入出行目的",
       "returnAfterDeparture": "返回时间必须晚于或等于出发时间",
-      "companyDriverRequired": "所选车辆未分配公司司机。请选择自行驾驶，或更换车辆。"
+      "companyDriverRequired": "所选车辆未分配公司司机。请选择自行驾驶，或更换车辆。",
+      "enterFuelStation": "请输入加油站名称"
     },
     "perDiemCategory": {
       "americas": "美洲",
@@ -2015,7 +2030,9 @@
       "deleteExpenseClaimItemTitle": "删除明细？",
       "deleteExpenseClaimItemDesc": "该明细及收据将被删除，报销合计将重新计算。",
       "addExpenseItemTitle": "添加报销明细",
-      "editExpenseItemTitle": "编辑报销明细"
+      "editExpenseItemTitle": "编辑报销明细",
+      "cancelVehicleRefuelingTitle": "取消申请？",
+      "cancelVehicleRefuelingDesc": "这将取消车辆加油申请及所有未完成的审批。"
     },
     "form": {
       "leaveType": "假期类型",
@@ -2207,6 +2224,7 @@
       "employeePerDiemRatesDescription": "调整搜索条件，或在员工档案中配置标准。",
       "noVehicleApplications": "暂无用车申请。",
       "noRefuelingRequests": "暂无加油申请。",
+      "noDrivers": "暂无司机岗位用户",
       "noInspectionRepairRequests": "暂无检修申请。",
       "noVehicles": "暂无注册车辆。",
       "noItems": "暂未添加物品。",

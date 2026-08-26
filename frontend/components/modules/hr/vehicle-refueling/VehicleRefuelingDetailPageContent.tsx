@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Alert, Button, Skeleton, Tag, Typography } from 'antd';
+import { Alert, Button, Skeleton, Space, Tag, Typography } from 'antd';
 import { ArrowLeft, Upload as UploadIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
@@ -13,6 +13,7 @@ import {
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
@@ -21,17 +22,19 @@ import {
   useVehicleRefueling,
 } from '@/lib/query/vehicle-refueling';
 import { useCurrentUser } from '@/lib/query/profile';
+import { formatFuelType } from '@/lib/utils/company-vehicle-display';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatVehicleRefuelingEmployeeName,
   formatVehicleRefuelingStatus,
   vehicleRefuelingStatusVariant,
 } from '@/lib/utils/vehicle-refueling-display';
-import { formatFuelType } from '@/lib/utils/company-vehicle-display';
-import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
+/**
+ * Vehicle refueling detail with summary, receipt upload, and approval chain.
+ */
 export default function VehicleRefuelingDetailPageContent({
   refuelingId,
 }: {
@@ -66,108 +69,131 @@ export default function VehicleRefuelingDetailPageContent({
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
-      messageApi.success('Refueling request cancelled');
+      messageApi.success(t('hr.messages.vehicleRefuelingCancelled'));
       setConfirmCancel(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to cancel request', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.vehicleRefuelingCancelFailed'),
+        messageApi,
+      );
     }
   }
 
   async function handleReceiptUpload(file: File): Promise<void> {
     try {
       await uploadMutation.mutateAsync(file);
-      messageApi.success('Receipt uploaded successfully');
+      messageApi.success(t('hr.messages.vehicleRefuelingReceiptUploaded'));
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to upload receipt', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.vehicleRefuelingReceiptUploadFailed'),
+        messageApi,
+      );
     }
   }
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !refueling) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        title={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : 'Vehicle refueling request not found'
-        }
-        action={
-          <Button onClick={() => router.push('/hr/vehicle-refueling')}>
-            Back to list
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <Alert
+          type="error"
+          showIcon
+          title={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : t('hr.messages.vehicleRefuelingNotFound')
+          }
+          action={
+            <Button
+              onClick={() => router.push('/hr/vehicle-refueling')}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.back')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
+    <div className="erp-pro-list-page flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/hr/vehicle-refueling')}
+          style={{ borderRadius: 0 }}
         >
-          Back
+          {t('hr.buttons.back')}
         </Button>
-        {canCancel ? (
-          <Button
-            danger
-            className="ml-auto"
-            onClick={() => setConfirmCancel(true)}
-          >
-            Cancel Request
-          </Button>
-        ) : null}
+        <Space wrap size={8} className="ml-auto">
+          {canCancel ? (
+            <Button
+              danger
+              onClick={() => setConfirmCancel(true)}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.cancelRequest')}
+            </Button>
+          ) : null}
+        </Space>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
-        <div className="flex flex-col gap-4 min-w-0">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_320px]">
+        <div className="flex min-w-0 flex-col gap-3">
           <div
-            className="rounded-lg overflow-hidden"
+            className="overflow-hidden rounded-none"
             style={{
               background: tokens.colorCardBg,
               border: `1px solid ${tokens.colorBorder}`,
             }}
           >
-            <div className="px-5 py-4">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="px-3 py-4 sm:px-5">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span
                   className="text-xs font-semibold uppercase tracking-wide"
                   style={{ color: tokens.colorTextTertiary }}
                 >
                   {refueling.requestNumber}
                 </span>
-                <span style={{ color: tokens.colorBorder }}>|</span>
+                <span style={{ color: tokens.colorBorder }}>·</span>
                 <StatusBadge
                   label={formatVehicleRefuelingStatus(refueling.status, t)}
                   variant={vehicleRefuelingStatusVariant(refueling.status)}
                 />
                 {isDirectApproved ? (
-                  <Tag color="blue">Direct approval</Tag>
+                  <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
                 ) : null}
                 {refueling.receiptDocumentId ? (
-                  <Tag color="green">Receipt attached</Tag>
+                  <Tag color="green">{t('hr.labels.receiptAttached')}</Tag>
                 ) : null}
               </div>
               <h2
-                className="text-lg font-semibold leading-snug m-0"
+                className="m-0 text-lg font-semibold leading-snug"
                 style={{ color: tokens.colorTextPrimary }}
               >
-                Vehicle Refueling - {refueling.vehicle?.plateNumber}
+                {t('pages.hr.vehicleRefueling.detail')} —{' '}
+                {refueling.vehicle?.plateNumber ?? t('hr.labels.noVehicle')}
               </h2>
               <p
-                className="mt-1 text-sm m-0"
+                className="m-0 mt-1 text-sm"
                 style={{ color: tokens.colorTextSecondary }}
               >
                 {formatVehicleRefuelingEmployeeName(refueling.employee)}
                 {refueling.submittedAt
-                  ? ` | Submitted ${formatProjectDate(refueling.submittedAt)}`
+                  ? ` · ${formatProjectDate(refueling.submittedAt)}`
                   : null}
               </p>
             </div>
@@ -175,31 +201,40 @@ export default function VehicleRefuelingDetailPageContent({
 
           <SummaryStrip
             items={[
-              { label: t('hr.labels.fuelStation'), value: refueling.fuelStation },
-              { label: t('hr.labels.fuelType'), value: formatFuelType(refueling.fuelType, t) },
+              {
+                label: t('hr.labels.fuelStation'),
+                value: refueling.fuelStation,
+              },
+              {
+                label: t('hr.labels.fuelType'),
+                value: formatFuelType(refueling.fuelType, t),
+              },
               {
                 label: t('hr.table.litres'),
-                value: refueling.requestedLitres?.toString() ?? '-',
+                value: refueling.requestedLitres?.toString() ?? '—',
               },
               {
                 label: t('hr.labels.estimatedCost'),
-                value: refueling.estimatedCostEtb?.toString() ?? '-',
+                value: refueling.estimatedCostEtb?.toString() ?? '—',
               },
             ]}
           />
 
-          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SectionCard
+            title={t('hr.section.requestDetails')}
+            bodyClassName="px-3 py-4 sm:px-5"
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <MetaItem label={t('hr.form.fuelDate')}>
                 {formatProjectDate(refueling.fuelDate)}
               </MetaItem>
               <MetaItem label={t('hr.form.currentMileage')}>
-                {refueling.currentMileage?.toString() ?? '-'}
+                {refueling.currentMileage?.toString() ?? '—'}
               </MetaItem>
               <MetaItem label={t('hr.form.vehicle')}>
                 {refueling.vehicle
-                  ? `${refueling.vehicle.plateNumber} - ${refueling.vehicle.make} ${refueling.vehicle.model}`
-                  : '-'}
+                  ? `${refueling.vehicle.plateNumber} — ${refueling.vehicle.make} ${refueling.vehicle.model}`
+                  : '—'}
               </MetaItem>
               {refueling.driver ? (
                 <MetaItem label={t('hr.form.driver')}>
@@ -208,7 +243,7 @@ export default function VehicleRefuelingDetailPageContent({
               ) : null}
               {refueling.notes ? (
                 <MetaItem label={t('hr.form.notes')}>
-                  <p className="whitespace-pre-wrap leading-relaxed m-0">
+                  <p className="m-0 whitespace-pre-wrap leading-relaxed">
                     {refueling.notes}
                   </p>
                 </MetaItem>
@@ -217,18 +252,21 @@ export default function VehicleRefuelingDetailPageContent({
           </SectionCard>
 
           {showReceiptUpload ? (
-            <SectionCard title={t('hr.form.receipt')} bodyClassName="px-5 py-4">
+            <SectionCard
+              title={t('hr.form.receipt')}
+              bodyClassName="px-3 py-4 sm:px-5"
+            >
               <Alert
                 type="info"
                 showIcon
                 className="mb-4"
-                title="This request has been approved. Please upload the fuel receipt."
+                title={t('hr.messages.vehicleRefuelingReceiptRequired')}
               />
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*,application/pdf"
-                style={{ display: 'none' }}
+                className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -241,6 +279,7 @@ export default function VehicleRefuelingDetailPageContent({
                 icon={<UploadIcon size={14} />}
                 loading={uploadMutation.isPending}
                 onClick={() => fileInputRef.current?.click()}
+                style={{ borderRadius: 0 }}
               >
                 {t('hr.buttons.attachReceipt')}
               </Button>
@@ -248,9 +287,12 @@ export default function VehicleRefuelingDetailPageContent({
           ) : null}
 
           {refueling.receiptDocumentId ? (
-            <SectionCard title={t('hr.table.receipt')} bodyClassName="px-5 py-4">
+            <SectionCard
+              title={t('hr.table.receipt')}
+              bodyClassName="px-3 py-4 sm:px-5"
+            >
               <Typography.Text>
-                Receipt attached
+                {t('hr.labels.receiptAttached')}
                 {refueling.receiptDocument?.name
                   ? `: ${refueling.receiptDocument.name}`
                   : ''}
@@ -260,10 +302,13 @@ export default function VehicleRefuelingDetailPageContent({
         </div>
 
         <div className="min-w-0">
-          <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-4 py-4">
+          <SectionCard
+            title={t('hr.section.approvalChain')}
+            bodyClassName="px-3 py-4 sm:px-4"
+          >
             {isDirectApproved ? (
               <Typography.Text type="secondary">
-                Approved directly - no approval required
+                {t('hr.messages.directApprovalNoChain')}
               </Typography.Text>
             ) : tiers.length > 0 ? (
               <ApprovalTierTimeline
@@ -281,9 +326,9 @@ export default function VehicleRefuelingDetailPageContent({
 
       <ConfirmDialog
         open={confirmCancel}
-        title="Cancel request?"
-        description="This will cancel the vehicle refueling request and any open approval request."
-        confirmLabel="Cancel Request"
+        title={t('hr.dialog.cancelVehicleRefuelingTitle')}
+        description={t('hr.dialog.cancelVehicleRefuelingDesc')}
+        confirmLabel={t('hr.buttons.cancelRequest')}
         danger
         confirmLoading={cancelMutation.isPending}
         onConfirm={() => void handleCancel()}

@@ -7,18 +7,21 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useVehicleRefueling } from '@/lib/query/vehicle-refueling';
+import { formatFuelType } from '@/lib/utils/company-vehicle-display';
+import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatVehicleRefuelingEmployeeName,
   formatVehicleRefuelingStatus,
   vehicleRefuelingStatusVariant,
 } from '@/lib/utils/vehicle-refueling-display';
-import { formatFuelType } from '@/lib/utils/company-vehicle-display';
-import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
+/**
+ * Vehicle refueling body for the Approvals detail inbox (read-only).
+ */
 export default function VehicleRefuelingDetail({
   sourceId,
 }: {
@@ -31,13 +34,7 @@ export default function VehicleRefuelingDetail({
 
   if (detailQuery.isLoading && !refueling) {
     return (
-      <div
-        className="rounded-none p-6"
-        style={{
-          background: tokens.colorCardBg,
-          border: `1px solid ${tokens.colorBorder}`,
-        }}
-      >
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -48,10 +45,10 @@ export default function VehicleRefuelingDetail({
       <Alert
         type="error"
         showIcon
-        message={
+        title={
           detailQuery.error instanceof ApiRequestError
             ? detailQuery.error.message
-            : 'Vehicle refueling request not found'
+            : t('hr.messages.vehicleRefuelingNotFound')
         }
       />
     );
@@ -60,14 +57,14 @@ export default function VehicleRefuelingDetail({
   return (
     <div className="flex flex-col gap-3">
       <div
-        className="rounded-none overflow-hidden"
+        className="overflow-hidden rounded-none"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
         <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             <span
               className="text-xs font-semibold uppercase tracking-wide"
               style={{ color: tokens.colorTextTertiary }}
@@ -79,27 +76,25 @@ export default function VehicleRefuelingDetail({
               label={formatVehicleRefuelingStatus(refueling.status, t)}
               variant={vehicleRefuelingStatusVariant(refueling.status)}
             />
+            {refueling.directApproved ? (
+              <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
+            ) : null}
             {refueling.receiptDocumentId ? (
-              <Tag color="green">Receipt attached</Tag>
+              <Tag color="green">{t('hr.labels.receiptAttached')}</Tag>
             ) : null}
           </div>
           <h2
-            className="text-lg font-semibold leading-snug m-0"
+            className="m-0 text-lg font-semibold leading-snug"
             style={{ color: tokens.colorTextPrimary }}
           >
-            Vehicle Refueling  - {refueling.vehicle?.plateNumber}
+            {t('pages.hr.vehicleRefueling.detail')} —{' '}
+            {refueling.vehicle?.plateNumber ?? t('hr.labels.noVehicle')}
           </h2>
           <p
-            className="mt-1 text-sm m-0"
+            className="mb-0 mt-1 text-sm"
             style={{ color: tokens.colorTextSecondary }}
           >
-            Submitted by{' '}
-            <span
-              className="font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {formatVehicleRefuelingEmployeeName(refueling.employee)}
-            </span>
+            {formatVehicleRefuelingEmployeeName(refueling.employee)}
             {refueling.submittedAt
               ? ` · ${formatProjectDate(refueling.submittedAt)}`
               : null}
@@ -109,34 +104,49 @@ export default function VehicleRefuelingDetail({
 
       <SummaryStrip
         items={[
-          { label: 'Station', value: refueling.fuelStation },
-          { label: t('hr.labels.fuelType'), value: formatFuelType(refueling.fuelType, t) },
-          { label: 'Litres', value: refueling.requestedLitres?.toString() ?? '-' },
-          { label: 'Cost (ETB)', value: refueling.estimatedCostEtb?.toString() ?? '-' },
+          {
+            label: t('hr.labels.fuelStation'),
+            value: refueling.fuelStation,
+          },
+          {
+            label: t('hr.labels.fuelType'),
+            value: formatFuelType(refueling.fuelType, t),
+          },
+          {
+            label: t('hr.table.litres'),
+            value: refueling.requestedLitres?.toString() ?? '—',
+          },
+          {
+            label: t('hr.labels.estimatedCost'),
+            value: refueling.estimatedCostEtb?.toString() ?? '—',
+          },
         ]}
       />
 
-      <SectionCard title="Refueling Details" bodyClassName="px-3 py-4 sm:px-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <MetaItem label="Fuel Date">
+      <SectionCard
+        title={t('hr.section.requestDetails')}
+        bodyClassName="px-3 py-4 sm:px-5"
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <MetaItem label={t('hr.form.fuelDate')}>
             {formatProjectDate(refueling.fuelDate)}
           </MetaItem>
-          <MetaItem label="Current Mileage (km)">
-            {refueling.currentMileage?.toString() ?? '-'}
+          <MetaItem label={t('hr.form.currentMileage')}>
+            {refueling.currentMileage?.toString() ?? '—'}
           </MetaItem>
-          <MetaItem label="Vehicle">
+          <MetaItem label={t('hr.form.vehicle')}>
             {refueling.vehicle
-              ? `${refueling.vehicle.plateNumber}  - ${refueling.vehicle.make} ${refueling.vehicle.model}`
-              : '-'}
+              ? `${refueling.vehicle.plateNumber} — ${refueling.vehicle.make} ${refueling.vehicle.model}`
+              : '—'}
           </MetaItem>
           {refueling.driver ? (
-            <MetaItem label="Driver">
+            <MetaItem label={t('hr.form.driver')}>
               {formatVehicleRefuelingEmployeeName(refueling.driver)}
             </MetaItem>
           ) : null}
           {refueling.notes ? (
-            <MetaItem label="Notes">
-              <p className="whitespace-pre-wrap leading-relaxed m-0">
+            <MetaItem label={t('hr.form.notes')}>
+              <p className="m-0 whitespace-pre-wrap leading-relaxed">
                 {refueling.notes}
               </p>
             </MetaItem>

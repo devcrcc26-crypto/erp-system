@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import {
+  Alert,
   Button,
   DatePicker,
   Form,
@@ -10,8 +11,9 @@ import {
   Select,
 } from 'antd';
 import dayjs from 'dayjs';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { FuelType } from '@/lib/api/company-vehicle.types';
 import type { VehicleRefuelingDetail } from '@/lib/api/vehicle-refueling.types';
 import { useCompanyVehicles } from '@/lib/query/company-vehicle';
@@ -22,7 +24,6 @@ import {
   toDriverSelectOptions,
 } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 interface FormValues {
   vehicleId: string;
@@ -40,6 +41,9 @@ interface VehicleRefuelingFormProps {
   onSuccess: (result: VehicleRefuelingDetail) => void;
 }
 
+/**
+ * Vehicle refueling create form — pro FormLayout chrome.
+ */
 export default function VehicleRefuelingForm({
   onSuccess,
 }: VehicleRefuelingFormProps): React.ReactNode {
@@ -47,6 +51,7 @@ export default function VehicleRefuelingForm({
   const messageApi = useAppMessage();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const submitMutation = useSubmitVehicleRefueling();
   const vehiclesQuery = useCompanyVehicles({ page: 1, limit: 100 });
@@ -56,14 +61,8 @@ export default function VehicleRefuelingForm({
     [usersQuery.data],
   );
 
-  async function handleSubmit(): Promise<void> {
-    let values: FormValues;
-    try {
-      values = await form.validateFields();
-    } catch {
-      return;
-    }
-
+  async function handleSubmit(values: FormValues): Promise<void> {
+    setFormError(null);
     setSubmitting(true);
     try {
       const result = await submitMutation.mutateAsync({
@@ -79,41 +78,66 @@ export default function VehicleRefuelingForm({
       });
 
       messageApi.success(
-        result.directApproved || (result.status === 'APPROVED' && !result.approvalRequestId)
-          ? 'Refueling request approved'
-          : 'Refueling request submitted for approval',
+        result.directApproved ||
+          (result.status === 'APPROVED' && !result.approvalRequestId)
+          ? t('hr.messages.vehicleRefuelingApproved')
+          : t('hr.messages.vehicleRefuelingSubmitted'),
       );
       onSuccess(result);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to submit refueling request', messageApi);
+      const message = t('hr.messages.vehicleRefuelingSubmitFailed');
+      notifyApiError(error, message, messageApi);
+      setFormError(message);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex flex-col gap-6 pb-8">
-      <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
-        <Form form={form} layout="vertical" initialValues={{ fuelType: 'DIESEL' }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      {formError ? (
+        <Alert
+          type="error"
+          showIcon
+          title={formError}
+          closable
+          onClose={() => setFormError(null)}
+        />
+      ) : null}
+
+      <Form<FormValues>
+        form={form}
+        layout="vertical"
+        requiredMark={false}
+        initialValues={{ fuelType: 'DIESEL' }}
+        onFinish={(values) => void handleSubmit(values)}
+        className="flex min-h-0 flex-1 flex-col gap-4"
+      >
+        <FormLayout
+          variant="pro"
+          title={t('hr.section.requestDetails')}
+          description={t('pages.hr.vehicleRefueling.formDescription')}
+        >
+          <div className="erp-form-grid-2">
             <Form.Item
               name="vehicleId"
               label={t('hr.form.vehicle')}
-              rules={[{ required: true, message: 'Select a vehicle' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.selectVehicle'),
+                },
+              ]}
             >
               <Select
                 showSearch
+                optionFilterProp="label"
                 placeholder={t('hr.placeholder.selectVehicle')}
                 loading={vehiclesQuery.isLoading}
-                filterOption={(input, option) =>
-                  String(option?.label ?? '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
                 options={
-                  vehiclesQuery.data?.data?.map((v) => ({
-                    value: v.id,
-                    label: `${v.plateNumber} — ${v.make} ${v.model}`,
+                  vehiclesQuery.data?.data?.map((vehicle) => ({
+                    value: vehicle.id,
+                    label: `${vehicle.plateNumber} — ${vehicle.make} ${vehicle.model}`,
                   })) ?? []
                 }
               />
@@ -122,38 +146,36 @@ export default function VehicleRefuelingForm({
               <Select
                 showSearch
                 allowClear
+                optionFilterProp="label"
                 placeholder={t('hr.placeholder.selectDriver')}
                 loading={usersQuery.isLoading}
                 notFoundContent={
                   usersQuery.isLoading
-                    ? 'Loading...'
-                    : 'No users with Driver position'
-                }
-                filterOption={(input, option) =>
-                  String(option?.label ?? '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
+                    ? t('common.loading')
+                    : t('hr.empty.noDrivers')
                 }
                 options={driverOptions}
               />
             </Form.Item>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             <Form.Item
               name="fuelDate"
               label={t('hr.form.fuelDate')}
-              rules={[{ required: true, message: 'Select date' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.selectDate'),
+                },
+              ]}
             >
               <DatePicker
-                style={{ width: '100%' }}
-                disabledDate={(d) => d.isAfter(dayjs(), 'day')}
+                className="w-full"
+                disabledDate={(date) => date.isAfter(dayjs(), 'day')}
               />
             </Form.Item>
             <Form.Item
               name="fuelType"
               label={t('hr.form.fuelType')}
-              rules={[{ required: true, message: 'Required' }]}
+              rules={[{ required: true, message: t('hr.validation.required') }]}
             >
               <Select options={FUEL_TYPE_OPTIONS} />
             </Form.Item>
@@ -162,38 +184,56 @@ export default function VehicleRefuelingForm({
           <Form.Item
             name="fuelStation"
             label={t('hr.form.fuelStation')}
-            rules={[{ required: true, message: 'Enter station name' }]}
+            rules={[
+              {
+                required: true,
+                message: t('hr.validation.enterFuelStation'),
+              },
+            ]}
           >
-            <Input maxLength={200} placeholder={t('hr.placeholder.enterFuelStation')} />
+            <Input
+              maxLength={200}
+              placeholder={t('hr.placeholder.enterFuelStation')}
+            />
           </Form.Item>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
-            <Form.Item name="currentMileage" label={t('hr.form.currentMileage')}>
-              <InputNumber min={0} style={{ width: '100%' }} placeholder="e.g. 45200" />
+          <div className="erp-form-grid-3">
+            <Form.Item
+              name="currentMileage"
+              label={t('hr.form.currentMileage')}
+            >
+              <InputNumber min={0} className="w-full" placeholder="e.g. 45200" />
             </Form.Item>
-            <Form.Item name="requestedLitres" label={t('hr.form.requestedLitres')}>
-              <InputNumber min={0} style={{ width: '100%' }} placeholder="e.g. 50" />
+            <Form.Item
+              name="requestedLitres"
+              label={t('hr.form.requestedLitres')}
+            >
+              <InputNumber min={0} className="w-full" placeholder="e.g. 50" />
             </Form.Item>
-            <Form.Item name="estimatedCostEtb" label={t('hr.form.estimatedCost')}>
-              <InputNumber min={0} style={{ width: '100%' }} placeholder="e.g. 3500" />
+            <Form.Item
+              name="estimatedCostEtb"
+              label={t('hr.form.estimatedCost')}
+            >
+              <InputNumber min={0} className="w-full" placeholder="e.g. 3500" />
             </Form.Item>
           </div>
 
           <Form.Item name="notes" label={t('hr.form.notes')}>
             <Input.TextArea rows={3} maxLength={2000} showCount />
           </Form.Item>
-        </Form>
-      </SectionCard>
+        </FormLayout>
 
-      <div className="flex justify-end">
-        <Button
-          type="primary"
-          loading={submitting}
-          onClick={() => void handleSubmit()}
-        >
-          {t('hr.buttons.submitRequest')}
-        </Button>
-      </div>
+        <div className="flex justify-end">
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={submitting}
+            style={{ borderRadius: 0 }}
+          >
+            {t('hr.buttons.submitRequest')}
+          </Button>
+        </div>
+      </Form>
     </div>
   );
 }

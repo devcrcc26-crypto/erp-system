@@ -303,7 +303,10 @@
         "listTitle": "Vehicle Refueling Requests",
         "myListTitle": "My Refueling Requests",
         "listDescription": "Review and process vehicle refueling requests.",
-        "myListDescription": "Submit and track your vehicle refueling requests through the approval workflow."
+        "myListDescription": "Submit and track your vehicle refueling requests through the approval workflow.",
+        "formDescription": "Select the vehicle and fuel details. Attach the receipt after the request is approved.",
+        "requestSingular": "request",
+        "requestPlural": "requests"
       },
       "inspectionRepair": {
         "new": "New Inspection & Repair Request",
@@ -1534,7 +1537,17 @@
       "vehicleApplicationSubmitFailed": "Failed to submit vehicle application",
       "vehicleApplicationNotFound": "Vehicle application not found",
       "selectDatesForVehicles": "Select departure and return dates above to see available vehicles.",
-      "vehicleConflict": "Conflicts with {{number}}"
+      "vehicleConflict": "Conflicts with {{number}}",
+      "vehicleRefuelingLoadFailed": "Failed to load vehicle refueling requests",
+      "vehicleRefuelingSubmitted": "Refueling request submitted for approval",
+      "vehicleRefuelingApproved": "Refueling request approved",
+      "vehicleRefuelingSubmitFailed": "Failed to submit refueling request",
+      "vehicleRefuelingNotFound": "Vehicle refueling request not found",
+      "vehicleRefuelingCancelled": "Refueling request cancelled",
+      "vehicleRefuelingCancelFailed": "Failed to cancel refueling request",
+      "vehicleRefuelingReceiptUploaded": "Receipt uploaded successfully",
+      "vehicleRefuelingReceiptUploadFailed": "Failed to upload receipt",
+      "vehicleRefuelingReceiptRequired": "This request has been approved. Please upload the fuel receipt."
     },
     "urgency": {
       "MINOR": "Minor",
@@ -1722,6 +1735,7 @@
       "issuedBy": "Issued by",
       "completed": "Completed",
       "directApproval": "Direct approval",
+      "receiptAttached": "Receipt attached",
       "released": "Released",
       "releasedAt": "Released At",
       "sealAttached": "Seal attached",
@@ -1990,7 +2004,8 @@
       "selectVehicle": "Select a vehicle",
       "enterPurpose": "Enter the purpose of travel",
       "returnAfterDeparture": "Return must be on or after departure",
-      "companyDriverRequired": "Selected vehicle has no assigned company driver. Choose Self Drive or pick another vehicle."
+      "companyDriverRequired": "Selected vehicle has no assigned company driver. Choose Self Drive or pick another vehicle.",
+      "enterFuelStation": "Enter the fuel station name"
     },
     "perDiemCategory": {
       "americas": "Americas",
@@ -2032,7 +2047,9 @@
       "deleteExpenseClaimItemTitle": "Remove item?",
       "deleteExpenseClaimItemDesc": "This item and its receipt will be removed and the claim total recalculated.",
       "addExpenseItemTitle": "Add Expense Item",
-      "editExpenseItemTitle": "Edit Expense Item"
+      "editExpenseItemTitle": "Edit Expense Item",
+      "cancelVehicleRefuelingTitle": "Cancel request?",
+      "cancelVehicleRefuelingDesc": "This will cancel the vehicle refueling request and any open approval request."
     },
     "form": {
       "leaveType": "Leave Type",
@@ -2226,6 +2243,7 @@
       "employeePerDiemRatesDescription": "Adjust search or add rates from an employee profile.",
       "noVehicleApplications": "No vehicle applications yet.",
       "noRefuelingRequests": "No refueling requests yet.",
+      "noDrivers": "No users with Driver position",
       "noInspectionRepairRequests": "No inspection and repair requests yet.",
       "noVehicles": "No vehicles registered yet.",
       "noItems": "No items added yet.",
