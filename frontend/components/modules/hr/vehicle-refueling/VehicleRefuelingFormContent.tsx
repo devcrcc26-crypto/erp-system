@@ -9,7 +9,7 @@ import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { tokens } from '@/lib/theme/tokens';
 
 /**
- * New vehicle refueling page — same page chrome as Add Employee.
+ * New vehicle refueling page — same page chrome as Add Employee (`/users/new`).
  */
 export default function VehicleRefuelingFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

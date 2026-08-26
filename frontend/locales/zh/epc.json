@@ -303,6 +303,9 @@
         "listDescription": "审核并处理车辆加油申请。",
         "myListDescription": "提交并跟踪您的车辆加油审批流程。",
         "formDescription": "选择车辆并填写加油信息。审批通过后请上传油费收据。",
+        "vehicleStepDescription": "选择本次加油的公司车辆及可选司机。",
+        "detailsStepDescription": "填写加油日期、加油站、燃油类型及预估用量或费用。",
+        "reviewStepDescription": "确认以下信息后提交审批。",
         "requestSingular": "条申请",
         "requestPlural": "条申请"
       },

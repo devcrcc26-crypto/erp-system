@@ -305,6 +305,9 @@
         "listDescription": "Review and process vehicle refueling requests.",
         "myListDescription": "Submit and track your vehicle refueling requests through the approval workflow.",
         "formDescription": "Select the vehicle and fuel details. Attach the receipt after the request is approved.",
+        "vehicleStepDescription": "Choose the company vehicle and optional driver for this refueling.",
+        "detailsStepDescription": "Enter fuel date, station, type, and estimated quantity or cost.",
+        "reviewStepDescription": "Confirm the details below, then submit for approval.",
         "requestSingular": "request",
         "requestPlural": "requests"
       },
