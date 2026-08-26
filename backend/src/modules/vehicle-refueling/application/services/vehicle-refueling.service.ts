@@ -134,6 +134,7 @@ export class VehicleRefuelingService
     const now = new Date();
     const id = randomUUID();
     const fuelDate = this.parseDateOnly(dto.fuelDate);
+    this.assertFuelDateNotFuture(dto.fuelDate);
 
     if (resolvedTiers.length === 0) {
       await this.prisma.vehicleRefueling.create({
@@ -624,6 +625,24 @@ export class VehicleRefuelingService
     return new Date(
       Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
     );
+  }
+
+  /** Rejects YYYY-MM-DD fuel dates after today (UTC calendar day). */
+  private assertFuelDateNotFuture(value: string): void {
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+    if (!match) {
+      throw new BadRequestException(`Invalid date: ${value}`);
+    }
+    const fuelYmd = `${match[1]}-${match[2]}-${match[3]}`;
+    const today = new Date();
+    const todayYmd = [
+      today.getUTCFullYear(),
+      String(today.getUTCMonth() + 1).padStart(2, '0'),
+      String(today.getUTCDate()).padStart(2, '0'),
+    ].join('-');
+    if (fuelYmd > todayYmd) {
+      throw new BadRequestException('Fuel date cannot be in the future');
+    }
   }
 
   private async nextRequestNumber(): Promise<string> {

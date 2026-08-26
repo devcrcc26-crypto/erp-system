@@ -222,6 +222,13 @@ export default function VehicleRefuelingForm({
                     required: true,
                     message: t('hr.validation.selectDate'),
                   },
+                  {
+                    validator: async (_rule, value: dayjs.Dayjs | null) => {
+                      if (value && value.isAfter(dayjs(), 'day')) {
+                        throw new Error(t('hr.validation.fuelDateNotFuture'));
+                      }
+                    },
+                  },
                 ]}
               >
                 <DatePicker

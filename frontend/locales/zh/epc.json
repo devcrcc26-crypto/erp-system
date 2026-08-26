@@ -1991,7 +1991,8 @@
       "enterPurpose": "请输入出行目的",
       "returnAfterDeparture": "返回时间必须晚于或等于出发时间",
       "companyDriverRequired": "所选车辆未分配公司司机。请选择自行驾驶，或更换车辆。",
-      "enterFuelStation": "请输入加油站名称"
+      "enterFuelStation": "请输入加油站名称",
+      "fuelDateNotFuture": "加油日期不能是将来日期"
     },
     "perDiemCategory": {
       "americas": "美洲",
