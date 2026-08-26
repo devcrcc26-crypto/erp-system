@@ -266,6 +266,9 @@
         "listDescription": "审核并处理员工差旅补贴申请。",
         "myListDescription": "提交并跟踪您的差旅补贴审批流程。",
         "formDescription": "根据您个人的目的地类别日补贴标准自动计算金额（天数 × 日标准）。",
+        "destinationStepDescription": "选择目的地类别并填写具体地点。",
+        "detailsStepDescription": "设置出差日期，可选择关联已批准的差旅或机票申请，并填写备注。",
+        "reviewStepDescription": "确认申请内容与预估金额后提交审批。",
         "requestSingular": "条申请",
         "requestPlural": "条申请"
       },
