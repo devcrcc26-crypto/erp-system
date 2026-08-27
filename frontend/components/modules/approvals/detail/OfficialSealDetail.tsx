@@ -6,7 +6,7 @@ import {
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
-import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import OfficialSealDocumentGallery from '@/components/modules/hr/official-seal/OfficialSealDocumentGallery';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -160,7 +160,8 @@ export default function OfficialSealDetail({
           title={t('hr.section.documentToSeal')}
           bodyClassName="px-3 py-4 sm:px-5"
         >
-          <AttachmentDownloadList
+          <OfficialSealDocumentGallery
+            variant="tiles"
             documents={seal.documents}
             emptyLabel={t('hr.empty.noAttachments')}
           />
@@ -172,7 +173,8 @@ export default function OfficialSealDetail({
           title={t('hr.section.sealedProof')}
           bodyClassName="px-3 py-4 sm:px-5"
         >
-          <AttachmentDownloadList
+          <OfficialSealDocumentGallery
+            variant="proof"
             documents={[seal.sealedDocument]}
             emptyLabel={t('hr.empty.noAttachments')}
           />

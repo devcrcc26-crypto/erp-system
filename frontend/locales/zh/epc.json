@@ -1802,6 +1802,7 @@
       "officialSeal": "公章使用",
       "projectSeal": "项目章使用",
       "completedAt": "完成时间",
+      "attachment": "附件",
       "documentToSealAttached": "已附待用印文件",
       "leaveType": "假期类型",
       "startDate": "开始日期",

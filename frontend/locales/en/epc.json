@@ -1803,6 +1803,7 @@
       "officialSeal": "Official Seal",
       "projectSeal": "Project Seal",
       "completedAt": "Completed at",
+      "attachment": "Attachment",
       "documentToSealAttached": "Document attached",
       "leaveType": "Leave Type",
       "startDate": "Start Date",
