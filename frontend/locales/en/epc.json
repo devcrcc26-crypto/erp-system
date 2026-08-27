@@ -2305,6 +2305,7 @@
       "enterItemName": "Name of the item",
       "enterItemCode": "Optional stock or catalogue code",
       "enterDepartment": "Department requesting the items",
+      "selectDepartment": "Select department",
       "enterVendor": "Vendor or supplier name",
       "enterVendorContact": "Phone or email",
       "enterUnit": "e.g. pcs, box, kg",

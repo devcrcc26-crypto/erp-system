@@ -2304,6 +2304,7 @@
       "enterItemName": "填写物品名称",
       "enterItemCode": "可选 - 库存或目录编码",
       "enterDepartment": "填写申请部门",
+      "selectDepartment": "选择部门",
       "enterVendor": "供应商名称",
       "enterVendorContact": "电话或邮箱",
       "enterUnit": "例如：件、箱、公斤",

@@ -9,6 +9,7 @@ import {
   Form,
   Input,
   InputNumber,
+  Select,
   Space,
   Table,
   Typography,
@@ -27,6 +28,7 @@ import type {
 } from '@/lib/api/consumables-requisition.types';
 import { CONSUMABLES_MAX_ITEMS } from '@/lib/api/consumables-requisition.types';
 import { useCreateConsumablesRequisition } from '@/lib/query/consumables-requisition';
+import { useDepartments } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -82,6 +84,18 @@ export default function ConsumablesRequisitionForm({
   const [formError, setFormError] = useState<string | null>(null);
 
   const createMutation = useCreateConsumablesRequisition();
+  const departmentsQuery = useDepartments(
+    { page: 1, limit: 100, isActive: true },
+    true,
+  );
+  const departmentOptions = useMemo(
+    () =>
+      (departmentsQuery.data?.data ?? []).map((department) => ({
+        value: department.name,
+        label: department.name,
+      })),
+    [departmentsQuery.data],
+  );
   const atMax = items.length >= CONSUMABLES_MAX_ITEMS;
 
   function resetForm(): void {
@@ -371,9 +385,13 @@ export default function ConsumablesRequisitionForm({
 
             <div className="erp-form-grid-2">
               <Form.Item name="department" label={t('hr.form.department')}>
-                <Input
-                  placeholder={t('hr.placeholder.enterDepartment')}
-                  maxLength={200}
+                <Select
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  loading={departmentsQuery.isLoading}
+                  placeholder={t('hr.placeholder.selectDepartment')}
+                  options={departmentOptions}
                 />
               </Form.Item>
 
@@ -626,6 +644,8 @@ export default function ConsumablesRequisitionForm({
       atMax,
       detailsSnapshot,
       declarationConfirmed,
+      departmentsQuery.isLoading,
+      departmentOptions,
     ],
   );
 
