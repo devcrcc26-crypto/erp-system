@@ -101,6 +101,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/asset-management': 'nav.hr.assetManagement',
   '/hr/attendance': 'nav.hr.attendance',
   '/hr/employee-evaluation': 'nav.hr.employeeEvaluation',
+  '/hr/equipment-and-materials-exit-permit': 'nav.hr.equipmentAndMaterialsExitPermit',
 };
 
 export interface IconRailVisibility {
@@ -430,6 +431,13 @@ export function buildIconRailNav(
       //   visible: canViewHr,
       // },
       {
+        key: '/hr/equipment-and-materials-exit-permit',
+        labelKey: 'nav.hr.equipmentAndMaterialsExitPermit',
+        href: '/hr/equipment-and-materials-exit-permit',
+        iconKey: 'hr-equipment-and-materials-exit-permit',
+        visible: canViewHr,
+      },
+      {
         key: '/hr/attendance',
         labelKey: 'nav.hr.attendance',
         href: '/hr/attendance',
@@ -447,7 +455,7 @@ export function buildIconRailNav(
         key: '/hr/reports',
         labelKey: 'nav.hr.reports',
         href: '/hr/reports',
-        iconKey: 'reports',
+        iconKey: 'hr-reports',
         visible: canViewHr,
       }
     ],

@@ -5,55 +5,96 @@ import {
   ApartmentOutlined,
   AppstoreOutlined,
   AuditOutlined,
-  BankOutlined,
   BarChartOutlined,
   BookOutlined,
   CalendarOutlined,
-  CarOutlined,
   CheckSquareOutlined,
-  ClockCircleOutlined,
   ClusterOutlined,
   CommentOutlined,
   DashboardOutlined,
   DiffOutlined,
-  DollarOutlined,
   ExportOutlined,
   FileProtectOutlined,
-  FileTextOutlined,
   FlagOutlined,
   FolderOpenOutlined,
   FundOutlined,
-  GlobalOutlined,
   IdcardOutlined,
   InboxOutlined,
   IssuesCloseOutlined,
-  LaptopOutlined,
   MailOutlined,
   MessageOutlined,
   PieChartOutlined,
   ProjectOutlined,
   QuestionCircleOutlined,
-  RocketOutlined,
-  SafetyCertificateOutlined,
   SafetyOutlined,
   ScheduleOutlined,
   SettingOutlined,
-  ShoppingCartOutlined,
-  ShoppingOutlined,
   TeamOutlined,
-  ThunderboltOutlined,
-  ToolOutlined,
   UserOutlined,
-  WalletOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { ComputerIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  BadgeCheck,
+  BarChart3,
+  BriefcaseBusiness,
+  CalendarCheck2,
+  CalendarDays,
+  Car,
+  CircleDollarSign,
+  ClipboardCheck,
+  ClipboardList,
+  FileSignature,
+  Fuel,
+  Monitor,
+  Package,
+  PackageMinus,
+  PackageOpen,
+  Plane,
+  Receipt,
+  ShoppingCart,
+  Stamp,
+  Timer,
+  Users,
+  Wallet,
+  Wrench,
+} from 'lucide-react';
 
-type NavIconComponent = ComponentType<{ className?: string; style?: CSSProperties }>;
+type NavIconComponent = ComponentType<{
+  className?: string;
+  style?: CSSProperties;
+}>;
+
+/**
+ * Adapts a Lucide icon to the sidebar icon API (className / style / 16px).
+ */
+function lucideNavIcon(Icon: LucideIcon): NavIconComponent {
+  function LucideNavIcon({
+    className,
+    style,
+  }: {
+    className?: string;
+    style?: CSSProperties;
+  }): React.ReactNode {
+    return (
+      <Icon
+        aria-hidden
+        className={className}
+        style={style}
+        size={16}
+        strokeWidth={1.75}
+      />
+    );
+  }
+
+  LucideNavIcon.displayName = `NavIcon(${Icon.displayName ?? Icon.name})`;
+  return LucideNavIcon;
+}
 
 /**
  * Single source of truth for app-rail and project-context sidebar icons.
  * Keys match `IconRailItem.iconKey` and `ProjectWorkspaceNavItem.iconKey`.
+ * HR keys use Lucide for clearer title matching.
  */
 export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   dashboard: DashboardOutlined,
@@ -65,7 +106,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   positions: IdcardOutlined,
   'disciplines-catalog': ClusterOutlined,
   kanban: AppstoreOutlined,
-  users: UserOutlined,
+  users: lucideNavIcon(Users),
   teams: TeamOutlined,
   'audit-logs': AuditOutlined,
   reports: PieChartOutlined,
@@ -91,26 +132,31 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   team: TeamOutlined,
   closeout: FlagOutlined,
   approvals: AuditOutlined,
-  'hr-leave': CalendarOutlined,
-  'hr-leave-policy': ScheduleOutlined,
-  'hr-overtime': ClockCircleOutlined,
-  'hr-employee-contract': FileTextOutlined,
-  'hr-expense': DollarOutlined,
-  'hr-purchase': ShoppingCartOutlined,
-  'hr-material': InboxOutlined,
-  'hr-consumables': ShoppingOutlined,
-  'hr-flight': RocketOutlined,
-  'hr-vehicle': CarOutlined,
-  'hr-official-seal': SafetyCertificateOutlined,
-  'hr-project-seal': FileProtectOutlined,
-  'hr-refueling': ThunderboltOutlined,
-  'hr-inspection': ToolOutlined,
-  'hr-business-trip': GlobalOutlined,
-  'hr-per-diem': WalletOutlined,
-  'hr-per-diem-rates': BankOutlined,
-  'hr-asset-management': LaptopOutlined,
-  'hr-company-asset': LaptopOutlined,
-  'hr-attendance': CalendarOutlined,
+
+  // HR — Lucide icons matched to module titles
+  'hr-leave': lucideNavIcon(CalendarDays),
+  'hr-leave-policy': lucideNavIcon(ClipboardList),
+  'hr-overtime': lucideNavIcon(Timer),
+  'hr-employee-contract': lucideNavIcon(FileSignature),
+  'hr-expense': lucideNavIcon(Receipt),
+  'hr-purchase': lucideNavIcon(ShoppingCart),
+  'hr-material': lucideNavIcon(Package),
+  'hr-consumables': lucideNavIcon(PackageOpen),
+  'hr-flight': lucideNavIcon(Plane),
+  'hr-vehicle': lucideNavIcon(Car),
+  'hr-official-seal': lucideNavIcon(Stamp),
+  'hr-project-seal': lucideNavIcon(BadgeCheck),
+  'hr-refueling': lucideNavIcon(Fuel),
+  'hr-inspection': lucideNavIcon(Wrench),
+  'hr-business-trip': lucideNavIcon(BriefcaseBusiness),
+  'hr-per-diem': lucideNavIcon(Wallet),
+  'hr-per-diem-rates': lucideNavIcon(CircleDollarSign),
+  'hr-asset-management': lucideNavIcon(Monitor),
+  'hr-company-asset': lucideNavIcon(Monitor),
+  'hr-attendance': lucideNavIcon(CalendarCheck2),
+  'hr-equipment-and-materials-exit-permit': lucideNavIcon(PackageMinus),
+  'hr-employee-evaluation': lucideNavIcon(ClipboardCheck),
+  'hr-reports': lucideNavIcon(BarChart3),
 };
 
 /** Shared icon sizing for main rail and context sidebar links. */
@@ -135,7 +181,7 @@ export function getNavIconComponent(iconKey: string): NavIconComponent {
 }
 
 /**
- * Returns the Ant Design icon element for a navigation key.
+ * Returns the navigation icon element for a key.
  */
 export function getNavIcon(iconKey: string): React.ReactNode {
   const Icon = getNavIconComponent(iconKey);
