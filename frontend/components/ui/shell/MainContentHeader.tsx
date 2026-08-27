@@ -16,10 +16,12 @@ import { SHELL_TOP_HEADER_HEIGHT } from '@/components/ui/shell/shell-layout';
 export default function MainContentHeader({
   breadcrumbs,
   pageTitle,
+  pageSubtitle,
   onOpenMobileNav,
 }: {
   breadcrumbs: readonly BreadcrumbSegment[];
   pageTitle: string;
+  pageSubtitle?: string;
   onOpenMobileNav?: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -70,6 +72,14 @@ export default function MainContentHeader({
             >
               {pageTitle}
             </h1>
+            {pageSubtitle ? (
+              <p
+                className="m-0 truncate text-xs leading-tight"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {pageSubtitle}
+              </p>
+            ) : null}
           </div>
 
           <HeaderActions compact />
@@ -79,15 +89,25 @@ export default function MainContentHeader({
           className="hidden items-center justify-between gap-4 px-6 lg:flex"
           style={{ height: SHELL_TOP_HEADER_HEIGHT }}
         >
-          <h2
-            className="m-0 truncate text-lg font-semibold"
-            style={{
-              color: tokens.colorTextPrimary,
-              fontFamily: tokens.fontFamily,
-            }}
-          >
-            {pageTitle} 
-          </h2>
+          <div className="min-w-0 flex-1">
+            <h2
+              className="m-0 truncate text-lg font-semibold leading-tight"
+              style={{
+                color: tokens.colorTextPrimary,
+                fontFamily: tokens.fontFamily,
+              }}
+            >
+              {pageTitle}
+            </h2>
+            {pageSubtitle ? (
+              <p
+                className="m-0 mt-0.5 truncate text-xs leading-tight"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {pageSubtitle}
+              </p>
+            ) : null}
+          </div>
           <HeaderActions />
         </div>
       </header>

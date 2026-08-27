@@ -41,6 +41,8 @@ export interface BreadcrumbSegment {
 
 export interface RouteMeta {
   readonly titleKey: string;
+  /** Optional i18n key for the top-bar subtitle under the page title. */
+  readonly descriptionKey?: string;
   readonly breadcrumbs: readonly BreadcrumbSegment[];
 }
 
@@ -103,6 +105,54 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/employee-evaluation': 'nav.hr.employeeEvaluation',
   '/hr/equipment-and-materials-exit-permit': 'nav.hr.equipmentAndMaterialsExitPermit',
 };
+
+/** Route → page subtitle (description) i18n keys for MainContentHeader. */
+const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
+  '/approvals': 'pages.approvals.listDescription',
+  '/approvals/new': 'pages.approvals.newDescription',
+  '/users': 'users.listDescription',
+  '/users/new': 'users.form.addEmployeeDescription',
+  '/departments': 'pages.departments.description',
+  '/positions': 'pages.positions.description',
+  '/disciplines': 'pages.disciplinesCatalog.description',
+  '/hr/leave-requests': 'pages.hr.leave.listDescription',
+  '/hr/leave-history/me': 'pages.hr.leaveHistory.myDescription',
+  '/hr/overtime': 'pages.hr.overtime.listDescription',
+  '/hr/expense-claims': 'pages.hr.expenseClaim.listDescription',
+  '/hr/purchase-requests': 'pages.hr.purchaseRequest.listDescription',
+  '/hr/material-requisition': 'pages.hr.materialRequisition.listDescription',
+  '/hr/consumables': 'pages.hr.consumables.listDescription',
+  '/hr/flight-applications': 'pages.hr.flight.listDescription',
+  '/hr/vehicle-applications': 'pages.hr.vehicleApplication.listDescription',
+  '/hr/official-seal': 'pages.hr.officialSeal.listDescription',
+  '/hr/project-seal': 'pages.hr.projectSeal.listDescription',
+  '/hr/vehicle-refueling': 'pages.hr.vehicleRefueling.listDescription',
+  '/hr/employee-contract': 'pages.hr.employeeContract.listDescription',
+  '/hr/employee-contract/new': 'pages.hr.employeeContract.formDescription',
+  '/hr/inspection-repair': 'pages.hr.inspectionRepair.listDescription',
+  '/hr/business-trips': 'pages.hr.businessTrip.listDescription',
+  '/hr/per-diem': 'pages.hr.perDiem.listDescription',
+  '/hr/employee-per-diem-rates': 'pages.hr.employeePerDiemRates.listDescription',
+  '/hr/leave-policy': 'hr.leavePolicy.formDescription',
+  '/hr/leave-policy/new': 'hr.leavePolicy.formDescription',
+  '/hr/company-asset': 'pages.hr.companyAsset.listDescription',
+  '/hr/company-asset/new': 'pages.hr.companyAsset.formDescription',
+  '/approvals/new/leave-request': 'pages.hr.leave.listDescription',
+  '/approvals/new/expense-claim': 'pages.hr.expenseClaim.formDescription',
+  '/approvals/new/purchase-request': 'pages.hr.purchaseRequest.formDescription',
+  '/approvals/new/material-requisition': 'pages.hr.materialRequisition.formDescription',
+  '/approvals/new/consumables': 'pages.hr.consumables.formDescription',
+  '/approvals/new/per-diem': 'pages.hr.perDiem.formDescription',
+  '/approvals/new/vehicle-application': 'pages.hr.vehicleApplication.formDescription',
+  '/approvals/new/vehicle-refueling': 'pages.hr.vehicleRefueling.formDescription',
+  '/approvals/new/inspection-repair': 'pages.hr.inspectionRepair.formDescription',
+  '/approvals/new/official-seal': 'pages.hr.officialSeal.formDescription',
+  '/approvals/new/project-seal': 'pages.hr.projectSeal.formDescription',
+};
+
+function descriptionKeyFor(pathname: string): string | undefined {
+  return PAGE_DESCRIPTION_KEYS[pathname];
+}
 
 export interface IconRailVisibility {
   canViewReviewInbox: boolean;
@@ -639,9 +689,21 @@ export function resolveIconRailKey(
 }
 
 /**
- * Route-driven page title key and breadcrumb segments.
+ * Route-driven page title key, optional subtitle key, and breadcrumb segments.
  */
 export function resolveRouteMeta(
+  pathname: string,
+  projectName: string | null,
+  t: (key: string) => string,
+): RouteMeta {
+  const meta = resolveRouteMetaCore(pathname, projectName, t);
+  return {
+    ...meta,
+    descriptionKey: meta.descriptionKey ?? descriptionKeyFor(pathname),
+  };
+}
+
+function resolveRouteMetaCore(
   pathname: string,
   projectName: string | null,
   t: (key: string) => string,
@@ -759,6 +821,7 @@ export function resolveRouteMeta(
     const id = pathname.split('/')[3];
     return {
       titleKey: 'pages.hr.leavePolicy.edit',
+      descriptionKey: 'hr.leavePolicy.formDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.leavePolicy'), href: '/hr/leave-policy' },
@@ -831,6 +894,7 @@ export function resolveRouteMeta(
     const userId = usersEditMatch[1];
     return {
       titleKey: 'pages.users.edit',
+      descriptionKey: 'users.form.editEmployeeDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.users'), href: '/users' },
@@ -975,6 +1039,7 @@ export function resolveRouteMeta(
   if (pathname === '/hr/employee-contract/new') {
     return {
       titleKey: 'pages.hr.employeeContract.new',
+      descriptionKey: 'pages.hr.employeeContract.formDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
         {
@@ -989,6 +1054,7 @@ export function resolveRouteMeta(
   if (pathname.startsWith('/hr/employee-contract/') && pathname.endsWith('/edit')) {
     return {
       titleKey: 'pages.hr.employeeContract.edit',
+      descriptionKey: 'pages.hr.employeeContract.formDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
         {

@@ -94,6 +94,9 @@ export default function AppShell({
 
   const routeMeta = resolveRouteMeta(pathname, projectName, t);
   const pageTitle = t(routeMeta.titleKey);
+  const pageSubtitle = routeMeta.descriptionKey
+    ? t(routeMeta.descriptionKey)
+    : undefined;
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden">
@@ -121,6 +124,7 @@ export default function AppShell({
         <MainContentHeader
           breadcrumbs={routeMeta.breadcrumbs}
           pageTitle={pageTitle}
+          pageSubtitle={pageSubtitle}
           onOpenMobileNav={() => setMobileNavOpen(true)}
         />
 

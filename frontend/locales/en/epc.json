@@ -908,6 +908,7 @@
   },
   "users": {
     "title": "Users",
+    "listDescription": "Manage employees, roles, and access across the organization.",
     "noPermission": "You do not have permission to manage users.",
     "loadError": "Unable to load users. Please try again later.",
     "addEmployee": "Add employee",

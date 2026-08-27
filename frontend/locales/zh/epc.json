@@ -908,6 +908,7 @@
   },
   "users": {
     "title": "用户",
+    "listDescription": "管理员工、角色与组织访问权限。",
     "noPermission": "您没有管理用户的权限。",
     "loadError": "无法加载用户，请稍后重试。",
     "addEmployee": "添加员工",
