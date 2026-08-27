@@ -268,7 +268,12 @@
         "listTitle": "低值易耗品申请",
         "myListTitle": "我的低值易耗品申请",
         "listDescription": "审核并处理低值易耗品领用申请。",
-        "myListDescription": "提交并跟踪您的低值易耗品审批流程。"
+        "myListDescription": "提交并跟踪您的低值易耗品审批流程。",
+        "formDescription": "申请低值易耗品（单项估价低于 ETB 5,000），由人力资源审批。",
+        "detailsStepDescription": "填写标题、用途，以及可选的部门或需用日期。",
+        "itemsStepDescription": "添加易耗品明细（最多 20 项）。每项估价须低于 ETB 5,000。",
+        "reviewStepDescription": "提交前请确认申请内容、明细与低值声明。",
+        "declarationStepDescription": "提交前请确认所有明细均为低值易耗品。"
       },
       "perDiem": {
         "new": "新建差旅补贴申请",
@@ -1585,7 +1590,12 @@
       "materialRequisitionItemUpdateFailed": "更新明细失败",
       "materialRequisitionItemRemoved": "明细已删除",
       "materialRequisitionItemRemoveFailed": "删除明细失败",
-      "materialRequisitionReturned": "该领用申请已退回修改。"
+      "materialRequisitionReturned": "该领用申请已退回修改。",
+      "consumablesRequisitionSubmitted": "低值易耗品申请已提交审批",
+      "consumablesRequisitionApproved": "低值易耗品申请已批准",
+      "consumablesRequisitionSubmitFailed": "提交低值易耗品申请失败",
+      "consumablesLowValueOnly": "本表单仅用于低值易耗品。",
+      "consumablesLowValueOnlyDesc": "每项估价须低于 ETB 5,000。更高价值物品请使用材料领用或采购申请。"
     },
     "urgency": {
       "MINOR": "一般",
@@ -2055,7 +2065,11 @@
       "unitPriceRequired": "请填写单价",
       "addMaterialItem": "请至少添加一条明细",
       "completeMaterialDetails": "提交前请先完成领用详情",
-      "purposeRequired": "请填写领用用途"
+      "purposeRequired": "请填写领用用途",
+      "addConsumablesItem": "请至少添加一条明细",
+      "completeConsumablesDetails": "提交前请先完成申请详情",
+      "consumablesMaxItems": "每份申请最多 {{count}} 项",
+      "consumablesDeclarationRequired": "请确认低值易耗品声明"
     },
     "perDiemCategory": {
       "americas": "美洲",

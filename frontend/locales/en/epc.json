@@ -268,7 +268,12 @@
         "listTitle": "Consumables Requisitions",
         "myListTitle": "My Consumables Requisitions",
         "listDescription": "Review and process low-value consumables requisitions.",
-        "myListDescription": "Submit and track your consumables requisitions through the approval workflow."
+        "myListDescription": "Submit and track your consumables requisitions through the approval workflow.",
+        "formDescription": "Request low-value consumables (under ETB 5,000 per item) for HR Officer approval.",
+        "detailsStepDescription": "Enter the title, purpose, and optional department or required-by date.",
+        "itemsStepDescription": "Add consumable line items (maximum 20). Each item must be under ETB 5,000.",
+        "reviewStepDescription": "Confirm the request, items, and low-value declaration before submitting.",
+        "declarationStepDescription": "Confirm that all items are low-value consumables before submit."
       },
       "perDiem": {
         "new": "New Per Diem Request",
@@ -1585,7 +1590,12 @@
       "materialRequisitionItemUpdateFailed": "Failed to update item",
       "materialRequisitionItemRemoved": "Item removed",
       "materialRequisitionItemRemoveFailed": "Failed to remove item",
-      "materialRequisitionReturned": "This requisition was returned for revision."
+      "materialRequisitionReturned": "This requisition was returned for revision.",
+      "consumablesRequisitionSubmitted": "Consumables requisition submitted for approval",
+      "consumablesRequisitionApproved": "Consumables requisition approved",
+      "consumablesRequisitionSubmitFailed": "Failed to submit consumables requisition",
+      "consumablesLowValueOnly": "This form is for low-value consumable items only.",
+      "consumablesLowValueOnlyDesc": "Each item must be valued below ETB 5,000. For higher value items please use Material Requisition or Purchase Request instead."
     },
     "urgency": {
       "MINOR": "Minor",
@@ -2056,7 +2066,11 @@
       "unitPriceRequired": "Enter a unit price",
       "addMaterialItem": "Add at least one line item",
       "completeMaterialDetails": "Complete requisition details before submitting",
-      "purposeRequired": "Enter the purpose for this requisition"
+      "purposeRequired": "Enter the purpose for this requisition",
+      "addConsumablesItem": "Add at least one line item",
+      "completeConsumablesDetails": "Complete request details before submitting",
+      "consumablesMaxItems": "Maximum {{count}} items per requisition",
+      "consumablesDeclarationRequired": "Confirm the low-value consumables declaration"
     },
     "perDiemCategory": {
       "americas": "Americas",
