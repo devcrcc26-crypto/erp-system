@@ -46,7 +46,14 @@ export default function ConfirmDialog({
         style: { borderRadius: 0 },
       }}
       centered
+      rootClassName="erp-responsive-modal"
       className="erp-responsive-modal"
+      classNames={{
+        content: 'erp-responsive-modal-content',
+      }}
+      styles={{
+        content: { borderRadius: 0, overflow: 'hidden' },
+      }}
       destroyOnHidden
     >
       {description && <p className="text-sm text-slate-600">{description}</p>}

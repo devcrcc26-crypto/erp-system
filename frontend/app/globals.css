@@ -853,6 +853,11 @@ main::-webkit-scrollbar,
   max-height: calc(100vh - 48px);
 }
 
+.erp-responsive-modal .ant-modal-content,
+.erp-responsive-modal-content {
+  border-radius: 0 !important;
+}
+
 .erp-wizard-modal .ant-modal-body {
   overflow-y: auto;
 }

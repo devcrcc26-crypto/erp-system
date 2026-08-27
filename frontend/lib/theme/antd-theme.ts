@@ -76,7 +76,7 @@ export function buildAntdTheme(fontSizePx: number = FONT_SIZE_BASE_PX): ThemeCon
         fontSize,
       },
       Modal: {
-        borderRadiusLG: tokens.borderRadiusCard,
+        borderRadiusLG: 0,
       },
       Menu: {
         darkItemBg: tokens.colorSidebarBg,
