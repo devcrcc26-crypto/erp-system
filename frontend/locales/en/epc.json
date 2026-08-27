@@ -381,7 +381,13 @@
         "listTitle": "Project Seal Requests",
         "myListTitle": "My Project Seal Requests",
         "listDescription": "Review and process project seal requests.",
-        "myListDescription": "Submit and track your project seal requests through the approval workflow."
+        "myListDescription": "Submit and track your project seal requests through the approval workflow.",
+        "formDescription": "Describe why you need the project seal, set urgency and date needed, then optionally attach the document to stamp.",
+        "detailsStepDescription": "Enter the purpose, urgency, and when the sealed document is needed.",
+        "documentsStepDescription": "Optionally upload the document that needs the project seal.",
+        "reviewStepDescription": "Confirm the request details and attachments before submitting.",
+        "requestSingular": "request",
+        "requestPlural": "requests"
       }
     },
     "dashboard": {
@@ -1481,6 +1487,7 @@
       "projectSealRequestNotFound": "Project seal request not found",
       "projectSealCancelled": "Project seal request cancelled",
       "projectSealIssued": "Project seal issued",
+      "projectSealReturned": "This request was returned for revision.",
       "failedToCancelProjectSeal": "Failed to cancel request",
       "failedToSubmitProjectSeal": "Failed to submit project seal request",
       "failedToLoadProjectSeals": "Failed to load project seal requests",

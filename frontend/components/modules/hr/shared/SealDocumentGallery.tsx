@@ -132,11 +132,11 @@ function resolveFileKind(doc: AttachmentDocumentSummary): FileKindMeta {
 }
 
 /**
- * Experimental file presentations for Official Seal document sections.
+ * File presentations for Official / Project Seal document sections.
  * - tiles: icon cards in a responsive grid (document to seal)
  * - proof: featured stamp-style card (sealed proof)
  */
-export default function OfficialSealDocumentGallery({
+export default function SealDocumentGallery({
   documents,
   emptyLabel = 'No attachments',
   variant = 'tiles',

@@ -381,7 +381,13 @@
         "listTitle": "项目章使用申请",
         "myListTitle": "我的项目章使用申请",
         "listDescription": "审核并处理项目章使用申请。",
-        "myListDescription": "提交并跟踪您的项目章使用审批流程。"
+        "myListDescription": "提交并跟踪您的项目章使用审批流程。",
+        "formDescription": "说明用章事由、紧急程度与所需日期，并可上传待盖章文件。",
+        "detailsStepDescription": "填写用章目的、紧急程度与所需日期。",
+        "documentsStepDescription": "可选上传需要加盖项目章的文件。",
+        "reviewStepDescription": "确认申请详情与附件后提交。",
+        "requestSingular": "条申请",
+        "requestPlural": "条申请"
       }
     },
     "dashboard": {
@@ -1481,6 +1487,7 @@
       "projectSealRequestNotFound": "未找到项目章使用申请",
       "projectSealCancelled": "项目章使用申请已取消",
       "projectSealIssued": "项目章已用印",
+      "projectSealReturned": "该申请已退回修改。",
       "failedToCancelProjectSeal": "取消申请失败",
       "failedToSubmitProjectSeal": "提交项目章使用申请失败",
       "failedToLoadProjectSeals": "加载项目章使用申请失败",
