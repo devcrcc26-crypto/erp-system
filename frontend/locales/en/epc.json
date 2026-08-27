@@ -1562,7 +1562,15 @@
       "purchaseRequestSubmitted": "Purchase request submitted for approval",
       "purchaseRequestSubmitFailed": "Failed to submit purchase request",
       "purchaseRequestGmRequired": "Estimated total exceeds ETB {{amount}} — GM approval will be required",
-      "purchaseRequestHrSufficient": "Estimated total is within ETB {{amount}} — HR Officer approval sufficient"
+      "purchaseRequestHrSufficient": "Estimated total is within ETB {{amount}} — HR Officer approval sufficient",
+      "purchaseRequestCancelled": "Purchase request cancelled",
+      "purchaseRequestCancelFailed": "Failed to cancel purchase request",
+      "purchaseRequestNotFound": "Purchase request not found",
+      "purchaseRequestItemUpdated": "Item updated",
+      "purchaseRequestItemUpdateFailed": "Failed to update item",
+      "purchaseRequestItemRemoved": "Item removed",
+      "purchaseRequestItemRemoveFailed": "Failed to remove item",
+      "purchaseRequestReturned": "This request was returned for revision."
     },
     "urgency": {
       "MINOR": "Minor",
@@ -1750,6 +1758,8 @@
       "issuedBy": "Issued by",
       "completed": "Completed",
       "directApproval": "Direct approval",
+      "gmApprovalRequired": "GM approval required",
+      "hrApprovalSufficient": "HR approval sufficient",
       "receiptAttached": "Receipt attached",
       "released": "Released",
       "releasedAt": "Released At",
@@ -2072,7 +2082,12 @@
       "addExpenseItemTitle": "Add Expense Item",
       "editExpenseItemTitle": "Edit Expense Item",
       "cancelVehicleRefuelingTitle": "Cancel request?",
-      "cancelVehicleRefuelingDesc": "This will cancel the vehicle refueling request and any open approval request."
+      "cancelVehicleRefuelingDesc": "This will cancel the vehicle refueling request and any open approval request.",
+      "cancelPurchaseRequestTitle": "Cancel purchase request?",
+      "cancelPurchaseRequestDesc": "This will cancel the purchase request and any open approval request.",
+      "deletePurchaseRequestItemTitle": "Remove item?",
+      "deletePurchaseRequestItemDesc": "This item will be removed and the request total recalculated.",
+      "editPurchaseRequestItemTitle": "Edit Line Item"
     },
     "form": {
       "leaveType": "Leave Type",

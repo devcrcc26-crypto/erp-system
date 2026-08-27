@@ -429,11 +429,17 @@ export default function PurchaseRequestForm({
               ) : undefined
             }
           >
-            {showItemForm ? (
-              <div
-                className="mb-4 rounded-none border border-[rgba(0,0,0,0.08)] p-4"
-                style={{ background: tokens.colorPageBg }}
-              >
+            <div
+              className={
+                showItemForm
+                  ? 'mb-4 rounded-none border border-[rgba(0,0,0,0.08)] p-4'
+                  : 'hidden'
+              }
+              style={
+                showItemForm ? { background: tokens.colorPageBg } : undefined
+              }
+              aria-hidden={!showItemForm}
+            >
                 <Typography.Text
                   strong
                   style={{ display: 'block', marginBottom: 12 }}
@@ -528,8 +534,7 @@ export default function PurchaseRequestForm({
                     {editingKey ? t('common.save') : t('hr.buttons.addItem')}
                   </Button>
                 </div>
-              </div>
-            ) : null}
+            </div>
 
             <Table<ClientItem>
               rowKey="_key"

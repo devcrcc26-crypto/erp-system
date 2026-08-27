@@ -29,6 +29,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -48,14 +49,12 @@ import {
   formatEtbAmount,
   formatPurchaseRequestEmployeeName,
   formatPurchaseRequestStatus,
-  PR_GM_THRESHOLD_ETB,
   purchaseRequestStatusVariant,
   requiresGmApproval,
 } from '@/lib/utils/purchase-request-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string }[] = [
   { value: 'ETB', label: 'ETB' },
@@ -64,7 +63,7 @@ const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string }[] = [
 ];
 
 /**
- * Purchase request detail — item editing, cancellation, and approval chain.
+ * Purchase request detail — aligned with Vehicle Refueling chrome.
  */
 export default function PurchaseRequestDetailPageContent({
   requestId,
@@ -80,10 +79,14 @@ export default function PurchaseRequestDetailPageContent({
   const deleteItemMutation = useDeletePurchaseRequestItem(requestId);
   const updateItemMutation = useUpdatePurchaseRequestItem(requestId);
 
-  const [editingItem, setEditingItem] = useState<PurchaseRequestItem | null>(null);
+  const [editingItem, setEditingItem] = useState<PurchaseRequestItem | null>(
+    null,
+  );
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [itemForm] = Form.useForm<UpdatePurchaseRequestItemPayload & { currency: SupportedCurrency }>();
+  const [itemForm] = Form.useForm<
+    UpdatePurchaseRequestItemPayload & { currency: SupportedCurrency }
+  >();
 
   const request = detailQuery.data;
   const isOwner =
@@ -94,6 +97,8 @@ export default function PurchaseRequestDetailPageContent({
   const canCancel =
     isOwner &&
     (request?.status === 'DRAFT' || request?.status === 'SUBMITTED');
+  const isDirectApproved =
+    request?.status === 'APPROVED' && !request.approvalRequestId;
 
   const tiers = useMemo(
     () => (request?.approvalRequest?.tiers ?? []) as ApprovalTier[],
@@ -102,18 +107,16 @@ export default function PurchaseRequestDetailPageContent({
 
   function openEditItem(item: PurchaseRequestItem): void {
     setEditingItem(item);
-    itemForm.setFieldsValue({
-      itemName: item.itemName,
-      description: item.description ?? '',
-      quantity: Number(item.quantity),
-      unit: item.unit,
-      unitPrice: Number(item.unitPrice),
-      currency: item.currency,
-    });
+  }
+
+  function closeEditItem(): void {
+    setEditingItem(null);
   }
 
   async function handleUpdateItem(): Promise<void> {
-    if (!editingItem) return;
+    if (!editingItem) {
+      return;
+    }
     try {
       const values = await itemForm.validateFields();
       await updateItemMutation.mutateAsync({
@@ -127,55 +130,79 @@ export default function PurchaseRequestDetailPageContent({
           currency: values.currency,
         },
       });
-      messageApi.success('Item updated');
-      setEditingItem(null);
-      itemForm.resetFields();
+      messageApi.success(t('hr.messages.purchaseRequestItemUpdated'));
+      closeEditItem();
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to update item', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.purchaseRequestItemUpdateFailed'),
+        messageApi,
+      );
     }
   }
 
   async function handleDeleteItem(): Promise<void> {
-    if (!deleteItemId) return;
+    if (!deleteItemId) {
+      return;
+    }
     try {
       await deleteItemMutation.mutateAsync(deleteItemId);
-      messageApi.success('Item removed');
+      messageApi.success(t('hr.messages.purchaseRequestItemRemoved'));
       setDeleteItemId(null);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to remove item', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.purchaseRequestItemRemoveFailed'),
+        messageApi,
+      );
     }
   }
 
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
-      messageApi.success('Purchase request cancelled');
+      messageApi.success(t('hr.messages.purchaseRequestCancelled'));
       setConfirmCancel(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to cancel request', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.purchaseRequestCancelFailed'),
+        messageApi,
+      );
     }
   }
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !request) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        message={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : 'Purchase request not found'
-        }
-        action={
-          <Button onClick={() => router.push('/hr/purchase-requests')}>
-            {t('hr.buttons.back')}
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <Alert
+          type="error"
+          showIcon
+          title={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : t('hr.messages.purchaseRequestNotFound')
+          }
+          action={
+            <Button
+              onClick={() => router.push('/hr/purchase-requests')}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.back')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
@@ -193,7 +220,7 @@ export default function PurchaseRequestDetailPageContent({
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (v: string | null | undefined) => v || '-',
+      render: (value: string | null | undefined) => value || '—',
     },
     {
       title: t('hr.table.quantity'),
@@ -217,7 +244,7 @@ export default function PurchaseRequestDetailPageContent({
       key: 'totalPriceEtb',
       width: 130,
       align: 'right',
-      render: (v: number | string) => formatEtbAmount(v),
+      render: (value: number | string) => formatEtbAmount(value),
     },
     ...(canEdit
       ? [
@@ -232,6 +259,7 @@ export default function PurchaseRequestDetailPageContent({
                   type="text"
                   icon={<Pencil size={14} />}
                   onClick={() => openEditItem(row)}
+                  style={{ borderRadius: 0 }}
                 />
                 <Button
                   size="small"
@@ -239,6 +267,7 @@ export default function PurchaseRequestDetailPageContent({
                   danger
                   icon={<Trash2 size={14} />}
                   onClick={() => setDeleteItemId(row.id)}
+                  style={{ borderRadius: 0 }}
                 />
               </Space>
             ),
@@ -249,44 +278,53 @@ export default function PurchaseRequestDetailPageContent({
 
   return (
     <div className="erp-pro-list-page flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/hr/purchase-requests')}
+          style={{ borderRadius: 0 }}
         >
           {t('hr.buttons.back')}
         </Button>
-
-        {canEdit ? (
-          <div className="ml-auto">
+        <Space wrap size={8} className="ml-auto">
+          {canEdit ? (
             <Button
               type="text"
               icon={<Pencil size={14} />}
-              onClick={() => router.push(`/hr/purchase-requests/${requestId}/edit`)}
-              style={{ color: tokens.colorPrimary }}
+              onClick={() =>
+                router.push(`/hr/purchase-requests/${requestId}/edit`)
+              }
+              style={{ borderRadius: 0, color: tokens.colorPrimary }}
             >
               {t('common.update')}
             </Button>
-          </div>
-        ) : null}
+          ) : null}
+          {canCancel ? (
+            <Button
+              danger
+              onClick={() => setConfirmCancel(true)}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.cancelRequest')}
+            </Button>
+          ) : null}
+        </Space>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
-        {/* Left column */}
-        <div className="flex flex-col gap-4">
-          {/* Request header card */}
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_320px]">
+        <div className="flex min-w-0 flex-col gap-3">
           <div
-            className="rounded-lg overflow-hidden"
+            className="overflow-hidden rounded-none"
             style={{
               background: tokens.colorCardBg,
               border: `1px solid ${tokens.colorBorder}`,
             }}
           >
-            <div className="px-5 py-4">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wide"
+            <div className="px-3 py-4 sm:px-5">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span
+                  className="text-xs font-semibold uppercase tracking-wide"
                   style={{ color: tokens.colorTextTertiary }}
                 >
                   {request.requestNumber}
@@ -296,36 +334,45 @@ export default function PurchaseRequestDetailPageContent({
                   label={formatPurchaseRequestStatus(request.status, t)}
                   variant={purchaseRequestStatusVariant(request.status)}
                 />
-                {gmRequired ? (
-                  <Tag color="orange">GM Approval Required</Tag>
+                {isDirectApproved ? (
+                  <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
+                ) : gmRequired ? (
+                  <Tag color="orange">
+                    {t('hr.labels.gmApprovalRequired')}
+                  </Tag>
                 ) : (
-                  <Tag color="cyan">HR Approval Sufficient</Tag>
+                  <Tag color="cyan">
+                    {t('hr.labels.hrApprovalSufficient')}
+                  </Tag>
                 )}
               </div>
-              <Typography.Title level={4} style={{ margin: 0 }}>
+              <h2
+                className="m-0 text-lg font-semibold leading-snug"
+                style={{ color: tokens.colorTextPrimary }}
+              >
                 {request.title}
-              </Typography.Title>
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                Submitted by{' '}
-                <span className="font-medium" style={{ color: tokens.colorTextPrimary }}>
-                  {formatPurchaseRequestEmployeeName(request.employee)}
-                </span>
+              </h2>
+              <p
+                className="m-0 mt-1 text-sm"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {formatPurchaseRequestEmployeeName(request.employee)}
                 {request.submittedAt
                   ? ` · ${formatProjectDate(request.submittedAt)}`
                   : null}
-              </Typography.Text>
+              </p>
             </div>
 
             {request.status === 'RETURNED' && isOwner ? (
               <div
-                className="px-5 py-3 flex items-center justify-between gap-3"
+                className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5"
                 style={{
                   background: tokens.colorAmber50,
                   borderTop: `1px solid ${tokens.colorAmber400}`,
                 }}
               >
                 <Typography.Text style={{ color: tokens.colorAmber400 }}>
-                  This request was returned for revision.
+                  {t('hr.messages.purchaseRequestReturned')}
                 </Typography.Text>
                 {request.approvalRequestId ? (
                   <Button
@@ -333,6 +380,7 @@ export default function PurchaseRequestDetailPageContent({
                     onClick={() =>
                       router.push(`/approvals/${request.approvalRequestId}`)
                     }
+                    style={{ borderRadius: 0 }}
                   >
                     {t('hr.buttons.viewInApprovals')}
                   </Button>
@@ -341,12 +389,14 @@ export default function PurchaseRequestDetailPageContent({
             ) : null}
           </div>
 
-          {/* Summary strip */}
           <SummaryStrip
             items={[
-              { label: t('hr.table.items'), value: String(request.items.length) },
               {
-                label: t('hr.table.total'),
+                label: t('hr.table.items'),
+                value: String(request.items.length),
+              },
+              {
+                label: t('hr.form.estimatedTotal'),
                 value: formatEtbAmount(request.totalEstimatedEtb),
                 emphasize: true,
               },
@@ -354,16 +404,18 @@ export default function PurchaseRequestDetailPageContent({
                 label: t('hr.table.requiredBy'),
                 value: request.requiredByDate
                   ? formatProjectDate(request.requiredByDate)
-                  : '-',
+                  : '—',
               },
             ]}
           />
 
-          {/* Details */}
-          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SectionCard
+            title={t('hr.section.requestDetails')}
+            bodyClassName="px-3 py-4 sm:px-5"
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <MetaItem label={t('hr.form.justification')}>
-                <p className="whitespace-pre-wrap leading-relaxed m-0">
+                <p className="m-0 whitespace-pre-wrap leading-relaxed">
                   {request.justification}
                 </p>
               </MetaItem>
@@ -380,11 +432,23 @@ export default function PurchaseRequestDetailPageContent({
                   ) : null}
                 </MetaItem>
               ) : null}
+              {request.requiredByDate ? (
+                <MetaItem label={t('hr.form.requiredByDate')}>
+                  {formatProjectDate(request.requiredByDate)}
+                </MetaItem>
+              ) : null}
+              {request.completedAt ? (
+                <MetaItem label={t('hr.labels.completedAt')}>
+                  {formatProjectDate(request.completedAt)}
+                </MetaItem>
+              ) : null}
             </div>
           </SectionCard>
 
-          {/* Line Items */}
-          <SectionCard title={t('hr.section.items')} bodyClassName="px-5 py-4">
+          <SectionCard
+            title={t('hr.section.items')}
+            bodyClassName="px-3 py-4 sm:px-5"
+          >
             <DataTable<PurchaseRequestItem>
               rowKey="id"
               className="erp-pro-table"
@@ -392,18 +456,21 @@ export default function PurchaseRequestDetailPageContent({
               columns={itemColumns}
               dataSource={request.items}
               pagination={false}
-              locale={{ emptyText: <Empty description={t('hr.empty.noItems')} /> }}
+              locale={{
+                emptyText: <Empty description={t('hr.empty.noItems')} />,
+              }}
               scroll={false}
               footer={
                 request.items.length > 0
                   ? () => (
-                      <div className="flex justify-end gap-4 text-sm font-medium pr-2">
+                      <div className="flex justify-end gap-4 pr-2 text-sm font-medium">
                         <span style={{ color: tokens.colorTextSecondary }}>
-                          {request.items.length} item
-                          {request.items.length !== 1 ? 's' : ''}
+                          {t('hr.form.itemCount', {
+                            count: request.items.length,
+                          })}
                         </span>
-                        <span>
-                          Total:{' '}
+                        <span style={{ color: tokens.colorTextPrimary }}>
+                          {t('hr.form.estimatedTotal')}:{' '}
                           <strong>
                             {formatEtbAmount(request.totalEstimatedEtb)}
                           </strong>
@@ -415,70 +482,77 @@ export default function PurchaseRequestDetailPageContent({
             />
           </SectionCard>
 
-          {/* Attachments */}
           {(request.documents?.length ?? 0) > 0 ? (
-            <SectionCard title={t('hr.section.attachments')} bodyClassName="px-5 py-4">
+            <SectionCard
+              title={t('hr.section.attachments')}
+              bodyClassName="px-3 py-4 sm:px-5"
+            >
               <AttachmentDownloadList documents={request.documents} />
             </SectionCard>
           ) : null}
-
-          {/* Actions */}
-          {canCancel ? (
-            <div className="flex justify-end gap-2">
-              <Button
-                danger
-                onClick={() => setConfirmCancel(true)}
-                loading={cancelMutation.isPending}
-              >
-                {t('hr.buttons.cancelRequest')}
-              </Button>
-            </div>
-          ) : null}
         </div>
 
-        {/* Right column: approval chain */}
-        <div>
-          {tiers.length > 0 ? (
-            <ApprovalTierTimeline
-              tiers={tiers}
-              currentTier={request.approvalRequest?.currentTier ?? 1}
-            />
-          ) : (
-            <div
-              className="rounded-lg p-4"
-              style={{
-                background: tokens.colorCardBg,
-                border: `1px solid ${tokens.colorBorder}`,
-              }}
-            >
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+        <div className="min-w-0">
+          <SectionCard
+            title={t('hr.section.approvalChain')}
+            bodyClassName="px-3 py-4 sm:px-4"
+          >
+            {isDirectApproved ? (
+              <Typography.Text type="secondary">
+                {t('hr.messages.directApprovalNoChain')}
+              </Typography.Text>
+            ) : tiers.length > 0 ? (
+              <ApprovalTierTimeline
+                tiers={tiers}
+                currentTier={request.approvalRequest?.currentTier ?? 1}
+              />
+            ) : (
+              <Typography.Text type="secondary">
                 {t('hr.empty.noApprovalChain')}
               </Typography.Text>
-            </div>
-          )}
+            )}
+          </SectionCard>
         </div>
       </div>
 
-      {/* Item edit modal */}
       <Modal
         open={Boolean(editingItem)}
-        title="Edit Line Item"
-        onCancel={() => {
-          setEditingItem(null);
-          itemForm.resetFields();
-        }}
+        title={t('hr.dialog.editPurchaseRequestItemTitle')}
+        onCancel={closeEditItem}
         onOk={() => void handleUpdateItem()}
         okText={t('hr.buttons.save')}
         confirmLoading={updateItemMutation.isPending}
         width={560}
-        destroyOnHidden
+        forceRender
+        afterOpenChange={(open) => {
+          if (open && editingItem) {
+            itemForm.setFieldsValue({
+              itemName: editingItem.itemName,
+              description: editingItem.description ?? '',
+              quantity: Number(editingItem.quantity),
+              unit: editingItem.unit,
+              unitPrice: Number(editingItem.unitPrice),
+              currency: editingItem.currency,
+            });
+            return;
+          }
+          if (!open) {
+            itemForm.resetFields();
+          }
+        }}
+        styles={{ body: { paddingTop: 16 } }}
       >
-        <Form form={itemForm} layout="vertical" style={{ marginTop: 16 }}>
-          <div className="grid grid-cols-2 gap-x-4">
+        <Form form={itemForm} layout="vertical" requiredMark={false}>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
             <Form.Item
               name="itemName"
               label={t('hr.form.itemName')}
-              rules={[{ required: true, message: 'Required' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.itemNameRequired'),
+                },
+              ]}
             >
               <Input maxLength={200} />
             </Form.Item>
@@ -488,23 +562,35 @@ export default function PurchaseRequestDetailPageContent({
             <Form.Item
               name="quantity"
               label={t('hr.form.quantity')}
-              rules={[{ required: true, message: 'Required' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.quantityRequired'),
+                },
+              ]}
             >
-              <InputNumber min={0.001} style={{ width: '100%' }} />
+              <InputNumber min={0.001} className="w-full" />
             </Form.Item>
             <Form.Item
               name="unit"
               label={t('hr.form.unit')}
-              rules={[{ required: true, message: 'Required' }]}
+              rules={[
+                { required: true, message: t('hr.validation.unitRequired') },
+              ]}
             >
               <Input maxLength={50} />
             </Form.Item>
             <Form.Item
               name="unitPrice"
               label={t('hr.form.unitPrice')}
-              rules={[{ required: true, message: 'Required' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.unitPriceRequired'),
+                },
+              ]}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber min={0} className="w-full" />
             </Form.Item>
             <Form.Item
               name="currency"
@@ -517,27 +603,29 @@ export default function PurchaseRequestDetailPageContent({
         </Form>
       </Modal>
 
-      {/* Delete item confirm */}
       <ConfirmDialog
         open={Boolean(deleteItemId)}
-        title="Remove item"
-        description="Are you sure you want to remove this item from the request?"
-        confirmLabel="Remove"
+        title={t('hr.dialog.deletePurchaseRequestItemTitle')}
+        description={t('hr.dialog.deletePurchaseRequestItemDesc')}
+        confirmLabel={t('hr.buttons.removeItem')}
         danger
         confirmLoading={deleteItemMutation.isPending}
-        onConfirm={() => { void handleDeleteItem(); }}
+        onConfirm={() => {
+          void handleDeleteItem();
+        }}
         onCancel={() => setDeleteItemId(null)}
       />
 
-      {/* Cancel request confirm */}
       <ConfirmDialog
         open={confirmCancel}
-        title="Cancel purchase request"
-        description="Are you sure you want to cancel this request? This action cannot be undone."
-        confirmLabel="{t('hr.buttons.cancelRequest')}"
+        title={t('hr.dialog.cancelPurchaseRequestTitle')}
+        description={t('hr.dialog.cancelPurchaseRequestDesc')}
+        confirmLabel={t('hr.buttons.cancelRequest')}
         danger
         confirmLoading={cancelMutation.isPending}
-        onConfirm={() => { void handleCancel(); }}
+        onConfirm={() => {
+          void handleCancel();
+        }}
         onCancel={() => setConfirmCancel(false)}
       />
     </div>

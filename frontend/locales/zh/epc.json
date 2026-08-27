@@ -1562,7 +1562,15 @@
       "purchaseRequestSubmitted": "采购申请已提交审批",
       "purchaseRequestSubmitFailed": "提交采购申请失败",
       "purchaseRequestGmRequired": "预估总额超过 ETB {{amount}} — 需要总经理审批",
-      "purchaseRequestHrSufficient": "预估总额在 ETB {{amount}} 以内 — 人力资源审批即可"
+      "purchaseRequestHrSufficient": "预估总额在 ETB {{amount}} 以内 — 人力资源审批即可",
+      "purchaseRequestCancelled": "采购申请已取消",
+      "purchaseRequestCancelFailed": "取消采购申请失败",
+      "purchaseRequestNotFound": "未找到采购申请",
+      "purchaseRequestItemUpdated": "明细已更新",
+      "purchaseRequestItemUpdateFailed": "更新明细失败",
+      "purchaseRequestItemRemoved": "明细已删除",
+      "purchaseRequestItemRemoveFailed": "删除明细失败",
+      "purchaseRequestReturned": "该申请已退回修改。"
     },
     "urgency": {
       "MINOR": "一般",
@@ -1749,6 +1757,8 @@
       "issued": "用印日期",
       "issuedBy": "用印人",
       "directApproval": "直接批准",
+      "gmApprovalRequired": "需总经理审批",
+      "hrApprovalSufficient": "人力资源审批即可",
       "receiptAttached": "已附收据",
       "released": "已放行",
       "releasedAt": "放行时间",
@@ -2071,7 +2081,12 @@
       "addExpenseItemTitle": "添加报销明细",
       "editExpenseItemTitle": "编辑报销明细",
       "cancelVehicleRefuelingTitle": "取消申请？",
-      "cancelVehicleRefuelingDesc": "这将取消车辆加油申请及所有未完成的审批。"
+      "cancelVehicleRefuelingDesc": "这将取消车辆加油申请及所有未完成的审批。",
+      "cancelPurchaseRequestTitle": "取消采购申请？",
+      "cancelPurchaseRequestDesc": "这将取消采购申请及所有未完成的审批。",
+      "deletePurchaseRequestItemTitle": "删除明细？",
+      "deletePurchaseRequestItemDesc": "该明细将被删除，申请总额将重新计算。",
+      "editPurchaseRequestItemTitle": "编辑明细"
     },
     "form": {
       "leaveType": "假期类型",

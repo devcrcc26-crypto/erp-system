@@ -10,6 +10,7 @@ import {
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { PurchaseRequestItem } from '@/lib/api/purchase-request.types';
 import { usePurchaseRequest } from '@/lib/query/purchase-request';
@@ -18,13 +19,11 @@ import {
   formatEtbAmount,
   formatPurchaseRequestEmployeeName,
   formatPurchaseRequestStatus,
-  PR_GM_THRESHOLD_ETB,
   purchaseRequestStatusVariant,
   requiresGmApproval,
 } from '@/lib/utils/purchase-request-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Purchase request body for the Approvals detail inbox (read-only).
@@ -58,10 +57,10 @@ export default function PurchaseRequestDetail({
       <Alert
         type="error"
         showIcon
-        message={
+        title={
           detailQuery.error instanceof ApiRequestError
             ? detailQuery.error.message
-            : 'Purchase request not found'
+            : t('hr.messages.purchaseRequestNotFound')
         }
       />
     );
@@ -71,28 +70,28 @@ export default function PurchaseRequestDetail({
 
   const columns: ColumnsType<PurchaseRequestItem> = [
     {
-      title: 'Item',
+      title: t('hr.table.itemName'),
       dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
     },
     {
-      title: 'Description',
+      title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (v: string | null | undefined) => v || '-',
+      render: (value: string | null | undefined) => value || '—',
     },
     {
-      title: 'Qty',
+      title: t('hr.table.quantity'),
       dataIndex: 'quantity',
       key: 'quantity',
       width: 70,
       align: 'right',
     },
-    { title: 'Unit', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
     {
-      title: 'Unit Price',
+      title: t('hr.table.unitPrice'),
       key: 'unitPrice',
       width: 130,
       align: 'right',
@@ -100,27 +99,26 @@ export default function PurchaseRequestDetail({
         formatCurrencyAmount(row.unitPrice, row.currency),
     },
     {
-      title: 'Total (ETB)',
+      title: t('hr.table.total'),
       dataIndex: 'totalPriceEtb',
       key: 'totalPriceEtb',
       width: 130,
       align: 'right',
-      render: (v: number | string) => formatEtbAmount(v),
+      render: (value: number | string) => formatEtbAmount(value),
     },
   ];
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Header */}
       <div
-        className="rounded-none overflow-hidden"
+        className="overflow-hidden rounded-none"
         style={{
           background: tokens.colorCardBg,
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
         <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             <span
               className="text-xs font-semibold uppercase tracking-wide"
               style={{ color: tokens.colorTextTertiary }}
@@ -133,25 +131,22 @@ export default function PurchaseRequestDetail({
               variant={purchaseRequestStatusVariant(request.status)}
             />
             {gmRequired ? (
-              <Tag color="orange">GM Approval Required</Tag>
+              <Tag color="orange">{t('hr.labels.gmApprovalRequired')}</Tag>
             ) : (
-              <Tag color="cyan">HR Approval Sufficient</Tag>
+              <Tag color="cyan">{t('hr.labels.hrApprovalSufficient')}</Tag>
             )}
           </div>
           <h2
-            className="text-lg font-semibold leading-snug m-0"
+            className="m-0 text-lg font-semibold leading-snug"
             style={{ color: tokens.colorTextPrimary }}
           >
             {request.title}
           </h2>
-          <p className="mt-1 text-sm m-0" style={{ color: tokens.colorTextSecondary }}>
-            Submitted by{' '}
-            <span
-              className="font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {formatPurchaseRequestEmployeeName(request.employee)}
-            </span>
+          <p
+            className="m-0 mt-1 text-sm"
+            style={{ color: tokens.colorTextSecondary }}
+          >
+            {formatPurchaseRequestEmployeeName(request.employee)}
             {request.submittedAt
               ? ` · ${formatProjectDate(request.submittedAt)}`
               : null}
@@ -161,30 +156,36 @@ export default function PurchaseRequestDetail({
 
       <SummaryStrip
         items={[
-          { label: 'Items', value: String(request.items.length) },
           {
-            label: 'Total (ETB)',
+            label: t('hr.table.items'),
+            value: String(request.items.length),
+          },
+          {
+            label: t('hr.form.estimatedTotal'),
             value: formatEtbAmount(request.totalEstimatedEtb),
             emphasize: true,
           },
           {
-            label: 'Required By',
+            label: t('hr.table.requiredBy'),
             value: request.requiredByDate
               ? formatProjectDate(request.requiredByDate)
-              : '-',
+              : '—',
           },
         ]}
       />
 
-      <SectionCard title="Justification" bodyClassName="px-3 py-4 sm:px-5">
-        <MetaItem label="Reason for Purchase">
-          <p className="whitespace-pre-wrap leading-relaxed m-0">
-            {request.justification}
-          </p>
-        </MetaItem>
-        {request.vendorName ? (
-          <div className="mt-4">
-            <MetaItem label="Preferred Vendor">
+      <SectionCard
+        title={t('hr.section.requestDetails')}
+        bodyClassName="px-3 py-4 sm:px-5"
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <MetaItem label={t('hr.form.justification')}>
+            <p className="m-0 whitespace-pre-wrap leading-relaxed">
+              {request.justification}
+            </p>
+          </MetaItem>
+          {request.vendorName ? (
+            <MetaItem label={t('hr.form.vendor')}>
               <p className="m-0">{request.vendorName}</p>
               {request.vendorContact ? (
                 <p
@@ -195,11 +196,19 @@ export default function PurchaseRequestDetail({
                 </p>
               ) : null}
             </MetaItem>
-          </div>
-        ) : null}
+          ) : null}
+          {request.requiredByDate ? (
+            <MetaItem label={t('hr.form.requiredByDate')}>
+              {formatProjectDate(request.requiredByDate)}
+            </MetaItem>
+          ) : null}
+        </div>
       </SectionCard>
 
-      <SectionCard title="Line Items" bodyClassName="px-3 py-4 sm:px-5">
+      <SectionCard
+        title={t('hr.section.items')}
+        bodyClassName="px-3 py-4 sm:px-5"
+      >
         <DataTable<PurchaseRequestItem>
           rowKey="id"
           className="erp-pro-table"
@@ -211,13 +220,14 @@ export default function PurchaseRequestDetail({
           footer={
             request.items.length > 0
               ? () => (
-                  <div className="flex justify-end gap-4 text-sm font-medium pr-2">
+                  <div className="flex justify-end gap-4 pr-2 text-sm font-medium">
                     <span style={{ color: tokens.colorTextSecondary }}>
-                      {request.items.length} item
-                      {request.items.length !== 1 ? 's' : ''}
+                      {t('hr.form.itemCount', {
+                        count: request.items.length,
+                      })}
                     </span>
-                    <span>
-                      Total:{' '}
+                    <span style={{ color: tokens.colorTextPrimary }}>
+                      {t('hr.form.estimatedTotal')}:{' '}
                       <strong>
                         {formatEtbAmount(request.totalEstimatedEtb)}
                       </strong>
@@ -230,7 +240,10 @@ export default function PurchaseRequestDetail({
       </SectionCard>
 
       {(request.documents?.length ?? 0) > 0 ? (
-        <SectionCard title="Attachments" bodyClassName="px-3 py-4 sm:px-5">
+        <SectionCard
+          title={t('hr.section.attachments')}
+          bodyClassName="px-3 py-4 sm:px-5"
+        >
           <AttachmentDownloadList documents={request.documents} />
         </SectionCard>
       ) : null}
