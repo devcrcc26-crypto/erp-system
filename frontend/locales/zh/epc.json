@@ -1569,6 +1569,7 @@
       "vehicleRefuelingReceiptUploaded": "收据上传成功",
       "vehicleRefuelingReceiptUploadFailed": "上传收据失败",
       "vehicleRefuelingReceiptRequired": "申请已批准，请上传油费收据。",
+      "vehicleRefuelingReturned": "该申请已退回修改。",
       "purchaseRequestSubmitted": "采购申请已提交审批",
       "purchaseRequestSubmitFailed": "提交采购申请失败",
       "purchaseRequestGmRequired": "预估总额超过 ETB {{amount}} — 需要总经理审批",

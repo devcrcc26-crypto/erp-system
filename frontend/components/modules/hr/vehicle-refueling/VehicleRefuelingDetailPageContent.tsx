@@ -11,6 +11,7 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -33,7 +34,7 @@ import {
 import { tokens } from '@/lib/theme/tokens';
 
 /**
- * Vehicle refueling detail with summary, receipt upload, and approval chain.
+ * Vehicle refueling detail — aligned with Purchase Request chrome.
  */
 export default function VehicleRefuelingDetailPageContent({
   refuelingId,
@@ -59,7 +60,8 @@ export default function VehicleRefuelingDetailPageContent({
     (refueling?.status === 'DRAFT' || refueling?.status === 'SUBMITTED');
   const showReceiptUpload =
     refueling?.status === 'APPROVED' && !refueling?.receiptDocumentId;
-  const isDirectApproved = Boolean(refueling?.directApproved);
+  const isDirectApproved =
+    refueling?.status === 'APPROVED' && !refueling.approvalRequestId;
 
   const tiers = useMemo(
     () => (refueling?.approvalRequest?.tiers ?? []) as ApprovalTier[],
@@ -197,6 +199,31 @@ export default function VehicleRefuelingDetailPageContent({
                   : null}
               </p>
             </div>
+
+            {refueling.status === 'RETURNED' && isOwner ? (
+              <div
+                className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5"
+                style={{
+                  background: tokens.colorAmber50,
+                  borderTop: `1px solid ${tokens.colorAmber400}`,
+                }}
+              >
+                <Typography.Text style={{ color: tokens.colorAmber400 }}>
+                  {t('hr.messages.vehicleRefuelingReturned')}
+                </Typography.Text>
+                {refueling.approvalRequestId ? (
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      router.push(`/approvals/${refueling.approvalRequestId}`)
+                    }
+                    style={{ borderRadius: 0 }}
+                  >
+                    {t('hr.buttons.viewInApprovals')}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <SummaryStrip
@@ -239,6 +266,11 @@ export default function VehicleRefuelingDetailPageContent({
               {refueling.driver ? (
                 <MetaItem label={t('hr.form.driver')}>
                   {formatVehicleRefuelingEmployeeName(refueling.driver)}
+                </MetaItem>
+              ) : null}
+              {refueling.completedAt ? (
+                <MetaItem label={t('hr.labels.completedAt')}>
+                  {formatProjectDate(refueling.completedAt)}
                 </MetaItem>
               ) : null}
               {refueling.notes ? (
@@ -286,41 +318,37 @@ export default function VehicleRefuelingDetailPageContent({
             </SectionCard>
           ) : null}
 
-          {refueling.receiptDocumentId ? (
+          {refueling.receiptDocument ? (
             <SectionCard
               title={t('hr.table.receipt')}
               bodyClassName="px-3 py-4 sm:px-5"
             >
-              <Typography.Text>
-                {t('hr.labels.receiptAttached')}
-                {refueling.receiptDocument?.name
-                  ? `: ${refueling.receiptDocument.name}`
-                  : ''}
-              </Typography.Text>
+              <AttachmentDownloadList
+                documents={[refueling.receiptDocument]}
+                emptyLabel={t('hr.empty.noAttachments')}
+              />
             </SectionCard>
           ) : null}
         </div>
 
         <div className="min-w-0">
-          <SectionCard
-            title={t('hr.section.approvalChain')}
-            bodyClassName="px-3 py-4 sm:px-4"
-          >
-            {isDirectApproved ? (
+          {isDirectApproved || tiers.length === 0 ? (
+            <SectionCard
+              title={t('hr.section.approvalChain')}
+              bodyClassName="px-3 py-4 sm:px-4"
+            >
               <Typography.Text type="secondary">
-                {t('hr.messages.directApprovalNoChain')}
+                {isDirectApproved
+                  ? t('hr.messages.directApprovalNoChain')
+                  : t('hr.empty.noApprovalChain')}
               </Typography.Text>
-            ) : tiers.length > 0 ? (
-              <ApprovalTierTimeline
-                tiers={tiers}
-                currentTier={refueling.approvalRequest?.currentTier ?? 1}
-              />
-            ) : (
-              <Typography.Text type="secondary">
-                {t('hr.empty.noApprovalChain')}
-              </Typography.Text>
-            )}
-          </SectionCard>
+            </SectionCard>
+          ) : (
+            <ApprovalTierTimeline
+              tiers={tiers}
+              currentTier={refueling.approvalRequest?.currentTier ?? 1}
+            />
+          )}
         </div>
       </div>
 

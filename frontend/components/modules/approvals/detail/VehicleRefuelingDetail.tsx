@@ -6,6 +6,7 @@ import {
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -54,6 +55,9 @@ export default function VehicleRefuelingDetail({
     );
   }
 
+  const isDirectApproved =
+    refueling.status === 'APPROVED' && !refueling.approvalRequestId;
+
   return (
     <div className="flex flex-col gap-3">
       <div
@@ -76,7 +80,7 @@ export default function VehicleRefuelingDetail({
               label={formatVehicleRefuelingStatus(refueling.status, t)}
               variant={vehicleRefuelingStatusVariant(refueling.status)}
             />
-            {refueling.directApproved ? (
+            {isDirectApproved ? (
               <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
             ) : null}
             {refueling.receiptDocumentId ? (
@@ -144,6 +148,11 @@ export default function VehicleRefuelingDetail({
               {formatVehicleRefuelingEmployeeName(refueling.driver)}
             </MetaItem>
           ) : null}
+          {refueling.completedAt ? (
+            <MetaItem label={t('hr.labels.completedAt')}>
+              {formatProjectDate(refueling.completedAt)}
+            </MetaItem>
+          ) : null}
           {refueling.notes ? (
             <MetaItem label={t('hr.form.notes')}>
               <p className="m-0 whitespace-pre-wrap leading-relaxed">
@@ -153,6 +162,18 @@ export default function VehicleRefuelingDetail({
           ) : null}
         </div>
       </SectionCard>
+
+      {refueling.receiptDocument ? (
+        <SectionCard
+          title={t('hr.table.receipt')}
+          bodyClassName="px-3 py-4 sm:px-5"
+        >
+          <AttachmentDownloadList
+            documents={[refueling.receiptDocument]}
+            emptyLabel={t('hr.empty.noAttachments')}
+          />
+        </SectionCard>
+      ) : null}
     </div>
   );
 }

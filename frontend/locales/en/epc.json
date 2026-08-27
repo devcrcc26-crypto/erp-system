@@ -1569,6 +1569,7 @@
       "vehicleRefuelingReceiptUploaded": "Receipt uploaded successfully",
       "vehicleRefuelingReceiptUploadFailed": "Failed to upload receipt",
       "vehicleRefuelingReceiptRequired": "This request has been approved. Please upload the fuel receipt.",
+      "vehicleRefuelingReturned": "This request was returned for revision.",
       "purchaseRequestSubmitted": "Purchase request submitted for approval",
       "purchaseRequestSubmitFailed": "Failed to submit purchase request",
       "purchaseRequestGmRequired": "Estimated total exceeds ETB {{amount}} — GM approval will be required",
