@@ -1401,8 +1401,14 @@
       "deleteDesc": "This will permanently delete this asset record. This action cannot be undone.",
       "statusTitle": "Change asset status",
       "statusDesc": "Update the operational status of this asset.",
+      "statusCurrentLabel": "Current status",
       "statusSelectLabel": "New status",
       "statusInUseHint": "In Use is set automatically when you issue the asset to an employee.",
+      "statusOptionHint": {
+        "AVAILABLE": "Ready to issue to an employee.",
+        "REPAIRING": "Temporarily unavailable while under repair.",
+        "DISPOSED": "Retired from the company asset register."
+      },
       "issueTitle": "Issue asset",
       "issueDesc": "Assign this asset to an active employee.",
       "returnTitle": "Return asset",

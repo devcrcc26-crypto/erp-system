@@ -1401,8 +1401,14 @@
       "deleteDesc": "此操作将永久删除该资产记录，不可撤销。",
       "statusTitle": "修改资产状态",
       "statusDesc": "更新此资产的运营状态。",
+      "statusCurrentLabel": "当前状态",
       "statusSelectLabel": "新状态",
       "statusInUseHint": "发放给员工后，状态会自动变为使用中。",
+      "statusOptionHint": {
+        "AVAILABLE": "可发放给员工。",
+        "REPAIRING": "维修中，暂时不可用。",
+        "DISPOSED": "已从公司资产台账退役。"
+      },
       "issueTitle": "发放资产",
       "issueDesc": "将此资产分配给在职员工。",
       "returnTitle": "归还资产",

@@ -37,7 +37,14 @@ export default function ConfirmDialog({
       okText={confirmLabel}
       cancelText={cancelLabel}
       confirmLoading={confirmLoading}
-      okButtonProps={{ danger, disabled: confirmDisabled }}
+      okButtonProps={{
+        danger,
+        disabled: confirmDisabled,
+        style: { borderRadius: 0 },
+      }}
+      cancelButtonProps={{
+        style: { borderRadius: 0 },
+      }}
       centered
       className="erp-responsive-modal"
       destroyOnHidden
