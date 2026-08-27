@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Input, Select, Skeleton } from 'antd';
+import { Alert, Button, Form, Input, Select, Skeleton } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -34,7 +35,11 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
-import { useFullUsersDirectory } from '@/lib/query/users';
+
+interface IssueAssetFormValues {
+  employeeId?: string;
+  notes?: string;
+}
 
 export default function CompanyAssetDetailPageContent({
   assetId,
@@ -64,15 +69,9 @@ export default function CompanyAssetDetailPageContent({
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<AssetStatus | undefined>();
 
-  const { data: users } = useFullUsersDirectory({
-    enabled: true,
-    // keep cache
-  });
   const [issueModalOpen, setIssueModalOpen] = useState(false);
-  const [issueEmployeeId, setIssueEmployeeId] = useState<string | undefined>(
-    undefined,
-  );
-  const [issueNotes, setIssueNotes] = useState<string>('');
+  const [issueForm] = Form.useForm<IssueAssetFormValues>();
+  const issueEmployeeId = Form.useWatch('employeeId', issueForm);
 
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnTo, setReturnTo] = useState<string>('');
@@ -137,20 +136,32 @@ export default function CompanyAssetDetailPageContent({
     );
   }
 
+  function closeIssueModal(): void {
+    issueForm.resetFields();
+    setIssueModalOpen(false);
+  }
+
   async function handleIssueSubmit(): Promise<void> {
-    if (!issueEmployeeId) return;
+    let values: IssueAssetFormValues;
+    try {
+      values = await issueForm.validateFields();
+    } catch {
+      return;
+    }
+
+    if (!values.employeeId) {
+      return;
+    }
+
     try {
       await issueMutation.mutateAsync({
-        employeeId: issueEmployeeId,
-        notes: issueNotes.trim() || undefined,
+        employeeId: values.employeeId,
+        notes: values.notes?.trim() || undefined,
       });
       messageApi.success(t('hr.assetMessages.assignmentIssued'));
-      // Make UI update immediately (don't rely only on query invalidation).
       await assignmentsQuery.refetch();
       await detailQuery.refetch();
-      setIssueModalOpen(false);
-      setIssueEmployeeId(undefined);
-      setIssueNotes('');
+      closeIssueModal();
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -504,38 +515,51 @@ export default function CompanyAssetDetailPageContent({
       <ConfirmDialog
         open={issueModalOpen}
         title={t('hr.assetDialog.issueTitle')}
-        description={t('hr.assetDialog.issueDesc')}
+        description={
+          asset
+            ? `${t('hr.assetDialog.issueDesc')} (${asset.serialNumber} · ${asset.brand} ${asset.model})`
+            : t('hr.assetDialog.issueDesc')
+        }
         confirmLabel={t('hr.assetButtons.issueAsset')}
+        cancelLabel={t('hr.assetButtons.cancel')}
         confirmLoading={issueMutation.isPending}
+        confirmDisabled={!issueEmployeeId}
         onConfirm={() => void handleIssueSubmit()}
-        onCancel={() => setIssueModalOpen(false)}
+        onCancel={closeIssueModal}
       >
-        {/* lazy import would be fine, keep minimal */}
-        <div className="flex flex-col gap-3">
-          <label className="text-sm font-medium">{t('hr.assetLabels.employee')}</label>
-          <Select
-            showSearch
-            placeholder={t('hr.assetPlaceholder.selectEmployee')}
-            optionFilterProp="label"
-            style={{ width: '100%' }}
-            value={issueEmployeeId}
-            onChange={(v) => setIssueEmployeeId(v)}
-            options={
-              users?.map((u) => ({
-                value: u.id,
-                label: `${u.firstName} ${u.lastName}`,
-              })) ?? []
-            }
-          />
-          <label className="text-sm font-medium">{t('hr.assetLabels.notes')}</label>
-          <Input.TextArea
-            rows={3}
-            maxLength={2000}
-            showCount
-            value={issueNotes}
-            onChange={(e) => setIssueNotes(e.target.value)}
-          />
-        </div>
+        <Form
+          form={issueForm}
+          layout="vertical"
+          requiredMark={false}
+          className="mt-3"
+          disabled={issueMutation.isPending}
+        >
+          <Form.Item
+            name="employeeId"
+            label={t('hr.assetLabels.employee')}
+            rules={[
+              {
+                required: true,
+                message: t('hr.assetValidation.employeeRequired'),
+              },
+            ]}
+          >
+            <UserSelect
+              allowClear={false}
+              placeholder={t('hr.assetPlaceholder.selectEmployee')}
+              className="w-full"
+            />
+          </Form.Item>
+          <Form.Item name="notes" label={t('hr.assetLabels.notes')}>
+            <Input.TextArea
+              rows={3}
+              maxLength={2000}
+              showCount
+              placeholder={t('hr.assetPlaceholder.issueNotes')}
+              style={{ borderRadius: 0 }}
+            />
+          </Form.Item>
+        </Form>
       </ConfirmDialog>
 
       <ConfirmDialog

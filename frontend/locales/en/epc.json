@@ -347,7 +347,10 @@
         "detail": "Asset Detail",
         "listTitle": "Company Assets",
         "listDescription": "Track company-owned equipment, status, and who each asset is assigned to.",
-        "formDescription": "Add or update a company asset record.",
+        "formDescription": "Enter asset details, optionally add a photo, then review and save.",
+        "detailsStepDescription": "Enter serial number, type, brand, model, year, and color.",
+        "photoStepDescription": "Optionally attach a photo of the asset for the register.",
+        "reviewStepDescription": "Confirm the asset details before saving.",
         "assetSingular": "asset",
         "assetPlural": "assets"
       },
@@ -1343,7 +1346,8 @@
       "color": "e.g. Black",
       "type": "e.g. Laptop",
       "description": "Optional description…",
-      "selectEmployee": "Select employee",
+      "selectEmployee": "Search and select an employee",
+      "issueNotes": "Optional notes for this assignment…",
       "returnedTo": "e.g. Main Store",
       "filterStatus": "Filter by status",
       "filterType": "Filter by type"
@@ -1377,7 +1381,8 @@
       "failedToUpdateStatus": "Failed to update asset status",
       "failedToIssueAssignment": "Failed to issue asset assignment",
       "failedToReturnAssignment": "Failed to return asset assignment",
-      "failedToLoad": "Failed to load company assets"
+      "failedToLoad": "Failed to load company assets",
+      "photoOptionalHint": "Optional — upload a clear photo of the asset (JPG, PNG, or WEBP)."
     },
     "assetValidation": {
       "serialNumberRequired": "Serial number is required",
@@ -1385,14 +1390,15 @@
       "brandRequired": "Brand is required",
       "modelRequired": "Model is required",
       "yearRequired": "Year is required",
-      "colorRequired": "Color is required"
+      "colorRequired": "Color is required",
+      "employeeRequired": "Select an employee to issue this asset to"
     },
     "assetDialog": {
       "deleteTitle": "Delete asset?",
       "deleteDesc": "This will permanently delete this asset record. This action cannot be undone.",
       "statusTitle": "Change asset status",
-      "issueTitle": "Issue asset to employee",
-      "issueDesc": "Assign this asset to an employee.",
+      "issueTitle": "Issue asset",
+      "issueDesc": "Assign this asset to an active employee.",
       "returnTitle": "Return asset from assignment",
       "returnDesc": "Mark the asset as returned."
     },

@@ -347,7 +347,10 @@
         "detail": "资产详情",
         "listTitle": "公司资产",
         "listDescription": "跟踪公司设备、状态以及当前领用人。",
-        "formDescription": "新增或更新公司资产记录。",
+        "formDescription": "填写资产信息，可选上传照片，确认后保存。",
+        "detailsStepDescription": "填写序列号、类型、品牌、型号、年份与颜色。",
+        "photoStepDescription": "可选上传资产照片用于资产台账。",
+        "reviewStepDescription": "确认资产信息后保存。",
         "assetSingular": "项资产",
         "assetPlural": "项资产"
       },
@@ -1343,7 +1346,8 @@
       "color": "如 黑色",
       "type": "如 笔记本电脑",
       "description": "可选描述…",
-      "selectEmployee": "选择员工",
+      "selectEmployee": "搜索并选择员工",
+      "issueNotes": "可选填写本次发放备注…",
       "returnedTo": "例如：主仓库",
       "filterStatus": "按状态筛选",
       "filterType": "按类型筛选"
@@ -1377,7 +1381,8 @@
       "failedToUpdateStatus": "更新资产状态失败",
       "failedToIssueAssignment": "发放资产失败",
       "failedToReturnAssignment": "归还资产失败",
-      "failedToLoad": "加载公司资产失败"
+      "failedToLoad": "加载公司资产失败",
+      "photoOptionalHint": "可选 — 上传清晰的资产照片（JPG、PNG 或 WEBP）。"
     },
     "assetValidation": {
       "serialNumberRequired": "请填写序列号",
@@ -1385,14 +1390,15 @@
       "brandRequired": "请填写品牌",
       "modelRequired": "请填写型号",
       "yearRequired": "请填写年份",
-      "colorRequired": "请填写颜色"
+      "colorRequired": "请填写颜色",
+      "employeeRequired": "请选择要发放资产的员工"
     },
     "assetDialog": {
       "deleteTitle": "删除资产？",
       "deleteDesc": "此操作将永久删除该资产记录，不可撤销。",
       "statusTitle": "修改资产状态",
-      "issueTitle": "向员工发放资产",
-      "issueDesc": "将此资产分配给员工。",
+      "issueTitle": "发放资产",
+      "issueDesc": "将此资产分配给在职员工。",
       "returnTitle": "从分配中归还资产",
       "returnDesc": "将资产标记为已归还。"
     },
