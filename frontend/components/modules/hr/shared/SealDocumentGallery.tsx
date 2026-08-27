@@ -2,134 +2,17 @@
 
 import { useState } from 'react';
 import { Button, Typography } from 'antd';
-import {
-  Download,
-  File,
-  FileArchive,
-  FileImage,
-  FileSpreadsheet,
-  FileText,
-  Stamp,
-} from 'lucide-react';
+import { Download, Stamp } from 'lucide-react';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { AttachmentDocumentSummary } from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import { downloadDocument } from '@/lib/utils/document-download';
+import {
+  formatSealFileSize,
+  resolveSealFileKind,
+} from '@/lib/utils/seal-file-display';
 import { tokens } from '@/lib/theme/tokens';
-
-type FileKind = 'pdf' | 'word' | 'excel' | 'image' | 'cad' | 'archive' | 'other';
-
-interface FileKindMeta {
-  kind: FileKind;
-  label: string;
-  accent: string;
-  soft: string;
-  Icon: typeof FileText;
-}
-
-function formatFileSize(bytes?: number): string {
-  if (bytes == null || Number.isNaN(bytes)) {
-    return '';
-  }
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function extensionFromName(name: string): string {
-  const parts = name.split('.');
-  if (parts.length < 2) {
-    return '';
-  }
-  return (parts[parts.length - 1] ?? '').toLowerCase();
-}
-
-function resolveFileKind(doc: AttachmentDocumentSummary): FileKindMeta {
-  const ext = extensionFromName(doc.name);
-  const mime = (doc.fileType ?? '').toLowerCase();
-
-  if (ext === 'pdf' || mime.includes('pdf')) {
-    return {
-      kind: 'pdf',
-      label: 'PDF',
-      accent: '#DC2626',
-      soft: '#FEF2F2',
-      Icon: FileText,
-    };
-  }
-  if (
-    ['doc', 'docx', 'rtf'].includes(ext) ||
-    mime.includes('word') ||
-    mime.includes('msword')
-  ) {
-    return {
-      kind: 'word',
-      label: 'WORD',
-      accent: '#2563EB',
-      soft: '#EFF6FF',
-      Icon: FileText,
-    };
-  }
-  if (
-    ['xls', 'xlsx', 'csv'].includes(ext) ||
-    mime.includes('sheet') ||
-    mime.includes('excel')
-  ) {
-    return {
-      kind: 'excel',
-      label: 'EXCEL',
-      accent: '#059669',
-      soft: '#ECFDF5',
-      Icon: FileSpreadsheet,
-    };
-  }
-  if (
-    ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext) ||
-    mime.startsWith('image/')
-  ) {
-    return {
-      kind: 'image',
-      label: 'IMAGE',
-      accent: '#7C3AED',
-      soft: '#F5F3FF',
-      Icon: FileImage,
-    };
-  }
-  if (
-    ['dwg', 'dxf', 'dwf', 'dgn', 'drw', 'rvt', 'rfa', 'ifc', 'stp', 'step'].includes(
-      ext,
-    )
-  ) {
-    return {
-      kind: 'cad',
-      label: 'CAD',
-      accent: '#D4610A',
-      soft: '#FEF0E6',
-      Icon: File,
-    };
-  }
-  if (['zip', '7z', 'rar'].includes(ext) || mime.includes('zip')) {
-    return {
-      kind: 'archive',
-      label: 'ZIP',
-      accent: '#6B7280',
-      soft: '#F3F4F6',
-      Icon: FileArchive,
-    };
-  }
-  return {
-    kind: 'other',
-    label: (ext || 'FILE').toUpperCase(),
-    accent: tokens.colorTextSecondary,
-    soft: tokens.colorPageBg,
-    Icon: File,
-  };
-}
 
 /**
  * File presentations for Official / Project Seal document sections.
@@ -180,8 +63,8 @@ export default function SealDocumentGallery({
     return (
       <div className="flex flex-col gap-3">
         {items.map((doc) => {
-          const meta = resolveFileKind(doc);
-          const sizeLabel = formatFileSize(doc.fileSizeBytes);
+          const meta = resolveSealFileKind(doc.name, doc.fileType);
+          const sizeLabel = formatSealFileSize(doc.fileSizeBytes);
           return (
             <div
               key={doc.id}
@@ -254,8 +137,8 @@ export default function SealDocumentGallery({
   return (
     <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
       {items.map((doc) => {
-        const meta = resolveFileKind(doc);
-        const sizeLabel = formatFileSize(doc.fileSizeBytes);
+        const meta = resolveSealFileKind(doc.name, doc.fileType);
+        const sizeLabel = formatSealFileSize(doc.fileSizeBytes);
         return (
           <li key={doc.id}>
             <button

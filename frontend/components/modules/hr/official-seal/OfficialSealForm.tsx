@@ -4,7 +4,9 @@ import { useMemo, useState } from 'react';
 import { Alert, DatePicker, Form, Input, Select, Typography } from 'antd';
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
-import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
+import SealFilePicker, {
+  SealLocalFileTiles,
+} from '@/components/modules/hr/shared/SealFilePicker';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -206,7 +208,7 @@ export default function OfficialSealForm({
             >
               {t('hr.messages.documentToSealHint')}
             </Typography.Paragraph>
-            <FileUploadInput
+            <SealFilePicker
               files={selectedFiles}
               onChange={setSelectedFiles}
               accept={OFFICIAL_SEAL_FILE_ACCEPT}
@@ -245,13 +247,18 @@ export default function OfficialSealForm({
                   t,
                 )}
               />
-              <ReviewItem
-                label={t('hr.section.documentToSeal')}
-                value={
-                  selectedFiles.length > 0
-                    ? selectedFiles.map((file) => file.name).join(', ')
-                    : t('hr.empty.noAttachments')
-                }
+            </div>
+            <div className="mt-4">
+              <p
+                className="mb-2 text-xs font-medium uppercase tracking-wide"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                {t('hr.section.documentToSeal')}
+              </p>
+              <SealLocalFileTiles
+                files={selectedFiles}
+                readOnly
+                emptyLabel={t('hr.empty.noAttachments')}
               />
             </div>
           </FormLayout>
