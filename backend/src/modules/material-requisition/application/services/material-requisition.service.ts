@@ -327,6 +327,34 @@ export class MaterialRequisitionService
         companyId,
       );
 
+    if (resolvedTiers.length === 0) {
+      if (files?.length > 0) {
+        await this.uploadRequisitionFiles(
+          requisition,
+          files,
+          companyId,
+          userId,
+        );
+      }
+
+      const now = new Date();
+      await this.prisma.materialRequisition.update({
+        where: { id },
+        data: {
+          status: MaterialRequisitionStatus.APPROVED,
+          submittedAt: now,
+          completedAt: now,
+          updatedBy: userId,
+        },
+      });
+
+      this.logger.log(
+        `Material requisition ${requisition.requestNumber} auto-approved (no further tiers)`,
+      );
+
+      return this.getRequisition(id, companyId, userId);
+    }
+
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'MATERIAL_REQUISITION',
