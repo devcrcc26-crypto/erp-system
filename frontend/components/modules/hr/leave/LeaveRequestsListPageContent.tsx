@@ -68,7 +68,6 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -413,9 +412,6 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   const pageTitle = canViewHr
     ? t('pages.hr.leave.listTitle')
     : t('pages.hr.leave.myListTitle');
-  const pageDescription = canViewHr
-    ? t('pages.hr.leave.listDescription')
-    : t('pages.hr.leave.myListDescription');
 
   const requestsPanel = showRequestsSkeleton ? (
     <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
@@ -445,11 +441,6 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           }
         />
       ) : null}
-
-      <SectionPageHeader
-        title={pageTitle}
-        description={pageDescription}
-      />
 
       <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <button

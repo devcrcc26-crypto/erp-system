@@ -8,7 +8,6 @@ export { default as FormLayout } from './FormLayout/FormLayout';
 export { default as ListSearchInput } from './ListSearchInput/ListSearchInput';
 export { default as NotificationPanel } from './NotificationPanel/NotificationPanel';
 export { default as PageHeader } from './PageHeader/PageHeader';
-export { default as SectionPageHeader } from './SectionPageHeader/SectionPageHeader';
 export { default as StatusBadge } from './StatusBadge/StatusBadge';
 export { default as TableEmptyState } from './TableEmptyState';
 export { default as UserSelect } from './UserSelect/UserSelect';

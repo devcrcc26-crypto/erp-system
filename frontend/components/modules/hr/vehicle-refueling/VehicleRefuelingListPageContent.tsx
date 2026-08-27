@@ -46,7 +46,6 @@ import {
 } from '@/lib/utils/vehicle-refueling-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 const { RangePicker } = DatePicker;
 
@@ -316,11 +315,6 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
           }
         />
       ) : null}
-
-      <SectionPageHeader
-        title={pageTitle}
-        description={pageDescription}
-      />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard

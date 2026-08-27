@@ -46,7 +46,6 @@ import { useUsersDirectory } from '@/lib/query/users';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 const LEADER_WARNING_DISMISS_KEY = 'erp-departments-leader-warning-dismissed';
 
@@ -512,12 +511,7 @@ export default function DepartmentsPageContent(): React.ReactNode {
 
   return (
     <div className="flex flex-col gap-4">
-      <SectionPageHeader
-        title={t('pages.departments.title')}
-        description={t('pages.departments.description')}
-      />
-
-      {canViewAll && departmentsWithoutLeader.length > 0 && !warningDismissed ? (
+{canViewAll && departmentsWithoutLeader.length > 0 && !warningDismissed ? (
         <Alert
           type="warning"
           showIcon

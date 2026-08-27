@@ -76,9 +76,18 @@ export default function MainContentHeader({
         </div>
 
         <div
-          className="hidden items-center justify-end gap-4 px-6 lg:flex"
+          className="hidden items-center justify-between gap-4 px-6 lg:flex"
           style={{ height: SHELL_TOP_HEADER_HEIGHT }}
         >
+          <h2
+            className="m-0 truncate text-lg font-semibold"
+            style={{
+              color: tokens.colorTextPrimary,
+              fontFamily: tokens.fontFamily,
+            }}
+          >
+            {pageTitle} 
+          </h2>
           <HeaderActions />
         </div>
       </header>

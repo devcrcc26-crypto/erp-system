@@ -31,7 +31,6 @@ import {
   formatLeaveType,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 interface LeaveFormValues {
   leaveType: LeaveType;
@@ -177,19 +176,15 @@ export default function LeaveRequestEditPageContent({
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <SectionPageHeader
-        title={t('pages.hr.leave.edit')}
-        description={"request.requestNumber"}
-        actions={
-          <Button
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        <Button
             onClick={() => router.push(`/hr/leave-requests/${requestId}`)}
             className="shrink-0"
             style={{ borderRadius: 0 }}
           >
             {t('hr.buttons.cancel')}
           </Button>
-        }
-      />
+      </div>
 
       {updateMutation.isError ? (
         <Alert

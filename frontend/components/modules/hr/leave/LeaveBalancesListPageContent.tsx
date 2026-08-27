@@ -37,7 +37,6 @@ import {
 import { filterLeaveBalances } from '@/lib/utils/leave-list-filter';
 import { leaveHistoryPath } from '@/lib/utils/leave-history-path';
 import { tokens } from '@/lib/theme/tokens';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 const LOW_BALANCE_THRESHOLD = 5;
 
@@ -225,11 +224,6 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
           }
         />
       ) : null}
-
-      <SectionPageHeader
-        title={t('hr.tabs.leaveBalances')}
-        description={`Track entitled, used, and remaining leave by employee for ${year}.`}
-      />
 
       <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard

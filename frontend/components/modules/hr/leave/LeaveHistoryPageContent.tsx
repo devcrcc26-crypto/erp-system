@@ -42,7 +42,6 @@ import {
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 const HISTORY_PAGE_SIZE = 15;
 const LOW_BALANCE_THRESHOLD = 5;
@@ -459,18 +458,6 @@ export default function LeaveHistoryPageContent({
           >
             {t('hr.buttons.back')}
           </Button>
-          <SectionPageHeader
-            title={
-              isSelf
-                ? t('pages.hr.leaveHistory.myTitle')
-                : t('pages.hr.leaveHistory.title')
-            }
-            description={
-              isSelf
-                ? t('pages.hr.leaveHistory.myDescription')
-                : t('pages.hr.leaveHistory.description', { name: displayName })
-            }
-          />
         </div>
       </div>
 

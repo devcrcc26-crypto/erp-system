@@ -3,7 +3,6 @@
 import { Alert, Button, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import CompanyAssetForm from '@/components/modules/hr/company-asset/CompanyAssetForm';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { CompanyAssetDetail } from '@/lib/api/company-asset.types';
@@ -56,21 +55,15 @@ export default function CompanyAssetFormContent({
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <SectionPageHeader
-        title={isEdit
-            ? t('pages.hr.companyAsset.edit')
-            : t('pages.hr.companyAsset.new')}
-        description={t('pages.hr.companyAsset.formDescription')}
-        actions={
-          <Button
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        <Button
             onClick={() => router.push('/hr/company-asset')}
             className="shrink-0"
             style={{ borderRadius: 0 }}
           >
             {t('hr.assetButtons.cancel')}
           </Button>
-        }
-      />
+      </div>
       <CompanyAssetForm
         mode={isEdit ? 'edit' : 'create'}
         asset={isEdit ? detailQuery.data : undefined}

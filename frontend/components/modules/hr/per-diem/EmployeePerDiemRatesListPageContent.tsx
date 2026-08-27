@@ -39,7 +39,6 @@ import { useEmployeePerDiemRatesList } from '@/lib/query/per-diem';
 import { tokens } from '@/lib/theme/tokens';
 import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 type SetupFilter = 'all' | 'configured' | 'pending';
 
@@ -280,7 +279,6 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   const hasFilters = Boolean(search.trim()) || setupFilter !== 'all';
 
   const pageTitle = t('pages.hr.employeePerDiemRates.listTitle');
-  const pageDescription = t('pages.hr.employeePerDiemRates.listDescription');
 
   if (!canManagePerDiemRates) {
     return (
@@ -311,11 +309,6 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
           }
         />
       ) : null}
-
-      <SectionPageHeader
-        title={pageTitle}
-        description={pageDescription}
-      />
 
       <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <button

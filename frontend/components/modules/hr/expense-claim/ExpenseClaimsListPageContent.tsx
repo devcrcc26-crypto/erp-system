@@ -58,7 +58,6 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 function isEditableClaimStatus(status: ExpenseClaimListItem['status']): boolean {
   return status === 'DRAFT' || status === 'RETURNED';
@@ -371,13 +370,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         onConfirm={() => void handleDeleteClaim()}
         onCancel={() => setDeletingClaim(null)}
       />
-
-      <SectionPageHeader
-        title={pageTitle}
-        description={pageDescription}
-      />
-
-      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
+<div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <button
           type="button"
           className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"

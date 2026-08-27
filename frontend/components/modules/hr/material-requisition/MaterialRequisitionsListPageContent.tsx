@@ -36,7 +36,6 @@ import {
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { tokens } from '@/lib/theme/tokens';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 const { RangePicker } = DatePicker;
 
@@ -238,11 +237,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
           }
         />
       ) : null}
-
-      <SectionPageHeader
-        title={pageTitle}
-        description={pageDescription}
-      />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard

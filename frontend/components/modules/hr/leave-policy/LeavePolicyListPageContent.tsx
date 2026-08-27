@@ -45,7 +45,6 @@ import {
 import { tokens } from '@/lib/theme/tokens';
 import { filterLeavePolicies } from '@/lib/utils/leave-policy-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 /**
  * HR leave policy list — layout aligned with Users page.
@@ -292,13 +291,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteId(null)}
       />
-
-      <SectionPageHeader
-        title={t('hr.leavePolicy.listTitle')}
-        description={t('hr.leavePolicy.formDescription')}
-      />
-
-      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
+<div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           label="Total"
           value={stats.total}

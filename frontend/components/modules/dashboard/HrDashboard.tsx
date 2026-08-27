@@ -45,6 +45,7 @@ import {
 } from '@/lib/utils/leave-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useAuthStore } from '@/stores/auth.store';
 
 const LEAVE_TYPE_COLORS: Record<string, string> = {
   ANNUAL: '#378ADD',
@@ -83,6 +84,7 @@ export default function HrDashboard({
   enabled?: boolean;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const user = useAuthStore((state) => state.user);
   const hrQuery = useHrDashboard(enabled);
   const hr = hrQuery.data;
   const loading = hrQuery.isLoading || hrQuery.isFetching;
@@ -105,6 +107,39 @@ export default function HrDashboard({
     );
   }
 
+  const firstName = user?.firstName ?? 'there';
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const today = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const alerts = [
+    {
+      label: `${hr.pendingLeaveRequests} pending leave`,
+      href: '/hr/leave-requests',
+      show: hr.pendingLeaveRequests > 0,
+    },
+    {
+      label: `${hr.pendingOvertimeSheets} pending overtime`,
+      href: '/hr/overtime',
+      show: hr.pendingOvertimeSheets > 0,
+    },
+    {
+      label: `${hr.pendingFlightBookings} flights need tickets`,
+      href: '/hr/flight-applications',
+      show: hr.pendingFlightBookings > 0,
+    },
+    {
+      label: `${hr.contractsExpiringSoon} contracts expiring`,
+      href: '/hr/employee-contracts',
+      show: (hr.contractsExpiringSoon ?? 0) > 0,
+    },
+  ].filter((a) => a.show);
+
   const leaveByTypeData = Object.entries(hr.leaveByType)
     .filter(([, count]) => count > 0)
     .map(([type, count]) => ({
@@ -119,6 +154,21 @@ export default function HrDashboard({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Greeting header */}
+      <div className="mb-1">
+        <div className="mb-2 flex items-end justify-between">
+          <div>
+            <h1 className="m-0 text-xl font-semibold text-[var(--color-text-primary)]">
+              {greeting}, {firstName} 👋
+            </h1>
+            <p className="m-0 mt-0.5 text-sm text-[var(--color-text-tertiary)]">
+              HR Dashboard · {today}
+            </p>
+          </div>
+        </div>
+        
+      </div>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           label="Total Employees"

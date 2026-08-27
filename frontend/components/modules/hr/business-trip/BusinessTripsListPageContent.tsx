@@ -29,7 +29,6 @@ import { useRouter } from 'next/navigation';
 import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import {
@@ -421,11 +420,6 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
           }
         />
       ) : null}
-
-      <SectionPageHeader
-        title={pageTitle}
-        description={pageDescription}
-      />
 
       <div
         className={`mb-1 grid grid-cols-2 gap-3 ${canViewHr ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}

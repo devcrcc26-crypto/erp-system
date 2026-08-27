@@ -59,7 +59,6 @@ import {
 } from '@/lib/utils/flight-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 type ListTab = 'ALL' | 'NEEDS_TICKET';
 type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
@@ -446,11 +445,6 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           }
         />
       ) : null}
-
-      <SectionPageHeader
-        title={pageTitle}
-        description={pageDescription}
-      />
 
       <div
         className={`mb-1 grid grid-cols-2 gap-3 ${canViewHr ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}

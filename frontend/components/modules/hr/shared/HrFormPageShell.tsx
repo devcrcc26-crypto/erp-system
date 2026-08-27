@@ -2,7 +2,6 @@
 
 import { Button } from 'antd';
 import { useRouter } from 'next/navigation';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 
 export interface HrFormPageShellProps {
@@ -19,8 +18,8 @@ export interface HrFormPageShellProps {
  * Page chrome for HR / Approvals create forms — aligned with Users and Leave Policy layouts.
  */
 export default function HrFormPageShell({
-  title,
-  description,
+  title: _title,
+  description: _description,
   cancelLabel,
   cancelHref,
   onCancel,
@@ -43,20 +42,14 @@ export default function HrFormPageShell({
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <SectionPageHeader
-        title={title}
-        description={description}
-        actions={
-          <>
-            {headerExtra}
-            {onCancel || cancelHref ? (
-              <Button onClick={handleCancel} style={{ borderRadius: 0 }}>
-                {cancelLabel}
-              </Button>
-            ) : null}
-          </>
-        }
-      />
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        {headerExtra}
+        {onCancel || cancelHref ? (
+          <Button onClick={handleCancel} style={{ borderRadius: 0 }}>
+            {cancelLabel}
+          </Button>
+        ) : null}
+      </div>
       {children}
     </div>
   );

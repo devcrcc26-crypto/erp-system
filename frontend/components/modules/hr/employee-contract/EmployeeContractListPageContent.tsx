@@ -62,7 +62,6 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 /**
  * Employee contract list — layout aligned with Users and Leave pages.
@@ -375,11 +374,6 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
           }
         />
       ) : null}
-
-      <SectionPageHeader
-        title={pageTitle}
-        description={pageDescription}
-      />
 
       <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <button

@@ -45,7 +45,6 @@ import {
 } from '@/lib/utils/inspection-repair-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 type StatusMode = 'all' | 'pending' | 'active' | 'done';
 
@@ -285,11 +284,6 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
           }
         />
       ) : null}
-
-      <SectionPageHeader
-        title={pageTitle}
-        description={pageDescription}
-      />
 
       <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <button type="button" className="m-0 w-full border-0 bg-transparent p-0 text-left" onClick={() => handleStatusMode('all')}>

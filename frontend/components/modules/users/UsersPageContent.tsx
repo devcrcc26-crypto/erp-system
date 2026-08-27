@@ -70,7 +70,6 @@ import {
 } from '@/lib/utils/user-status';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 const ROLE_COLOR_MAP: Record<string, string> = {
   'System Administrator': 'red',
@@ -524,13 +523,7 @@ export default function UsersPageContent(): React.ReactNode {
           onClose={() => setActionMessage(null)}
         />
       )}
-
-      <SectionPageHeader
-        title={t('users.title')}
-        description="Manage employees, roles, and access across the organization."
-      />
-
-      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
+<div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           label="Total Employees"
           value={userStats.totalCount}

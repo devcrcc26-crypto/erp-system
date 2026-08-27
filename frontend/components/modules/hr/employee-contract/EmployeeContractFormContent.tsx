@@ -20,7 +20,6 @@ import {
   contractTypeRequiresEndDate,
 } from '@/lib/utils/employee-contract-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 /**
  * Full-page create / edit employee contract — layout aligned with Leave Policy and Users.
@@ -180,22 +179,15 @@ export default function EmployeeContractFormContent({
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <SectionPageHeader
-        title={isEdit
-              ? t('pages.hr.employeeContract.edit')
-              : t('pages.hr.employeeContract.new')}
-        description={t('pages.hr.employeeContract.formDescription')}
-        actions={
-          <Button
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        <Button
             onClick={() => router.push('/hr/employee-contract')}
             className="shrink-0"
             style={{ borderRadius: 0 }}
           >
             {t('common.cancel')}
           </Button>
-        }
-      />
-
+      </div>
       <EmployeeContractForm
         mode={isEdit ? 'edit' : 'create'}
         contract={isEdit ? detailQuery.data : undefined}

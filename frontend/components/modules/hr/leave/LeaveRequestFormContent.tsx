@@ -33,7 +33,6 @@ import {
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { tokens } from '@/lib/theme/tokens';
-import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 interface LeaveFormValues {
   leaveType: LeaveType;
@@ -192,19 +191,15 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <SectionPageHeader
-        title={t('pages.hr.leave.new')}
-        description={t('pages.hr.leave.listDescription')}
-        actions={
-          <Button
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        <Button
             onClick={() => router.push('/approvals/new')}
             className="shrink-0"
             style={{ borderRadius: 0 }}
           >
             {t('hr.buttons.cancel')}
           </Button>
-        }
-      />
+      </div>
 
       {submitMutation.isError ? (
         <Alert
