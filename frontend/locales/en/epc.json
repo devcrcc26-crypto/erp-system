@@ -336,7 +336,10 @@
         "myListTitle": "My Inspection & Repair Requests",
         "listDescription": "Review and track employee asset inspection and repair requests.",
         "myListDescription": "Submit and track your inspection and repair requests.",
-        "formDescription": "Select one of your assigned company assets or enter external device details for HR documentation and asset tracking.",
+        "formDescription": "Select an assigned company asset or enter device details, then describe the request and review before submitting.",
+        "deviceStepDescription": "Choose an assigned company asset or enter external device details.",
+        "detailsStepDescription": "Enter location, request type, urgency, and a clear description of the issue.",
+        "reviewStepDescription": "Confirm the asset and request details before submitting.",
         "requestSingular": "request",
         "requestPlural": "requests"
       },

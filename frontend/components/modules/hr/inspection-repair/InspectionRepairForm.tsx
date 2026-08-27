@@ -1,9 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Alert, Button, Form, Input, InputNumber, Radio, Select } from 'antd';
-import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Form,
+  Input,
+  InputNumber,
+  Radio,
+  Select,
+} from 'antd';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
@@ -15,35 +22,62 @@ import {
   useMyInspectionRepairAssets,
   useSubmitInspectionRepair,
 } from '@/lib/query/inspection-repair';
+import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface FormValues {
   source: 'assigned' | 'manual';
   assetId?: string;
   deviceName?: string;
-  location: string;
+  location?: string;
   make?: string;
   model?: string;
   year?: number;
-  description: string;
+  description?: string;
   solution?: string;
   urgency: InspectionRepairUrgency;
   inspectionType: InspectionRepairType;
 }
 
+interface InspectionRepairFormProps {
+  onSuccess: (result: InspectionRepairDetail) => void;
+}
+
+const DETAILS_FIELDS = [
+  'location',
+  'inspectionType',
+  'urgency',
+  'description',
+] as const;
+
+/**
+ * Inspection & repair create form — StepperForm chrome like Add Employee.
+ */
 export default function InspectionRepairForm({
   onSuccess,
-}: {
-  onSuccess: (result: InspectionRepairDetail) => void;
-}): React.ReactNode {
+}: InspectionRepairFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [detailsSnapshot, setDetailsSnapshot] = useState<FormValues | null>(
+    null,
+  );
+
   const assetsQuery = useMyInspectionRepairAssets();
   const submitMutation = useSubmitInspectionRepair();
+  const formValues = Form.useWatch([], form) as FormValues | undefined;
+  const source = formValues?.source ?? 'assigned';
 
-  const source = Form.useWatch('source', form) ?? 'assigned';
+  const noAssignedAssets = (assetsQuery.data?.length ?? 0) === 0;
+
+  useEffect(() => {
+    if (!assetsQuery.isLoading && noAssignedAssets) {
+      form.setFieldsValue({ source: 'manual' });
+    }
+  }, [assetsQuery.isLoading, noAssignedAssets, form]);
+
   const assetOptions = useMemo(
     () =>
       (assetsQuery.data ?? []).map((asset) => ({
@@ -53,11 +87,88 @@ export default function InspectionRepairForm({
     [assetsQuery.data],
   );
 
+  const selectedAssetLabel = useMemo(() => {
+    const assetId = detailsSnapshot?.assetId ?? formValues?.assetId;
+    if (!assetId) {
+      return '—';
+    }
+    return (
+      assetOptions.find((option) => option.value === assetId)?.label ?? '—'
+    );
+  }, [assetOptions, detailsSnapshot?.assetId, formValues?.assetId]);
+
+  function captureSnapshot(): FormValues {
+    const values = form.getFieldsValue(true) as FormValues;
+    setDetailsSnapshot(values);
+    return values;
+  }
+
+  function resetForm(): void {
+    form.resetFields();
+    form.setFieldsValue({
+      source: noAssignedAssets ? 'manual' : 'assigned',
+      urgency: 'MEDIUM',
+      inspectionType: 'REPAIR',
+    });
+    setDetailsSnapshot(null);
+    setFormError(null);
+  }
+
+  async function validateDeviceStep(): Promise<boolean> {
+    const currentSource = form.getFieldValue('source') as FormValues['source'];
+    const fields =
+      currentSource === 'manual' ? (['deviceName'] as const) : (['assetId'] as const);
+    try {
+      await form.validateFields([...fields]);
+      captureSnapshot();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function validateDetailsStep(): Promise<boolean> {
+    try {
+      await form.validateFields([...DETAILS_FIELDS]);
+      captureSnapshot();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function handleSubmit(): Promise<void> {
+    setFormError(null);
     let values: FormValues;
     try {
-      values = await form.validateFields();
+      const deviceOk = await validateDeviceStep();
+      if (!deviceOk) {
+        return;
+      }
+      values = await form.validateFields([
+        ...(form.getFieldValue('source') === 'manual'
+          ? (['deviceName'] as const)
+          : (['assetId'] as const)),
+        ...DETAILS_FIELDS,
+      ]);
     } catch {
+      return;
+    }
+
+    if (
+      !values.location?.trim() ||
+      !values.description?.trim() ||
+      !values.urgency ||
+      !values.inspectionType
+    ) {
+      return;
+    }
+
+    if (values.source === 'assigned' && !values.assetId) {
+      return;
+    }
+
+    if (values.source === 'manual' && !values.deviceName?.trim()) {
       return;
     }
 
@@ -65,10 +176,17 @@ export default function InspectionRepairForm({
     try {
       const result = await submitMutation.mutateAsync({
         assetId: values.source === 'assigned' ? values.assetId : undefined,
-        deviceName: values.source === 'manual' ? values.deviceName?.trim() : undefined,
+        deviceName:
+          values.source === 'manual' ? values.deviceName?.trim() : undefined,
         location: values.location.trim(),
-        make: values.source === 'manual' ? values.make?.trim() || undefined : undefined,
-        model: values.source === 'manual' ? values.model?.trim() || undefined : undefined,
+        make:
+          values.source === 'manual'
+            ? values.make?.trim() || undefined
+            : undefined,
+        model:
+          values.source === 'manual'
+            ? values.model?.trim() || undefined
+            : undefined,
         year: values.source === 'manual' ? values.year : undefined,
         description: values.description.trim(),
         solution: values.solution?.trim() || undefined,
@@ -78,40 +196,36 @@ export default function InspectionRepairForm({
       messageApi.success(t('hr.messages.inspectionRepairSubmitted'));
       onSuccess(result);
     } catch (error: unknown) {
-      notifyApiError(error, t('hr.messages.inspectionRepairSubmitFailed'), messageApi);
+      const message = t('hr.messages.inspectionRepairSubmitFailed');
+      notifyApiError(error, message, messageApi);
+      setFormError(message);
     } finally {
       setSubmitting(false);
     }
   }
 
-  const noAssignedAssets = (assetsQuery.data?.length ?? 0) === 0;
+  const reviewValues = detailsSnapshot ?? formValues;
 
-  return (
-    <HrFormPageShell
-      title={t('pages.hr.inspectionRepair.new')}
-      description={t('pages.hr.inspectionRepair.formDescription')}
-      cancelLabel={t('hr.buttons.cancel')}
-      cancelHref="/approvals/new"
-    >
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-8">
-        {noAssignedAssets ? (
-          <Alert
-            type="info"
-            showIcon
-            title={t('hr.messages.noAssignedInspectionAssets')}
-          />
-        ) : null}
-
-        <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{
-              source: noAssignedAssets ? 'manual' : 'assigned',
-              urgency: 'MEDIUM',
-              inspectionType: 'REPAIR',
-            }}
+  const steps = useMemo(
+    () => [
+      {
+        title: t('hr.form.asset'),
+        validate: () => validateDeviceStep(),
+        content: (
+          <FormLayout
+            variant="pro"
+            title={t('hr.form.asset')}
+            description={t('pages.hr.inspectionRepair.deviceStepDescription')}
           >
+            {noAssignedAssets ? (
+              <Alert
+                type="info"
+                showIcon
+                className="mb-4"
+                title={t('hr.messages.noAssignedInspectionAssets')}
+              />
+            ) : null}
+
             <Form.Item name="source" label={t('hr.form.assetSource')}>
               <Radio.Group
                 options={[
@@ -132,7 +246,9 @@ export default function InspectionRepairForm({
               <Form.Item
                 name="assetId"
                 label={t('hr.form.asset')}
-                rules={[{ required: true, message: t('hr.validation.required') }]}
+                rules={[
+                  { required: true, message: t('hr.validation.required') },
+                ]}
               >
                 <Select
                   showSearch
@@ -147,68 +263,114 @@ export default function InspectionRepairForm({
                 />
               </Form.Item>
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="erp-form-grid-2">
                 <Form.Item
                   name="deviceName"
                   label={t('hr.form.deviceName')}
-                  rules={[{ required: true, message: t('hr.validation.required') }]}
+                  rules={[
+                    { required: true, message: t('hr.validation.required') },
+                  ]}
                 >
-                  <Input maxLength={200} placeholder={t('hr.placeholder.enterDeviceName')} />
+                  <Input
+                    maxLength={200}
+                    placeholder={t('hr.placeholder.enterDeviceName')}
+                  />
                 </Form.Item>
                 <Form.Item name="make" label={t('hr.form.make')}>
-                  <Input maxLength={120} placeholder={t('hr.placeholder.enterMake')} />
+                  <Input
+                    maxLength={120}
+                    placeholder={t('hr.placeholder.enterMake')}
+                  />
                 </Form.Item>
                 <Form.Item name="model" label={t('hr.form.model')}>
-                  <Input maxLength={120} placeholder={t('hr.placeholder.enterModel')} />
+                  <Input
+                    maxLength={120}
+                    placeholder={t('hr.placeholder.enterModel')}
+                  />
                 </Form.Item>
                 <Form.Item name="year" label={t('hr.form.year')}>
                   <InputNumber min={1900} max={2100} className="w-full" />
                 </Form.Item>
               </div>
             )}
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.section.requestDetails'),
+        validate: () => validateDetailsStep(),
+        content: (
+          <FormLayout
+            variant="pro"
+            title={t('hr.section.requestDetails')}
+            description={t(
+              'pages.hr.inspectionRepair.detailsStepDescription',
+            )}
+          >
+            <div className="erp-form-grid-2">
               <Form.Item
                 name="location"
                 label={t('hr.form.location')}
-                rules={[{ required: true, message: t('hr.validation.required') }]}
+                rules={[
+                  { required: true, message: t('hr.validation.required') },
+                ]}
               >
-                <Input maxLength={200} placeholder={t('hr.placeholder.enterLocation')} />
+                <Input
+                  maxLength={200}
+                  placeholder={t('hr.placeholder.enterLocation')}
+                />
               </Form.Item>
               <Form.Item
                 name="inspectionType"
                 label={t('hr.form.inspectionType')}
-                rules={[{ required: true, message: t('hr.validation.required') }]}
+                rules={[
+                  { required: true, message: t('hr.validation.required') },
+                ]}
               >
                 <Select
                   options={[
-                    { value: 'INSPECTION', label: t('hr.inspectionType.INSPECTION') },
-                    { value: 'MAINTENANCE', label: t('hr.inspectionType.MAINTENANCE') },
-                    { value: 'REPAIR', label: t('hr.inspectionType.REPAIR') },
+                    {
+                      value: 'INSPECTION',
+                      label: t('hr.inspectionType.INSPECTION'),
+                    },
+                    {
+                      value: 'MAINTENANCE',
+                      label: t('hr.inspectionType.MAINTENANCE'),
+                    },
+                    {
+                      value: 'REPAIR',
+                      label: t('hr.inspectionType.REPAIR'),
+                    },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item
+                name="urgency"
+                label={t('hr.form.urgency')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.selectUrgency'),
+                  },
+                ]}
+              >
+                <Select
+                  options={[
+                    { value: 'CRITICAL', label: t('hr.urgency.CRITICAL') },
+                    { value: 'URGENT', label: t('hr.urgency.URGENT') },
+                    { value: 'MEDIUM', label: t('hr.urgency.MEDIUM') },
+                    { value: 'MINOR', label: t('hr.urgency.MINOR') },
                   ]}
                 />
               </Form.Item>
             </div>
 
             <Form.Item
-              name="urgency"
-              label={t('hr.form.urgency')}
-              rules={[{ required: true, message: t('hr.validation.selectUrgency') }]}
-            >
-              <Select
-                options={[
-                  { value: 'CRITICAL', label: t('hr.urgency.CRITICAL') },
-                  { value: 'URGENT', label: t('hr.urgency.URGENT') },
-                  { value: 'MEDIUM', label: t('hr.urgency.MEDIUM') },
-                  { value: 'MINOR', label: t('hr.urgency.MINOR') },
-                ]}
-              />
-            </Form.Item>
-
-            <Form.Item
               name="description"
               label={t('hr.form.description')}
-              rules={[{ required: true, message: t('hr.validation.required') }]}
+              rules={[
+                { required: true, message: t('hr.validation.required') },
+              ]}
             >
               <Input.TextArea
                 rows={4}
@@ -226,15 +388,157 @@ export default function InspectionRepairForm({
                 placeholder={t('hr.placeholder.enterSuggestedSolution')}
               />
             </Form.Item>
-          </Form>
-        </SectionCard>
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.form.reviewSubmit'),
+        content: (
+          <FormLayout
+            variant="pro"
+            title={t('hr.form.reviewSubmit')}
+            description={t('pages.hr.inspectionRepair.reviewStepDescription')}
+          >
+            <div className="erp-form-grid-2">
+              <ReviewItem
+                label={t('hr.form.assetSource')}
+                value={
+                  reviewValues?.source === 'manual'
+                    ? t('hr.form.enterDeviceManually')
+                    : t('hr.form.useAssignedAsset')
+                }
+              />
+              {reviewValues?.source === 'assigned' ? (
+                <ReviewItem
+                  label={t('hr.form.asset')}
+                  value={selectedAssetLabel}
+                />
+              ) : (
+                <>
+                  <ReviewItem
+                    label={t('hr.form.deviceName')}
+                    value={reviewValues?.deviceName?.trim() || '—'}
+                  />
+                  <ReviewItem
+                    label={t('hr.form.make')}
+                    value={reviewValues?.make?.trim() || '—'}
+                  />
+                  <ReviewItem
+                    label={t('hr.form.model')}
+                    value={reviewValues?.model?.trim() || '—'}
+                  />
+                  <ReviewItem
+                    label={t('hr.form.year')}
+                    value={
+                      reviewValues?.year != null
+                        ? String(reviewValues.year)
+                        : '—'
+                    }
+                  />
+                </>
+              )}
+              <ReviewItem
+                label={t('hr.form.location')}
+                value={reviewValues?.location?.trim() || '—'}
+              />
+              <ReviewItem
+                label={t('hr.form.inspectionType')}
+                value={
+                  reviewValues?.inspectionType
+                    ? t(`hr.inspectionType.${reviewValues.inspectionType}`)
+                    : '—'
+                }
+              />
+              <ReviewItem
+                label={t('hr.form.urgency')}
+                value={
+                  reviewValues?.urgency
+                    ? t(`hr.urgency.${reviewValues.urgency}`)
+                    : '—'
+                }
+              />
+              <ReviewItem
+                label={t('hr.form.description')}
+                value={reviewValues?.description?.trim() || '—'}
+              />
+              {reviewValues?.solution?.trim() ? (
+                <ReviewItem
+                  label={t('hr.form.solution')}
+                  value={reviewValues.solution.trim()}
+                />
+              ) : null}
+            </div>
+          </FormLayout>
+        ),
+      },
+    ],
+    [
+      t,
+      noAssignedAssets,
+      source,
+      assetsQuery.isLoading,
+      assetOptions,
+      selectedAssetLabel,
+      reviewValues,
+    ],
+  );
 
-        <div className="flex justify-end">
-          <Button type="primary" loading={submitting} onClick={() => void handleSubmit()}>
-            {t('hr.buttons.submitRequest')}
-          </Button>
-        </div>
-      </div>
-    </HrFormPageShell>
+  return (
+    <Form<FormValues>
+      form={form}
+      layout="vertical"
+      requiredMark={false}
+      preserve
+      className="flex min-h-0 flex-1 flex-col"
+      initialValues={{
+        source: noAssignedAssets ? 'manual' : 'assigned',
+        urgency: 'MEDIUM',
+        inspectionType: 'REPAIR',
+      }}
+    >
+      {formError ? (
+        <Alert
+          type="error"
+          showIcon
+          title={formError}
+          className="mb-4"
+          closable
+          onClose={() => setFormError(null)}
+        />
+      ) : null}
+      <StepperForm
+        steps={steps}
+        onSubmit={handleSubmit}
+        onReset={resetForm}
+        isSubmitting={submitting}
+        contentVariant="sections"
+        submitLabel={t('hr.buttons.submitRequest')}
+      />
+    </Form>
+  );
+}
+
+function ReviewItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): React.ReactNode {
+  return (
+    <div className="min-w-0">
+      <p
+        className="mb-0.5 text-xs font-medium uppercase tracking-wide"
+        style={{ color: tokens.colorTextTertiary }}
+      >
+        {label}
+      </p>
+      <p
+        className="m-0 whitespace-pre-wrap text-sm"
+        style={{ color: tokens.colorTextPrimary }}
+      >
+        {value}
+      </p>
+    </div>
   );
 }

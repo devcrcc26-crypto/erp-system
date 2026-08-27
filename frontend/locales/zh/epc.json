@@ -336,7 +336,10 @@
         "myListTitle": "我的检修申请",
         "listDescription": "审核并跟踪员工设备检修申请。",
         "myListDescription": "提交并跟踪您的检修申请。",
-        "formDescription": "可选择您已领用的公司资产，或手动填写设备信息，供人力资源留档和资产跟踪。",
+        "formDescription": "选择已领用公司资产或手动填写设备信息，描述问题后确认并提交。",
+        "deviceStepDescription": "选择已领用公司资产，或手动填写外部设备信息。",
+        "detailsStepDescription": "填写位置、申请类型、紧急程度与问题描述。",
+        "reviewStepDescription": "确认资产与申请信息后提交。",
         "requestSingular": "条申请",
         "requestPlural": "条申请"
       },
