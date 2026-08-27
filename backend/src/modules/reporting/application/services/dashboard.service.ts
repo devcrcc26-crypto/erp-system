@@ -93,6 +93,23 @@ export interface HrDashboardOvertimeRow {
   totalHours: number;
 }
 
+export interface HrDashboardTrendRow {
+  month: string;
+  total: number;
+  approved: number;
+  rejected: number;
+}
+
+export interface HrDashboardModuleRow {
+  module: string;
+  pending: number;
+}
+
+export interface HrDashboardDepartmentRow {
+  department: string;
+  count: number;
+}
+
 export interface HrDashboardStats {
   totalEmployees: number;
   onLeaveThisWeek: number;
@@ -102,7 +119,12 @@ export interface HrDashboardStats {
   pendingBusinessTripBookings: number;
   approvedFlightsThisMonth: number;
   overtimeSubmissionsThisMonth: number;
+  contractsExpiringSoon: number;
+  employeesWithoutPolicy: number;
   leaveByType: Record<string, number>;
+  leaveRequestsTrend: HrDashboardTrendRow[];
+  pendingByModule: HrDashboardModuleRow[];
+  headcountByDepartment: HrDashboardDepartmentRow[];
   recentLeaveRequests: HrDashboardRecentLeaveRequest[];
   upcomingTravel: HrDashboardUpcomingTravel[];
   overtimeThisMonth: HrDashboardOvertimeRow[];
@@ -463,6 +485,13 @@ export class DashboardService {
     const next30Days = new Date(now);
     next30Days.setDate(now.getDate() + 30);
 
+    const in90Days = new Date(now);
+    in90Days.setDate(now.getDate() + 90);
+    in90Days.setHours(23, 59, 59, 999);
+
+    const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    trendStart.setHours(0, 0, 0, 0);
+
     const [
       totalEmployees,
       onLeaveThisWeek,
@@ -472,7 +501,12 @@ export class DashboardService {
       pendingBusinessTripBookings,
       approvedFlightsThisMonth,
       overtimeSubmissionsThisMonth,
+      contractsExpiringSoon,
+      employeesWithoutPolicy,
       leaveByTypeGroups,
+      leaveTrendSource,
+      pendingByCategoryGroups,
+      headcountGroups,
       recentLeaveRequests,
       upcomingFlights,
       upcomingBusinessTrips,
@@ -537,6 +571,25 @@ export class DashboardService {
           year: now.getFullYear(),
         },
       }),
+      this.prisma.employeeContract.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: 'ACTIVE',
+          endDate: {
+            gte: now,
+            lte: in90Days,
+          },
+        },
+      }),
+      this.prisma.user.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          isActive: true,
+          leavePolicyId: null,
+        },
+      }),
       this.prisma.leaveRequest.groupBy({
         by: ['leaveType'],
         where: {
@@ -546,6 +599,36 @@ export class DashboardService {
           startDate: { gte: startOfMonth },
         },
         _count: { _all: true },
+      }),
+      this.prisma.leaveRequest.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          createdAt: { gte: trendStart },
+        },
+        select: {
+          createdAt: true,
+          status: true,
+        },
+      }),
+      this.prisma.approvalRequest.groupBy({
+        by: ['categoryId'],
+        where: {
+          companyId,
+          deletedAt: null,
+          status: { in: ['SUBMITTED', 'IN_REVIEW'] },
+        },
+        _count: { id: true },
+      }),
+      this.prisma.user.groupBy({
+        by: ['departmentId'],
+        where: {
+          companyId,
+          deletedAt: null,
+          isActive: true,
+          departmentId: { not: null },
+        },
+        _count: { id: true },
       }),
       this.prisma.leaveRequest.findMany({
         where: { companyId, deletedAt: null },
@@ -623,6 +706,59 @@ export class DashboardService {
       leaveByType[group.leaveType] = group._count._all;
     }
 
+    const leaveRequestsTrend = this.buildLeaveRequestsTrend(
+      leaveTrendSource,
+      now,
+    );
+
+    const categoryIds = pendingByCategoryGroups.map((row) => row.categoryId);
+    const categories =
+      categoryIds.length > 0
+        ? await this.prisma.approvalCategory.findMany({
+            where: {
+              companyId,
+              id: { in: categoryIds },
+              deletedAt: null,
+            },
+            select: { id: true, name: true },
+          })
+        : [];
+    const categoryNameById = new Map(
+      categories.map((category) => [category.id, category.name]),
+    );
+    const pendingByModule: HrDashboardModuleRow[] = pendingByCategoryGroups
+      .map((row) => ({
+        module: categoryNameById.get(row.categoryId) ?? 'Unknown',
+        pending: row._count.id,
+      }))
+      .sort((a, b) => b.pending - a.pending);
+
+    const departmentIds = headcountGroups
+      .map((row) => row.departmentId)
+      .filter((id): id is string => Boolean(id));
+    const departments =
+      departmentIds.length > 0
+        ? await this.prisma.department.findMany({
+            where: {
+              companyId,
+              id: { in: departmentIds },
+              deletedAt: null,
+            },
+            select: { id: true, name: true },
+          })
+        : [];
+    const departmentNameById = new Map(
+      departments.map((department) => [department.id, department.name]),
+    );
+    const headcountByDepartment: HrDashboardDepartmentRow[] = headcountGroups
+      .filter((row) => row.departmentId)
+      .map((row) => ({
+        department:
+          departmentNameById.get(row.departmentId as string) ?? 'Unknown',
+        count: row._count.id,
+      }))
+      .sort((a, b) => b.count - a.count);
+
     const upcomingTravel: HrDashboardUpcomingTravel[] = [
       ...upcomingFlights.map((flight) => ({
         id: flight.id,
@@ -655,7 +791,12 @@ export class DashboardService {
       pendingBusinessTripBookings,
       approvedFlightsThisMonth,
       overtimeSubmissionsThisMonth,
+      contractsExpiringSoon,
+      employeesWithoutPolicy,
       leaveByType,
+      leaveRequestsTrend,
+      pendingByModule,
+      headcountByDepartment,
       recentLeaveRequests: recentLeaveRequests.map((request) => ({
         id: request.id,
         requestNumber: request.requestNumber,
@@ -672,6 +813,51 @@ export class DashboardService {
         totalHours: Number(sheet.totalHours),
       })),
     };
+  }
+
+  /**
+   * Builds a fixed 6-month leave trend series (oldest → newest).
+   */
+  private buildLeaveRequestsTrend(
+    rows: Array<{ createdAt: Date; status: string }>,
+    now: Date,
+  ): HrDashboardTrendRow[] {
+    const buckets: HrDashboardTrendRow[] = [];
+    for (let offset = 5; offset >= 0; offset -= 1) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      buckets.push({
+        month: monthDate.toLocaleString('en-US', {
+          month: 'short',
+          year: 'numeric',
+        }),
+        total: 0,
+        approved: 0,
+        rejected: 0,
+      });
+    }
+
+    const indexByKey = new Map(
+      buckets.map((bucket, index) => {
+        const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+        return [`${date.getFullYear()}-${date.getMonth()}`, index] as const;
+      }),
+    );
+
+    for (const row of rows) {
+      const key = `${row.createdAt.getFullYear()}-${row.createdAt.getMonth()}`;
+      const index = indexByKey.get(key);
+      if (index === undefined) {
+        continue;
+      }
+      buckets[index].total += 1;
+      if (row.status === 'APPROVED') {
+        buckets[index].approved += 1;
+      } else if (row.status === 'REJECTED') {
+        buckets[index].rejected += 1;
+      }
+    }
+
+    return buckets;
   }
 
   /**

@@ -70,6 +70,23 @@ export interface HrDashboardOvertimeRow {
   totalHours: number;
 }
 
+export interface HrDashboardTrendRow {
+  month: string;
+  total: number;
+  approved: number;
+  rejected: number;
+}
+
+export interface HrDashboardModuleRow {
+  module: string;
+  pending: number;
+}
+
+export interface HrDashboardDepartmentRow {
+  department: string;
+  count: number;
+}
+
 /** HR aggregates from GET /dashboard/hr. */
 export interface HrDashboardStats {
   totalEmployees: number;
@@ -80,7 +97,12 @@ export interface HrDashboardStats {
   pendingBusinessTripBookings: number;
   approvedFlightsThisMonth: number;
   overtimeSubmissionsThisMonth: number;
+  contractsExpiringSoon: number;
+  employeesWithoutPolicy: number;
   leaveByType: Record<string, number>;
+  leaveRequestsTrend: HrDashboardTrendRow[];
+  pendingByModule: HrDashboardModuleRow[];
+  headcountByDepartment: HrDashboardDepartmentRow[];
   recentLeaveRequests: HrDashboardRecentLeaveRequest[];
   upcomingTravel: HrDashboardUpcomingTravel[];
   overtimeThisMonth: HrDashboardOvertimeRow[];

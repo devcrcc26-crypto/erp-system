@@ -6,8 +6,10 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   FieldTimeOutlined,
+  FileOutlined,
   SendOutlined,
   TeamOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import {
   Bar,
@@ -15,6 +17,8 @@ import {
   CartesianGrid,
   Cell,
   Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -51,6 +55,15 @@ const LEAVE_TYPE_COLORS: Record<string, string> = {
   EMERGENCY: '#E24B4A',
   COMPASSIONATE: '#BA7517',
 };
+
+const OVERTIME_BAR_COLORS = ['#1D9E75', '#378ADD', '#BA7517'] as const;
+
+const TOOLTIP_STYLE = {
+  background: '#fff',
+  border: '1px solid rgba(0,0,0,0.08)',
+  borderRadius: 8,
+  fontSize: 12,
+} as const;
 
 const ViewAllLink = ({ href }: { href: string }): React.ReactNode => (
   <Link
@@ -100,9 +113,13 @@ export default function HrDashboard({
       fill: LEAVE_TYPE_COLORS[type] ?? tokens.colorGray200,
     }));
 
+  const leaveTrend = hr.leaveRequestsTrend ?? [];
+  const pendingByModule = hr.pendingByModule ?? [];
+  const headcountByDepartment = hr.headcountByDepartment ?? [];
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           label="Total Employees"
           value={hr.totalEmployees}
@@ -120,7 +137,9 @@ export default function HrDashboard({
         <StatCard
           label="Pending Leave"
           value={hr.pendingLeaveRequests}
-          sub={hr.pendingLeaveRequests > 0 ? 'awaiting approval' : 'All caught up'}
+          sub={
+            hr.pendingLeaveRequests > 0 ? 'awaiting approval' : 'All caught up'
+          }
           color={hr.pendingLeaveRequests > 0 ? 'blue' : 'default'}
           icon={<ClockCircleOutlined />}
           href="/hr/leave-requests"
@@ -128,33 +147,226 @@ export default function HrDashboard({
         <StatCard
           label="Pending Overtime"
           value={hr.pendingOvertimeSheets}
-          sub={hr.pendingOvertimeSheets > 0 ? 'awaiting approval' : 'All caught up'}
+          sub={
+            hr.pendingOvertimeSheets > 0 ? 'awaiting approval' : 'All caught up'
+          }
           color={hr.pendingOvertimeSheets > 0 ? 'blue' : 'default'}
           icon={<FieldTimeOutlined />}
           href="/hr/overtime"
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <StatCard
           label="Flights Needing Ticket"
           value={hr.pendingFlightBookings}
-          sub={hr.pendingFlightBookings > 0 ? 'booking required' : 'None pending'}
+          sub={
+            hr.pendingFlightBookings > 0 ? 'booking required' : 'None pending'
+          }
           color={hr.pendingFlightBookings > 0 ? 'amber' : 'default'}
           icon={<SendOutlined />}
           href="/hr/flight-applications"
         />
+        <StatCard
+          label="Contracts Expiring"
+          value={hr.contractsExpiringSoon ?? 0}
+          sub="within 90 days"
+          color={(hr.contractsExpiringSoon ?? 0) > 0 ? 'red' : 'default'}
+          icon={<FileOutlined />}
+          href="/hr/employee-contract"
+        />
+        <StatCard
+          label="No Leave Policy"
+          value={hr.employeesWithoutPolicy ?? 0}
+          sub={
+            (hr.employeesWithoutPolicy ?? 0) > 0
+              ? 'needs attention'
+              : 'All assigned'
+          }
+          color={(hr.employeesWithoutPolicy ?? 0) > 0 ? 'amber' : 'default'}
+          icon={<WarningOutlined />}
+          href="/users"
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <ChartCard
+        title="Leave Requests — Last 6 Months"
+        subtitle="Total, approved, and rejected"
+        icon={<CalendarOutlined />}
+      >
+        {leaveTrend.length === 0 ? (
+          <p className="flex h-[220px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
+            No data
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart
+              data={leaveTrend}
+              margin={{ left: 0, right: 16, top: 8, bottom: 0 }}
+            >
+              <CartesianGrid
+                stroke="#E8E6E0"
+                strokeDasharray="3 3"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 11, fill: '#5F5E5A' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: '#5F5E5A' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Legend
+                iconType="circle"
+                iconSize={8}
+                formatter={(value) => (
+                  <span style={{ fontSize: 11, color: '#5F5E5A' }}>{value}</span>
+                )}
+              />
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke="#1D9E75"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                name="Total"
+              />
+              <Line
+                type="monotone"
+                dataKey="approved"
+                stroke="#378ADD"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                name="Approved"
+              />
+              <Line
+                type="monotone"
+                dataKey="rejected"
+                stroke="#E24B4A"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                name="Rejected"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </ChartCard>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ChartCard
+          title="Pending Approvals by Module"
+          subtitle="Submitted or in review"
+          icon={<ClockCircleOutlined />}
+        >
+          {pendingByModule.length === 0 ? (
+            <p className="flex h-[220px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
+              No pending approvals
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart
+                data={pendingByModule}
+                layout="vertical"
+                margin={{ left: 16, right: 24, top: 8, bottom: 8 }}
+              >
+                <CartesianGrid
+                  stroke="#E8E6E0"
+                  strokeDasharray="3 3"
+                  horizontal={false}
+                />
+                <XAxis
+                  type="number"
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: '#5F5E5A' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="module"
+                  width={110}
+                  tick={{ fontSize: 11, fill: '#5F5E5A' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Bar
+                  dataKey="pending"
+                  fill="#1D9E75"
+                  radius={[0, 6, 6, 0]}
+                  name="Pending"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Headcount by Department"
+          subtitle="Active employees"
+          icon={<TeamOutlined />}
+        >
+          {headcountByDepartment.length === 0 ? (
+            <p className="flex h-[220px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
+              No department data
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart
+                data={headcountByDepartment}
+                margin={{ left: 0, right: 16, top: 8, bottom: 40 }}
+              >
+                <CartesianGrid
+                  stroke="#E8E6E0"
+                  strokeDasharray="3 3"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="department"
+                  tick={{ fontSize: 10, fill: '#5F5E5A' }}
+                  axisLine={false}
+                  tickLine={false}
+                  angle={-35}
+                  textAnchor="end"
+                  interval={0}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: '#5F5E5A' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Bar
+                  dataKey="count"
+                  fill="#378ADD"
+                  radius={[6, 6, 0, 0]}
+                  name="Employees"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
           title="Leave Requests This Month by Type"
           subtitle="Submitted, in review, or approved"
           icon={<CalendarOutlined />}
         >
           {leaveByTypeData.length === 0 ? (
-            <p className="flex h-[200px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
+            <p className="flex h-[220px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
               No data
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
                   data={leaveByTypeData}
@@ -162,20 +374,29 @@ export default function HrDashboard({
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  innerRadius={65}
+                  innerRadius={60}
                   outerRadius={90}
-                  paddingAngle={2}
+                  paddingAngle={3}
+                  strokeWidth={0}
                 >
                   {leaveByTypeData.map((entry) => (
                     <Cell key={entry.name} fill={entry.fill} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  formatter={(value, name) => [
+                    `${String(value)} requests`,
+                    String(name),
+                  ]}
+                />
                 <Legend
                   iconType="circle"
                   iconSize={8}
                   formatter={(value) => (
-                    <span style={{ fontSize: 11, color: '#5F5E5A' }}>{value}</span>
+                    <span style={{ fontSize: 11, color: '#5F5E5A' }}>
+                      {value}
+                    </span>
                   )}
                 />
               </PieChart>
@@ -189,18 +410,28 @@ export default function HrDashboard({
           icon={<FieldTimeOutlined />}
         >
           {hr.overtimeThisMonth.length === 0 ? (
-            <p className="flex h-[200px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
+            <p className="flex h-[220px] items-center justify-center text-sm text-[var(--color-text-tertiary)] m-0">
               No data
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart
                 data={hr.overtimeThisMonth}
                 layout="vertical"
                 margin={{ left: 8, right: 20, top: 8, bottom: 8 }}
               >
-                <CartesianGrid stroke={CHART_GRID_COLOR} strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={CHART_AXIS_STYLE} axisLine={false} tickLine={false} />
+                <CartesianGrid
+                  stroke={CHART_GRID_COLOR}
+                  strokeDasharray="3 3"
+                  horizontal={false}
+                />
+                <XAxis
+                  type="number"
+                  allowDecimals={false}
+                  tick={CHART_AXIS_STYLE}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <YAxis
                   type="category"
                   dataKey="employeeName"
@@ -209,15 +440,28 @@ export default function HrDashboard({
                   axisLine={false}
                   tickLine={false}
                 />
-                <Tooltip cursor={CHART_TOOLTIP_CURSOR} contentStyle={CHART_TOOLTIP_STYLE} />
-                <Bar dataKey="totalHours" fill="#1D9E75" radius={[0, 6, 6, 0]} />
+                <Tooltip
+                  cursor={CHART_TOOLTIP_CURSOR}
+                  contentStyle={CHART_TOOLTIP_STYLE}
+                />
+                <Bar dataKey="totalHours" radius={[0, 6, 6, 0]} name="Hours">
+                  {hr.overtimeThisMonth.map((_, index) => (
+                    <Cell
+                      key={`overtime-${index}`}
+                      fill={
+                        OVERTIME_BAR_COLORS[index] ??
+                        OVERTIME_BAR_COLORS[OVERTIME_BAR_COLORS.length - 1]
+                      }
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
         </ChartCard>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
           title="Recent Leave Requests"
           icon={<CalendarOutlined />}
@@ -253,7 +497,11 @@ export default function HrDashboard({
           )}
         </ChartCard>
 
-        <ChartCard title="Upcoming Travel" subtitle="Next 30 days" icon={<SendOutlined />}>
+        <ChartCard
+          title="Upcoming Travel"
+          subtitle="Next 30 days"
+          icon={<SendOutlined />}
+        >
           {hr.upcomingTravel.length === 0 ? (
             <p className="text-sm text-[var(--color-text-tertiary)] py-4 text-center m-0">
               No upcoming travel
