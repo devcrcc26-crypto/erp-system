@@ -367,7 +367,13 @@
         "listTitle": "公章使用申请",
         "myListTitle": "我的公章使用申请",
         "listDescription": "审核并处理公章使用申请。",
-        "myListDescription": "提交并跟踪您的公章使用审批流程。"
+        "myListDescription": "提交并跟踪您的公章使用审批流程。",
+        "formDescription": "说明用章事由、紧急程度与所需日期，并可上传待盖章文件。",
+        "detailsStepDescription": "填写用章目的、紧急程度与所需日期。",
+        "documentsStepDescription": "可选上传需要加盖公章的文件。",
+        "reviewStepDescription": "确认申请详情与附件后提交。",
+        "requestSingular": "条申请",
+        "requestPlural": "条申请"
       },
       "projectSeal": {
         "new": "新建项目章使用申请",
@@ -1461,6 +1467,7 @@
       "officialSealRequestNotFound": "未找到公章使用申请",
       "officialSealCancelled": "公章使用申请已取消",
       "officialSealIssued": "公章已用印",
+      "officialSealReturned": "该申请已退回修改。",
       "failedToIssueSeal": "用印失败",
       "failedToCancelOfficialSeal": "取消申请失败",
       "failedToSubmitOfficialSeal": "提交公章使用申请失败",

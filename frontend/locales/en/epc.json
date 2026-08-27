@@ -367,7 +367,13 @@
         "listTitle": "Official Seal Requests",
         "myListTitle": "My Official Seal Requests",
         "listDescription": "Review and process official seal requests.",
-        "myListDescription": "Submit and track your official seal requests through the approval workflow."
+        "myListDescription": "Submit and track your official seal requests through the approval workflow.",
+        "formDescription": "Describe why you need the seal, set urgency and date needed, then optionally attach the document to stamp.",
+        "detailsStepDescription": "Enter the purpose, urgency, and when the sealed document is needed.",
+        "documentsStepDescription": "Optionally upload the document that needs the official seal.",
+        "reviewStepDescription": "Confirm the request details and attachments before submitting.",
+        "requestSingular": "request",
+        "requestPlural": "requests"
       },
       "projectSeal": {
         "new": "New Project Seal",
@@ -1461,6 +1467,7 @@
       "officialSealRequestNotFound": "Official seal request not found",
       "officialSealCancelled": "Official seal request cancelled",
       "officialSealIssued": "Official seal issued",
+      "officialSealReturned": "This request was returned for revision.",
       "failedToIssueSeal": "Failed to issue seal",
       "failedToCancelOfficialSeal": "Failed to cancel request",
       "failedToSubmitOfficialSeal": "Failed to submit official seal request",
