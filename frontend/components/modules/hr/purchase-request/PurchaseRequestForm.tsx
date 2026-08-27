@@ -471,7 +471,7 @@ export default function PurchaseRequestForm({
                       name="description"
                       label={t('hr.form.description')}
                     >
-                      <Input maxLength={500} />
+                      <Input.TextArea rows={3} maxLength={500} showCount />
                     </Form.Item>
                     <Form.Item
                       name="quantity"

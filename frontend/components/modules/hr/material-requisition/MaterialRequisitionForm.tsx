@@ -453,7 +453,7 @@ export default function MaterialRequisitionForm({
                     label={t('hr.form.description')}
                     className="sm:col-span-2"
                   >
-                    <Input maxLength={1000} />
+                    <Input.TextArea rows={3} maxLength={1000} showCount />
                   </Form.Item>
                 </div>
               </Form>
