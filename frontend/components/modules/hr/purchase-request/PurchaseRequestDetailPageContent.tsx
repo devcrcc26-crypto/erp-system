@@ -471,7 +471,7 @@ export default function PurchaseRequestDetailPageContent({
         okText={t('hr.buttons.save')}
         confirmLoading={updateItemMutation.isPending}
         width={560}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={itemForm} layout="vertical" style={{ marginTop: 16 }}>
           <div className="grid grid-cols-2 gap-x-4">

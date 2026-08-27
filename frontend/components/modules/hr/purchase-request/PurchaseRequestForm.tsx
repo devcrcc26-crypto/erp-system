@@ -84,9 +84,9 @@ export default function PurchaseRequestForm({
   const [detailsForm] = Form.useForm<Step1Values>();
   const [itemForm] = Form.useForm<ItemFormValues>();
   const vendorName = Form.useWatch('vendorName', detailsForm);
-  const formValues = Form.useWatch([], detailsForm) as Step1Values | undefined;
 
   const [items, setItems] = useState<ClientItem[]>([]);
+  const [detailsSnapshot, setDetailsSnapshot] = useState<Step1Values>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -123,15 +123,23 @@ export default function PurchaseRequestForm({
     detailsForm.resetFields();
     itemForm.resetFields();
     setItems([]);
+    setDetailsSnapshot({});
     setEditingKey(null);
     setShowItemForm(false);
     setFiles([]);
     setFormError(null);
   }
 
+  function captureDetailsSnapshot(): Step1Values {
+    const values = detailsForm.getFieldsValue(true);
+    setDetailsSnapshot(values);
+    return values;
+  }
+
   async function validateDetailsStep(): Promise<boolean> {
     try {
       await detailsForm.validateFields([...DETAILS_FIELDS]);
+      captureDetailsSnapshot();
       return true;
     } catch {
       return false;
@@ -143,6 +151,7 @@ export default function PurchaseRequestForm({
       messageApi.warning(t('hr.validation.addPurchaseItem'));
       return false;
     }
+    captureDetailsSnapshot();
     return true;
   }
 
@@ -204,21 +213,18 @@ export default function PurchaseRequestForm({
   async function handleSubmit(): Promise<void> {
     setFormError(null);
 
-    let values: Step1Values;
-    try {
-      values = await detailsForm.validateFields();
-    } catch {
+    const values = {
+      ...detailsSnapshot,
+      ...detailsForm.getFieldsValue(true),
+    };
+
+    if (!values.title?.trim() || !values.justification?.trim()) {
       messageApi.warning(t('hr.validation.completePurchaseDetails'));
       return;
     }
 
     if (items.length === 0) {
       messageApi.warning(t('hr.validation.addPurchaseItem'));
-      return;
-    }
-
-    if (!values.title?.trim() || !values.justification?.trim()) {
-      messageApi.warning(t('hr.validation.completePurchaseDetails'));
       return;
     }
 
@@ -320,6 +326,10 @@ export default function PurchaseRequestForm({
     },
   ];
 
+  const reviewItemColumns: ColumnsType<ClientItem> = itemColumns.filter(
+    (column) => column.key !== 'actions',
+  );
+
   const steps = useMemo(
     () => [
       {
@@ -331,12 +341,6 @@ export default function PurchaseRequestForm({
             title={t('hr.section.requestDetails')}
             description={t('pages.hr.purchaseRequest.detailsStepDescription')}
           >
-            <Form
-              form={detailsForm}
-              layout="vertical"
-              requiredMark={false}
-              preserve
-            >
               <Form.Item
                 name="title"
                 label={t('hr.form.title')}
@@ -401,7 +405,6 @@ export default function PurchaseRequestForm({
                   </Form.Item>
                 ) : null}
               </div>
-            </Form>
           </FormLayout>
         ),
       },
@@ -439,7 +442,12 @@ export default function PurchaseRequestForm({
                     ? t('hr.form.editItem')
                     : t('hr.form.newItem')}
                 </Typography.Text>
-                <Form form={itemForm} layout="vertical" requiredMark={false}>
+                <Form
+                  form={itemForm}
+                  layout="vertical"
+                  requiredMark={false}
+                  component={false}
+                >
                   <div className="erp-form-grid-2">
                     <Form.Item
                       name="itemName"
@@ -576,7 +584,7 @@ export default function PurchaseRequestForm({
               <div className="erp-form-grid-2">
                 <ReviewItem
                   label={t('hr.form.title')}
-                  value={formValues?.title?.trim() || '—'}
+                  value={detailsSnapshot.title?.trim() || '—'}
                 />
                 <ReviewItem
                   label={t('hr.section.items')}
@@ -585,16 +593,16 @@ export default function PurchaseRequestForm({
                 <ReviewItem
                   label={t('hr.form.requiredByDate')}
                   value={
-                    formValues?.requiredByDate
+                    detailsSnapshot.requiredByDate
                       ? formatDisplayDate(
-                          formValues.requiredByDate.format('YYYY-MM-DD'),
+                          detailsSnapshot.requiredByDate.format('YYYY-MM-DD'),
                         )
                       : '—'
                   }
                 />
                 <ReviewItem
                   label={t('hr.form.vendor')}
-                  value={formValues?.vendorName?.trim() || '—'}
+                  value={detailsSnapshot.vendorName?.trim() || '—'}
                 />
                 <ReviewItem
                   label={t('hr.form.estimatedTotal')}
@@ -602,9 +610,32 @@ export default function PurchaseRequestForm({
                 />
                 <ReviewItem
                   label={t('hr.form.justification')}
-                  value={formValues?.justification?.trim() || '—'}
+                  value={detailsSnapshot.justification?.trim() || '—'}
                 />
               </div>
+            </FormLayout>
+
+            <FormLayout
+              variant="pro"
+              title={t('hr.section.items')}
+              description={t('hr.form.itemCount', { count: items.length })}
+            >
+              <Table<ClientItem>
+                rowKey="_key"
+                size="small"
+                columns={reviewItemColumns}
+                dataSource={items}
+                pagination={false}
+                locale={{ emptyText: t('hr.empty.noItems') }}
+                footer={() => (
+                  <div className="flex justify-end pr-2 text-sm font-medium">
+                    <span style={{ color: tokens.colorTextPrimary }}>
+                      {t('hr.form.estimatedTotal')}:{' '}
+                      <strong>{formatEtbAmount(totalEtb)}</strong>
+                    </span>
+                  </div>
+                )}
+              />
             </FormLayout>
 
             <FormLayout
@@ -634,16 +665,23 @@ export default function PurchaseRequestForm({
       editingKey,
       itemForm,
       itemColumns,
+      reviewItemColumns,
       items,
       totalEtb,
       gmRequired,
-      formValues,
+      detailsSnapshot,
       files,
     ],
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <Form<Step1Values>
+      form={detailsForm}
+      layout="vertical"
+      requiredMark={false}
+      preserve
+      className="flex min-h-0 flex-1 flex-col"
+    >
       {formError ? (
         <Alert
           type="error"
@@ -662,7 +700,7 @@ export default function PurchaseRequestForm({
         contentVariant="sections"
         submitLabel={t('hr.buttons.submitRequest')}
       />
-    </div>
+    </Form>
   );
 }
 

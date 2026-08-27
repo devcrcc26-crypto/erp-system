@@ -361,6 +361,29 @@ export class PurchaseRequestService
         companyId,
       );
 
+    if (resolvedTiers.length === 0) {
+      if (files?.length > 0) {
+        await this.uploadRequestFiles(request, files, companyId, userId);
+      }
+
+      const now = new Date();
+      await this.prisma.purchaseRequest.update({
+        where: { id },
+        data: {
+          status: PurchaseRequestStatus.APPROVED,
+          submittedAt: now,
+          completedAt: now,
+          updatedBy: userId,
+        },
+      });
+
+      this.logger.log(
+        `Purchase request ${request.requestNumber} auto-approved (HR+ submitter, no further tiers)`,
+      );
+
+      return this.getRequest(id, companyId, userId);
+    }
+
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'PURCHASE_REQUEST',

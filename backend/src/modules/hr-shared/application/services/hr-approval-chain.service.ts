@@ -21,14 +21,99 @@ export class HrApprovalChainService {
 
   /**
    * Approval chain for purchase requests.
-   * Includes General Manager when the total ETB value exceeds 10,000.
+   * Employee → Discipline Lead → HR Officer → GM when total ETB > 10,000.
+   * HR Officer / above skip Discipline Lead (and HR self-approval).
+   * Empty array = auto-approve (HR+ with total ≤ 10,000).
    */
   async buildPurchaseApprovalChain(
     submitterId: string,
     totalEtb: number,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
-    return this.buildOrgApprovalChain(submitterId, companyId, totalEtb > 10000);
+    const primaryRole =
+      (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
+
+    const submitter = await this.prisma.user.findFirst({
+      where: activeOnly({ id: submitterId, companyId }),
+      include: {
+        ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
+      },
+    });
+
+    if (!submitter) {
+      throw new BadRequestException('Employee not found');
+    }
+
+    const isHrOrAbove = [
+      'HR Officer',
+      'HR Manager',
+      'General Manager',
+      'Managing Director',
+      'System Administrator',
+    ].includes(primaryRole);
+
+    const isGmOrAbove = [
+      'General Manager',
+      'Managing Director',
+      'System Administrator',
+    ].includes(primaryRole);
+
+    const isDisciplineLeadOrAbove =
+      [
+        'Discipline Lead',
+        'HR Officer',
+        'HR Manager',
+        'General Manager',
+        'Managing Director',
+        'System Administrator',
+      ].includes(primaryRole) || submitter.ledDisciplines.length > 0;
+
+    const tiers: ChainTierDraft[] = [];
+
+    if (!isDisciplineLeadOrAbove) {
+      const disciplineLead = await this.getDisciplineLead(
+        submitterId,
+        companyId,
+      );
+      tiers.push({
+        order: 1,
+        label: 'Discipline Lead',
+        approverId: disciplineLead.id,
+        resolver: 'DISCIPLINE_LEAD',
+      });
+    }
+
+    if (!isHrOrAbove) {
+      const hrOfficer = await this.getHROfficer(companyId);
+      tiers.push({
+        order: tiers.length + 1,
+        label: 'HR Officer',
+        approverId: hrOfficer.id,
+        resolver: 'ROLE:HR Officer',
+      });
+    }
+
+    if (totalEtb > 10000 && !isGmOrAbove) {
+      const gm = await this.getGeneralManager(companyId);
+      tiers.push({
+        order: tiers.length + 1,
+        label: 'General Manager',
+        approverId: gm.id,
+        resolver: 'ROLE:General Manager',
+      });
+    }
+
+    const uniqueTiers = tiers.filter(
+      (tier, index, self) =>
+        index === self.findIndex((t) => t.approverId === tier.approverId),
+    );
+
+    return uniqueTiers.map((tier, index) => ({
+      tierOrder: index + 1,
+      label: tier.label,
+      approverId: tier.approverId,
+      resolver: tier.resolver,
+    }));
   }
 
   /**
