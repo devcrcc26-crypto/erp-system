@@ -60,9 +60,12 @@ export default function CompanyAssetDetailPageContent({
   });
 
   const issueMutation = useIssueCompanyAssetAssignment(assetId);
+  const activeAssignmentId =
+    assignmentsQuery.data?.data?.find((assignment) => !assignment.returnedAt)
+      ?.id ?? '';
   const returnMutation = useReturnCompanyAssetAssignment(
     assetId,
-    assignmentsQuery.data?.data?.[0]?.id ?? '',
+    activeAssignmentId,
   );
 
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -79,56 +82,76 @@ export default function CompanyAssetDetailPageContent({
 
   const asset = detailQuery.data;
   const assignmentHistory = assignmentsQuery.data?.data ?? [];
-  const mostRecentAssignment = assignmentHistory[0];
-  const activeAssignment = mostRecentAssignment?.returnedAt
-    ? undefined
-    : mostRecentAssignment;
-  const returnedAssignment = mostRecentAssignment?.returnedAt
-    ? mostRecentAssignment
-    : undefined;
+  const activeAssignment = assignmentHistory.find(
+    (assignment) => !assignment.returnedAt,
+  );
+  const pastAssignments = assignmentHistory.filter((assignment) =>
+    Boolean(assignment.returnedAt),
+  );
 
   function formatUserName(user?: {
     firstName: string;
     lastName: string;
   } | null): string {
     if (!user) {
-      return '-';
+      return '—';
     }
 
     return `${user.firstName} ${user.lastName}`;
   }
 
-  function renderAssignmentMeta(
+  function renderAssignmentFields(
     assignment: CompanyAssetAssignmentListItem,
+    options?: { includeReturnFields?: boolean },
   ): React.ReactNode {
+    const includeReturnFields =
+      options?.includeReturnFields ?? Boolean(assignment.returnedAt);
+
     return (
-      <div className="grid gap-2 sm:grid-cols-2">
-        <p className="text-sm m-0 text-slate-600">
-          {t('hr.assetLabels.assignedAt')}: {formatProjectDate(assignment.assignedAt)}
-        </p>
-        <p className="text-sm m-0 text-slate-600">
-          {t('hr.assetLabels.issuedBy')}: {formatUserName(assignment.issuedBy)}
-        </p>
-        {assignment.notes ? (
-          <p className="text-sm m-0 whitespace-pre-wrap sm:col-span-2">
-            {t('hr.assetLabels.notes')}: {assignment.notes}
-          </p>
-        ) : null}
-        {assignment.returnedAt ? (
-          <>
-            <p className="text-sm m-0 text-slate-600">
-              {t('hr.assetLabels.returnedAt')}: {formatProjectDate(assignment.returnedAt)}
-            </p>
-            <p className="text-sm m-0 text-slate-600">
-              {t('hr.assetLabels.returnedBy')}: {formatUserName(assignment.returnedBy)}
-            </p>
-            <p className="text-sm m-0 text-slate-600">
-              {t('hr.assetLabels.returnedTo')}: {assignment.returnedTo ?? '-'}
-            </p>
-            {assignment.returnedNotes ? (
-              <p className="text-sm m-0 whitespace-pre-wrap sm:col-span-2">
-                {t('hr.assetLabels.returnedNotes')}: {assignment.returnedNotes}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <MetaItem label={t('hr.assetLabels.assignedTo')}>
+          <div>
+            <p className="m-0 font-medium">{formatUserName(assignment.employee)}</p>
+            {assignment.employee.email ? (
+              <p
+                className="m-0 mt-0.5 text-xs"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                {assignment.employee.email}
               </p>
+            ) : null}
+          </div>
+        </MetaItem>
+        <MetaItem label={t('hr.assetLabels.assignedAt')}>
+          {formatProjectDate(assignment.assignedAt)}
+        </MetaItem>
+        <MetaItem label={t('hr.assetLabels.issuedBy')}>
+          {formatUserName(assignment.issuedBy)}
+        </MetaItem>
+        {assignment.notes ? (
+          <MetaItem label={t('hr.assetLabels.notes')}>
+            <p className="m-0 whitespace-pre-wrap leading-relaxed">
+              {assignment.notes}
+            </p>
+          </MetaItem>
+        ) : null}
+        {includeReturnFields ? (
+          <>
+            <MetaItem label={t('hr.assetLabels.returnedAt')}>
+              {formatProjectDate(assignment.returnedAt ?? null)}
+            </MetaItem>
+            <MetaItem label={t('hr.assetLabels.returnedBy')}>
+              {formatUserName(assignment.returnedBy)}
+            </MetaItem>
+            <MetaItem label={t('hr.assetLabels.returnedTo')}>
+              {assignment.returnedTo?.trim() || '—'}
+            </MetaItem>
+            {assignment.returnedNotes ? (
+              <MetaItem label={t('hr.assetLabels.returnedNotes')}>
+                <p className="m-0 whitespace-pre-wrap leading-relaxed">
+                  {assignment.returnedNotes}
+                </p>
+              </MetaItem>
             ) : null}
           </>
         ) : null}
@@ -342,10 +365,59 @@ export default function CompanyAssetDetailPageContent({
         />
 
         <SectionCard
+          title={t('hr.assetSection.currentAssignment')}
+          bodyClassName="px-3 py-4 sm:px-5"
+          action={
+            activeAssignment ? (
+              <Button
+                type="primary"
+                onClick={() => setReturnModalOpen(true)}
+                style={{ borderRadius: 0 }}
+              >
+                {t('hr.assetButtons.returnAsset')}
+              </Button>
+            ) : asset.status === 'AVAILABLE' ? (
+              <Button
+                type="primary"
+                onClick={() => setIssueModalOpen(true)}
+                style={{ borderRadius: 0 }}
+              >
+                {t('hr.assetButtons.issueAsset')}
+              </Button>
+            ) : undefined
+          }
+        >
+          {activeAssignment ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge
+                  label={t('hr.assetStatus.IN_USE')}
+                  variant={assetStatusVariant('IN_USE')}
+                />
+              </div>
+              {renderAssignmentFields(activeAssignment, {
+                includeReturnFields: false,
+              })}
+            </div>
+          ) : (
+            <Alert
+              type="info"
+              showIcon
+              title={t('hr.assetMessages.noActiveAssignment')}
+              description={
+                asset.status === 'AVAILABLE'
+                  ? t('hr.assetMessages.issueWhenAvailable')
+                  : t('hr.assetMessages.cannotIssueWhileUnavailable')
+              }
+            />
+          )}
+        </SectionCard>
+
+        <SectionCard
           title={t('hr.assetSection.assetDetails')}
           bodyClassName="px-3 py-4 sm:px-5"
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <MetaItem label={t('hr.assetLabels.serialNumber')}>
               {asset.serialNumber}
             </MetaItem>
@@ -354,6 +426,9 @@ export default function CompanyAssetDetailPageContent({
                 label={formatAssetStatus(asset.status, t)}
                 variant={assetStatusVariant(asset.status)}
               />
+            </MetaItem>
+            <MetaItem label={t('hr.assetLabels.type')}>
+              {asset.type}
             </MetaItem>
             <MetaItem label={t('hr.assetLabels.brand')}>
               {asset.brand}
@@ -367,11 +442,11 @@ export default function CompanyAssetDetailPageContent({
             <MetaItem label={t('hr.assetLabels.color')}>
               {asset.color}
             </MetaItem>
-            <MetaItem label={t('hr.assetLabels.type')}>
-              {asset.type}
-            </MetaItem>
             <MetaItem label={t('hr.assetLabels.createdAt')}>
               {formatProjectDate(asset.createdAt)}
+            </MetaItem>
+            <MetaItem label={t('hr.assetLabels.updatedAt')}>
+              {formatProjectDate(asset.updatedAt)}
             </MetaItem>
             {asset.description ? (
               <MetaItem label={t('hr.assetLabels.description')}>
@@ -382,104 +457,47 @@ export default function CompanyAssetDetailPageContent({
             ) : null}
           </div>
         </SectionCard>
-      </div>
 
-      <SectionCard
-        title={t('hr.assetSection.assetAssignments')}
-        bodyClassName="px-3 py-4 sm:px-5"
-      >
-        {activeAssignment ? (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">
-                {activeAssignment.employee.firstName}{' '}
-                {activeAssignment.employee.lastName}
-              </span>
-              <StatusBadge
-                label={t('hr.assetStatus.IN_USE')}
-                variant={assetStatusVariant('IN_USE')}
-              />
-            </div>
-            {renderAssignmentMeta(activeAssignment)}
-
-            <div className="flex justify-end">
-              <Button onClick={() => setReturnModalOpen(true)} type="primary">
-                {t('hr.assetButtons.returnAsset')}
-              </Button>
-            </div>
-          </div>
-        ) : returnedAssignment ? (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">
-                {returnedAssignment.employee.firstName}{' '}
-                {returnedAssignment.employee.lastName}
-              </span>
-              <StatusBadge
-                label={t('hr.assetStatus.AVAILABLE')}
-                variant={assetStatusVariant('AVAILABLE')}
-              />
-            </div>
-            {renderAssignmentMeta(returnedAssignment)}
-            <div className="flex justify-end">
-              {asset.status === 'AVAILABLE' ? (
-                <Button type="primary" onClick={() => setIssueModalOpen(true)}>
-                  {t('hr.assetButtons.issueAsset')}
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        ) : (
-          <Alert
-            type="info"
-            showIcon
-            title={t('hr.assetMessages.noActiveAssignment')}
-            action={
-              asset.status === 'AVAILABLE' ? (
-                <Button type="primary" onClick={() => setIssueModalOpen(true)}>
-                  {t('hr.assetButtons.issueAsset')}
-                </Button>
-              ) : undefined
-            }
-          />
-        )}
-
-        {assignmentHistory.length > 0 ? (
-          <div className="mt-5 border-t border-slate-200 pt-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-700">
-              {t('hr.assetSection.assignmentHistory')}
-            </h3>
+        <SectionCard
+          title={t('hr.assetSection.assignmentHistory')}
+          bodyClassName="px-3 py-4 sm:px-5"
+        >
+          {pastAssignments.length > 0 ? (
             <div className="flex flex-col gap-3">
-              {assignmentHistory.map((assignment) => {
-                const isReturned = Boolean(assignment.returnedAt);
-                return (
-                  <div
-                    key={assignment.id}
-                    className="rounded-lg border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <span className="font-medium">
-                        {assignment.employee.firstName} {assignment.employee.lastName}
-                      </span>
-                      <StatusBadge
-                        label={t(
-                          isReturned
-                            ? 'hr.assetStatus.AVAILABLE'
-                            : 'hr.assetStatus.IN_USE',
-                        )}
-                        variant={assetStatusVariant(
-                          isReturned ? 'AVAILABLE' : 'IN_USE',
-                        )}
-                      />
-                    </div>
-                    {renderAssignmentMeta(assignment)}
+              {pastAssignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className="rounded-none border px-3 py-4 sm:px-4"
+                  style={{ borderColor: tokens.colorBorder }}
+                >
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span
+                      className="text-sm font-semibold"
+                      style={{ color: tokens.colorTextPrimary }}
+                    >
+                      {formatUserName(assignment.employee)}
+                    </span>
+                    <StatusBadge
+                      label={t('hr.assetStatus.AVAILABLE')}
+                      variant={assetStatusVariant('AVAILABLE')}
+                    />
                   </div>
-                );
-              })}
+                  {renderAssignmentFields(assignment, {
+                    includeReturnFields: true,
+                  })}
+                </div>
+              ))}
             </div>
-          </div>
-        ) : null}
-      </SectionCard>
+          ) : (
+            <p
+              className="m-0 text-sm"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              {t('hr.assetEmpty.noAssignmentHistory')}
+            </p>
+          )}
+        </SectionCard>
+      </div>
 
       <ConfirmDialog
         open={statusModalOpen}
@@ -567,17 +585,19 @@ export default function CompanyAssetDetailPageContent({
         title={t('hr.assetDialog.returnTitle')}
         description={t('hr.assetDialog.returnDesc')}
         confirmLabel={t('hr.assetButtons.returnAsset')}
+        cancelLabel={t('hr.assetButtons.cancel')}
         confirmLoading={returnMutation.isPending}
         onConfirm={() => void handleReturnSubmit()}
         onCancel={() => setReturnModalOpen(false)}
       >
-        <div className="flex flex-col gap-3">
+        <div className="mt-3 flex flex-col gap-3">
           <label className="text-sm font-medium">{t('hr.assetLabels.returnedTo')}</label>
           <Input
             maxLength={2000}
             value={returnTo}
             onChange={(e) => setReturnTo(e.target.value)}
             placeholder={t('hr.assetPlaceholder.returnedTo')}
+            style={{ borderRadius: 0 }}
           />
           <label className="text-sm font-medium">{t('hr.assetLabels.returnedNotes')}</label>
           <Input.TextArea
@@ -586,6 +606,7 @@ export default function CompanyAssetDetailPageContent({
             showCount
             value={returnNotes}
             onChange={(e) => setReturnNotes(e.target.value)}
+            style={{ borderRadius: 0 }}
           />
         </div>
       </ConfirmDialog>

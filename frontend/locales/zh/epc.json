@@ -1382,7 +1382,9 @@
       "failedToIssueAssignment": "发放资产失败",
       "failedToReturnAssignment": "归还资产失败",
       "failedToLoad": "加载公司资产失败",
-      "photoOptionalHint": "可选 — 上传清晰的资产照片（JPG、PNG 或 WEBP）。"
+      "photoOptionalHint": "可选 — 上传清晰的资产照片（JPG、PNG 或 WEBP）。",
+      "issueWhenAvailable": "资产可用时，可发放给员工。",
+      "cannotIssueWhileUnavailable": "请先将资产状态改为可用，再进行发放。"
     },
     "assetValidation": {
       "serialNumberRequired": "请填写序列号",
@@ -1403,11 +1405,13 @@
       "returnDesc": "将资产标记为已归还。"
     },
     "assetEmpty": {
-      "noAssets": "暂无资产"
+      "noAssets": "暂无资产",
+      "noAssignmentHistory": "暂无历史分配记录。"
     },
     "assetSection": {
       "assetDetails": "资产详情",
       "assetAssignments": "资产分配",
+      "currentAssignment": "当前分配",
       "assignmentHistory": "分配历史"
     },
     "status": {

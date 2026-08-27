@@ -1382,7 +1382,9 @@
       "failedToIssueAssignment": "Failed to issue asset assignment",
       "failedToReturnAssignment": "Failed to return asset assignment",
       "failedToLoad": "Failed to load company assets",
-      "photoOptionalHint": "Optional — upload a clear photo of the asset (JPG, PNG, or WEBP)."
+      "photoOptionalHint": "Optional — upload a clear photo of the asset (JPG, PNG, or WEBP).",
+      "issueWhenAvailable": "Issue this asset to an employee when ready.",
+      "cannotIssueWhileUnavailable": "Change the asset status to Available before issuing it."
     },
     "assetValidation": {
       "serialNumberRequired": "Serial number is required",
@@ -1403,11 +1405,13 @@
       "returnDesc": "Mark the asset as returned."
     },
     "assetEmpty": {
-      "noAssets": "No assets found"
+      "noAssets": "No assets found",
+      "noAssignmentHistory": "No previous assignments yet."
     },
     "assetSection": {
       "assetDetails": "Asset Details",
       "assetAssignments": "Asset Assignment",
+      "currentAssignment": "Current Assignment",
       "assignmentHistory": "Assignment History"
     },
     "status": {

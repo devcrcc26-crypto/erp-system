@@ -169,12 +169,7 @@ export function useIssueCompanyAssetAssignment(assetId: string) {
         queryKey: companyAssetKeys.detail(assetId),
       });
       void queryClient.invalidateQueries({
-        // Must match component's params to force a refetch.
-        queryKey: [
-          ...companyAssetKeys.detail(assetId),
-          'assignments',
-          { page: 1, limit: 1, includeReturned: true },
-        ],
+        queryKey: [...companyAssetKeys.detail(assetId), 'assignments'],
       });
     },
   });
@@ -199,12 +194,7 @@ export function useReturnCompanyAssetAssignment(
         queryKey: companyAssetKeys.detail(assetId),
       });
       void queryClient.invalidateQueries({
-        // Must match component's params to force a refetch.
-        queryKey: [
-          ...companyAssetKeys.detail(assetId),
-          'assignments',
-          { page: 1, limit: 1, includeReturned: true },
-        ],
+        queryKey: [...companyAssetKeys.detail(assetId), 'assignments'],
       });
     },
   });
