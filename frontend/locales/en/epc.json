@@ -1349,6 +1349,7 @@
       "selectEmployee": "Search and select an employee",
       "issueNotes": "Optional notes for this assignment…",
       "returnedTo": "e.g. Main Store",
+      "returnNotes": "Optional notes about the return…",
       "filterStatus": "Filter by status",
       "filterType": "Filter by type"
     },
@@ -1399,10 +1400,13 @@
       "deleteTitle": "Delete asset?",
       "deleteDesc": "This will permanently delete this asset record. This action cannot be undone.",
       "statusTitle": "Change asset status",
+      "statusDesc": "Update the operational status of this asset.",
+      "statusSelectLabel": "New status",
+      "statusInUseHint": "In Use is set automatically when you issue the asset to an employee.",
       "issueTitle": "Issue asset",
       "issueDesc": "Assign this asset to an active employee.",
-      "returnTitle": "Return asset from assignment",
-      "returnDesc": "Mark the asset as returned."
+      "returnTitle": "Return asset",
+      "returnDesc": "Mark this asset as returned and set it back to Available."
     },
     "assetEmpty": {
       "noAssets": "No assets found",

@@ -10,6 +10,20 @@ export const ASSET_STATUS_OPTIONS: Array<{ value: AssetStatus; label: string }> 
   { value: 'DISPOSED', label: 'Disposed' },
 ];
 
+/** Statuses that can be set manually via Change Status (not IN_USE). */
+export const ASSET_MANUAL_STATUS_OPTIONS: Array<{
+  value: Exclude<AssetStatus, 'IN_USE'>;
+  label: string;
+}> = [
+  { value: 'AVAILABLE', label: 'Available' },
+  { value: 'REPAIRING', label: 'Repairing' },
+  { value: 'DISPOSED', label: 'Disposed' },
+];
+
+export function canChangeAssetStatusManually(status: AssetStatus): boolean {
+  return status === 'AVAILABLE' || status === 'REPAIRING' || status === 'DISPOSED';
+}
+
 export function formatAssetStatus(
   status: AssetStatus | string,
   t?: TFn,

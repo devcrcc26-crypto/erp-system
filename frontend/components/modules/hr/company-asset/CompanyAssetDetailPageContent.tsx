@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Alert, Button, Form, Input, Select, Skeleton } from 'antd';
+import { useMemo, useState } from 'react';
+import { Alert, Button, Form, Input, Radio, Skeleton } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -28,8 +28,9 @@ import {
   useUpdateCompanyAssetStatus,
 } from '@/lib/query/company-asset';
 import {
-  ASSET_STATUS_OPTIONS,
+  ASSET_MANUAL_STATUS_OPTIONS,
   assetStatusVariant,
+  canChangeAssetStatusManually,
   formatAssetStatus,
 } from '@/lib/utils/company-asset-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -39,6 +40,11 @@ import { tokens } from '@/lib/theme/tokens';
 interface IssueAssetFormValues {
   employeeId?: string;
   notes?: string;
+}
+
+interface ReturnAssetFormValues {
+  returnedTo?: string;
+  returnedNotes?: string;
 }
 
 export default function CompanyAssetDetailPageContent({
@@ -77,8 +83,7 @@ export default function CompanyAssetDetailPageContent({
   const issueEmployeeId = Form.useWatch('employeeId', issueForm);
 
   const [returnModalOpen, setReturnModalOpen] = useState(false);
-  const [returnTo, setReturnTo] = useState<string>('');
-  const [returnNotes, setReturnNotes] = useState<string>('');
+  const [returnForm] = Form.useForm<ReturnAssetFormValues>();
 
   const asset = detailQuery.data;
   const assignmentHistory = assignmentsQuery.data?.data ?? [];
@@ -87,6 +92,17 @@ export default function CompanyAssetDetailPageContent({
   );
   const pastAssignments = assignmentHistory.filter((assignment) =>
     Boolean(assignment.returnedAt),
+  );
+  const canChangeStatus = asset
+    ? canChangeAssetStatusManually(asset.status)
+    : false;
+  const manualStatusOptions = useMemo(
+    () =>
+      ASSET_MANUAL_STATUS_OPTIONS.map((option) => ({
+        value: option.value,
+        label: formatAssetStatus(option.value, t),
+      })),
+    [t],
   );
 
   function formatUserName(user?: {
@@ -194,20 +210,30 @@ export default function CompanyAssetDetailPageContent({
     }
   }
 
+  function closeReturnModal(): void {
+    returnForm.resetFields();
+    setReturnModalOpen(false);
+  }
+
   async function handleReturnSubmit(): Promise<void> {
     if (!activeAssignment) return;
+
+    let values: ReturnAssetFormValues;
+    try {
+      values = await returnForm.validateFields();
+    } catch {
+      return;
+    }
+
     try {
       await returnMutation.mutateAsync({
-        returnedTo: returnTo.trim() || undefined,
-        returnedNotes: returnNotes.trim() || undefined,
+        returnedTo: values.returnedTo?.trim() || undefined,
+        returnedNotes: values.returnedNotes?.trim() || undefined,
       });
       messageApi.success(t('hr.assetMessages.assignmentReturned'));
-      // Make UI update immediately (don't rely only on query invalidation).
       await assignmentsQuery.refetch();
       await detailQuery.refetch();
-      setReturnModalOpen(false);
-      setReturnTo('');
-      setReturnNotes('');
+      closeReturnModal();
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -218,12 +244,19 @@ export default function CompanyAssetDetailPageContent({
   }
 
   async function handleStatusChange(): Promise<void> {
-    if (!pendingStatus) return;
+    if (!pendingStatus || pendingStatus === 'IN_USE') {
+      return;
+    }
+    if (pendingStatus === asset?.status) {
+      setStatusModalOpen(false);
+      return;
+    }
     try {
       await statusMutation.mutateAsync({ status: pendingStatus });
       messageApi.success(t('hr.assetMessages.statusUpdated'));
       setStatusModalOpen(false);
       setPendingStatus(undefined);
+      await detailQuery.refetch();
     } catch (error: unknown) {
       notifyApiError(error, t('hr.assetMessages.failedToUpdateStatus'), messageApi);
     }
@@ -285,15 +318,17 @@ export default function CompanyAssetDetailPageContent({
           {t('hr.assetButtons.back')}
         </Button>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button
-            onClick={() => {
-              setPendingStatus(asset.status);
-              setStatusModalOpen(true);
-            }}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.assetButtons.changeStatus')}
-          </Button>
+          {canChangeStatus ? (
+            <Button
+              onClick={() => {
+                setPendingStatus(asset.status);
+                setStatusModalOpen(true);
+              }}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.assetButtons.changeStatus')}
+            </Button>
+          ) : null}
           <Button
             onClick={() => router.push(`/hr/company-asset/${assetId}/edit`)}
             style={{ borderRadius: 0 }}
@@ -502,21 +537,86 @@ export default function CompanyAssetDetailPageContent({
       <ConfirmDialog
         open={statusModalOpen}
         title={t('hr.assetDialog.statusTitle')}
-        description=""
+        description={
+          asset
+            ? `${t('hr.assetDialog.statusDesc')} (${asset.serialNumber} · ${asset.brand} ${asset.model})`
+            : t('hr.assetDialog.statusDesc')
+        }
         confirmLabel={t('hr.assetButtons.save')}
+        cancelLabel={t('hr.assetButtons.cancel')}
         confirmLoading={statusMutation.isPending}
+        confirmDisabled={
+          !pendingStatus ||
+          pendingStatus === 'IN_USE' ||
+          pendingStatus === asset.status
+        }
         onConfirm={() => void handleStatusChange()}
         onCancel={() => {
           setStatusModalOpen(false);
           setPendingStatus(undefined);
         }}
       >
-        <Select
-          style={{ width: '100%', marginTop: 8 }}
-          value={pendingStatus}
-          onChange={setPendingStatus}
-          options={ASSET_STATUS_OPTIONS}
-        />
+        <div className="mt-3 flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="text-xs font-medium uppercase tracking-wide"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              {t('hr.assetLabels.status')}
+            </span>
+            <StatusBadge
+              label={formatAssetStatus(asset.status, t)}
+              variant={assetStatusVariant(asset.status)}
+            />
+          </div>
+
+          <Form layout="vertical" requiredMark={false}>
+            <Form.Item
+              label={t('hr.assetDialog.statusSelectLabel')}
+              className="mb-0"
+            >
+              <Radio.Group
+                value={pendingStatus}
+                onChange={(event) =>
+                  setPendingStatus(event.target.value as AssetStatus)
+                }
+                disabled={statusMutation.isPending}
+                className="flex w-full flex-col gap-2"
+              >
+                {manualStatusOptions.map((option) => (
+                  <Radio
+                    key={option.value}
+                    value={option.value}
+                    className="m-0 rounded-none border px-3 py-2.5"
+                    style={{
+                      borderColor:
+                        pendingStatus === option.value
+                          ? tokens.colorPrimary
+                          : tokens.colorBorder,
+                      background:
+                        pendingStatus === option.value
+                          ? tokens.colorPrimaryLight
+                          : tokens.colorCardBg,
+                    }}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <StatusBadge
+                        label={option.label}
+                        variant={assetStatusVariant(option.value)}
+                      />
+                    </span>
+                  </Radio>
+                ))}
+              </Radio.Group>
+            </Form.Item>
+          </Form>
+
+          <Alert
+            type="info"
+            showIcon
+            title={t('hr.assetDialog.statusInUseHint')}
+          />
+        </div>
       </ConfirmDialog>
 
       <ConfirmDialog
@@ -583,31 +683,87 @@ export default function CompanyAssetDetailPageContent({
       <ConfirmDialog
         open={returnModalOpen}
         title={t('hr.assetDialog.returnTitle')}
-        description={t('hr.assetDialog.returnDesc')}
+        description={
+          asset
+            ? `${t('hr.assetDialog.returnDesc')} (${asset.serialNumber} · ${asset.brand} ${asset.model})`
+            : t('hr.assetDialog.returnDesc')
+        }
         confirmLabel={t('hr.assetButtons.returnAsset')}
         cancelLabel={t('hr.assetButtons.cancel')}
         confirmLoading={returnMutation.isPending}
+        confirmDisabled={!activeAssignment}
         onConfirm={() => void handleReturnSubmit()}
-        onCancel={() => setReturnModalOpen(false)}
+        onCancel={closeReturnModal}
       >
-        <div className="mt-3 flex flex-col gap-3">
-          <label className="text-sm font-medium">{t('hr.assetLabels.returnedTo')}</label>
-          <Input
-            maxLength={2000}
-            value={returnTo}
-            onChange={(e) => setReturnTo(e.target.value)}
-            placeholder={t('hr.assetPlaceholder.returnedTo')}
-            style={{ borderRadius: 0 }}
-          />
-          <label className="text-sm font-medium">{t('hr.assetLabels.returnedNotes')}</label>
-          <Input.TextArea
-            rows={3}
-            maxLength={2000}
-            showCount
-            value={returnNotes}
-            onChange={(e) => setReturnNotes(e.target.value)}
-            style={{ borderRadius: 0 }}
-          />
+        <div className="mt-3 flex flex-col gap-4">
+          {activeAssignment ? (
+            <div
+              className="rounded-none border px-3 py-3"
+              style={{
+                borderColor: tokens.colorBorder,
+                background: tokens.colorSurfaceSecondary,
+              }}
+            >
+              <p
+                className="mb-1 text-xs font-medium uppercase tracking-wide"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                {t('hr.assetLabels.assignedTo')}
+              </p>
+              <p
+                className="m-0 text-sm font-semibold"
+                style={{ color: tokens.colorTextPrimary }}
+              >
+                {formatUserName(activeAssignment.employee)}
+              </p>
+              {activeAssignment.employee.email ? (
+                <p
+                  className="m-0 mt-0.5 text-xs"
+                  style={{ color: tokens.colorTextTertiary }}
+                >
+                  {activeAssignment.employee.email}
+                </p>
+              ) : null}
+              <p
+                className="m-0 mt-2 text-xs"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {t('hr.assetLabels.assignedAt')}:{' '}
+                {formatProjectDate(activeAssignment.assignedAt)}
+              </p>
+            </div>
+          ) : null}
+
+          <Form
+            form={returnForm}
+            layout="vertical"
+            requiredMark={false}
+            disabled={returnMutation.isPending}
+          >
+            <Form.Item
+              name="returnedTo"
+              label={t('hr.assetLabels.returnedTo')}
+            >
+              <Input
+                maxLength={200}
+                placeholder={t('hr.assetPlaceholder.returnedTo')}
+                style={{ borderRadius: 0 }}
+              />
+            </Form.Item>
+            <Form.Item
+              name="returnedNotes"
+              label={t('hr.assetLabels.returnedNotes')}
+              className="mb-0"
+            >
+              <Input.TextArea
+                rows={3}
+                maxLength={2000}
+                showCount
+                placeholder={t('hr.assetPlaceholder.returnNotes')}
+                style={{ borderRadius: 0 }}
+              />
+            </Form.Item>
+          </Form>
         </div>
       </ConfirmDialog>
     </div>

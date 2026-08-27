@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { AssetStatus, Prisma } from "@prisma/client";
 import { FolderContextType } from "@prisma/client";
 import { randomUUID } from "node:crypto";
@@ -245,7 +245,7 @@ export class CompanyAssetService {
     });
   }
 
-  /** Updates asset status. */
+  /** Updates asset status. IN_USE is set only via issue assignment. */
   async updateAssetStatus(
     id: string,
     dto: UpdateCompanyAssetStatusDto,
@@ -258,6 +258,28 @@ export class CompanyAssetService {
 
     if (!asset) {
       throw new NotFoundException("Asset not found");
+    }
+
+    if (asset.status === AssetStatus.IN_USE) {
+      throw new ConflictException(
+        "Return the asset assignment before changing status",
+      );
+    }
+
+    if (dto.status === AssetStatus.IN_USE) {
+      throw new BadRequestException(
+        "In Use status is set automatically when the asset is issued",
+      );
+    }
+
+    const allowed: AssetStatus[] = [
+      AssetStatus.AVAILABLE,
+      AssetStatus.REPAIRING,
+      AssetStatus.DISPOSED,
+    ];
+
+    if (!allowed.includes(dto.status)) {
+      throw new BadRequestException("Invalid asset status");
     }
 
     return this.prisma.companyAsset.update({
@@ -416,6 +438,12 @@ export class CompanyAssetService {
 
     if (!asset) {
       throw new NotFoundException("Asset not found");
+    }
+
+    if (asset.status !== AssetStatus.AVAILABLE) {
+      throw new ConflictException(
+        "Only available assets can be issued to an employee",
+      );
     }
 
     const existingActive = await this.prisma.assetAssignment.findFirst({
