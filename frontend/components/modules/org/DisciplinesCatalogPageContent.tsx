@@ -46,6 +46,7 @@ import {
 import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
+import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -268,23 +269,10 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1
-          className="m-0 text-xl font-semibold tracking-tight"
-          style={{
-            color: tokens.colorTextPrimary,
-            fontFamily: tokens.fontFamily,
-          }}
-        >
-          {t('pages.disciplinesCatalog.title')}
-        </h1>
-        <p
-          className="mb-0 mt-1 text-sm"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          {t('pages.disciplinesCatalog.description')}
-        </p>
-      </div>
+      <SectionPageHeader
+        title={t('pages.disciplinesCatalog.title')}
+        description={t('pages.disciplinesCatalog.description')}
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <button

@@ -836,12 +836,11 @@ export class DashboardService {
       });
     }
 
-    const indexByKey = new Map(
-      buckets.map((bucket, index) => {
-        const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
-        return [`${date.getFullYear()}-${date.getMonth()}`, index] as const;
-      }),
-    );
+    const indexByKey = new Map<string, number>();
+    for (let index = 0; index < buckets.length; index += 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      indexByKey.set(`${date.getFullYear()}-${date.getMonth()}`, index);
+    }
 
     for (const row of rows) {
       const key = `${row.createdAt.getFullYear()}-${row.createdAt.getMonth()}`;

@@ -6,7 +6,7 @@ import AddEmployeeForm from '@/components/modules/users/add-employee/AddEmployee
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
-import { tokens } from '@/lib/theme/tokens';
+import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 export default function AddEmployeeFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -26,32 +26,19 @@ export default function AddEmployeeFormContent(): React.ReactNode {
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1
-            className="m-0 text-xl font-semibold tracking-tight"
-            style={{
-              color: tokens.colorTextPrimary,
-              fontFamily: tokens.fontFamily,
-            }}
+      <SectionPageHeader
+        title={t('users.addEmployee')}
+        description={t('users.form.addEmployeeDescription')}
+        actions={
+          <Button
+            onClick={() => router.push('/users')}
+            className="shrink-0"
+            style={{ borderRadius: 0 }}
           >
-            {t('users.addEmployee')}
-          </h1>
-          <p
-            className="mb-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {t('users.form.addEmployeeDescription')}
-          </p>
-        </div>
-        <Button
-          onClick={() => router.push('/users')}
-          className="shrink-0"
-          style={{ borderRadius: 0 }}
-        >
-          {t('users.form.cancel')}
-        </Button>
-      </div>
+            {t('users.form.cancel')}
+          </Button>
+        }
+      />
       <AddEmployeeForm onSuccess={handleSuccess} />
     </div>
   );

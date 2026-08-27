@@ -17,7 +17,7 @@ import {
   useUpdateLeavePolicy,
 } from '@/lib/query/leave-policy';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { tokens } from '@/lib/theme/tokens';
+import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 interface LeavePolicyFormPageContentProps {
   policyId?: string;
@@ -94,34 +94,21 @@ export default function LeavePolicyFormPageContent({
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1
-            className="m-0 text-xl font-semibold tracking-tight"
-            style={{
-              color: tokens.colorTextPrimary,
-              fontFamily: tokens.fontFamily,
-            }}
+      <SectionPageHeader
+        title={
+          isEdit ? t('pages.hr.leavePolicy.edit') : t('hr.leavePolicy.new')
+        }
+        description={t('hr.leavePolicy.formDescription')}
+        actions={
+          <Button
+            onClick={() => router.push('/hr/leave-policy')}
+            className="shrink-0"
+            style={{ borderRadius: 0 }}
           >
-            {isEdit
-              ? t('pages.hr.leavePolicy.edit')
-              : t('hr.leavePolicy.new')}
-          </h1>
-          <p
-            className="mb-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {t('hr.leavePolicy.formDescription')}
-          </p>
-        </div>
-        <Button
-          onClick={() => router.push('/hr/leave-policy')}
-          className="shrink-0"
-          style={{ borderRadius: 0 }}
-        >
-          {t('common.cancel')}
-        </Button>
-      </div>
+            {t('common.cancel')}
+          </Button>
+        }
+      />
       <LeavePolicyForm
         policy={policyQuery.data}
         isSubmitting={saving}

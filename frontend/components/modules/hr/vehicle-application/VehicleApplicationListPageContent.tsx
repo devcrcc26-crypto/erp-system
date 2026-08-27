@@ -45,6 +45,7 @@ import {
 } from '@/lib/utils/vehicle-application-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 const { RangePicker } = DatePicker;
 
@@ -301,17 +302,10 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div>
-        <h1
-          className="m-0 text-xl font-semibold tracking-tight"
-          style={{ color: tokens.colorTextPrimary, fontFamily: tokens.fontFamily }}
-        >
-          {pageTitle}
-        </h1>
-        <p className="mb-0 mt-1 text-sm" style={{ color: tokens.colorTextSecondary }}>
-          {pageDescription}
-        </p>
-      </div>
+      <SectionPageHeader
+        title={pageTitle}
+        description={pageDescription}
+      />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard

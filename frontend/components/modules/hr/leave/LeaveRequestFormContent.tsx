@@ -33,6 +33,7 @@ import {
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { tokens } from '@/lib/theme/tokens';
+import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 interface LeaveFormValues {
   leaveType: LeaveType;
@@ -191,32 +192,19 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1
-            className="m-0 text-xl font-semibold tracking-tight"
-            style={{
-              color: tokens.colorTextPrimary,
-              fontFamily: tokens.fontFamily,
-            }}
+      <SectionPageHeader
+        title={t('pages.hr.leave.new')}
+        description={t('pages.hr.leave.listDescription')}
+        actions={
+          <Button
+            onClick={() => router.push('/approvals/new')}
+            className="shrink-0"
+            style={{ borderRadius: 0 }}
           >
-            {t('pages.hr.leave.new')}
-          </h1>
-          <p
-            className="mb-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {t('pages.hr.leave.listDescription')}
-          </p>
-        </div>
-        <Button
-          onClick={() => router.push('/approvals/new')}
-          className="shrink-0"
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.cancel')}
-        </Button>
-      </div>
+            {t('hr.buttons.cancel')}
+          </Button>
+        }
+      />
 
       {submitMutation.isError ? (
         <Alert

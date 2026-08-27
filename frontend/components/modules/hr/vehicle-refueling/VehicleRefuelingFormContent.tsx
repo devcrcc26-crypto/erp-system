@@ -6,7 +6,7 @@ import VehicleRefuelingForm from '@/components/modules/hr/vehicle-refueling/Vehi
 import type { VehicleRefuelingDetail } from '@/lib/api/vehicle-refueling.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
-import { tokens } from '@/lib/theme/tokens';
+import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 /**
  * New vehicle refueling page — same page chrome as Add Employee (`/users/new`).
@@ -27,32 +27,19 @@ export default function VehicleRefuelingFormContent(): React.ReactNode {
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1
-            className="m-0 text-xl font-semibold tracking-tight"
-            style={{
-              color: tokens.colorTextPrimary,
-              fontFamily: tokens.fontFamily,
-            }}
+      <SectionPageHeader
+        title={t('pages.hr.vehicleRefueling.new')}
+        description={t('pages.hr.vehicleRefueling.formDescription')}
+        actions={
+          <Button
+            onClick={() => router.push('/hr/vehicle-refueling')}
+            className="shrink-0"
+            style={{ borderRadius: 0 }}
           >
-            {t('pages.hr.vehicleRefueling.new')}
-          </h1>
-          <p
-            className="mb-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {t('pages.hr.vehicleRefueling.formDescription')}
-          </p>
-        </div>
-        <Button
-          onClick={() => router.push('/hr/vehicle-refueling')}
-          className="shrink-0"
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.cancel')}
-        </Button>
-      </div>
+            {t('hr.buttons.cancel')}
+          </Button>
+        }
+      />
       <VehicleRefuelingForm onSuccess={handleSuccess} />
     </div>
   );

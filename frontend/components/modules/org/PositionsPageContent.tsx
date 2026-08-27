@@ -46,6 +46,7 @@ import {
 } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -308,23 +309,10 @@ export default function PositionsPageContent(): React.ReactNode {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1
-          className="m-0 text-xl font-semibold tracking-tight"
-          style={{
-            color: tokens.colorTextPrimary,
-            fontFamily: tokens.fontFamily,
-          }}
-        >
-          {t('pages.positions.title')}
-        </h1>
-        <p
-          className="mb-0 mt-1 text-sm"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          {t('pages.positions.description')}
-        </p>
-      </div>
+      <SectionPageHeader
+        title={t('pages.positions.title')}
+        description={t('pages.positions.description')}
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <button

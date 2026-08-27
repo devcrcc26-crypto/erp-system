@@ -39,6 +39,7 @@ import { useEmployeePerDiemRatesList } from '@/lib/query/per-diem';
 import { tokens } from '@/lib/theme/tokens';
 import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import SectionPageHeader from '@/components/ui/SectionPageHeader/SectionPageHeader';
 
 type SetupFilter = 'all' | 'configured' | 'pending';
 
@@ -311,23 +312,10 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div>
-        <h1
-          className="m-0 text-xl font-semibold tracking-tight"
-          style={{
-            color: tokens.colorTextPrimary,
-            fontFamily: tokens.fontFamily,
-          }}
-        >
-          {pageTitle}
-        </h1>
-        <p
-          className="mb-0 mt-1 text-sm"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          {pageDescription}
-        </p>
-      </div>
+      <SectionPageHeader
+        title={pageTitle}
+        description={pageDescription}
+      />
 
       <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <button
