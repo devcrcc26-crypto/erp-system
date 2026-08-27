@@ -596,7 +596,7 @@ export class DashboardService {
           companyId,
           deletedAt: null,
           status: { in: ['SUBMITTED', 'IN_REVIEW', 'APPROVED'] },
-          startDate: { gte: startOfMonth },
+          startDate: { gte: trendStart },
         },
         _count: { _all: true },
       }),
