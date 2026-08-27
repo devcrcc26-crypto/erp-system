@@ -346,7 +346,10 @@
         "edit": "Edit Company Asset",
         "detail": "Asset Detail",
         "listTitle": "Company Assets",
-        "formDescription": "Add or update a company asset record."
+        "listDescription": "Track company-owned equipment, status, and who each asset is assigned to.",
+        "formDescription": "Add or update a company asset record.",
+        "assetSingular": "asset",
+        "assetPlural": "assets"
       },
       "employeeContract": {
         "new": "New Employee Contract",
@@ -1322,6 +1325,7 @@
       "employee": "Employee",
       "notes": "Notes",
       "assignedAt": "Assigned At",
+      "assignedTo": "Assigned To",
       "issuedBy": "Issued By",
       "returnedTo": "Returned To",
       "returnedAt": "Returned At",
@@ -1355,7 +1359,8 @@
       "create": "Create Asset",
       "cancel": "Cancel",
       "back": "Back",
-      "backToList": "Back to Assets"
+      "backToList": "Back to Assets",
+      "uploadPhoto": "Upload Photo"
     },
     "assetMessages": {
       "created": "Asset created successfully",
@@ -1371,7 +1376,16 @@
       "failedToDelete": "Failed to delete asset",
       "failedToUpdateStatus": "Failed to update asset status",
       "failedToIssueAssignment": "Failed to issue asset assignment",
-      "failedToReturnAssignment": "Failed to return asset assignment"
+      "failedToReturnAssignment": "Failed to return asset assignment",
+      "failedToLoad": "Failed to load company assets"
+    },
+    "assetValidation": {
+      "serialNumberRequired": "Serial number is required",
+      "typeRequired": "Type is required",
+      "brandRequired": "Brand is required",
+      "modelRequired": "Model is required",
+      "yearRequired": "Year is required",
+      "colorRequired": "Color is required"
     },
     "assetDialog": {
       "deleteTitle": "Delete asset?",

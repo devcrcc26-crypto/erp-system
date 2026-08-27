@@ -101,11 +101,12 @@ export default function CompanyAssetForm({
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-6 pb-8">
       <SectionCard
         title={t('hr.assetSection.assetDetails')}
-        bodyClassName="px-5 py-4"
+        bodyClassName="px-3 py-4 sm:px-5"
       >
         <Form
           form={form}
           layout="vertical"
+          requiredMark={false}
           initialValues={
             asset
               ? {
@@ -120,11 +121,16 @@ export default function CompanyAssetForm({
               : undefined
           }
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <Form.Item
               name="serialNumber"
               label={t('hr.assetLabels.serialNumber')}
-              rules={[{ required: true, message: 'Serial number is required' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.assetValidation.serialNumberRequired'),
+                },
+              ]}
             >
               <Input
                 maxLength={100}
@@ -134,7 +140,9 @@ export default function CompanyAssetForm({
             <Form.Item
               name="type"
               label={t('hr.assetLabels.type')}
-              rules={[{ required: true, message: 'Type is required' }]}
+              rules={[
+                { required: true, message: t('hr.assetValidation.typeRequired') },
+              ]}
             >
               <Input
                 maxLength={100}
@@ -143,11 +151,16 @@ export default function CompanyAssetForm({
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <Form.Item
               name="brand"
               label={t('hr.assetLabels.brand')}
-              rules={[{ required: true, message: 'Brand is required' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.assetValidation.brandRequired'),
+                },
+              ]}
             >
               <Input
                 maxLength={100}
@@ -157,7 +170,12 @@ export default function CompanyAssetForm({
             <Form.Item
               name="model"
               label={t('hr.assetLabels.model')}
-              rules={[{ required: true, message: 'Model is required' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.assetValidation.modelRequired'),
+                },
+              ]}
             >
               <Input
                 maxLength={100}
@@ -166,23 +184,30 @@ export default function CompanyAssetForm({
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <Form.Item
               name="year"
               label={t('hr.assetLabels.year')}
-              rules={[{ required: true, message: 'Year is required' }]}
+              rules={[
+                { required: true, message: t('hr.assetValidation.yearRequired') },
+              ]}
             >
               <InputNumber
                 min={1900}
                 max={2100}
-                style={{ width: '100%' }}
+                className="w-full"
                 placeholder={t('hr.assetPlaceholder.year')}
               />
             </Form.Item>
             <Form.Item
               name="color"
               label={t('hr.assetLabels.color')}
-              rules={[{ required: true, message: 'Color is required' }]}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.assetValidation.colorRequired'),
+                },
+              ]}
             >
               <Input
                 maxLength={50}
@@ -209,8 +234,10 @@ export default function CompanyAssetForm({
               showUploadList={false}
               disabled={submitting || uploadPhotoMutation.isPending}
             >
-              <Button type="default" disabled={submitting}>
-                {photoFile ? `Selected: ${photoFile.name}` : 'Upload Photo'}
+              <Button type="default" disabled={submitting} style={{ borderRadius: 0 }}>
+                {photoFile
+                  ? `${t('hr.assetLabels.photo')}: ${photoFile.name}`
+                  : t('hr.assetButtons.uploadPhoto')}
               </Button>
             </Upload>
           </Form.Item>
@@ -222,6 +249,7 @@ export default function CompanyAssetForm({
           type="primary"
           loading={submitting}
           onClick={() => void handleSubmit()}
+          style={{ borderRadius: 0 }}
         >
           {mode === 'edit'
             ? t('hr.assetButtons.save')

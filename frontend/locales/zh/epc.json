@@ -346,7 +346,10 @@
         "edit": "编辑资产",
         "detail": "资产详情",
         "listTitle": "公司资产",
-        "formDescription": "新增或更新公司资产记录。"
+        "listDescription": "跟踪公司设备、状态以及当前领用人。",
+        "formDescription": "新增或更新公司资产记录。",
+        "assetSingular": "项资产",
+        "assetPlural": "项资产"
       },
       "employeeContract": {
         "new": "新建劳动合同",
@@ -1322,6 +1325,7 @@
       "employee": "员工",
       "notes": "备注",
       "assignedAt": "分配时间",
+      "assignedTo": "领用人",
       "issuedBy": "发放人",
       "returnedTo": "归还位置",
       "returnedAt": "归还时间",
@@ -1355,7 +1359,8 @@
       "create": "创建资产",
       "cancel": "取消",
       "back": "返回",
-      "backToList": "返回资产列表"
+      "backToList": "返回资产列表",
+      "uploadPhoto": "上传照片"
     },
     "assetMessages": {
       "created": "资产创建成功",
@@ -1371,7 +1376,16 @@
       "failedToDelete": "删除资产失败",
       "failedToUpdateStatus": "更新资产状态失败",
       "failedToIssueAssignment": "发放资产失败",
-      "failedToReturnAssignment": "归还资产失败"
+      "failedToReturnAssignment": "归还资产失败",
+      "failedToLoad": "加载公司资产失败"
+    },
+    "assetValidation": {
+      "serialNumberRequired": "请填写序列号",
+      "typeRequired": "请填写类型",
+      "brandRequired": "请填写品牌",
+      "modelRequired": "请填写型号",
+      "yearRequired": "请填写年份",
+      "colorRequired": "请填写颜色"
     },
     "assetDialog": {
       "deleteTitle": "删除资产？",

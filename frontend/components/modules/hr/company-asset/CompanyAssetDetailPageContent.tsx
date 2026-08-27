@@ -30,7 +30,6 @@ import {
   ASSET_STATUS_OPTIONS,
   assetStatusVariant,
   formatAssetStatus,
-  getAssetStatusColor,
 } from '@/lib/utils/company-asset-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -207,97 +206,112 @@ export default function CompanyAssetDetailPageContent({
   }
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !asset) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        title={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : t('hr.assetMessages.notFound')
-        }
-        action={
-          <Button onClick={() => router.push('/hr/company-asset')}>
-            {t('hr.assetButtons.backToList')}
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <Alert
+          type="error"
+          showIcon
+          title={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : t('hr.assetMessages.notFound')
+          }
+          action={
+            <Button
+              onClick={() => router.push('/hr/company-asset')}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.assetButtons.back')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
+    <div className="erp-pro-list-page flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/hr/company-asset')}
+          style={{ borderRadius: 0 }}
         >
           {t('hr.assetButtons.back')}
         </Button>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button
             onClick={() => {
               setPendingStatus(asset.status);
               setStatusModalOpen(true);
             }}
+            style={{ borderRadius: 0 }}
           >
             {t('hr.assetButtons.changeStatus')}
           </Button>
           <Button
-            onClick={() =>
-              router.push(`/hr/company-asset/${assetId}/edit`)
-            }
+            onClick={() => router.push(`/hr/company-asset/${assetId}/edit`)}
+            style={{ borderRadius: 0 }}
           >
             {t('hr.assetButtons.editAsset')}
           </Button>
           <Button
             danger
-            type="primary"
             onClick={() => setConfirmDelete(true)}
+            style={{ borderRadius: 0 }}
           >
             {t('hr.assetButtons.deleteAsset')}
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <div
-          className="rounded-lg overflow-hidden"
+          className="overflow-hidden rounded-none"
           style={{
             background: tokens.colorCardBg,
             border: `1px solid ${tokens.colorBorder}`,
           }}
         >
-          <div className="px-5 py-4">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="px-3 py-4 sm:px-5">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
               <span
                 className="text-xs font-semibold uppercase tracking-wide"
                 style={{ color: tokens.colorTextTertiary }}
               >
                 {asset.serialNumber}
               </span>
-              <span style={{ color: tokens.colorBorder }}>|</span>
+              <span style={{ color: tokens.colorBorder }}>·</span>
               <StatusBadge
                 label={formatAssetStatus(asset.status, t)}
                 variant={assetStatusVariant(asset.status)}
               />
             </div>
             <h2
-              className="text-lg font-semibold leading-snug m-0"
+              className="m-0 text-lg font-semibold leading-snug"
               style={{ color: tokens.colorTextPrimary }}
             >
               {asset.brand} {asset.model}
             </h2>
             <p
-              className="mt-1 text-sm m-0"
+              className="m-0 mt-1 text-sm"
               style={{ color: tokens.colorTextSecondary }}
             >
-              {asset.type} | {asset.year} | {asset.color}
+              {asset.type} · {asset.year} · {asset.color}
+              {activeAssignment
+                ? ` · ${t('hr.assetLabels.assignedTo')}: ${formatUserName(activeAssignment.employee)}`
+                : null}
             </p>
           </div>
         </div>
@@ -307,15 +321,20 @@ export default function CompanyAssetDetailPageContent({
             { label: t('hr.assetLabels.brand'), value: asset.brand },
             { label: t('hr.assetLabels.model'), value: asset.model },
             { label: t('hr.assetLabels.year'), value: String(asset.year) },
-            { label: t('hr.assetLabels.type'), value: asset.type },
+            {
+              label: t('hr.assetLabels.assignedTo'),
+              value: activeAssignment
+                ? formatUserName(activeAssignment.employee)
+                : '—',
+            },
           ]}
         />
 
         <SectionCard
           title={t('hr.assetSection.assetDetails')}
-          bodyClassName="px-5 py-4"
+          bodyClassName="px-3 py-4 sm:px-5"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <MetaItem label={t('hr.assetLabels.serialNumber')}>
               {asset.serialNumber}
             </MetaItem>
@@ -345,7 +364,7 @@ export default function CompanyAssetDetailPageContent({
             </MetaItem>
             {asset.description ? (
               <MetaItem label={t('hr.assetLabels.description')}>
-                <p className="whitespace-pre-wrap leading-relaxed m-0">
+                <p className="m-0 whitespace-pre-wrap leading-relaxed">
                   {asset.description}
                 </p>
               </MetaItem>
@@ -356,7 +375,7 @@ export default function CompanyAssetDetailPageContent({
 
       <SectionCard
         title={t('hr.assetSection.assetAssignments')}
-        bodyClassName="px-5 py-4"
+        bodyClassName="px-3 py-4 sm:px-5"
       >
         {activeAssignment ? (
           <div className="flex flex-col gap-3">

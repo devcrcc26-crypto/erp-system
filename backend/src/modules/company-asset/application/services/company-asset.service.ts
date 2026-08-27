@@ -94,11 +94,38 @@ export class CompanyAssetService {
         skip,
         take,
         orderBy: { createdAt: "desc" },
+        include: {
+          assetAssignments: {
+            where: { deletedAt: null, returnedAt: null },
+            take: 1,
+            orderBy: { assignedAt: "desc" },
+            include: {
+              employee: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
       }),
       this.prisma.companyAsset.count({ where }),
     ]);
 
-    return buildPaginatedResult(rows, total, page, limit);
+    const data = rows.map((row) => {
+      const { assetAssignments, ...asset } = row;
+      const currentAssignment = assetAssignments[0];
+      return {
+        ...asset,
+        assignedTo: currentAssignment?.employee ?? null,
+        assignedAt: currentAssignment?.assignedAt ?? null,
+      };
+    });
+
+    return buildPaginatedResult(data, total, page, limit);
   }
 
   /** Creates a new asset in the company register. */

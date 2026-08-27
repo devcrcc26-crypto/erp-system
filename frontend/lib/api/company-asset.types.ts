@@ -4,6 +4,7 @@ export interface AssetUserRef {
   id: string;
   firstName: string;
   lastName: string;
+  email?: string | null;
 }
 
 export interface CompanyAssetAssignmentListItem {
@@ -32,6 +33,8 @@ export interface CompanyAssetListItem {
   status: AssetStatus;
   description?: string | null;
   photoDocumentId?: string | null;
+  assignedTo?: AssetUserRef | null;
+  assignedAt?: string | null;
   createdAt: string;
 }
 
