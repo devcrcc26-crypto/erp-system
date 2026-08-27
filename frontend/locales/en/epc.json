@@ -257,7 +257,7 @@
         "listDescription": "Review and process warehouse material requisitions.",
         "myListDescription": "Submit and track your material requisitions through the approval workflow.",
         "formDescription": "Add requisition details and line items, then review and submit for approval.",
-        "detailsStepDescription": "Enter the title, purpose, and optional project or warehouse details.",
+        "detailsStepDescription": "Enter the title, purpose, and optional warehouse details.",
         "itemsStepDescription": "Add at least one material line item with quantity and unit.",
         "reviewStepDescription": "Confirm the requisition summary before submitting.",
         "attachmentsStepDescription": "Optionally attach drawings, specs, or other supporting documents."

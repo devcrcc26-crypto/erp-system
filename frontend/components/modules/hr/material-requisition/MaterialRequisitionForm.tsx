@@ -8,7 +8,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Select,
   Space,
   Table,
   Typography,
@@ -27,7 +26,6 @@ import type {
   MaterialRequisitionDetail,
 } from '@/lib/api/material-requisition.types';
 import { useCreateMaterialRequisition } from '@/lib/query/material-requisition';
-import { useAllProjects } from '@/lib/query/projects';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -36,7 +34,6 @@ interface Step1Values {
   title?: string;
   purpose?: string;
   requiredByDate?: dayjs.Dayjs | null;
-  projectId?: string;
   warehouseLocation?: string;
 }
 
@@ -82,7 +79,6 @@ export default function MaterialRequisitionForm({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const projectsQuery = useAllProjects({}, true);
   const createMutation = useCreateMaterialRequisition();
 
   function resetForm(): void {
@@ -199,7 +195,6 @@ export default function MaterialRequisitionForm({
         requiredByDate: values.requiredByDate
           ? values.requiredByDate.format('YYYY-MM-DD')
           : undefined,
-        projectId: values.projectId,
         warehouseLocation: values.warehouseLocation?.trim() || undefined,
       });
 
@@ -230,24 +225,6 @@ export default function MaterialRequisitionForm({
       setSubmitting(false);
     }
   }
-
-  const projectOptions =
-    projectsQuery.data?.data?.map((project) => ({
-      value: project.id,
-      label: project.projectCode
-        ? `[${project.projectCode}] ${project.name}`
-        : project.name,
-    })) ?? [];
-
-  const projectLabel = useMemo(() => {
-    const projectId = detailsSnapshot.projectId;
-    if (!projectId) {
-      return '—';
-    }
-    return (
-      projectOptions.find((option) => option.value === projectId)?.label ?? '—'
-    );
-  }, [detailsSnapshot.projectId, projectOptions]);
 
   const itemColumns: ColumnsType<ClientItem> = [
     {
@@ -363,17 +340,6 @@ export default function MaterialRequisitionForm({
                 <DatePicker
                   className="w-full"
                   disabledDate={(date) => date.isBefore(dayjs(), 'day')}
-                />
-              </Form.Item>
-
-              <Form.Item name="projectId" label={t('hr.form.project')}>
-                <Select
-                  showSearch
-                  allowClear
-                  optionFilterProp="label"
-                  placeholder={t('hr.placeholder.selectProject')}
-                  options={projectOptions}
-                  loading={projectsQuery.isLoading}
                 />
               </Form.Item>
 
@@ -557,7 +523,6 @@ export default function MaterialRequisitionForm({
                       : '—'
                   }
                 />
-                <ReviewItem label={t('hr.form.project')} value={projectLabel} />
                 <ReviewItem
                   label={t('hr.form.warehouseLocation')}
                   value={detailsSnapshot.warehouseLocation?.trim() || '—'}
@@ -607,8 +572,6 @@ export default function MaterialRequisitionForm({
     ],
     [
       t,
-      projectOptions,
-      projectsQuery.isLoading,
       showItemForm,
       editingKey,
       itemForm,
@@ -616,7 +579,6 @@ export default function MaterialRequisitionForm({
       reviewItemColumns,
       items,
       detailsSnapshot,
-      projectLabel,
       files,
     ],
   );

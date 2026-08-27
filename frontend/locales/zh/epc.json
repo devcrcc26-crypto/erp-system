@@ -257,7 +257,7 @@
         "listDescription": "审核并处理仓库材料领用申请。",
         "myListDescription": "提交并跟踪您的材料领用审批流程。",
         "formDescription": "填写领用详情与明细行，确认后提交审批。",
-        "detailsStepDescription": "填写标题、用途，以及可选的项目或仓库信息。",
+        "detailsStepDescription": "填写标题、用途，以及可选的仓库信息。",
         "itemsStepDescription": "至少添加一条材料明细，包含数量和单位。",
         "reviewStepDescription": "提交前请确认领用摘要。",
         "attachmentsStepDescription": "可选上传图纸、规格说明或其他证明文件。"

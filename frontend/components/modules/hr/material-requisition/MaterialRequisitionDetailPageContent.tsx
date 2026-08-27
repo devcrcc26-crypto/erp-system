@@ -363,10 +363,6 @@ export default function MaterialRequisitionDetailPageContent({
                   : '—',
               },
               {
-                label: t('hr.table.project'),
-                value: requisition.project?.name ?? '—',
-              },
-              {
                 label: t('hr.form.warehouseLocation'),
                 value: requisition.warehouseLocation ?? '—',
               },
@@ -386,13 +382,6 @@ export default function MaterialRequisitionDetailPageContent({
               {requisition.requiredByDate ? (
                 <MetaItem label={t('hr.form.requiredByDate')}>
                   {formatProjectDate(requisition.requiredByDate)}
-                </MetaItem>
-              ) : null}
-              {requisition.project?.name ? (
-                <MetaItem label={t('hr.form.project')}>
-                  {requisition.project.projectCode
-                    ? `[${requisition.project.projectCode}] ${requisition.project.name}`
-                    : requisition.project.name}
                 </MetaItem>
               ) : null}
               {requisition.warehouseLocation ? (

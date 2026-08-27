@@ -28,7 +28,6 @@ import type {
 } from '@/lib/api/material-requisition.types';
 import { useMaterialRequisitions } from '@/lib/query/material-requisition';
 import { useUsersDirectory } from '@/lib/query/users';
-import { useAllProjects } from '@/lib/query/projects';
 import {
   formatMaterialRequisitionEmployeeName,
   formatMaterialRequisitionStatus,
@@ -67,7 +66,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
     [],
   );
   const [employeeId, setEmployeeId] = useState<string | undefined>();
-  const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [dateRange, setDateRange] = useState<
     [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
   >(null);
@@ -78,7 +76,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
       search: search.trim() || undefined,
       status: statusFilter.length > 0 ? statusFilter : undefined,
       employeeId: canViewHr ? employeeId : undefined,
-      projectId: projectFilter,
       dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
       dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
     }),
@@ -87,7 +84,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
       search,
       statusFilter,
       employeeId,
-      projectFilter,
       dateRange,
       canViewHr,
     ],
@@ -98,7 +94,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
     { page: 1, limit: 100 },
     { enabled: canViewHr },
   );
-  const projectsQuery = useAllProjects({}, canViewHr);
   const pendingStatuses = useMemo(
     () => ['DRAFT', 'SUBMITTED', 'IN_REVIEW'] as MaterialRequisitionStatus[],
     [],
@@ -107,11 +102,10 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
     () => ({
       search: search.trim() || undefined,
       employeeId: canViewHr ? employeeId : undefined,
-      projectId: projectFilter,
       dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
       dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
     }),
-    [search, canViewHr, employeeId, projectFilter, dateRange],
+    [search, canViewHr, employeeId, dateRange],
   );
   const totalCountQuery = useMaterialRequisitions(
     { page: 1, limit: 1, ...countsBaseParams },
@@ -193,14 +187,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
           value ? formatProjectDate(value) : '-',
       },
       {
-        title: t('hr.table.project'),
-        key: 'project',
-        width: 150,
-        ellipsis: true,
-        render: (_: unknown, row: MaterialRequisitionListItem) =>
-          row.project?.name ?? '-',
-      },
-      {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
@@ -236,7 +222,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
     Boolean(search.trim()) ||
     statusFilter.length > 0 ||
     employeeId !== undefined ||
-    projectFilter !== undefined ||
     Boolean(dateRange?.[0] || dateRange?.[1]);
 
   return (
@@ -344,32 +329,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
             />
           ) : null}
 
-          {canViewHr ? (
-            <Select
-              showSearch
-              allowClear
-              placeholder={t('hr.placeholder.project')}
-              loading={projectsQuery.isLoading}
-              value={projectFilter}
-              onChange={(v) => {
-                setProjectFilter(v);
-                resetPage();
-              }}
-              className="w-full min-w-0 sm:w-56"
-              filterOption={(input, option) =>
-                String(option?.label ?? '')
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              options={
-                projectsQuery.data?.data?.map((p) => ({
-                  value: p.id,
-                  label: p.projectCode ? `[${p.projectCode}] ${p.name}` : p.name,
-                })) ?? []
-              }
-            />
-          ) : null}
-
           <RangePicker
             value={dateRange}
             className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
@@ -386,7 +345,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
                 setSearch('');
                 setStatusFilter([]);
                 setEmployeeId(undefined);
-                setProjectFilter(undefined);
                 setDateRange(null);
                 resetPage();
               }}
@@ -471,7 +429,6 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
                             setSearch('');
                             setStatusFilter([]);
                             setEmployeeId(undefined);
-                            setProjectFilter(undefined);
                             setDateRange(null);
                             resetPage();
                           },
