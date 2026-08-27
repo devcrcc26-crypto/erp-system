@@ -356,10 +356,6 @@ export default function PurchaseRequestDetailPageContent({
                   ? formatProjectDate(request.requiredByDate)
                   : '-',
               },
-              {
-                label: t('hr.table.project'),
-                value: request.project?.name ?? '-',
-              },
             ]}
           />
 

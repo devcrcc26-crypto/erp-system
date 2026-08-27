@@ -10,7 +10,6 @@ import {
   InputNumber,
   Select,
   Space,
-  Steps,
   Table,
   Typography,
 } from 'antd';
@@ -18,8 +17,10 @@ import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { apiPost, apiPostForm } from '@/lib/api/client';
 import type {
   AddPurchaseRequestItemPayload,
@@ -27,7 +28,6 @@ import type {
   SupportedCurrency,
 } from '@/lib/api/purchase-request.types';
 import { useCreatePurchaseRequest } from '@/lib/query/purchase-request';
-import { useAllProjects } from '@/lib/query/projects';
 import { useCurrencyRates } from '@/lib/query/currency';
 import { tokens } from '@/lib/theme/tokens';
 import {
@@ -37,13 +37,12 @@ import {
   requiresGmApproval,
 } from '@/lib/utils/purchase-request-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { formatDisplayDate } from '@/lib/utils/date-format';
 
 interface Step1Values {
-  title: string;
-  justification: string;
+  title?: string;
+  justification?: string;
   requiredByDate?: dayjs.Dayjs | null;
-  projectId?: string;
   vendorName?: string;
   vendorContact?: string;
 }
@@ -66,42 +65,41 @@ const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string }[] = [
   { value: 'CNY', label: 'CNY' },
 ];
 
-let _keyCounter = 0;
+const DETAILS_FIELDS = ['title', 'justification'] as const;
+
+let keyCounter = 0;
 function nextKey(): string {
-  _keyCounter += 1;
-  return `item-${_keyCounter}`;
+  keyCounter += 1;
+  return `item-${keyCounter}`;
 }
 
 /**
- * 3-step stepper for creating a Purchase Request.
- *
- * Steps 1–2 are client-side only. On Step 3 submit:
- *   createDraft → add each item → submit with files → navigate
+ * Purchase request create form — same StepperForm chrome as Add Employee.
  */
 export default function PurchaseRequestForm({
   onSuccess,
 }: PurchaseRequestFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
-  const [currentStep, setCurrentStep] = useState(0);
-
-  const [step1Form] = Form.useForm<Step1Values>();
+  const [detailsForm] = Form.useForm<Step1Values>();
   const [itemForm] = Form.useForm<ItemFormValues>();
-  const vendorName = Form.useWatch('vendorName', step1Form);
+  const vendorName = Form.useWatch('vendorName', detailsForm);
+  const formValues = Form.useWatch([], detailsForm) as Step1Values | undefined;
 
-  const [details, setDetails] = useState<Step1Values | null>(null);
   const [items, setItems] = useState<ClientItem[]>([]);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const projectsQuery = useAllProjects({}, true);
   const ratesQuery = useCurrencyRates();
   const createMutation = useCreatePurchaseRequest();
 
   function getRate(currency: SupportedCurrency): number {
-    if (currency === 'ETB') return 1;
+    if (currency === 'ETB') {
+      return 1;
+    }
     return ratesQuery.data?.[currency] ?? 1;
   }
 
@@ -116,25 +114,36 @@ export default function PurchaseRequestForm({
   );
 
   function itemLineEtb(item: ClientItem): number {
-    return Number(item.unitPrice) * Number(item.quantity) * getRate(item.currency);
+    return (
+      Number(item.unitPrice) * Number(item.quantity) * getRate(item.currency)
+    );
   }
 
-  async function goToStep2(): Promise<void> {
+  function resetForm(): void {
+    detailsForm.resetFields();
+    itemForm.resetFields();
+    setItems([]);
+    setEditingKey(null);
+    setShowItemForm(false);
+    setFiles([]);
+    setFormError(null);
+  }
+
+  async function validateDetailsStep(): Promise<boolean> {
     try {
-      const values = await step1Form.validateFields();
-      setDetails(values);
-      setCurrentStep(1);
+      await detailsForm.validateFields([...DETAILS_FIELDS]);
+      return true;
     } catch {
-      /* validation shown inline */
+      return false;
     }
   }
 
-  function goToStep3(): void {
+  async function validateItemsStep(): Promise<boolean> {
     if (items.length === 0) {
-      messageApi.warning('Add at least one line item before continuing');
-      return;
+      messageApi.warning(t('hr.validation.addPurchaseItem'));
+      return false;
     }
-    setCurrentStep(2);
+    return true;
   }
 
   function openAddItem(): void {
@@ -177,7 +186,7 @@ export default function PurchaseRequestForm({
       };
       if (editingKey) {
         setItems((prev) =>
-          prev.map((it) => (it._key === editingKey ? entry : it)),
+          prev.map((row) => (row._key === editingKey ? entry : row)),
         );
       } else {
         setItems((prev) => [...prev, entry]);
@@ -189,38 +198,40 @@ export default function PurchaseRequestForm({
   }
 
   function removeItem(key: string): void {
-    setItems((prev) => prev.filter((it) => it._key !== key));
+    setItems((prev) => prev.filter((row) => row._key !== key));
   }
 
-  async function handleFinalSubmit(): Promise<void> {
-    if (items.length === 0) {
-      messageApi.warning('Add at least one line item');
+  async function handleSubmit(): Promise<void> {
+    setFormError(null);
+
+    let values: Step1Values;
+    try {
+      values = await detailsForm.validateFields();
+    } catch {
+      messageApi.warning(t('hr.validation.completePurchaseDetails'));
       return;
     }
 
-    let v = details;
-    if (!v?.title?.trim() || !v.justification?.trim()) {
-      try {
-        v = await step1Form.validateFields();
-        setDetails(v);
-      } catch {
-        messageApi.warning('Complete request details before submitting');
-        setCurrentStep(0);
-        return;
-      }
+    if (items.length === 0) {
+      messageApi.warning(t('hr.validation.addPurchaseItem'));
+      return;
+    }
+
+    if (!values.title?.trim() || !values.justification?.trim()) {
+      messageApi.warning(t('hr.validation.completePurchaseDetails'));
+      return;
     }
 
     setSubmitting(true);
     try {
       const created = await createMutation.mutateAsync({
-        title: v.title.trim(),
-        justification: v.justification.trim(),
-        requiredByDate: v.requiredByDate
-          ? v.requiredByDate.format('YYYY-MM-DD')
+        title: values.title.trim(),
+        justification: values.justification.trim(),
+        requiredByDate: values.requiredByDate
+          ? values.requiredByDate.format('YYYY-MM-DD')
           : undefined,
-        projectId: v.projectId,
-        vendorName: v.vendorName?.trim() || undefined,
-        vendorContact: v.vendorContact?.trim() || undefined,
+        vendorName: values.vendorName?.trim() || undefined,
+        vendorContact: values.vendorContact?.trim() || undefined,
       });
 
       await Promise.all(
@@ -240,20 +251,16 @@ export default function PurchaseRequestForm({
         formData,
       );
 
-      messageApi.success('Purchase request submitted for approval');
+      messageApi.success(t('hr.messages.purchaseRequestSubmitted'));
       onSuccess(finalResult);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to submit purchase request', messageApi);
+      const message = t('hr.messages.purchaseRequestSubmitFailed');
+      notifyApiError(error, message, messageApi);
+      setFormError(message);
     } finally {
       setSubmitting(false);
     }
   }
-
-  const projectOptions =
-    projectsQuery.data?.data?.map((p) => ({
-      value: p.id,
-      label: p.projectCode ? `[${p.projectCode}] ${p.name}` : p.name,
-    })) ?? [];
 
   const gmRequired = requiresGmApproval(totalEtb);
 
@@ -285,8 +292,7 @@ export default function PurchaseRequestForm({
       key: 'totalEtb',
       width: 130,
       align: 'right',
-      render: (_: unknown, row: ClientItem) =>
-        formatEtbAmount(itemLineEtb(row)),
+      render: (_: unknown, row: ClientItem) => formatEtbAmount(itemLineEtb(row)),
     },
     {
       title: '',
@@ -299,6 +305,7 @@ export default function PurchaseRequestForm({
             type="text"
             icon={<EditOutlined />}
             onClick={() => openEditItem(row)}
+            style={{ borderRadius: 0 }}
           />
           <Button
             size="small"
@@ -306,41 +313,39 @@ export default function PurchaseRequestForm({
             danger
             icon={<DeleteOutlined />}
             onClick={() => removeItem(row._key)}
+            style={{ borderRadius: 0 }}
           />
         </Space>
       ),
     },
   ];
 
-  return (
-    <div className="flex flex-col gap-6 pb-8">
-      <Steps
-        current={currentStep}
-        items={[
-          { title: t('hr.section.requestDetails') },
-          { title: t('hr.section.items') },
-          { title: 'Attachments & Submit' },
-        ]}
-        style={{ maxWidth: 560, margin: '0 auto' }}
-      />
-
-      {/* ─── Step 1: Request Details (kept mounted so field values survive step changes) ─── */}
-      <div
-        className="mx-auto w-full max-w-2xl flex flex-col gap-4"
-        style={{ display: currentStep === 0 ? undefined : 'none' }}
-        aria-hidden={currentStep !== 0}
-      >
-          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-5 py-4">
+  const steps = useMemo(
+    () => [
+      {
+        title: t('hr.section.requestDetails'),
+        validate: () => validateDetailsStep(),
+        content: (
+          <FormLayout
+            variant="pro"
+            title={t('hr.section.requestDetails')}
+            description={t('pages.hr.purchaseRequest.detailsStepDescription')}
+          >
             <Form
-              form={step1Form}
+              form={detailsForm}
               layout="vertical"
+              requiredMark={false}
               preserve
-              onFinish={() => void goToStep2()}
             >
               <Form.Item
                 name="title"
                 label={t('hr.form.title')}
-                rules={[{ required: true, message: 'Enter a title' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.titleRequired'),
+                  },
+                ]}
               >
                 <Input
                   placeholder={t('hr.placeholder.enterTitle')}
@@ -351,7 +356,12 @@ export default function PurchaseRequestForm({
               <Form.Item
                 name="justification"
                 label={t('hr.form.justification')}
-                rules={[{ required: true, message: 'Provide a justification' }]}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.justificationRequired'),
+                  },
+                ]}
               >
                 <Input.TextArea
                   rows={4}
@@ -361,63 +371,55 @@ export default function PurchaseRequestForm({
                 />
               </Form.Item>
 
-              <Form.Item name="requiredByDate" label={t('hr.form.requiredByDate')}>
-                <DatePicker
-                  style={{ width: '100%' }}
-                  disabledDate={(d) => d.isBefore(dayjs(), 'day')}
-                />
-              </Form.Item>
-
-              <Form.Item name="projectId" label={t('hr.form.project')}>
-                <Select
-                  showSearch
-                  allowClear
-                  placeholder={t('hr.placeholder.selectProject')}
-                  options={projectOptions}
-                  loading={projectsQuery.isLoading}
-                  filterOption={(input, option) =>
-                    String(option?.label ?? '')
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="vendorName"
-                label={t('hr.form.vendor')}
-              >
-                <Input placeholder="e.g. Acme Supplies Co." maxLength={200} />
-              </Form.Item>
-
-              {vendorName ? (
-                <Form.Item name="vendorContact" label={t('hr.form.vendorContact')}>
-                  <Input placeholder="Phone or email" maxLength={200} />
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  name="requiredByDate"
+                  label={t('hr.form.requiredByDate')}
+                >
+                  <DatePicker
+                    className="w-full"
+                    disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                  />
                 </Form.Item>
-              ) : null}
+
+                <Form.Item name="vendorName" label={t('hr.form.vendor')}>
+                  <Input
+                    placeholder={t('hr.placeholder.enterVendor')}
+                    maxLength={200}
+                  />
+                </Form.Item>
+
+                {vendorName ? (
+                  <Form.Item
+                    name="vendorContact"
+                    label={t('hr.form.vendorContact')}
+                  >
+                    <Input
+                      placeholder={t('hr.placeholder.enterVendorContact')}
+                      maxLength={200}
+                    />
+                  </Form.Item>
+                ) : null}
+              </div>
             </Form>
-          </SectionCard>
-
-          <div className="flex justify-end">
-            <Button type="primary" onClick={() => void goToStep2()}>
-              Continue to Line Items
-            </Button>
-          </div>
-      </div>
-
-      {/* ─── Step 2: Line Items ─── */}
-      {currentStep === 1 ? (
-        <div className="mx-auto w-full max-w-4xl flex flex-col gap-4">
-          <SectionCard
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.section.items'),
+        validate: () => validateItemsStep(),
+        content: (
+          <FormLayout
+            variant="pro"
             title={t('hr.section.items')}
-            bodyClassName="px-5 py-4"
-            action={
+            description={t('pages.hr.purchaseRequest.itemsStepDescription')}
+            extra={
               !showItemForm ? (
                 <Button
-                  size="small"
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={openAddItem}
+                  style={{ borderRadius: 0 }}
                 >
                   {t('hr.buttons.addItem')}
                 </Button>
@@ -426,47 +428,75 @@ export default function PurchaseRequestForm({
           >
             {showItemForm ? (
               <div
-                className="mb-4 rounded-md p-4"
-                style={{
-                  background: tokens.colorPageBg,
-                  border: `1px solid ${tokens.colorBorder}`,
-                }}
+                className="mb-4 rounded-none border border-[rgba(0,0,0,0.08)] p-4"
+                style={{ background: tokens.colorPageBg }}
               >
-                <Typography.Text strong style={{ display: 'block', marginBottom: 12 }}>
-                  {editingKey ? 'Edit Item' : 'New Item'}
+                <Typography.Text
+                  strong
+                  style={{ display: 'block', marginBottom: 12 }}
+                >
+                  {editingKey
+                    ? t('hr.form.editItem')
+                    : t('hr.form.newItem')}
                 </Typography.Text>
-                <Form form={itemForm} layout="vertical">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                <Form form={itemForm} layout="vertical" requiredMark={false}>
+                  <div className="erp-form-grid-2">
                     <Form.Item
                       name="itemName"
                       label={t('hr.form.itemName')}
-                      rules={[{ required: true, message: 'Enter item name' }]}
+                      rules={[
+                        {
+                          required: true,
+                          message: t('hr.validation.itemNameRequired'),
+                        },
+                      ]}
                     >
                       <Input maxLength={200} />
                     </Form.Item>
-                    <Form.Item name="description" label={t('hr.form.description')}>
+                    <Form.Item
+                      name="description"
+                      label={t('hr.form.description')}
+                    >
                       <Input maxLength={500} />
                     </Form.Item>
                     <Form.Item
                       name="quantity"
                       label={t('hr.form.quantity')}
-                      rules={[{ required: true, message: 'Enter quantity' }]}
+                      rules={[
+                        {
+                          required: true,
+                          message: t('hr.validation.quantityRequired'),
+                        },
+                      ]}
                     >
-                      <InputNumber min={0.001} style={{ width: '100%' }} />
+                      <InputNumber min={0.001} className="w-full" />
                     </Form.Item>
                     <Form.Item
                       name="unit"
                       label={t('hr.form.unit')}
-                      rules={[{ required: true, message: 'Enter unit (e.g. pcs)' }]}
+                      rules={[
+                        {
+                          required: true,
+                          message: t('hr.validation.unitRequired'),
+                        },
+                      ]}
                     >
-                      <Input placeholder="pcs, kg, m, box…" maxLength={50} />
+                      <Input
+                        placeholder={t('hr.placeholder.enterUnit')}
+                        maxLength={50}
+                      />
                     </Form.Item>
                     <Form.Item
                       name="unitPrice"
                       label={t('hr.form.unitPrice')}
-                      rules={[{ required: true, message: 'Enter unit price' }]}
+                      rules={[
+                        {
+                          required: true,
+                          message: t('hr.validation.unitPriceRequired'),
+                        },
+                      ]}
                     >
-                      <InputNumber min={0} style={{ width: '100%' }} />
+                      <InputNumber min={0} className="w-full" />
                     </Form.Item>
                     <Form.Item
                       name="currency"
@@ -479,15 +509,15 @@ export default function PurchaseRequestForm({
                   </div>
                 </Form>
                 <div className="flex justify-end gap-2">
-                  <Button size="small" onClick={cancelItemForm}>
+                  <Button onClick={cancelItemForm} style={{ borderRadius: 0 }}>
                     {t('hr.buttons.cancel')}
                   </Button>
                   <Button
-                    size="small"
                     type="primary"
                     onClick={() => void saveItem()}
+                    style={{ borderRadius: 0 }}
                   >
-                    {editingKey ? 'Update' : 'Add'}
+                    {editingKey ? t('common.save') : t('hr.buttons.addItem')}
                   </Button>
                 </div>
               </div>
@@ -499,18 +529,16 @@ export default function PurchaseRequestForm({
               columns={itemColumns}
               dataSource={items}
               pagination={false}
-              locale={{
-                emptyText: t('hr.empty.noItems'),
-              }}
+              locale={{ emptyText: t('hr.empty.noItems') }}
               footer={
                 items.length > 0
                   ? () => (
-                      <div className="flex justify-end gap-4 text-sm font-medium pr-2">
+                      <div className="flex justify-end gap-4 pr-2 text-sm font-medium">
                         <span style={{ color: tokens.colorTextSecondary }}>
-                          {items.length} item{items.length !== 1 ? 's' : ''}
+                          {t('hr.form.itemCount', { count: items.length })}
                         </span>
                         <span style={{ color: tokens.colorTextPrimary }}>
-                          Estimated Total:{' '}
+                          {t('hr.form.estimatedTotal')}:{' '}
                           <strong>{formatEtbAmount(totalEtb)}</strong>
                         </span>
                       </div>
@@ -518,108 +546,147 @@ export default function PurchaseRequestForm({
                   : undefined
               }
             />
-          </SectionCard>
-
-          <div className="flex justify-between">
-            <Button onClick={() => setCurrentStep(0)}>{t('hr.buttons.back')}</Button>
-            <Button type="primary" onClick={goToStep3}>
-              Continue to Attachments
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {/* ─── Step 3: Attachments & Submit ─── */}
-      {currentStep === 2 ? (
-        <div className="mx-auto w-full max-w-2xl flex flex-col gap-4">
-          <Alert
-            type={gmRequired ? 'warning' : 'success'}
-            showIcon
-            title={
-              gmRequired
-                ? `Estimated total exceeds ETB ${PR_GM_THRESHOLD_ETB.toLocaleString()} — GM approval will be required`
-                : `Estimated total is within ETB ${PR_GM_THRESHOLD_ETB.toLocaleString()} — HR Officer approval sufficient`
-            }
-            description={`Estimated total: ${formatEtbAmount(totalEtb)}`}
-          />
-
-          <SectionCard title="Summary" bodyClassName="px-5 py-4">
-            <div className="grid grid-cols-2 gap-y-3 text-sm">
-              <div>
-                <p
-                  className="text-xs uppercase tracking-wide mb-0.5"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  Title
-                </p>
-                <p
-                  className="font-medium"
-                  style={{ color: tokens.colorTextPrimary }}
-                >
-                  {step1Form.getFieldValue('title') as string}
-                </p>
-              </div>
-              <div>
-                <p
-                  className="text-xs uppercase tracking-wide mb-0.5"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  Line Items
-                </p>
-                <p style={{ color: tokens.colorTextPrimary }}>
-                  {items.length} item{items.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <div className="col-span-2">
-                <p
-                  className="text-xs uppercase tracking-wide mb-0.5"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  Estimated Total (ETB)
-                </p>
-                <p
-                  className="text-base font-bold"
-                  style={{ color: tokens.colorTextPrimary }}
-                >
-                  {formatEtbAmount(totalEtb)}
-                </p>
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title={t('hr.form.supportingDocuments')}
-            bodyClassName="px-5 py-4"
-          >
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 13, display: 'block', marginBottom: 12 }}
-            >
-              Attach quotations, specifications, or other supporting documents.
-            </Typography.Text>
-            <FileUploadInput
-              files={files}
-              onChange={setFiles}
-              multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-              placeholder="Choose supporting documents"
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.form.reviewSubmit'),
+        content: (
+          <div className="flex flex-col gap-4">
+            <Alert
+              type={gmRequired ? 'warning' : 'success'}
+              showIcon
+              title={
+                gmRequired
+                  ? t('hr.messages.purchaseRequestGmRequired', {
+                      amount: PR_GM_THRESHOLD_ETB.toLocaleString(),
+                    })
+                  : t('hr.messages.purchaseRequestHrSufficient', {
+                      amount: PR_GM_THRESHOLD_ETB.toLocaleString(),
+                    })
+              }
+              description={`${t('hr.form.estimatedTotal')}: ${formatEtbAmount(totalEtb)}`}
             />
-          </SectionCard>
 
-          <div className="flex justify-between">
-            <Button disabled={submitting} onClick={() => setCurrentStep(1)}>
-              {t('hr.buttons.back')}
-            </Button>
-            <Button
-              type="primary"
-              loading={submitting}
-              onClick={() => void handleFinalSubmit()}
+            <FormLayout
+              variant="pro"
+              title={t('hr.form.reviewSubmit')}
+              description={t('pages.hr.purchaseRequest.reviewStepDescription')}
             >
-              {t('hr.buttons.submitRequest')}
-            </Button>
+              <div className="erp-form-grid-2">
+                <ReviewItem
+                  label={t('hr.form.title')}
+                  value={formValues?.title?.trim() || '—'}
+                />
+                <ReviewItem
+                  label={t('hr.section.items')}
+                  value={t('hr.form.itemCount', { count: items.length })}
+                />
+                <ReviewItem
+                  label={t('hr.form.requiredByDate')}
+                  value={
+                    formValues?.requiredByDate
+                      ? formatDisplayDate(
+                          formValues.requiredByDate.format('YYYY-MM-DD'),
+                        )
+                      : '—'
+                  }
+                />
+                <ReviewItem
+                  label={t('hr.form.vendor')}
+                  value={formValues?.vendorName?.trim() || '—'}
+                />
+                <ReviewItem
+                  label={t('hr.form.estimatedTotal')}
+                  value={formatEtbAmount(totalEtb)}
+                />
+                <ReviewItem
+                  label={t('hr.form.justification')}
+                  value={formValues?.justification?.trim() || '—'}
+                />
+              </div>
+            </FormLayout>
+
+            <FormLayout
+              variant="pro"
+              title={t('hr.form.supportingDocuments')}
+              description={t(
+                'pages.hr.purchaseRequest.attachmentsStepDescription',
+              )}
+            >
+              <FileUploadInput
+                files={files}
+                onChange={setFiles}
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                placeholder={t('hr.placeholder.chooseSupportingDocuments')}
+              />
+            </FormLayout>
           </div>
-        </div>
+        ),
+      },
+    ],
+    [
+      t,
+      detailsForm,
+      vendorName,
+      showItemForm,
+      editingKey,
+      itemForm,
+      itemColumns,
+      items,
+      totalEtb,
+      gmRequired,
+      formValues,
+      files,
+    ],
+  );
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {formError ? (
+        <Alert
+          type="error"
+          showIcon
+          title={formError}
+          className="mb-4"
+          closable
+          onClose={() => setFormError(null)}
+        />
       ) : null}
+      <StepperForm
+        steps={steps}
+        onSubmit={handleSubmit}
+        onReset={resetForm}
+        isSubmitting={submitting}
+        contentVariant="sections"
+        submitLabel={t('hr.buttons.submitRequest')}
+      />
+    </div>
+  );
+}
+
+function ReviewItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): React.ReactNode {
+  return (
+    <div className="min-w-0">
+      <p
+        className="mb-0.5 text-xs font-medium uppercase tracking-wide"
+        style={{ color: tokens.colorTextTertiary }}
+      >
+        {label}
+      </p>
+      <p
+        className="m-0 whitespace-pre-wrap text-sm"
+        style={{ color: tokens.colorTextPrimary }}
+      >
+        {value}
+      </p>
     </div>
   );
 }

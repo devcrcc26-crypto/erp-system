@@ -173,7 +173,6 @@ export default function PurchaseRequestDetail({
               ? formatProjectDate(request.requiredByDate)
               : '-',
           },
-          { label: 'Project', value: request.project?.name ?? '-' },
         ]}
       />
 

@@ -242,7 +242,12 @@
         "listTitle": "采购申请",
         "myListTitle": "我的采购申请",
         "listDescription": "审核并处理员工采购申请。",
-        "myListDescription": "提交并跟踪您的采购申请审批流程。"
+        "myListDescription": "提交并跟踪您的采购申请审批流程。",
+        "formDescription": "填写申请详情与明细行，确认后提交审批。",
+        "detailsStepDescription": "填写标题、采购理由，以及可选的供应商信息。",
+        "itemsStepDescription": "至少添加一条明细，包含数量、单位和单价。",
+        "reviewStepDescription": "提交前请确认申请摘要与预估总额。",
+        "attachmentsStepDescription": "可选上传报价单、规格说明或其他证明文件。"
       },
       "materialRequisition": {
         "new": "新建材料领用",
@@ -1553,7 +1558,11 @@
       "vehicleRefuelingCancelFailed": "取消加油申请失败",
       "vehicleRefuelingReceiptUploaded": "收据上传成功",
       "vehicleRefuelingReceiptUploadFailed": "上传收据失败",
-      "vehicleRefuelingReceiptRequired": "申请已批准，请上传油费收据。"
+      "vehicleRefuelingReceiptRequired": "申请已批准，请上传油费收据。",
+      "purchaseRequestSubmitted": "采购申请已提交审批",
+      "purchaseRequestSubmitFailed": "提交采购申请失败",
+      "purchaseRequestGmRequired": "预估总额超过 ETB {{amount}} — 需要总经理审批",
+      "purchaseRequestHrSufficient": "预估总额在 ETB {{amount}} 以内 — 人力资源审批即可"
     },
     "urgency": {
       "MINOR": "一般",
@@ -2011,7 +2020,14 @@
       "returnAfterDeparture": "返回时间必须晚于或等于出发时间",
       "companyDriverRequired": "所选车辆未分配公司司机。请选择自行驾驶，或更换车辆。",
       "enterFuelStation": "请输入加油站名称",
-      "fuelDateNotFuture": "加油日期不能是将来日期"
+      "fuelDateNotFuture": "加油日期不能是将来日期",
+      "addPurchaseItem": "请至少添加一条明细",
+      "completePurchaseDetails": "提交前请先完成申请详情",
+      "justificationRequired": "请填写采购理由",
+      "itemNameRequired": "请填写物品名称",
+      "quantityRequired": "请填写数量",
+      "unitRequired": "请填写单位",
+      "unitPriceRequired": "请填写单价"
     },
     "perDiemCategory": {
       "americas": "美洲",
@@ -2169,7 +2185,10 @@
       "contractType": "合同类型",
       "signedAt": "签署日期",
       "terminatedAt": "终止日期",
-      "terminationReason": "终止原因"
+      "terminationReason": "终止原因",
+      "editItem": "编辑明细",
+      "newItem": "新明细",
+      "itemCount": "{{count}} 项"
     },
     "placeholder": {
       "searchRequest": "按姓名或申请编号搜索",
@@ -2232,7 +2251,11 @@
       "enterDestination": "填写城市和国家",
       "enterItemName": "填写物品名称",
       "enterItemCode": "可选 - 库存或目录编码",
-      "enterDepartment": "填写申请部门"
+      "enterDepartment": "填写申请部门",
+      "enterVendor": "供应商名称",
+      "enterVendorContact": "电话或邮箱",
+      "enterUnit": "例如：件、箱、公斤",
+      "chooseSupportingDocuments": "选择证明文件"
     },
     "empty": {
       "noLeaveRequests": "暂无请假申请。",

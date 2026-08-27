@@ -242,7 +242,12 @@
         "listTitle": "Purchase Requests",
         "myListTitle": "My Purchase Requests",
         "listDescription": "Review and process employee purchase requests.",
-        "myListDescription": "Submit and track your purchase requests through the approval workflow."
+        "myListDescription": "Submit and track your purchase requests through the approval workflow.",
+        "formDescription": "Add request details and line items, then review and submit for approval.",
+        "detailsStepDescription": "Enter the title, justification, and optional vendor details.",
+        "itemsStepDescription": "Add at least one line item with quantity, unit, and unit price.",
+        "reviewStepDescription": "Confirm the request summary and estimated total before submitting.",
+        "attachmentsStepDescription": "Optionally attach quotes, specs, or other supporting documents."
       },
       "materialRequisition": {
         "new": "New Material Requisition",
@@ -1553,7 +1558,11 @@
       "vehicleRefuelingCancelFailed": "Failed to cancel refueling request",
       "vehicleRefuelingReceiptUploaded": "Receipt uploaded successfully",
       "vehicleRefuelingReceiptUploadFailed": "Failed to upload receipt",
-      "vehicleRefuelingReceiptRequired": "This request has been approved. Please upload the fuel receipt."
+      "vehicleRefuelingReceiptRequired": "This request has been approved. Please upload the fuel receipt.",
+      "purchaseRequestSubmitted": "Purchase request submitted for approval",
+      "purchaseRequestSubmitFailed": "Failed to submit purchase request",
+      "purchaseRequestGmRequired": "Estimated total exceeds ETB {{amount}} — GM approval will be required",
+      "purchaseRequestHrSufficient": "Estimated total is within ETB {{amount}} — HR Officer approval sufficient"
     },
     "urgency": {
       "MINOR": "Minor",
@@ -2012,7 +2021,14 @@
       "returnAfterDeparture": "Return must be on or after departure",
       "companyDriverRequired": "Selected vehicle has no assigned company driver. Choose Self Drive or pick another vehicle.",
       "enterFuelStation": "Enter the fuel station name",
-      "fuelDateNotFuture": "Fuel date cannot be in the future"
+      "fuelDateNotFuture": "Fuel date cannot be in the future",
+      "addPurchaseItem": "Add at least one line item",
+      "completePurchaseDetails": "Complete request details before submitting",
+      "justificationRequired": "Enter a justification for this purchase",
+      "itemNameRequired": "Enter an item name",
+      "quantityRequired": "Enter a quantity",
+      "unitRequired": "Enter a unit",
+      "unitPriceRequired": "Enter a unit price"
     },
     "perDiemCategory": {
       "americas": "Americas",
@@ -2170,7 +2186,10 @@
       "contractType": "Contract Type",
       "signedAt": "Signed Date",
       "terminatedAt": "Termination Date",
-      "terminationReason": "Termination Reason"
+      "terminationReason": "Termination Reason",
+      "editItem": "Edit Item",
+      "newItem": "New Item",
+      "itemCount": "{{count}} item(s)"
     },
     "placeholder": {
       "searchRequest": "Search by name or request #",
@@ -2233,7 +2252,11 @@
       "enterDestination": "City and country",
       "enterItemName": "Name of the item",
       "enterItemCode": "Optional stock or catalogue code",
-      "enterDepartment": "Department requesting the items"
+      "enterDepartment": "Department requesting the items",
+      "enterVendor": "Vendor or supplier name",
+      "enterVendorContact": "Phone or email",
+      "enterUnit": "e.g. pcs, box, kg",
+      "chooseSupportingDocuments": "Choose supporting documents"
     },
     "empty": {
       "noLeaveRequests": "No leave requests yet.",

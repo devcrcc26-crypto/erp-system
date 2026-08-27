@@ -28,7 +28,6 @@ import type {
 } from '@/lib/api/purchase-request.types';
 import { usePurchaseRequests } from '@/lib/query/purchase-request';
 import { useUsersDirectory } from '@/lib/query/users';
-import { useAllProjects } from '@/lib/query/projects';
 import {
   formatEtbAmount,
   formatPurchaseRequestEmployeeName,
@@ -79,7 +78,6 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<PurchaseRequestStatus[]>([]);
   const [employeeId, setEmployeeId] = useState<string | undefined>();
-  const [projectFilter, setProjectFilter] = useState<string | undefined>();
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(
     null,
   );
@@ -92,7 +90,6 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
       search: search.trim() || undefined,
       status: statusFilter.length > 0 ? statusFilter : undefined,
       employeeId: canViewHr ? employeeId : undefined,
-      projectId: projectFilter,
       dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
       dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
       amountMin,
@@ -103,7 +100,6 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
       search,
       statusFilter,
       employeeId,
-      projectFilter,
       dateRange,
       amountMin,
       amountMax,
@@ -122,13 +118,12 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
     () => ({
       search: search.trim() || undefined,
       employeeId: canViewHr ? employeeId : undefined,
-      projectId: projectFilter,
       dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
       dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
       amountMin,
       amountMax,
     }),
-    [search, canViewHr, employeeId, projectFilter, dateRange, amountMin, amountMax],
+    [search, canViewHr, employeeId, dateRange, amountMin, amountMax],
   );
 
   const totalCountQuery = usePurchaseRequests(
@@ -152,7 +147,6 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
     { page: 1, limit: 100 },
     { enabled: canViewHr },
   );
-  const projectsQuery = useAllProjects({}, canViewHr);
 
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
@@ -211,14 +205,6 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
           value ? formatProjectDate(value) : '-',
       },
       {
-        title: t('hr.table.project'),
-        key: 'project',
-        width: 150,
-        ellipsis: true,
-        render: (_: unknown, row: PurchaseRequestListItem) =>
-          row.project?.name ?? '-',
-      },
-      {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
@@ -254,7 +240,6 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
     Boolean(search.trim()) ||
     statusFilter.length > 0 ||
     employeeId !== undefined ||
-    projectFilter !== undefined ||
     Boolean(dateRange?.[0] || dateRange?.[1]) ||
     amountMin !== undefined ||
     amountMax !== undefined;
@@ -366,32 +351,6 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
             />
           ) : null}
 
-          {canViewHr ? (
-            <Select
-              showSearch
-              allowClear
-              placeholder={t('hr.placeholder.project')}
-              loading={projectsQuery.isLoading}
-              value={projectFilter}
-              onChange={(v) => {
-                setProjectFilter(v);
-                resetPage();
-              }}
-              className="w-full min-w-0 sm:w-56"
-              filterOption={(input, option) =>
-                String(option?.label ?? '')
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              options={
-                projectsQuery.data?.data?.map((p) => ({
-                  value: p.id,
-                  label: p.projectCode ? `[${p.projectCode}] ${p.name}` : p.name,
-                })) ?? []
-              }
-            />
-          ) : null}
-
           <RangePicker
             value={dateRange}
             className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
@@ -430,7 +389,6 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
                 setSearch('');
                 setStatusFilter([]);
                 setEmployeeId(undefined);
-                setProjectFilter(undefined);
                 setDateRange(null);
                 setAmountMin(undefined);
                 setAmountMax(undefined);
