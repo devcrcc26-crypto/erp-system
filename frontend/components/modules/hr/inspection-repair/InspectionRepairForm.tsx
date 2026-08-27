@@ -139,14 +139,16 @@ export default function InspectionRepairForm({
 
   async function handleSubmit(): Promise<void> {
     setFormError(null);
-    let values: FormValues;
+    const sourceMode =
+      (form.getFieldValue('source') as FormValues['source']) ?? 'assigned';
+
     try {
       const deviceOk = await validateDeviceStep();
       if (!deviceOk) {
         return;
       }
-      values = await form.validateFields([
-        ...(form.getFieldValue('source') === 'manual'
+      await form.validateFields([
+        ...(sourceMode === 'manual'
           ? (['deviceName'] as const)
           : (['assetId'] as const)),
         ...DETAILS_FIELDS,
@@ -154,6 +156,9 @@ export default function InspectionRepairForm({
     } catch {
       return;
     }
+
+    const values = form.getFieldsValue(true) as FormValues;
+    const source = values.source ?? sourceMode;
 
     if (
       !values.location?.trim() ||
@@ -164,30 +169,26 @@ export default function InspectionRepairForm({
       return;
     }
 
-    if (values.source === 'assigned' && !values.assetId) {
+    if (source === 'assigned' && !values.assetId) {
       return;
     }
 
-    if (values.source === 'manual' && !values.deviceName?.trim()) {
+    if (source === 'manual' && !values.deviceName?.trim()) {
       return;
     }
 
     setSubmitting(true);
     try {
       const result = await submitMutation.mutateAsync({
-        assetId: values.source === 'assigned' ? values.assetId : undefined,
+        assetId: source === 'assigned' ? values.assetId : undefined,
         deviceName:
-          values.source === 'manual' ? values.deviceName?.trim() : undefined,
+          source === 'manual' ? values.deviceName?.trim() : undefined,
         location: values.location.trim(),
         make:
-          values.source === 'manual'
-            ? values.make?.trim() || undefined
-            : undefined,
+          source === 'manual' ? values.make?.trim() || undefined : undefined,
         model:
-          values.source === 'manual'
-            ? values.model?.trim() || undefined
-            : undefined,
-        year: values.source === 'manual' ? values.year : undefined,
+          source === 'manual' ? values.model?.trim() || undefined : undefined,
+        year: source === 'manual' ? values.year : undefined,
         description: values.description.trim(),
         solution: values.solution?.trim() || undefined,
         urgency: values.urgency,

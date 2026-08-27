@@ -1595,6 +1595,8 @@
       "inspectionRepairUpdated": "检修申请已更新",
       "inspectionRepairUpdateFailed": "更新检修申请失败",
       "inspectionRepairNotFound": "未找到检修申请",
+      "inspectionRepairStatusActionsHint": "点击“更新状态”将申请推进到下一流程步骤。",
+      "inspectionRepairStatusLocked": "当前申请没有可继续变更的状态。",
       "noAssignedInspectionAssets": "未找到已分配的公司资产。请手动填写设备信息。",
       "employeePerDiemRatesSaved": "员工差旅补贴标准已保存",
       "employeePerDiemRatesSaveFailed": "保存员工差旅补贴标准失败",
@@ -2032,6 +2034,7 @@
       "newVehicleApplication": "新建用车申请",
       "newVehicleRefueling": "新建加油申请",
       "newInspectionRepair": "新建检修申请",
+      "updateStatus": "更新状态",
       "newOfficialSeal": "新建公章使用申请",
       "newProjectSeal": "新建项目章使用申请",
       "thisMonthSheet": "本月加班表",
@@ -2176,7 +2179,14 @@
       "cancelMaterialRequisitionDesc": "这将取消材料领用及所有未完成的审批。",
       "deleteMaterialRequisitionItemTitle": "删除明细？",
       "deleteMaterialRequisitionItemDesc": "该明细将从领用申请中删除。",
-      "editMaterialRequisitionItemTitle": "编辑明细"
+      "editMaterialRequisitionItemTitle": "编辑明细",
+      "updateInspectionRepairStatusTitle": "更新申请状态",
+      "updateInspectionRepairStatusDesc": "将此检修申请推进到下一流程状态。"
+    },
+    "inspectionRepairStatusHint": {
+      "IN_REPAIR": "已开始检修或维修工作。",
+      "REPAIRED": "工作已完成，可关闭申请。",
+      "REJECTED": "拒绝该申请并关闭，不进行维修。"
     },
     "form": {
       "leaveType": "假期类型",
@@ -2422,6 +2432,7 @@
       "vehicleAvailability": "车辆可用性",
       "hourSummary": "加班时长汇总",
       "actions": "操作",
+      "updateStatus": "更新状态",
       "officialSealDetails": "公章使用详情",
       "projectSealDetails": "项目章使用详情",
       "issueSeal": "用印",

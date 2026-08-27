@@ -1595,6 +1595,8 @@
       "inspectionRepairUpdated": "Inspection and repair request updated",
       "inspectionRepairUpdateFailed": "Failed to update inspection and repair request",
       "inspectionRepairNotFound": "Inspection and repair request not found",
+      "inspectionRepairStatusActionsHint": "Choose Update Status to move this request to the next workflow step.",
+      "inspectionRepairStatusLocked": "No further status changes are available for this request.",
       "noAssignedInspectionAssets": "No assigned company assets found. Enter the device details manually.",
       "employeePerDiemRatesSaved": "Employee per diem rates saved",
       "employeePerDiemRatesSaveFailed": "Failed to save employee per diem rates",
@@ -2033,6 +2035,7 @@
       "newVehicleApplication": "New Vehicle Application",
       "newVehicleRefueling": "New Refueling Request",
       "newInspectionRepair": "New Inspection & Repair Request",
+      "updateStatus": "Update Status",
       "newOfficialSeal": "New Official Seal",
       "newProjectSeal": "New Project Seal",
       "thisMonthSheet": "This month's sheet",
@@ -2177,7 +2180,14 @@
       "cancelMaterialRequisitionDesc": "This will cancel the material requisition and any open approval request.",
       "deleteMaterialRequisitionItemTitle": "Remove item?",
       "deleteMaterialRequisitionItemDesc": "This item will be removed from the requisition.",
-      "editMaterialRequisitionItemTitle": "Edit Line Item"
+      "editMaterialRequisitionItemTitle": "Edit Line Item",
+      "updateInspectionRepairStatusTitle": "Update request status",
+      "updateInspectionRepairStatusDesc": "Move this inspection and repair request to the next workflow status."
+    },
+    "inspectionRepairStatusHint": {
+      "IN_REPAIR": "Work has started on this inspection or repair.",
+      "REPAIRED": "Work is complete and the request can be closed.",
+      "REJECTED": "Decline this request and close it without repair."
     },
     "form": {
       "leaveType": "Leave Type",
@@ -2423,6 +2433,7 @@
       "vehicleAvailability": "Vehicle Availability",
       "hourSummary": "Hour Summary",
       "actions": "Actions",
+      "updateStatus": "Update Status",
       "officialSealDetails": "Official Seal Details",
       "projectSealDetails": "Project Seal Details",
       "issueSeal": "Issue Seal",
