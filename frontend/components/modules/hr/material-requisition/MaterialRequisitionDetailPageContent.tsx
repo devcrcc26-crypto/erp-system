@@ -27,6 +27,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -48,10 +49,9 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Material requisition detail — item editing, cancellation, and approval chain.
+ * Material requisition detail — aligned with Vehicle Refueling / Purchase Request chrome.
  */
 export default function MaterialRequisitionDetailPageContent({
   requisitionId,
@@ -90,17 +90,16 @@ export default function MaterialRequisitionDetailPageContent({
 
   function openEditItem(item: MaterialRequisitionItem): void {
     setEditingItem(item);
-    itemForm.setFieldsValue({
-      itemName: item.itemName,
-      itemCode: item.itemCode ?? '',
-      description: item.description ?? '',
-      quantity: Number(item.quantity),
-      unit: item.unit,
-    });
+  }
+
+  function closeEditItem(): void {
+    setEditingItem(null);
   }
 
   async function handleUpdateItem(): Promise<void> {
-    if (!editingItem) return;
+    if (!editingItem) {
+      return;
+    }
     try {
       const values = await itemForm.validateFields();
       await updateItemMutation.mutateAsync({
@@ -113,55 +112,79 @@ export default function MaterialRequisitionDetailPageContent({
           unit: values.unit,
         },
       });
-      messageApi.success('Item updated');
-      setEditingItem(null);
-      itemForm.resetFields();
+      messageApi.success(t('hr.messages.materialRequisitionItemUpdated'));
+      closeEditItem();
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to update item', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.materialRequisitionItemUpdateFailed'),
+        messageApi,
+      );
     }
   }
 
   async function handleDeleteItem(): Promise<void> {
-    if (!deleteItemId) return;
+    if (!deleteItemId) {
+      return;
+    }
     try {
       await deleteItemMutation.mutateAsync(deleteItemId);
-      messageApi.success('Item removed');
+      messageApi.success(t('hr.messages.materialRequisitionItemRemoved'));
       setDeleteItemId(null);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to remove item', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.materialRequisitionItemRemoveFailed'),
+        messageApi,
+      );
     }
   }
 
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
-      messageApi.success('Material requisition cancelled');
+      messageApi.success(t('hr.messages.materialRequisitionCancelled'));
       setConfirmCancel(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to cancel requisition', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.materialRequisitionCancelFailed'),
+        messageApi,
+      );
     }
   }
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !requisition) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        message={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : 'Material requisition not found'
-        }
-        action={
-          <Button onClick={() => router.push('/hr/material-requisition')}>
-            Back to list
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page flex flex-col gap-3">
+        <Alert
+          type="error"
+          showIcon
+          title={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : t('hr.messages.materialRequisitionNotFound')
+          }
+          action={
+            <Button
+              onClick={() => router.push('/hr/material-requisition')}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.back')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
@@ -177,14 +200,14 @@ export default function MaterialRequisitionDetailPageContent({
       dataIndex: 'itemCode',
       key: 'itemCode',
       width: 120,
-      render: (v: string | null | undefined) => v || '-',
+      render: (value: string | null | undefined) => value || '—',
     },
     {
       title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (v: string | null | undefined) => v || '-',
+      render: (value: string | null | undefined) => value || '—',
     },
     {
       title: t('hr.table.quantity'),
@@ -207,6 +230,7 @@ export default function MaterialRequisitionDetailPageContent({
                   size="small"
                   icon={<Pencil size={14} />}
                   onClick={() => openEditItem(row)}
+                  style={{ borderRadius: 0 }}
                 />
                 <Button
                   type="text"
@@ -214,6 +238,7 @@ export default function MaterialRequisitionDetailPageContent({
                   danger
                   icon={<Trash2 size={14} />}
                   onClick={() => setDeleteItemId(row.id)}
+                  style={{ borderRadius: 0 }}
                 />
               </Space>
             ),
@@ -224,43 +249,50 @@ export default function MaterialRequisitionDetailPageContent({
 
   return (
     <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/hr/material-requisition')}
+          style={{ borderRadius: 0 }}
         >
           {t('hr.buttons.back')}
         </Button>
-        {canCancel ? (
-          <Button danger className="ml-auto" onClick={() => setConfirmCancel(true)}>
-            {t('hr.buttons.cancelRequest')}
-          </Button>
-        ) : null}
-        {requisition.status === 'RETURNED' && isOwner ? (
-          <Button
-            type="primary"
-            className={canCancel ? '' : 'ml-auto'}
-            onClick={() =>
-              router.push(`/approvals/${requisition.approvalRequestId}`)
-            }
-          >
-            {t('hr.buttons.resubmit')}
-          </Button>
-        ) : null}
+        <Space wrap size={8} className="ml-auto">
+          {canCancel ? (
+            <Button
+              danger
+              onClick={() => setConfirmCancel(true)}
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.cancelRequest')}
+            </Button>
+          ) : null}
+          {requisition.status === 'RETURNED' && isOwner ? (
+            <Button
+              type="primary"
+              onClick={() =>
+                router.push(`/approvals/${requisition.approvalRequestId}`)
+              }
+              style={{ borderRadius: 0 }}
+            >
+              {t('hr.buttons.resubmit')}
+            </Button>
+          ) : null}
+        </Space>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
-        <div className="flex flex-col gap-4 min-w-0">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_320px]">
+        <div className="flex min-w-0 flex-col gap-3">
           <div
-            className="rounded-lg overflow-hidden"
+            className="overflow-hidden rounded-none"
             style={{
               background: tokens.colorCardBg,
               border: `1px solid ${tokens.colorBorder}`,
             }}
           >
-            <div className="px-5 py-4">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="px-3 py-4 sm:px-5">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span
                   className="text-xs font-semibold uppercase tracking-wide"
                   style={{ color: tokens.colorTextTertiary }}
@@ -274,57 +306,107 @@ export default function MaterialRequisitionDetailPageContent({
                 />
               </div>
               <h2
-                className="text-lg font-semibold leading-snug m-0"
+                className="m-0 text-lg font-semibold leading-snug"
                 style={{ color: tokens.colorTextPrimary }}
               >
                 {requisition.title}
               </h2>
               <p
-                className="mt-1 text-sm m-0"
+                className="m-0 mt-1 text-sm"
                 style={{ color: tokens.colorTextSecondary }}
               >
                 {formatMaterialRequisitionEmployeeName(requisition.employee)}
                 {requisition.submittedAt
-                  ? ` · Submitted ${formatProjectDate(requisition.submittedAt)}`
+                  ? ` · ${formatProjectDate(requisition.submittedAt)}`
                   : null}
               </p>
             </div>
+
+            {requisition.status === 'RETURNED' && isOwner ? (
+              <div
+                className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5"
+                style={{
+                  background: tokens.colorAmber50,
+                  borderTop: `1px solid ${tokens.colorAmber400}`,
+                }}
+              >
+                <Typography.Text style={{ color: tokens.colorAmber400 }}>
+                  {t('hr.messages.materialRequisitionReturned')}
+                </Typography.Text>
+                {requisition.approvalRequestId ? (
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      router.push(
+                        `/approvals/${requisition.approvalRequestId}`,
+                      )
+                    }
+                    style={{ borderRadius: 0 }}
+                  >
+                    {t('hr.buttons.viewInApprovals')}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <SummaryStrip
             items={[
-              { label: t('hr.table.items'), value: String(requisition.items.length) },
+              {
+                label: t('hr.table.items'),
+                value: String(requisition.items.length),
+              },
               {
                 label: t('hr.table.requiredBy'),
                 value: requisition.requiredByDate
                   ? formatProjectDate(requisition.requiredByDate)
-                  : '-',
+                  : '—',
               },
-              { label: t('hr.table.project'), value: requisition.project?.name ?? '-' },
+              {
+                label: t('hr.table.project'),
+                value: requisition.project?.name ?? '—',
+              },
               {
                 label: t('hr.form.warehouseLocation'),
-                value: requisition.warehouseLocation ?? '-',
+                value: requisition.warehouseLocation ?? '—',
               },
             ]}
           />
 
-          {canEdit && requisition.status === 'RETURNED' ? (
-            <Alert
-              type="warning"
-              showIcon
-              message="This requisition was returned. Edit items below, then resubmit from Approvals."
-            />
-          ) : null}
-
-          <SectionCard title={t('hr.form.purpose')} bodyClassName="px-5 py-4">
-            <MetaItem label={t('hr.form.purpose')}>
-              <p className="whitespace-pre-wrap leading-relaxed m-0">
-                {requisition.purpose}
-              </p>
-            </MetaItem>
+          <SectionCard
+            title={t('hr.section.requestDetails')}
+            bodyClassName="px-3 py-4 sm:px-5"
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <MetaItem label={t('hr.labels.purpose')}>
+                <p className="m-0 whitespace-pre-wrap leading-relaxed">
+                  {requisition.purpose}
+                </p>
+              </MetaItem>
+              {requisition.requiredByDate ? (
+                <MetaItem label={t('hr.form.requiredByDate')}>
+                  {formatProjectDate(requisition.requiredByDate)}
+                </MetaItem>
+              ) : null}
+              {requisition.project?.name ? (
+                <MetaItem label={t('hr.form.project')}>
+                  {requisition.project.projectCode
+                    ? `[${requisition.project.projectCode}] ${requisition.project.name}`
+                    : requisition.project.name}
+                </MetaItem>
+              ) : null}
+              {requisition.warehouseLocation ? (
+                <MetaItem label={t('hr.form.warehouseLocation')}>
+                  {requisition.warehouseLocation}
+                </MetaItem>
+              ) : null}
+            </div>
           </SectionCard>
 
-          <SectionCard title={t('hr.section.items')} bodyClassName="px-5 py-4">
+          <SectionCard
+            title={t('hr.section.items')}
+            bodyClassName="px-3 py-4 sm:px-5"
+          >
             {requisition.items.length === 0 ? (
               <Empty description={t('hr.empty.noItems')} />
             ) : (
@@ -336,94 +418,146 @@ export default function MaterialRequisitionDetailPageContent({
                 dataSource={requisition.items}
                 pagination={false}
                 scroll={false}
+                footer={() => (
+                  <div className="flex justify-end pr-2 text-sm font-medium">
+                    <span style={{ color: tokens.colorTextSecondary }}>
+                      {t('hr.form.itemCount', {
+                        count: requisition.items.length,
+                      })}
+                    </span>
+                  </div>
+                )}
               />
             )}
           </SectionCard>
 
           {(requisition.documents?.length ?? 0) > 0 ? (
-            <SectionCard title={t('hr.section.attachments')} bodyClassName="px-5 py-4">
+            <SectionCard
+              title={t('hr.section.attachments')}
+              bodyClassName="px-3 py-4 sm:px-5"
+            >
               <AttachmentDownloadList documents={requisition.documents} />
             </SectionCard>
           ) : null}
         </div>
 
         <div className="min-w-0">
-          <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-4 py-4">
-            {tiers.length > 0 ? (
-              <ApprovalTierTimeline
-                tiers={tiers}
-                currentTier={requisition.approvalRequest?.currentTier ?? 1}
-              />
-            ) : (
+          {tiers.length === 0 ? (
+            <SectionCard
+              title={t('hr.section.approvalChain')}
+              bodyClassName="px-3 py-4 sm:px-4"
+            >
               <Typography.Text type="secondary">
-                No approval chain yet
+                {t('hr.empty.noApprovalChain')}
               </Typography.Text>
-            )}
-          </SectionCard>
+            </SectionCard>
+          ) : (
+            <ApprovalTierTimeline
+              tiers={tiers}
+              currentTier={requisition.approvalRequest?.currentTier ?? 1}
+            />
+          )}
         </div>
       </div>
 
       <Modal
-        title="Edit Item"
         open={Boolean(editingItem)}
-        onCancel={() => {
-          setEditingItem(null);
-          itemForm.resetFields();
-        }}
+        title={t('hr.dialog.editMaterialRequisitionItemTitle')}
+        onCancel={closeEditItem}
         onOk={() => void handleUpdateItem()}
+        okText={t('hr.buttons.save')}
         confirmLoading={updateItemMutation.isPending}
-        destroyOnHidden
+        width={560}
+        forceRender
+        afterOpenChange={(open) => {
+          if (open && editingItem) {
+            itemForm.setFieldsValue({
+              itemName: editingItem.itemName,
+              itemCode: editingItem.itemCode ?? '',
+              description: editingItem.description ?? '',
+              quantity: Number(editingItem.quantity),
+              unit: editingItem.unit,
+            });
+            return;
+          }
+          if (!open) {
+            itemForm.resetFields();
+          }
+        }}
+        styles={{ body: { paddingTop: 16 } }}
       >
-        <Form form={itemForm} layout="vertical" className="mt-2">
-          <Form.Item
-            name="itemName"
-            label={t('hr.form.itemName')}
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            <Input maxLength={200} />
-          </Form.Item>
-          <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
-            <Input maxLength={100} />
-          </Form.Item>
-          <Form.Item name="description" label={t('hr.form.description')}>
-            <Input maxLength={1000} />
-          </Form.Item>
-          <Form.Item
-            name="quantity"
-            label={t('hr.form.quantity')}
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            <InputNumber min={0.01} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            name="unit"
-            label={t('hr.form.unit')}
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            <Input maxLength={50} />
-          </Form.Item>
+        <Form form={itemForm} layout="vertical" requiredMark={false}>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item
+              name="itemName"
+              label={t('hr.form.itemName')}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.itemNameRequired'),
+                },
+              ]}
+            >
+              <Input maxLength={200} />
+            </Form.Item>
+            <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
+              <Input maxLength={100} />
+            </Form.Item>
+            <Form.Item
+              name="quantity"
+              label={t('hr.form.quantity')}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.quantityRequired'),
+                },
+              ]}
+            >
+              <InputNumber min={0.01} className="w-full" />
+            </Form.Item>
+            <Form.Item
+              name="unit"
+              label={t('hr.form.unit')}
+              rules={[
+                { required: true, message: t('hr.validation.unitRequired') },
+              ]}
+            >
+              <Input maxLength={50} />
+            </Form.Item>
+            <Form.Item
+              name="description"
+              label={t('hr.form.description')}
+              className="sm:col-span-2"
+            >
+              <Input maxLength={1000} />
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
 
       <ConfirmDialog
         open={Boolean(deleteItemId)}
-        title="Remove item?"
-        description="This line item will be permanently removed."
-        confirmLabel="Remove"
+        title={t('hr.dialog.deleteMaterialRequisitionItemTitle')}
+        description={t('hr.dialog.deleteMaterialRequisitionItemDesc')}
+        confirmLabel={t('hr.buttons.removeItem')}
         danger
         confirmLoading={deleteItemMutation.isPending}
-        onConfirm={() => void handleDeleteItem()}
+        onConfirm={() => {
+          void handleDeleteItem();
+        }}
         onCancel={() => setDeleteItemId(null)}
       />
 
       <ConfirmDialog
         open={confirmCancel}
-        title="Cancel requisition?"
-        description="This will cancel the material requisition and any open approval request."
-        confirmLabel="Cancel Requisition"
+        title={t('hr.dialog.cancelMaterialRequisitionTitle')}
+        description={t('hr.dialog.cancelMaterialRequisitionDesc')}
+        confirmLabel={t('hr.buttons.cancelRequest')}
         danger
         confirmLoading={cancelMutation.isPending}
-        onConfirm={() => void handleCancel()}
+        onConfirm={() => {
+          void handleCancel();
+        }}
         onCancel={() => setConfirmCancel(false)}
       />
     </div>

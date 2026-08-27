@@ -255,7 +255,12 @@
         "listTitle": "Material Requisitions",
         "myListTitle": "My Material Requisitions",
         "listDescription": "Review and process warehouse material requisitions.",
-        "myListDescription": "Submit and track your material requisitions through the approval workflow."
+        "myListDescription": "Submit and track your material requisitions through the approval workflow.",
+        "formDescription": "Add requisition details and line items, then review and submit for approval.",
+        "detailsStepDescription": "Enter the title, purpose, and optional project or warehouse details.",
+        "itemsStepDescription": "Add at least one material line item with quantity and unit.",
+        "reviewStepDescription": "Confirm the requisition summary before submitting.",
+        "attachmentsStepDescription": "Optionally attach drawings, specs, or other supporting documents."
       },
       "consumables": {
         "new": "New Consumables Requisition",
@@ -1570,7 +1575,17 @@
       "purchaseRequestItemUpdateFailed": "Failed to update item",
       "purchaseRequestItemRemoved": "Item removed",
       "purchaseRequestItemRemoveFailed": "Failed to remove item",
-      "purchaseRequestReturned": "This request was returned for revision."
+      "purchaseRequestReturned": "This request was returned for revision.",
+      "materialRequisitionSubmitted": "Material requisition submitted for approval",
+      "materialRequisitionSubmitFailed": "Failed to submit material requisition",
+      "materialRequisitionCancelled": "Material requisition cancelled",
+      "materialRequisitionCancelFailed": "Failed to cancel material requisition",
+      "materialRequisitionNotFound": "Material requisition not found",
+      "materialRequisitionItemUpdated": "Item updated",
+      "materialRequisitionItemUpdateFailed": "Failed to update item",
+      "materialRequisitionItemRemoved": "Item removed",
+      "materialRequisitionItemRemoveFailed": "Failed to remove item",
+      "materialRequisitionReturned": "This requisition was returned for revision."
     },
     "urgency": {
       "MINOR": "Minor",
@@ -2038,7 +2053,10 @@
       "itemNameRequired": "Enter an item name",
       "quantityRequired": "Enter a quantity",
       "unitRequired": "Enter a unit",
-      "unitPriceRequired": "Enter a unit price"
+      "unitPriceRequired": "Enter a unit price",
+      "addMaterialItem": "Add at least one line item",
+      "completeMaterialDetails": "Complete requisition details before submitting",
+      "purposeRequired": "Enter the purpose for this requisition"
     },
     "perDiemCategory": {
       "americas": "Americas",
@@ -2087,7 +2105,12 @@
       "cancelPurchaseRequestDesc": "This will cancel the purchase request and any open approval request.",
       "deletePurchaseRequestItemTitle": "Remove item?",
       "deletePurchaseRequestItemDesc": "This item will be removed and the request total recalculated.",
-      "editPurchaseRequestItemTitle": "Edit Line Item"
+      "editPurchaseRequestItemTitle": "Edit Line Item",
+      "cancelMaterialRequisitionTitle": "Cancel material requisition?",
+      "cancelMaterialRequisitionDesc": "This will cancel the material requisition and any open approval request.",
+      "deleteMaterialRequisitionItemTitle": "Remove item?",
+      "deleteMaterialRequisitionItemDesc": "This item will be removed from the requisition.",
+      "editMaterialRequisitionItemTitle": "Edit Line Item"
     },
     "form": {
       "leaveType": "Leave Type",
@@ -2271,7 +2294,8 @@
       "enterVendor": "Vendor or supplier name",
       "enterVendorContact": "Phone or email",
       "enterUnit": "e.g. pcs, box, kg",
-      "chooseSupportingDocuments": "Choose supporting documents"
+      "chooseSupportingDocuments": "Choose supporting documents",
+      "enterWarehouseLocation": "Which warehouse to draw from"
     },
     "empty": {
       "noLeaveRequests": "No leave requests yet.",

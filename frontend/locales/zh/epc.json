@@ -255,7 +255,12 @@
         "listTitle": "材料领用",
         "myListTitle": "我的材料领用",
         "listDescription": "审核并处理仓库材料领用申请。",
-        "myListDescription": "提交并跟踪您的材料领用审批流程。"
+        "myListDescription": "提交并跟踪您的材料领用审批流程。",
+        "formDescription": "填写领用详情与明细行，确认后提交审批。",
+        "detailsStepDescription": "填写标题、用途，以及可选的项目或仓库信息。",
+        "itemsStepDescription": "至少添加一条材料明细，包含数量和单位。",
+        "reviewStepDescription": "提交前请确认领用摘要。",
+        "attachmentsStepDescription": "可选上传图纸、规格说明或其他证明文件。"
       },
       "consumables": {
         "new": "新建低值易耗品申请",
@@ -1570,7 +1575,17 @@
       "purchaseRequestItemUpdateFailed": "更新明细失败",
       "purchaseRequestItemRemoved": "明细已删除",
       "purchaseRequestItemRemoveFailed": "删除明细失败",
-      "purchaseRequestReturned": "该申请已退回修改。"
+      "purchaseRequestReturned": "该申请已退回修改。",
+      "materialRequisitionSubmitted": "材料领用已提交审批",
+      "materialRequisitionSubmitFailed": "提交材料领用失败",
+      "materialRequisitionCancelled": "材料领用已取消",
+      "materialRequisitionCancelFailed": "取消材料领用失败",
+      "materialRequisitionNotFound": "未找到材料领用申请",
+      "materialRequisitionItemUpdated": "明细已更新",
+      "materialRequisitionItemUpdateFailed": "更新明细失败",
+      "materialRequisitionItemRemoved": "明细已删除",
+      "materialRequisitionItemRemoveFailed": "删除明细失败",
+      "materialRequisitionReturned": "该领用申请已退回修改。"
     },
     "urgency": {
       "MINOR": "一般",
@@ -2037,7 +2052,10 @@
       "itemNameRequired": "请填写物品名称",
       "quantityRequired": "请填写数量",
       "unitRequired": "请填写单位",
-      "unitPriceRequired": "请填写单价"
+      "unitPriceRequired": "请填写单价",
+      "addMaterialItem": "请至少添加一条明细",
+      "completeMaterialDetails": "提交前请先完成领用详情",
+      "purposeRequired": "请填写领用用途"
     },
     "perDiemCategory": {
       "americas": "美洲",
@@ -2086,7 +2104,12 @@
       "cancelPurchaseRequestDesc": "这将取消采购申请及所有未完成的审批。",
       "deletePurchaseRequestItemTitle": "删除明细？",
       "deletePurchaseRequestItemDesc": "该明细将被删除，申请总额将重新计算。",
-      "editPurchaseRequestItemTitle": "编辑明细"
+      "editPurchaseRequestItemTitle": "编辑明细",
+      "cancelMaterialRequisitionTitle": "取消材料领用？",
+      "cancelMaterialRequisitionDesc": "这将取消材料领用及所有未完成的审批。",
+      "deleteMaterialRequisitionItemTitle": "删除明细？",
+      "deleteMaterialRequisitionItemDesc": "该明细将从领用申请中删除。",
+      "editMaterialRequisitionItemTitle": "编辑明细"
     },
     "form": {
       "leaveType": "假期类型",
@@ -2270,7 +2293,8 @@
       "enterVendor": "供应商名称",
       "enterVendorContact": "电话或邮箱",
       "enterUnit": "例如：件、箱、公斤",
-      "chooseSupportingDocuments": "选择证明文件"
+      "chooseSupportingDocuments": "选择证明文件",
+      "enterWarehouseLocation": "从哪个仓库领用"
     },
     "empty": {
       "noLeaveRequests": "暂无请假申请。",
