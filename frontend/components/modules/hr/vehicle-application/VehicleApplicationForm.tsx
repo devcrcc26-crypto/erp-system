@@ -8,7 +8,6 @@ import {
   Input,
   InputNumber,
   Radio,
-  Select,
   Spin,
   Tooltip,
 } from 'antd';
@@ -29,7 +28,6 @@ import type {
 } from '@/lib/api/vehicle-application.types';
 import { useAvailableVehicles } from '@/lib/query/company-vehicle';
 import { useSubmitVehicleApplication } from '@/lib/query/vehicle-application';
-import { useAllProjects } from '@/lib/query/projects';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDriverName } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -45,7 +43,6 @@ interface VehicleApplicationFormValues {
   purpose?: string;
   passengerCount?: number;
   passengerNames?: string;
-  projectId?: string;
   notes?: string;
 }
 
@@ -88,7 +85,6 @@ export default function VehicleApplicationForm({
   const [returnAt, setReturnAt] = useState<dayjs.Dayjs | null>(null);
 
   const submitMutation = useSubmitVehicleApplication();
-  const projectsQuery = useAllProjects();
 
   const driveType = Form.useWatch('driveType', form) ?? 'COMPANY_DRIVER';
   const formValues = Form.useWatch([], form) as
@@ -111,13 +107,6 @@ export default function VehicleApplicationForm({
 
   const availableQuery = useAvailableVehicles(availableParams);
   const vehicles = availableQuery.data ?? [];
-
-  const projectLabel = useMemo(() => {
-    const projectId = formValues?.projectId;
-    if (!projectId) return '—';
-    const project = projectsQuery.data?.data?.find((row) => row.id === projectId);
-    return project ? `${project.projectCode} — ${project.name}` : '—';
-  }, [formValues?.projectId, projectsQuery.data?.data]);
 
   function clearVehicleSelection(): void {
     setSelectedVehicle(null);
@@ -297,7 +286,6 @@ export default function VehicleApplicationForm({
         purpose,
         passengerCount: stored.passengerCount ?? 1,
         passengerNames: stored.passengerNames?.trim() || undefined,
-        projectId: stored.projectId || undefined,
         notes: stored.notes?.trim() || undefined,
       });
 
@@ -602,37 +590,16 @@ export default function VehicleApplicationForm({
               />
             </Form.Item>
 
-            <div className="erp-form-grid-2">
-              <Form.Item name="projectId" label={t('hr.form.project')}>
-                <Select
-                  showSearch
-                  allowClear
-                  placeholder={t('hr.placeholder.selectProject')}
-                  loading={projectsQuery.isLoading}
-                  filterOption={(input, option) =>
-                    String(option?.label ?? '')
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                  options={
-                    projectsQuery.data?.data?.map((project) => ({
-                      value: project.id,
-                      label: `${project.projectCode} — ${project.name}`,
-                    })) ?? []
-                  }
-                />
-              </Form.Item>
-              <Form.Item
-                name="passengerNames"
-                label={t('hr.form.passengerNames')}
-              >
-                <Input.TextArea
-                  rows={2}
-                  maxLength={2000}
-                  placeholder={t('hr.placeholder.enterPassengerNames')}
-                />
-              </Form.Item>
-            </div>
+            <Form.Item
+              name="passengerNames"
+              label={t('hr.form.passengerNames')}
+            >
+              <Input.TextArea
+                rows={2}
+                maxLength={2000}
+                placeholder={t('hr.placeholder.enterPassengerNames')}
+              />
+            </Form.Item>
 
             <Form.Item name="notes" label={t('hr.form.notes')}>
               <Input.TextArea
@@ -693,7 +660,6 @@ export default function VehicleApplicationForm({
                 label={t('hr.labels.passengers')}
                 value={String(formValues?.passengerCount ?? 1)}
               />
-              <ReviewItem label={t('hr.labels.project')} value={projectLabel} />
               <ReviewItem
                 label={t('hr.labels.purpose')}
                 value={formValues?.purpose?.trim() || '—'}
@@ -729,9 +695,6 @@ export default function VehicleApplicationForm({
       selectedVehicle,
       driveType,
       formValues,
-      projectLabel,
-      projectsQuery.isLoading,
-      projectsQuery.data?.data,
     ],
   );
 
