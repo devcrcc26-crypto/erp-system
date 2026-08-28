@@ -27,7 +27,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { AuditLog, AuditLogSource } from '@/lib/api/types';
-import { useAuditLogs } from '@/lib/query/audit-logs';
+import { useAuditLogs, useAuditLogStats } from '@/lib/query/audit-logs';
 import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
 import {
   auditLogActionVariant,
@@ -94,12 +94,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
   );
 
   const auditLogsQuery = useAuditLogs(queryParams);
-  const statsQuery = useAuditLogs({
-    page: 1,
-    limit: 500,
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
-  });
+  const statsQuery = useAuditLogStats();
   const usersDirectoryQuery = useUsersDirectory(
     { page: 1, limit: USER_DIRECTORY_PAGE_LIMIT },
     { enabled: auditLogsQuery.isSuccess },
@@ -115,24 +110,12 @@ export default function AuditLogsPageContent(): React.ReactNode {
   );
 
   const auditStats = useMemo(() => {
-    const sample = statsQuery.data?.data ?? [];
-    let userActionCount = 0;
-    let systemJobCount = 0;
-    let integrationCount = 0;
-    for (const log of sample) {
-      if (log.source === 'USER_ACTION') {
-        userActionCount += 1;
-      } else if (log.source === 'SYSTEM_JOB') {
-        systemJobCount += 1;
-      } else {
-        integrationCount += 1;
-      }
-    }
+    const stats = statsQuery.data;
     return {
-      totalCount: statsQuery.data?.meta.total ?? sample.length,
-      userActionCount,
-      systemJobCount,
-      integrationCount,
+      totalCount: stats?.total ?? 0,
+      userActionCount: stats?.userActions ?? 0,
+      systemJobCount: stats?.systemJobs ?? 0,
+      integrationCount: stats?.integrations ?? 0,
     };
   }, [statsQuery.data]);
 

@@ -2,7 +2,7 @@
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 import { apiGet, apiGetPaginated } from '@/lib/api/client';
-import type { AuditLog, AuditLogQueryParams } from '@/lib/api/types';
+import type { AuditLog, AuditLogQueryParams, AuditLogStats } from '@/lib/api/types';
 
 export const auditLogKeys = {
   all: ['audit-logs'] as const,
@@ -10,6 +10,7 @@ export const auditLogKeys = {
   list: (params: AuditLogQueryParams) => [...auditLogKeys.lists(), params] as const,
   details: () => [...auditLogKeys.all, 'detail'] as const,
   detail: (id: string) => [...auditLogKeys.details(), id] as const,
+  stats: () => [...auditLogKeys.all, 'stats'] as const,
 };
 
 function toQueryString(params: AuditLogQueryParams): string {
@@ -53,6 +54,16 @@ export function useAuditLog(id: string, enabled = true) {
     queryKey: auditLogKeys.detail(id),
     queryFn: () => apiGet<AuditLog>(`/audit-logs/${id}`),
     enabled: Boolean(id) && enabled,
+    retry: false,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useAuditLogStats(enabled = true) {
+  return useQuery({
+    queryKey: auditLogKeys.stats(),
+    queryFn: () => apiGet<AuditLogStats>('/audit-logs/stats/summary'),
+    enabled,
     retry: false,
     staleTime: 60 * 1000,
   });

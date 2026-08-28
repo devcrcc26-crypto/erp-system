@@ -141,6 +141,36 @@ export class AuditService {
   }
 
   /**
+   * Returns aggregate audit log counts for dashboard stat cards.
+   */
+  async getStats(companyId: string): Promise<{
+    total: number;
+    userActions: number;
+    systemJobs: number;
+    integrations: number;
+  }> {
+    const [total, bySource] = await Promise.all([
+      this.prisma.auditLog.count({ where: { companyId } }),
+      this.prisma.auditLog.groupBy({
+        by: ['source'],
+        where: { companyId },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const countFor = (source: string): number =>
+      bySource.find((row) => row.source === source)?._count._all ?? 0;
+
+    return {
+      total,
+      userActions: countFor('USER_ACTION'),
+      systemJobs: countFor('SYSTEM_JOB'),
+      integrations:
+        countFor('API_INTEGRATION') + countFor('MIGRATION'),
+    };
+  }
+
+  /**
    * Builds audit input from the current HTTP request context.
    */
   buildFromRequestContext(

@@ -24,6 +24,13 @@ export class AuditController {
     return this.auditService.list(user.companyId, query);
   }
 
+  @Get('stats/summary')
+  @RequirePermission('audit', 'view')
+  @ApiOperation({ summary: 'Audit log aggregate stats for stat cards' })
+  getStats(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
+    return this.auditService.getStats(user.companyId);
+  }
+
   @Get(':id')
   @RequirePermission('audit', 'view')
   @ApiOperation({ summary: 'Get audit log entry by ID' })

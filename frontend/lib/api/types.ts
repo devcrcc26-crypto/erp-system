@@ -485,6 +485,13 @@ export interface AuditLogQueryParams extends PaginationParams {
   dateTo?: string;
 }
 
+export interface AuditLogStats {
+  total: number;
+  userActions: number;
+  systemJobs: number;
+  integrations: number;
+}
+
 export interface AuthCapabilities {
   canManageUsers: boolean;
   canCreateUsers: boolean;
