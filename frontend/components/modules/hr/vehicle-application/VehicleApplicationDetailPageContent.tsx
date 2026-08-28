@@ -270,25 +270,23 @@ export default function VehicleApplicationDetailPageContent({
         </div>
 
         <div className="min-w-0">
-          <SectionCard
-            title={t('hr.section.approvalChain')}
-            bodyClassName="px-3 py-4 sm:px-4"
-          >
-            {isDirectApproved ? (
+          {isDirectApproved || tiers.length === 0 ? (
+            <SectionCard
+              title={t('hr.section.approvalChain')}
+              bodyClassName="px-3 py-4 sm:px-4"
+            >
               <Typography.Text type="secondary">
-                {t('hr.messages.directApprovalNoChain')}
+                {isDirectApproved
+                  ? t('hr.messages.directApprovalNoChain')
+                  : t('hr.empty.noApprovalChain')}
               </Typography.Text>
-            ) : tiers.length > 0 ? (
-              <ApprovalTierTimeline
-                tiers={tiers}
-                currentTier={application.approvalRequest?.currentTier ?? 1}
-              />
-            ) : (
-              <Typography.Text type="secondary">
-                No approval chain yet
-              </Typography.Text>
-            )}
-          </SectionCard>
+            </SectionCard>
+          ) : (
+            <ApprovalTierTimeline
+              tiers={tiers}
+              currentTier={application.approvalRequest?.currentTier ?? 1}
+            />
+          )}
         </div>
       </div>
 
