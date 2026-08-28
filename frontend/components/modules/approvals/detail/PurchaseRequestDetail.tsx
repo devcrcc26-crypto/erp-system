@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Skeleton, Tag } from 'antd';
+import { Alert, Skeleton, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   MetaItem,
@@ -82,6 +82,19 @@ export default function PurchaseRequestDetail({
       ellipsis: true,
       render: (_: unknown, row: PurchaseRequestItem) =>
         formatPurchaseItemDescription(row.description, row.modelSpec),
+    },
+    {
+      title: t('hr.table.itemImage'),
+      key: 'image',
+      width: 120,
+      render: (_: unknown, row: PurchaseRequestItem) =>
+        row.image ? (
+          <AttachmentDownloadList documents={[row.image]} />
+        ) : (
+          <Typography.Text type="secondary" className="text-xs">
+            {t('hr.labels.noItemImage')}
+          </Typography.Text>
+        ),
     },
     {
       title: t('hr.table.quantity'),

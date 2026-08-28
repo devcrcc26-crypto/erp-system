@@ -1835,6 +1835,7 @@
       "ticketsRequired": "需上传机票",
       "ticketsRequiredDesc": "出差已获批准，请上传合并机票或各乘客的单独机票。",
       "receiptMissing": "缺失",
+      "noItemImage": "无图片",
       "submittedOn": "提交于 {{date}}",
       "removeTicket": "删除机票？",
       "removeTicketDesc": "乘客的确认状态将被重置。",
@@ -2004,6 +2005,7 @@
       "category": "类别",
       "description": "描述",
       "descriptionWithModelSpec": "描述（型号 / 规格）",
+      "itemImage": "图片",
       "amount": "金额",
       "actions": "操作",
       "itemName": "物品名称",
@@ -2179,7 +2181,9 @@
       "REPAIR": "维修"
     },
     "hints": {
-      "replaceReceipt": "当前收据：{{name}}。上传新文件可替换。"
+      "replaceReceipt": "当前收据：{{name}}。上传新文件可替换。",
+      "itemImageOptional": "可选的物品照片（JPEG、PNG、WebP 或 GIF）。",
+      "replaceItemImage": "当前图片：{{name}}。上传新文件可替换。"
     },
     "dialog": {
       "editEmployeePerDiemRates": "编辑差旅补贴标准 — {{name}}",
@@ -2289,6 +2293,7 @@
       "unit": "单位",
       "unitPrice": "单价",
       "modelSpec": "型号 / 规格",
+      "itemImage": "物品图片",
       "budgetAmount": "预算金额",
       "totalBudgetAmount": "预算总额",
       "currency": "货币",

@@ -42,6 +42,7 @@ export interface PurchaseRequestItem {
   totalPrice: number | string;
   totalPriceEtb: number | string;
   exchangeRate?: number | string;
+  image?: PurchaseRequestDocumentSummary | null;
 }
 
 export interface PurchaseRequestListItem {
@@ -114,6 +115,7 @@ export interface AddPurchaseRequestItemPayload {
   unit: string;
   unitPrice: number;
   currency: SupportedCurrency;
+  file?: File;
 }
 
 export interface UpdatePurchaseRequestItemPayload {
@@ -124,6 +126,7 @@ export interface UpdatePurchaseRequestItemPayload {
   unit?: string;
   unitPrice?: number;
   currency?: SupportedCurrency;
+  file?: File;
 }
 
 export interface ListPurchaseRequestsParams {

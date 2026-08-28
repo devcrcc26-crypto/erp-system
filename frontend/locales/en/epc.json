@@ -1835,6 +1835,7 @@
       "ticketsRequired": "Tickets required",
       "ticketsRequiredDesc": "The trip is approved. Upload a combined ticket and/or individual passenger tickets below.",
       "receiptMissing": "Missing",
+      "noItemImage": "No image",
       "submittedOn": "Submitted {{date}}",
       "removeTicket": "Remove ticket?",
       "removeTicketDesc": "Passenger acknowledgement will be reset.",
@@ -2004,6 +2005,7 @@
       "category": "Category",
       "description": "Description",
       "descriptionWithModelSpec": "Description (Model Specifications)",
+      "itemImage": "Image",
       "amount": "Amount",
       "actions": "Actions",
       "itemName": "Item Name",
@@ -2179,7 +2181,9 @@
       "REPAIR": "Repair"
     },
     "hints": {
-      "replaceReceipt": "Current receipt: {{name}}. Upload a new file to replace it."
+      "replaceReceipt": "Current receipt: {{name}}. Upload a new file to replace it.",
+      "itemImageOptional": "Optional photo of the item (JPEG, PNG, WebP, or GIF).",
+      "replaceItemImage": "Current image: {{name}}. Upload a new file to replace it."
     },
     "dialog": {
       "editEmployeePerDiemRates": "Edit per diem rates — {{name}}",
@@ -2289,6 +2293,7 @@
       "unit": "Unit",
       "unitPrice": "Unit Price",
       "modelSpec": "Model / Specifications",
+      "itemImage": "Item Image",
       "budgetAmount": "Budget Amount",
       "totalBudgetAmount": "Total Budget Amount",
       "currency": "Currency",

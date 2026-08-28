@@ -8,11 +8,12 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { memoryStorage } from 'multer';
@@ -134,32 +135,75 @@ export class PurchaseRequestController {
 
   @Post(':id/items')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Add a line item to a draft or returned request' })
+  @ApiOperation({ summary: 'Add a line item to a draft or returned request (optional item image)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        itemName: { type: 'string' },
+        modelSpec: { type: 'string' },
+        description: { type: 'string' },
+        quantity: { type: 'number' },
+        unit: { type: 'string' },
+        unitPrice: { type: 'number' },
+        currency: { type: 'string', enum: ['ETB', 'USD', 'CNY'] },
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async addItem(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<unknown> {
     const dto = await parseDto(AddPurchaseRequestItemDto, body);
-    return this.purchaseRequestService.addItem(id, dto, companyId, user.userId);
+    return this.purchaseRequestService.addItem(
+      id,
+      dto,
+      file,
+      companyId,
+      user.userId,
+    );
   }
 
   @Patch(':id/items/:itemId')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Update a line item' })
+  @ApiOperation({ summary: 'Update a line item and/or replace its image' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        itemName: { type: 'string' },
+        modelSpec: { type: 'string' },
+        description: { type: 'string' },
+        quantity: { type: 'number' },
+        unit: { type: 'string' },
+        unitPrice: { type: 'number' },
+        currency: { type: 'string', enum: ['ETB', 'USD', 'CNY'] },
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   async updateItem(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
     @Param('itemId') itemId: string,
     @Body() body: Record<string, unknown>,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<unknown> {
     const dto = await parseDto(UpdatePurchaseRequestItemDto, body);
     return this.purchaseRequestService.updateItem(
       id,
       itemId,
       dto,
+      file,
       companyId,
       user.userId,
     );

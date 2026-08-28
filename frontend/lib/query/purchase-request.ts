@@ -10,6 +10,7 @@ import {
   apiGet,
   apiGetPaginated,
   apiPatch,
+  apiPatchForm,
   apiPost,
   apiPostForm,
 } from '@/lib/api/client';
@@ -115,14 +116,46 @@ export function useUpdatePurchaseRequest(requestId: string) {
   });
 }
 
+/** Builds multipart form data for purchase request line items. */
+export function buildPurchaseRequestItemFormData(
+  payload: AddPurchaseRequestItemPayload | UpdatePurchaseRequestItemPayload,
+): FormData {
+  const formData = new FormData();
+  if (payload.itemName !== undefined) {
+    formData.append('itemName', payload.itemName);
+  }
+  if (payload.modelSpec !== undefined) {
+    formData.append('modelSpec', payload.modelSpec);
+  }
+  if (payload.description !== undefined) {
+    formData.append('description', payload.description);
+  }
+  if (payload.quantity !== undefined) {
+    formData.append('quantity', String(payload.quantity));
+  }
+  if (payload.unit !== undefined) {
+    formData.append('unit', payload.unit);
+  }
+  if (payload.unitPrice !== undefined) {
+    formData.append('unitPrice', String(payload.unitPrice));
+  }
+  if (payload.currency !== undefined) {
+    formData.append('currency', payload.currency);
+  }
+  if (payload.file) {
+    formData.append('file', payload.file);
+  }
+  return formData;
+}
+
 /** Adds a line item to a draft purchase request. */
 export function useAddPurchaseRequestItem(requestId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: AddPurchaseRequestItemPayload) =>
-      apiPost<PurchaseRequestDetail>(
+      apiPostForm<PurchaseRequestDetail>(
         `${PURCHASE_REQUEST_PATH}/${requestId}/items`,
-        payload,
+        buildPurchaseRequestItemFormData(payload),
       ),
     onSuccess: (updated) => {
       void queryClient.setQueryData(
@@ -144,9 +177,9 @@ export function useUpdatePurchaseRequestItem(requestId: string) {
       itemId: string;
       payload: UpdatePurchaseRequestItemPayload;
     }) =>
-      apiPatch<PurchaseRequestDetail>(
+      apiPatchForm<PurchaseRequestDetail>(
         `${PURCHASE_REQUEST_PATH}/${requestId}/items/${itemId}`,
-        payload,
+        buildPurchaseRequestItemFormData(payload),
       ),
     onSuccess: (updated) => {
       void queryClient.setQueryData(

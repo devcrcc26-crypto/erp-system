@@ -21,13 +21,13 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { apiPost, apiPostForm } from '@/lib/api/client';
+import { apiPostForm } from '@/lib/api/client';
 import type {
   AddPurchaseRequestItemPayload,
   PurchaseRequestDetail,
   SupportedCurrency,
 } from '@/lib/api/purchase-request.types';
-import { useCreatePurchaseRequest } from '@/lib/query/purchase-request';
+import { useCreatePurchaseRequest, buildPurchaseRequestItemFormData } from '@/lib/query/purchase-request';
 import { useCurrencyRates } from '@/lib/query/currency';
 import { tokens } from '@/lib/theme/tokens';
 import {
@@ -95,6 +95,7 @@ export default function PurchaseRequestForm({
   const [detailsSnapshot, setDetailsSnapshot] = useState<Step1Values>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
+  const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -165,6 +166,7 @@ export default function PurchaseRequestForm({
     setEditingKey(null);
     itemForm.resetFields();
     itemForm.setFieldValue('currency', 'ETB');
+    setItemImageFile(null);
     setShowItemForm(true);
   }
 
@@ -181,6 +183,7 @@ export default function PurchaseRequestForm({
       unitPrice: item.unitPrice,
       currency: item.currency,
     });
+    setItemImageFile(item.file ?? null);
     setShowItemForm(true);
   }
 
@@ -188,6 +191,7 @@ export default function PurchaseRequestForm({
     setShowItemForm(false);
     setEditingKey(null);
     itemForm.resetFields();
+    setItemImageFile(null);
   }
 
   async function saveItem(): Promise<void> {
@@ -205,6 +209,7 @@ export default function PurchaseRequestForm({
         unit: values.unit,
         unitPrice: Number(values.unitPrice),
         currency: values.currency,
+        file: itemImageFile ?? undefined,
       };
       if (editingKey) {
         setItems((prev) =>
@@ -256,9 +261,9 @@ export default function PurchaseRequestForm({
       await Promise.all(
         items.map((item) => {
           const { _key: _unused, ...payload } = item;
-          return apiPost<PurchaseRequestDetail>(
+          return apiPostForm<PurchaseRequestDetail>(
             `/hr/purchase-requests/${created.id}/items`,
-            payload,
+            buildPurchaseRequestItemFormData(payload),
           );
         }),
       );
@@ -296,6 +301,19 @@ export default function PurchaseRequestForm({
       ellipsis: true,
       render: (_: unknown, row: ClientItem) =>
         formatPurchaseItemDescription(row.description, row.modelSpec),
+    },
+    {
+      title: t('hr.table.itemImage'),
+      key: 'image',
+      width: 100,
+      render: (_: unknown, row: ClientItem) =>
+        row.file ? (
+          <Typography.Text ellipsis className="text-xs">
+            {row.file.name}
+          </Typography.Text>
+        ) : (
+          '—'
+        ),
     },
     {
       title: t('hr.table.quantity'),
@@ -548,6 +566,20 @@ export default function PurchaseRequestForm({
                     >
                       <Select options={CURRENCY_OPTIONS} />
                     </Form.Item>
+                    <Form.Item
+                      label={t('hr.form.itemImage')}
+                      className="sm:col-span-2"
+                      extra={t('hr.hints.itemImageOptional')}
+                    >
+                      <FileUploadInput
+                        files={itemImageFile ? [itemImageFile] : []}
+                        onChange={(nextFiles) =>
+                          setItemImageFile(nextFiles[0] ?? null)
+                        }
+                        accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                        multiple={false}
+                      />
+                    </Form.Item>
                   </div>
                 </Form>
                 <div className="flex justify-end gap-2">
@@ -697,6 +729,7 @@ export default function PurchaseRequestForm({
       showItemForm,
       editingKey,
       itemForm,
+      itemImageFile,
       itemColumns,
       reviewItemColumns,
       items,

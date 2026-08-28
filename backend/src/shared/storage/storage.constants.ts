@@ -54,3 +54,11 @@ export const ALLOWED_UPLOAD_MIME_TYPES = new Set([
   'application/x-rar-compressed',
   'application/gzip',
 ]);
+
+/** Image-only uploads (item photos, profile pictures, etc.). */
+export const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);

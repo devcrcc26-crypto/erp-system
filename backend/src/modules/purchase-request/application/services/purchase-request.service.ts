@@ -19,6 +19,7 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
+  ALLOWED_IMAGE_MIME_TYPES,
   ALLOWED_UPLOAD_MIME_TYPES,
   STORAGE_BUCKETS,
   STORAGE_SERVICE,
@@ -71,6 +72,9 @@ const REQUEST_DETAIL_INCLUDE = {
   project: { select: { id: true, name: true, projectCode: true } },
   items: {
     orderBy: { createdAt: 'asc' as const },
+    include: {
+      image: { select: DOCUMENT_SELECT },
+    },
   },
   attachmentFolder: {
     include: {
@@ -213,10 +217,19 @@ export class PurchaseRequestService
   async addItem(
     requestId: string,
     dto: AddPurchaseRequestItemDto,
+    file: UploadedFile | undefined,
     companyId: string,
     userId: string,
   ): Promise<unknown> {
     await this.assertEditableOwner(requestId, companyId, userId);
+
+    const request = await this.prisma.purchaseRequest.findFirst({
+      where: activeOnly({ id: requestId, companyId }),
+      select: { id: true, requestNumber: true, attachmentFolderId: true },
+    });
+    if (!request) {
+      throw new NotFoundException('Purchase request not found');
+    }
 
     const rate =
       dto.currency === 'ETB'
@@ -225,6 +238,11 @@ export class PurchaseRequestService
 
     const totalPrice = dto.quantity * dto.unitPrice;
     const totalPriceEtb = totalPrice * rate;
+
+    let documentId: string | null = null;
+    if (file?.buffer?.length) {
+      documentId = await this.uploadItemImage(request, companyId, userId, file);
+    }
 
     await this.prisma.purchaseRequestItem.create({
       data: {
@@ -240,6 +258,7 @@ export class PurchaseRequestService
         totalPrice: new Prisma.Decimal(totalPrice),
         totalPriceEtb: new Prisma.Decimal(totalPriceEtb),
         exchangeRate: new Prisma.Decimal(rate),
+        documentId,
       },
     });
 
@@ -254,10 +273,19 @@ export class PurchaseRequestService
     requestId: string,
     itemId: string,
     dto: UpdatePurchaseRequestItemDto,
+    file: UploadedFile | undefined,
     companyId: string,
     userId: string,
   ): Promise<unknown> {
     await this.assertEditableOwner(requestId, companyId, userId);
+
+    const request = await this.prisma.purchaseRequest.findFirst({
+      where: activeOnly({ id: requestId, companyId }),
+      select: { id: true, requestNumber: true, attachmentFolderId: true },
+    });
+    if (!request) {
+      throw new NotFoundException('Purchase request not found');
+    }
 
     const existing = await this.prisma.purchaseRequestItem.findFirst({
       where: { id: itemId, requestId },
@@ -278,6 +306,11 @@ export class PurchaseRequestService
     const totalPrice = nextQuantity * nextUnitPrice;
     const totalPriceEtb = totalPrice * rate;
 
+    let documentId = existing.documentId;
+    if (file?.buffer?.length) {
+      documentId = await this.uploadItemImage(request, companyId, userId, file);
+    }
+
     await this.prisma.purchaseRequestItem.update({
       where: { id: itemId },
       data: {
@@ -297,6 +330,7 @@ export class PurchaseRequestService
         totalPrice: new Prisma.Decimal(totalPrice),
         totalPriceEtb: new Prisma.Decimal(totalPriceEtb),
         exchangeRate: new Prisma.Decimal(rate),
+        documentId,
       },
     });
 
@@ -452,8 +486,11 @@ export class PurchaseRequestService
         t.decision === 'PENDING',
     );
 
+    const { attachmentFolder, ...requestRest } = request;
+
     return {
-      ...request,
+      ...requestRest,
+      documents: attachmentFolder?.documents ?? [],
       itemCount: request.items.length,
       currentTierLabel: pendingTier?.label ?? null,
     };
@@ -743,6 +780,64 @@ export class PurchaseRequestService
         updatedBy: userId,
       },
     });
+  }
+
+  private async uploadItemImage(
+    request: { id: string; requestNumber: string; attachmentFolderId: string | null },
+    companyId: string,
+    userId: string,
+    file: UploadedFile,
+  ): Promise<string> {
+    if (!ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(
+        `Only image files are allowed (JPEG, PNG, WebP, GIF). Received: ${file.mimetype}`,
+      );
+    }
+
+    const folderId =
+      request.attachmentFolderId ??
+      (await this.ensureAttachmentFolder(request, companyId, userId));
+
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileKey = `${companyId}/hr/purchase-requests/${request.id}/items/${randomUUID()}_${safeName}`;
+
+    await this.storage.upload({
+      bucket: STORAGE_BUCKETS.HR,
+      key: fileKey,
+      body: file.buffer,
+      contentType: file.mimetype,
+      contentLength: file.size,
+    });
+
+    const documentId = randomUUID();
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.document.create({
+        data: {
+          id: documentId,
+          companyId,
+          folderId,
+          name: file.originalname,
+          fileKey,
+          fileType: file.mimetype,
+          fileSizeBytes: file.size,
+          version: 1,
+          isCurrent: true,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      await tx.documentVersion.create({
+        data: {
+          documentId,
+          uploadedBy: userId,
+          versionNumber: 1,
+          fileKey,
+          fileSizeBytes: file.size,
+        },
+      });
+    });
+
+    return documentId;
   }
 
   private async uploadRequestFiles(

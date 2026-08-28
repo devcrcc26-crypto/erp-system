@@ -25,6 +25,7 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -87,6 +88,7 @@ export default function PurchaseRequestDetailPageContent({
   );
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [itemForm] = Form.useForm<
     UpdatePurchaseRequestItemPayload & { currency: SupportedCurrency }
   >();
@@ -109,11 +111,13 @@ export default function PurchaseRequestDetailPageContent({
   );
 
   function openEditItem(item: PurchaseRequestItem): void {
+    setItemImageFile(null);
     setEditingItem(item);
   }
 
   function closeEditItem(): void {
     setEditingItem(null);
+    setItemImageFile(null);
   }
 
   async function handleUpdateItem(): Promise<void> {
@@ -135,6 +139,7 @@ export default function PurchaseRequestDetailPageContent({
           unit: values.unit,
           unitPrice: Number(values.unitPrice),
           currency: values.currency,
+          file: itemImageFile ?? undefined,
         },
       });
       messageApi.success(t('hr.messages.purchaseRequestItemUpdated'));
@@ -228,6 +233,19 @@ export default function PurchaseRequestDetailPageContent({
       ellipsis: true,
       render: (_: unknown, row: PurchaseRequestItem) =>
         formatPurchaseItemDescription(row.description, row.modelSpec),
+    },
+    {
+      title: t('hr.table.itemImage'),
+      key: 'image',
+      width: 120,
+      render: (_: unknown, row: PurchaseRequestItem) =>
+        row.image ? (
+          <AttachmentDownloadList documents={[row.image]} />
+        ) : (
+          <Typography.Text type="secondary" className="text-xs">
+            {t('hr.labels.noItemImage')}
+          </Typography.Text>
+        ),
     },
     {
       title: t('hr.table.quantity'),
@@ -546,6 +564,7 @@ export default function PurchaseRequestDetailPageContent({
           }
           if (!open) {
             itemForm.resetFields();
+            setItemImageFile(null);
           }
         }}
         styles={{ body: { paddingTop: 16 } }}
@@ -617,6 +636,22 @@ export default function PurchaseRequestDetailPageContent({
               <Select options={CURRENCY_OPTIONS} />
             </Form.Item>
           </div>
+          <Form.Item
+            label={t('hr.form.itemImage')}
+            extra={
+              editingItem?.image
+                ? t('hr.hints.replaceItemImage', { name: editingItem.image.name })
+                : t('hr.hints.itemImageOptional')
+            }
+          >
+            <FileUploadInput
+              files={itemImageFile ? [itemImageFile] : []}
+              onChange={(nextFiles) => setItemImageFile(nextFiles[0] ?? null)}
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+              multiple={false}
+              disabled={updateItemMutation.isPending}
+            />
+          </Form.Item>
         </Form>
       </Modal>
 
