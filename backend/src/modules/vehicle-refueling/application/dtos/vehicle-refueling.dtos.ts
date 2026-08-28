@@ -50,12 +50,12 @@ export class SubmitVehicleRefuelingDto {
   @Min(0)
   requestedLitres!: number;
 
-  @ApiPropertyOptional({ description: 'Estimated cost in ETB' })
+  @ApiPropertyOptional({ description: 'Unit price per litre in ETB' })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  estimatedCostEtb?: number;
+  unitPriceEtb?: number;
 
   @ApiPropertyOptional({ maxLength: 2000 })
   @IsOptional()

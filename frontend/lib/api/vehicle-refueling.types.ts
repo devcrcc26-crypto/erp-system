@@ -42,7 +42,8 @@ export interface VehicleRefuelingListItem {
   fuelStation: string;
   currentMileage?: number | string | null;
   requestedLitres?: number | string | null;
-  estimatedCostEtb?: number | string | null;
+  unitPriceEtb?: number | string | null;
+  totalCostEtb?: number | string | null;
   notes?: string | null;
   status: VehicleRefuelingStatus;
   approvalRequestId?: string | null;
@@ -84,7 +85,7 @@ export interface SubmitVehicleRefuelingPayload {
   fuelStation: string;
   currentMileage?: number;
   requestedLitres?: number;
-  estimatedCostEtb?: number;
+  unitPriceEtb?: number;
   notes?: string;
 }
 

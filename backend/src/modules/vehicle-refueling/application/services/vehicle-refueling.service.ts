@@ -150,10 +150,14 @@ export class VehicleRefuelingService
           fuelStation: dto.fuelStation.trim(),
           currentMileage: new Prisma.Decimal(dto.currentMileage),
           requestedLitres: new Prisma.Decimal(dto.requestedLitres),
-          estimatedCostEtb:
-            dto.estimatedCostEtb != null
-              ? new Prisma.Decimal(dto.estimatedCostEtb)
+          unitPriceEtb:
+            dto.unitPriceEtb != null
+              ? new Prisma.Decimal(dto.unitPriceEtb)
               : null,
+          totalCostEtb: this.computeTotalCostEtb(
+            dto.requestedLitres,
+            dto.unitPriceEtb,
+          ),
           notes: dto.notes?.trim() || null,
           status: VehicleRefuelingStatus.APPROVED,
           submittedAt: now,
@@ -204,10 +208,14 @@ export class VehicleRefuelingService
         fuelStation: dto.fuelStation.trim(),
         currentMileage: new Prisma.Decimal(dto.currentMileage),
         requestedLitres: new Prisma.Decimal(dto.requestedLitres),
-        estimatedCostEtb:
-          dto.estimatedCostEtb != null
-            ? new Prisma.Decimal(dto.estimatedCostEtb)
+        unitPriceEtb:
+          dto.unitPriceEtb != null
+            ? new Prisma.Decimal(dto.unitPriceEtb)
             : null,
+        totalCostEtb: this.computeTotalCostEtb(
+          dto.requestedLitres,
+          dto.unitPriceEtb,
+        ),
         notes: dto.notes?.trim() || null,
         status: VehicleRefuelingStatus.SUBMITTED,
         approvalRequestId: approval.id,
@@ -643,6 +651,16 @@ export class VehicleRefuelingService
     if (fuelYmd > todayYmd) {
       throw new BadRequestException('Fuel date cannot be in the future');
     }
+  }
+
+  private computeTotalCostEtb(
+    requestedLitres: number,
+    unitPriceEtb?: number | null,
+  ): Prisma.Decimal | null {
+    if (unitPriceEtb === undefined || unitPriceEtb === null) {
+      return null;
+    }
+    return new Prisma.Decimal(requestedLitres * unitPriceEtb);
   }
 
   private async nextRequestNumber(): Promise<string> {

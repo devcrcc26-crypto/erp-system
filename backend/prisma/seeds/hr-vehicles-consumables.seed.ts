@@ -828,7 +828,8 @@ async function seedVehicleRefueling(
     fuelStation: string;
     currentMileage: number;
     requestedLitres: number;
-    estimatedCostEtb: number;
+    unitPriceEtb: number;
+    totalCostEtb: number;
     status: HrRequestStatus;
   }> = [
     {
@@ -838,7 +839,8 @@ async function seedVehicleRefueling(
       fuelStation: 'NOC Petrol Station — Bole Road',
       currentMileage: 45230,
       requestedLitres: 60,
-      estimatedCostEtb: 3600,
+      unitPriceEtb: 60,
+      totalCostEtb: 3600,
       status: 'APPROVED',
     },
     {
@@ -848,7 +850,8 @@ async function seedVehicleRefueling(
       fuelStation: 'Total Energies — Meskel Square',
       currentMileage: 32100,
       requestedLitres: 45,
-      estimatedCostEtb: 2700,
+      unitPriceEtb: 60,
+      totalCostEtb: 2700,
       status: 'SUBMITTED',
     },
     {
@@ -858,7 +861,8 @@ async function seedVehicleRefueling(
       fuelStation: 'Oromo Oil — Megenagna',
       currentMileage: 28500,
       requestedLitres: 80,
-      estimatedCostEtb: 4800,
+      unitPriceEtb: 60,
+      totalCostEtb: 4800,
       status: 'APPROVED',
     },
     {
@@ -868,7 +872,8 @@ async function seedVehicleRefueling(
       fuelStation: 'NOC Petrol Station — CMC Road',
       currentMileage: 45890,
       requestedLitres: 65,
-      estimatedCostEtb: 3900,
+      unitPriceEtb: 60,
+      totalCostEtb: 3900,
       status: 'IN_REVIEW',
     },
     {
@@ -878,7 +883,8 @@ async function seedVehicleRefueling(
       fuelStation: 'Total Energies — Sarbet',
       currentMileage: 62400,
       requestedLitres: 120,
-      estimatedCostEtb: 7200,
+      unitPriceEtb: 60,
+      totalCostEtb: 7200,
       status: 'APPROVED',
     },
     {
@@ -888,7 +894,8 @@ async function seedVehicleRefueling(
       fuelStation: 'Oromo Oil — Kality',
       currentMileage: 89200,
       requestedLitres: 100,
-      estimatedCostEtb: 6000,
+      unitPriceEtb: 60,
+      totalCostEtb: 6000,
       status: 'APPROVED',
     },
     {
@@ -898,7 +905,8 @@ async function seedVehicleRefueling(
       fuelStation: 'NOC Petrol Station — Kazanchis',
       currentMileage: 31800,
       requestedLitres: 50,
-      estimatedCostEtb: 3000,
+      unitPriceEtb: 60,
+      totalCostEtb: 3000,
       status: 'RETURNED',
     },
     {
@@ -908,7 +916,8 @@ async function seedVehicleRefueling(
       fuelStation: 'Total Energies — Lideta',
       currentMileage: 29100,
       requestedLitres: 75,
-      estimatedCostEtb: 4500,
+      unitPriceEtb: 60,
+      totalCostEtb: 4500,
       status: 'SUBMITTED',
     },
     {
@@ -918,7 +927,8 @@ async function seedVehicleRefueling(
       fuelStation: 'Oromo Oil — Ayer Tena',
       currentMileage: 44750,
       requestedLitres: 55,
-      estimatedCostEtb: 3300,
+      unitPriceEtb: 60,
+      totalCostEtb: 3300,
       status: 'REJECTED',
     },
     {
@@ -928,7 +938,8 @@ async function seedVehicleRefueling(
       fuelStation: 'NOC Petrol Station — Gotera',
       currentMileage: 32500,
       requestedLitres: 40,
-      estimatedCostEtb: 2400,
+      unitPriceEtb: 60,
+      totalCostEtb: 2400,
       status: 'APPROVED',
     },
   ];
@@ -962,7 +973,8 @@ async function seedVehicleRefueling(
         fuelStation: ref.fuelStation,
         currentMileage: ref.currentMileage,
         requestedLitres: ref.requestedLitres,
-        estimatedCostEtb: ref.estimatedCostEtb,
+        unitPriceEtb: ref.unitPriceEtb,
+        totalCostEtb: ref.totalCostEtb,
         status: ref.status as VehicleRefuelingStatus,
         approvalRequestId: approvalRequest.id,
         submittedAt: new Date(),
@@ -975,7 +987,7 @@ async function seedVehicleRefueling(
     });
 
     console.log(
-      `✓ VR ${requestNumber} — ${vehicle.plateNumber} — ${ref.requestedLitres}L — ETB ${ref.estimatedCostEtb} — ${ref.status}`,
+      `✓ VR ${requestNumber} — ${vehicle.plateNumber} — ${ref.requestedLitres}L — ETB ${ref.totalCostEtb} — ${ref.status}`,
     );
   }
 }

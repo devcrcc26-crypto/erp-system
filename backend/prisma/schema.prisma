@@ -4570,7 +4570,8 @@ model VehicleRefueling {
   fuelStation        String                 @map("fuel_station")
   currentMileage     Decimal                @map("current_mileage") @db.Decimal(10, 1)
   requestedLitres    Decimal                @map("requested_litres") @db.Decimal(8, 2)
-  estimatedCostEtb   Decimal?               @map("estimated_cost_etb") @db.Decimal(12, 2)
+  unitPriceEtb       Decimal?               @map("unit_price_etb") @db.Decimal(10, 2)
+  totalCostEtb       Decimal?               @map("total_cost_etb") @db.Decimal(12, 2)
   receiptDocumentId  String?                @map("receipt_document_id")
   notes              String?
   status             VehicleRefuelingStatus @default(DRAFT)

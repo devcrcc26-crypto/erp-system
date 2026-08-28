@@ -25,6 +25,7 @@ import {
   formatFuelType,
   toDriverSelectOptions,
 } from '@/lib/utils/company-vehicle-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
@@ -36,7 +37,7 @@ interface FormValues {
   fuelStation?: string;
   currentMileage?: number;
   requestedLitres?: number;
-  estimatedCostEtb?: number;
+  unitPriceEtb?: number;
   notes?: string;
 }
 
@@ -46,6 +47,21 @@ interface VehicleRefuelingFormProps {
 
 const VEHICLE_FIELDS = ['vehicleId'] as const;
 const DETAILS_FIELDS = ['fuelDate', 'fuelType', 'fuelStation'] as const;
+
+function computeTotalCostEtb(
+  requestedLitres: number | null | undefined,
+  unitPriceEtb: number | null | undefined,
+): number | undefined {
+  if (
+    requestedLitres == null ||
+    unitPriceEtb == null ||
+    Number.isNaN(requestedLitres) ||
+    Number.isNaN(unitPriceEtb)
+  ) {
+    return undefined;
+  }
+  return requestedLitres * unitPriceEtb;
+}
 
 /**
  * Vehicle refueling create form — same StepperForm chrome as Add Employee.
@@ -63,6 +79,11 @@ export default function VehicleRefuelingForm({
   const vehiclesQuery = useCompanyVehicles({ page: 1, limit: 100 });
   const usersQuery = useFullUsersDirectory();
   const formValues = Form.useWatch([], form) as FormValues | undefined;
+
+  const totalCostEtb = computeTotalCostEtb(
+    formValues?.requestedLitres,
+    formValues?.unitPriceEtb,
+  );
 
   const driverOptions = useMemo(
     () => toDriverSelectOptions(usersQuery.data ?? []),
@@ -130,7 +151,7 @@ export default function VehicleRefuelingForm({
         fuelStation: values.fuelStation.trim(),
         currentMileage: values.currentMileage ?? undefined,
         requestedLitres: values.requestedLitres ?? undefined,
-        estimatedCostEtb: values.estimatedCostEtb ?? undefined,
+        unitPriceEtb: values.unitPriceEtb ?? undefined,
         notes: values.notes?.trim() || undefined,
       });
 
@@ -263,7 +284,7 @@ export default function VehicleRefuelingForm({
               />
             </Form.Item>
 
-            <div className="erp-form-grid-3">
+            <div className="erp-form-grid-2">
               <Form.Item
                 name="currentMileage"
                 label={t('hr.form.currentMileage')}
@@ -281,15 +302,16 @@ export default function VehicleRefuelingForm({
                 <InputNumber min={0} className="w-full" placeholder="e.g. 50" />
               </Form.Item>
               <Form.Item
-                name="estimatedCostEtb"
-                label={t('hr.form.estimatedCost')}
+                name="unitPriceEtb"
+                label={t('hr.form.unitPriceEtb')}
               >
                 <InputNumber
                   min={0}
                   className="w-full"
-                  placeholder="e.g. 3500"
+                  placeholder="e.g. 72"
                 />
               </Form.Item>
+              <TotalCostPreview form={form} />
             </div>
 
             <Form.Item name="notes" label={t('hr.form.notes')}>
@@ -349,11 +371,17 @@ export default function VehicleRefuelingForm({
                 }
               />
               <ReviewItem
-                label={t('hr.form.estimatedCost')}
+                label={t('hr.form.unitPriceEtb')}
                 value={
-                  formValues?.estimatedCostEtb != null
-                    ? String(formValues.estimatedCostEtb)
+                  formValues?.unitPriceEtb != null
+                    ? formatEtbAmount(formValues.unitPriceEtb)
                     : '—'
+                }
+              />
+              <ReviewItem
+                label={t('hr.form.totalCostEtb')}
+                value={
+                  totalCostEtb != null ? formatEtbAmount(totalCostEtb) : '—'
                 }
               />
               {formValues?.notes?.trim() ? (
@@ -369,6 +397,7 @@ export default function VehicleRefuelingForm({
     ],
     [
       t,
+      form,
       vehiclesQuery.isLoading,
       vehiclesQuery.data?.data,
       usersQuery.isLoading,
@@ -376,6 +405,7 @@ export default function VehicleRefuelingForm({
       selectedVehicle,
       selectedDriverLabel,
       formValues,
+      totalCostEtb,
     ],
   );
 
@@ -432,5 +462,29 @@ function ReviewItem({
         {value}
       </p>
     </div>
+  );
+}
+
+function TotalCostPreview({
+  form,
+}: {
+  form: ReturnType<typeof Form.useForm<FormValues>>[0];
+}): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const requestedLitres = Form.useWatch('requestedLitres', form);
+  const unitPriceEtb = Form.useWatch('unitPriceEtb', form);
+  const totalCostEtb = computeTotalCostEtb(
+    requestedLitres != null ? Number(requestedLitres) : undefined,
+    unitPriceEtb != null ? Number(unitPriceEtb) : undefined,
+  );
+
+  return (
+    <Form.Item label={t('hr.form.totalCostEtb')}>
+      <Input
+        readOnly
+        value={totalCostEtb != null ? formatEtbAmount(totalCostEtb) : '—'}
+        style={{ background: tokens.colorPageBg }}
+      />
+    </Form.Item>
   );
 }

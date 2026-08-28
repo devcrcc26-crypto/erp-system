@@ -25,6 +25,7 @@ import {
 import { useCurrentUser } from '@/lib/query/profile';
 import { formatFuelType } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatVehicleRefuelingEmployeeName,
@@ -241,8 +242,18 @@ export default function VehicleRefuelingDetailPageContent({
                 value: refueling.requestedLitres?.toString() ?? '—',
               },
               {
-                label: t('hr.labels.estimatedCost'),
-                value: refueling.estimatedCostEtb?.toString() ?? '—',
+                label: t('hr.form.unitPriceEtb'),
+                value:
+                  refueling.unitPriceEtb != null
+                    ? formatEtbAmount(refueling.unitPriceEtb)
+                    : '—',
+              },
+              {
+                label: t('hr.labels.totalCostEtb'),
+                value:
+                  refueling.totalCostEtb != null
+                    ? formatEtbAmount(refueling.totalCostEtb)
+                    : '—',
               },
             ]}
           />

@@ -12,6 +12,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useVehicleRefueling } from '@/lib/query/vehicle-refueling';
 import { formatFuelType } from '@/lib/utils/company-vehicle-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import {
   formatVehicleRefuelingEmployeeName,
@@ -121,8 +122,18 @@ export default function VehicleRefuelingDetail({
             value: refueling.requestedLitres?.toString() ?? '—',
           },
           {
-            label: t('hr.labels.estimatedCost'),
-            value: refueling.estimatedCostEtb?.toString() ?? '—',
+            label: t('hr.form.unitPriceEtb'),
+            value:
+              refueling.unitPriceEtb != null
+                ? formatEtbAmount(refueling.unitPriceEtb)
+                : '—',
+          },
+          {
+            label: t('hr.labels.totalCostEtb'),
+            value:
+              refueling.totalCostEtb != null
+                ? formatEtbAmount(refueling.totalCostEtb)
+                : '—',
           },
         ]}
       />

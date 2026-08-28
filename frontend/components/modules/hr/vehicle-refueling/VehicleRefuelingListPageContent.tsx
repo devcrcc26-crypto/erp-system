@@ -44,6 +44,7 @@ import {
   formatVehicleRefuelingStatus,
   vehicleRefuelingStatusVariant,
 } from '@/lib/utils/vehicle-refueling-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
@@ -244,13 +245,14 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
         render: (value: number | string | null | undefined) => value ?? '—',
       },
       {
-        title: t('hr.table.estimatedCost'),
-        dataIndex: 'estimatedCostEtb',
-        key: 'estimatedCostEtb',
+        title: t('hr.table.totalCostEtb'),
+        dataIndex: 'totalCostEtb',
+        key: 'totalCostEtb',
         width: 110,
         align: 'right',
         responsive: ['lg'],
-        render: (value: number | string | null | undefined) => value ?? '—',
+        render: (value: number | string | null | undefined) =>
+          value != null ? formatEtbAmount(value) : '—',
       },
       {
         title: t('hr.table.status'),
