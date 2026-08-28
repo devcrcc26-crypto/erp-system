@@ -24,6 +24,7 @@ export interface ProvisionInvitedUserInput {
   branchId?: string;
   departmentId?: string;
   positionId?: string;
+  reportsToUserId?: string;
   discipline?: UserDiscipline;
   engineeringDisciplineId?: string;
   preferredLanguage?: string;
@@ -103,6 +104,7 @@ export class UserProvisioningService {
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
+        reportsToUserId: input.reportsToUserId ?? null,
         discipline: input.discipline ?? null,
         engineeringDisciplineId: input.engineeringDisciplineId ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
@@ -151,6 +153,7 @@ export class UserProvisioningService {
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
+        reportsToUserId: input.reportsToUserId ?? null,
         discipline: input.discipline ?? null,
         engineeringDisciplineId: input.engineeringDisciplineId ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
@@ -197,6 +200,7 @@ export class UserProvisioningService {
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
+        reportsToUserId: input.reportsToUserId ?? null,
         discipline: input.discipline ?? null,
         engineeringDisciplineId: input.engineeringDisciplineId ?? null,
         preferredLanguage: input.preferredLanguage ?? null,
@@ -280,6 +284,7 @@ export class UserProvisioningService {
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
         positionId: input.positionId ?? null,
+        reportsToUserId: input.reportsToUserId ?? null,
         discipline: input.discipline ?? null,
         engineeringDisciplineId: input.engineeringDisciplineId ?? null,
         preferredLanguage: input.preferredLanguage ?? null,

@@ -28,6 +28,7 @@ import {
   useUser,
 } from '@/lib/query/users';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
 import {
   userStatusLabel,
   userStatusVariant,
@@ -308,6 +309,10 @@ export default function EmployeeDetailPageContent({
             value: displayValue(user.position?.title),
           },
           {
+            label: t('users.form.reportsTo'),
+            value: user.reportsTo ? formatUserName(user.reportsTo) : '-',
+          },
+          {
             label: t('common.discipline'),
             value: displayValue(user.engineeringDiscipline?.name),
           },
@@ -437,6 +442,9 @@ export default function EmployeeDetailPageContent({
             </MetaItem>
             <MetaItem label={t('common.position')}>
               {displayValue(user.position?.title)}
+            </MetaItem>
+            <MetaItem label={t('users.form.reportsTo')}>
+              {user.reportsTo ? formatUserName(user.reportsTo) : '-'}
             </MetaItem>
             <MetaItem label={t('common.discipline')}>
               {user.engineeringDiscipline ? (

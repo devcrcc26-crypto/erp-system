@@ -150,6 +150,14 @@ export class UserManagementService {
 
     const profileInput = this.extractProfileInput(dto);
 
+    if (rest.reportsToUserId) {
+      await this.assertValidReportsTo(
+        ctx.companyId,
+        undefined,
+        rest.reportsToUserId,
+      );
+    }
+
     const sharedInput = {
       firstName,
       lastName,
@@ -158,6 +166,7 @@ export class UserManagementService {
       branchId: rest.branchId,
       departmentId: rest.departmentId,
       positionId: rest.positionId,
+      reportsToUserId: rest.reportsToUserId,
       discipline: rest.discipline,
       engineeringDisciplineId: rest.engineeringDisciplineId,
       preferredLanguage: rest.preferredLanguage,
@@ -275,6 +284,14 @@ export class UserManagementService {
 
     if (rest.leavePolicyId) {
       await this.assertLeavePolicy(ctx.companyId, rest.leavePolicyId);
+    }
+
+    if (rest.reportsToUserId !== undefined) {
+      await this.assertValidReportsTo(
+        ctx.companyId,
+        id,
+        rest.reportsToUserId,
+      );
     }
 
     const profileData = this.buildProfileUpdateData(rest);
@@ -861,6 +878,16 @@ export class UserManagementService {
       department: { select: { id: true, name: true } },
       positionId: true,
       position: { select: { id: true, title: true } },
+      reportsToUserId: true,
+      reportsTo: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          chineseName: true,
+          employeeId: true,
+        },
+      },
       discipline: true,
       engineeringDisciplineId: true,
       engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },
@@ -1105,6 +1132,7 @@ export class UserManagementService {
       branchId: rest.branchId,
       departmentId: rest.departmentId,
       positionId: rest.positionId,
+      reportsToUserId: rest.reportsToUserId,
       discipline: rest.discipline,
       engineeringDisciplineId: rest.engineeringDisciplineId,
       preferredLanguage: rest.preferredLanguage,
@@ -1336,6 +1364,26 @@ export class UserManagementService {
       );
 
     return normalized.length > 0 ? normalized : Prisma.DbNull;
+  }
+
+  private async assertValidReportsTo(
+    companyId: string,
+    userId: string | undefined,
+    reportsToUserId: string | null,
+  ): Promise<void> {
+    if (!reportsToUserId) {
+      return;
+    }
+    if (userId && reportsToUserId === userId) {
+      throw new BadRequestException('User cannot report to themselves');
+    }
+    const manager = await this.prisma.user.findFirst({
+      where: activeOnly({ id: reportsToUserId, companyId }),
+      select: { id: true },
+    });
+    if (!manager) {
+      throw new NotFoundException('Reports-to user not found');
+    }
   }
 
   private mapUserResponse<T extends { experienceStartDate?: Date | null }>(

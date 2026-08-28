@@ -4,6 +4,8 @@ import { Descriptions, Table } from 'antd';
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useUser } from '@/lib/query/users';
+import { formatUserName } from '@/lib/utils/user-display';
 import { formatEmployeeAddress } from '@/components/modules/users/EmployeeProfileFormFields';
 import type { Role } from '@/lib/api/types';
 import type { AddEmployeeFormValues } from './add-employee.types';
@@ -26,6 +28,10 @@ export default function AddEmployeeReviewStep({
 }: AddEmployeeReviewStepProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const roleName = roles.find((role) => role.id === values.roleId)?.name ?? '-';
+  const reportsToQuery = useUser(values.reportsToUserId ?? '', Boolean(values.reportsToUserId));
+  const reportsToName = reportsToQuery.data
+    ? formatUserName(reportsToQuery.data)
+    : '-';
   const hasEmail = Boolean(values.email?.trim());
   const emergencyContacts = values.emergencyContacts ?? [];
   const reviewDescription =
@@ -88,6 +94,9 @@ export default function AddEmployeeReviewStep({
           </Descriptions.Item>
           <Descriptions.Item label={t('users.form.employeeType')}>
             {values.employeeType ? t(`hr.employeeType.${values.employeeType}`) : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label={t('users.form.reportsTo')}>
+            {reportsToName}
           </Descriptions.Item>
           <Descriptions.Item label={t('users.form.experienceStartDate')}>
             {values.experienceStartDate

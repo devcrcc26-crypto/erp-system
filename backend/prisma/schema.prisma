@@ -562,6 +562,7 @@ model User {
   departmentId            String?   @map("department_id")
   engineeringDisciplineId String?   @map("engineering_discipline_id")
   positionId          String?   @map("position_id")
+  reportsToUserId     String?   @map("reports_to_user_id")
   /// @deprecated Use engineeringDisciplineId — retained for migration/audit.
   discipline          UserDiscipline? @map("discipline")
   employeeId            String?         @unique @map("employee_id")
@@ -610,6 +611,8 @@ model User {
   department             Department?             @relation(fields: [departmentId], references: [id])
   engineeringDiscipline  Discipline?             @relation("UserEngineeringDiscipline", fields: [engineeringDisciplineId], references: [id])
   position               Position?               @relation(fields: [positionId], references: [id])
+  reportsTo              User?                   @relation("UserReportsTo", fields: [reportsToUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  directReports          User[]                  @relation("UserReportsTo")
   sessions               UserSession[]
   passwordResetTokens    PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
@@ -770,6 +773,7 @@ model User {
   @@index([companyId, deletedAt], map: "idx_user_company_deleted")
   @@index([branchId], map: "idx_user_branch_id")
   @@index([departmentId], map: "idx_user_department_id")
+  @@index([reportsToUserId], map: "idx_user_reports_to_user_id")
   @@index([engineeringDisciplineId], map: "idx_user_engineering_discipline_id")
   @@index([discipline], map: "idx_user_discipline")
   @@map("user")

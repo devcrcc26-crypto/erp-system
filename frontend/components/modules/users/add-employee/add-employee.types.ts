@@ -9,6 +9,7 @@ export interface AddEmployeeFormValues extends EmployeeProfileFormValues {
   phone?: string;
   departmentId?: string;
   positionId?: string;
+  reportsToUserId?: string;
   roleId?: string;
   engineeringDisciplineId?: string;
   isActive: boolean;
@@ -35,6 +36,7 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
     'employeeType',
     'departmentId',
     'positionId',
+    'reportsToUserId',
     'engineeringDisciplineId',
     'roleId',
   ],

@@ -105,6 +105,11 @@ export class CreateUserDto {
   @IsEntityUuid()
   positionId?: string;
 
+  @ApiPropertyOptional({ description: 'Direct manager / supervisor (user id)' })
+  @IsOptional()
+  @IsEntityUuid()
+  reportsToUserId?: string;
+
   @ApiPropertyOptional({ enum: UserDiscipline, deprecated: true })
   @IsOptional()
   @IsEnum(UserDiscipline)
@@ -248,6 +253,12 @@ export class UpdateUserDto extends PartialType(
   @ValidateIf((_, value) => value !== null)
   @IsEntityUuid()
   engineeringDisciplineId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Direct manager / supervisor (user id)' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEntityUuid()
+  reportsToUserId?: string | null;
 }
 
 export class UsersQueryDto extends PaginationQueryDto {

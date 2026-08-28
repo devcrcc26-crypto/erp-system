@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Form, Input, Select, Skeleton, Switch } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
+import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import {
   buildEmployeeProfilePayload,
   EmployeeProfileFormFields,
@@ -75,6 +76,7 @@ function buildFormValuesFromUser(user: UserDetail): AddEmployeeFormValues {
     phone: user.phone ?? '',
     departmentId: user.departmentId ?? undefined,
     positionId: user.positionId ?? undefined,
+    reportsToUserId: user.reportsToUserId ?? undefined,
     engineeringDisciplineId: user.engineeringDisciplineId ?? undefined,
     isActive: user.isActive,
     roleId: resolvePrimaryRoleId(user),
@@ -206,6 +208,7 @@ export default function AddEmployeeForm({
           phone: values.phone?.trim() || undefined,
           departmentId: values.departmentId,
           positionId: values.positionId,
+          reportsToUserId: values.reportsToUserId ?? null,
           engineeringDisciplineId: values.engineeringDisciplineId ?? null,
           isActive: values.isActive,
           ...buildEmployeeProfilePayload(values),
@@ -251,6 +254,7 @@ export default function AddEmployeeForm({
         phone: values.phone?.trim() || undefined,
         departmentId: values.departmentId,
         positionId: values.positionId,
+        reportsToUserId: values.reportsToUserId,
         engineeringDisciplineId: values.engineeringDisciplineId,
         isActive: values.isActive,
         ...buildEmployeeProfilePayload(values),
@@ -447,6 +451,16 @@ export default function AddEmployeeForm({
                     placeholder={t('common.selectDiscipline')}
                     options={disciplineOptions}
                     optionFilterProp="label"
+                  />
+                </Form.Item>
+                <Form.Item
+                  label={t('users.form.reportsTo')}
+                  name="reportsToUserId"
+                  extra={t('users.form.reportsToHint')}
+                >
+                  <UserSelect
+                    placeholder={t('users.form.reportsToPlaceholder')}
+                    excludeUserIds={userId ? [userId] : []}
                   />
                 </Form.Item>
               </div>
