@@ -100,6 +100,15 @@ export function vehicleStatusSelectOptions(
   }));
 }
 
+/** Status options for manual fleet status changes (excludes operational states). */
+export function vehicleStatusChangeSelectOptions(
+  t: TFn,
+): Array<{ value: VehicleStatus; label: string }> {
+  return vehicleStatusSelectOptions(t).filter(
+    (option) => option.value !== 'AVAILABLE' && option.value !== 'IN_USE',
+  );
+}
+
 export function formatDriverName(
   driver?: CompanyVehicleDriverSummary | null,
 ): string {

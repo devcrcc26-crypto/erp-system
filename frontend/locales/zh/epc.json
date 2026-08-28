@@ -116,6 +116,7 @@
     "organization": {
       "vehicles": {
         "new": "添加车辆",
+        "detail": "车辆详情",
         "edit": "更新车辆"
       }
     },
@@ -1315,7 +1316,12 @@
     "deleteDescription": "将 {{plate}} 从公司车队中移除？此操作不可撤销。",
     "emptyDescription": "添加第一辆公司车辆以开始管理车队。",
     "actionsFor": "{{plate}} 的操作",
+    "backToList": "返回车辆列表",
+    "notFound": "未找到该车辆。",
     "noDriversFound": "未找到驾驶员岗位的用户",
+    "detail": {
+      "registeredAt": "登记时间"
+    },
     "stats": {
       "total": "车辆总数",
       "available": "可用",

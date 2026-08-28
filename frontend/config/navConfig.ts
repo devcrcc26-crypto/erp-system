@@ -1140,13 +1140,30 @@ function resolveRouteMetaCore(
       pathname,
     );
     if (vehiclesEditMatch) {
+      const vehicleId = vehiclesEditMatch[1];
       return {
         titleKey: 'pages.organization.vehicles.edit',
         descriptionKey: 'vehicles.form.editDescription',
         breadcrumbs: [
           { label: t('nav.dashboard'), href: '/' },
           { label: t('nav.organization.vehicles'), href: '/organization/vehicles' },
+          {
+            label: t('pages.organization.vehicles.detail'),
+            href: `/organization/vehicles/${vehicleId}`,
+          },
           { label: t('pages.organization.vehicles.edit') },
+        ],
+      };
+    }
+
+    const vehiclesDetailMatch = /^\/organization\/vehicles\/([^/]+)$/.exec(pathname);
+    if (vehiclesDetailMatch) {
+      return {
+        titleKey: 'pages.organization.vehicles.detail',
+        breadcrumbs: [
+          { label: t('nav.dashboard'), href: '/' },
+          { label: t('nav.organization.vehicles'), href: '/organization/vehicles' },
+          { label: t('pages.organization.vehicles.detail') },
         ],
       };
     }

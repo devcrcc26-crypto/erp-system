@@ -23,20 +23,20 @@ export default function EditVehicleFormContent({
   const headerExtra = useMemo(
     () => (
       <Button
-        onClick={() => router.push('/organization/vehicles')}
+        onClick={() => router.push(`/organization/vehicles/${vehicleId}`)}
         style={{ borderRadius: 0 }}
       >
         {t('common.cancel')}
       </Button>
     ),
-    [router, t],
+    [router, t, vehicleId],
   );
   useSetHeaderExtra(headerExtra);
 
   function handleSuccess(): void {
     const plate = vehicleQuery.data?.plateNumber ?? vehicleId;
     messageApi.success(t('vehicles.updated', { plate }));
-    router.push('/organization/vehicles');
+    router.push(`/organization/vehicles/${vehicleId}`);
   }
 
   if (vehicleQuery.isLoading) {

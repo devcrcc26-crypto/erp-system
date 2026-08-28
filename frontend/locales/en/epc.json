@@ -116,6 +116,7 @@
     "organization": {
       "vehicles": {
         "new": "Add Vehicle",
+        "detail": "Vehicle Detail",
         "edit": "Update Vehicle"
       }
     },
@@ -1315,7 +1316,12 @@
     "deleteDescription": "Remove {{plate}} from the company fleet? This cannot be undone.",
     "emptyDescription": "Add your first company vehicle to start tracking the fleet.",
     "actionsFor": "Actions for {{plate}}",
+    "backToList": "Back to vehicles",
+    "notFound": "Vehicle not found.",
     "noDriversFound": "No users with Driver position",
+    "detail": {
+      "registeredAt": "Registered"
+    },
     "stats": {
       "total": "Total vehicles",
       "available": "Available",

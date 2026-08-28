@@ -48,6 +48,7 @@ import {
   formatVehicleStatus,
   formatVehicleType,
   vehicleStatusSelectOptions,
+  vehicleStatusChangeSelectOptions,
   vehicleStatusVariant,
 } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -74,6 +75,10 @@ export default function VehiclesPageContent(): React.ReactNode {
 
   const vehicleStatusOptions = useMemo(
     () => vehicleStatusSelectOptions(t),
+    [t],
+  );
+  const vehicleStatusChangeOptions = useMemo(
+    () => vehicleStatusChangeSelectOptions(t),
     [t],
   );
 
@@ -195,8 +200,7 @@ export default function VehiclesPageContent(): React.ReactNode {
         key: 'edit',
         icon: <EditOutlined />,
         label: t('common.update'),
-        onClick: () =>
-          router.push(`/organization/vehicles/${vehicle.id}/edit`),
+        onClick: () => router.push(`/organization/vehicles/${vehicle.id}/edit`),
       },
       {
         key: 'status',
@@ -243,7 +247,7 @@ export default function VehiclesPageContent(): React.ReactNode {
         <Select
           value={newStatus}
           onChange={setNewStatus}
-          options={vehicleStatusOptions}
+          options={vehicleStatusChangeOptions}
           className="mt-2 w-full"
         />
       </ConfirmDialog>
@@ -409,7 +413,7 @@ export default function VehiclesPageContent(): React.ReactNode {
             }
             onRow={(record) => ({
               onClick: () =>
-                router.push(`/organization/vehicles/${record.id}/edit`),
+                router.push(`/organization/vehicles/${record.id}`),
               className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
             })}
             locale={{
