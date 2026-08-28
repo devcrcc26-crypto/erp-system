@@ -7,6 +7,7 @@ describe('AuditService', () => {
     auditLog: {
       create: jest.Mock;
       findMany: jest.Mock;
+      findFirst: jest.Mock;
       count: jest.Mock;
     };
   };
@@ -17,6 +18,7 @@ describe('AuditService', () => {
       auditLog: {
         create: jest.fn().mockResolvedValue({}),
         findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
         count: jest.fn().mockResolvedValue(0),
       },
     };
@@ -82,6 +84,27 @@ describe('AuditService', () => {
           module: 'branches',
         }),
       }),
+    );
+  });
+
+  it('returns a single audit log scoped to company', async () => {
+    prisma.auditLog.findFirst.mockResolvedValue({ id: 'log-1', module: 'users' });
+
+    const result = await service.getById('company-1', 'log-1');
+
+    expect(result).toEqual({ id: 'log-1', module: 'users' });
+    expect(prisma.auditLog.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'log-1', companyId: 'company-1' },
+      }),
+    );
+  });
+
+  it('throws when audit log is not found', async () => {
+    prisma.auditLog.findFirst.mockResolvedValue(null);
+
+    await expect(service.getById('company-1', 'missing')).rejects.toThrow(
+      'Audit log entry not found',
     );
   });
 });

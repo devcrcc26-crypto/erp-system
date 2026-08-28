@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AuditLogSource, Prisma } from '@prisma/client';
 import { getRequestContext } from '../../../../shared/context/request-context';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -112,6 +112,32 @@ export class AuditService {
     ]);
 
     return buildPaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /**
+   * Returns a single audit log entry scoped to the company.
+   */
+  async getById(companyId: string, id: string): Promise<unknown> {
+    const log = await this.prisma.auditLog.findFirst({
+      where: { id, companyId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            chineseName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!log) {
+      throw new NotFoundException('Audit log entry not found');
+    }
+
+    return log;
   }
 
   /**

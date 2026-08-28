@@ -1112,6 +1112,17 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname.startsWith('/audit-logs/')) {
+    return {
+      titleKey: 'pages.auditLogs.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.auditLogs'), href: '/audit-logs' },
+        { label: t('pages.auditLogs.detail') },
+      ],
+    };
+  }
+
   if (pathname.startsWith('/organization/vehicles')) {
     if (pathname === '/organization/vehicles/new') {
       return {

@@ -1,13 +1,15 @@
 'use client';
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
-import { apiGetPaginated } from '@/lib/api/client';
+import { apiGet, apiGetPaginated } from '@/lib/api/client';
 import type { AuditLog, AuditLogQueryParams } from '@/lib/api/types';
 
 export const auditLogKeys = {
   all: ['audit-logs'] as const,
   lists: () => [...auditLogKeys.all, 'list'] as const,
   list: (params: AuditLogQueryParams) => [...auditLogKeys.lists(), params] as const,
+  details: () => [...auditLogKeys.all, 'detail'] as const,
+  detail: (id: string) => [...auditLogKeys.details(), id] as const,
 };
 
 function toQueryString(params: AuditLogQueryParams): string {
@@ -43,5 +45,15 @@ export function useAuditLogs(
     retry: false,
     staleTime: 60 * 1000,
     ...options,
+  });
+}
+
+export function useAuditLog(id: string, enabled = true) {
+  return useQuery({
+    queryKey: auditLogKeys.detail(id),
+    queryFn: () => apiGet<AuditLog>(`/audit-logs/${id}`),
+    enabled: Boolean(id) && enabled,
+    retry: false,
+    staleTime: 60 * 1000,
   });
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Button,
   DatePicker,
@@ -22,7 +23,6 @@ import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import AuditLogDetailDrawer from '@/components/modules/audit/AuditLogDetailDrawer';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -41,6 +41,7 @@ import { tokens } from '@/lib/theme/tokens';
 
 export default function AuditLogsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const router = useRouter();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [moduleFilter, setModuleFilter] = useState('');
@@ -50,7 +51,6 @@ export default function AuditLogsPageContent(): React.ReactNode {
   const [userIdFilter, setUserIdFilter] = useState<string | undefined>();
   const [dateFrom, setDateFrom] = useState<Dayjs | null>(null);
   const [dateTo, setDateTo] = useState<Dayjs | null>(null);
-  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -196,14 +196,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <>
-      <AuditLogDetailDrawer
-        log={selectedLog}
-        open={selectedLog !== null}
-        onClose={() => setSelectedLog(null)}
-      />
-
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
         <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatCard
             label={t('auditLogs.stats.total')}
@@ -332,10 +325,10 @@ export default function AuditLogsPageContent(): React.ReactNode {
                     }
                   : undefined
               }
-              onRow={(record) => ({
-                onClick: () => setSelectedLog(record),
-                className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
-              })}
+            onRow={(record) => ({
+              onClick: () => router.push(`/audit-logs/${record.id}`),
+              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+            })}
               locale={{
                 emptyText: (
                   <TableEmptyState
@@ -457,7 +450,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
                         aria-label={t('auditLogs.viewDetailsFor', {
                           module: record.module,
                         })}
-                        onClick={() => setSelectedLog(record)}
+                        onClick={() => router.push(`/audit-logs/${record.id}`)}
                         style={{ borderRadius: 0 }}
                       />
                     </div>
@@ -465,9 +458,8 @@ export default function AuditLogsPageContent(): React.ReactNode {
                 },
               ]}
             />
-          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -119,6 +119,9 @@
         "edit": "Update Vehicle"
       }
     },
+    "auditLogs": {
+      "detail": "Audit Entry Detail"
+    },
     "approvals": {
       "detail": "Request Detail",
       "new": "New Request",
@@ -1159,6 +1162,8 @@
     "allEntries": "All audit entries",
     "viewDetailsFor": "View details for {{module}}",
     "viewDetails": "Details",
+    "backToList": "Back to audit log",
+    "notFound": "Audit log entry not found.",
     "detailTitle": "Audit entry details",
     "emptyTitle": "No audit entries",
     "emptyDescription": "System activity will appear here as users make changes.",

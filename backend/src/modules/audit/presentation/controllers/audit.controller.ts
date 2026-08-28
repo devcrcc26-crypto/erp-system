@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
@@ -22,5 +22,15 @@ export class AuditController {
     @Query() query: AuditLogQueryDto,
   ): Promise<unknown> {
     return this.auditService.list(user.companyId, query);
+  }
+
+  @Get(':id')
+  @RequirePermission('audit', 'view')
+  @ApiOperation({ summary: 'Get audit log entry by ID' })
+  getById(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.auditService.getById(user.companyId, id);
   }
 }
