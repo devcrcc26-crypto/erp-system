@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, Max, MaxLength, IsInt, Min, IsOptional, IsUUID, IsEnum } from "class-validator";
+import { IsNotEmpty, IsString, Max, MaxLength, IsInt, Min, IsOptional, IsUUID, IsEnum, IsDateString, IsNumber } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { AssetStatus } from "@prisma/client";
@@ -47,8 +47,75 @@ export class CreateCompanyAssetDto{
     @MaxLength(2000)
     @IsNotEmpty()
     description?: string;
-    
-    @ApiPropertyOptional({description: 'Description'})
+
+    @ApiPropertyOptional({ maxLength: 100 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    assetCode?: string;
+
+    @ApiPropertyOptional({ maxLength: 100 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    cardNumber?: string;
+
+    @ApiPropertyOptional({ maxLength: 200 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    assetName?: string;
+
+    @ApiPropertyOptional({ maxLength: 500 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(500)
+    specifications?: string;
+
+    @ApiPropertyOptional({ maxLength: 200 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    assetCategory?: string;
+
+    @ApiPropertyOptional({ example: '2026-01-15' })
+    @IsOptional()
+    @IsDateString()
+    startUseDate?: string;
+
+    @ApiPropertyOptional({ description: 'Useful life in months' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    usefulLifeMonths?: number;
+
+    @ApiPropertyOptional({ description: 'Original value in ETB' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    originalValue?: number;
+
+    @ApiPropertyOptional({ maxLength: 200 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    managingDepartment?: string;
+
+    @ApiPropertyOptional({ maxLength: 200 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    storageLocation?: string;
+
+    @ApiPropertyOptional({ maxLength: 100 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    projectCode?: string;
+
+    @ApiPropertyOptional({ description: 'Photo document ID' })
     @IsOptional()
     @IsUUID()
     photoDocumentId?: string;
@@ -98,6 +165,73 @@ export class UpdateCompanyAssetDto {
     @IsString()
     @MaxLength(2000)
     description?: string;
+
+    @ApiPropertyOptional({ maxLength: 100 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    assetCode?: string;
+
+    @ApiPropertyOptional({ maxLength: 100 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    cardNumber?: string;
+
+    @ApiPropertyOptional({ maxLength: 200 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    assetName?: string;
+
+    @ApiPropertyOptional({ maxLength: 500 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(500)
+    specifications?: string;
+
+    @ApiPropertyOptional({ maxLength: 200 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    assetCategory?: string;
+
+    @ApiPropertyOptional({ example: '2026-01-15' })
+    @IsOptional()
+    @IsDateString()
+    startUseDate?: string;
+
+    @ApiPropertyOptional({ description: 'Useful life in months' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    usefulLifeMonths?: number;
+
+    @ApiPropertyOptional({ description: 'Original value in ETB' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    originalValue?: number;
+
+    @ApiPropertyOptional({ maxLength: 200 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    managingDepartment?: string;
+
+    @ApiPropertyOptional({ maxLength: 200 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    storageLocation?: string;
+
+    @ApiPropertyOptional({ maxLength: 100 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    projectCode?: string;
 
     @ApiPropertyOptional({description: 'Photo Document ID'})
     @IsOptional()

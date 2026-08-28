@@ -353,6 +353,7 @@
         "listDescription": "Track company-owned equipment, status, and who each asset is assigned to.",
         "formDescription": "Enter asset details, optionally add a photo, then review and save.",
         "detailsStepDescription": "Enter serial number, type, brand, model, year, and color.",
+        "ledgerStepDescription": "Optional fixed-asset ledger fields for depreciation tracking.",
         "photoStepDescription": "Optionally attach a photo of the asset for the register.",
         "reviewStepDescription": "Confirm the asset details before saving.",
         "assetSingular": "asset",
@@ -1340,7 +1341,25 @@
       "returnedBy": "Returned By",
       "returnedNotes": "Returned Notes",
       "createdAt": "Created At",
-      "updatedAt": "Updated At"
+      "updatedAt": "Updated At",
+      "assetCode": "Asset Code",
+      "cardNumber": "Card Number",
+      "assetName": "Asset Name",
+      "specifications": "Specifications",
+      "assetCategory": "Asset Category",
+      "startUseDate": "Start of Use Date",
+      "usefulLifeMonths": "Useful Life (Months)",
+      "originalValue": "Original Value",
+      "managingDepartment": "Managing Department",
+      "storageLocation": "Storage Location",
+      "projectCode": "Project Code",
+      "depreciationSummary": "Depreciation Summary",
+      "monthlyDepreciation": "Monthly Depreciation",
+      "accumulatedDepreciation": "Accumulated Depreciation",
+      "monthsDepreciated": "Months Depreciated",
+      "netValue": "Net Value",
+      "fullyDepreciated": "Fully Depreciated",
+      "monthsSuffix": "months"
     },
     "assetPlaceholder": {
       "search": "Search by serial number, brand or model…",
@@ -1356,7 +1375,15 @@
       "returnedTo": "e.g. Main Store",
       "returnNotes": "Optional notes about the return…",
       "filterStatus": "Filter by status",
-      "filterType": "Filter by type"
+      "filterType": "Filter by type",
+      "assetCode": "e.g. FA-001234",
+      "cardNumber": "e.g. CARD-001",
+      "assetName": "e.g. Dell Latitude 5540",
+      "specifications": "e.g. HP i7 16GB",
+      "assetCategory": "e.g. Other Fixed Assets - Overseas",
+      "managingDepartment": "e.g. IT Department",
+      "storageLocation": "e.g. Head Office Store",
+      "projectCode": "e.g. PRJ-001"
     },
     "assetButtons": {
       "newAsset": "New Asset",
@@ -1425,6 +1452,8 @@
     },
     "assetSection": {
       "assetDetails": "Asset Details",
+      "ledgerDetails": "Fixed Asset Ledger",
+      "depreciationSummary": "Depreciation Summary",
       "assetAssignments": "Asset Assignment",
       "currentAssignment": "Current Assignment",
       "assignmentHistory": "Assignment History"

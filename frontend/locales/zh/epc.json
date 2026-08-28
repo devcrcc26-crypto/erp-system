@@ -353,6 +353,7 @@
         "listDescription": "跟踪公司设备、状态以及当前领用人。",
         "formDescription": "填写资产信息，可选上传照片，确认后保存。",
         "detailsStepDescription": "填写序列号、类型、品牌、型号、年份与颜色。",
+        "ledgerStepDescription": "可选填写固定资产台账字段，用于折旧跟踪。",
         "photoStepDescription": "可选上传资产照片用于资产台账。",
         "reviewStepDescription": "确认资产信息后保存。",
         "assetSingular": "项资产",
@@ -1340,7 +1341,25 @@
       "returnedBy": "归还处理人",
       "returnedNotes": "归还备注",
       "createdAt": "创建时间",
-      "updatedAt": "更新时间"
+      "updatedAt": "更新时间",
+      "assetCode": "资产编码",
+      "cardNumber": "卡片编号",
+      "assetName": "资产名称",
+      "specifications": "规格",
+      "assetCategory": "资产类别",
+      "startUseDate": "开始使用日期",
+      "usefulLifeMonths": "使用月限",
+      "originalValue": "本币原值",
+      "managingDepartment": "管理部门",
+      "storageLocation": "存放地点",
+      "projectCode": "项目编码",
+      "depreciationSummary": "折旧汇总",
+      "monthlyDepreciation": "月折旧额",
+      "accumulatedDepreciation": "累计折旧",
+      "monthsDepreciated": "已计提月份",
+      "netValue": "净值",
+      "fullyDepreciated": "已完全折旧",
+      "monthsSuffix": "月"
     },
     "assetPlaceholder": {
       "search": "搜索序列号、品牌或型号…",
@@ -1356,7 +1375,15 @@
       "returnedTo": "例如：主仓库",
       "returnNotes": "可选填写归还备注…",
       "filterStatus": "按状态筛选",
-      "filterType": "按类型筛选"
+      "filterType": "按类型筛选",
+      "assetCode": "例如：FA-001234",
+      "cardNumber": "例如：CARD-001",
+      "assetName": "例如：戴尔 Latitude 5540",
+      "specifications": "例如：HP i7 16GB",
+      "assetCategory": "例如：其他固定资产-海外",
+      "managingDepartment": "例如：IT 部门",
+      "storageLocation": "例如：总部仓库",
+      "projectCode": "例如：PRJ-001"
     },
     "assetButtons": {
       "newAsset": "新建资产",
@@ -1425,6 +1452,8 @@
     },
     "assetSection": {
       "assetDetails": "资产详情",
+      "ledgerDetails": "固定资产台账",
+      "depreciationSummary": "折旧汇总",
       "assetAssignments": "资产分配",
       "currentAssignment": "当前分配",
       "assignmentHistory": "分配历史"

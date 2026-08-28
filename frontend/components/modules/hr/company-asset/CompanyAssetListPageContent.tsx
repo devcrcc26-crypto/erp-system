@@ -39,6 +39,11 @@ import {
   assetStatusVariant,
   formatAssetStatus,
 } from '@/lib/utils/company-asset-display';
+import {
+  getNetValueColor,
+  resolveAssetDepreciation,
+} from '@/lib/utils/asset-depreciation-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 /**
@@ -132,6 +137,21 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         ),
       },
       {
+        title: t('hr.assetLabels.assetCode'),
+        dataIndex: 'assetCode',
+        key: 'assetCode',
+        width: 120,
+        responsive: ['md'],
+        render: (value: string | null | undefined) =>
+          value ? (
+            <span className="font-[family-name:var(--font-mono)] text-xs">
+              {value}
+            </span>
+          ) : (
+            <span style={{ color: tokens.colorTextTertiary }}>—</span>
+          ),
+      },
+      {
         title: t('hr.assetLabels.brand'),
         dataIndex: 'brand',
         key: 'brand',
@@ -167,6 +187,41 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         key: 'type',
         width: 120,
         responsive: ['lg'],
+      },
+      {
+        title: t('hr.assetLabels.assetCategory'),
+        dataIndex: 'assetCategory',
+        key: 'assetCategory',
+        width: 160,
+        ellipsis: true,
+        responsive: ['xl'],
+        render: (value: string | null | undefined) => value || '—',
+      },
+      {
+        title: t('hr.assetLabels.netValue'),
+        key: 'netValue',
+        width: 120,
+        align: 'right',
+        responsive: ['lg'],
+        render: (_: unknown, row: CompanyAssetListItem) => {
+          const depreciation = resolveAssetDepreciation(row);
+          if (depreciation.netValue == null) {
+            return <span style={{ color: tokens.colorTextTertiary }}>—</span>;
+          }
+          return (
+            <span
+              className="text-sm font-medium"
+              style={{
+                color: getNetValueColor(
+                  depreciation.netValue,
+                  row.originalValue,
+                ),
+              }}
+            >
+              {formatEtbAmount(depreciation.netValue)}
+            </span>
+          );
+        },
       },
       {
         title: t('hr.assetLabels.year'),

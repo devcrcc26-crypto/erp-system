@@ -22,7 +22,15 @@ export interface CompanyAssetAssignmentListItem {
   returnedBy?: AssetUserRef | null;
 }
 
-export interface CompanyAssetListItem {
+export interface CompanyAssetDepreciationFields {
+  monthsDepreciated: number;
+  monthlyDepreciation?: number | string | null;
+  accumulatedDepreciation?: number | string | null;
+  netValue?: number | string | null;
+  depreciationPercent?: number | string | null;
+}
+
+export interface CompanyAssetListItem extends CompanyAssetDepreciationFields {
   id: string;
   serialNumber: string;
   brand: string;
@@ -32,6 +40,17 @@ export interface CompanyAssetListItem {
   type: string;
   status: AssetStatus;
   description?: string | null;
+  assetCode?: string | null;
+  cardNumber?: string | null;
+  assetName?: string | null;
+  specifications?: string | null;
+  assetCategory?: string | null;
+  startUseDate?: string | null;
+  usefulLifeMonths?: number | null;
+  originalValue?: number | string | null;
+  managingDepartment?: string | null;
+  storageLocation?: string | null;
+  projectCode?: string | null;
   photoDocumentId?: string | null;
   assignedTo?: AssetUserRef | null;
   assignedAt?: string | null;
@@ -53,6 +72,17 @@ export interface CreateCompanyAssetPayload {
   color: string;
   type: string;
   description?: string;
+  assetCode?: string;
+  cardNumber?: string;
+  assetName?: string;
+  specifications?: string;
+  assetCategory?: string;
+  startUseDate?: string;
+  usefulLifeMonths?: number;
+  originalValue?: number;
+  managingDepartment?: string;
+  storageLocation?: string;
+  projectCode?: string;
   photoDocumentId?: string;
 }
 
@@ -64,6 +94,17 @@ export interface UpdateCompanyAssetPayload {
   color?: string;
   type?: string;
   description?: string;
+  assetCode?: string;
+  cardNumber?: string;
+  assetName?: string;
+  specifications?: string;
+  assetCategory?: string;
+  startUseDate?: string;
+  usefulLifeMonths?: number;
+  originalValue?: number;
+  managingDepartment?: string;
+  storageLocation?: string;
+  projectCode?: string;
   photoDocumentId?: string;
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Form, Input, Radio, Skeleton } from 'antd';
+import { Alert, Button, Form, Input, Progress, Radio, Skeleton } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -33,6 +33,11 @@ import {
   canChangeAssetStatusManually,
   formatAssetStatus,
 } from '@/lib/utils/company-asset-display';
+import {
+  getDepreciationProgressColor,
+  resolveAssetDepreciation,
+} from '@/lib/utils/asset-depreciation-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
@@ -86,6 +91,7 @@ export default function CompanyAssetDetailPageContent({
   const [returnForm] = Form.useForm<ReturnAssetFormValues>();
 
   const asset = detailQuery.data;
+  const depreciation = asset ? resolveAssetDepreciation(asset) : null;
   const assignmentHistory = assignmentsQuery.data?.data ?? [];
   const activeAssignment = assignmentHistory.find(
     (assignment) => !assignment.returnedAt,
@@ -490,8 +496,77 @@ export default function CompanyAssetDetailPageContent({
                 </p>
               </MetaItem>
             ) : null}
+            {asset.assetCode ? (
+              <MetaItem label={t('hr.assetLabels.assetCode')}>
+                {asset.assetCode}
+              </MetaItem>
+            ) : null}
+            {asset.cardNumber ? (
+              <MetaItem label={t('hr.assetLabels.cardNumber')}>
+                {asset.cardNumber}
+              </MetaItem>
+            ) : null}
+            {asset.assetName ? (
+              <MetaItem label={t('hr.assetLabels.assetName')}>
+                {asset.assetName}
+              </MetaItem>
+            ) : null}
+            {asset.specifications ? (
+              <MetaItem label={t('hr.assetLabels.specifications')}>
+                {asset.specifications}
+              </MetaItem>
+            ) : null}
+            {asset.assetCategory ? (
+              <MetaItem label={t('hr.assetLabels.assetCategory')}>
+                {asset.assetCategory}
+              </MetaItem>
+            ) : null}
+            {asset.startUseDate ? (
+              <MetaItem label={t('hr.assetLabels.startUseDate')}>
+                {formatProjectDate(asset.startUseDate)}
+              </MetaItem>
+            ) : null}
+            {asset.usefulLifeMonths != null ? (
+              <MetaItem label={t('hr.assetLabels.usefulLifeMonths')}>
+                {asset.usefulLifeMonths}
+              </MetaItem>
+            ) : null}
+            {asset.originalValue != null ? (
+              <MetaItem label={t('hr.assetLabels.originalValue')}>
+                {formatEtbAmount(asset.originalValue)}
+              </MetaItem>
+            ) : null}
+            {asset.managingDepartment ? (
+              <MetaItem label={t('hr.assetLabels.managingDepartment')}>
+                {asset.managingDepartment}
+              </MetaItem>
+            ) : null}
+            {asset.storageLocation ? (
+              <MetaItem label={t('hr.assetLabels.storageLocation')}>
+                {asset.storageLocation}
+              </MetaItem>
+            ) : null}
+            {asset.projectCode ? (
+              <MetaItem label={t('hr.assetLabels.projectCode')}>
+                {asset.projectCode}
+              </MetaItem>
+            ) : null}
           </div>
         </SectionCard>
+
+        {depreciation && asset.originalValue != null && asset.usefulLifeMonths ? (
+          <SectionCard
+            title={t('hr.assetSection.depreciationSummary')}
+            bodyClassName="px-3 py-4 sm:px-5"
+          >
+            <DepreciationSummaryCard
+              depreciation={depreciation}
+              originalValue={asset.originalValue}
+              usefulLifeMonths={asset.usefulLifeMonths}
+              t={t}
+            />
+          </SectionCard>
+        ) : null}
 
         <SectionCard
           title={t('hr.assetSection.assignmentHistory')}
@@ -784,6 +859,101 @@ export default function CompanyAssetDetailPageContent({
           </Form>
         </div>
       </ConfirmDialog>
+    </div>
+  );
+}
+
+function DepreciationSummaryCard({
+  depreciation,
+  originalValue,
+  usefulLifeMonths,
+  t,
+}: {
+  depreciation: ReturnType<typeof resolveAssetDepreciation>;
+  originalValue: number | string;
+  usefulLifeMonths: number;
+  t: (key: string) => string;
+}): React.ReactNode {
+  const percent = depreciation.depreciationPercent ?? 0;
+  const progressColor = getDepreciationProgressColor(percent);
+  const fullyDepreciated = percent >= 100;
+
+  const rows = [
+    {
+      label: t('hr.assetLabels.originalValue'),
+      value: formatEtbAmount(originalValue),
+    },
+    {
+      label: t('hr.assetLabels.monthlyDepreciation'),
+      value:
+        depreciation.monthlyDepreciation != null
+          ? formatEtbAmount(depreciation.monthlyDepreciation)
+          : '—',
+    },
+    {
+      label: t('hr.assetLabels.monthsDepreciated'),
+      value: `${depreciation.monthsDepreciated} / ${usefulLifeMonths} ${t('hr.assetLabels.monthsSuffix')}`,
+    },
+    {
+      label: t('hr.assetLabels.accumulatedDepreciation'),
+      value:
+        depreciation.accumulatedDepreciation != null
+          ? formatEtbAmount(depreciation.accumulatedDepreciation)
+          : '—',
+    },
+    {
+      label: t('hr.assetLabels.netValue'),
+      value:
+        depreciation.netValue != null
+          ? formatEtbAmount(depreciation.netValue)
+          : '—',
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {rows.map((row) => (
+          <div key={row.label} className="min-w-0">
+            <p
+              className="mb-0.5 text-xs font-medium uppercase tracking-wide"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              {row.label}
+            </p>
+            <p
+              className="m-0 text-sm font-medium"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {row.value}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span
+            className="text-xs font-medium uppercase tracking-wide"
+            style={{ color: tokens.colorTextTertiary }}
+          >
+            {t('hr.assetLabels.status')}
+          </span>
+          <span
+            className="text-xs font-medium"
+            style={{ color: fullyDepreciated ? '#8c8c8c' : progressColor }}
+          >
+            {fullyDepreciated
+              ? t('hr.assetLabels.fullyDepreciated')
+              : `${Math.round(percent)}%`}
+          </span>
+        </div>
+        <Progress
+          percent={Math.round(percent)}
+          strokeColor={progressColor}
+          showInfo={false}
+          size="small"
+        />
+      </div>
     </div>
   );
 }

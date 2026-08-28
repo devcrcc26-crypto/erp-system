@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import { AssetStatus, Prisma } from "@prisma/client";
+import { AssetStatus, CompanyAsset, Prisma } from "@prisma/client";
 import { FolderContextType } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 
@@ -17,6 +17,8 @@ import {
 } from "../dtos/company-asset.dtos";
 import { UpdateCompanyAssetStatusDto } from "../dtos/company-asset.dtos";
 import { DocumentService } from "@/modules/documents/application/services/document.service";
+import { computeAssetDepreciation } from "../utils/asset-depreciation.util";
+import type { AssetDepreciationInput } from "../utils/asset-depreciation.util";
 
 type UploadedFile = {
   originalname: string;
@@ -78,6 +80,24 @@ export class CompanyAssetService {
                   mode: "insensitive" as const,
                 },
               },
+              {
+                assetCode: {
+                  contains: filters.search.trim(),
+                  mode: "insensitive" as const,
+                },
+              },
+              {
+                assetName: {
+                  contains: filters.search.trim(),
+                  mode: "insensitive" as const,
+                },
+              },
+              {
+                assetCategory: {
+                  contains: filters.search.trim(),
+                  mode: "insensitive" as const,
+                },
+              },
             ],
           }
         : {}),
@@ -118,11 +138,11 @@ export class CompanyAssetService {
     const data = rows.map((row) => {
       const { assetAssignments, ...asset } = row;
       const currentAssignment = assetAssignments[0];
-      return {
+      return this.toAssetResponse({
         ...asset,
         assignedTo: currentAssignment?.employee ?? null,
         assignedAt: currentAssignment?.assignedAt ?? null,
-      };
+      });
     });
 
     return buildPaginatedResult(data, total, page, limit);
@@ -147,7 +167,7 @@ export class CompanyAssetService {
       );
     }
 
-    return this.prisma.companyAsset.create({
+    const created = await this.prisma.companyAsset.create({
       data: {
         id: randomUUID(),
         companyId,
@@ -158,17 +178,20 @@ export class CompanyAssetService {
         color: dto.color.trim(),
         type: dto.type.trim(),
         status: AssetStatus.AVAILABLE,
-        description: dto.description ?? null,
+        description: dto.description?.trim() || null,
+        ...this.buildLedgerCreateData(dto),
         photoDocumentId: dto.photoDocumentId ?? null,
         createdBy: userId,
         updatedBy: userId,
       },
     });
+
+    return this.toAssetResponse(created);
   }
 
   /** Lists assets that are currently marked as available. */
   async getAvailableAssets(companyId: string): Promise<unknown[]> {
-    return this.prisma.companyAsset.findMany({
+    const rows = await this.prisma.companyAsset.findMany({
       where: {
         companyId,
         deletedAt: null,
@@ -176,6 +199,8 @@ export class CompanyAssetService {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    return rows.map((row) => this.toAssetResponse(row));
   }
 
   /** Fetches a single asset by id (active record only). */
@@ -188,7 +213,7 @@ export class CompanyAssetService {
       throw new NotFoundException("Asset not found");
     }
 
-    return asset;
+    return this.toAssetResponse(asset);
   }
 
   /** Updates asset details. */
@@ -225,7 +250,7 @@ export class CompanyAssetService {
       }
     }
 
-    return this.prisma.companyAsset.update({
+    const updated = await this.prisma.companyAsset.update({
       where: { id },
       data: {
         ...(dto.serialNumber !== undefined
@@ -236,13 +261,18 @@ export class CompanyAssetService {
         ...(dto.year !== undefined ? { year: dto.year } : {}),
         ...(dto.color !== undefined ? { color: dto.color.trim() } : {}),
         ...(dto.type !== undefined ? { type: dto.type.trim() } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.description !== undefined
+          ? { description: dto.description?.trim() || null }
+          : {}),
+        ...this.buildLedgerUpdateData(dto),
         ...(dto.photoDocumentId !== undefined
           ? { photoDocumentId: dto.photoDocumentId ?? null }
           : {}),
         updatedBy: userId,
       },
     });
+
+    return this.toAssetResponse(updated);
   }
 
   /** Updates asset status. IN_USE is set only via issue assignment. */
@@ -379,7 +409,7 @@ export class CompanyAssetService {
         photoDocumentId: (uploadedDocument as { id: string }).id,
         updatedBy: userId,
       },
-    });
+    }).then((row) => this.toAssetResponse(row));
   }
 
   /** Lists asset assignments for a given asset (active only by default). */
@@ -550,5 +580,109 @@ export class CompanyAssetService {
 
       return updated;
     });
+  }
+
+  private toAssetResponse(
+    asset: CompanyAsset & {
+      assignedTo?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email?: string | null;
+      } | null;
+      assignedAt?: Date | null;
+    },
+  ): Record<string, unknown> {
+    const depreciation = computeAssetDepreciation({
+      startUseDate: (asset as AssetDepreciationInput).startUseDate ?? null,
+      usefulLifeMonths: (asset as AssetDepreciationInput).usefulLifeMonths ?? null,
+      originalValue: (asset as AssetDepreciationInput).originalValue ?? null,
+    });
+    const { assignedTo, assignedAt, ...rest } = asset;
+
+    return {
+      ...rest,
+      assignedTo: assignedTo ?? null,
+      assignedAt: assignedAt ?? null,
+      ...depreciation,
+    };
+  }
+
+  private buildLedgerCreateData(dto: CreateCompanyAssetDto) {
+    return {
+      assetCode: dto.assetCode?.trim() || null,
+      cardNumber: dto.cardNumber?.trim() || null,
+      assetName: dto.assetName?.trim() || null,
+      specifications: dto.specifications?.trim() || null,
+      assetCategory: dto.assetCategory?.trim() || null,
+      startUseDate: dto.startUseDate
+        ? this.parseDateOnly(dto.startUseDate)
+        : null,
+      usefulLifeMonths: dto.usefulLifeMonths ?? null,
+      originalValue:
+        dto.originalValue != null
+          ? new Prisma.Decimal(dto.originalValue)
+          : null,
+      managingDepartment: dto.managingDepartment?.trim() || null,
+      storageLocation: dto.storageLocation?.trim() || null,
+      projectCode: dto.projectCode?.trim() || null,
+    };
+  }
+
+  private buildLedgerUpdateData(dto: UpdateCompanyAssetDto) {
+    return {
+      ...(dto.assetCode !== undefined
+        ? { assetCode: dto.assetCode?.trim() || null }
+        : {}),
+      ...(dto.cardNumber !== undefined
+        ? { cardNumber: dto.cardNumber?.trim() || null }
+        : {}),
+      ...(dto.assetName !== undefined
+        ? { assetName: dto.assetName?.trim() || null }
+        : {}),
+      ...(dto.specifications !== undefined
+        ? { specifications: dto.specifications?.trim() || null }
+        : {}),
+      ...(dto.assetCategory !== undefined
+        ? { assetCategory: dto.assetCategory?.trim() || null }
+        : {}),
+      ...(dto.startUseDate !== undefined
+        ? {
+            startUseDate: dto.startUseDate
+              ? this.parseDateOnly(dto.startUseDate)
+              : null,
+          }
+        : {}),
+      ...(dto.usefulLifeMonths !== undefined
+        ? { usefulLifeMonths: dto.usefulLifeMonths ?? null }
+        : {}),
+      ...(dto.originalValue !== undefined
+        ? {
+            originalValue:
+              dto.originalValue != null
+                ? new Prisma.Decimal(dto.originalValue)
+                : null,
+          }
+        : {}),
+      ...(dto.managingDepartment !== undefined
+        ? { managingDepartment: dto.managingDepartment?.trim() || null }
+        : {}),
+      ...(dto.storageLocation !== undefined
+        ? { storageLocation: dto.storageLocation?.trim() || null }
+        : {}),
+      ...(dto.projectCode !== undefined
+        ? { projectCode: dto.projectCode?.trim() || null }
+        : {}),
+    };
+  }
+
+  private parseDateOnly(value: string): Date {
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+    if (!match) {
+      throw new BadRequestException(`Invalid date: ${value}`);
+    }
+    return new Date(
+      Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+    );
   }
 }

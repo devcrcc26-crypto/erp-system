@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, Form, Input, InputNumber, Typography } from 'antd';
+import { Alert, Button, DatePicker, Form, Input, InputNumber, Typography } from 'antd';
 import { Image as ImageIcon, Paperclip, X } from 'lucide-react';
+import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -15,6 +16,8 @@ import {
 } from '@/lib/query/company-asset';
 import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
+import { formatProjectDate } from '@/lib/utils/project-display';
 
 interface FormValues {
   serialNumber?: string;
@@ -24,6 +27,17 @@ interface FormValues {
   color?: string;
   type?: string;
   description?: string;
+  assetCode?: string;
+  cardNumber?: string;
+  assetName?: string;
+  specifications?: string;
+  assetCategory?: string;
+  startUseDate?: dayjs.Dayjs | null;
+  usefulLifeMonths?: number;
+  originalValue?: number;
+  managingDepartment?: string;
+  storageLocation?: string;
+  projectCode?: string;
 }
 
 interface CompanyAssetFormProps {
@@ -40,6 +54,48 @@ const DETAILS_FIELDS = [
   'year',
   'color',
 ] as const;
+
+function buildLedgerPayload(values: FormValues) {
+  return {
+    assetCode: values.assetCode?.trim() || undefined,
+    cardNumber: values.cardNumber?.trim() || undefined,
+    assetName: values.assetName?.trim() || undefined,
+    specifications: values.specifications?.trim() || undefined,
+    assetCategory: values.assetCategory?.trim() || undefined,
+    startUseDate: values.startUseDate
+      ? values.startUseDate.format('YYYY-MM-DD')
+      : undefined,
+    usefulLifeMonths: values.usefulLifeMonths ?? undefined,
+    originalValue: values.originalValue ?? undefined,
+    managingDepartment: values.managingDepartment?.trim() || undefined,
+    storageLocation: values.storageLocation?.trim() || undefined,
+    projectCode: values.projectCode?.trim() || undefined,
+  };
+}
+
+function mapAssetToFormValues(asset: CompanyAssetDetail): FormValues {
+  return {
+    serialNumber: asset.serialNumber,
+    brand: asset.brand,
+    model: asset.model,
+    year: asset.year,
+    color: asset.color,
+    type: asset.type,
+    description: asset.description ?? undefined,
+    assetCode: asset.assetCode ?? undefined,
+    cardNumber: asset.cardNumber ?? undefined,
+    assetName: asset.assetName ?? undefined,
+    specifications: asset.specifications ?? undefined,
+    assetCategory: asset.assetCategory ?? undefined,
+    startUseDate: asset.startUseDate ? dayjs(asset.startUseDate) : undefined,
+    usefulLifeMonths: asset.usefulLifeMonths ?? undefined,
+    originalValue:
+      asset.originalValue != null ? Number(asset.originalValue) : undefined,
+    managingDepartment: asset.managingDepartment ?? undefined,
+    storageLocation: asset.storageLocation ?? undefined,
+    projectCode: asset.projectCode ?? undefined,
+  };
+}
 
 /**
  * Company asset create/edit form — StepperForm chrome like Add Employee.
@@ -75,6 +131,18 @@ export default function CompanyAssetForm({
       color: asset.color,
       type: asset.type,
       description: asset.description ?? undefined,
+      assetCode: asset.assetCode ?? undefined,
+      cardNumber: asset.cardNumber ?? undefined,
+      assetName: asset.assetName ?? undefined,
+      specifications: asset.specifications ?? undefined,
+      assetCategory: asset.assetCategory ?? undefined,
+      startUseDate: asset.startUseDate ? dayjs(asset.startUseDate) : undefined,
+      usefulLifeMonths: asset.usefulLifeMonths ?? undefined,
+      originalValue:
+        asset.originalValue != null ? Number(asset.originalValue) : undefined,
+      managingDepartment: asset.managingDepartment ?? undefined,
+      storageLocation: asset.storageLocation ?? undefined,
+      projectCode: asset.projectCode ?? undefined,
     };
     form.setFieldsValue(values);
     setDetailsSnapshot(values);
@@ -88,24 +156,9 @@ export default function CompanyAssetForm({
 
   function resetForm(): void {
     if (asset) {
-      form.setFieldsValue({
-        serialNumber: asset.serialNumber,
-        brand: asset.brand,
-        model: asset.model,
-        year: asset.year,
-        color: asset.color,
-        type: asset.type,
-        description: asset.description ?? undefined,
-      });
-      setDetailsSnapshot({
-        serialNumber: asset.serialNumber,
-        brand: asset.brand,
-        model: asset.model,
-        year: asset.year,
-        color: asset.color,
-        type: asset.type,
-        description: asset.description ?? undefined,
-      });
+      const values = mapAssetToFormValues(asset);
+      form.setFieldsValue(values);
+      setDetailsSnapshot(values);
     } else {
       form.resetFields();
       form.setFieldsValue({ year: new Date().getFullYear() });
@@ -160,6 +213,7 @@ export default function CompanyAssetForm({
         color: values.color.trim(),
         type: values.type.trim(),
         description: values.description?.trim() || undefined,
+        ...buildLedgerPayload(values),
       };
 
       const baseResult =
@@ -315,6 +369,116 @@ export default function CompanyAssetForm({
                 placeholder={t('hr.assetPlaceholder.description')}
               />
             </Form.Item>
+
+            <div
+              className="mt-6 border-t pt-6"
+              style={{ borderColor: tokens.colorBorder }}
+            >
+              <h3
+                className="mb-1 text-base font-semibold"
+                style={{ color: tokens.colorTextPrimary }}
+              >
+                {t('hr.assetSection.ledgerDetails')}
+              </h3>
+              <p
+                className="mb-4 text-sm"
+                style={{ color: tokens.colorTextSecondary }}
+              >
+                {t('pages.hr.companyAsset.ledgerStepDescription')}
+              </p>
+              <div className="erp-form-grid-2">
+                <Form.Item name="assetCode" label={t('hr.assetLabels.assetCode')}>
+                  <Input
+                    maxLength={100}
+                    placeholder={t('hr.assetPlaceholder.assetCode')}
+                  />
+                </Form.Item>
+                <Form.Item name="cardNumber" label={t('hr.assetLabels.cardNumber')}>
+                  <Input
+                    maxLength={100}
+                    placeholder={t('hr.assetPlaceholder.cardNumber')}
+                  />
+                </Form.Item>
+                <Form.Item name="assetName" label={t('hr.assetLabels.assetName')}>
+                  <Input
+                    maxLength={200}
+                    placeholder={t('hr.assetPlaceholder.assetName')}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="specifications"
+                  label={t('hr.assetLabels.specifications')}
+                >
+                  <Input
+                    maxLength={500}
+                    placeholder={t('hr.assetPlaceholder.specifications')}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="assetCategory"
+                  label={t('hr.assetLabels.assetCategory')}
+                  className="sm:col-span-2"
+                >
+                  <Input
+                    maxLength={200}
+                    placeholder={t('hr.assetPlaceholder.assetCategory')}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="startUseDate"
+                  label={t('hr.assetLabels.startUseDate')}
+                >
+                  <DatePicker className="w-full" />
+                </Form.Item>
+                <Form.Item
+                  name="usefulLifeMonths"
+                  label={t('hr.assetLabels.usefulLifeMonths')}
+                >
+                  <InputNumber
+                    min={1}
+                    className="w-full"
+                    addonAfter={t('hr.assetLabels.monthsSuffix')}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="originalValue"
+                  label={t('hr.assetLabels.originalValue')}
+                >
+                  <InputNumber
+                    min={0}
+                    className="w-full"
+                    prefix="ETB"
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="managingDepartment"
+                  label={t('hr.assetLabels.managingDepartment')}
+                >
+                  <Input
+                    maxLength={200}
+                    placeholder={t('hr.assetPlaceholder.managingDepartment')}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="storageLocation"
+                  label={t('hr.assetLabels.storageLocation')}
+                >
+                  <Input
+                    maxLength={200}
+                    placeholder={t('hr.assetPlaceholder.storageLocation')}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="projectCode"
+                  label={t('hr.assetLabels.projectCode')}
+                >
+                  <Input
+                    maxLength={100}
+                    placeholder={t('hr.assetPlaceholder.projectCode')}
+                  />
+                </Form.Item>
+              </div>
+            </div>
           </FormLayout>
         ),
       },
@@ -447,6 +611,42 @@ export default function CompanyAssetForm({
                 <ReviewItem
                   label={t('hr.assetLabels.description')}
                   value={reviewValues.description.trim()}
+                />
+              ) : null}
+              {reviewValues.assetCode?.trim() ? (
+                <ReviewItem
+                  label={t('hr.assetLabels.assetCode')}
+                  value={reviewValues.assetCode.trim()}
+                />
+              ) : null}
+              {reviewValues.assetName?.trim() ? (
+                <ReviewItem
+                  label={t('hr.assetLabels.assetName')}
+                  value={reviewValues.assetName.trim()}
+                />
+              ) : null}
+              {reviewValues.assetCategory?.trim() ? (
+                <ReviewItem
+                  label={t('hr.assetLabels.assetCategory')}
+                  value={reviewValues.assetCategory.trim()}
+                />
+              ) : null}
+              {reviewValues.startUseDate ? (
+                <ReviewItem
+                  label={t('hr.assetLabels.startUseDate')}
+                  value={formatProjectDate(reviewValues.startUseDate.toISOString())}
+                />
+              ) : null}
+              {reviewValues.usefulLifeMonths != null ? (
+                <ReviewItem
+                  label={t('hr.assetLabels.usefulLifeMonths')}
+                  value={String(reviewValues.usefulLifeMonths)}
+                />
+              ) : null}
+              {reviewValues.originalValue != null ? (
+                <ReviewItem
+                  label={t('hr.assetLabels.originalValue')}
+                  value={formatEtbAmount(reviewValues.originalValue)}
                 />
               ) : null}
               <ReviewItem
