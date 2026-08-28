@@ -1311,6 +1311,16 @@
     "changeStatus": "Change status",
     "changeStatusTitle": "Change vehicle status",
     "changeStatusDescription": "Update status for {{plate}}",
+    "statusDialog": {
+      "currentLabel": "Current status",
+      "selectLabel": "New status",
+      "operationalHint": "Available and In Use are managed automatically by fleet operations.",
+      "optionHint": {
+        "APPROVED": "Vehicle is approved and ready for assignment.",
+        "MAINTENANCE": "Temporarily unavailable while under maintenance.",
+        "RETIRED": "Removed from active fleet operations."
+      }
+    },
     "updateStatus": "Update status",
     "deleteTitle": "Delete vehicle?",
     "deleteDescription": "Remove {{plate}} from the company fleet? This cannot be undone.",

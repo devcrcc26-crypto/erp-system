@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Select, Skeleton, Space } from 'antd';
+import { Alert, Button, Skeleton, Space } from 'antd';
 import { ArrowLeft, CarFront, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -10,6 +10,7 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import VehicleChangeStatusDialog from '@/components/modules/org/vehicles/VehicleChangeStatusDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -25,7 +26,7 @@ import {
   formatFuelType,
   formatVehicleStatus,
   formatVehicleType,
-  vehicleStatusChangeSelectOptions,
+  initialVehicleStatusChangeSelection,
   vehicleStatusVariant,
 } from '@/lib/utils/company-vehicle-display';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
@@ -49,7 +50,6 @@ export default function VehicleDetailPageContent({
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const vehicle = detailQuery.data;
-  const vehicleStatusChangeOptions = vehicleStatusChangeSelectOptions(t);
 
   async function handleStatusChange(): Promise<void> {
     if (!vehicle || !newStatus) {
@@ -113,24 +113,19 @@ export default function VehicleDetailPageContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <ConfirmDialog
+      <VehicleChangeStatusDialog
         open={statusModalOpen}
-        title={t('vehicles.changeStatusTitle')}
-        description={t('vehicles.changeStatusDescription', {
-          plate: vehicle.plateNumber,
-        })}
-        confirmLabel={t('vehicles.updateStatus')}
+        plateNumber={vehicle.plateNumber}
+        currentStatus={vehicle.status}
+        pendingStatus={newStatus}
         confirmLoading={statusMutation.isPending}
+        onPendingStatusChange={setNewStatus}
         onConfirm={() => void handleStatusChange()}
-        onCancel={() => setStatusModalOpen(false)}
-      >
-        <Select
-          value={newStatus}
-          onChange={setNewStatus}
-          options={vehicleStatusChangeOptions}
-          className="mt-2 w-full"
-        />
-      </ConfirmDialog>
+        onCancel={() => {
+          setStatusModalOpen(false);
+          setNewStatus(undefined);
+        }}
+      />
 
       <ConfirmDialog
         open={deleteOpen}
@@ -157,7 +152,7 @@ export default function VehicleDetailPageContent({
         <Space wrap size={8} className="ml-auto">
           <Button
             onClick={() => {
-              setNewStatus(vehicle.status);
+              setNewStatus(initialVehicleStatusChangeSelection(vehicle.status));
               setStatusModalOpen(true);
             }}
             style={{ borderRadius: 0 }}

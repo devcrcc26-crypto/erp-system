@@ -1311,6 +1311,16 @@
     "changeStatus": "更改状态",
     "changeStatusTitle": "更改车辆状态",
     "changeStatusDescription": "更新 {{plate}} 的状态",
+    "statusDialog": {
+      "currentLabel": "当前状态",
+      "selectLabel": "新状态",
+      "operationalHint": "可用和使用中状态由车队运营流程自动管理。",
+      "optionHint": {
+        "APPROVED": "车辆已批准，可分配使用。",
+        "MAINTENANCE": "维修期间暂时不可用。",
+        "RETIRED": "已从活跃车队运营中移除。"
+      }
+    },
     "updateStatus": "更新状态",
     "deleteTitle": "删除车辆？",
     "deleteDescription": "将 {{plate}} 从公司车队中移除？此操作不可撤销。",

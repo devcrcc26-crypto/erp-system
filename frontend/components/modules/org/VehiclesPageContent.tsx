@@ -29,6 +29,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import VehicleChangeStatusDialog from '@/components/modules/org/vehicles/VehicleChangeStatusDialog';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -48,7 +49,7 @@ import {
   formatVehicleStatus,
   formatVehicleType,
   vehicleStatusSelectOptions,
-  vehicleStatusChangeSelectOptions,
+  initialVehicleStatusChangeSelection,
   vehicleStatusVariant,
 } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -75,10 +76,6 @@ export default function VehiclesPageContent(): React.ReactNode {
 
   const vehicleStatusOptions = useMemo(
     () => vehicleStatusSelectOptions(t),
-    [t],
-  );
-  const vehicleStatusChangeOptions = useMemo(
-    () => vehicleStatusChangeSelectOptions(t),
     [t],
   );
 
@@ -157,7 +154,7 @@ export default function VehiclesPageContent(): React.ReactNode {
 
   function openStatusChange(vehicle: CompanyVehicleListItem): void {
     setStatusModalVehicle(vehicle);
-    setNewStatus(vehicle.status);
+    setNewStatus(initialVehicleStatusChangeSelection(vehicle.status));
   }
 
   async function handleStatusChange(): Promise<void> {
@@ -233,24 +230,16 @@ export default function VehiclesPageContent(): React.ReactNode {
 
   return (
     <div className="flex flex-col gap-4">
-      <ConfirmDialog
+      <VehicleChangeStatusDialog
         open={Boolean(statusModalVehicle)}
-        title={t('vehicles.changeStatusTitle')}
-        description={t('vehicles.changeStatusDescription', {
-          plate: statusModalVehicle?.plateNumber ?? '',
-        })}
-        confirmLabel={t('vehicles.updateStatus')}
+        plateNumber={statusModalVehicle?.plateNumber ?? ''}
+        currentStatus={statusModalVehicle?.status ?? 'AVAILABLE'}
+        pendingStatus={newStatus}
         confirmLoading={statusMutation.isPending}
+        onPendingStatusChange={setNewStatus}
         onConfirm={() => void handleStatusChange()}
         onCancel={() => setStatusModalVehicle(null)}
-      >
-        <Select
-          value={newStatus}
-          onChange={setNewStatus}
-          options={vehicleStatusChangeOptions}
-          className="mt-2 w-full"
-        />
-      </ConfirmDialog>
+      />
 
       <ConfirmDialog
         open={Boolean(deleteVehicle)}

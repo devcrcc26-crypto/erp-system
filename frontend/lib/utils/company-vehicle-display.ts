@@ -100,13 +100,28 @@ export function vehicleStatusSelectOptions(
   }));
 }
 
+const MANUAL_VEHICLE_STATUS_CHANGES: VehicleStatus[] = [
+  'APPROVED',
+  'MAINTENANCE',
+  'RETIRED',
+];
+
 /** Status options for manual fleet status changes (excludes operational states). */
 export function vehicleStatusChangeSelectOptions(
   t: TFn,
 ): Array<{ value: VehicleStatus; label: string }> {
-  return vehicleStatusSelectOptions(t).filter(
-    (option) => option.value !== 'AVAILABLE' && option.value !== 'IN_USE',
+  return vehicleStatusSelectOptions(t).filter((option) =>
+    MANUAL_VEHICLE_STATUS_CHANGES.includes(option.value),
   );
+}
+
+/** Initial selection when opening the change-status dialog. */
+export function initialVehicleStatusChangeSelection(
+  currentStatus: VehicleStatus,
+): VehicleStatus | undefined {
+  return MANUAL_VEHICLE_STATUS_CHANGES.includes(currentStatus)
+    ? currentStatus
+    : undefined;
 }
 
 export function formatDriverName(
