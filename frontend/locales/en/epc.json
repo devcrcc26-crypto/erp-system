@@ -1181,6 +1181,10 @@
       "ipAddress": "IP address"
     },
     "detail": {
+      "overview": "Event overview",
+      "technical": "Technical context",
+      "changes": "State changes",
+      "close": "Close",
       "ipAddress": "IP address",
       "deviceInfo": "Device",
       "correlationId": "Correlation ID",

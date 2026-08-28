@@ -1181,6 +1181,10 @@
       "ipAddress": "IP 地址"
     },
     "detail": {
+      "overview": "事件概览",
+      "technical": "技术信息",
+      "changes": "状态变更",
+      "close": "关闭",
       "ipAddress": "IP 地址",
       "deviceInfo": "设备",
       "correlationId": "关联 ID",
