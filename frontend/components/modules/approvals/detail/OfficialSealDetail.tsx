@@ -7,6 +7,7 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import SealDocumentGallery from '@/components/modules/hr/shared/SealDocumentGallery';
+import SealRequestDetailFields from '@/components/modules/hr/shared/SealRequestDetailFields';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -147,6 +148,11 @@ export default function OfficialSealDetail({
           <MetaItem label={t('hr.labels.urgency')}>
             {formatOfficialSealUrgency(seal.urgency, t)}
           </MetaItem>
+          <SealRequestDetailFields
+            sealCategory={seal.sealCategory}
+            copyCount={seal.copyCount}
+            remarks={seal.remarks}
+          />
           {seal.completedAt ? (
             <MetaItem label={t('hr.labels.completedAt')}>
               {formatProjectDate(seal.completedAt)}

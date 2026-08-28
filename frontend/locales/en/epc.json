@@ -2164,7 +2164,16 @@
       "addConsumablesItem": "Add at least one line item",
       "completeConsumablesDetails": "Complete request details before submitting",
       "consumablesMaxItems": "Maximum {{count}} items per requisition",
-      "consumablesDeclarationRequired": "Confirm the low-value consumables declaration"
+      "consumablesDeclarationRequired": "Confirm the low-value consumables declaration",
+      "sealCategoryOtherRequired": "Enter the category name"
+    },
+    "sealCategory": {
+      "CONTRACT": "Contract",
+      "LETTER": "Letter",
+      "CERTIFICATE": "Certificate",
+      "REPORT": "Report",
+      "DRAWING": "Drawing",
+      "OTHER": "Other (specify)"
     },
     "perDiemCategory": {
       "americas": "Americas",
@@ -2282,6 +2291,10 @@
       "descriptionWithModelSpec": "Description (Model / Specifications)",
       "dateNeeded": "Date needed",
       "urgency": "Urgency",
+      "sealCategory": "Category",
+      "sealCategoryOther": "Other category",
+      "copyCount": "Copy Count",
+      "remarks": "Remarks",
       "justification": "Justification",
       "vendor": "Vendor Name",
       "vendorContact": "Vendor Contact",
@@ -2395,6 +2408,9 @@
       "enterPurpose": "Describe what the materials are needed for",
       "enterOfficialSealDescription": "Describe what the seal is needed for",
       "enterProjectSealDescription": "Describe what the seal is needed for",
+      "selectSealCategory": "Select category",
+      "enterSealCategoryOther": "Enter category name",
+      "enterSealRemarks": "Optional notes for the approver",
       "selectProjectSealDateNeeded": "Select date needed",
       "selectProjectSealUrgency": "Select urgency",
       "enterReason": "Optional - describe the reason for leave",

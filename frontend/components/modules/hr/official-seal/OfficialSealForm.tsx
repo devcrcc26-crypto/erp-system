@@ -7,6 +7,7 @@ import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import SealFilePicker, {
   SealLocalFileTiles,
 } from '@/components/modules/hr/shared/SealFilePicker';
+import SealRequestExtraFields from '@/components/modules/hr/shared/SealRequestExtraFields';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -22,12 +23,17 @@ import {
   formatOfficialSealUrgency,
   OFFICIAL_SEAL_URGENCY_OPTIONS,
 } from '@/lib/utils/official-seal';
+import { formatSealCategory, resolveSealCategory } from '@/lib/utils/seal-category';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 interface FormValues {
   description?: string;
   urgency: OfficialSealUrgency;
   dateNeeded?: dayjs.Dayjs;
+  sealCategoryPreset?: string;
+  sealCategoryOther?: string;
+  copyCount?: number;
+  remarks?: string;
 }
 
 interface OfficialSealFormProps {
@@ -110,6 +116,12 @@ export default function OfficialSealForm({
     try {
       const result = await submitMutation.mutateAsync({
         description: values.description.trim(),
+        sealCategory: resolveSealCategory(
+          values.sealCategoryPreset,
+          values.sealCategoryOther,
+        ),
+        copyCount: values.copyCount,
+        remarks: values.remarks?.trim() || undefined,
         urgency: values.urgency,
         dateNeeded: values.dateNeeded.format('YYYY-MM-DD'),
         files: selectedFiles.length > 0 ? selectedFiles : undefined,
@@ -190,6 +202,8 @@ export default function OfficialSealForm({
                 <Select options={urgencyOptions} />
               </Form.Item>
             </div>
+
+            <SealRequestExtraFields form={form} />
           </FormLayout>
         ),
       },
@@ -246,6 +260,28 @@ export default function OfficialSealForm({
                   reviewValues.urgency ?? 'MINOR',
                   t,
                 )}
+              />
+              <ReviewItem
+                label={t('hr.form.sealCategory')}
+                value={formatSealCategory(
+                  resolveSealCategory(
+                    reviewValues.sealCategoryPreset,
+                    reviewValues.sealCategoryOther,
+                  ),
+                  t,
+                )}
+              />
+              <ReviewItem
+                label={t('hr.form.copyCount')}
+                value={
+                  reviewValues.copyCount != null
+                    ? String(reviewValues.copyCount)
+                    : '—'
+                }
+              />
+              <ReviewItem
+                label={t('hr.form.remarks')}
+                value={reviewValues.remarks?.trim() || '—'}
               />
             </div>
             <div className="mt-4">

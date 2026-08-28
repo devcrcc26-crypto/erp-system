@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import SealDocumentGallery from '@/components/modules/hr/shared/SealDocumentGallery';
+import SealRequestDetailFields from '@/components/modules/hr/shared/SealRequestDetailFields';
 import {
   MetaItem,
   SectionCard,
@@ -274,6 +275,11 @@ export default function ProjectSealDetailPageContent({
               <MetaItem label={t('hr.labels.urgency')}>
                 {formatProjectSealUrgency(seal.urgency, t)}
               </MetaItem>
+              <SealRequestDetailFields
+                sealCategory={seal.sealCategory}
+                copyCount={seal.copyCount}
+                remarks={seal.remarks}
+              />
               {seal.completedAt ? (
                 <MetaItem label={t('hr.labels.completedAt')}>
                   {formatProjectDate(seal.completedAt)}

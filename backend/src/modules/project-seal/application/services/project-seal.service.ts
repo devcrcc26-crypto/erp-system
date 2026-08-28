@@ -104,6 +104,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
         const now = new Date();
         const id = randomUUID();
         const dateNeeded = this.parseDateOnly(dto.dateNeeded);
+        const extraFields = this.sealExtraFieldsFromDto(dto);
 
         if (resolvedTiers.length === 0) {
             await this.prisma.projectSeal.create({
@@ -113,6 +114,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
                     requestNumber,
                     employeeId: userId,
                     description: dto.description,
+                    ...extraFields,
                     urgency: dto.urgency,
                     dateNeeded,
                     status: SealStatus.APPROVED,
@@ -137,6 +139,9 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
                 title: `Project Seal — ${dto.description}`,
                 formData: {
                     description: dto.description,
+                    sealCategory: dto.sealCategory,
+                    copyCount: dto.copyCount,
+                    remarks: dto.remarks,
                     urgency: dto.urgency,
                     dateNeeded: dto.dateNeeded,
                 },
@@ -159,6 +164,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
                     requestNumber,
                     employeeId: userId,
                     description: dto.description,
+                    ...extraFields,
                     urgency: dto.urgency,
                     dateNeeded,
                     status: SealStatus.SUBMITTED,
@@ -495,6 +501,18 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
             .filter(Boolean) as SealStatus[];
         }
         return [status as SealStatus];
+    }
+
+    private sealExtraFieldsFromDto(dto: SubmitProjectSealRequestDto): {
+        sealCategory: string | null;
+        copyCount: number | null;
+        remarks: string | null;
+    } {
+        return {
+            sealCategory: dto.sealCategory?.trim() || null,
+            copyCount: dto.copyCount ?? null,
+            remarks: dto.remarks?.trim() || null,
+        };
     }
 
     private parseDateOnly(value: string): Date {

@@ -2,6 +2,7 @@
 
 import { Alert, Skeleton, Tag } from 'antd';
 import SealDocumentGallery from '@/components/modules/hr/shared/SealDocumentGallery';
+import SealRequestDetailFields from '@/components/modules/hr/shared/SealRequestDetailFields';
 import {
   MetaItem,
   SectionCard,
@@ -147,6 +148,11 @@ export default function ProjectSealDetail({
           <MetaItem label={t('hr.labels.urgency')}>
             {formatProjectSealUrgency(seal.urgency, t)}
           </MetaItem>
+          <SealRequestDetailFields
+            sealCategory={seal.sealCategory}
+            copyCount={seal.copyCount}
+            remarks={seal.remarks}
+          />
           {seal.completedAt ? (
             <MetaItem label={t('hr.labels.completedAt')}>
               {formatProjectDate(seal.completedAt)}

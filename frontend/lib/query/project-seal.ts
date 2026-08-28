@@ -3,6 +3,7 @@ import { ListProjectSealsParams, ProjectSealDetail, ProjectSealListItem, SubmitP
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PaginatedResult } from "../api/types";
 import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from "../api/client";
+import { appendSealSubmitFields, sealSubmitJsonFields } from "../utils/seal-submit-fields";
 import { approvalKeys } from "./approvals";
 
 
@@ -61,6 +62,7 @@ export function useSubmitProjectSeal() {
                 formData.append('description', payload.description);
                 formData.append('urgency', payload.urgency);
                 formData.append('dateNeeded', payload.dateNeeded);
+                appendSealSubmitFields(formData, payload);
                 for (const file of payload.files ?? []) {
                     formData.append('files', file);
                 }
@@ -72,6 +74,7 @@ export function useSubmitProjectSeal() {
             description: payload.description,
             urgency: payload.urgency,
             dateNeeded: payload.dateNeeded,
+            ...sealSubmitJsonFields(payload),
         });
     },
     onSuccess: (created) => {

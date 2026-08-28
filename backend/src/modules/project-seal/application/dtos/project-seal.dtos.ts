@@ -10,6 +10,25 @@ export class SubmitProjectSealRequestDto {
     @IsNotEmpty()
     @MaxLength(1000)
     description!: string;
+
+    @ApiPropertyOptional({ maxLength: 200, description: 'Document category (preset code or custom text)' })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    sealCategory?: string;
+
+    @ApiPropertyOptional({ minimum: 1 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    copyCount?: number;
+
+    @ApiPropertyOptional({ maxLength: 2000 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(2000)
+    remarks?: string;
     
     @ApiProperty({ enum: SealUrgency })
     @IsEnum(SealUrgency)

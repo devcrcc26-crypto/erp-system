@@ -234,7 +234,11 @@ export class CreateUserDto {
 }
 
 export class UpdateUserDto extends PartialType(
-  OmitType(CreateUserDto, ['discipline', 'engineeringDisciplineId'] as const),
+  OmitType(CreateUserDto, [
+    'discipline',
+    'engineeringDisciplineId',
+    'reportsToUserId',
+  ] as const),
 ) {
   @ApiPropertyOptional()
   @IsOptional()

@@ -12,6 +12,7 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import SealDocumentGallery from '@/components/modules/hr/shared/SealDocumentGallery';
+import SealRequestDetailFields from '@/components/modules/hr/shared/SealRequestDetailFields';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -274,6 +275,11 @@ export default function OfficialSealDetailPageContent({
               <MetaItem label={t('hr.labels.urgency')}>
                 {formatOfficialSealUrgency(seal.urgency, t)}
               </MetaItem>
+              <SealRequestDetailFields
+                sealCategory={seal.sealCategory}
+                copyCount={seal.copyCount}
+                remarks={seal.remarks}
+              />
               {seal.completedAt ? (
                 <MetaItem label={t('hr.labels.completedAt')}>
                   {formatProjectDate(seal.completedAt)}

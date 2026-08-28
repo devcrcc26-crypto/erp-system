@@ -2164,7 +2164,16 @@
       "addConsumablesItem": "请至少添加一条明细",
       "completeConsumablesDetails": "提交前请先完成申请详情",
       "consumablesMaxItems": "每份申请最多 {{count}} 项",
-      "consumablesDeclarationRequired": "请确认低值易耗品声明"
+      "consumablesDeclarationRequired": "请确认低值易耗品声明",
+      "sealCategoryOtherRequired": "请填写类别名称"
+    },
+    "sealCategory": {
+      "CONTRACT": "合同",
+      "LETTER": "函件",
+      "CERTIFICATE": "证书",
+      "REPORT": "报告",
+      "DRAWING": "图纸",
+      "OTHER": "其他（请填写）"
     },
     "perDiemCategory": {
       "americas": "美洲",
@@ -2282,6 +2291,10 @@
       "descriptionWithModelSpec": "描述（型号 / 规格）",
       "dateNeeded": "需用日期",
       "urgency": "紧急程度",
+      "sealCategory": "类别",
+      "sealCategoryOther": "其他类别",
+      "copyCount": "份数",
+      "remarks": "备注",
       "justification": "申请理由",
       "vendor": "供应商名称",
       "vendorContact": "供应商联系方式",
@@ -2395,6 +2408,9 @@
       "enterPurpose": "请描述所需材料的用途",
       "enterOfficialSealDescription": "请描述公章用途",
       "enterProjectSealDescription": "请描述项目章用途",
+      "selectSealCategory": "选择类别",
+      "enterSealCategoryOther": "填写类别名称",
+      "enterSealRemarks": "可选 - 填写给审批人的备注",
       "selectProjectSealDateNeeded": "请选择需用日期",
       "selectProjectSealUrgency": "请选择紧急程度",
       "enterReason": "可选 - 请描述请假原因",

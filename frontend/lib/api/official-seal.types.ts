@@ -41,6 +41,9 @@ export interface OfficialSealListItem {
     requestNumber: string;
     employeeId: string;
     description: string;
+    sealCategory?: string | null;
+    copyCount?: number | null;
+    remarks?: string | null;
     urgency: OfficialSealUrgency;
     dateNeeded: string;
     status: OfficialSealStatus;
@@ -80,6 +83,9 @@ export interface OfficialSealDetail extends OfficialSealListItem {
 
 export interface SubmitOfficialSealPayload {
     description: string;
+    sealCategory?: string;
+    copyCount?: number;
+    remarks?: string;
     urgency: OfficialSealUrgency;
     dateNeeded: string;
     files?: File[];

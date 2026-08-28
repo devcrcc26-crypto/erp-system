@@ -4,7 +4,7 @@ import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from "../api/
 import { ListOfficialSealsParams, OfficialSealDetail, OfficialSealListItem, SubmitOfficialSealPayload } from "../api/official-seal.types";
 import { PaginatedResult } from "../api/types";
 import { toQueryString } from "./pm-query-utils";
-import { approvalKeys } from "./approvals";
+import { appendSealSubmitFields, sealSubmitJsonFields } from "../utils/seal-submit-fields";
 
 const OFFICIAL_SEAL_PATH = '/hr/official-seal';
 
@@ -64,6 +64,7 @@ export function useSubmitOfficialSeal() {
                 formData.append('description', payload.description);
                 formData.append('urgency', payload.urgency);
                 formData.append('dateNeeded', payload.dateNeeded);
+                appendSealSubmitFields(formData, payload);
                 for (const file of payload.files ?? []) {
                     formData.append('files', file);
                 }
@@ -75,6 +76,7 @@ export function useSubmitOfficialSeal() {
                     description: payload.description,
                     urgency: payload.urgency,
                     dateNeeded: payload.dateNeeded,
+                    ...sealSubmitJsonFields(payload),
                 },
             );
         },

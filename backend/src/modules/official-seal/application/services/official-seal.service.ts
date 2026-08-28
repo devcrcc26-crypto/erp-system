@@ -127,6 +127,7 @@ export class OfficialSealService
     const now = new Date();
     const id = randomUUID();
     const dateNeeded = this.parseDateOnly(dto.dateNeeded);
+    const extraFields = this.sealExtraFieldsFromDto(dto);
 
     if (resolvedTiers.length === 0) {
       await this.prisma.officialSeal.create({
@@ -136,6 +137,7 @@ export class OfficialSealService
           requestNumber,
           employeeId: userId,
           description: dto.description,
+          ...extraFields,
           urgency: dto.urgency,
           dateNeeded,
           status: SealStatus.APPROVED,
@@ -160,6 +162,9 @@ export class OfficialSealService
         title: `Official Seal — ${dto.description}`,
         formData: {
           description: dto.description,
+          sealCategory: dto.sealCategory,
+          copyCount: dto.copyCount,
+          remarks: dto.remarks,
           urgency: dto.urgency,
           dateNeeded: dto.dateNeeded,
         },
@@ -182,6 +187,7 @@ export class OfficialSealService
           requestNumber,
           employeeId: userId,
           description: dto.description,
+          ...extraFields,
           urgency: dto.urgency,
           dateNeeded: dateNeeded,
           status: SealStatus.SUBMITTED,
@@ -538,6 +544,18 @@ export class OfficialSealService
         .filter(Boolean) as SealStatus[];
     }
     return [status as SealStatus];
+  }
+
+  private sealExtraFieldsFromDto(dto: SubmitOfficialSealRequestDto): {
+    sealCategory: string | null;
+    copyCount: number | null;
+    remarks: string | null;
+  } {
+    return {
+      sealCategory: dto.sealCategory?.trim() || null,
+      copyCount: dto.copyCount ?? null,
+      remarks: dto.remarks?.trim() || null,
+    };
   }
 
   private parseDateOnly(value: string): Date {
