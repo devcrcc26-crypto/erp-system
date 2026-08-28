@@ -1,161 +1,153 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Alert,
   Button,
-  Drawer,
-  Form,
+  Dropdown,
   Input,
-  InputNumber,
   Select,
   Space,
+  Spin,
+  Tooltip,
+  type MenuProps,
 } from 'antd';
-import { CarOutlined, PlusOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import {
+  CarOutlined,
+  CheckCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  MoreOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  ToolOutlined,
+} from '@ant-design/icons';
+import { CarFront } from 'lucide-react';
+import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
-import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   CompanyVehicleListItem,
-  CreateCompanyVehiclePayload,
-  UpdateCompanyVehiclePayload,
   VehicleStatus,
 } from '@/lib/api/company-vehicle.types';
 import {
   useCompanyVehicles,
-  useCreateCompanyVehicle,
-  useUpdateCompanyVehicle,
-  useUpdateCompanyVehicleStatus,
   useDeleteCompanyVehicle,
+  useUpdateCompanyVehicleStatus,
 } from '@/lib/query/company-vehicle';
-import { useFullUsersDirectory } from '@/lib/query/users';
 import {
   formatDriverName,
   formatFuelType,
   formatVehicleStatus,
   formatVehicleType,
-  toDriverSelectOptions,
+  vehicleStatusSelectOptions,
   vehicleStatusVariant,
 } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
-
-type DrawerMode = 'create' | 'edit';
+import { tokens } from '@/lib/theme/tokens';
 
 export default function VehiclesPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
-
-  const vehicleStatusOptions = useMemo(
-    () => [
-      { value: 'AVAILABLE', label: t('hr.vehicleStatus.AVAILABLE') },
-      { value: 'APPROVED', label: t('hr.vehicleStatus.APPROVED') },
-      { value: 'IN_USE', label: t('hr.vehicleStatus.IN_USE') },
-      { value: 'MAINTENANCE', label: t('hr.vehicleStatus.MAINTENANCE') },
-      { value: 'RETIRED', label: t('hr.vehicleStatus.RETIRED') },
-    ],
-    [t],
-  );
-
-  const vehicleTypeOptions = useMemo(
-    () => [
-      { value: 'CAR', label: t('hr.vehicleType.CAR') },
-      { value: 'TRUCK', label: t('hr.vehicleType.TRUCK') },
-      { value: 'VAN', label: t('hr.vehicleType.VAN') },
-      { value: 'BUS', label: t('hr.vehicleType.BUS') },
-      { value: 'PICKUP', label: t('hr.vehicleType.PICKUP') },
-      { value: 'MOTORCYCLE', label: t('hr.vehicleType.MOTORCYCLE') },
-      { value: 'OTHER', label: t('hr.vehicleType.OTHER') },
-    ],
-    [t],
-  );
-
-  const fuelTypeOptions = useMemo(
-    () => [
-      { value: 'PETROL', label: t('hr.fuelType.PETROL') },
-      { value: 'DIESEL', label: t('hr.fuelType.DIESEL') },
-      { value: 'ELECTRIC', label: t('hr.fuelType.ELECTRIC') },
-      { value: 'HYBRID', label: t('hr.fuelType.HYBRID') },
-    ],
-    [t],
-  );
   const messageApi = useAppMessage();
-  const { params, resetPage, bindMeta } = useTablePagination();
+  const router = useRouter();
+  const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | undefined>();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState<DrawerMode>('create');
-  const [editingVehicle, setEditingVehicle] =
-    useState<CompanyVehicleListItem | null>(null);
   const [statusModalVehicle, setStatusModalVehicle] =
     useState<CompanyVehicleListItem | null>(null);
   const [newStatus, setNewStatus] = useState<VehicleStatus | undefined>();
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteVehicle, setDeleteVehicle] =
+    useState<CompanyVehicleListItem | null>(null);
+  const [actionMessage, setActionMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
-  const [form] = Form.useForm<CreateCompanyVehiclePayload>();
+  const vehicleStatusOptions = useMemo(
+    () => vehicleStatusSelectOptions(t),
+    [t],
+  );
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const next = search.trim();
+      setAppliedSearch((prev) => {
+        if (prev !== next) {
+          setTimeout(() => resetPage(), 0);
+        }
+        return next;
+      });
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [search, resetPage]);
 
   const listParams = useMemo(
     () => ({
       ...params,
-      search: search.trim() || undefined,
+      search: appliedSearch || undefined,
       status: statusFilter,
     }),
-    [params, search, statusFilter],
+    [params, appliedSearch, statusFilter],
   );
 
   const listQuery = useCompanyVehicles(listParams);
-  const usersQuery = useFullUsersDirectory();
-  const createMutation = useCreateCompanyVehicle();
-  const updateMutation = useUpdateCompanyVehicle(editingVehicle?.id ?? '');
+  const statsQuery = useCompanyVehicles({ page: 1, limit: 500 });
   const deleteMutation = useDeleteCompanyVehicle();
   const statusMutation = useUpdateCompanyVehicleStatus(
     statusModalVehicle?.id ?? '',
   );
 
   const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-  const driverOptions = useMemo(
-    () =>
-      toDriverSelectOptions(
-        usersQuery.data ?? [],
-        editingVehicle?.assignedDriverId
-          ? [editingVehicle.assignedDriverId]
-          : [],
-      ),
-    [usersQuery.data, editingVehicle?.assignedDriverId],
-  );
+  const meta = listQuery.data?.meta ?? {
+    total: 0,
+    page: params.page ?? 1,
+    limit: params.limit ?? 10,
+    pages: 0,
+  };
 
-  function openCreate(): void {
-    setDrawerMode('create');
-    setEditingVehicle(null);
-    form.resetFields();
-    setDrawerOpen(true);
+  const vehicleStats = useMemo(() => {
+    const all = statsQuery.data?.data ?? [];
+    let availableCount = 0;
+    let inUseCount = 0;
+    let maintenanceCount = 0;
+    for (const vehicle of all) {
+      if (vehicle.status === 'AVAILABLE' || vehicle.status === 'APPROVED') {
+        availableCount += 1;
+      } else if (vehicle.status === 'IN_USE') {
+        inUseCount += 1;
+      } else if (
+        vehicle.status === 'MAINTENANCE' ||
+        vehicle.status === 'RETIRED'
+      ) {
+        maintenanceCount += 1;
+      }
+    }
+    return {
+      totalCount: statsQuery.data?.meta.total ?? all.length,
+      availableCount,
+      inUseCount,
+      maintenanceCount,
+    };
+  }, [statsQuery.data]);
+
+  function handleResetFilters(): void {
+    setSearch('');
+    setAppliedSearch('');
+    setStatusFilter(undefined);
+    resetPage();
   }
 
-  function openEdit(vehicle: CompanyVehicleListItem): void {
-    setDrawerMode('edit');
-    setEditingVehicle(vehicle);
-    form.setFieldsValue({
-      plateNumber: vehicle.plateNumber,
-      vehicleType: vehicle.vehicleType,
-      make: vehicle.make,
-      model: vehicle.model,
-      year: vehicle.year,
-      fuelType: vehicle.fuelType,
-      color: vehicle.color ?? undefined,
-      assignedDriverId: vehicle.assignedDriverId ?? undefined,
-      notes: vehicle.notes ?? undefined,
-      isActive: vehicle.isActive,
-    });
-    setDrawerOpen(true);
+  async function handleRefresh(): Promise<void> {
+    await Promise.all([listQuery.refetch(), statsQuery.refetch()]);
   }
 
   function openStatusChange(vehicle: CompanyVehicleListItem): void {
@@ -163,325 +155,87 @@ export default function VehiclesPageContent(): React.ReactNode {
     setNewStatus(vehicle.status);
   }
 
-  async function handleSubmit(): Promise<void> {
-    try {
-      const values = await form.validateFields();
-      if (drawerMode === 'create') {
-        await createMutation.mutateAsync(values);
-        messageApi.success('Vehicle created');
-      } else {
-        const payload: UpdateCompanyVehiclePayload = { ...values };
-        await updateMutation.mutateAsync(payload);
-        messageApi.success('Vehicle updated');
-      }
-      setDrawerOpen(false);
-      form.resetFields();
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) return;
-      notifyApiError(error, 'Failed to save vehicle', messageApi);
-    }
-  }
-
   async function handleStatusChange(): Promise<void> {
-    if (!statusModalVehicle || !newStatus) return;
+    if (!statusModalVehicle || !newStatus) {
+      return;
+    }
+    setActionMessage(null);
     try {
       await statusMutation.mutateAsync({ status: newStatus });
-      messageApi.success('Vehicle status updated');
+      setActionMessage({
+        type: 'success',
+        text: t('vehicles.statusUpdated'),
+      });
       setStatusModalVehicle(null);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to update status', messageApi);
+      notifyApiError(error, t('vehicles.statusUpdateError'), messageApi);
     }
   }
 
   async function handleDelete(): Promise<void> {
-    if (!deleteId) return;
+    if (!deleteVehicle) {
+      return;
+    }
+    setActionMessage(null);
     try {
-      await deleteMutation.mutateAsync(deleteId);
-      messageApi.success('Vehicle deleted');
-      setDeleteId(null);
+      await deleteMutation.mutateAsync(deleteVehicle.id);
+      setActionMessage({
+        type: 'success',
+        text: t('vehicles.deleted', { plate: deleteVehicle.plateNumber }),
+      });
+      setDeleteVehicle(null);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to delete vehicle', messageApi);
+      notifyApiError(error, t('vehicles.deleteError'), messageApi);
     }
   }
 
-  const columns: ColumnsType<CompanyVehicleListItem> = useMemo(
-    () => [
-    {
-      title: t('hr.table.plateNumber'),
-      dataIndex: 'plateNumber',
-      key: 'plateNumber',
-      width: 130,
-    },
-    {
-      title: 'Type',
-      dataIndex: 'vehicleType',
-      key: 'vehicleType',
-      width: 110,
-      render: (v: string) => formatVehicleType(v, t),
-    },
-    {
-      title: t('hr.table.make'),
-      dataIndex: 'make',
-      key: 'make',
-      width: 120,
-      ellipsis: true,
-    },
-    {
-      title: t('hr.table.model'),
-      dataIndex: 'model',
-      key: 'model',
-      width: 120,
-      ellipsis: true,
-    },
-    {
-      title: t('hr.table.year'),
-      dataIndex: 'year',
-      key: 'year',
-      width: 70,
-      align: 'right',
-    },
-    {
-      title: t('hr.table.fuelType'),
-      dataIndex: 'fuelType',
-      key: 'fuelType',
-      width: 90,
-      render: (v: string) => formatFuelType(v, t),
-    },
-    {
-      title: t('hr.table.assignedDriver'),
-      key: 'assignedDriver',
-      width: 160,
-      ellipsis: true,
-      render: (_: unknown, row: CompanyVehicleListItem) =>
-        formatDriverName(row.assignedDriver),
-    },
-    {
-      title: t('hr.table.status'),
-      dataIndex: 'status',
-      key: 'status',
-      width: 120,
-      render: (value: VehicleStatus) => (
-        <StatusBadge
-          label={formatVehicleStatus(value, t)}
-          variant={vehicleStatusVariant(value)}
-        />
-      ),
-    },
-    {
-      title: t('hr.table.actions'),
-      key: 'actions',
-      width: 200,
-      render: (_: unknown, row: CompanyVehicleListItem) => (
-        <Space size={4}>
-          <Button type="link" size="small" onClick={() => openEdit(row)}>
-            Edit
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => openStatusChange(row)}
-          >
-            Status
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            danger
-            onClick={() => setDeleteId(row.id)}
-          >
-            Delete
-          </Button>
-        </Space>
-      ),
-    },
-  ],
-  [t],
+  const buildActionMenu = useCallback(
+    (vehicle: CompanyVehicleListItem): MenuProps['items'] => [
+      {
+        key: 'edit',
+        icon: <EditOutlined />,
+        label: t('common.update'),
+        onClick: () =>
+          router.push(`/organization/vehicles/${vehicle.id}/edit`),
+      },
+      {
+        key: 'status',
+        icon: <ToolOutlined />,
+        label: t('vehicles.changeStatus'),
+        onClick: () => openStatusChange(vehicle),
+      },
+      {
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: t('common.delete'),
+        danger: true,
+        onClick: () => setDeleteVehicle(vehicle),
+      },
+    ],
+    [router, t],
   );
 
   if (listQuery.isLoading && !listQuery.data) {
-    return <PageLoadingSkeleton />;
-  }
-
-  return (
-    <div>
-      {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          style={{ marginBottom: 16 }}
-          title={
-            listQuery.error instanceof ApiRequestError
-              ? listQuery.error.message
-              : 'Failed to load vehicles'
-          }
-        />
-      ) : null}
-
-      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
-        <ListSearchInput
-          committedValue={search}
-          onCommit={(value) => {
-            setSearch(value);
-            resetPage();
-          }}
-          placeholder="Search plate, make, or model"
-          style={{ width: 260 }}
-        />
-
-        <Select
-          allowClear
-          placeholder="Status"
-          options={vehicleStatusOptions}
-          value={statusFilter}
-          onChange={(v) => {
-            setStatusFilter(v);
-            resetPage();
-          }}
-          style={{ minWidth: 140 }}
-        />
-
-        <div className="ml-auto">
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            Add Vehicle
-          </Button>
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+          <Spin />
         </div>
       </div>
+    );
+  }
 
-      {listQuery.isFetching && listQuery.data ? (
-        <TableUpdatingIndicator active={listQuery.isFetching} />
-      ) : null}
+  const pagination = bindMeta(meta);
 
-      <DataTable<CompanyVehicleListItem>
-        rowKey="id"
-        columns={columns}
-        dataSource={rows}
-        loading={listQuery.isLoading}
-        pagination={meta ? bindMeta(meta) : false}
-        locale={{
-          emptyText: (
-            <TableEmptyState
-              icon={<CarOutlined />}
-              title={t('hr.empty.noVehicles')}
-              description="Add your first company vehicle to get started."
-            />
-          ),
-        }}
-      />
-
-      <Drawer
-        title={drawerMode === 'create' ? 'Add Vehicle' : 'Edit Vehicle'}
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        size={480}
-        destroyOnClose
-        extra={
-          <Space>
-            <Button onClick={() => setDrawerOpen(false)}>Cancel</Button>
-            <Button
-              type="primary"
-              loading={createMutation.isPending || updateMutation.isPending}
-              onClick={() => void handleSubmit()}
-            >
-              {drawerMode === 'create' ? 'Create' : 'Save'}
-            </Button>
-          </Space>
-        }
-      >
-        <Form form={form} layout="vertical" autoComplete="off">
-          <Form.Item
-            name="plateNumber"
-            label="Plate Number"
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            <Input maxLength={20} placeholder="e.g. AA-12345" />
-          </Form.Item>
-
-          <div className="grid grid-cols-2 gap-x-4">
-            <Form.Item
-              name="vehicleType"
-              label="Vehicle Type"
-              rules={[{ required: true, message: 'Required' }]}
-            >
-              <Select options={vehicleTypeOptions} placeholder="Select type" />
-            </Form.Item>
-            <Form.Item
-              name="fuelType"
-              label="Fuel Type"
-            >
-              <Select
-                options={fuelTypeOptions}
-                placeholder="Select fuel"
-                allowClear
-              />
-            </Form.Item>
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-4">
-            <Form.Item
-              name="make"
-              label="Make"
-              rules={[{ required: true, message: 'Required' }]}
-            >
-              <Input maxLength={100} placeholder="e.g. Toyota" />
-            </Form.Item>
-            <Form.Item
-              name="model"
-              label="Model"
-              rules={[{ required: true, message: 'Required' }]}
-            >
-              <Input maxLength={100} placeholder="e.g. Hilux" />
-            </Form.Item>
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-4">
-            <Form.Item
-              name="year"
-              label="Year"
-              rules={[{ required: true, message: 'Required' }]}
-            >
-              <InputNumber
-                min={1980}
-                max={2100}
-                style={{ width: '100%' }}
-                placeholder="e.g. 2024"
-              />
-            </Form.Item>
-            <Form.Item name="color" label="Color">
-              <Input maxLength={50} placeholder="e.g. White" />
-            </Form.Item>
-          </div>
-
-          <Form.Item name="assignedDriverId" label="Assigned Driver">
-            <Select
-              showSearch
-              allowClear
-              placeholder="Select driver"
-              loading={usersQuery.isLoading}
-              notFoundContent={
-                usersQuery.isLoading
-                  ? 'Loading...'
-                  : 'No users with Driver position'
-              }
-              filterOption={(input, option) =>
-                String(option?.label ?? '')
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              options={driverOptions}
-            />
-          </Form.Item>
-
-          <Form.Item name="notes" label="Notes">
-            <Input.TextArea rows={3} maxLength={2000} showCount />
-          </Form.Item>
-        </Form>
-      </Drawer>
-
+  return (
+    <div className="flex flex-col gap-4">
       <ConfirmDialog
         open={Boolean(statusModalVehicle)}
-        title="Change Vehicle Status"
-        description={`Update status for ${statusModalVehicle?.plateNumber ?? 'vehicle'}`}
-        confirmLabel="Update Status"
+        title={t('vehicles.changeStatusTitle')}
+        description={t('vehicles.changeStatusDescription', {
+          plate: statusModalVehicle?.plateNumber ?? '',
+        })}
+        confirmLabel={t('vehicles.updateStatus')}
         confirmLoading={statusMutation.isPending}
         onConfirm={() => void handleStatusChange()}
         onCancel={() => setStatusModalVehicle(null)}
@@ -490,20 +244,294 @@ export default function VehiclesPageContent(): React.ReactNode {
           value={newStatus}
           onChange={setNewStatus}
           options={vehicleStatusOptions}
-          style={{ width: '100%', marginTop: 8 }}
+          className="mt-2 w-full"
         />
       </ConfirmDialog>
 
       <ConfirmDialog
-        open={Boolean(deleteId)}
-        title="Delete vehicle?"
-        description="This will permanently remove the vehicle from the fleet."
-        confirmLabel="Delete"
+        open={Boolean(deleteVehicle)}
+        title={t('vehicles.deleteTitle')}
+        description={
+          deleteVehicle
+            ? t('vehicles.deleteDescription', {
+                plate: deleteVehicle.plateNumber,
+              })
+            : undefined
+        }
+        confirmLabel={t('common.delete')}
         danger
         confirmLoading={deleteMutation.isPending}
         onConfirm={() => void handleDelete()}
-        onCancel={() => setDeleteId(null)}
+        onCancel={() => setDeleteVehicle(null)}
       />
+
+      {actionMessage ? (
+        <Alert
+          type={actionMessage.type === 'success' ? 'success' : 'error'}
+          showIcon
+          title={actionMessage.text}
+          closable
+          onClose={() => setActionMessage(null)}
+        />
+      ) : null}
+
+      {listQuery.isError ? (
+        <Alert
+          type="error"
+          showIcon
+          title={
+            listQuery.error instanceof ApiRequestError
+              ? listQuery.error.message
+              : t('vehicles.loadError')
+          }
+        />
+      ) : null}
+
+      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard
+          label={t('vehicles.stats.total')}
+          value={vehicleStats.totalCount}
+          color="teal"
+          icon={<CarFront size={14} />}
+        />
+        <StatCard
+          label={t('vehicles.stats.available')}
+          value={vehicleStats.availableCount}
+          color="green"
+          icon={<CheckCircleOutlined />}
+        />
+        <StatCard
+          label={t('vehicles.stats.inUse')}
+          value={vehicleStats.inUseCount}
+          color="amber"
+          icon={<CarOutlined />}
+        />
+        <StatCard
+          label={t('vehicles.stats.maintenanceRetired')}
+          value={vehicleStats.maintenanceCount}
+          color="default"
+          icon={<ToolOutlined />}
+        />
+      </div>
+
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
+        <div className="erp-filter-bar">
+          <Input.Search
+            placeholder={t('vehicles.searchPlaceholder')}
+            className="w-full min-w-0 sm:w-72"
+            allowClear
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onSearch={(value) => {
+              setSearch(value);
+              setAppliedSearch(value.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
+          />
+          <Select
+            placeholder={t('vehicles.filterStatus')}
+            className="w-full min-w-0 sm:w-40"
+            allowClear
+            options={vehicleStatusOptions}
+            value={statusFilter}
+            onChange={(value?: VehicleStatus) => {
+              setStatusFilter(value);
+              resetPage();
+            }}
+          />
+          <Button onClick={handleResetFilters} style={{ borderRadius: 0 }}>
+            {t('common.reset')}
+          </Button>
+          <Tooltip title={t('common.refresh')}>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              loading={listQuery.isFetching && !listQuery.isLoading}
+              onClick={() => void handleRefresh()}
+              aria-label={t('common.refresh')}
+              style={{ borderRadius: 0 }}
+            />
+          </Tooltip>
+        </div>
+      </div>
+
+      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <CarFront size={16} style={{ color: tokens.colorPrimary }} />
+            <h3
+              className="m-0 text-sm font-semibold"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {t('vehicles.allVehicles')}
+            </h3>
+            <span
+              className="text-xs"
+              style={{ color: tokens.colorTextTertiary }}
+            >
+              {meta.total === 1
+                ? t('vehicles.vehicleCountOne')
+                : t('vehicles.vehicleCount', { count: meta.total })}
+            </span>
+          </div>
+          <Space wrap size={8}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/organization/vehicles/new')}
+              style={{ borderRadius: 0 }}
+            >
+              {t('vehicles.addVehicle')}
+            </Button>
+          </Space>
+        </div>
+
+        <div className="px-0">
+          <DataTable<CompanyVehicleListItem>
+            rowKey="id"
+            className="erp-pro-table"
+            size="small"
+            dataSource={rows}
+            scroll={false}
+            loading={listQuery.isLoading}
+            pagination={
+              pagination
+                ? {
+                    ...pagination,
+                    pageSizeOptions: ['10', '20', '50', '100'],
+                  }
+                : undefined
+            }
+            onRow={(record) => ({
+              onClick: () =>
+                router.push(`/organization/vehicles/${record.id}/edit`),
+              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+            })}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<CarFront />}
+                  title={t('hr.empty.noVehicles')}
+                  description={t('vehicles.emptyDescription')}
+                  action={{
+                    label: t('vehicles.addVehicle'),
+                    onClick: () => router.push('/organization/vehicles/new'),
+                  }}
+                />
+              ),
+            }}
+            columns={[
+              {
+                title: t('hr.table.plateNumber'),
+                dataIndex: 'plateNumber',
+                key: 'plateNumber',
+                width: 130,
+                render: (plate: string) => (
+                  <span
+                    className="font-[family-name:var(--font-mono)] text-sm font-medium"
+                    style={{ color: tokens.colorTextPrimary }}
+                  >
+                    {plate}
+                  </span>
+                ),
+              },
+              {
+                title: t('vehicles.form.vehicleType'),
+                dataIndex: 'vehicleType',
+                key: 'vehicleType',
+                width: 110,
+                responsive: ['md'],
+                render: (value: string) => formatVehicleType(value, t),
+              },
+              {
+                title: t('hr.table.make'),
+                dataIndex: 'make',
+                key: 'make',
+                width: 120,
+                ellipsis: true,
+                responsive: ['md'],
+              },
+              {
+                title: t('hr.table.model'),
+                dataIndex: 'model',
+                key: 'model',
+                width: 120,
+                ellipsis: true,
+                responsive: ['lg'],
+              },
+              {
+                title: t('hr.table.year'),
+                dataIndex: 'year',
+                key: 'year',
+                width: 70,
+                align: 'right',
+                responsive: ['lg'],
+              },
+              {
+                title: t('hr.table.fuelType'),
+                dataIndex: 'fuelType',
+                key: 'fuelType',
+                width: 90,
+                responsive: ['lg'],
+                render: (value: string) => formatFuelType(value, t),
+              },
+              {
+                title: t('hr.table.assignedDriver'),
+                key: 'assignedDriver',
+                width: 160,
+                ellipsis: true,
+                responsive: ['md'],
+                render: (_: unknown, row: CompanyVehicleListItem) =>
+                  formatDriverName(row.assignedDriver),
+              },
+              {
+                title: t('hr.table.status'),
+                dataIndex: 'status',
+                key: 'status',
+                width: 120,
+                render: (value: VehicleStatus) => (
+                  <StatusBadge
+                    label={formatVehicleStatus(value, t)}
+                    variant={vehicleStatusVariant(value)}
+                  />
+                ),
+              },
+              {
+                title: '',
+                key: 'actions',
+                width: 56,
+                render: (_: unknown, record: CompanyVehicleListItem) => (
+                  <div
+                    className="flex items-center justify-end"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <Dropdown
+                      menu={{ items: buildActionMenu(record) }}
+                      trigger={['click']}
+                    >
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<MoreOutlined />}
+                        aria-label={t('vehicles.actionsFor', {
+                          plate: record.plateNumber,
+                        })}
+                        style={{ borderRadius: 0 }}
+                      />
+                    </Dropdown>
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </div>
+      </div>
     </div>
   );
 }

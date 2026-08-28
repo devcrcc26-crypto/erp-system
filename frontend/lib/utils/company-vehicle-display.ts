@@ -73,6 +73,33 @@ export function vehicleStatusVariant(
   }
 }
 
+export function vehicleTypeSelectOptions(
+  t: TFn,
+): Array<{ value: VehicleType; label: string }> {
+  return VEHICLE_TYPE_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(`hr.vehicleType.${option.value}`),
+  }));
+}
+
+export function fuelTypeSelectOptions(
+  t: TFn,
+): Array<{ value: FuelType; label: string }> {
+  return FUEL_TYPE_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(`hr.fuelType.${option.value}`),
+  }));
+}
+
+export function vehicleStatusSelectOptions(
+  t: TFn,
+): Array<{ value: VehicleStatus; label: string }> {
+  return VEHICLE_STATUS_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(`hr.vehicleStatus.${option.value}`),
+  }));
+}
+
 export function formatDriverName(
   driver?: CompanyVehicleDriverSummary | null,
 ): string {

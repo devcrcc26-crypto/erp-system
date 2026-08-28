@@ -91,6 +91,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/employee-contract': 'nav.hr.employeeContract',
   '/hr/employee-contract/new': 'pages.hr.employeeContract.new',
   '/organization/vehicles': 'nav.organization.vehicles',
+  '/organization/vehicles/new': 'pages.organization.vehicles.new',
   '/hr/inspection-repair': 'pages.hr.inspectionRepair.listTitle',
   '/hr/business-trips': 'nav.hr.businessTrips',
   '/hr/reports': 'nav.hr.reports',
@@ -137,6 +138,8 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/leave-policy/new': 'hr.leavePolicy.formDescription',
   '/hr/company-asset': 'pages.hr.companyAsset.listDescription',
   '/hr/company-asset/new': 'pages.hr.companyAsset.formDescription',
+  '/organization/vehicles': 'vehicles.listDescription',
+  '/organization/vehicles/new': 'vehicles.form.addDescription',
   '/approvals/new/leave-request': 'pages.hr.leave.listDescription',
   '/approvals/new/expense-claim': 'pages.hr.expenseClaim.formDescription',
   '/approvals/new/purchase-request': 'pages.hr.purchaseRequest.formDescription',
@@ -1109,8 +1112,36 @@ function resolveRouteMetaCore(
   }
 
   if (pathname.startsWith('/organization/vehicles')) {
+    if (pathname === '/organization/vehicles/new') {
+      return {
+        titleKey: 'pages.organization.vehicles.new',
+        descriptionKey: 'vehicles.form.addDescription',
+        breadcrumbs: [
+          { label: t('nav.dashboard'), href: '/' },
+          { label: t('nav.organization.vehicles'), href: '/organization/vehicles' },
+          { label: t('pages.organization.vehicles.new') },
+        ],
+      };
+    }
+
+    const vehiclesEditMatch = /^\/organization\/vehicles\/([^/]+)\/edit$/.exec(
+      pathname,
+    );
+    if (vehiclesEditMatch) {
+      return {
+        titleKey: 'pages.organization.vehicles.edit',
+        descriptionKey: 'vehicles.form.editDescription',
+        breadcrumbs: [
+          { label: t('nav.dashboard'), href: '/' },
+          { label: t('nav.organization.vehicles'), href: '/organization/vehicles' },
+          { label: t('pages.organization.vehicles.edit') },
+        ],
+      };
+    }
+
     return {
       titleKey: 'nav.organization.vehicles',
+      descriptionKey: 'vehicles.listDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.groups.organization') },

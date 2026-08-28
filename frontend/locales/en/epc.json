@@ -113,6 +113,12 @@
       "detail": "Employee Detail",
       "edit": "Update Employee"
     },
+    "organization": {
+      "vehicles": {
+        "new": "Add Vehicle",
+        "edit": "Update Vehicle"
+      }
+    },
     "approvals": {
       "detail": "Request Detail",
       "new": "New Request",
@@ -1263,6 +1269,72 @@
   },
   "teams": {
     "description": "Organize users into project teams and manage team membership."
+  },
+  "vehicles": {
+    "listDescription": "Manage the company fleet register — plate numbers, drivers, and vehicle status.",
+    "searchPlaceholder": "Search plate, make, or model…",
+    "filterStatus": "All statuses",
+    "allVehicles": "All vehicles",
+    "vehicleCount": "{{count}} vehicles total",
+    "vehicleCountOne": "1 vehicle total",
+    "addVehicle": "Add vehicle",
+    "createVehicle": "Create vehicle",
+    "updateVehicle": "Save changes",
+    "created": "Vehicle created successfully.",
+    "updated": "Vehicle {{plate}} updated successfully.",
+    "createError": "Failed to create vehicle.",
+    "updateError": "Failed to update vehicle.",
+    "loadError": "Unable to load vehicles. Please try again.",
+    "deleteError": "Failed to delete vehicle.",
+    "deleted": "Vehicle {{plate}} removed from the fleet.",
+    "statusUpdated": "Vehicle status updated.",
+    "statusUpdateError": "Failed to update vehicle status.",
+    "changeStatus": "Change status",
+    "changeStatusTitle": "Change vehicle status",
+    "changeStatusDescription": "Update status for {{plate}}",
+    "updateStatus": "Update status",
+    "deleteTitle": "Delete vehicle?",
+    "deleteDescription": "Remove {{plate}} from the company fleet? This cannot be undone.",
+    "emptyDescription": "Add your first company vehicle to start tracking the fleet.",
+    "actionsFor": "Actions for {{plate}}",
+    "noDriversFound": "No users with Driver position",
+    "stats": {
+      "total": "Total vehicles",
+      "available": "Available",
+      "inUse": "In use",
+      "maintenanceRetired": "Maintenance / retired"
+    },
+    "steps": {
+      "identity": "Vehicle identity",
+      "specifications": "Specifications",
+      "assignment": "Assignment & notes",
+      "review": "Review & submit"
+    },
+    "form": {
+      "addDescription": "Register a new company vehicle in the fleet.",
+      "editDescription": "Update vehicle details and assignment.",
+      "identityHelp": "Plate number and vehicle classification.",
+      "specificationsHelp": "Make, model, year, and color.",
+      "assignmentHelp": "Optional assigned driver, active flag, and notes.",
+      "vehicleType": "Vehicle type",
+      "fuelType": "Fuel type",
+      "color": "Color",
+      "notes": "Notes",
+      "activeVehicle": "Active in fleet",
+      "reviewCreateHelp": "Confirm the details before adding this vehicle to the fleet.",
+      "reviewEditHelp": "Confirm the changes before saving."
+    },
+    "placeholder": {
+      "plateNumber": "e.g. AA-12345",
+      "vehicleType": "Select type",
+      "fuelType": "Select fuel type",
+      "make": "e.g. Toyota",
+      "model": "e.g. Hilux",
+      "year": "e.g. 2024",
+      "color": "e.g. White",
+      "assignedDriver": "Select driver",
+      "notes": "Optional notes about this vehicle"
+    }
   },
   "hr": {
     "assetStatus": {
