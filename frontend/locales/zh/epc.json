@@ -2000,6 +2000,7 @@
       "date": "日期",
       "category": "类别",
       "description": "描述",
+      "descriptionWithModelSpec": "描述（型号 / 规格）",
       "amount": "金额",
       "actions": "操作",
       "itemName": "物品名称",
@@ -2271,6 +2272,7 @@
       "estimatedTotal": "预计总费用",
       "title": "标题",
       "description": "描述",
+      "descriptionWithModelSpec": "描述（型号 / 规格）",
       "dateNeeded": "需用日期",
       "urgency": "紧急程度",
       "justification": "申请理由",
@@ -2409,6 +2411,7 @@
       "enterVendorContact": "电话或邮箱",
       "enterUnit": "例如：件、箱、公斤",
       "enterModelSpec": "例如：型号、尺寸或规格说明",
+      "enterDescriptionWithModelSpec": "例如：办公笔记本电脑（HP i7，16GB 内存）",
       "chooseSupportingDocuments": "选择证明文件",
       "enterWarehouseLocation": "从哪个仓库领用"
     },

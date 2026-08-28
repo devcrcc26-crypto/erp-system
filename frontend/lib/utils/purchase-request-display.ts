@@ -79,3 +79,39 @@ export function formatPurchaseItemDescription(
   }
   return desc || spec || '—';
 }
+
+/** Formats combined description + model/spec for a single form input. */
+export function formatPurchaseItemDescriptionInput(
+  description?: string | null,
+  modelSpec?: string | null,
+): string {
+  const desc = description?.trim();
+  const spec = modelSpec?.trim();
+  if (desc && spec) {
+    return `${desc} (${spec})`;
+  }
+  return desc || spec || '';
+}
+
+/** Parses "Description (Model Spec)" from a single form input. */
+export function parsePurchaseItemDescription(combined?: string | null): {
+  description?: string;
+  modelSpec?: string;
+} {
+  const trimmed = combined?.trim();
+  if (!trimmed) {
+    return {};
+  }
+
+  const match = trimmed.match(/^(.+?)\s*\(([^()]+)\)\s*$/);
+  if (match) {
+    const description = match[1].trim();
+    const modelSpec = match[2].trim();
+    return {
+      description: description || undefined,
+      modelSpec: modelSpec || undefined,
+    };
+  }
+
+  return { description: trimmed };
+}

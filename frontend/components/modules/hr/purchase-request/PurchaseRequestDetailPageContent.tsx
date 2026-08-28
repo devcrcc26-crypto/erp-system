@@ -48,6 +48,8 @@ import {
   formatCurrencyAmount,
   formatEtbAmount,
   formatPurchaseItemDescription,
+  formatPurchaseItemDescriptionInput,
+  parsePurchaseItemDescription,
   formatPurchaseRequestEmployeeName,
   formatPurchaseRequestStatus,
   purchaseRequestStatusVariant,
@@ -120,12 +122,15 @@ export default function PurchaseRequestDetailPageContent({
     }
     try {
       const values = await itemForm.validateFields();
+      const { description, modelSpec } = parsePurchaseItemDescription(
+        values.descriptionWithModelSpec as string | undefined,
+      );
       await updateItemMutation.mutateAsync({
         itemId: editingItem.id,
         payload: {
           itemName: values.itemName,
-          modelSpec: (values.modelSpec as string | undefined) || undefined,
-          description: (values.description as string | undefined) || undefined,
+          modelSpec,
+          description,
           quantity: Number(values.quantity),
           unit: values.unit,
           unitPrice: Number(values.unitPrice),
@@ -528,8 +533,10 @@ export default function PurchaseRequestDetailPageContent({
           if (open && editingItem) {
             itemForm.setFieldsValue({
               itemName: editingItem.itemName,
-              modelSpec: editingItem.modelSpec ?? '',
-              description: editingItem.description ?? '',
+              descriptionWithModelSpec: formatPurchaseItemDescriptionInput(
+                editingItem.description,
+                editingItem.modelSpec,
+              ),
               quantity: Number(editingItem.quantity),
               unit: editingItem.unit,
               unitPrice: Number(editingItem.unitPrice),
@@ -557,17 +564,16 @@ export default function PurchaseRequestDetailPageContent({
             >
               <Input maxLength={200} />
             </Form.Item>
-            <Form.Item name="description" label={t('hr.form.description')}>
-              <Input.TextArea rows={2} maxLength={1000} showCount />
-            </Form.Item>
             <Form.Item
-              name="modelSpec"
-              label={t('hr.form.modelSpec')}
+              name="descriptionWithModelSpec"
+              label={t('hr.form.descriptionWithModelSpec')}
               className="sm:col-span-2"
             >
-              <Input
-                maxLength={500}
-                placeholder={t('hr.placeholder.enterModelSpec')}
+              <Input.TextArea
+                rows={2}
+                maxLength={1502}
+                showCount
+                placeholder={t('hr.placeholder.enterDescriptionWithModelSpec')}
               />
             </Form.Item>
             <Form.Item
