@@ -231,6 +231,7 @@ export class PurchaseRequestService
         id: randomUUID(),
         requestId,
         itemName: dto.itemName.trim(),
+        modelSpec: dto.modelSpec?.trim() || null,
         description: dto.description?.trim() ?? null,
         quantity: new Prisma.Decimal(dto.quantity),
         unit: dto.unit.trim(),
@@ -281,6 +282,10 @@ export class PurchaseRequestService
       where: { id: itemId },
       data: {
         itemName: dto.itemName !== undefined ? dto.itemName.trim() : existing.itemName,
+        modelSpec:
+          dto.modelSpec !== undefined
+            ? dto.modelSpec?.trim() || null
+            : existing.modelSpec,
         description:
           dto.description !== undefined
             ? dto.description?.trim() ?? null

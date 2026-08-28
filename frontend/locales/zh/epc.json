@@ -1911,6 +1911,7 @@
       "itemName": "物品名称",
       "itemCode": "物品编码",
       "description": "描述",
+      "descriptionWithModelSpec": "描述（型号 / 规格）",
       "quantity": "数量",
       "unit": "单位",
       "unitPrice": "单价",

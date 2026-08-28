@@ -17,6 +17,7 @@ import { usePurchaseRequest } from '@/lib/query/purchase-request';
 import {
   formatCurrencyAmount,
   formatEtbAmount,
+  formatPurchaseItemDescription,
   formatPurchaseRequestEmployeeName,
   formatPurchaseRequestStatus,
   purchaseRequestStatusVariant,
@@ -76,11 +77,11 @@ export default function PurchaseRequestDetail({
       ellipsis: true,
     },
     {
-      title: t('hr.table.description'),
-      dataIndex: 'description',
+      title: t('hr.table.descriptionWithModelSpec'),
       key: 'description',
       ellipsis: true,
-      render: (value: string | null | undefined) => value || '—',
+      render: (_: unknown, row: PurchaseRequestItem) =>
+        formatPurchaseItemDescription(row.description, row.modelSpec),
     },
     {
       title: t('hr.table.quantity'),

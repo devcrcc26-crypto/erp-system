@@ -33,6 +33,7 @@ export interface PurchaseRequestItem {
   id: string;
   requestId: string;
   itemName: string;
+  modelSpec?: string | null;
   description?: string | null;
   quantity: number | string;
   unit: string;
@@ -107,6 +108,7 @@ export interface UpdatePurchaseRequestPayload {
 
 export interface AddPurchaseRequestItemPayload {
   itemName: string;
+  modelSpec?: string;
   description?: string;
   quantity: number;
   unit: string;
@@ -116,6 +118,7 @@ export interface AddPurchaseRequestItemPayload {
 
 export interface UpdatePurchaseRequestItemPayload {
   itemName?: string;
+  modelSpec?: string;
   description?: string;
   quantity?: number;
   unit?: string;

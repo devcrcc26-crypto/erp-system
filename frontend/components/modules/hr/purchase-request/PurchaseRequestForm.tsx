@@ -33,6 +33,7 @@ import { tokens } from '@/lib/theme/tokens';
 import {
   formatCurrencyAmount,
   formatEtbAmount,
+  formatPurchaseItemDescription,
   PR_GM_THRESHOLD_ETB,
   requiresGmApproval,
 } from '@/lib/utils/purchase-request-display';
@@ -47,8 +48,12 @@ interface Step1Values {
   vendorContact?: string;
 }
 
-type ItemFormValues = Omit<AddPurchaseRequestItemPayload, 'description'> & {
+type ItemFormValues = Omit<
+  AddPurchaseRequestItemPayload,
+  'description' | 'modelSpec'
+> & {
   description?: string;
+  modelSpec?: string;
 };
 
 interface ClientItem extends AddPurchaseRequestItemPayload {
@@ -166,6 +171,7 @@ export default function PurchaseRequestForm({
     setEditingKey(item._key);
     itemForm.setFieldsValue({
       itemName: item.itemName,
+      modelSpec: item.modelSpec ?? '',
       description: item.description ?? '',
       quantity: item.quantity,
       unit: item.unit,
@@ -187,6 +193,7 @@ export default function PurchaseRequestForm({
       const entry: ClientItem = {
         _key: editingKey ?? nextKey(),
         itemName: values.itemName,
+        modelSpec: values.modelSpec || undefined,
         description: values.description || undefined,
         quantity: Number(values.quantity),
         unit: values.unit,
@@ -276,6 +283,13 @@ export default function PurchaseRequestForm({
       dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
+    },
+    {
+      title: t('hr.table.descriptionWithModelSpec'),
+      key: 'description',
+      ellipsis: true,
+      render: (_: unknown, row: ClientItem) =>
+        formatPurchaseItemDescription(row.description, row.modelSpec),
     },
     {
       title: t('hr.table.quantity'),
@@ -471,7 +485,17 @@ export default function PurchaseRequestForm({
                       name="description"
                       label={t('hr.form.description')}
                     >
-                      <Input.TextArea rows={3} maxLength={500} showCount />
+                      <Input.TextArea rows={2} maxLength={1000} showCount />
+                    </Form.Item>
+                    <Form.Item
+                      name="modelSpec"
+                      label={t('hr.form.modelSpec')}
+                      className="sm:col-span-2"
+                    >
+                      <Input
+                        maxLength={500}
+                        placeholder={t('hr.placeholder.enterModelSpec')}
+                      />
                     </Form.Item>
                     <Form.Item
                       name="quantity"

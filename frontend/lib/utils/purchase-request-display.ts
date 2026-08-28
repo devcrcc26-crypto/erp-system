@@ -66,3 +66,16 @@ export function requiresGmApproval(totalEtb: number | string | null | undefined)
   const num = typeof totalEtb === 'string' ? Number(totalEtb) : totalEtb;
   return !Number.isNaN(num) && num > PR_GM_THRESHOLD_ETB;
 }
+
+/** Formats description with optional model/spec in brackets. */
+export function formatPurchaseItemDescription(
+  description?: string | null,
+  modelSpec?: string | null,
+): string {
+  const desc = description?.trim();
+  const spec = modelSpec?.trim();
+  if (desc && spec) {
+    return `${desc} (${spec})`;
+  }
+  return desc || spec || '—';
+}

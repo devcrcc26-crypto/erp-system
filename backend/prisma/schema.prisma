@@ -4260,6 +4260,7 @@ model PurchaseRequestItem {
   id            String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   requestId     String            @map("request_id")
   itemName      String            @map("item_name")
+  modelSpec     String?           @map("model_spec")
   description   String?
   quantity      Decimal           @db.Decimal(10, 2)
   unit          String

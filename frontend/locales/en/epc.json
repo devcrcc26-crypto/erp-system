@@ -2000,6 +2000,7 @@
       "date": "Date",
       "category": "Category",
       "description": "Description",
+      "descriptionWithModelSpec": "Description (Model / Specifications)",
       "amount": "Amount",
       "actions": "Actions",
       "itemName": "Item Name",

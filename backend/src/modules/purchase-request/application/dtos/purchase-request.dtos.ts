@@ -96,6 +96,12 @@ export class AddPurchaseRequestItemDto {
   @MaxLength(200)
   itemName!: string;
 
+  @ApiPropertyOptional({ maxLength: 500, description: 'Model / specifications' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  modelSpec?: string;
+
   @ApiPropertyOptional({ maxLength: 1000 })
   @IsOptional()
   @IsString()
@@ -132,6 +138,12 @@ export class UpdatePurchaseRequestItemDto {
   @IsNotEmpty()
   @MaxLength(200)
   itemName?: string;
+
+  @ApiPropertyOptional({ maxLength: 500, description: 'Model / specifications' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  modelSpec?: string;
 
   @ApiPropertyOptional({ maxLength: 1000 })
   @IsOptional()
