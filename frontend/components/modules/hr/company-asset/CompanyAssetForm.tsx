@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, DatePicker, Form, Input, InputNumber, Typography } from 'antd';
+import { Alert, Button, DatePicker, Form, Input, InputNumber, Space, Typography } from 'antd';
+import type { InputNumberProps } from 'antd';
 import { Image as ImageIcon, Paperclip, X } from 'lucide-react';
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -176,6 +177,11 @@ export default function CompanyAssetForm({
     } catch {
       return false;
     }
+  }
+
+  async function validateLedgerStep(): Promise<boolean> {
+    captureDetailsSnapshot();
+    return true;
   }
 
   async function validatePhotoStep(): Promise<boolean> {
@@ -369,115 +375,104 @@ export default function CompanyAssetForm({
                 placeholder={t('hr.assetPlaceholder.description')}
               />
             </Form.Item>
-
-            <div
-              className="mt-6 border-t pt-6"
-              style={{ borderColor: tokens.colorBorder }}
-            >
-              <h3
-                className="mb-1 text-base font-semibold"
-                style={{ color: tokens.colorTextPrimary }}
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.assetSection.ledgerDetails'),
+        validate: () => validateLedgerStep(),
+        content: (
+          <FormLayout
+            variant="pro"
+            title={t('hr.assetSection.ledgerDetails')}
+            description={t('pages.hr.companyAsset.ledgerStepDescription')}
+          >
+            <div className="erp-form-grid-2">
+              <Form.Item name="assetCode" label={t('hr.assetLabels.assetCode')}>
+                <Input
+                  maxLength={100}
+                  placeholder={t('hr.assetPlaceholder.assetCode')}
+                />
+              </Form.Item>
+              <Form.Item name="cardNumber" label={t('hr.assetLabels.cardNumber')}>
+                <Input
+                  maxLength={100}
+                  placeholder={t('hr.assetPlaceholder.cardNumber')}
+                />
+              </Form.Item>
+              <Form.Item name="assetName" label={t('hr.assetLabels.assetName')}>
+                <Input
+                  maxLength={200}
+                  placeholder={t('hr.assetPlaceholder.assetName')}
+                />
+              </Form.Item>
+              <Form.Item
+                name="specifications"
+                label={t('hr.assetLabels.specifications')}
               >
-                {t('hr.assetSection.ledgerDetails')}
-              </h3>
-              <p
-                className="mb-4 text-sm"
-                style={{ color: tokens.colorTextSecondary }}
+                <Input
+                  maxLength={500}
+                  placeholder={t('hr.assetPlaceholder.specifications')}
+                />
+              </Form.Item>
+              <Form.Item
+                name="assetCategory"
+                label={t('hr.assetLabels.assetCategory')}
+                className="sm:col-span-2"
               >
-                {t('pages.hr.companyAsset.ledgerStepDescription')}
-              </p>
-              <div className="erp-form-grid-2">
-                <Form.Item name="assetCode" label={t('hr.assetLabels.assetCode')}>
-                  <Input
-                    maxLength={100}
-                    placeholder={t('hr.assetPlaceholder.assetCode')}
-                  />
-                </Form.Item>
-                <Form.Item name="cardNumber" label={t('hr.assetLabels.cardNumber')}>
-                  <Input
-                    maxLength={100}
-                    placeholder={t('hr.assetPlaceholder.cardNumber')}
-                  />
-                </Form.Item>
-                <Form.Item name="assetName" label={t('hr.assetLabels.assetName')}>
-                  <Input
-                    maxLength={200}
-                    placeholder={t('hr.assetPlaceholder.assetName')}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="specifications"
-                  label={t('hr.assetLabels.specifications')}
-                >
-                  <Input
-                    maxLength={500}
-                    placeholder={t('hr.assetPlaceholder.specifications')}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="assetCategory"
-                  label={t('hr.assetLabels.assetCategory')}
-                  className="sm:col-span-2"
-                >
-                  <Input
-                    maxLength={200}
-                    placeholder={t('hr.assetPlaceholder.assetCategory')}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="startUseDate"
-                  label={t('hr.assetLabels.startUseDate')}
-                >
-                  <DatePicker className="w-full" />
-                </Form.Item>
-                <Form.Item
-                  name="usefulLifeMonths"
-                  label={t('hr.assetLabels.usefulLifeMonths')}
-                >
-                  <InputNumber
-                    min={1}
-                    className="w-full"
-                    addonAfter={t('hr.assetLabels.monthsSuffix')}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="originalValue"
-                  label={t('hr.assetLabels.originalValue')}
-                >
-                  <InputNumber
-                    min={0}
-                    className="w-full"
-                    prefix="ETB"
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="managingDepartment"
-                  label={t('hr.assetLabels.managingDepartment')}
-                >
-                  <Input
-                    maxLength={200}
-                    placeholder={t('hr.assetPlaceholder.managingDepartment')}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="storageLocation"
-                  label={t('hr.assetLabels.storageLocation')}
-                >
-                  <Input
-                    maxLength={200}
-                    placeholder={t('hr.assetPlaceholder.storageLocation')}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="projectCode"
-                  label={t('hr.assetLabels.projectCode')}
-                >
-                  <Input
-                    maxLength={100}
-                    placeholder={t('hr.assetPlaceholder.projectCode')}
-                  />
-                </Form.Item>
-              </div>
+                <Input
+                  maxLength={200}
+                  placeholder={t('hr.assetPlaceholder.assetCategory')}
+                />
+              </Form.Item>
+              <Form.Item
+                name="startUseDate"
+                label={t('hr.assetLabels.startUseDate')}
+              >
+                <DatePicker className="w-full" />
+              </Form.Item>
+              <Form.Item
+                name="usefulLifeMonths"
+                label={t('hr.assetLabels.usefulLifeMonths')}
+              >
+                <InputNumberWithSuffix
+                  min={1}
+                  suffix={t('hr.assetLabels.monthsSuffix')}
+                />
+              </Form.Item>
+              <Form.Item
+                name="originalValue"
+                label={t('hr.assetLabels.originalValue')}
+              >
+                <CurrencyInputNumber min={0} />
+              </Form.Item>
+              <Form.Item
+                name="managingDepartment"
+                label={t('hr.assetLabels.managingDepartment')}
+              >
+                <Input
+                  maxLength={200}
+                  placeholder={t('hr.assetPlaceholder.managingDepartment')}
+                />
+              </Form.Item>
+              <Form.Item
+                name="storageLocation"
+                label={t('hr.assetLabels.storageLocation')}
+              >
+                <Input
+                  maxLength={200}
+                  placeholder={t('hr.assetPlaceholder.storageLocation')}
+                />
+              </Form.Item>
+              <Form.Item
+                name="projectCode"
+                label={t('hr.assetLabels.projectCode')}
+              >
+                <Input
+                  maxLength={100}
+                  placeholder={t('hr.assetPlaceholder.projectCode')}
+                />
+              </Form.Item>
             </div>
           </FormLayout>
         ),
@@ -703,6 +698,35 @@ export default function CompanyAssetForm({
         }
       />
     </Form>
+  );
+}
+
+function InputNumberWithSuffix({
+  suffix,
+  ...rest
+}: InputNumberProps & { suffix: string }): React.ReactNode {
+  return (
+    <Space.Compact className="w-full">
+      <InputNumber {...rest} className="w-full" style={{ width: '100%' }} />
+      <Input
+        disabled
+        value={suffix}
+        style={{ width: 72, textAlign: 'center' }}
+      />
+    </Space.Compact>
+  );
+}
+
+function CurrencyInputNumber(props: InputNumberProps): React.ReactNode {
+  return (
+    <Space.Compact className="w-full">
+      <Input
+        disabled
+        value="ETB"
+        style={{ width: 64, textAlign: 'center' }}
+      />
+      <InputNumber {...props} className="w-full" style={{ width: '100%' }} />
+    </Space.Compact>
   );
 }
 
