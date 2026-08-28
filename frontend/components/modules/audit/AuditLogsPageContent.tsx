@@ -13,7 +13,6 @@ import {
 import type { Dayjs } from 'dayjs';
 import {
   ApiOutlined,
-  EyeOutlined,
   ReloadOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -415,29 +414,6 @@ export default function AuditLogsPageContent(): React.ReactNode {
                     ) : (
                       '—'
                     ),
-                },
-                {
-                  title: '',
-                  key: 'actions',
-                  width: 48,
-                  render: (_value, record) => (
-                    <div
-                      className="flex items-center justify-end"
-                      onClick={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => event.stopPropagation()}
-                    >
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<EyeOutlined />}
-                        aria-label={t('auditLogs.viewDetailsFor', {
-                          module: record.module,
-                        })}
-                        onClick={() => router.push(`/audit-logs/${record.id}`)}
-                        style={{ borderRadius: 0 }}
-                      />
-                    </div>
-                  ),
                 },
               ]}
             />
