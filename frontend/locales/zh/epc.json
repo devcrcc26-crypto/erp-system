@@ -2252,6 +2252,9 @@
       "quantity": "数量",
       "unit": "单位",
       "unitPrice": "单价",
+      "modelSpec": "型号 / 规格",
+      "budgetAmount": "预算金额",
+      "totalBudgetAmount": "预算总额",
       "currency": "货币",
       "active": "启用",
       "amount": "金额",
@@ -2373,6 +2376,7 @@
       "enterVendor": "供应商名称",
       "enterVendorContact": "电话或邮箱",
       "enterUnit": "例如：件、箱、公斤",
+      "enterModelSpec": "例如：型号、尺寸或规格说明",
       "chooseSupportingDocuments": "选择证明文件",
       "enterWarehouseLocation": "从哪个仓库领用"
     },

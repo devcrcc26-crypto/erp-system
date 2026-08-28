@@ -19,9 +19,12 @@ export interface ConsumablesRequisitionItem {
   requisitionId: string;
   itemName: string;
   itemCode?: string | null;
+  modelSpec?: string | null;
   description?: string | null;
   quantity: number | string;
   unit: string;
+  unitPrice?: number | string | null;
+  budgetAmount?: number | string | null;
 }
 
 export interface ConsumablesRequisitionListItem {
@@ -83,17 +86,21 @@ export interface UpdateConsumablesRequisitionPayload {
 export interface AddConsumablesRequisitionItemPayload {
   itemName: string;
   itemCode?: string;
+  modelSpec?: string;
   description?: string;
   quantity: number;
   unit: string;
+  unitPrice?: number;
 }
 
 export interface UpdateConsumablesRequisitionItemPayload {
   itemName?: string;
   itemCode?: string;
+  modelSpec?: string;
   description?: string;
   quantity?: number;
   unit?: string;
+  unitPrice?: number;
 }
 
 export interface ListConsumablesRequisitionsParams {

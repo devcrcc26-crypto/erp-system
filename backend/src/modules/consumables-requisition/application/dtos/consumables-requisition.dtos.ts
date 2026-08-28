@@ -89,6 +89,12 @@ export class AddConsumablesRequisitionItemDto {
   @MaxLength(100)
   itemCode?: string;
 
+  @ApiPropertyOptional({ maxLength: 500, description: 'Model / specifications' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  modelSpec?: string;
+
   @ApiPropertyOptional({ maxLength: 1000 })
   @IsOptional()
   @IsString()
@@ -106,6 +112,13 @@ export class AddConsumablesRequisitionItemDto {
   @IsNotEmpty()
   @MaxLength(50)
   unit!: string;
+
+  @ApiPropertyOptional({ description: 'Estimated unit price (ETB)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  unitPrice?: number;
 }
 
 export class UpdateConsumablesRequisitionItemDto {
@@ -121,6 +134,12 @@ export class UpdateConsumablesRequisitionItemDto {
   @IsString()
   @MaxLength(100)
   itemCode?: string;
+
+  @ApiPropertyOptional({ maxLength: 500, description: 'Model / specifications' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  modelSpec?: string;
 
   @ApiPropertyOptional({ maxLength: 1000 })
   @IsOptional()
@@ -141,6 +160,13 @@ export class UpdateConsumablesRequisitionItemDto {
   @IsNotEmpty()
   @MaxLength(50)
   unit?: string;
+
+  @ApiPropertyOptional({ description: 'Estimated unit price (ETB)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  unitPrice?: number;
 }
 
 export class ListConsumablesRequisitionsDto {

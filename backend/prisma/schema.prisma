@@ -4399,9 +4399,12 @@ model ConsumablesRequisitionItem {
   requisitionId String   @map("requisition_id")
   itemName      String   @map("item_name")
   itemCode      String?  @map("item_code")
+  modelSpec     String?  @map("model_spec")
   description   String?
   quantity      Decimal  @db.Decimal(10, 2)
   unit          String
+  unitPrice     Decimal? @map("unit_price") @db.Decimal(14, 2)
+  budgetAmount  Decimal? @map("budget_amount") @db.Decimal(14, 2)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
 

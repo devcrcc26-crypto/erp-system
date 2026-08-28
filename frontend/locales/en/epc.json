@@ -2253,6 +2253,9 @@
       "quantity": "Quantity",
       "unit": "Unit",
       "unitPrice": "Unit Price",
+      "modelSpec": "Model / Specifications",
+      "budgetAmount": "Budget Amount",
+      "totalBudgetAmount": "Total Budget Amount",
       "currency": "Currency",
       "active": "Active",
       "amount": "Amount",
@@ -2374,6 +2377,7 @@
       "enterVendor": "Vendor or supplier name",
       "enterVendorContact": "Phone or email",
       "enterUnit": "e.g. pcs, box, kg",
+      "enterModelSpec": "e.g. model number, size, or specifications",
       "chooseSupportingDocuments": "Choose supporting documents",
       "enterWarehouseLocation": "Which warehouse to draw from"
     },

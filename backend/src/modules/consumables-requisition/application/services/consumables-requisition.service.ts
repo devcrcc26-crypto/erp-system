@@ -179,9 +179,15 @@ export class ConsumablesRequisitionService
         requisitionId,
         itemName: dto.itemName.trim(),
         itemCode: dto.itemCode?.trim() || null,
+        modelSpec: dto.modelSpec?.trim() || null,
         description: dto.description?.trim() ?? null,
         quantity: new Prisma.Decimal(dto.quantity),
         unit: dto.unit.trim(),
+        unitPrice:
+          dto.unitPrice !== undefined && dto.unitPrice !== null
+            ? new Prisma.Decimal(dto.unitPrice)
+            : null,
+        budgetAmount: this.computeBudgetAmount(dto.quantity, dto.unitPrice),
       },
     });
 
@@ -207,6 +213,17 @@ export class ConsumablesRequisitionService
       throw new NotFoundException('Consumables requisition item not found');
     }
 
+    const nextQuantity =
+      dto.quantity !== undefined
+        ? dto.quantity
+        : Number(existing.quantity);
+    const nextUnitPrice =
+      dto.unitPrice !== undefined
+        ? dto.unitPrice
+        : existing.unitPrice !== null
+          ? Number(existing.unitPrice)
+          : null;
+
     await this.prisma.consumablesRequisitionItem.update({
       where: { id: itemId },
       data: {
@@ -216,15 +233,21 @@ export class ConsumablesRequisitionService
           dto.itemCode !== undefined
             ? dto.itemCode?.trim() || null
             : existing.itemCode,
+        modelSpec:
+          dto.modelSpec !== undefined
+            ? dto.modelSpec?.trim() || null
+            : existing.modelSpec,
         description:
           dto.description !== undefined
             ? dto.description?.trim() ?? null
             : existing.description,
-        quantity:
-          dto.quantity !== undefined
-            ? new Prisma.Decimal(dto.quantity)
-            : existing.quantity,
+        quantity: new Prisma.Decimal(nextQuantity),
         unit: dto.unit !== undefined ? dto.unit.trim() : existing.unit,
+        unitPrice:
+          nextUnitPrice !== null && nextUnitPrice !== undefined
+            ? new Prisma.Decimal(nextUnitPrice)
+            : null,
+        budgetAmount: this.computeBudgetAmount(nextQuantity, nextUnitPrice),
       },
     });
 
@@ -667,6 +690,16 @@ export class ConsumablesRequisitionService
     return new Date(
       Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
     );
+  }
+
+  private computeBudgetAmount(
+    quantity: number,
+    unitPrice?: number | null,
+  ): Prisma.Decimal | null {
+    if (unitPrice === undefined || unitPrice === null) {
+      return null;
+    }
+    return new Prisma.Decimal(quantity * unitPrice);
   }
 
   private async nextRequestNumber(): Promise<string> {

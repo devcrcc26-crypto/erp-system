@@ -32,6 +32,7 @@ import { useDepartments } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 
 interface Step1Values {
   title?: string;
@@ -42,14 +43,17 @@ interface Step1Values {
 
 type ItemFormValues = Omit<
   AddConsumablesRequisitionItemPayload,
-  'description' | 'itemCode'
+  'description' | 'itemCode' | 'modelSpec' | 'unitPrice'
 > & {
   description?: string;
   itemCode?: string;
+  modelSpec?: string;
+  unitPrice?: number | null;
 };
 
 interface ClientItem extends AddConsumablesRequisitionItemPayload {
   _key: string;
+  budgetAmount?: number;
 }
 
 interface ConsumablesRequisitionFormProps {
@@ -62,6 +66,31 @@ let keyCounter = 0;
 function nextKey(): string {
   keyCounter += 1;
   return `item-${keyCounter}`;
+}
+
+function computeLineBudget(
+  quantity: number | null | undefined,
+  unitPrice: number | null | undefined,
+): number | undefined {
+  if (
+    quantity == null ||
+    unitPrice == null ||
+    unitPrice === undefined ||
+    Number.isNaN(quantity) ||
+    Number.isNaN(unitPrice)
+  ) {
+    return undefined;
+  }
+  return quantity * unitPrice;
+}
+
+function sumBudgetAmount(items: readonly ClientItem[]): number {
+  return items.reduce((sum, item) => {
+    const line =
+      item.budgetAmount ??
+      computeLineBudget(item.quantity, item.unitPrice ?? undefined);
+    return sum + (line ?? 0);
+  }, 0);
 }
 
 /**
@@ -153,9 +182,11 @@ export default function ConsumablesRequisitionForm({
     itemForm.setFieldsValue({
       itemName: item.itemName,
       itemCode: item.itemCode ?? '',
+      modelSpec: item.modelSpec ?? '',
       description: item.description ?? '',
       quantity: item.quantity,
       unit: item.unit,
+      unitPrice: item.unitPrice ?? undefined,
     });
     setShowItemForm(true);
   }
@@ -169,13 +200,20 @@ export default function ConsumablesRequisitionForm({
   async function saveItem(): Promise<void> {
     try {
       const values = await itemForm.validateFields();
+      const unitPrice =
+        values.unitPrice != null ? Number(values.unitPrice) : undefined;
+      const quantity = Number(values.quantity);
+      const budgetAmount = computeLineBudget(quantity, unitPrice);
       const entry: ClientItem = {
         _key: editingKey ?? nextKey(),
         itemName: values.itemName,
         itemCode: values.itemCode || undefined,
+        modelSpec: values.modelSpec || undefined,
         description: values.description || undefined,
-        quantity: Number(values.quantity),
+        quantity,
         unit: values.unit,
+        unitPrice,
+        budgetAmount,
       };
       if (editingKey) {
         setItems((prev) =>
@@ -248,7 +286,7 @@ export default function ConsumablesRequisitionForm({
 
       await Promise.all(
         items.map((item) => {
-          const { _key: _unused, ...payload } = item;
+          const { _key: _unused, budgetAmount: _budget, ...payload } = item;
           return apiPost<ConsumablesRequisitionDetail>(
             `/hr/consumables/${created.id}/items`,
             payload,
@@ -279,6 +317,8 @@ export default function ConsumablesRequisitionForm({
     }
   }
 
+  const totalBudget = sumBudgetAmount(items);
+
   const itemColumns: ColumnsType<ClientItem> = [
     {
       title: t('hr.table.itemName'),
@@ -290,7 +330,15 @@ export default function ConsumablesRequisitionForm({
       title: t('hr.table.itemCode'),
       dataIndex: 'itemCode',
       key: 'itemCode',
-      width: 110,
+      width: 100,
+      render: (value: string | undefined) => value || '—',
+    },
+    {
+      title: t('hr.form.modelSpec'),
+      dataIndex: 'modelSpec',
+      key: 'modelSpec',
+      width: 120,
+      ellipsis: true,
       render: (value: string | undefined) => value || '—',
     },
     {
@@ -307,7 +355,27 @@ export default function ConsumablesRequisitionForm({
       width: 70,
       align: 'right',
     },
-    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 70 },
+    {
+      title: t('hr.table.unitPrice'),
+      key: 'unitPrice',
+      width: 100,
+      align: 'right',
+      render: (_: unknown, row: ClientItem) =>
+        row.unitPrice != null ? formatEtbAmount(row.unitPrice) : '—',
+    },
+    {
+      title: t('hr.form.budgetAmount'),
+      key: 'budgetAmount',
+      width: 110,
+      align: 'right',
+      render: (_: unknown, row: ClientItem) => {
+        const amount =
+          row.budgetAmount ??
+          computeLineBudget(row.quantity, row.unitPrice ?? undefined);
+        return amount != null ? formatEtbAmount(amount) : '—';
+      },
+    },
     {
       title: '',
       key: 'actions',
@@ -523,6 +591,20 @@ export default function ConsumablesRequisitionForm({
                     />
                   </Form.Item>
                   <Form.Item
+                    name="modelSpec"
+                    label={t('hr.form.modelSpec')}
+                    className="sm:col-span-2"
+                  >
+                    <Input
+                      placeholder={t('hr.placeholder.enterModelSpec')}
+                      maxLength={500}
+                    />
+                  </Form.Item>
+                  <Form.Item name="unitPrice" label={t('hr.form.unitPrice')}>
+                    <InputNumber min={0} className="w-full" />
+                  </Form.Item>
+                  <ItemBudgetPreview form={itemForm} />
+                  <Form.Item
                     name="description"
                     label={t('hr.form.description')}
                     className="sm:col-span-2"
@@ -552,6 +634,19 @@ export default function ConsumablesRequisitionForm({
               dataSource={items}
               pagination={false}
               locale={{ emptyText: t('hr.empty.noItems') }}
+              scroll={{ x: 960 }}
+              footer={
+                items.length > 0 && totalBudget > 0
+                  ? () => (
+                      <div className="flex justify-end pr-2 text-sm font-medium">
+                        <span style={{ color: tokens.colorTextPrimary }}>
+                          {t('hr.form.totalBudgetAmount')}:{' '}
+                          <strong>{formatEtbAmount(totalBudget)}</strong>
+                        </span>
+                      </div>
+                    )
+                  : undefined
+              }
             />
           </FormLayout>
         ),
@@ -592,6 +687,12 @@ export default function ConsumablesRequisitionForm({
                   label={t('hr.labels.purpose')}
                   value={detailsSnapshot.purpose?.trim() || '—'}
                 />
+                <ReviewItem
+                  label={t('hr.form.totalBudgetAmount')}
+                  value={
+                    totalBudget > 0 ? formatEtbAmount(totalBudget) : '—'
+                  }
+                />
               </div>
             </FormLayout>
 
@@ -607,6 +708,19 @@ export default function ConsumablesRequisitionForm({
                 dataSource={items}
                 pagination={false}
                 locale={{ emptyText: t('hr.empty.noItems') }}
+                scroll={{ x: 960 }}
+                footer={
+                  items.length > 0 && totalBudget > 0
+                    ? () => (
+                        <div className="flex justify-end pr-2 text-sm font-medium">
+                          <span style={{ color: tokens.colorTextPrimary }}>
+                            {t('hr.form.totalBudgetAmount')}:{' '}
+                            <strong>{formatEtbAmount(totalBudget)}</strong>
+                          </span>
+                        </div>
+                      )
+                    : undefined
+                }
               />
             </FormLayout>
 
@@ -646,6 +760,7 @@ export default function ConsumablesRequisitionForm({
       declarationConfirmed,
       departmentsQuery.isLoading,
       departmentOptions,
+      totalBudget,
     ],
   );
 
@@ -701,5 +816,29 @@ function ReviewItem({
         {value}
       </p>
     </div>
+  );
+}
+
+function ItemBudgetPreview({
+  form,
+}: {
+  form: ReturnType<typeof Form.useForm<ItemFormValues>>[0];
+}): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const quantity = Form.useWatch('quantity', form);
+  const unitPrice = Form.useWatch('unitPrice', form);
+  const budgetAmount = computeLineBudget(
+    quantity != null ? Number(quantity) : undefined,
+    unitPrice != null ? Number(unitPrice) : undefined,
+  );
+
+  return (
+    <Form.Item label={t('hr.form.budgetAmount')}>
+      <Input
+        readOnly
+        value={budgetAmount != null ? formatEtbAmount(budgetAmount) : '—'}
+        style={{ background: tokens.colorPageBg }}
+      />
+    </Form.Item>
   );
 }
