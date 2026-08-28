@@ -1,51 +1,17 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import { Descriptions, Drawer } from 'antd';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import type { AuditLog, AuditLogSource } from '@/lib/api/types';
+import type { AuditLog } from '@/lib/api/types';
 import { layout, wideDetailDrawerProps } from '@/lib/theme/layout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
-import { formatUserName } from '@/lib/utils/user-display';
-
-function formatTimestamp(value: string): string {
-  return formatDisplayDateTime(value);
-}
-
-function formatLogUserName(log: AuditLog): string {
-  if (!log.user) {
-    return '-';
-  }
-  return formatUserName(log.user);
-}
-
-function sourceVariant(
-  source: AuditLogSource,
-): 'default' | 'info' | 'warning' | 'success' {
-  switch (source) {
-    case 'USER_ACTION':
-      return 'info';
-    case 'SYSTEM_JOB':
-      return 'warning';
-    case 'API_INTEGRATION':
-      return 'success';
-    case 'MIGRATION':
-      return 'default';
-    default:
-      return 'default';
-  }
-}
-
-function formatSourceLabel(
-  source: AuditLogSource,
-  t: (key: string) => string,
-): string {
-  const key = `auditLogs.source.${source}`;
-  const translated = t(key);
-  return translated === key ? source.replace(/_/g, ' ') : translated;
-}
+import {
+  auditLogActionVariant,
+  auditLogSourceVariant,
+  formatAuditLogSourceLabel,
+  formatAuditLogUserName,
+} from '@/lib/utils/audit-log-display';
 
 function JsonBlock({
   value,
@@ -55,7 +21,11 @@ function JsonBlock({
   emptyLabel?: string;
 }): React.ReactNode {
   if (value === null || value === undefined) {
-    return <span style={{ color: 'var(--color-text-tertiary)' }}>{emptyLabel ?? '-'}</span>;
+    return (
+      <span style={{ color: 'var(--color-text-tertiary)' }}>
+        {emptyLabel ?? '—'}
+      </span>
+    );
   }
 
   return (
@@ -92,27 +62,32 @@ export default function AuditLogDetailDrawer({
             bordered
           >
             <Descriptions.Item label={t('auditLogs.columns.timestamp')}>
-              {formatTimestamp(log.createdAt)}
+              {formatDisplayDateTime(log.createdAt)}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.user')}>
-              {formatLogUserName(log)}
+              {formatAuditLogUserName(log)}
               {log.user?.email ? (
-                <span className={`block ${layout.drawerMetaLabel} normal-case tracking-normal`}>
+                <span
+                  className={`block ${layout.drawerMetaLabel} normal-case tracking-normal`}
+                >
                   {log.user.email}
                 </span>
               ) : null}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.source')}>
               <StatusBadge
-                label={formatSourceLabel(log.source, t)}
-                variant={sourceVariant(log.source)}
+                label={formatAuditLogSourceLabel(log.source, t)}
+                variant={auditLogSourceVariant(log.source)}
               />
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.module')}>
               {log.module}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.action')}>
-              {log.action}
+              <StatusBadge
+                label={log.action}
+                variant={auditLogActionVariant(log.action)}
+              />
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.recordType')}>
               {log.recordType}
@@ -121,19 +96,19 @@ export default function AuditLogDetailDrawer({
               <span className="break-all font-mono text-xs">{log.recordId}</span>
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.columns.recordReference')}>
-              {log.recordReference ?? '-'}
+              {log.recordReference ?? '—'}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.detail.ipAddress')}>
-              {log.ipAddress ?? '-'}
+              {log.ipAddress ?? '—'}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.detail.deviceInfo')}>
-              {log.deviceInfo ?? '-'}
+              {log.deviceInfo ?? '—'}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.detail.correlationId')}>
-              {log.correlationId ?? '-'}
+              {log.correlationId ?? '—'}
             </Descriptions.Item>
             <Descriptions.Item label={t('auditLogs.detail.sessionId')}>
-              {log.sessionId ?? '-'}
+              {log.sessionId ?? '—'}
             </Descriptions.Item>
           </Descriptions>
 

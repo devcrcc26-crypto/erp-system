@@ -1155,6 +1155,9 @@
     "noPermission": "您没有查看审计日志的权限。",
     "loadError": "无法加载审计日志，请稍后重试。",
     "entryCount": "共 {{count}} 条记录",
+    "entryCountOne": "共 1 条记录",
+    "allEntries": "全部审计记录",
+    "viewDetailsFor": "查看 {{module}} 的详情",
     "viewDetails": "详情",
     "detailTitle": "审计记录详情",
     "emptyTitle": "暂无审计记录",
@@ -1193,6 +1196,12 @@
       "SYSTEM_JOB": "系统任务",
       "API_INTEGRATION": "API 集成",
       "MIGRATION": "迁移"
+    },
+    "stats": {
+      "total": "记录总数",
+      "userActions": "用户操作",
+      "systemJobs": "系统任务",
+      "integrations": "API 与迁移"
     }
   },
   "profile": {

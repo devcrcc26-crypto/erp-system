@@ -1155,6 +1155,9 @@
     "noPermission": "You do not have permission to view audit logs.",
     "loadError": "Unable to load audit logs. Please try again later.",
     "entryCount": "{{count}} entries total",
+    "entryCountOne": "1 entry total",
+    "allEntries": "All audit entries",
+    "viewDetailsFor": "View details for {{module}}",
     "viewDetails": "Details",
     "detailTitle": "Audit entry details",
     "emptyTitle": "No audit entries",
@@ -1193,6 +1196,12 @@
       "SYSTEM_JOB": "System job",
       "API_INTEGRATION": "API integration",
       "MIGRATION": "Migration"
+    },
+    "stats": {
+      "total": "Total entries",
+      "userActions": "User actions",
+      "systemJobs": "System jobs",
+      "integrations": "API & migrations"
     }
   },
   "profile": {
