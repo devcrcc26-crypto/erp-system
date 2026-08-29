@@ -231,6 +231,11 @@ export class CreatePositionDto {
   @IsString()
   title!: string;
 
+  @ApiPropertyOptional({ description: 'Chinese title / name' })
+  @IsOptional()
+  @IsString()
+  titleZh?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

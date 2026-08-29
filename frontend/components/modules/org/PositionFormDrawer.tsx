@@ -9,11 +9,13 @@ import {
   type Position,
 } from '@/lib/query/org';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface PositionFormValues {
   departmentId: string;
   title: string;
+  titleZh?: string;
   grade?: string;
   isActive: boolean;
 }
@@ -31,6 +33,7 @@ export default function PositionFormDrawer({
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const [form] = Form.useForm<PositionFormValues>();
   const messageApi = useAppMessage();
   const createPosition = useCreatePosition();
@@ -38,7 +41,9 @@ export default function PositionFormDrawer({
   const departmentsQuery = useDepartments({ page: 1, limit: 100 }, open);
   const departmentOptions = (departmentsQuery.data?.data ?? []).map((department) => ({
     value: department.id,
-    label: department.name,
+    label: department.nameZh
+      ? `${department.name} / ${department.nameZh}`
+      : department.name,
   }));
 
   useEffect(() => {
@@ -49,6 +54,7 @@ export default function PositionFormDrawer({
       form.setFieldsValue({
         departmentId: editing.departmentId,
         title: editing.title,
+        titleZh: editing.titleZh ?? undefined,
         grade: editing.grade ?? undefined,
         isActive: editing.isActive,
       });
@@ -66,26 +72,30 @@ export default function PositionFormDrawer({
           body: {
             departmentId: values.departmentId,
             title: values.title.trim(),
+            titleZh: values.titleZh?.trim() || undefined,
             grade: values.grade?.trim() || undefined,
             isActive: values.isActive,
           },
         });
-        messageApi.success('Position updated');
+        messageApi.success(t('pages.positions.updated'));
       } else {
         await createPosition.mutateAsync({
           departmentId: values.departmentId,
           title: values.title.trim(),
+          titleZh: values.titleZh?.trim() || undefined,
           grade: values.grade?.trim() || undefined,
           isActive: values.isActive,
         });
-        messageApi.success('Position created');
+        messageApi.success(t('pages.positions.created'));
       }
       onSaved();
       onClose();
     } catch (error) {
       notifyApiError(
         error,
-        editing ? 'Failed to update position' : 'Failed to create position',
+        editing
+          ? t('pages.positions.updateFailed')
+          : t('pages.positions.createFailed'),
         messageApi,
       );
     }
@@ -94,7 +104,13 @@ export default function PositionFormDrawer({
   return (
     <Drawer
       open={open}
-      title={readOnly ? 'View position' : editing ? 'Edit position' : 'Add position'}
+      title={
+        readOnly
+          ? t('pages.positions.viewPosition')
+          : editing
+            ? t('pages.positions.editPosition')
+            : t('pages.positions.addPosition')
+      }
       size={480}
       className="erp-responsive-drawer"
       onClose={onClose}
@@ -105,8 +121,9 @@ export default function PositionFormDrawer({
             type="primary"
             loading={createPosition.isPending || updatePosition.isPending}
             onClick={() => form.submit()}
+            style={{ borderRadius: 0 }}
           >
-            Save
+            {t('common.save')}
           </Button>
         )
       }
@@ -118,29 +135,46 @@ export default function PositionFormDrawer({
         onFinish={(values) => void handleSubmit(values)}
       >
         <Form.Item
-          label="Department"
+          label={t('pages.positions.form.department')}
           name="departmentId"
-          rules={[{ required: true, message: 'Department is required' }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.positions.form.departmentRequired'),
+            },
+          ]}
         >
           <Select
             showSearch
             optionFilterProp="label"
             loading={departmentsQuery.isLoading}
-            placeholder="Select department"
+            placeholder={t('pages.positions.form.departmentPlaceholder')}
             options={departmentOptions}
           />
         </Form.Item>
         <Form.Item
-          label="Title"
+          label={t('pages.positions.form.title')}
           name="title"
-          rules={[{ required: true, message: 'Title is required' }]}
+          rules={[
+            { required: true, message: t('pages.positions.form.titleRequired') },
+          ]}
         >
-          <Input />
+          <Input placeholder={t('pages.positions.form.titlePlaceholder')} />
         </Form.Item>
-        <Form.Item label="Grade" name="grade">
-          <Input placeholder="Optional" />
+        <Form.Item
+          label={t('pages.positions.form.titleZh')}
+          name="titleZh"
+        >
+          <Input placeholder={t('pages.positions.form.titleZhPlaceholder')} />
         </Form.Item>
-        <Form.Item label="Active" name="isActive" valuePropName="checked">
+        <Form.Item label={t('pages.positions.form.grade')} name="grade">
+          <Input placeholder={t('pages.positions.form.gradePlaceholder')} />
+        </Form.Item>
+        <Form.Item
+          label={t('common.active')}
+          name="isActive"
+          valuePropName="checked"
+        >
           <Switch disabled={readOnly} />
         </Form.Item>
       </Form>

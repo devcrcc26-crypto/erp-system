@@ -268,7 +268,9 @@ export default function UsersPageContent(): React.ReactNode {
     () =>
       (positionsQuery.data?.data ?? []).map((position) => ({
         value: position.id,
-        label: position.title,
+        label: position.titleZh
+          ? `${position.title} / ${position.titleZh}`
+          : position.title,
       })),
     [positionsQuery.data],
   );

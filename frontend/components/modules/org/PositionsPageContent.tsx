@@ -70,6 +70,7 @@ function filterPositions(
       departmentNameById.get(row.departmentId)?.toLowerCase() ?? '';
     return (
       row.title.toLowerCase().includes(query) ||
+      (row.titleZh?.toLowerCase().includes(query) ?? false) ||
       (row.grade?.toLowerCase().includes(query) ?? false) ||
       departmentName.includes(query)
     );
@@ -220,13 +221,23 @@ export default function PositionsPageContent(): React.ReactNode {
         title: t('pages.positions.table.title'),
         dataIndex: 'title',
         key: 'title',
-        render: (value: string) => (
-          <span
-            className="text-sm font-medium"
-            style={{ color: tokens.colorTextPrimary }}
-          >
-            {value}
-          </span>
+        render: (value: string, row: Position) => (
+          <div className="min-w-0 py-0.5">
+            <p
+              className="m-0 text-sm font-medium"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {value}
+            </p>
+            {row.titleZh ? (
+              <p
+                className="m-0 truncate text-xs"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                {row.titleZh}
+              </p>
+            ) : null}
+          </div>
         ),
       },
       {

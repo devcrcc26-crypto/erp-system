@@ -134,7 +134,12 @@ export default function AddEmployeeForm({
     const filtered = departmentIdValue
       ? allPositions.filter((position) => position.departmentId === departmentIdValue)
       : allPositions.filter((position) => position.isActive);
-    return filtered.map((position) => ({ value: position.id, label: position.title }));
+    return filtered.map((position) => ({
+      value: position.id,
+      label: position.titleZh
+        ? `${position.title} / ${position.titleZh}`
+        : position.title,
+    }));
   }, [allPositions, departmentIdValue]);
 
   const currentRoleId = userQuery.data ? resolvePrimaryRoleId(userQuery.data) ?? '' : '';

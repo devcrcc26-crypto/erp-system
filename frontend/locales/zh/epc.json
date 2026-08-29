@@ -507,7 +507,13 @@
       "accessDenied": "您无权访问职位。",
       "loadFailed": "加载职位失败",
       "addPosition": "添加职位",
-      "searchPlaceholder": "搜索职务、职级或部门",
+      "editPosition": "编辑职位",
+      "viewPosition": "查看职位",
+      "created": "职位已创建",
+      "updated": "职位已更新",
+      "createFailed": "创建职位失败",
+      "updateFailed": "更新职位失败",
+      "searchPlaceholder": "搜索职务、中文职务、职级或部门",
       "empty": "暂无职位",
       "emptyFiltered": "没有符合筛选条件的职位",
       "count": "{{count}} 个职位",
@@ -523,6 +529,18 @@
         "title": "职务",
         "department": "部门",
         "grade": "职级"
+      },
+      "form": {
+        "department": "部门",
+        "departmentRequired": "请选择部门",
+        "departmentPlaceholder": "选择部门",
+        "title": "职务名称",
+        "titleRequired": "请输入职务名称",
+        "titlePlaceholder": "例如：Project Manager",
+        "titleZh": "中文职务名称",
+        "titleZhPlaceholder": "例如：项目经理",
+        "grade": "职级",
+        "gradePlaceholder": "可选"
       }
     },
     "disciplinesCatalog": {

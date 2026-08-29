@@ -507,7 +507,13 @@
       "accessDenied": "You do not have access to positions.",
       "loadFailed": "Failed to load positions",
       "addPosition": "Add position",
-      "searchPlaceholder": "Search title, grade, or department",
+      "editPosition": "Edit position",
+      "viewPosition": "View position",
+      "created": "Position created",
+      "updated": "Position updated",
+      "createFailed": "Failed to create position",
+      "updateFailed": "Failed to update position",
+      "searchPlaceholder": "Search title, Chinese title, grade, or department",
       "empty": "No positions defined",
       "emptyFiltered": "No positions match your filters",
       "count": "{{count}} positions",
@@ -523,6 +529,18 @@
         "title": "Title",
         "department": "Department",
         "grade": "Grade"
+      },
+      "form": {
+        "department": "Department",
+        "departmentRequired": "Department is required",
+        "departmentPlaceholder": "Select department",
+        "title": "Title",
+        "titleRequired": "Title is required",
+        "titlePlaceholder": "e.g. Project Manager",
+        "titleZh": "Title (Chinese)",
+        "titleZhPlaceholder": "例如：项目经理",
+        "grade": "Grade",
+        "gradePlaceholder": "Optional"
       }
     },
     "disciplinesCatalog": {
