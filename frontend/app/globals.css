@@ -1095,28 +1095,19 @@ main::-webkit-scrollbar,
 }
 
 /* Enterprise login */
-@keyframes erp-login-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.erp-login-form .ant-input,
+.erp-login-form .ant-input-affix-wrapper,
+.erp-login-form .ant-input-password {
+  border-radius: 0 !important;
 }
 
-.erp-login-brand-enter,
-.erp-login-form-enter {
-  animation: erp-login-fade-up 0.55s ease-out both;
+.erp-login-form .ant-btn {
+  border-radius: 0 !important;
 }
 
-.erp-login-brand-enter.delay-100 {
-  animation-delay: 0.1s;
-}
-
-.erp-login-brand-enter.delay-200 {
-  animation-delay: 0.2s;
+.erp-login-submit.ant-btn {
+  height: 44px !important;
+  font-weight: 600 !important;
 }
 
 .erp-login-demo-account {
@@ -1127,12 +1118,5 @@ main::-webkit-scrollbar,
 .erp-login-demo-account:hover {
   border-color: #1d9e75;
   background: #e1f5ee;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .erp-login-brand-enter,
-  .erp-login-form-enter {
-    animation: none;
-  }
 }
 

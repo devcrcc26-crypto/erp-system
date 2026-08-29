@@ -330,7 +330,7 @@ export default function MainNavPanel({
       >
         {isExpanded ? (
           <div className="flex min-w-0 items-center gap-2.5">
-            <BrandLogo size={28} className="shrink-0 rounded-[7px]" />
+            <BrandLogo size={26} onDark className="shrink-0" />
             <h1
               className="m-0 truncate text-[14px] font-semibold tracking-[-0.01em]"
               style={{
@@ -343,11 +343,11 @@ export default function MainNavPanel({
           </div>
         ) : (
           <div
-            className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-[7px]"
+            className="flex items-center justify-center"
             title={t('shell.brandTitle')}
             aria-label={t('shell.brandWorkspace')}
           >
-            <BrandLogo size={28} />
+            <BrandLogo size={26} onDark />
           </div>
         )}
       </div>
