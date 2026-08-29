@@ -998,6 +998,12 @@
       "pendingUsers": "Pending activation",
       "inactiveUsers": "Inactive"
     },
+    "stats": {
+      "total": "Total Employees",
+      "active": "Active",
+      "pending": "Pending Activation",
+      "inactive": "Inactive"
+    },
     "exportTable": {
       "phone": "Phone",
       "lastLogin": "Last login"

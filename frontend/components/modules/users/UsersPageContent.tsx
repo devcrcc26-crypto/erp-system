@@ -525,25 +525,25 @@ export default function UsersPageContent(): React.ReactNode {
       )}
 <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
-          label="Total Employees"
+          label={t('users.stats.total')}
           value={userStats.totalCount}
           color="teal"
           icon={<Users size={14} />}
         />
         <StatCard
-          label="Active"
+          label={t('users.stats.active')}
           value={userStats.activeCount}
           color="green"
           icon={<CheckCircleOutlined />}
         />
         <StatCard
-          label="Pending Activation"
+          label={t('users.stats.pending')}
           value={userStats.pendingCount}
           color="amber"
           icon={<ClockCircleOutlined />}
         />
         <StatCard
-          label="Inactive"
+          label={t('users.stats.inactive')}
           value={userStats.inactiveCount}
           color="default"
           icon={<UserDeleteOutlined />}

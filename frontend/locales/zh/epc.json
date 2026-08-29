@@ -998,6 +998,12 @@
       "pendingUsers": "待激活",
       "inactiveUsers": "停用"
     },
+    "stats": {
+      "total": "员工总数",
+      "active": "活跃",
+      "pending": "待激活",
+      "inactive": "停用"
+    },
     "exportTable": {
       "phone": "电话",
       "lastLogin": "上次登录"
