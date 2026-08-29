@@ -232,9 +232,9 @@ export class CreatePositionDto {
   @IsString()
   titleZh?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: ['1', '2', '3', '4', '5'] })
   @IsOptional()
-  @IsString()
+  @IsIn(['1', '2', '3', '4', '5'])
   grade?: string;
 
   @ApiPropertyOptional()

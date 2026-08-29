@@ -45,6 +45,7 @@ import {
 } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatPositionGrade } from '@/lib/utils/position-grades';
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -223,7 +224,7 @@ export default function PositionsPageContent(): React.ReactNode {
         dataIndex: 'grade',
         key: 'grade',
         responsive: ['lg'],
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => formatPositionGrade(value, t),
       },
       {
         title: t('common.status'),

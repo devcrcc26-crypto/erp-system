@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Button, Drawer, Form, Input, Switch } from 'antd';
+import { useEffect, useMemo } from 'react';
+import { Button, Drawer, Form, Input, Select, Switch } from 'antd';
 import {
   useCreatePosition,
   useUpdatePosition,
@@ -10,6 +10,10 @@ import {
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import {
+  isPositionGrade,
+  POSITION_GRADE_VALUES,
+} from '@/lib/utils/position-grades';
 
 interface PositionFormValues {
   title: string;
@@ -37,6 +41,15 @@ export default function PositionFormDrawer({
   const createPosition = useCreatePosition();
   const updatePosition = useUpdatePosition();
 
+  const gradeOptions = useMemo(
+    () =>
+      POSITION_GRADE_VALUES.map((grade) => ({
+        value: grade,
+        label: t(`pages.positions.grades.${grade}`),
+      })),
+    [t],
+  );
+
   useEffect(() => {
     if (!open) {
       return;
@@ -45,7 +58,7 @@ export default function PositionFormDrawer({
       form.setFieldsValue({
         title: editing.title,
         titleZh: editing.titleZh ?? undefined,
-        grade: editing.grade ?? undefined,
+        grade: isPositionGrade(editing.grade) ? editing.grade : undefined,
         isActive: editing.isActive,
       });
       return;
@@ -62,7 +75,7 @@ export default function PositionFormDrawer({
           body: {
             title: values.title.trim(),
             titleZh: values.titleZh?.trim() || undefined,
-            grade: values.grade?.trim() || undefined,
+            grade: values.grade || undefined,
             isActive: values.isActive,
           },
         });
@@ -71,7 +84,7 @@ export default function PositionFormDrawer({
         await createPosition.mutateAsync({
           title: values.title.trim(),
           titleZh: values.titleZh?.trim() || undefined,
-          grade: values.grade?.trim() || undefined,
+          grade: values.grade || undefined,
           isActive: values.isActive,
         });
         messageApi.success(t('pages.positions.created'));
@@ -135,7 +148,11 @@ export default function PositionFormDrawer({
           <Input placeholder={t('pages.positions.form.titleZhPlaceholder')} />
         </Form.Item>
         <Form.Item label={t('pages.positions.form.grade')} name="grade">
-          <Input placeholder={t('pages.positions.form.gradePlaceholder')} />
+          <Select
+            allowClear
+            placeholder={t('pages.positions.form.gradePlaceholder')}
+            options={gradeOptions}
+          />
         </Form.Item>
         <Form.Item
           label={t('common.active')}

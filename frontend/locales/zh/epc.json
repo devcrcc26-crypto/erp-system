@@ -536,7 +536,14 @@
         "titleZh": "中文职务名称",
         "titleZhPlaceholder": "例如：项目经理",
         "grade": "职级",
-        "gradePlaceholder": "可选"
+        "gradePlaceholder": "选择职级"
+      },
+      "grades": {
+        "1": "1级",
+        "2": "2级",
+        "3": "3级",
+        "4": "4级",
+        "5": "5级"
       }
     },
     "disciplinesCatalog": {

@@ -536,7 +536,14 @@
         "titleZh": "Title (Chinese)",
         "titleZhPlaceholder": "例如：项目经理",
         "grade": "Grade",
-        "gradePlaceholder": "Optional"
+        "gradePlaceholder": "Select grade"
+      },
+      "grades": {
+        "1": "Grade 1",
+        "2": "Grade 2",
+        "3": "Grade 3",
+        "4": "Grade 4",
+        "5": "Grade 5"
       }
     },
     "disciplinesCatalog": {
