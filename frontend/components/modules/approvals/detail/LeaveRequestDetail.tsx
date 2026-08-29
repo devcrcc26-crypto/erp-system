@@ -11,7 +11,6 @@ import {
   Select,
   Skeleton,
   Space,
-  Tag,
   Typography,
 } from 'antd';
 import dayjs from 'dayjs';
@@ -30,9 +29,7 @@ import { useCurrentUser } from '@/lib/query/profile';
 import {
   LEAVE_TYPE_OPTIONS,
   formatLeaveEmployeeName,
-  formatLeaveStatus,
   formatLeaveType,
-  leaveStatusVariant,
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -40,7 +37,8 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Typed leave body for Approvals detail  - editable when RETURNED by requester.
+ * Typed leave body for Approvals detail — editable when RETURNED by requester.
+ * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
  */
 export default function LeaveRequestDetail({
   sourceId,
@@ -107,43 +105,25 @@ export default function LeaveRequestDetail({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                {leave.requestNumber}
-              </span>
-              <span className="text-[var(--color-border-secondary)]">·</span>
-              <Tag className="m-0">{formatLeaveType(leave.leaveType, t)}</Tag>
-              <StatusBadge
-                label={formatLeaveStatus(leave.status, t)}
-                variant={leaveStatusVariant(leave.status)}
-              />
-            </div>
-            {canEdit && !editing ? (
-              <Button
-                size="small"
-                onClick={() => {
-                  form.setFieldsValue({
-                    leaveType: leave.leaveType,
-                    range: [dayjs(leave.startDate), dayjs(leave.endDate)],
-                    days: leave.days,
-                    reason: leave.reason ?? '',
-                  });
-                  setEditing(true);
-                }}
-              >
-                Edit
-              </Button>
-            ) : null}
-          </div>
-
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug mt-4 mb-0">
-            {formatLeaveType(leave.leaveType, t)}
-          </h2>
+      {canEdit && !editing ? (
+        <div className="flex justify-end">
+          <Button
+            size="small"
+            onClick={() => {
+              form.setFieldsValue({
+                leaveType: leave.leaveType,
+                range: [dayjs(leave.startDate), dayjs(leave.endDate)],
+                days: leave.days,
+                reason: leave.reason ?? '',
+              });
+              setEditing(true);
+            }}
+            style={{ borderRadius: 0 }}
+          >
+            Edit
+          </Button>
         </div>
-      </div>
+      ) : null}
 
       {!editing ? (
         <SummaryStrip

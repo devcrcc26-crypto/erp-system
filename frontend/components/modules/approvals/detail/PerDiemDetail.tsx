@@ -6,20 +6,14 @@ import {
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import { usePerDiemRequest } from '@/lib/query/per-diem';
 import { formatCurrencyAmount, formatEtbAmount } from '@/lib/utils/expense-claim-display';
-import {
-  formatPerDiemEmployeeName,
-  formatPerDiemStatus,
-  perDiemStatusVariant,
-} from '@/lib/utils/per-diem-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Per diem request body for the Approvals detail inbox.
+ * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
  */
 export default function PerDiemDetail({
   sourceId,
@@ -27,7 +21,6 @@ export default function PerDiemDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
-  const { t } = useEpcTranslation();
   const detailQuery = usePerDiemRequest(sourceId);
   const request = detailQuery.data;
 
@@ -61,34 +54,6 @@ export default function PerDiemDetail({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Header */}
-      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-              {request.requestNumber}
-            </span>
-            <span className="text-[var(--color-border-secondary)]">·</span>
-            <StatusBadge
-              label={formatPerDiemStatus(request.status, t)}
-              variant={perDiemStatusVariant(request.status)}
-            />
-          </div>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug m-0">
-            {request.destination}
-          </h2>
-          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-            Submitted by{' '}
-            <span className="font-medium text-[var(--color-text-primary)]">
-              {formatPerDiemEmployeeName(request.employee)}
-            </span>
-            {request.submittedAt
-              ? ` · ${formatProjectDate(request.submittedAt)}`
-              : null}
-          </p>
-        </div>
-      </div>
-
       <SummaryStrip
         items={[
           { label: 'Days', value: String(request.days) },

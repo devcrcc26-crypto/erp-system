@@ -1,28 +1,22 @@
 'use client';
 
-import { Alert, Skeleton, Tag } from 'antd';
+import { Alert, Skeleton } from 'antd';
 import {
   MetaItem,
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useVehicleRefueling } from '@/lib/query/vehicle-refueling';
 import { formatFuelType } from '@/lib/utils/company-vehicle-display';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import {
-  formatVehicleRefuelingEmployeeName,
-  formatVehicleRefuelingStatus,
-  vehicleRefuelingStatusVariant,
-} from '@/lib/utils/vehicle-refueling-display';
-import { tokens } from '@/lib/theme/tokens';
 
 /**
  * Vehicle refueling body for the Approvals detail inbox (read-only).
+ * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
  */
 export default function VehicleRefuelingDetail({
   sourceId,
@@ -56,57 +50,8 @@ export default function VehicleRefuelingDetail({
     );
   }
 
-  const isDirectApproved =
-    refueling.status === 'APPROVED' && !refueling.approvalRequestId;
-
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className="overflow-hidden rounded-none"
-        style={{
-          background: tokens.colorCardBg,
-          border: `1px solid ${tokens.colorBorder}`,
-        }}
-      >
-        <div className="px-3 py-4 sm:px-5">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {refueling.requestNumber}
-            </span>
-            <span style={{ color: tokens.colorBorder }}>·</span>
-            <StatusBadge
-              label={formatVehicleRefuelingStatus(refueling.status, t)}
-              variant={vehicleRefuelingStatusVariant(refueling.status)}
-            />
-            {isDirectApproved ? (
-              <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
-            ) : null}
-            {refueling.receiptDocumentId ? (
-              <Tag color="green">{t('hr.labels.receiptAttached')}</Tag>
-            ) : null}
-          </div>
-          <h2
-            className="m-0 text-lg font-semibold leading-snug"
-            style={{ color: tokens.colorTextPrimary }}
-          >
-            {t('pages.hr.vehicleRefueling.detail')} —{' '}
-            {refueling.vehicle?.plateNumber ?? t('hr.labels.noVehicle')}
-          </h2>
-          <p
-            className="mb-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {formatVehicleRefuelingEmployeeName(refueling.employee)}
-            {refueling.submittedAt
-              ? ` · ${formatProjectDate(refueling.submittedAt)}`
-              : null}
-          </p>
-        </div>
-      </div>
-
       <SummaryStrip
         items={[
           {

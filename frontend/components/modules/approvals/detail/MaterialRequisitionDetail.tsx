@@ -9,16 +9,10 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { MaterialRequisitionItem } from '@/lib/api/material-requisition.types';
 import { useMaterialRequisition } from '@/lib/query/material-requisition';
-import {
-  formatMaterialRequisitionEmployeeName,
-  formatMaterialRequisitionStatus,
-  materialRequisitionStatusVariant,
-} from '@/lib/utils/material-requisition-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -96,45 +90,6 @@ export default function MaterialRequisitionDetail({
 
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className="overflow-hidden rounded-none"
-        style={{
-          background: tokens.colorCardBg,
-          border: `1px solid ${tokens.colorBorder}`,
-        }}
-      >
-        <div className="px-3 py-4 sm:px-5">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {requisition.requestNumber}
-            </span>
-            <span style={{ color: tokens.colorBorder }}>·</span>
-            <StatusBadge
-              label={formatMaterialRequisitionStatus(requisition.status, t)}
-              variant={materialRequisitionStatusVariant(requisition.status)}
-            />
-          </div>
-          <h2
-            className="m-0 text-lg font-semibold leading-snug"
-            style={{ color: tokens.colorTextPrimary }}
-          >
-            {requisition.title}
-          </h2>
-          <p
-            className="m-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {formatMaterialRequisitionEmployeeName(requisition.employee)}
-            {requisition.submittedAt
-              ? ` · ${formatProjectDate(requisition.submittedAt)}`
-              : null}
-          </p>
-        </div>
-      </div>
-
       <SummaryStrip
         items={[
           {

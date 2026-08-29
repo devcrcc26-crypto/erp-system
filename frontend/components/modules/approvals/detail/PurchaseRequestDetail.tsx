@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Skeleton, Tag, Typography } from 'antd';
+import { Alert, Skeleton, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   MetaItem,
@@ -9,7 +9,6 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { PurchaseRequestItem } from '@/lib/api/purchase-request.types';
@@ -18,10 +17,6 @@ import {
   formatCurrencyAmount,
   formatEtbAmount,
   formatPurchaseItemDescription,
-  formatPurchaseRequestEmployeeName,
-  formatPurchaseRequestStatus,
-  purchaseRequestStatusVariant,
-  requiresGmApproval,
 } from '@/lib/utils/purchase-request-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
@@ -66,8 +61,6 @@ export default function PurchaseRequestDetail({
       />
     );
   }
-
-  const gmRequired = requiresGmApproval(request.totalEstimatedEtb);
 
   const columns: ColumnsType<PurchaseRequestItem> = [
     {
@@ -124,50 +117,6 @@ export default function PurchaseRequestDetail({
 
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className="overflow-hidden rounded-none"
-        style={{
-          background: tokens.colorCardBg,
-          border: `1px solid ${tokens.colorBorder}`,
-        }}
-      >
-        <div className="px-3 py-4 sm:px-5">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {request.requestNumber}
-            </span>
-            <span style={{ color: tokens.colorBorder }}>·</span>
-            <StatusBadge
-              label={formatPurchaseRequestStatus(request.status, t)}
-              variant={purchaseRequestStatusVariant(request.status)}
-            />
-            {gmRequired ? (
-              <Tag color="orange">{t('hr.labels.gmApprovalRequired')}</Tag>
-            ) : (
-              <Tag color="cyan">{t('hr.labels.hrApprovalSufficient')}</Tag>
-            )}
-          </div>
-          <h2
-            className="m-0 text-lg font-semibold leading-snug"
-            style={{ color: tokens.colorTextPrimary }}
-          >
-            {request.title}
-          </h2>
-          <p
-            className="m-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {formatPurchaseRequestEmployeeName(request.employee)}
-            {request.submittedAt
-              ? ` · ${formatProjectDate(request.submittedAt)}`
-              : null}
-          </p>
-        </div>
-      </div>
-
       <SummaryStrip
         items={[
           {

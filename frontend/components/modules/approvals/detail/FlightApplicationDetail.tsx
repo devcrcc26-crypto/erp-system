@@ -10,7 +10,6 @@ import {
   Plane,
   Users,
 } from 'lucide-react';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FlightCurrentStepBanner from '@/components/modules/hr/flight/FlightCurrentStepBanner';
 import FlightTicketAssignmentPanel from '@/components/modules/hr/flight/FlightTicketAssignmentPanel';
@@ -29,9 +28,6 @@ import {
 } from '@/lib/query/flight';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
-  flightStatusVariant,
-  formatFlightStatus,
-  formatFlightSubmitterName,
   formatTicketClass,
   formatTripType,
   formatVisaStatus,
@@ -143,26 +139,9 @@ export default function FlightApplicationDetail({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Header */}
+      {/* Route + step (approval page already shows request title/status) */}
       <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
         <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-              {application.applicationNumber}
-            </span>
-            <span className="text-[var(--color-border-secondary)]">·</span>
-            <Tag className="m-0">{formatTripType(application.tripType, t)}</Tag>
-            <StatusBadge
-              label={formatFlightStatus(application.status, t)}
-              variant={flightStatusVariant(application.status)}
-            />
-            {application.isInternational ? (
-              <Tag color="volcano" className="m-0">
-                International
-              </Tag>
-            ) : null}
-          </div>
-
           <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
             <div className="flex-1 min-w-0 rounded-md border border-[rgba(0,0,0,0.06)] bg-[var(--color-page-bg)] px-4 py-3">
               <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
@@ -187,23 +166,13 @@ export default function FlightApplicationDetail({
               </h2>
             </div>
           </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-secondary)]">
-            <span>
-              Submitted by{' '}
-              <span className="font-medium text-[var(--color-text-primary)]">
-                {formatFlightSubmitterName(application.submitter)}
-              </span>
-            </span>
-            <span className="text-[var(--color-border-secondary)]">·</span>
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar
-                size={13}
-                className="text-[var(--color-text-tertiary)]"
-              />
-              {formatProjectDate(application.createdAt)}
-            </span>
-          </div>
+          {application.isInternational ? (
+            <div className="mt-3">
+              <Tag color="volcano" className="m-0">
+                International
+              </Tag>
+            </div>
+          ) : null}
         </div>
 
         <div className="border-t border-[rgba(0,0,0,0.06)]">

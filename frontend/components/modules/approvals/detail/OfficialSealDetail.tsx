@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Skeleton, Tag } from 'antd';
+import { Alert, Skeleton } from 'antd';
 import {
   MetaItem,
   SectionCard,
@@ -8,21 +8,18 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import SealDocumentGallery from '@/components/modules/hr/shared/SealDocumentGallery';
 import SealRequestDetailFields from '@/components/modules/hr/shared/SealRequestDetailFields';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useOfficialSeal } from '@/lib/query/official-seal';
-import { tokens } from '@/lib/theme/tokens';
 import {
   formatOfficialSealEmployeeName,
-  formatOfficialSealStatus,
   formatOfficialSealUrgency,
-  officialSealStatusVariant,
 } from '@/lib/utils/official-seal';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 /**
  * Official seal body for the Approvals detail inbox (read-only).
+ * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
  */
 export default function OfficialSealDetail({
   sourceId,
@@ -56,61 +53,8 @@ export default function OfficialSealDetail({
     );
   }
 
-  const isDirectApproved =
-    seal.status === 'APPROVED' && !seal.approvalRequestId
-      ? true
-      : Boolean(seal.directApproved);
-
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className="overflow-hidden rounded-none"
-        style={{
-          background: tokens.colorCardBg,
-          border: `1px solid ${tokens.colorBorder}`,
-        }}
-      >
-        <div className="px-3 py-4 sm:px-5">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {seal.requestNumber}
-            </span>
-            <span style={{ color: tokens.colorBorder }}>·</span>
-            <StatusBadge
-              label={formatOfficialSealStatus(seal.status, t)}
-              variant={officialSealStatusVariant(seal.status)}
-            />
-            {isDirectApproved ? (
-              <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
-            ) : null}
-            {seal.sealedDocument?.id ? (
-              <Tag color="green">{t('hr.labels.sealAttached')}</Tag>
-            ) : null}
-            {(seal.documents?.length ?? 0) > 0 ? (
-              <Tag color="blue">{t('hr.labels.documentToSealAttached')}</Tag>
-            ) : null}
-          </div>
-          <h2
-            className="m-0 text-lg font-semibold leading-snug"
-            style={{ color: tokens.colorTextPrimary }}
-          >
-            {t('pages.hr.officialSeal.detail')} — {seal.description}
-          </h2>
-          <p
-            className="mb-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {formatOfficialSealEmployeeName(seal.employee)}
-            {seal.submittedAt
-              ? ` · ${formatProjectDate(seal.submittedAt)}`
-              : null}
-          </p>
-        </div>
-      </div>
-
       <SummaryStrip
         items={[
           {

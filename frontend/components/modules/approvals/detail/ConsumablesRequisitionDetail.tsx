@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Skeleton, Tag } from 'antd';
+import { Alert, Skeleton } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   MetaItem,
@@ -8,21 +8,15 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ConsumablesRequisitionItem } from '@/lib/api/consumables-requisition.types';
 import { useConsumablesRequisition } from '@/lib/query/consumables-requisition';
-import {
-  formatConsumablesRequisitionEmployeeName,
-  formatConsumablesRequisitionStatus,
-  consumablesRequisitionStatusVariant,
-} from '@/lib/utils/consumables-requisition-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Consumables requisition body for the Approvals detail inbox (read-only).
+ * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
  */
 export default function ConsumablesRequisitionDetail({
   sourceId,
@@ -30,7 +24,6 @@ export default function ConsumablesRequisitionDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
-  const { t } = useEpcTranslation();
   const detailQuery = useConsumablesRequisition(sourceId);
   const requisition = detailQuery.data;
 
@@ -95,54 +88,6 @@ export default function ConsumablesRequisitionDetail({
 
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className="rounded-none overflow-hidden"
-        style={{
-          background: tokens.colorCardBg,
-          border: `1px solid ${tokens.colorBorder}`,
-        }}
-      >
-        <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {requisition.requestNumber}
-            </span>
-            <span style={{ color: tokens.colorBorder }}>·</span>
-            <StatusBadge
-              label={formatConsumablesRequisitionStatus(requisition.status, t)}
-              variant={consumablesRequisitionStatusVariant(requisition.status)}
-            />
-            {requisition.declarationConfirmed ? (
-              <Tag color="green">Declaration confirmed</Tag>
-            ) : null}
-          </div>
-          <h2
-            className="text-lg font-semibold leading-snug m-0"
-            style={{ color: tokens.colorTextPrimary }}
-          >
-            {requisition.title}
-          </h2>
-          <p
-            className="mt-1 text-sm m-0"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            Submitted by{' '}
-            <span
-              className="font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {formatConsumablesRequisitionEmployeeName(requisition.employee)}
-            </span>
-            {requisition.submittedAt
-              ? ` · ${formatProjectDate(requisition.submittedAt)}`
-              : null}
-          </p>
-        </div>
-      </div>
-
       <SummaryStrip
         items={[
           { label: 'Items', value: String(requisition.items.length) },

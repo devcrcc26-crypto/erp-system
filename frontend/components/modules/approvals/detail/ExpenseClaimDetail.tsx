@@ -9,22 +9,18 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ExpenseClaimItem } from '@/lib/api/expense-claim.types';
 import { useExpenseClaim } from '@/lib/query/expense-claim';
 import {
-  expenseClaimStatusVariant,
   formatCurrencyAmount,
   formatEtbAmount,
-  formatExpenseClaimEmployeeName,
-  formatExpenseClaimStatus,
 } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Expense claim body for the Approvals detail inbox.
+ * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
  */
 export default function ExpenseClaimDetail({
   sourceId,
@@ -32,7 +28,6 @@ export default function ExpenseClaimDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
-  const { t } = useEpcTranslation();
   const detailQuery = useExpenseClaim(sourceId);
   const claim = detailQuery.data;
 
@@ -95,34 +90,6 @@ export default function ExpenseClaimDetail({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Header */}
-      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-              {claim.claimNumber}
-            </span>
-            <span className="text-[var(--color-border-secondary)]">·</span>
-            <StatusBadge
-              label={formatExpenseClaimStatus(claim.status, t)}
-              variant={expenseClaimStatusVariant(claim.status)}
-            />
-          </div>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug m-0">
-            {claim.title}
-          </h2>
-          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-            Submitted by{' '}
-            <span className="font-medium text-[var(--color-text-primary)]">
-              {formatExpenseClaimEmployeeName(claim.employee)}
-            </span>
-            {claim.submittedAt
-              ? ` · ${formatProjectDate(claim.submittedAt)}`
-              : null}
-          </p>
-        </div>
-      </div>
-
       <SummaryStrip
         items={[
           { label: 'Items', value: String(claim.items.length) },
