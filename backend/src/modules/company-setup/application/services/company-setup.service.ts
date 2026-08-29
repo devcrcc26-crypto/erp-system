@@ -295,31 +295,6 @@ export class CompanySetupService {
     await this.findOrThrow('department', id, ctx.companyId);
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
-      const positions = await tx.position.findMany({
-        where: activeOnly({ companyId: ctx.companyId, departmentId: id }),
-        select: { id: true },
-      });
-      const positionIds = positions.map((position) => position.id);
-
-      if (positionIds.length > 0) {
-        await tx.user.updateMany({
-          where: {
-            companyId: ctx.companyId,
-            positionId: { in: positionIds },
-            deletedAt: null,
-          },
-          data: { positionId: null, updatedBy: ctx.userId },
-        });
-        await tx.position.updateMany({
-          where: { id: { in: positionIds } },
-          data: {
-            deletedAt: now,
-            deletedBy: ctx.userId,
-            updatedBy: ctx.userId,
-          },
-        });
-      }
-
       await tx.costCentre.updateMany({
         where: activeOnly({ companyId: ctx.companyId, departmentId: id }),
         data: {
@@ -649,11 +624,9 @@ export class CompanySetupService {
     ctx: AuditContext,
     dto: CreatePositionDto,
   ): Promise<unknown> {
-    await this.findOrThrow('department', dto.departmentId, ctx.companyId);
     return this.prisma.position.create({
       data: {
         companyId: ctx.companyId,
-        departmentId: dto.departmentId,
         title: dto.title.trim(),
         titleZh: dto.titleZh?.trim() || null,
         grade: dto.grade?.trim() || null,
@@ -670,20 +643,13 @@ export class CompanySetupService {
     dto: UpdatePositionDto,
   ): Promise<unknown> {
     await this.findOrThrow('position', id, ctx.companyId);
-    if (dto.departmentId) {
-      await this.findOrThrow('department', dto.departmentId, ctx.companyId);
-    }
     const data: {
-      departmentId?: string;
       title?: string;
       titleZh?: string | null;
       grade?: string | null;
       isActive?: boolean;
       updatedBy: string;
     } = { updatedBy: ctx.userId };
-    if (dto.departmentId !== undefined) {
-      data.departmentId = dto.departmentId;
-    }
     if (dto.title !== undefined) {
       data.title = dto.title.trim();
     }

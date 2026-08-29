@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Button, Drawer, Form, Input, Select, Switch } from 'antd';
+import { Button, Drawer, Form, Input, Switch } from 'antd';
 import {
   useCreatePosition,
-  useDepartments,
   useUpdatePosition,
   type Position,
 } from '@/lib/query/org';
@@ -13,7 +12,6 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface PositionFormValues {
-  departmentId: string;
   title: string;
   titleZh?: string;
   grade?: string;
@@ -38,13 +36,6 @@ export default function PositionFormDrawer({
   const messageApi = useAppMessage();
   const createPosition = useCreatePosition();
   const updatePosition = useUpdatePosition();
-  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, open);
-  const departmentOptions = (departmentsQuery.data?.data ?? []).map((department) => ({
-    value: department.id,
-    label: department.nameZh
-      ? `${department.name} / ${department.nameZh}`
-      : department.name,
-  }));
 
   useEffect(() => {
     if (!open) {
@@ -52,7 +43,6 @@ export default function PositionFormDrawer({
     }
     if (editing) {
       form.setFieldsValue({
-        departmentId: editing.departmentId,
         title: editing.title,
         titleZh: editing.titleZh ?? undefined,
         grade: editing.grade ?? undefined,
@@ -70,7 +60,6 @@ export default function PositionFormDrawer({
         await updatePosition.mutateAsync({
           id: editing.id,
           body: {
-            departmentId: values.departmentId,
             title: values.title.trim(),
             titleZh: values.titleZh?.trim() || undefined,
             grade: values.grade?.trim() || undefined,
@@ -80,7 +69,6 @@ export default function PositionFormDrawer({
         messageApi.success(t('pages.positions.updated'));
       } else {
         await createPosition.mutateAsync({
-          departmentId: values.departmentId,
           title: values.title.trim(),
           titleZh: values.titleZh?.trim() || undefined,
           grade: values.grade?.trim() || undefined,
@@ -135,24 +123,6 @@ export default function PositionFormDrawer({
         onFinish={(values) => void handleSubmit(values)}
       >
         <Form.Item
-          label={t('pages.positions.form.department')}
-          name="departmentId"
-          rules={[
-            {
-              required: true,
-              message: t('pages.positions.form.departmentRequired'),
-            },
-          ]}
-        >
-          <Select
-            showSearch
-            optionFilterProp="label"
-            loading={departmentsQuery.isLoading}
-            placeholder={t('pages.positions.form.departmentPlaceholder')}
-            options={departmentOptions}
-          />
-        </Form.Item>
-        <Form.Item
           label={t('pages.positions.form.title')}
           name="title"
           rules={[
@@ -161,10 +131,7 @@ export default function PositionFormDrawer({
         >
           <Input placeholder={t('pages.positions.form.titlePlaceholder')} />
         </Form.Item>
-        <Form.Item
-          label={t('pages.positions.form.titleZh')}
-          name="titleZh"
-        >
+        <Form.Item label={t('pages.positions.form.titleZh')} name="titleZh">
           <Input placeholder={t('pages.positions.form.titleZhPlaceholder')} />
         </Form.Item>
         <Form.Item label={t('pages.positions.form.grade')} name="grade">

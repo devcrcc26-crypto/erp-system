@@ -225,10 +225,6 @@ export class UpdateCostCentreDto extends PartialType(CreateCostCentreDto) {}
 export class CreatePositionDto {
   @ApiProperty()
   @IsString()
-  departmentId!: string;
-
-  @ApiProperty()
-  @IsString()
   title!: string;
 
   @ApiPropertyOptional({ description: 'Chinese title / name' })

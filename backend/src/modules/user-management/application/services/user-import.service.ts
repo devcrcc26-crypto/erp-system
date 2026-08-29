@@ -926,7 +926,7 @@ export class UserImportService {
         }),
         this.prisma.position.findMany({
           where: activeOnly({ companyId }),
-          select: { id: true, title: true },
+          select: { id: true, title: true, titleZh: true },
         }),
         this.prisma.leavePolicy.findMany({
           where: activeOnly({ companyId }),
@@ -949,12 +949,19 @@ export class UserImportService {
       ]),
     );
 
-    const positionByNormalizedTitle = new Map(
-      positions.map((position) => [
-        this.normalizeLookupKey(position.title),
-        { id: position.id, name: position.title },
-      ]),
-    );
+    const positionByNormalizedTitle = new Map<string, NamedLookup>();
+    for (const position of positions) {
+      positionByNormalizedTitle.set(this.normalizeLookupKey(position.title), {
+        id: position.id,
+        name: position.title,
+      });
+      if (position.titleZh?.trim()) {
+        positionByNormalizedTitle.set(
+          this.normalizeLookupKey(position.titleZh),
+          { id: position.id, name: position.title },
+        );
+      }
+    }
 
     const leavePolicyByNormalizedName = new Map(
       leavePolicies.map((policy) => [

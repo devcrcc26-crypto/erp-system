@@ -40,7 +40,6 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import type { PaginationMeta } from '@/lib/api/types';
 import {
   useDeletePosition,
-  useDepartments,
   usePositions,
   type Position,
 } from '@/lib/query/org';
@@ -53,7 +52,6 @@ function filterPositions(
   rows: Position[],
   search: string,
   statusMode: StatusMode,
-  departmentNameById: Map<string, string>,
 ): Position[] {
   const query = search.trim().toLowerCase();
   return rows.filter((row) => {
@@ -66,13 +64,10 @@ function filterPositions(
     if (!query) {
       return true;
     }
-    const departmentName =
-      departmentNameById.get(row.departmentId)?.toLowerCase() ?? '';
     return (
       row.title.toLowerCase().includes(query) ||
       (row.titleZh?.toLowerCase().includes(query) ?? false) ||
-      (row.grade?.toLowerCase().includes(query) ?? false) ||
-      departmentName.includes(query)
+      (row.grade?.toLowerCase().includes(query) ?? false)
     );
   });
 }
@@ -102,7 +97,6 @@ export default function PositionsPageContent(): React.ReactNode {
     { page: 1, limit: 100, isActive: false },
     canView,
   );
-  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, canView);
   const deletePosition = useDeletePosition();
 
   const allRows = useMemo(() => {
@@ -118,17 +112,6 @@ export default function PositionsPageContent(): React.ReactNode {
     });
   }, [activePositionsQuery.data?.data, inactivePositionsQuery.data?.data]);
 
-  const departmentNameById = useMemo(
-    () =>
-      new Map(
-        (departmentsQuery.data?.data ?? []).map((department) => [
-          department.id,
-          department.name,
-        ]),
-      ),
-    [departmentsQuery.data],
-  );
-
   const stats = useMemo(
     () => ({
       total: allRows.length,
@@ -139,9 +122,8 @@ export default function PositionsPageContent(): React.ReactNode {
   );
 
   const filtered = useMemo(
-    () =>
-      filterPositions(allRows, appliedSearch, statusMode, departmentNameById),
-    [allRows, appliedSearch, statusMode, departmentNameById],
+    () => filterPositions(allRows, appliedSearch, statusMode),
+    [allRows, appliedSearch, statusMode],
   );
 
   const meta: PaginationMeta = useMemo(() => {
@@ -163,13 +145,9 @@ export default function PositionsPageContent(): React.ReactNode {
 
   const hasFilters = Boolean(appliedSearch.trim()) || statusMode !== 'all';
   const listLoading =
-    activePositionsQuery.isLoading ||
-    inactivePositionsQuery.isLoading ||
-    departmentsQuery.isLoading;
+    activePositionsQuery.isLoading || inactivePositionsQuery.isLoading;
   const listFetching =
-    activePositionsQuery.isFetching ||
-    inactivePositionsQuery.isFetching ||
-    departmentsQuery.isFetching;
+    activePositionsQuery.isFetching || inactivePositionsQuery.isFetching;
 
   function refetchLists(): void {
     void activePositionsQuery.refetch();
@@ -241,13 +219,6 @@ export default function PositionsPageContent(): React.ReactNode {
         ),
       },
       {
-        title: t('pages.positions.table.department'),
-        key: 'department',
-        responsive: ['md'],
-        render: (_value, record) =>
-          departmentNameById.get(record.departmentId) ?? '—',
-      },
-      {
         title: t('pages.positions.table.grade'),
         dataIndex: 'grade',
         key: 'grade',
@@ -290,7 +261,7 @@ export default function PositionsPageContent(): React.ReactNode {
         ),
       },
     ],
-    [canManage, departmentNameById, t],
+    [canManage, t],
   );
 
   if (

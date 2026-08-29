@@ -1655,7 +1655,6 @@ async function main(): Promise<void> {
     create: {
       id: '00000000-0000-4000-8000-000000000020',
       companyId: company.id,
-      departmentId: department.id,
       title: 'System Administrator',
       grade: 'L5',
       isActive: true,

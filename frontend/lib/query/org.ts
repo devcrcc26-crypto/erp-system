@@ -45,7 +45,6 @@ export interface DepartmentRow {
 export interface Position {
   id: string;
   companyId: string;
-  departmentId: string;
   title: string;
   titleZh: string | null;
   grade: string | null;
@@ -265,7 +264,6 @@ export function useCreatePosition() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: {
-      departmentId: string;
       title: string;
       titleZh?: string;
       grade?: string;
@@ -286,7 +284,6 @@ export function useUpdatePosition() {
     }: {
       id: string;
       body: {
-        departmentId?: string;
         title?: string;
         titleZh?: string;
         grade?: string;

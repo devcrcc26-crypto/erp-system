@@ -102,7 +102,6 @@ export default function AddEmployeeForm({
   const isEdit = Boolean(userId);
 
   const emailValue = Form.useWatch('email', form);
-  const departmentIdValue = Form.useWatch('departmentId', form);
   const hasEmail = Boolean(emailValue?.trim());
   const formValues = Form.useWatch([], form) as AddEmployeeFormValues | undefined;
 
@@ -130,17 +129,18 @@ export default function AddEmployeeForm({
   );
 
   const allPositions = positionsQuery.data?.data ?? [];
-  const positionOptions = useMemo(() => {
-    const filtered = departmentIdValue
-      ? allPositions.filter((position) => position.departmentId === departmentIdValue)
-      : allPositions.filter((position) => position.isActive);
-    return filtered.map((position) => ({
-      value: position.id,
-      label: position.titleZh
-        ? `${position.title} / ${position.titleZh}`
-        : position.title,
-    }));
-  }, [allPositions, departmentIdValue]);
+  const positionOptions = useMemo(
+    () =>
+      allPositions
+        .filter((position) => position.isActive)
+        .map((position) => ({
+          value: position.id,
+          label: position.titleZh
+            ? `${position.title} / ${position.titleZh}`
+            : position.title,
+        })),
+    [allPositions],
+  );
 
   const currentRoleId = userQuery.data ? resolvePrimaryRoleId(userQuery.data) ?? '' : '';
 
@@ -158,16 +158,6 @@ export default function AddEmployeeForm({
     revokeRole.isPending ||
     uploadDocuments.isPending ||
     uploadPhoto.isPending;
-
-  function handleDepartmentChange(nextDepartmentId?: string): void {
-    const currentPositionId = form.getFieldValue('positionId') as string | undefined;
-    if (currentPositionId) {
-      const currentPosition = allPositions.find((p) => p.id === currentPositionId);
-      if (currentPosition && currentPosition.departmentId !== nextDepartmentId) {
-        form.setFieldValue('positionId', undefined);
-      }
-    }
-  }
 
   function resetForm(): void {
     if (isEdit && userQuery.data) {
@@ -433,7 +423,6 @@ export default function AddEmployeeForm({
                     placeholder={t('users.filterDepartment')}
                     options={departmentOptions}
                     optionFilterProp="label"
-                    onChange={handleDepartmentChange}
                   />
                 </Form.Item>
                 <Form.Item label={t('users.form.position')} name="positionId">
@@ -574,8 +563,6 @@ export default function AddEmployeeForm({
       pendingDocuments,
       pendingPhoto,
       formValues,
-      departmentIdValue,
-      allPositions,
       form,
     ],
   );
