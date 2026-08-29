@@ -4,6 +4,7 @@ import { Suspense, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PriorSessionNotice } from '@/components/auth/PriorSessionNotice';
+import AuthCenteredShell from '@/components/auth/AuthCenteredShell';
 import { usePrepareIdentityAuthFlow } from '@/hooks/usePrepareIdentityAuthFlow';
 import { useActivateAccount } from '@/lib/query/auth';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -131,14 +132,16 @@ function ActivateForm(): React.ReactNode {
 
 export default function ActivatePage(): React.ReactNode {
   return (
-    <Suspense
-      fallback={
-        <div className="w-full min-w-0 max-w-md rounded-md border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm sm:p-8">
-          Loading...
-        </div>
-      }
-    >
-      <ActivateForm />
-    </Suspense>
+    <AuthCenteredShell>
+      <Suspense
+        fallback={
+          <div className="w-full min-w-0 rounded-none border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm sm:p-8">
+            Loading...
+          </div>
+        }
+      >
+        <ActivateForm />
+      </Suspense>
+    </AuthCenteredShell>
   );
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrepareIdentityAuthFlow } from '@/hooks/usePrepareIdentityAuthFlow';
+import AuthCenteredShell from '@/components/auth/AuthCenteredShell';
 import { apiPost } from '@/lib/api/client';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { MessageResponse } from '@/lib/api/types';
@@ -112,14 +113,16 @@ function ConfirmEmailChangeContent(): React.ReactNode {
 
 export default function ConfirmEmailChangePage(): React.ReactNode {
   return (
-    <Suspense
-      fallback={
-        <div className="w-full min-w-0 max-w-md rounded-md border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm sm:p-8">
-          Loading…
-        </div>
-      }
-    >
-      <ConfirmEmailChangeContent />
-    </Suspense>
+    <AuthCenteredShell>
+      <Suspense
+        fallback={
+          <div className="w-full min-w-0 rounded-none border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm sm:p-8">
+            Loading…
+          </div>
+        }
+      >
+        <ConfirmEmailChangeContent />
+      </Suspense>
+    </AuthCenteredShell>
   );
 }
