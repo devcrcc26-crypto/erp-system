@@ -3,6 +3,7 @@
 'use client';
 
 import { MenuOutlined } from '@ant-design/icons';
+import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
 import Breadcrumbs from '@/components/ui/shell/Breadcrumbs';
 import HeaderActions from '@/components/ui/PageHeader/HeaderActions';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -61,6 +62,8 @@ export default function MainContentHeader({
               <MenuOutlined style={{ fontSize: 16 }} />
             </button>
           )}
+
+          <BrandLogo size={28} className="shrink-0 rounded-[6px] lg:hidden" />
 
           <div className="min-w-0 flex-1">
             <h1

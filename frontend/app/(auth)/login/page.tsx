@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Alert, Button, Form, Input, Spin } from 'antd';
@@ -110,6 +111,16 @@ function LoginForm(): React.ReactNode {
       >
         <div className="p-5 sm:p-8">
           <div className="mb-6 text-center sm:mb-8">
+            <div className="mb-3 flex justify-center">
+              <Image
+                src="/ccecc-logo.png"
+                alt="CCECC"
+                width={72}
+                height={72}
+                className="object-contain"
+                priority
+              />
+            </div>
             <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
               CCECC
             </h1>

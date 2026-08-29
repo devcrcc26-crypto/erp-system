@@ -48,6 +48,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSidebarGroupOpen } from '@/hooks/useSidebarGroupOpen';
 import { tokens } from '@/lib/theme/tokens';
 import { SHELL_TOP_HEADER_HEIGHT } from '@/components/ui/shell/shell-layout';
+import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
 
 function railItemClass(isActive: boolean, isExpanded: boolean): string {
   const base =
@@ -329,13 +330,7 @@ export default function MainNavPanel({
       >
         {isExpanded ? (
           <div className="flex min-w-0 items-center gap-2.5">
-            <div
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-[11px] font-medium text-white"
-              style={{ backgroundColor: tokens.colorSidebarAccent }}
-              aria-hidden
-            >
-              {t('shell.brandShort')}
-            </div>
+            <BrandLogo size={28} className="shrink-0 rounded-[7px]" />
             <h1
               className="m-0 truncate text-[14px] font-semibold tracking-[-0.01em]"
               style={{
@@ -348,12 +343,11 @@ export default function MainNavPanel({
           </div>
         ) : (
           <div
-            className="flex h-7 w-7 items-center justify-center rounded-[7px] text-[11px] font-medium text-white"
-            style={{ backgroundColor: tokens.colorSidebarAccent }}
+            className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-[7px]"
             title={t('shell.brandTitle')}
             aria-label={t('shell.brandWorkspace')}
           >
-            {t('shell.brandShort')}
+            <BrandLogo size={28} />
           </div>
         )}
       </div>
