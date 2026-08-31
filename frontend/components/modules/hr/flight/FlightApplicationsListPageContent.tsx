@@ -674,7 +674,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             columns={columns}
             dataSource={rows}
             loading={listQuery.isFetching && !listQuery.isLoading}
-            scroll={{ x: 'max-content' }}
+            scroll={false}
             onRow={(record) => ({
               onClick: () => router.push(`/hr/flight-applications/${record.id}`),
               className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',

@@ -388,6 +388,30 @@ main::-webkit-scrollbar,
   overflow-y: visible !important;
 }
 
+/* Pro list tables: expand to column widths; parent .erp-table-scroll handles overflow */
+.erp-table-scroll .erp-data-table.erp-pro-table .ant-table-content > table {
+  width: max-content;
+  min-width: 100%;
+}
+
+/* Ant Design measure row (scroll.x) — keep collapsed when thead padding overrides apply */
+.erp-data-table .ant-table-thead > tr.ant-table-measure-row,
+.erp-pro-table .ant-table-thead > tr.ant-table-measure-row {
+  height: 0 !important;
+  line-height: 0 !important;
+}
+
+.erp-data-table .ant-table-thead > tr.ant-table-measure-row > th,
+.erp-data-table .ant-table-thead > tr.ant-table-measure-row > td,
+.erp-pro-table .ant-table-thead > tr.ant-table-measure-row > th,
+.erp-pro-table .ant-table-thead > tr.ant-table-measure-row > td {
+  padding: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+}
+
 /* Shell breadcrumb - Ant Design trail in main header */
 .shell-breadcrumb.ant-breadcrumb {
   font-size: calc(13px * var(--erp-font-scale));
@@ -531,7 +555,7 @@ main::-webkit-scrollbar,
   border-radius: 0 !important;
 }
 
-.erp-pro-table .ant-table-thead > tr > th {
+.erp-pro-table .ant-table-thead > tr:not(.ant-table-measure-row) > th {
   background: #fafafa !important;
   padding: 14px 16px !important;
   font-size: calc(15px * var(--erp-font-scale)) !important;
@@ -769,8 +793,8 @@ main::-webkit-scrollbar,
 }
 
 /* Pro list tables — must follow erp-data-table so these win when both classes apply */
-.erp-data-table.erp-pro-table .ant-table-thead > tr > th,
-.erp-data-table.erp-pro-table .ant-table-thead > tr > th.ant-table-cell {
+.erp-data-table.erp-pro-table .ant-table-thead > tr:not(.ant-table-measure-row) > th,
+.erp-data-table.erp-pro-table .ant-table-thead > tr:not(.ant-table-measure-row) > th.ant-table-cell {
   background: #fafafa !important;
   padding: 14px 16px !important;
   font-size: calc(13.5px * var(--erp-font-scale)) !important;
@@ -948,9 +972,9 @@ main::-webkit-scrollbar,
     max-width: 100% !important;
   }
 
-  .erp-pro-table .ant-table-thead > tr > th,
-  .erp-data-table.erp-pro-table .ant-table-thead > tr > th,
-  .erp-data-table.erp-pro-table .ant-table-thead > tr > th.ant-table-cell {
+  .erp-pro-table .ant-table-thead > tr:not(.ant-table-measure-row) > th,
+  .erp-data-table.erp-pro-table .ant-table-thead > tr:not(.ant-table-measure-row) > th,
+  .erp-data-table.erp-pro-table .ant-table-thead > tr:not(.ant-table-measure-row) > th.ant-table-cell {
     padding: 10px 12px !important;
   }
 
