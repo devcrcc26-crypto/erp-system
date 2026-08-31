@@ -3,6 +3,7 @@
 import { Segmented } from 'antd';
 import HrDashboard from '@/components/modules/dashboard/HrDashboard';
 import PmDashboard from '@/components/modules/dashboard/PmDashboard';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 
 export type GmDashboardTab = 'pm' | 'hr';
@@ -21,13 +22,15 @@ export default function GmDashboard({
   onTabChange: (tab: GmDashboardTab) => void;
   enabled?: boolean;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
+
   useSetHeaderExtra(
     <Segmented
       value={tab}
       onChange={(value) => onTabChange(value as GmDashboardTab)}
       options={[
-        { label: 'PM Overview', value: 'pm' },
-        { label: 'HR Overview', value: 'hr' },
+        { label: t('pages.dashboard.gm.pmOverview'), value: 'pm' },
+        { label: t('pages.dashboard.gm.hrOverview'), value: 'hr' },
       ]}
     />,
   );

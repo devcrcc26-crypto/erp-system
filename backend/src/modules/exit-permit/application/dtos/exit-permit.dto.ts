@@ -21,10 +21,8 @@ enum ExitPermitDirection{
 
 export class CreateExitPermitDto{
     @ApiProperty()
-    @IsString()
-    @IsNotEmpty()
-    @MaxLength(100)
-    employeeId?: string;
+    @IsUUID()
+    employeeId!: string;
 
     @ApiPropertyOptional()
     @IsOptional()
@@ -39,6 +37,7 @@ export class CreateExitPermitDto{
 
     @ApiPropertyOptional()
     @IsOptional()
+    @Type(() => Date)
     @IsDate()
     date?: Date;
 
@@ -54,14 +53,12 @@ export class CreateExitPermitDto{
 export class UpdateExitPermitDto{
     @ApiPropertyOptional()
     @IsOptional()
-    @IsString()
-    @MaxLength(100)
+    @IsUUID()
     employeeId?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
-    @IsString()
-    @MaxLength(100)
+    @IsUUID()
     departmentId?: string;
 
     @ApiPropertyOptional()
@@ -71,6 +68,7 @@ export class UpdateExitPermitDto{
 
     @ApiPropertyOptional()
     @IsOptional()
+    @Type(() => Date)
     @IsDate()
     date?: Date;
 
@@ -93,7 +91,7 @@ export class CreateExitPermitItemDto{
     @IsOptional()
     @IsString()
     @MaxLength(100)
-    issue?: String;
+    issue?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
@@ -118,7 +116,7 @@ export class UpdateExitPermitItemDto{
     @IsOptional()
     @IsString()
     @MaxLength(100)
-    issue?: String;
+    issue?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
@@ -164,9 +162,7 @@ export class ListExitPermitsDto{
     @IsString()
     search?: string;
 
-    @ApiPropertyOptional({
-        description: 'Comma-separated ExitPermitStatus values',
-    })
+    @ApiPropertyOptional()
     @IsOptional()
     @IsString()
     status?: ExitPermitStatus;
@@ -178,11 +174,13 @@ export class ListExitPermitsDto{
 
     @ApiPropertyOptional()
     @IsOptional()
+    @Type(() => Date)
     @IsDate()
     dateFrom?: Date;
 
     @ApiPropertyOptional()
     @IsOptional()
+    @Type(() => Date)
     @IsDate()
     dateTo?: Date;
 }

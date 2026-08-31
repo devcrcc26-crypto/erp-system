@@ -412,16 +412,40 @@
       }
     },
     "dashboard": {
+      "gm": {
+        "pmOverview": "PM Overview",
+        "hrOverview": "HR Overview"
+      },
       "hr": {
         "title": "HR Dashboard",
         "subtitle": "Workforce requests, leave, and HR workflows at a glance.",
-        "recentLeave": "Recent leave requests",
-        "noRecentLeave": "No leave requests yet.",
+        "loadFailed": "Unable to load HR dashboard.",
+        "viewAll": "View all →",
         "viewAllLeave": "View all leave requests",
+        "daysShort": "{{days}}d",
+        "greeting": {
+          "morning": "Good morning",
+          "afternoon": "Good afternoon",
+          "evening": "Good evening",
+          "fallbackName": "there"
+        },
+        "recentLeave": "Recent leave",
+        "noRecentLeave": "No leave requests yet.",
         "quickLinks": "HR shortcuts",
         "kpi": {
+          "employees": "Employees",
+          "onLeave": "On leave",
+          "thisWeek": "This week",
           "pendingLeave": "Pending leave",
           "pendingLeaveHint": "Submitted or in review",
+          "pendingOvertime": "Pending overtime",
+          "flightTickets": "Flight tickets",
+          "bookingRequired": "Booking required",
+          "contractsExpiring": "Contracts expiring",
+          "within90Days": "Within 90 days",
+          "noLeavePolicy": "No leave policy",
+          "needsAssignment": "Needs assignment",
+          "allAssigned": "All assigned",
           "approvedLeave": "Approved leave",
           "approvedLeaveHint": "Company-wide approved",
           "leaveModule": "Leave requests",
@@ -429,6 +453,49 @@
           "users": "Users",
           "usersHint": "Manage people & roles",
           "open": "Open"
+        },
+        "chart": {
+          "leaveTrend": {
+            "title": "Leave request trend",
+            "subtitle": "Approved vs rejected over 6 months"
+          },
+          "leaveMix": {
+            "title": "Leave mix",
+            "subtitle": "Last 6 months by type"
+          },
+          "requests": "Requests",
+          "requestsCount": "{{count}} requests",
+          "legend": {
+            "total": "Total",
+            "approved": "Approved",
+            "rejected": "Rejected"
+          },
+          "pendingApprovals": {
+            "title": "Pending approvals",
+            "subtitle": "{{total}} open across {{count}} modules"
+          },
+          "pendingCount": "{{count}} pending",
+          "count": "Count",
+          "pending": "Pending",
+          "headcount": {
+            "title": "Headcount",
+            "subtitle": "Active employees by department"
+          },
+          "employees": "Employees",
+          "overtime": {
+            "title": "Overtime hours",
+            "subtitle": "Top employees this month"
+          },
+          "hours": "Hours"
+        },
+        "upcomingTravel": {
+          "title": "Upcoming travel",
+          "subtitle": "Next 30 days",
+          "empty": "No upcoming travel",
+          "passengerCount": "{{count}} passenger",
+          "passengerCountPlural": "{{count}} passengers",
+          "flight": "Flight",
+          "businessTrip": "Business Trip"
         },
         "links": {
           "leave": "Review and process employee leave",

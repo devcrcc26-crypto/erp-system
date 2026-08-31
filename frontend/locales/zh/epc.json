@@ -412,16 +412,40 @@
       }
     },
     "dashboard": {
+      "gm": {
+        "pmOverview": "项目概览",
+        "hrOverview": "人力资源概览"
+      },
       "hr": {
         "title": "人力资源仪表板",
         "subtitle": "一眼查看员工申请、请假与 HR 工作流。",
-        "recentLeave": "最近请假申请",
-        "noRecentLeave": "暂无请假申请。",
+        "loadFailed": "无法加载人力资源仪表板。",
+        "viewAll": "查看全部 →",
         "viewAllLeave": "查看全部请假",
+        "daysShort": "{{days}} 天",
+        "greeting": {
+          "morning": "早上好",
+          "afternoon": "下午好",
+          "evening": "晚上好",
+          "fallbackName": "您好"
+        },
+        "recentLeave": "最近请假",
+        "noRecentLeave": "暂无请假申请。",
         "quickLinks": "HR 快捷入口",
         "kpi": {
+          "employees": "员工",
+          "onLeave": "休假中",
+          "thisWeek": "本周",
           "pendingLeave": "待处理请假",
           "pendingLeaveHint": "已提交或审批中",
+          "pendingOvertime": "待处理加班",
+          "flightTickets": "机票",
+          "bookingRequired": "待预订",
+          "contractsExpiring": "合同即将到期",
+          "within90Days": "90 天内",
+          "noLeavePolicy": "未配置假期政策",
+          "needsAssignment": "需要分配",
+          "allAssigned": "已全部分配",
           "approvedLeave": "已批准请假",
           "approvedLeaveHint": "全公司已批准",
           "leaveModule": "请假申请",
@@ -429,6 +453,49 @@
           "users": "用户",
           "usersHint": "管理人员与角色",
           "open": "打开"
+        },
+        "chart": {
+          "leaveTrend": {
+            "title": "请假申请趋势",
+            "subtitle": "近 6 个月批准与拒绝"
+          },
+          "leaveMix": {
+            "title": "请假类型分布",
+            "subtitle": "近 6 个月按类型"
+          },
+          "requests": "申请",
+          "requestsCount": "{{count}} 条申请",
+          "legend": {
+            "total": "合计",
+            "approved": "已批准",
+            "rejected": "已拒绝"
+          },
+          "pendingApprovals": {
+            "title": "待审批",
+            "subtitle": "{{count}} 个模块共 {{total}} 项待处理"
+          },
+          "pendingCount": "{{count}} 项待处理",
+          "count": "数量",
+          "pending": "待处理",
+          "headcount": {
+            "title": "人员编制",
+            "subtitle": "各部门在职员工"
+          },
+          "employees": "员工",
+          "overtime": {
+            "title": "加班工时",
+            "subtitle": "本月加班最多的员工"
+          },
+          "hours": "小时"
+        },
+        "upcomingTravel": {
+          "title": "近期出差",
+          "subtitle": "未来 30 天",
+          "empty": "暂无出差安排",
+          "passengerCount": "{{count}} 位乘客",
+          "passengerCountPlural": "{{count}} 位乘客",
+          "flight": "机票",
+          "businessTrip": "出差"
         },
         "links": {
           "leave": "审核与处理员工请假",

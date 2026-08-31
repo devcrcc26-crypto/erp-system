@@ -119,12 +119,20 @@ const TOOLTIP_STYLE = {
 
 const AXIS_TICK = { fontSize: 11, fill: '#6B7280' } as const;
 
-const ViewAllLink = ({ href }: { href: string }): React.ReactNode => (
+const HR = 'pages.dashboard.hr';
+
+const ViewAllLink = ({
+  href,
+  label,
+}: {
+  href: string;
+  label: string;
+}): React.ReactNode => (
   <Link
     href={href}
     className="text-xs font-medium text-[#1D9E75] no-underline hover:text-[#0F6E56]"
   >
-    View all →
+    {label}
   </Link>
 );
 
@@ -150,7 +158,7 @@ export default function HrDashboard({
 }: {
   enabled?: boolean;
 }): React.ReactNode {
-  const { t } = useEpcTranslation();
+  const { t, locale } = useEpcTranslation();
   const user = useAuthStore((state) => state.user);
   const hrQuery = useHrDashboard(enabled);
   const hr = hrQuery.data;
@@ -168,17 +176,22 @@ export default function HrDashboard({
     return (
       <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
         <p className="m-0 text-sm text-[var(--color-text-tertiary)]">
-          Unable to load HR dashboard.
+          {t(`${HR}.loadFailed`)}
         </p>
       </div>
     );
   }
 
-  const firstName = user?.firstName ?? 'there';
+  const firstName = user?.firstName ?? t(`${HR}.greeting.fallbackName`);
   const hour = new Date().getHours();
   const greeting =
-    hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const today = new Date().toLocaleDateString('en-GB', {
+    hour < 12
+      ? t(`${HR}.greeting.morning`)
+      : hour < 17
+        ? t(`${HR}.greeting.afternoon`)
+        : t(`${HR}.greeting.evening`);
+  const dateLocale = locale === 'zh' ? 'zh-CN' : 'en-GB';
+  const today = new Date().toLocaleDateString(dateLocale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -229,35 +242,35 @@ export default function HrDashboard({
           {greeting}, {firstName}
         </h1>
         <p className="m-0 mt-1 text-sm text-[var(--color-text-tertiary)]">
-          HR Dashboard · {today}
+          {t(`${HR}.title`)} · {today}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
-          label="Employees"
+          label={t(`${HR}.kpi.employees`)}
           value={hr.totalEmployees}
           color="teal"
           icon={<TeamOutlined />}
           href="/users"
         />
         <StatCard
-          label="On leave"
+          label={t(`${HR}.kpi.onLeave`)}
           value={hr.onLeaveThisWeek}
-          sub="This week"
+          sub={t(`${HR}.kpi.thisWeek`)}
           color="amber"
           icon={<CalendarOutlined />}
           href="/hr/leave-requests"
         />
         <StatCard
-          label="Pending leave"
+          label={t(`${HR}.kpi.pendingLeave`)}
           value={hr.pendingLeaveRequests}
           color={hr.pendingLeaveRequests > 0 ? 'blue' : 'default'}
           icon={<ClockCircleOutlined />}
           href="/hr/leave-requests"
         />
         <StatCard
-          label="Pending overtime"
+          label={t(`${HR}.kpi.pendingOvertime`)}
           value={hr.pendingOvertimeSheets}
           color={hr.pendingOvertimeSheets > 0 ? 'blue' : 'default'}
           icon={<FieldTimeOutlined />}
@@ -267,28 +280,28 @@ export default function HrDashboard({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard
-          label="Flight tickets"
+          label={t(`${HR}.kpi.flightTickets`)}
           value={hr.pendingFlightBookings}
-          sub="Booking required"
+          sub={t(`${HR}.kpi.bookingRequired`)}
           color={hr.pendingFlightBookings > 0 ? 'amber' : 'default'}
           icon={<SendOutlined />}
           href="/hr/flight-applications"
         />
         <StatCard
-          label="Contracts expiring"
+          label={t(`${HR}.kpi.contractsExpiring`)}
           value={hr.contractsExpiringSoon ?? 0}
-          sub="Within 90 days"
+          sub={t(`${HR}.kpi.within90Days`)}
           color={(hr.contractsExpiringSoon ?? 0) > 0 ? 'red' : 'default'}
           icon={<FileOutlined />}
           href="/hr/employee-contract"
         />
         <StatCard
-          label="No leave policy"
+          label={t(`${HR}.kpi.noLeavePolicy`)}
           value={hr.employeesWithoutPolicy ?? 0}
           sub={
             (hr.employeesWithoutPolicy ?? 0) > 0
-              ? 'Needs assignment'
-              : 'All assigned'
+              ? t(`${HR}.kpi.needsAssignment`)
+              : t(`${HR}.kpi.allAssigned`)
           }
           color={(hr.employeesWithoutPolicy ?? 0) > 0 ? 'amber' : 'default'}
           icon={<WarningOutlined />}
@@ -305,8 +318,8 @@ export default function HrDashboard({
               }
             >
               <ChartCard
-                title="Leave request trend"
-                subtitle="Approved vs rejected over 6 months"
+                title={t(`${HR}.chart.leaveTrend.title`)}
+                subtitle={t(`${HR}.chart.leaveTrend.subtitle`)}
                 icon={<CalendarOutlined />}
               >
                 <ResponsiveContainer width="100%" height={280}>
@@ -365,7 +378,7 @@ export default function HrDashboard({
                     <Area
                       type="monotone"
                       dataKey="total"
-                      name="Total"
+                      name={t(`${HR}.chart.legend.total`)}
                       stroke="#1D9E75"
                       strokeWidth={2.5}
                       fill="url(#hrTotalArea)"
@@ -374,14 +387,14 @@ export default function HrDashboard({
                     />
                     <Bar
                       dataKey="approved"
-                      name="Approved"
+                      name={t(`${HR}.chart.legend.approved`)}
                       fill="url(#hrApprovedFill)"
                       radius={[6, 6, 0, 0]}
                       maxBarSize={28}
                     />
                     <Bar
                       dataKey="rejected"
-                      name="Rejected"
+                      name={t(`${HR}.chart.legend.rejected`)}
                       fill="url(#hrRejectedFill)"
                       radius={[6, 6, 0, 0]}
                       maxBarSize={28}
@@ -399,8 +412,8 @@ export default function HrDashboard({
               }
             >
               <ChartCard
-                title="Leave mix"
-                subtitle="Last 6 months by type"
+                title={t(`${HR}.chart.leaveMix.title`)}
+                subtitle={t(`${HR}.chart.leaveMix.subtitle`)}
                 icon={<CalendarOutlined />}
               >
                 <div className="grid h-[280px] grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -426,7 +439,9 @@ export default function HrDashboard({
                         <Tooltip
                           contentStyle={TOOLTIP_STYLE}
                           formatter={(value, name) => [
-                            `${String(value)} requests`,
+                            t(`${HR}.chart.requestsCount`, {
+                              count: String(value),
+                            }),
                             String(name),
                           ]}
                         />
@@ -437,7 +452,7 @@ export default function HrDashboard({
                         {leaveTypeTotal}
                       </p>
                       <p className="m-0 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]">
-                        Requests
+                        {t(`${HR}.chart.requests`)}
                       </p>
                     </div>
                   </div>
@@ -479,8 +494,11 @@ export default function HrDashboard({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {pendingByModule.length > 0 ? (
             <ChartCard
-              title="Pending approvals"
-              subtitle={`${pendingTotal} open across ${pendingByModule.length} modules`}
+              title={t(`${HR}.chart.pendingApprovals.title`)}
+              subtitle={t(`${HR}.chart.pendingApprovals.subtitle`, {
+                total: pendingTotal,
+                count: pendingByModule.length,
+              })}
               icon={<ClockCircleOutlined />}
             >
               <ResponsiveContainer width="100%" height={280}>
@@ -544,13 +562,13 @@ export default function HrDashboard({
                       return row?.module ?? '';
                     }}
                     formatter={(value) => [
-                      `${String(value)} pending`,
-                      'Count',
+                      t(`${HR}.chart.pendingCount`, { count: String(value) }),
+                      t(`${HR}.chart.count`),
                     ]}
                   />
                   <Bar
                     dataKey="pending"
-                    name="Pending"
+                    name={t(`${HR}.chart.pending`)}
                     radius={[8, 8, 0, 0]}
                     maxBarSize={72}
                   >
@@ -578,8 +596,8 @@ export default function HrDashboard({
 
           {headcountByDepartment.length > 0 ? (
             <ChartCard
-              title="Headcount"
-              subtitle="Active employees by department"
+              title={t(`${HR}.chart.headcount.title`)}
+              subtitle={t(`${HR}.chart.headcount.subtitle`)}
               icon={<TeamOutlined />}
             >
               <ResponsiveContainer width="100%" height={headcountChartHeight}>
@@ -634,7 +652,7 @@ export default function HrDashboard({
                   />
                   <Bar
                     dataKey="count"
-                    name="Employees"
+                    name={t(`${HR}.chart.employees`)}
                     radius={[0, 8, 8, 0]}
                     maxBarSize={18}
                   >
@@ -654,8 +672,8 @@ export default function HrDashboard({
 
       {hr.overtimeThisMonth.length > 0 ? (
         <ChartCard
-          title="Overtime hours"
-          subtitle="Top employees this month"
+          title={t(`${HR}.chart.overtime.title`)}
+          subtitle={t(`${HR}.chart.overtime.subtitle`)}
           icon={<FieldTimeOutlined />}
         >
           <ResponsiveContainer width="100%" height={overtimeChartHeight}>
@@ -697,7 +715,7 @@ export default function HrDashboard({
               />
               <Bar
                 dataKey="totalHours"
-                name="Hours"
+                name={t(`${HR}.chart.hours`)}
                 fill="url(#otBarGrad)"
                 radius={[0, 8, 8, 0]}
                 maxBarSize={18}
@@ -709,13 +727,15 @@ export default function HrDashboard({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Recent leave"
+          title={t(`${HR}.recentLeave`)}
           icon={<CalendarOutlined />}
-          action={<ViewAllLink href="/hr/leave-requests" />}
+          action={
+            <ViewAllLink href="/hr/leave-requests" label={t(`${HR}.viewAll`)} />
+          }
         >
           {hr.recentLeaveRequests.length === 0 ? (
             <p className="m-0 text-sm text-[var(--color-text-tertiary)]">
-              No leave requests yet.
+              {t(`${HR}.noRecentLeave`)}
             </p>
           ) : (
             <div className="divide-y divide-[rgba(0,0,0,0.06)]">
@@ -735,7 +755,8 @@ export default function HrDashboard({
                         {req.employeeName}
                       </p>
                       <p className="m-0 mt-0.5 text-xs text-[var(--color-text-tertiary)]">
-                        {formatLeaveType(req.leaveType, t)} · {req.days}d ·{' '}
+                        {formatLeaveType(req.leaveType, t)} ·{' '}
+                        {t(`${HR}.daysShort`, { days: req.days })} ·{' '}
                         {formatProjectDate(req.startDate)}
                       </p>
                     </div>
@@ -751,13 +772,13 @@ export default function HrDashboard({
         </ChartCard>
 
         <ChartCard
-          title="Upcoming travel"
-          subtitle="Next 30 days"
+          title={t(`${HR}.upcomingTravel.title`)}
+          subtitle={t(`${HR}.upcomingTravel.subtitle`)}
           icon={<SendOutlined />}
         >
           {hr.upcomingTravel.length === 0 ? (
             <p className="m-0 py-6 text-center text-sm text-[var(--color-text-tertiary)]">
-              No upcoming travel
+              {t(`${HR}.upcomingTravel.empty`)}
             </p>
           ) : (
             <div className="divide-y divide-[rgba(0,0,0,0.06)]">
@@ -779,14 +800,23 @@ export default function HrDashboard({
                         {trip.destination}
                       </p>
                       <p className="m-0 mt-0.5 text-xs text-[var(--color-text-tertiary)]">
-                        {trip.number} · {trip.passengerCount} passenger
-                        {trip.passengerCount !== 1 ? 's' : ''} ·{' '}
-                        {formatProjectDate(trip.departureDate)}
+                        {trip.number} ·{' '}
+                        {t(
+                          trip.passengerCount !== 1
+                            ? `${HR}.upcomingTravel.passengerCountPlural`
+                            : `${HR}.upcomingTravel.passengerCount`,
+                          { count: trip.passengerCount },
+                        )}{' '}
+                        · {formatProjectDate(trip.departureDate)}
                       </p>
                     </div>
                   </div>
                   <StatusBadge
-                    label={trip.type === 'FLIGHT' ? 'Flight' : 'Business Trip'}
+                    label={
+                      trip.type === 'FLIGHT'
+                        ? t(`${HR}.upcomingTravel.flight`)
+                        : t(`${HR}.upcomingTravel.businessTrip`)
+                    }
                     variant={trip.type === 'FLIGHT' ? 'info' : 'default'}
                   />
                 </div>
