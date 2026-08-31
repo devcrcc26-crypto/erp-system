@@ -1452,6 +1452,7 @@
       "identity": "Vehicle identity",
       "specifications": "Specifications",
       "assignment": "Assignment & notes",
+      "photo": "Vehicle photo",
       "review": "Review & submit"
     },
     "form": {
@@ -1460,6 +1461,11 @@
       "identityHelp": "Plate number and vehicle classification.",
       "specificationsHelp": "Make, model, year, and color.",
       "assignmentHelp": "Optional assigned driver, active flag, and notes.",
+      "photoStepHelp": "Add an optional photo to identify the vehicle in the fleet register.",
+      "photoOptionalHint": "JPEG, PNG, WebP, or GIF up to 5 MB. You can skip this step.",
+      "photoReplaceHint": "Choose a new file below to replace the current photo when you save.",
+      "photo": "Photo",
+      "photoHelp": "Upload a clear photo of the vehicle for quick identification.",
       "vehicleType": "Vehicle type",
       "fuelType": "Fuel type",
       "color": "Color",
@@ -1478,7 +1484,18 @@
       "color": "e.g. White",
       "assignedDriver": "Select driver",
       "notes": "Optional notes about this vehicle"
-    }
+    },
+    "uploadPhoto": "Choose photo",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove photo",
+    "removePhotoTitle": "Remove vehicle photo?",
+    "removePhotoDescription": "The photo will be deleted from document storage.",
+    "photoUploaded": "Vehicle photo uploaded.",
+    "photoRemoved": "Vehicle photo removed.",
+    "photoUploadError": "Failed to upload vehicle photo.",
+    "photoRemoveError": "Failed to remove vehicle photo.",
+    "photoInvalidType": "Photo must be JPEG, PNG, WebP, or GIF.",
+    "photoTooLarge": "Photo must be 5 MB or smaller."
   },
   "hr": {
     "assetStatus": {

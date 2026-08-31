@@ -1153,6 +1153,7 @@ model Document {
 
   purchaseRequestItemImages PurchaseRequestItem[] @relation("PurchaseRequestItemImage")
   companyAssetPhotos         CompanyAsset[] @relation("CompanyAssetPhotoDocument")
+  companyVehiclePhotos       CompanyVehicle[] @relation("CompanyVehiclePhotoDocument")
   userPhotos                 User[]         @relation("UserPhotoDocument")
   exitPermitItemDocument      ExitPermitItem[]       @relation("ExitPermitItemDocument")
 
@@ -4472,6 +4473,7 @@ model CompanyVehicle {
   assignedDriverId String?      @map("assigned_driver_id")
   status          VehicleStatus @default(AVAILABLE)
   notes           String?
+  photoDocumentId String?       @map("photo_document_id")
   isActive        Boolean       @default(true) @map("is_active")
   createdAt       DateTime      @default(now()) @map("created_at")
   createdBy       String        @map("created_by")
@@ -4483,6 +4485,7 @@ model CompanyVehicle {
   company              Company              @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   assignedDriver       User?                @relation("VehicleDriver", fields: [assignedDriverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   creator              User                 @relation("VehicleCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  photoDocument        Document?            @relation("CompanyVehiclePhotoDocument", fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   vehicleApplications  VehicleApplication[]
   vehicleRefuelings    VehicleRefueling[]
 
@@ -4491,6 +4494,7 @@ model CompanyVehicle {
   @@index([companyId, deletedAt], map: "idx_company_vehicle_company_deleted")
   @@index([status], map: "idx_company_vehicle_status")
   @@index([assignedDriverId], map: "idx_company_vehicle_assigned_driver")
+  @@index([photoDocumentId], map: "idx_company_vehicle_photo_document")
   @@map("company_vehicle")
 }
 

@@ -11,6 +11,7 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import VehicleChangeStatusDialog from '@/components/modules/org/vehicles/VehicleChangeStatusDialog';
+import VehiclePhoto from '@/components/modules/org/vehicles/VehiclePhoto';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -186,32 +187,42 @@ export default function VehicleDetailPageContent({
           border: `1px solid ${tokens.colorBorder}`,
         }}
       >
-        <div className="px-3 py-4 sm:px-5">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <CarFront size={16} style={{ color: tokens.colorPrimary }} />
-            <span
-              className="font-[family-name:var(--font-mono)] text-base font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
+        <div className="flex flex-col gap-4 px-3 py-4 sm:flex-row sm:items-start sm:px-5">
+          <VehiclePhoto
+            vehicleId={vehicle.id}
+            photoDocumentId={vehicle.photoDocumentId}
+            plateNumber={vehicle.plateNumber}
+            canEdit
+            variant="hero"
+            size={88}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <CarFront size={16} style={{ color: tokens.colorPrimary }} />
+              <span
+                className="font-[family-name:var(--font-mono)] text-base font-semibold"
+                style={{ color: tokens.colorTextPrimary }}
+              >
+                {vehicle.plateNumber}
+              </span>
+              <StatusBadge
+                label={formatVehicleStatus(vehicle.status, t)}
+                variant={vehicleStatusVariant(vehicle.status)}
+              />
+              <StatusBadge
+                label={
+                  vehicle.isActive ? t('common.active') : t('common.inactive')
+                }
+                variant={vehicle.isActive ? 'success' : 'default'}
+              />
+            </div>
+            <p
+              className="m-0 text-sm"
+              style={{ color: tokens.colorTextSecondary }}
             >
-              {vehicle.plateNumber}
-            </span>
-            <StatusBadge
-              label={formatVehicleStatus(vehicle.status, t)}
-              variant={vehicleStatusVariant(vehicle.status)}
-            />
-            <StatusBadge
-              label={
-                vehicle.isActive ? t('common.active') : t('common.inactive')
-              }
-              variant={vehicle.isActive ? 'success' : 'default'}
-            />
+              {vehicle.make} {vehicle.model} · {vehicle.year}
+            </p>
           </div>
-          <p
-            className="m-0 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {vehicle.make} {vehicle.model} · {vehicle.year}
-          </p>
         </div>
       </div>
 

@@ -1452,6 +1452,7 @@
       "identity": "车辆信息",
       "specifications": "规格参数",
       "assignment": "分配与备注",
+      "photo": "车辆照片",
       "review": "确认并提交"
     },
     "form": {
@@ -1460,6 +1461,11 @@
       "identityHelp": "车牌号码和车辆分类。",
       "specificationsHelp": "品牌、型号、年份和颜色。",
       "assignmentHelp": "可选的指定驾驶员、启用状态和备注。",
+      "photoStepHelp": "添加可选照片，便于在车队登记中识别车辆。",
+      "photoOptionalHint": "支持 JPEG、PNG、WebP 或 GIF，最大 5 MB。可跳过此步骤。",
+      "photoReplaceHint": "选择新文件后，保存时将替换当前照片。",
+      "photo": "照片",
+      "photoHelp": "上传清晰的车辆照片以便快速识别。",
       "vehicleType": "车辆类型",
       "fuelType": "燃料类型",
       "color": "颜色",
@@ -1478,7 +1484,18 @@
       "color": "例如：白色",
       "assignedDriver": "选择驾驶员",
       "notes": "关于此车辆的可选备注"
-    }
+    },
+    "uploadPhoto": "选择照片",
+    "changePhoto": "更换照片",
+    "removePhoto": "移除照片",
+    "removePhotoTitle": "移除车辆照片？",
+    "removePhotoDescription": "照片将从文档存储中删除。",
+    "photoUploaded": "车辆照片已上传。",
+    "photoRemoved": "车辆照片已移除。",
+    "photoUploadError": "上传车辆照片失败。",
+    "photoRemoveError": "移除车辆照片失败。",
+    "photoInvalidType": "照片须为 JPEG、PNG、WebP 或 GIF 格式。",
+    "photoTooLarge": "照片大小不能超过 5 MB。"
   },
   "hr": {
     "assetStatus": {

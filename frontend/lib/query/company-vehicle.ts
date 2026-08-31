@@ -11,6 +11,7 @@ import {
   apiGetPaginated,
   apiPatch,
   apiPost,
+  apiPostForm,
 } from '@/lib/api/client';
 import type {
   AvailableVehicle,
@@ -141,6 +142,49 @@ export function useDeleteCompanyVehicle() {
       void queryClient.invalidateQueries({
         queryKey: companyVehicleKeys.lists(),
       });
+    },
+  });
+}
+
+export function useUploadCompanyVehiclePhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      vehicleId,
+      file,
+    }: {
+      vehicleId: string;
+      file: File;
+    }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<CompanyVehicleDetail>(
+        `${VEHICLES_PATH}/${vehicleId}/photo`,
+        formData,
+      );
+    },
+    onSuccess: (updated, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: companyVehicleKeys.lists(),
+      });
+      void queryClient.setQueryData(
+        companyVehicleKeys.detail(variables.vehicleId),
+        updated,
+      );
+    },
+  });
+}
+
+export function useDeleteCompanyVehiclePhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vehicleId: string) =>
+      apiDelete<CompanyVehicleDetail>(`${VEHICLES_PATH}/${vehicleId}/photo`),
+    onSuccess: (updated, vehicleId) => {
+      void queryClient.invalidateQueries({
+        queryKey: companyVehicleKeys.lists(),
+      });
+      void queryClient.setQueryData(companyVehicleKeys.detail(vehicleId), updated);
     },
   });
 }

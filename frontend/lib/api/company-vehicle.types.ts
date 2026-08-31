@@ -35,6 +35,7 @@ export interface CompanyVehicleListItem {
   assignedDriver?: CompanyVehicleDriverSummary | null;
   status: VehicleStatus;
   notes?: string | null;
+  photoDocumentId?: string | null;
   isActive: boolean;
   createdAt: string;
 }

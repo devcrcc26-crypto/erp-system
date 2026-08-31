@@ -8,12 +8,17 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import {
   ApiBearerAuth,
+  ApiConsumes,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -169,5 +174,60 @@ export class CompanyVehicleController {
   ): Promise<{ success: boolean }> {
     await this.companyVehicleService.deleteVehicle(id, companyId, user.userId);
     return { success: true };
+  }
+
+  @Post(':id/photo')
+  @DelegatePermissionCheck()
+  @RequireAnyPermission(
+    { module: 'documents', action: 'create' },
+    { module: 'vehicles', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Upload a photo for a vehicle' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  async uploadPhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<unknown> {
+    if (!file) {
+      throw new BadRequestException('Photo file is required');
+    }
+
+    void body;
+
+    return this.companyVehicleService.uploadVehiclePhoto(
+      id,
+      {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        buffer: file.buffer,
+      },
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Delete(':id/photo')
+  @DelegatePermissionCheck()
+  @RequireAnyPermission(
+    { module: 'vehicles', action: 'edit' },
+    { module: 'hr', action: 'edit' },
+  )
+  @ApiOperation({ summary: 'Remove a vehicle photo' })
+  async deletePhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.companyVehicleService.deleteVehiclePhoto(
+      id,
+      companyId,
+      user.userId,
+    );
   }
 }

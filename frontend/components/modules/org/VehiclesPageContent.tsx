@@ -30,6 +30,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import VehicleChangeStatusDialog from '@/components/modules/org/vehicles/VehicleChangeStatusDialog';
+import VehiclePhoto from '@/components/modules/org/vehicles/VehiclePhoto';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -419,6 +420,23 @@ export default function VehiclesPageContent(): React.ReactNode {
               ),
             }}
             columns={[
+              {
+                title: t('vehicles.form.photo'),
+                key: 'photo',
+                width: 56,
+                render: (_: unknown, record: CompanyVehicleListItem) => (
+                  <div onClick={(event) => event.stopPropagation()}>
+                    <VehiclePhoto
+                      vehicleId={record.id}
+                      photoDocumentId={record.photoDocumentId}
+                      plateNumber={record.plateNumber}
+                      canEdit={false}
+                      variant="thumb"
+                      size={40}
+                    />
+                  </div>
+                ),
+              },
               {
                 title: t('hr.table.plateNumber'),
                 dataIndex: 'plateNumber',

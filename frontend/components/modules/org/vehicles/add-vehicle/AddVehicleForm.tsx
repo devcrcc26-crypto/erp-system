@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Form, Input, InputNumber, Select, Skeleton, Switch } from 'antd';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Button, Form, Input, InputNumber, Select, Skeleton, Switch, Typography } from 'antd';
+import { ImageIcon, Paperclip } from 'lucide-react';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import AddVehicleReviewStep from '@/components/modules/org/vehicles/add-vehicle/AddVehicleReviewStep';
+import VehiclePhoto from '@/components/modules/org/vehicles/VehiclePhoto';
 import {
   ADD_VEHICLE_STEP_FIELDS,
   type AddVehicleFormValues,
@@ -16,6 +18,7 @@ import {
   useCompanyVehicle,
   useCreateCompanyVehicle,
   useUpdateCompanyVehicle,
+  useUploadCompanyVehiclePhoto,
 } from '@/lib/query/company-vehicle';
 import { useFullUsersDirectory } from '@/lib/query/users';
 import {
@@ -24,6 +27,7 @@ import {
   vehicleTypeSelectOptions,
 } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { tokens } from '@/lib/theme/tokens';
 
 export interface AddVehicleFormProps {
   vehicleId?: string;
@@ -38,12 +42,15 @@ export default function AddVehicleForm({
   const messageApi = useAppMessage();
   const [form] = Form.useForm<AddVehicleFormValues>();
   const [error, setError] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(vehicleId);
 
   const vehicleQuery = useCompanyVehicle(vehicleId ?? '', isEdit);
   const usersQuery = useFullUsersDirectory();
   const createMutation = useCreateCompanyVehicle();
   const updateMutation = useUpdateCompanyVehicle(vehicleId ?? '');
+  const uploadPhotoMutation = useUploadCompanyVehiclePhoto();
 
   const formValues = Form.useWatch([], form) as AddVehicleFormValues | undefined;
 
@@ -106,12 +113,24 @@ export default function AddVehicleForm({
       };
 
       if (isEdit && vehicleId) {
-        await updateMutation.mutateAsync(payload);
+        const updated = await updateMutation.mutateAsync(payload);
+        if (photoFile) {
+          await uploadPhotoMutation.mutateAsync({
+            vehicleId,
+            file: photoFile,
+          });
+        }
         onSuccess(vehicleId);
         return;
       }
 
       const created = await createMutation.mutateAsync(payload);
+      if (photoFile) {
+        await uploadPhotoMutation.mutateAsync({
+          vehicleId: created.id,
+          file: photoFile,
+        });
+      }
       onSuccess(created.id);
     } catch (submitError: unknown) {
       if (
@@ -173,7 +192,11 @@ export default function AddVehicleForm({
 
       <StepperForm
         contentVariant="sections"
-        isSubmitting={createMutation.isPending || updateMutation.isPending}
+        isSubmitting={
+          createMutation.isPending ||
+          updateMutation.isPending ||
+          uploadPhotoMutation.isPending
+        }
         submitLabel={
           isEdit ? t('vehicles.updateVehicle') : t('vehicles.createVehicle')
         }
@@ -351,11 +374,122 @@ export default function AddVehicleForm({
             ),
           },
           {
+            title: t('vehicles.steps.photo'),
+            content: (
+              <FormLayout
+                variant="pro"
+                title={t('vehicles.steps.photo')}
+                description={t('vehicles.form.photoStepHelp')}
+              >
+                {isEdit && vehicleId && vehicleQuery.data?.photoDocumentId ? (
+                  <div className="mb-4">
+                    <VehiclePhoto
+                      vehicleId={vehicleId}
+                      photoDocumentId={vehicleQuery.data.photoDocumentId}
+                      plateNumber={vehicleQuery.data.plateNumber}
+                      canEdit
+                      variant="panel"
+                    />
+                    <Typography.Paragraph
+                      type="secondary"
+                      className="!mb-3 !mt-4"
+                      style={{ fontSize: 13 }}
+                    >
+                      {t('vehicles.form.photoReplaceHint')}
+                    </Typography.Paragraph>
+                  </div>
+                ) : null}
+
+                <Typography.Paragraph
+                  type="secondary"
+                  style={{ marginBottom: 12, fontSize: 13 }}
+                >
+                  {t('vehicles.form.photoOptionalHint')}
+                </Typography.Paragraph>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  disabled={
+                    createMutation.isPending ||
+                    updateMutation.isPending ||
+                    uploadPhotoMutation.isPending
+                  }
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setPhotoFile(file);
+                    event.target.value = '';
+                  }}
+                />
+
+                <Button
+                  type="default"
+                  icon={<Paperclip size={14} />}
+                  disabled={
+                    createMutation.isPending ||
+                    updateMutation.isPending ||
+                    uploadPhotoMutation.isPending
+                  }
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ marginBottom: 12 }}
+                >
+                  {t('vehicles.uploadPhoto')}
+                </Button>
+
+                {photoFile ? (
+                  <div
+                    className="flex items-center gap-3 rounded-lg border px-3 py-3"
+                    style={{
+                      borderColor: tokens.colorBorder,
+                      background: tokens.colorCardBg,
+                    }}
+                  >
+                    <div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg"
+                      style={{
+                        background: tokens.colorTeal50,
+                        color: tokens.colorTeal400,
+                        border: `1px solid ${tokens.colorPrimary}33`,
+                      }}
+                    >
+                      <ImageIcon size={22} strokeWidth={1.75} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="m-0 truncate text-sm font-medium"
+                        style={{ color: tokens.colorTextPrimary }}
+                        title={photoFile.name}
+                      >
+                        {photoFile.name}
+                      </p>
+                      <p
+                        className="m-0 mt-0.5 text-xs"
+                        style={{ color: tokens.colorTextTertiary }}
+                      >
+                        IMAGE · {(photoFile.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => setPhotoFile(null)}
+                    >
+                      {t('common.delete')}
+                    </Button>
+                  </div>
+                ) : null}
+              </FormLayout>
+            ),
+          },
+          {
             title: t('vehicles.steps.review'),
             content: (
               <AddVehicleReviewStep
                 values={reviewValues}
                 mode={isEdit ? 'edit' : 'create'}
+                photoFileName={photoFile?.name}
               />
             ),
           },

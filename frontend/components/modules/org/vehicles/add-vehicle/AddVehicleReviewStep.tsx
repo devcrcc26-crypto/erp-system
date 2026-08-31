@@ -14,11 +14,13 @@ import type { AddVehicleFormValues } from './add-vehicle.types';
 interface AddVehicleReviewStepProps {
   values: AddVehicleFormValues;
   mode?: 'create' | 'edit';
+  photoFileName?: string;
 }
 
 export default function AddVehicleReviewStep({
   values,
   mode = 'create',
+  photoFileName,
 }: AddVehicleReviewStepProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const usersQuery = useFullUsersDirectory();
@@ -81,6 +83,9 @@ export default function AddVehicleReviewStep({
         </Descriptions.Item>
         <Descriptions.Item label={t('vehicles.form.notes')}>
           {values.notes?.trim() || '—'}
+        </Descriptions.Item>
+        <Descriptions.Item label={t('vehicles.form.photo')}>
+          {photoFileName ?? '—'}
         </Descriptions.Item>
       </Descriptions>
     </FormLayout>

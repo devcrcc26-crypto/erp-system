@@ -7,11 +7,13 @@ import {
 } from '@nestjs/common';
 import {
   FuelType,
+  FolderContextType,
   Prisma,
   VehicleApplicationStatus,
   VehicleStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { DocumentService } from '../../../documents/application/services/document.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -26,6 +28,13 @@ import {
   AvailableVehiclesQueryDto,
 } from '../dtos/company-vehicle.dtos';
 
+type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
+
 const ASSIGNED_DRIVER_SELECT = {
   id: true,
   firstName: true,
@@ -39,7 +48,17 @@ const ASSIGNED_DRIVER_SELECT = {
 export class CompanyVehicleService {
   private readonly logger = new Logger(CompanyVehicleService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  private static readonly PHOTO_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+  ]);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly documentService: DocumentService,
+  ) {}
 
   /** Lists vehicles with optional search and status filter. */
   async listVehicles(
@@ -336,5 +355,132 @@ export class CompanyVehicleService {
         updatedBy: userId,
       },
     });
+  }
+
+  /**
+   * Uploads (or replaces) a vehicle photo linked via `photoDocumentId`.
+   */
+  async uploadVehiclePhoto(
+    vehicleId: string,
+    file: UploadedFile,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    if (!CompanyVehicleService.PHOTO_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(
+        'Vehicle photo must be a JPEG, PNG, WebP, or GIF image',
+      );
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException('Vehicle photo must be 5 MB or smaller');
+    }
+
+    const vehicle = await this.prisma.companyVehicle.findFirst({
+      where: activeOnly({ id: vehicleId, companyId }),
+      select: { id: true, photoDocumentId: true },
+    });
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    const folderName = 'Company Vehicle Photos';
+    const existingFolder = await this.prisma.documentFolder.findFirst({
+      where: {
+        companyId,
+        contextType: FolderContextType.COMPANY,
+        contextId: null,
+        name: folderName,
+        parentId: null,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    const folderId =
+      existingFolder?.id ??
+      (
+        await this.prisma.documentFolder.create({
+          data: {
+            id: randomUUID(),
+            companyId,
+            parentId: null,
+            name: folderName,
+            path: `/${folderName}`,
+            contextType: FolderContextType.COMPANY,
+            contextId: null,
+            isSystem: false,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+          select: { id: true },
+        })
+      ).id;
+
+    const uploadedDocument = await this.documentService.uploadDocument(
+      { companyId, userId },
+      folderId,
+      file,
+    );
+
+    const updated = await this.prisma.companyVehicle.update({
+      where: { id: vehicleId },
+      data: {
+        photoDocumentId: (uploadedDocument as { id: string }).id,
+        updatedBy: userId,
+      },
+      include: {
+        assignedDriver: { select: ASSIGNED_DRIVER_SELECT },
+      },
+    });
+
+    if (
+      vehicle.photoDocumentId &&
+      vehicle.photoDocumentId !== (uploadedDocument as { id: string }).id
+    ) {
+      await this.documentService.deleteDocument(
+        { companyId, userId },
+        vehicle.photoDocumentId,
+      );
+    }
+
+    return updated;
+  }
+
+  /** Removes the vehicle photo link and soft-deletes the document. */
+  async deleteVehiclePhoto(
+    vehicleId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const vehicle = await this.prisma.companyVehicle.findFirst({
+      where: activeOnly({ id: vehicleId, companyId }),
+      select: { id: true, photoDocumentId: true },
+    });
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+    if (!vehicle.photoDocumentId) {
+      throw new NotFoundException('Vehicle photo not found');
+    }
+
+    const previousDocumentId = vehicle.photoDocumentId;
+
+    const updated = await this.prisma.companyVehicle.update({
+      where: { id: vehicleId },
+      data: {
+        photoDocumentId: null,
+        updatedBy: userId,
+      },
+      include: {
+        assignedDriver: { select: ASSIGNED_DRIVER_SELECT },
+      },
+    });
+
+    await this.documentService.deleteDocument(
+      { companyId, userId },
+      previousDocumentId,
+    );
+
+    return updated;
   }
 }
