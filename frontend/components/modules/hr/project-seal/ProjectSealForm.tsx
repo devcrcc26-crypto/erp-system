@@ -27,6 +27,7 @@ import { formatSealCategory, resolveSealCategory } from '@/lib/utils/seal-catego
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 interface FormValues {
+  fileName?: string;
   description?: string;
   urgency: ProjectSealUrgency;
   dateNeeded?: dayjs.Dayjs;
@@ -40,7 +41,7 @@ interface ProjectSealFormProps {
   onSuccess: (result: ProjectSealDetail) => void;
 }
 
-const DETAILS_FIELDS = ['description', 'urgency', 'dateNeeded'] as const;
+const DETAILS_FIELDS = ['fileName', 'description', 'urgency', 'dateNeeded'] as const;
 
 /**
  * Project seal create form — same StepperForm chrome as Add Employee.
@@ -108,13 +109,14 @@ export default function ProjectSealForm({
       return;
     }
 
-    if (!values.description?.trim() || !values.dateNeeded) {
+    if (!values.fileName?.trim() || !values.description?.trim() || !values.dateNeeded) {
       return;
     }
 
     setSubmitting(true);
     try {
       const result = await submitMutation.mutateAsync({
+        fileName: values.fileName.trim(),
         description: values.description.trim(),
         sealCategory: resolveSealCategory(
           values.sealCategoryPreset,
@@ -143,7 +145,7 @@ export default function ProjectSealForm({
     }
   }
 
-  const reviewValues = detailsSnapshot.description
+  const reviewValues = detailsSnapshot.fileName || detailsSnapshot.description
     ? detailsSnapshot
     : (formValues ?? detailsSnapshot);
 
@@ -158,6 +160,23 @@ export default function ProjectSealForm({
             title={t('hr.section.requestDetails')}
             description={t('pages.hr.projectSeal.detailsStepDescription')}
           >
+            <Form.Item
+              name="fileName"
+              label={t('hr.form.fileName')}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.placeholder.enterProjectSealFileName'),
+                },
+              ]}
+            >
+              <Input
+                maxLength={255}
+                showCount
+                placeholder={t('hr.placeholder.enterProjectSealFileName')}
+              />
+            </Form.Item>
+
             <Form.Item
               name="description"
               label={t('hr.form.description')}
@@ -242,6 +261,10 @@ export default function ProjectSealForm({
             description={t('pages.hr.projectSeal.reviewStepDescription')}
           >
             <div className="erp-form-grid-2">
+              <ReviewItem
+                label={t('hr.form.fileName')}
+                value={reviewValues.fileName?.trim() || '—'}
+              />
               <ReviewItem
                 label={t('hr.form.description')}
                 value={reviewValues.description?.trim() || '—'}

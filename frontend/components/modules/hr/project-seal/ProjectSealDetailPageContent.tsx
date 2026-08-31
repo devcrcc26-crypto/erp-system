@@ -197,7 +197,7 @@ export default function ProjectSealDetailPageContent({
                 className="m-0 text-lg font-semibold leading-snug"
                 style={{ color: tokens.colorTextPrimary }}
               >
-                {t('pages.hr.projectSeal.detail')} — {seal.description}
+                {t('pages.hr.projectSeal.detail')} — {seal.fileName}
               </h2>
               <p
                 className="m-0 mt-1 text-sm"
@@ -264,6 +264,9 @@ export default function ProjectSealDetailPageContent({
             bodyClassName="px-3 py-4 sm:px-5"
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <MetaItem label={t('hr.form.fileName')}>
+                {seal.fileName}
+              </MetaItem>
               <MetaItem label={t('hr.form.description')}>
                 <p className="m-0 whitespace-pre-wrap leading-relaxed">
                   {seal.description}

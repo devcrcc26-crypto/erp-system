@@ -40,6 +40,7 @@ export interface OfficialSealListItem {
     id: string;
     requestNumber: string;
     employeeId: string;
+    fileName: string;
     description: string;
     sealCategory?: string | null;
     copyCount?: number | null;
@@ -82,6 +83,7 @@ export interface OfficialSealDetail extends OfficialSealListItem {
 }
 
 export interface SubmitOfficialSealPayload {
+    fileName: string;
     description: string;
     sealCategory?: string;
     copyCount?: number;

@@ -187,9 +187,9 @@ export default function ProjectSealListPageContent(): React.ReactNode {
           ]
         : []),
       {
-        title: t('hr.table.description'),
-        dataIndex: 'description',
-        key: 'description',
+        title: t('hr.table.fileName'),
+        dataIndex: 'fileName',
+        key: 'fileName',
         ellipsis: true,
         render: (value: string) => (
           <span className="text-sm" style={{ color: tokens.colorTextPrimary }}>

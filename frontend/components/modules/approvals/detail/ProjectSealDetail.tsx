@@ -81,6 +81,9 @@ export default function ProjectSealDetail({
         bodyClassName="px-3 py-4 sm:px-5"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <MetaItem label={t('hr.form.fileName')}>
+            {seal.fileName}
+          </MetaItem>
           <MetaItem label={t('hr.form.description')}>
             <p className="m-0 whitespace-pre-wrap leading-relaxed">
               {seal.description}

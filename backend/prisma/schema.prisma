@@ -4720,6 +4720,7 @@ model OfficialSeal {
   companyId             String                  @map("company_id")
   requestNumber         String                  @map("request_number")
   employeeId            String                  @map("employee_id")
+  fileName              String                  @map("file_name")
   description           String
   sealCategory          String?                 @map("seal_category")
   copyCount             Int?                    @map("copy_count")
@@ -4768,6 +4769,7 @@ model ProjectSeal {
   companyId             String                  @map("company_id")
   requestNumber         String                  @map("request_number")
   employeeId            String                  @map("employee_id")
+  fileName              String                  @map("file_name")
   description           String
   sealCategory          String?                 @map("seal_category")
   copyCount             Int?                    @map("copy_count")

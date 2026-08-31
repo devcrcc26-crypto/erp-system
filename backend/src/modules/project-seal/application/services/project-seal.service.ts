@@ -113,6 +113,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
                     companyId,
                     requestNumber,
                     employeeId: userId,
+                    fileName: dto.fileName,
                     description: dto.description,
                     ...extraFields,
                     urgency: dto.urgency,
@@ -136,8 +137,9 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
         const approval = (await this.approvalsService.submitRequest(
             {
                 categoryCode: 'PROJECT_SEAL_USAGE',
-                title: `Project Seal — ${dto.description}`,
+                title: `Project Seal — ${dto.fileName}`,
                 formData: {
+                    fileName: dto.fileName,
                     description: dto.description,
                     sealCategory: dto.sealCategory,
                     copyCount: dto.copyCount,
@@ -163,6 +165,7 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
                     companyId,
                     requestNumber,
                     employeeId: userId,
+                    fileName: dto.fileName,
                     description: dto.description,
                     ...extraFields,
                     urgency: dto.urgency,
@@ -235,6 +238,12 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
                     OR: [
                         {
                             requestNumber: {
+                                contains: filters.search.trim(),
+                                mode: 'insensitive' as const,
+                            },
+                        },
+                        {
+                            fileName: {
                                 contains: filters.search.trim(),
                                 mode: 'insensitive' as const,
                             },

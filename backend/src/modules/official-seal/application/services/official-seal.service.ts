@@ -136,6 +136,7 @@ export class OfficialSealService
           companyId,
           requestNumber,
           employeeId: userId,
+          fileName: dto.fileName,
           description: dto.description,
           ...extraFields,
           urgency: dto.urgency,
@@ -159,8 +160,9 @@ export class OfficialSealService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: "OFFICIAL_SEAL_USAGE",
-        title: `Official Seal — ${dto.description}`,
+        title: `Official Seal — ${dto.fileName}`,
         formData: {
+          fileName: dto.fileName,
           description: dto.description,
           sealCategory: dto.sealCategory,
           copyCount: dto.copyCount,
@@ -186,6 +188,7 @@ export class OfficialSealService
           companyId,
           requestNumber,
           employeeId: userId,
+          fileName: dto.fileName,
           description: dto.description,
           ...extraFields,
           urgency: dto.urgency,
@@ -247,6 +250,12 @@ export class OfficialSealService
             OR: [
               {
                 requestNumber: {
+                  contains: filters.search.trim(),
+                  mode: "insensitive" as const,
+                },
+              },
+              {
+                fileName: {
                   contains: filters.search.trim(),
                   mode: "insensitive" as const,
                 },

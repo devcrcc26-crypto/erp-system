@@ -5,6 +5,12 @@ import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLengt
 
 
 export class SubmitProjectSealRequestDto {
+    @ApiProperty({ maxLength: 255, description: 'Document or file name for the seal request' })
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(255)
+    fileName!: string;
+
     @ApiProperty()
     @IsString()
     @IsNotEmpty()

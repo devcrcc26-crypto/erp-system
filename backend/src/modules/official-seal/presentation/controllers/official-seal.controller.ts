@@ -55,8 +55,9 @@ export class OfficialSealController {
     @ApiBody({
         schema: {
             type: 'object',
-            required: ['description', 'urgency', 'dateNeeded'],
+            required: ['fileName', 'description', 'urgency', 'dateNeeded'],
             properties: {
+                fileName: { type: 'string' },
                 description: { type: 'string' },
                 urgency: { type: 'string' },
                 dateNeeded: { type: 'string', format: 'date' },

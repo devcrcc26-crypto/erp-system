@@ -40,6 +40,7 @@ export interface ProjectSealListItem {
     id: string;
     requestNumber: string;
     employeeId: string;
+    fileName: string;
     description: string;
     sealCategory?: string | null;
     copyCount?: number | null;
@@ -83,6 +84,7 @@ export interface ProjectSealDetail extends ProjectSealListItem {
 
 
 export interface SubmitProjectSealPayload {
+    fileName: string;
     description: string;
     sealCategory?: string;
     copyCount?: number;

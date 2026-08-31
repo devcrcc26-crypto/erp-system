@@ -61,6 +61,7 @@ export function useSubmitOfficialSeal() {
             const hasFiles = (payload.files?.length ?? 0) > 0;
             if (hasFiles) {
                 const formData = new FormData();
+                formData.append('fileName', payload.fileName);
                 formData.append('description', payload.description);
                 formData.append('urgency', payload.urgency);
                 formData.append('dateNeeded', payload.dateNeeded);
@@ -73,6 +74,7 @@ export function useSubmitOfficialSeal() {
             return apiPost<OfficialSealDetail>(
                 OFFICIAL_SEAL_PATH,
                 {
+                    fileName: payload.fileName,
                     description: payload.description,
                     urgency: payload.urgency,
                     dateNeeded: payload.dateNeeded,
