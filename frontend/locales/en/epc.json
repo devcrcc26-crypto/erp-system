@@ -509,6 +509,9 @@
     "notifications": {
       "filterAll": "All",
       "filterUnread": "Unread",
+      "showAll": "View all notifications",
+      "unreadBadge": "{{count}} unread",
+      "panelAria": "Open notifications",
       "markAllRead": "Mark all read",
       "markRead": "Mark read",
       "markedAllRead": "All notifications marked as read",

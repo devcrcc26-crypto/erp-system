@@ -1,11 +1,25 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Badge, Button, Dropdown, Empty, Spin, Typography } from 'antd';
-import { BellOutlined, CheckOutlined } from '@ant-design/icons';
+import {
+  Badge,
+  Button,
+  Dropdown,
+  Segmented,
+  Spin,
+  Tooltip,
+  Typography,
+} from 'antd';
+import {
+  BellOutlined,
+  CalendarOutlined,
+  CheckCircleOutlined,
+  CheckOutlined,
+  FieldTimeOutlined,
+  ProjectOutlined,
+  RightOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -15,65 +29,152 @@ import {
   useUnreadNotificationCount,
 } from '@/lib/query/notifications';
 import type { InAppNotification } from '@/lib/api/documents.types';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 
 dayjs.extend(relativeTime);
 
+type InboxFilter = 'all' | 'unread';
+
+interface NotificationVisual {
+  icon: React.ReactNode;
+  bg: string;
+  color: string;
+}
+
+function notificationVisual(notification: InAppNotification): NotificationVisual {
+  const link = notification.link?.toLowerCase() ?? '';
+  const subject = notification.subject.toLowerCase();
+
+  if (link.includes('/leave') || subject.includes('leave')) {
+    return {
+      icon: <CalendarOutlined />,
+      bg: tokens.colorTeal50,
+      color: tokens.colorTeal400,
+    };
+  }
+  if (link.includes('/overtime') || subject.includes('overtime')) {
+    return {
+      icon: <FieldTimeOutlined />,
+      bg: tokens.colorBlue50,
+      color: tokens.colorBlue400,
+    };
+  }
+  if (
+    link.includes('/approval') ||
+    subject.includes('approv') ||
+    subject.includes('reject')
+  ) {
+    return {
+      icon: <CheckCircleOutlined />,
+      bg: tokens.colorAmber50,
+      color: tokens.colorAmber400,
+    };
+  }
+  if (link.includes('/project')) {
+    return {
+      icon: <ProjectOutlined />,
+      bg: tokens.colorBlue50,
+      color: tokens.colorBlue400,
+    };
+  }
+  return {
+    icon: <BellOutlined />,
+    bg: tokens.colorGray50,
+    color: tokens.colorGray600,
+  };
+}
+
 function NotificationItem({
   notification,
   onRead,
   onNavigate,
+  markReadLabel,
 }: {
   notification: InAppNotification;
   onRead: (id: string) => void;
   onNavigate: (notification: InAppNotification) => void;
+  markReadLabel: string;
 }): React.ReactNode {
   const isUnread = !notification.readAt;
   const clickable = Boolean(notification.link);
+  const visual = notificationVisual(notification);
 
   return (
     <div
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
+      onKeyDown={
+        clickable
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onNavigate(notification);
+              }
+            }
+          : undefined
+      }
       onClick={clickable ? () => onNavigate(notification) : undefined}
-      className={`flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 ${isUnread ? 'bg-orange-50/60' : ''} ${clickable ? 'cursor-pointer hover:bg-slate-50' : ''}`}
+      className={[
+        'group relative flex items-start gap-3 px-4 py-3 transition-colors',
+        isUnread ? 'bg-[#F7FCFA]' : 'bg-white',
+        clickable ? 'cursor-pointer hover:bg-[var(--color-surface-secondary)]' : '',
+      ].join(' ')}
     >
-      <div className="min-w-0 flex-1">
-        <p
-          className={
-            isUnread
-              ? 'text-sm font-semibold text-slate-900'
-              : 'text-sm text-slate-800'
-          }
-        >
-          {notification.subject}
-        </p>
-        <div className="mt-1 space-y-1">
-          <Typography.Paragraph
-            className="!mb-0 text-sm text-slate-600"
-            ellipsis={{ rows: 2 }}
-          >
-            {notification.body}
-          </Typography.Paragraph>
-          <span className="text-xs text-slate-400">
-            {dayjs(notification.createdAt).fromNow()}
-          </span>
-        </div>
+      {isUnread ? (
+        <span
+          className="absolute bottom-3 left-0 top-3 w-[3px] rounded-r-full"
+          style={{ backgroundColor: tokens.colorPrimary }}
+          aria-hidden
+        />
+      ) : null}
+
+      <div
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px]"
+        style={{ backgroundColor: visual.bg, color: visual.color }}
+      >
+        {visual.icon}
       </div>
-      {isUnread && (
-        <Button
-          type="link"
-          size="small"
-          icon={<CheckOutlined />}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRead(notification.id);
-          }}
+
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="flex items-start justify-between gap-2">
+          <p
+            className={[
+              'm-0 line-clamp-1 text-[13px] leading-snug',
+              isUnread
+                ? 'font-semibold text-[var(--color-text-primary)]'
+                : 'font-medium text-[var(--color-text-primary)]',
+            ].join(' ')}
+          >
+            {notification.subject}
+          </p>
+          {isUnread ? (
+            <Tooltip title={markReadLabel}>
+              <button
+                type="button"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--color-text-tertiary)] opacity-0 transition-all hover:bg-white hover:text-[var(--color-teal-600)] group-hover:opacity-100"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRead(notification.id);
+                }}
+                aria-label={markReadLabel}
+              >
+                <CheckOutlined style={{ fontSize: 12 }} />
+              </button>
+            </Tooltip>
+          ) : null}
+        </div>
+        <Typography.Paragraph
+          className="!mb-0 !mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]"
+          ellipsis={{ rows: 2 }}
         >
-          Mark read
-        </Button>
-      )}
+          {notification.body}
+        </Typography.Paragraph>
+        <span className="mt-1.5 block text-[11px] text-[var(--color-text-tertiary)]">
+          {dayjs(notification.createdAt).fromNow()}
+        </span>
+      </div>
     </div>
   );
 }
@@ -83,12 +184,20 @@ function NotificationItem({
  */
 export default function NotificationPanel(): React.ReactNode {
   const router = useRouter();
+  const { t } = useEpcTranslation();
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<InboxFilter>('all');
   const allowed = useAuthStore((state) => state.isAuthenticated());
 
   const unreadQuery = useUnreadNotificationCount(allowed);
   const notificationsQuery = useNotifications(
-    { page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' },
+    {
+      page: 1,
+      limit: 10,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      unreadOnly: filter === 'unread' ? true : undefined,
+    },
     allowed && open,
   );
   const markRead = useMarkNotificationRead();
@@ -108,73 +217,131 @@ export default function NotificationPanel(): React.ReactNode {
 
   const dropdownContent = (
     <div
-      className="w-80 bg-white md:w-96"
-      style={{
-        borderRadius: 12,
-        border: `0.5px solid ${tokens.colorBorder}`,
-      }}
+      className="flex w-[380px] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+      onClick={(event) => event.stopPropagation()}
     >
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
-      >
-        <h3
-          className="text-[13px] font-medium"
-          style={{ color: tokens.colorTextPrimary }}
-        >
-          Notifications
-        </h3>
-        {allowed && unreadCount > 0 && (
-          <Button
-            type="link"
-            size="small"
-            loading={markAllRead.isPending}
-            onClick={() => void markAllRead.mutateAsync()}
-          >
-            Mark all read
-          </Button>
-        )}
+      <div className="border-b border-[rgba(0,0,0,0.06)] px-4 pb-3 pt-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-lg"
+                style={{
+                  backgroundColor: tokens.colorPrimaryLight,
+                  color: tokens.colorPrimary,
+                }}
+              >
+                <BellOutlined style={{ fontSize: 15 }} />
+              </div>
+              <div>
+                <h3
+                  className="m-0 text-[14px] font-semibold leading-tight"
+                  style={{ color: tokens.colorTextPrimary }}
+                >
+                  {t('nav.notifications')}
+                </h3>
+                {allowed && unreadCount > 0 ? (
+                  <p
+                    className="m-0 mt-0.5 text-[11px]"
+                    style={{ color: tokens.colorTextTertiary }}
+                  >
+                    {t('pages.notifications.unreadBadge', { count: unreadCount })}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          {allowed && unreadCount > 0 ? (
+            <Button
+              type="link"
+              size="small"
+              loading={markAllRead.isPending}
+              className="!h-auto !px-0 !text-[12px] !font-medium"
+              style={{ color: tokens.colorPrimary }}
+              onClick={() => void markAllRead.mutateAsync()}
+            >
+              {t('pages.notifications.markAllRead')}
+            </Button>
+          ) : null}
+        </div>
+
+        {allowed ? (
+          <div className="mt-3">
+            <Segmented
+              block
+              size="small"
+              value={filter}
+              onChange={(value) => setFilter(value as InboxFilter)}
+              options={[
+                { label: t('pages.notifications.filterAll'), value: 'all' },
+                {
+                  label:
+                    unreadCount > 0
+                      ? `${t('pages.notifications.filterUnread')} (${unreadCount})`
+                      : t('pages.notifications.filterUnread'),
+                  value: 'unread',
+                },
+              ]}
+            />
+          </div>
+        ) : null}
       </div>
 
       {open && notificationsQuery.isLoading ? (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center py-12">
           <Spin />
         </div>
       ) : notifications.length === 0 ? (
-        <Empty
-          className="py-8"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No notifications"
-        />
+        <div className="flex flex-col items-center px-6 py-10 text-center">
+          <div
+            className="mb-3 flex h-12 w-12 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: tokens.colorGray50,
+              color: tokens.colorTextTertiary,
+            }}
+          >
+            <BellOutlined style={{ fontSize: 20 }} />
+          </div>
+          <p
+            className="m-0 text-sm font-medium"
+            style={{ color: tokens.colorTextPrimary }}
+          >
+            {filter === 'unread'
+              ? t('pages.notifications.emptyUnread')
+              : t('pages.notifications.empty')}
+          </p>
+        </div>
       ) : (
-        <div className="max-h-96 overflow-y-auto">
-          {notifications.map((notification) => (
-            <NotificationItem
-              key={notification.id}
-              notification={notification}
-              onRead={(id) =>
-                void markRead.mutateAsync(id).catch(() => undefined)
-              }
-              onNavigate={handleNavigate}
-            />
-          ))}
+        <div className="max-h-[min(420px,60vh)] overflow-y-auto">
+          <div className="divide-y divide-[rgba(0,0,0,0.05)]">
+            {notifications.map((notification) => (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onRead={(id) =>
+                  void markRead.mutateAsync(id).catch(() => undefined)
+                }
+                onNavigate={handleNavigate}
+                markReadLabel={t('pages.notifications.markRead')}
+              />
+            ))}
+          </div>
         </div>
       )}
 
-      <div
-        className="px-4 py-2.5"
-        style={{ borderTop: `0.5px solid ${tokens.colorBorder}` }}
-      >
+      <div className="border-t border-[rgba(0,0,0,0.06)] p-2">
         <Button
-          type="link"
+          type="text"
           block
-          className="!px-0"
+          className="!flex !h-9 !items-center !justify-center !gap-1.5 !text-[13px] !font-medium"
+          style={{ color: tokens.colorPrimary }}
           onClick={() => {
             setOpen(false);
             router.push('/notifications');
           }}
         >
-          Show all
+          {t('pages.notifications.showAll')}
+          <RightOutlined style={{ fontSize: 11 }} />
         </Button>
       </div>
     </div>
@@ -188,27 +355,36 @@ export default function NotificationPanel(): React.ReactNode {
       trigger={['click']}
       placement="bottomRight"
     >
-      <button
-        type="button"
-        className="relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-[var(--color-surface-secondary)]"
-        style={{
-          border: `0.5px solid ${tokens.colorBorder}`,
-          color: tokens.colorTextSecondary,
-        }}
-        aria-label="Open notifications"
-      >
-        <Badge
-          count={unreadCount}
-          size="small"
-          offset={[-2, 2]}
-          style={{
-            backgroundColor: tokens.colorRed400,
-            boxShadow: `0 0 0 1.5px ${tokens.colorPageBg}`,
-          }}
+      <Tooltip title={t('nav.notifications')}>
+        <button
+          type="button"
+          className={[
+            'relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
+            open
+              ? 'bg-[var(--color-teal-50)] text-[var(--color-teal-600)]'
+              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]',
+          ].join(' ')}
+          aria-label={t('pages.notifications.panelAria')}
+          aria-expanded={open}
         >
-          <BellOutlined style={{ fontSize: 16 }} />
-        </Badge>
-      </button>
+          <Badge
+            count={unreadCount}
+            size="small"
+            overflowCount={99}
+            offset={[-1, 1]}
+            style={{
+              backgroundColor: tokens.colorRed400,
+              boxShadow: `0 0 0 1.5px ${tokens.colorCardBg}`,
+              fontSize: 10,
+              minWidth: 16,
+              height: 16,
+              lineHeight: '16px',
+            }}
+          >
+            <BellOutlined style={{ fontSize: 17 }} />
+          </Badge>
+        </button>
+      </Tooltip>
     </Dropdown>
   );
 }

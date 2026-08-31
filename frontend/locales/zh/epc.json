@@ -509,6 +509,9 @@
     "notifications": {
       "filterAll": "全部",
       "filterUnread": "未读",
+      "showAll": "查看全部通知",
+      "unreadBadge": "{{count}} 条未读",
+      "panelAria": "打开通知",
       "markAllRead": "全部标为已读",
       "markRead": "标为已读",
       "markedAllRead": "已将全部通知标为已读",
