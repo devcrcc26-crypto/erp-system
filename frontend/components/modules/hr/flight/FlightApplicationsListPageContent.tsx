@@ -34,7 +34,6 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import {
   useCanAccessFlight,
   useCanCreateFlight,
-  useCanManageFlight,
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -108,7 +107,6 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   const canAccess = useCanAccessFlight();
   const canViewHr = useCanViewHr();
   const canCreate = useCanCreateFlight();
-  const canManage = useCanManageFlight();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [listTab, setListTab] = useState<ListTab>('ALL');
@@ -307,14 +305,6 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           ),
       },
       {
-        title: t('hr.table.passengers'),
-        dataIndex: 'passengerCount',
-        key: 'passengerCount',
-        width: 90,
-        align: 'center' as const,
-        responsive: ['md'],
-      },
-      {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
@@ -349,31 +339,8 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           return <Tag color={color}>{label}</Tag>;
         },
       },
-      ...(canManage
-        ? [
-            {
-              title: '',
-              key: 'ticketAction',
-              width: 110,
-              render: (_: unknown, row: FlightApplicationListItem) =>
-                row.needsTicketAttachment ? (
-                  <Tag
-                    color="orange"
-                    icon={<SendOutlined />}
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/hr/flight-applications/${row.id}`);
-                    }}
-                  >
-                    {t('hr.labels.attachTicket')}
-                  </Tag>
-                ) : null,
-            } satisfies ColumnsType<FlightApplicationListItem>[number],
-          ]
-        : []),
     ],
-    [canManage, canViewHr, router, t],
+    [canViewHr, t],
   );
 
   function handleStatusMode(mode: StatusMode): void {

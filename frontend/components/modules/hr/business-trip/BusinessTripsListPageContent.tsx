@@ -34,7 +34,6 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import {
   useCanAccessBusinessTrip,
   useCanCreateBusinessTrip,
-  useCanManageBusinessTrip,
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -53,7 +52,6 @@ import {
   businessTripStatusVariant,
   formatBusinessTripStatus,
   formatBusinessTripSubmitterName,
-  formatEtb,
   formatTripType,
   getCurrentStepLabel,
   tripTypeVariant,
@@ -109,7 +107,6 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   const canAccess = useCanAccessBusinessTrip();
   const canViewHr = useCanViewHr();
   const canCreate = useCanCreateBusinessTrip();
-  const canManage = useCanManageBusinessTrip();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [listTab, setListTab] = useState<ListTab>('ALL');
@@ -275,22 +272,6 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         ),
       },
       {
-        title: t('hr.table.passengers'),
-        dataIndex: 'passengerCount',
-        key: 'passengerCount',
-        width: 90,
-        align: 'center' as const,
-        responsive: ['md'],
-      },
-      {
-        title: t('hr.table.estimatedTotal'),
-        dataIndex: 'estimatedTotalCost',
-        key: 'estimatedTotalCost',
-        width: 130,
-        responsive: ['lg'],
-        render: (value: number | null | undefined) => formatEtb(value),
-      },
-      {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
@@ -325,31 +306,8 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
           return <Tag color={color}>{label}</Tag>;
         },
       },
-      ...(canManage
-        ? [
-            {
-              title: '',
-              key: 'ticketAction',
-              width: 110,
-              render: (_: unknown, row: BusinessTripListItem) =>
-                row.needsTicketAttachment ? (
-                  <Tag
-                    color="orange"
-                    icon={<SendOutlined />}
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/hr/business-trips/${row.id}`);
-                    }}
-                  >
-                    {t('hr.labels.attachTicket')}
-                  </Tag>
-                ) : null,
-            } satisfies ColumnsType<BusinessTripListItem>[number],
-          ]
-        : []),
     ],
-    [canManage, canViewHr, router, t],
+    [canViewHr, t],
   );
 
   function handleStatusMode(mode: StatusMode): void {
