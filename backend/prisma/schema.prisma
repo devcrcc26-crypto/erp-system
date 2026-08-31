@@ -84,6 +84,7 @@ enum FolderContextType {
   PROJECT_SEAL
   EMPLOYEE_CONTRACT
   EMPLOYEE_PROFILE
+  EXIT_PERMIT
 }
 
 enum Nationality {
@@ -287,6 +288,7 @@ model Company {
   companyAssets            CompanyAsset[]
   assetAssignments         AssetAssignment[]
   leavePolicies            LeavePolicy[]
+  ExitPermits              ExitPermit[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -391,6 +393,7 @@ model Department {
   costCentres CostCentre[]
   users       User[]
   projects    Project[]
+  exitPermits ExitPermit[]
 
   @@unique([companyId, code], map: "uq_department_company_code")
   @@index([companyId], map: "idx_department_company_id")
@@ -749,6 +752,10 @@ model User {
   employeeContractsCreated        EmployeeContract[]        @relation("EmployeeContractCreator")
   employeeContractEmployee        EmployeeContract[]        @relation("EmployeeContractEmployee")
 
+  exitPermitsEmployee             ExitPermit[]              @relation("ExitPermitEmployee")
+  exitPermitsCreated              ExitPermit[]              @relation("ExitPermitCreator")
+
+
   createdAssets                   CompanyAsset[]            @relation("AssetCreator")
   updatedAssets                   CompanyAsset[]            @relation("AssetUpdater")
   assetAssignmentsAsEmployee      AssetAssignment[]         @relation("AssetAssignmentEmployee")
@@ -1091,6 +1098,8 @@ model DocumentFolder {
   projectSeals               ProjectSeal[]
   employeeContracts          EmployeeContract[]
   userProfiles               User[]                 @relation("UserProfileFolder")
+  exitPermits                ExitPermit[]
+
 
   @@index([companyId], map: "idx_document_folder_company_id")
   @@index([companyId, deletedAt], map: "idx_document_folder_company_deleted")
@@ -1145,6 +1154,7 @@ model Document {
   purchaseRequestItemImages PurchaseRequestItem[] @relation("PurchaseRequestItemImage")
   companyAssetPhotos         CompanyAsset[] @relation("CompanyAssetPhotoDocument")
   userPhotos                 User[]         @relation("UserPhotoDocument")
+  exitPermitItemDocument      ExitPermitItem[]       @relation("ExitPermitItemDocument")
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -3476,6 +3486,7 @@ model ApprovalRequest {
   tiers            ApprovalTier[]
   comments         ApprovalComment[]
   responses        ApprovalResponse[]
+  
   attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   leaveRequest       LeaveRequest?
   overtimeSheet      OvertimeSheet?
@@ -3491,6 +3502,7 @@ model ApprovalRequest {
   inspectionRepair       InspectionRepair?
   officialSeal            OfficialSeal?
   projectSeal            ProjectSeal?
+  exitPermit             ExitPermit?
 
 
   @@index([categoryId], map: "idx_approval_request_category")
@@ -4949,4 +4961,79 @@ model AssetAssignment {
     @@index([companyId, returnedById], map: "idx_company_asset_assignment_returned_by")
     @@index([companyId, deletedAt], map: "idx_company_asset_assignment_deleted")
     @@map("asset_assignment")
+}
+
+enum ExitDirection {
+    ENTRANCE
+    EXIT
+}
+
+enum ExitPermitStatus {
+    DRAFT
+    SUBMITTED
+    IN_REVIEW
+    APPROVED
+    REJECTED
+    RETURNED
+    CANCELLED
+}
+
+
+model ExitPermit {
+id                  String             @id @default(uuid())
+companyId           String             @map("company_id")
+departmentId        String?             @map("department_id")
+employeeId          String             @map("employee_id")
+requestNumber       String             @map("request_number")
+direction           ExitDirection      @default(EXIT)
+date                DateTime           @default(now())
+status              ExitPermitStatus   @default(DRAFT)
+approvalRequestId   String?            @unique @map("approval_request_id")
+attachmentFolderId  String?            @map("attachment_folder_id")
+completedAt         DateTime?          @map("completed_at")
+submittedAt         DateTime?          @map("submitted_at")
+createdBy           String             @map("created_by")
+updatedBy           String             @map("updated_by")
+createdAt           DateTime           @default(now()) @map("created_at")
+updatedAt           DateTime          @updatedAt @map("updated_at") @default(now())
+deletedAt           DateTime?          @map("deleted_at")
+deletedBy           String?            @map("deleted_by")
+
+
+company             Company            @relation(fields: [companyId], references: [id])
+employee            User               @relation("ExitPermitEmployee", fields: [employeeId], references: [id])
+creator             User               @relation("ExitPermitCreator", fields: [createdBy], references: [id])
+department          Department?         @relation(fields: [departmentId], references: [id])
+approvalRequest     ApprovalRequest?   @relation(fields: [approvalRequestId], references: [id])
+attachmentFolder    DocumentFolder?    @relation(fields: [attachmentFolderId], references: [id])
+items               ExitPermitItem[]   
+
+@@unique([companyId, requestNumber])
+@@index([requestNumber], map: "idx_exit_permit_company")
+@@index([employeeId], map: "idx_exit_permit_employee")
+@@index([status], map: "idx_exit_permit_status")
+@@index([companyId, createdAt], map: "idx_exit_permit_company_created")
+@@index([companyId, deletedAt], map: "idx_exit_permit_company_deleted")
+@@index([departmentId], map: "idx_exit_permit_department")
+@@map("exit_permit")
+}
+
+model ExitPermitItem {
+    id                 String             @id @default(uuid())
+    requestId          String             @map("request_id")
+    itemName           String             @map("item_name")  
+    issue              String?
+    quantity           Decimal            @default(1) @db.Decimal(10, 2)
+    unit               String?                   
+    documentId         String?             @map("document_id")
+    createdAt          DateTime            @default(now()) @map("created_at")
+    updatedAt          DateTime            @updatedAt @map("updated_at")
+
+    request            ExitPermit           @relation(fields: [requestId], references: [id])
+    image              Document?             @relation("ExitPermitItemDocument", fields: [documentId], references: [id])
+
+    @@index([requestId], map: "idx_exit_permit_item_request")
+    @@index([documentId], map: "idx_exit_permit_item_document")
+    @@map("exit_permit_item")
+
 }
