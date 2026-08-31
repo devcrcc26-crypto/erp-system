@@ -21,6 +21,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -371,9 +372,7 @@ export default function ProjectSealListPageContent(): React.ReactNode {
       <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <SafetyCertificateOutlined
-              style={{ color: tokens.colorPrimary, fontSize: 16 }}
-            />
+            <ListPageNavIcon iconKey="hr-project-seal" />
             <h3
               className="m-0 text-sm font-semibold"
               style={{ color: tokens.colorTextPrimary }}
