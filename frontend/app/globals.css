@@ -538,6 +538,7 @@ main::-webkit-scrollbar,
   font-weight: 700 !important;
   letter-spacing: normal;
   text-transform: none;
+  white-space: nowrap;
   color: rgba(0, 0, 0, 0.88) !important;
   border-bottom: none !important;
 }
@@ -552,7 +553,7 @@ main::-webkit-scrollbar,
 }
 
 .erp-pro-table .ant-table-tbody > tr > td {
-  padding: 52px 16px !important;
+  padding: 14px 16px !important;
   height: auto;
   min-height: 48px;
   font-size: calc(14px * var(--erp-font-scale));
@@ -776,6 +777,7 @@ main::-webkit-scrollbar,
   font-weight: 700 !important;
   letter-spacing: normal !important;
   text-transform: none !important;
+  white-space: nowrap;
   color: rgba(0, 0, 0, 0.88) !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
 }

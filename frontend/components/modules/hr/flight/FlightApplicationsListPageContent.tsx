@@ -252,6 +252,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
       {
         title: t('hr.table.route'),
         key: 'route',
+        width: 200,
         ellipsis: { showTitle: true },
         render: (_: unknown, row: FlightApplicationListItem) => (
           <div className="min-w-0">
@@ -673,7 +674,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
             columns={columns}
             dataSource={rows}
             loading={listQuery.isFetching && !listQuery.isLoading}
-            scroll={false}
+            scroll={{ x: 'max-content' }}
             onRow={(record) => ({
               onClick: () => router.push(`/hr/flight-applications/${record.id}`),
               className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
@@ -704,6 +705,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
                 />
               ),
             }}
+            
             pagination={{
               ...bindMeta(meta),
               pageSizeOptions: ['10', '20', '50', '100'],
