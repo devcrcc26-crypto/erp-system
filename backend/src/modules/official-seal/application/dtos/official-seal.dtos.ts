@@ -38,12 +38,6 @@ export class SubmitOfficialSealRequestDto {
   @Min(1)
   copyCount?: number;
 
-  @ApiPropertyOptional({ maxLength: 2000 })
-  @IsOptional()
-  @IsString()
-  @MaxLength(2000)
-  remarks?: string;
-
   @ApiProperty({ enum: SealUrgency })
   @IsEnum(SealUrgency)
   urgency!: SealUrgency;

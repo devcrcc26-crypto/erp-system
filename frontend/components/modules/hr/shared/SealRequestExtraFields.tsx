@@ -13,7 +13,7 @@ interface SealRequestExtraFieldsProps {
 }
 
 /**
- * Category (preset or custom), copy count, and remarks for seal usage requests.
+ * Category (preset or custom) and copy count for seal usage requests.
  */
 export default function SealRequestExtraFields({
   form,
@@ -59,14 +59,6 @@ export default function SealRequestExtraFields({
           />
         </Form.Item>
       ) : null}
-      <Form.Item name="remarks" label={t('hr.form.remarks')}>
-        <Input.TextArea
-          rows={3}
-          maxLength={2000}
-          showCount
-          placeholder={t('hr.placeholder.enterSealRemarks')}
-        />
-      </Form.Item>
     </>
   );
 }

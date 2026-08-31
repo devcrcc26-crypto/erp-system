@@ -4724,7 +4724,6 @@ model OfficialSeal {
   description           String
   sealCategory          String?                 @map("seal_category")
   copyCount             Int?                    @map("copy_count")
-  remarks               String?
   urgency               SealUrgency             @default(MINOR)
   status                SealStatus              @default(DRAFT)
   approvalRequestId     String?                 @unique @map("approval_request_id")
@@ -4773,7 +4772,6 @@ model ProjectSeal {
   description           String
   sealCategory          String?                 @map("seal_category")
   copyCount             Int?                    @map("copy_count")
-  remarks               String?
   urgency               SealUrgency             @default(MINOR)
   status                SealStatus              @default(DRAFT)
   approvalRequestId     String?                 @unique @map("approval_request_id")

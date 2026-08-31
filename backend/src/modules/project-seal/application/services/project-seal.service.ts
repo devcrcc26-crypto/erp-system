@@ -143,7 +143,6 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
                     description: dto.description,
                     sealCategory: dto.sealCategory,
                     copyCount: dto.copyCount,
-                    remarks: dto.remarks,
                     urgency: dto.urgency,
                     dateNeeded: dto.dateNeeded,
                 },
@@ -515,12 +514,10 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
     private sealExtraFieldsFromDto(dto: SubmitProjectSealRequestDto): {
         sealCategory: string | null;
         copyCount: number | null;
-        remarks: string | null;
     } {
         return {
             sealCategory: dto.sealCategory?.trim() || null,
             copyCount: dto.copyCount ?? null,
-            remarks: dto.remarks?.trim() || null,
         };
     }
 

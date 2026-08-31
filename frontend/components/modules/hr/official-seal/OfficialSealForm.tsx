@@ -34,7 +34,6 @@ interface FormValues {
   sealCategoryPreset?: string;
   sealCategoryOther?: string;
   copyCount?: number;
-  remarks?: string;
 }
 
 interface OfficialSealFormProps {
@@ -123,7 +122,6 @@ export default function OfficialSealForm({
           values.sealCategoryOther,
         ),
         copyCount: values.copyCount,
-        remarks: values.remarks?.trim() || undefined,
         urgency: values.urgency,
         dateNeeded: values.dateNeeded.format('YYYY-MM-DD'),
         files: selectedFiles.length > 0 ? selectedFiles : undefined,
@@ -301,10 +299,6 @@ export default function OfficialSealForm({
                     ? String(reviewValues.copyCount)
                     : '—'
                 }
-              />
-              <ReviewItem
-                label={t('hr.form.remarks')}
-                value={reviewValues.remarks?.trim() || '—'}
               />
             </div>
             <div className="mt-4">

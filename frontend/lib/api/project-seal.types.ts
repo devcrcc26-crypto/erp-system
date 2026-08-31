@@ -44,7 +44,6 @@ export interface ProjectSealListItem {
     description: string;
     sealCategory?: string | null;
     copyCount?: number | null;
-    remarks?: string | null;
     urgency: ProjectSealUrgency;
     dateNeeded: string;
     status: ProjectSealStatus;
@@ -88,7 +87,6 @@ export interface SubmitProjectSealPayload {
     description: string;
     sealCategory?: string;
     copyCount?: number;
-    remarks?: string;
     urgency: ProjectSealUrgency;
     dateNeeded: string;
     files?: File[];

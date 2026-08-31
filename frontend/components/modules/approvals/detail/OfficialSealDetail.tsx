@@ -98,7 +98,6 @@ export default function OfficialSealDetail({
           <SealRequestDetailFields
             sealCategory={seal.sealCategory}
             copyCount={seal.copyCount}
-            remarks={seal.remarks}
           />
           {seal.completedAt ? (
             <MetaItem label={t('hr.labels.completedAt')}>

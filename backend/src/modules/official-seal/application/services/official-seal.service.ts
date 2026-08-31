@@ -166,7 +166,6 @@ export class OfficialSealService
           description: dto.description,
           sealCategory: dto.sealCategory,
           copyCount: dto.copyCount,
-          remarks: dto.remarks,
           urgency: dto.urgency,
           dateNeeded: dto.dateNeeded,
         },
@@ -558,12 +557,10 @@ export class OfficialSealService
   private sealExtraFieldsFromDto(dto: SubmitOfficialSealRequestDto): {
     sealCategory: string | null;
     copyCount: number | null;
-    remarks: string | null;
   } {
     return {
       sealCategory: dto.sealCategory?.trim() || null,
       copyCount: dto.copyCount ?? null,
-      remarks: dto.remarks?.trim() || null,
     };
   }
 
