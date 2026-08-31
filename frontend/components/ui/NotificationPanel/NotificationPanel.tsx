@@ -9,19 +9,12 @@ import {
   Segmented,
   Spin,
   Tooltip,
-  Typography,
 } from 'antd';
 import {
   BellOutlined,
-  CalendarOutlined,
-  CheckCircleOutlined,
-  CheckOutlined,
-  FieldTimeOutlined,
-  ProjectOutlined,
   RightOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
+import NotificationInboxItem from '@/components/ui/NotificationInboxItem/NotificationInboxItem';
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -33,151 +26,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 
-dayjs.extend(relativeTime);
-
 type InboxFilter = 'all' | 'unread';
-
-interface NotificationVisual {
-  icon: React.ReactNode;
-  bg: string;
-  color: string;
-}
-
-function notificationVisual(notification: InAppNotification): NotificationVisual {
-  const link = notification.link?.toLowerCase() ?? '';
-  const subject = notification.subject.toLowerCase();
-
-  if (link.includes('/leave') || subject.includes('leave')) {
-    return {
-      icon: <CalendarOutlined />,
-      bg: tokens.colorTeal50,
-      color: tokens.colorTeal400,
-    };
-  }
-  if (link.includes('/overtime') || subject.includes('overtime')) {
-    return {
-      icon: <FieldTimeOutlined />,
-      bg: tokens.colorBlue50,
-      color: tokens.colorBlue400,
-    };
-  }
-  if (
-    link.includes('/approval') ||
-    subject.includes('approv') ||
-    subject.includes('reject')
-  ) {
-    return {
-      icon: <CheckCircleOutlined />,
-      bg: tokens.colorAmber50,
-      color: tokens.colorAmber400,
-    };
-  }
-  if (link.includes('/project')) {
-    return {
-      icon: <ProjectOutlined />,
-      bg: tokens.colorBlue50,
-      color: tokens.colorBlue400,
-    };
-  }
-  return {
-    icon: <BellOutlined />,
-    bg: tokens.colorGray50,
-    color: tokens.colorGray600,
-  };
-}
-
-function NotificationItem({
-  notification,
-  onRead,
-  onNavigate,
-  markReadLabel,
-}: {
-  notification: InAppNotification;
-  onRead: (id: string) => void;
-  onNavigate: (notification: InAppNotification) => void;
-  markReadLabel: string;
-}): React.ReactNode {
-  const isUnread = !notification.readAt;
-  const clickable = Boolean(notification.link);
-  const visual = notificationVisual(notification);
-
-  return (
-    <div
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
-      onKeyDown={
-        clickable
-          ? (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onNavigate(notification);
-              }
-            }
-          : undefined
-      }
-      onClick={clickable ? () => onNavigate(notification) : undefined}
-      className={[
-        'group relative flex items-start gap-3 px-4 py-3 transition-colors',
-        isUnread ? 'bg-[#F7FCFA]' : 'bg-white',
-        clickable ? 'cursor-pointer hover:bg-[var(--color-surface-secondary)]' : '',
-      ].join(' ')}
-    >
-      {isUnread ? (
-        <span
-          className="absolute bottom-3 left-0 top-3 w-[3px] rounded-r-full"
-          style={{ backgroundColor: tokens.colorPrimary }}
-          aria-hidden
-        />
-      ) : null}
-
-      <div
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px]"
-        style={{ backgroundColor: visual.bg, color: visual.color }}
-      >
-        {visual.icon}
-      </div>
-
-      <div className="min-w-0 flex-1 pt-0.5">
-        <div className="flex items-start justify-between gap-2">
-          <p
-            className={[
-              'm-0 line-clamp-1 text-[13px] leading-snug',
-              isUnread
-                ? 'font-semibold text-[var(--color-text-primary)]'
-                : 'font-medium text-[var(--color-text-primary)]',
-            ].join(' ')}
-          >
-            {notification.subject}
-          </p>
-          {isUnread ? (
-            <Tooltip title={markReadLabel}>
-              <button
-                type="button"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--color-text-tertiary)] opacity-0 transition-all hover:bg-white hover:text-[var(--color-teal-600)] group-hover:opacity-100"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onRead(notification.id);
-                }}
-                aria-label={markReadLabel}
-              >
-                <CheckOutlined style={{ fontSize: 12 }} />
-              </button>
-            </Tooltip>
-          ) : null}
-        </div>
-        <Typography.Paragraph
-          className="!mb-0 !mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]"
-          ellipsis={{ rows: 2 }}
-        >
-          {notification.body}
-        </Typography.Paragraph>
-        <span className="mt-1.5 block text-[11px] text-[var(--color-text-tertiary)]">
-          {dayjs(notification.createdAt).fromNow()}
-        </span>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Header bell dropdown for in-app notifications.
@@ -315,14 +164,17 @@ export default function NotificationPanel(): React.ReactNode {
         <div className="max-h-[min(420px,60vh)] overflow-y-auto">
           <div className="divide-y divide-[rgba(0,0,0,0.05)]">
             {notifications.map((notification) => (
-              <NotificationItem
+              <NotificationInboxItem
                 key={notification.id}
                 notification={notification}
+                variant="panel"
                 onRead={(id) =>
                   void markRead.mutateAsync(id).catch(() => undefined)
                 }
                 onNavigate={handleNavigate}
                 markReadLabel={t('pages.notifications.markRead')}
+                readLabel={t('pages.notifications.read')}
+                unreadLabel={t('pages.notifications.unread')}
               />
             ))}
           </div>

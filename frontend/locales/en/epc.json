@@ -520,9 +520,16 @@
       "loadFailed": "Failed to load notifications",
       "signInRequired": "Sign in to view notifications.",
       "empty": "No notifications yet",
+      "emptyHint": "When something needs your attention, it will appear here.",
       "emptyUnread": "You're all caught up",
+      "emptyUnreadHint": "You have no unread notifications right now.",
       "read": "Read",
       "unread": "Unread",
+      "stats": {
+        "total": "Total notifications",
+        "unread": "Unread",
+        "read": "Read"
+      },
       "columns": {
         "notification": "Notification",
         "when": "When",

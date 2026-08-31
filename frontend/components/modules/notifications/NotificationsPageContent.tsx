@@ -2,11 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Button, Empty, Segmented } from 'antd';
-import { CheckOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import DataTable from '@/components/ui/DataTable/DataTable';
+import { Alert, Button, Pagination, Segmented, Spin } from 'antd';
+import {
+  BellOutlined,
+  CheckCircleOutlined,
+  MailOutlined,
+} from '@ant-design/icons';
+import NotificationInboxItem from '@/components/ui/NotificationInboxItem/NotificationInboxItem';
+import KPICard from '@/components/ui/KPICard/KPICard';
 import { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
 import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -22,9 +25,7 @@ import {
 } from '@/lib/query/notifications';
 import { useAuthStore } from '@/stores/auth.store';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import type { ColumnsType } from 'antd/es/table';
-
-dayjs.extend(relativeTime);
+import { tokens } from '@/lib/theme/tokens';
 
 type InboxFilter = 'all' | 'unread';
 
@@ -57,6 +58,7 @@ export default function NotificationsPageContent(): React.ReactNode {
   const rows = listQuery.data?.data ?? [];
   const meta = listQuery.data?.meta;
   const unreadCount = unreadQuery.data?.count ?? 0;
+  const pagination = bindMeta(meta);
 
   async function handleMarkRead(id: string): Promise<void> {
     try {
@@ -84,78 +86,6 @@ export default function NotificationsPageContent(): React.ReactNode {
     }
   }
 
-  const columns: ColumnsType<InAppNotification> = [
-    {
-      title: t('pages.notifications.columns.notification'),
-      key: 'notification',
-      render: (_: unknown, row: InAppNotification) => {
-        const isUnread = !row.readAt;
-        return (
-          <div className="min-w-0 py-0.5">
-            <p
-              className={`m-0 text-sm ${
-                isUnread
-                  ? 'font-semibold text-[var(--color-text-primary)]'
-                  : 'font-medium text-[var(--color-text-primary)]'
-              }`}
-            >
-              {row.subject}
-            </p>
-            <p className="m-0 mt-1 text-sm text-[var(--color-text-secondary)] line-clamp-2">
-              {row.body}
-            </p>
-          </div>
-        );
-      },
-    },
-    {
-      title: t('pages.notifications.columns.when'),
-      key: 'when',
-      width: 140,
-      render: (_: unknown, row: InAppNotification) => (
-        <span className="text-sm text-[var(--color-text-tertiary)]">
-          {dayjs(row.createdAt).fromNow()}
-        </span>
-      ),
-    },
-    {
-      title: t('pages.notifications.columns.status'),
-      key: 'status',
-      width: 100,
-      render: (_: unknown, row: InAppNotification) =>
-        row.readAt ? (
-          <span className="text-xs text-[var(--color-text-tertiary)]">
-            {t('pages.notifications.read')}
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-teal-600)]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-teal-400)]" />
-            {t('pages.notifications.unread')}
-          </span>
-        ),
-    },
-    {
-      title: '',
-      key: 'actions',
-      width: 120,
-      render: (_: unknown, row: InAppNotification) =>
-        !row.readAt ? (
-          <Button
-            type="link"
-            size="small"
-            icon={<CheckOutlined />}
-            loading={markRead.isPending && markRead.variables === row.id}
-            onClick={(event) => {
-              event.stopPropagation();
-              void handleMarkRead(row.id);
-            }}
-          >
-            {t('pages.notifications.markRead')}
-          </Button>
-        ) : null,
-    },
-  ];
-
   if (!allowed) {
     return (
       <Alert
@@ -170,9 +100,38 @@ export default function NotificationsPageContent(): React.ReactNode {
     return <PageLoadingSkeleton />;
   }
 
+  const readCount = Math.max(0, (meta?.total ?? 0) - unreadCount);
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <KPICard
+          label={t('pages.notifications.stats.total')}
+          value={String(meta?.total ?? 0)}
+          icon={BellOutlined}
+          iconBg={tokens.colorTeal50}
+          iconColor={tokens.colorTeal400}
+        />
+        <KPICard
+          label={t('pages.notifications.stats.unread')}
+          value={String(unreadCount)}
+          icon={MailOutlined}
+          iconBg={tokens.colorAmber50}
+          iconColor={tokens.colorAmber400}
+        />
+        <KPICard
+          label={t('pages.notifications.stats.read')}
+          value={String(readCount)}
+          icon={CheckCircleOutlined}
+          iconBg={tokens.colorBlue50}
+          iconColor={tokens.colorBlue400}
+        />
+      </div>
+
+      <div
+        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[rgba(0,0,0,0.08)] bg-white px-4 py-3"
+        style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
+      >
         <Segmented
           value={filter}
           onChange={(value) => {
@@ -194,8 +153,12 @@ export default function NotificationsPageContent(): React.ReactNode {
           <TableUpdatingIndicator active={listQuery.isFetching} />
           {unreadCount > 0 ? (
             <Button
+              type="primary"
               loading={markAllRead.isPending}
               onClick={() => void handleMarkAllRead()}
+              style={{
+                backgroundColor: tokens.colorPrimary,
+              }}
             >
               {t('pages.notifications.markAllRead')}
             </Button>
@@ -215,36 +178,73 @@ export default function NotificationsPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-        <DataTable<InAppNotification>
-          rowKey="id"
-          columns={columns}
-          dataSource={rows}
-          loading={listQuery.isFetching && Boolean(listQuery.data)}
-          onRow={(record) => ({
-            onClick: () => handleOpen(record),
-            style: {
-              cursor: record.link ? 'pointer' : 'default',
-              background: record.readAt
-                ? undefined
-                : 'var(--color-teal-50)',
-            },
-          })}
-          locale={{
-            emptyText: (
-              <Empty
-                className="py-10"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={
-                  filter === 'unread'
-                    ? t('pages.notifications.emptyUnread')
-                    : t('pages.notifications.empty')
+      <div className="overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        {listQuery.isFetching && !rows.length ? (
+          <div className="flex justify-center py-16">
+            <Spin />
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex flex-col items-center px-6 py-16 text-center">
+            <div
+              className="mb-4 flex h-14 w-14 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: tokens.colorGray50,
+                color: tokens.colorTextTertiary,
+              }}
+            >
+              <BellOutlined style={{ fontSize: 24 }} />
+            </div>
+            <p
+              className="m-0 text-base font-semibold"
+              style={{ color: tokens.colorTextPrimary }}
+            >
+              {filter === 'unread'
+                ? t('pages.notifications.emptyUnread')
+                : t('pages.notifications.empty')}
+            </p>
+            <p
+              className="m-0 mt-2 max-w-sm text-sm"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              {filter === 'unread'
+                ? t('pages.notifications.emptyUnreadHint')
+                : t('pages.notifications.emptyHint')}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[rgba(0,0,0,0.05)]">
+            {rows.map((notification) => (
+              <NotificationInboxItem
+                key={notification.id}
+                notification={notification}
+                variant="page"
+                markReadLoading={
+                  markRead.isPending && markRead.variables === notification.id
                 }
+                onRead={(id) => void handleMarkRead(id)}
+                onNavigate={handleOpen}
+                markReadLabel={t('pages.notifications.markRead')}
+                readLabel={t('pages.notifications.read')}
+                unreadLabel={t('pages.notifications.unread')}
               />
-            ),
-          }}
-          pagination={bindMeta(meta)}
-        />
+            ))}
+          </div>
+        )}
+
+        {pagination && rows.length > 0 ? (
+          <div className="flex justify-end border-t border-[rgba(0,0,0,0.06)] px-4 py-3 sm:px-5">
+            <Pagination
+              current={pagination.current}
+              pageSize={pagination.pageSize}
+              total={pagination.total}
+              showSizeChanger={pagination.showSizeChanger}
+              pageSizeOptions={pagination.pageSizeOptions}
+              showTotal={pagination.showTotal}
+              onChange={pagination.onChange}
+              onShowSizeChange={pagination.onShowSizeChange}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -520,9 +520,16 @@
       "loadFailed": "加载通知失败",
       "signInRequired": "请登录后查看通知。",
       "empty": "暂无通知",
+      "emptyHint": "有需要您关注的事项时，会显示在这里。",
       "emptyUnread": "没有未读通知",
+      "emptyUnreadHint": "当前没有未读通知。",
       "read": "已读",
       "unread": "未读",
+      "stats": {
+        "total": "通知总数",
+        "unread": "未读",
+        "read": "已读"
+      },
       "columns": {
         "notification": "通知",
         "when": "时间",
