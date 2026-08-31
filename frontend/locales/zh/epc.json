@@ -1383,6 +1383,11 @@
     "viewOnlyRoles": "您仅有角色查看权限。",
     "permissionsSaved": "权限保存成功。",
     "permissionsSaveError": "保存权限失败。",
+    "stats": {
+      "roles": "角色",
+      "modules": "模块",
+      "granted": "已授予权限"
+    },
     "actionView": "查看",
     "actionCreate": "创建",
     "actionEdit": "编辑",

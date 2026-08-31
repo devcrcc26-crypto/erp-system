@@ -1383,6 +1383,11 @@
     "viewOnlyRoles": "You have view-only access to roles.",
     "permissionsSaved": "Permissions saved successfully.",
     "permissionsSaveError": "Failed to save permissions.",
+    "stats": {
+      "roles": "Roles",
+      "modules": "Modules",
+      "granted": "Granted permissions"
+    },
     "actionView": "View",
     "actionCreate": "Create",
     "actionEdit": "Edit",
