@@ -47,6 +47,7 @@ import { StorageModule } from './shared/storage/storage.module';
 import { OfficialSealModule } from './modules/official-seal/official-seal.module';
 import { ProjectSealModule } from './modules/project-seal/project-seal.module';
 import { EmployeeContractModule } from './modules/employee-contract/employee-contract.module';
+import { ExitPermitModule } from './modules/exit-permit/exit-permit.module';
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { EmployeeContractModule } from './modules/employee-contract/employee-con
     OfficialSealModule,
     ProjectSealModule,
     EmployeeContractModule,
+    ExitPermitModule,
   ],
   controllers: [AppController],
   providers: [
