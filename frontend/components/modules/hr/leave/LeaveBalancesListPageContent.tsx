@@ -228,28 +228,30 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
 
       <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
-          label="Employees"
+          label={t('pages.hr.leave.balanceStats.employees')}
           value={totalCount}
           color="teal"
           icon={<UserOutlined />}
         />
         <StatCard
-          label="Year"
+          label={t('hr.labels.year')}
           value={year}
           color="blue"
           icon={<CalendarOutlined />}
         />
         <StatCard
-          label="Low balance"
+          label={t('pages.hr.leave.balanceStats.lowBalance')}
           value={pageStats.lowBalance}
-          sub={`≤ ${LOW_BALANCE_THRESHOLD} days`}
+          sub={t('pages.hr.leave.balanceStats.lowBalanceSub', {
+            threshold: LOW_BALANCE_THRESHOLD,
+          })}
           color="amber"
           icon={<WarningOutlined />}
         />
         <StatCard
-          label="With pending"
+          label={t('pages.hr.leave.balanceStats.withPending')}
           value={pageStats.withPending}
-          sub="Annual leave"
+          sub={t('pages.hr.leave.balanceStats.withPendingSub')}
           color="default"
           icon={<ClockCircleOutlined />}
         />

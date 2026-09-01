@@ -190,7 +190,20 @@
         "listTitle": "Leave Requests",
         "myListTitle": "My Leave Requests",
         "listDescription": "Submit and track employee leave through the approval workflow.",
-        "myListDescription": "View and submit your own leave requests."
+        "myListDescription": "View and submit your own leave requests.",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        },
+        "balanceStats": {
+          "employees": "Employees",
+          "lowBalance": "Low balance",
+          "lowBalanceSub": "≤ {{threshold}} days",
+          "withPending": "With pending",
+          "withPendingSub": "Annual leave"
+        }
       },
       "leaveHistory": {
         "title": "Leave balance & history",
@@ -380,7 +393,13 @@
         "formDescription": "Record employment contract dates and type for an employee.",
         "contractCount": "{{count}} contracts",
         "contractCountOne": "1 contract",
-        "emptyFiltered": "No employee contracts match your filters"
+        "emptyFiltered": "No employee contracts match your filters",
+        "stats": {
+          "total": "Total",
+          "active": "Active",
+          "expiringSoon": "Expiring soon",
+          "ended": "Ended"
+        }
       },
       "officialSeal": {
         "new": "New Official Seal",

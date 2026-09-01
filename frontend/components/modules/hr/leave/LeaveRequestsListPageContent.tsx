@@ -450,7 +450,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('all')}
         >
           <StatCard
-            label="Total"
+            label={t('pages.hr.leave.stats.total')}
             value={statusCounts.all}
             color="teal"
             icon={<CalendarOutlined />}
@@ -462,7 +462,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('pending')}
         >
           <StatCard
-            label="Pending"
+            label={t('pages.hr.leave.stats.pending')}
             value={statusCounts.pending}
             color="amber"
             icon={<ClockCircleOutlined />}
@@ -474,7 +474,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('approved')}
         >
           <StatCard
-            label="Approved"
+            label={t('pages.hr.leave.stats.approved')}
             value={statusCounts.approved}
             color="green"
             icon={<CheckCircleOutlined />}
@@ -486,7 +486,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('rejected')}
         >
           <StatCard
-            label="Rejected"
+            label={t('pages.hr.leave.stats.rejected')}
             value={statusCounts.rejected}
             color="red"
             icon={<CloseCircleOutlined />}

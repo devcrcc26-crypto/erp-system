@@ -190,7 +190,20 @@
         "listTitle": "请假申请",
         "myListTitle": "我的请假申请",
         "listDescription": "通过审批流程提交并跟踪员工请假。",
-        "myListDescription": "查看并提交您自己的请假申请。"
+        "myListDescription": "查看并提交您自己的请假申请。",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        },
+        "balanceStats": {
+          "employees": "员工数",
+          "lowBalance": "余额不足",
+          "lowBalanceSub": "≤ {{threshold}} 天",
+          "withPending": "有待审批",
+          "withPendingSub": "年假"
+        }
       },
       "leaveHistory": {
         "title": "假期余额与记录",
@@ -380,7 +393,13 @@
         "formDescription": "为员工登记劳动合同类型与日期。",
         "contractCount": "{{count}} 份合同",
         "contractCountOne": "1 份合同",
-        "emptyFiltered": "没有符合筛选条件的劳动合同"
+        "emptyFiltered": "没有符合筛选条件的劳动合同",
+        "stats": {
+          "total": "全部",
+          "active": "生效中",
+          "expiringSoon": "即将到期",
+          "ended": "已结束"
+        }
       },
       "officialSeal": {
         "new": "新建公章使用申请",

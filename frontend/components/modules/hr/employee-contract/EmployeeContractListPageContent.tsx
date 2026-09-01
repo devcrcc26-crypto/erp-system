@@ -383,7 +383,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('all')}
         >
           <StatCard
-            label="Total"
+            label={t('pages.hr.employeeContract.stats.total')}
             value={statusCounts.all}
             color="teal"
             icon={<FileTextOutlined />}
@@ -395,7 +395,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('active')}
         >
           <StatCard
-            label="Active"
+            label={t('pages.hr.employeeContract.stats.active')}
             value={statusCounts.active}
             color="green"
             icon={<CheckCircleOutlined />}
@@ -407,7 +407,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('expiringSoon')}
         >
           <StatCard
-            label={t('hr.labels.expiringSoon')}
+            label={t('pages.hr.employeeContract.stats.expiringSoon')}
             value={statusCounts.expiringSoon}
             color="amber"
             icon={<ClockCircleOutlined />}
@@ -419,7 +419,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('ended')}
         >
           <StatCard
-            label="Ended"
+            label={t('pages.hr.employeeContract.stats.ended')}
             value={statusCounts.ended}
             color="default"
             icon={<StopOutlined />}
