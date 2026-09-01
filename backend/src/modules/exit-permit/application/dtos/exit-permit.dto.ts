@@ -1,5 +1,5 @@
 import { ApiPropertyOptional, ApiProperty } from "@nestjs/swagger";
-import {  IsArray, IsDate, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateNested } from "class-validator";
+import {  IsArray, IsDate, IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 
@@ -174,15 +174,13 @@ export class ListExitPermitsDto{
 
     @ApiPropertyOptional()
     @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    dateFrom?: Date;
+    @IsDateString()
+    dateFrom?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    dateTo?: Date;
+    @IsDateString()
+    dateTo?: string;
 }
 
 export { ExitPermitStatus, ExitPermitDirection };
