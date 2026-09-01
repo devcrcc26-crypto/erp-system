@@ -207,7 +207,6 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             quantity: dto.quantity ?? 1,
             unit: dto.unit?.trim() ?? null,
             documentId,
-            updatedBy: userId,
         }
     });
     await this.getRequest(requestId, companyId, userId);
@@ -253,7 +252,6 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             quantity: dto.quantity ?? existing.quantity,
             unit: dto.unit?.trim() ?? existing.unit,
             documentId,
-            updatedBy: userId,
         }
     });
     await this.getRequest(requestId, companyId, userId);
