@@ -424,7 +424,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('all')}
         >
           <StatCard
-            label="Total"
+            label={t('pages.hr.flight.stats.total')}
             value={statusCounts.all}
             color="teal"
             icon={<Plane size={14} />}
@@ -436,7 +436,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('pending')}
         >
           <StatCard
-            label="Pending"
+            label={t('pages.hr.flight.stats.pending')}
             value={statusCounts.pending}
             color="amber"
             icon={<ClockCircleOutlined />}
@@ -448,7 +448,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('approved')}
         >
           <StatCard
-            label="Approved"
+            label={t('pages.hr.flight.stats.approved')}
             value={statusCounts.approved}
             color="green"
             icon={<CheckCircleOutlined />}
@@ -460,7 +460,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           onClick={() => handleStatusMode('rejected')}
         >
           <StatCard
-            label="Rejected"
+            label={t('pages.hr.flight.stats.rejected')}
             value={statusCounts.rejected}
             color="red"
             icon={<CloseCircleOutlined />}

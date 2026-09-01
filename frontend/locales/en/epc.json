@@ -242,7 +242,13 @@
         "listTitle": "Flight Applications",
         "myListTitle": "My Flight Applications",
         "listDescription": "Submit and track flight applications through the approval workflow.",
-        "myListDescription": "View and submit your own flight applications."
+        "myListDescription": "View and submit your own flight applications.",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       },
       "businessTrip": {
         "new": "New Business Trip",

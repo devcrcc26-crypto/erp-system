@@ -242,7 +242,13 @@
         "listTitle": "机票申请",
         "myListTitle": "我的机票申请",
         "listDescription": "提交并跟踪机票申请审批流程。",
-        "myListDescription": "查看并提交您的机票申请。"
+        "myListDescription": "查看并提交您的机票申请。",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       },
       "businessTrip": {
         "new": "新建出差申请",
