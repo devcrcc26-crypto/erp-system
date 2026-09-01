@@ -228,7 +228,13 @@
         "openingSheet": "正在打开本月加班表…",
         "sheetCount": "{{count}} 张加班表",
         "sheetCountOne": "1 张加班表",
-        "emptyFiltered": "没有符合筛选条件的加班表"
+        "emptyFiltered": "没有符合筛选条件的加班表",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       },
       "flight": {
         "new": "新建机票申请",

@@ -228,7 +228,13 @@
         "openingSheet": "Opening this month's overtime sheet…",
         "sheetCount": "{{count}} sheets",
         "sheetCountOne": "1 sheet",
-        "emptyFiltered": "No overtime sheets match your filters"
+        "emptyFiltered": "No overtime sheets match your filters",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       },
       "flight": {
         "new": "New Flight Application",
