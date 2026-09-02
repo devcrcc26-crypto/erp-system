@@ -298,6 +298,12 @@
         "reviewStepDescription": "提交前请确认领用摘要。",
         "attachmentsStepDescription": "可选上传图纸、规格说明或其他证明文件。"
       },
+      "exitPermit": {
+        "direction": {
+          "ENTRANCE": "入场",
+          "EXIT": "出场"
+        }
+      },
       "consumables": {
         "new": "新建低值易耗品申请",
         "detail": "低值易耗品申请",

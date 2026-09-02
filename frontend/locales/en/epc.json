@@ -298,6 +298,12 @@
         "reviewStepDescription": "Confirm the requisition summary before submitting.",
         "attachmentsStepDescription": "Optionally attach drawings, specs, or other supporting documents."
       },
+      "exitPermit": {
+        "direction": {
+          "ENTRANCE": "Entrance",
+          "EXIT": "Exit"
+        }
+      },
       "consumables": {
         "new": "New Consumables Requisition",
         "detail": "Consumables Requisition",
