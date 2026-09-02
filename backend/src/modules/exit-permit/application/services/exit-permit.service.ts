@@ -86,6 +86,11 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     companyId: string,
     userId: string,
   ) {
+    const employeeId = await this.resolveTargetEmployeeId(
+      dto.employeeId ?? userId,
+      companyId,
+      userId,
+    );
     const requestNumber = await this.nextRequestNumber();
 
     const request = await this.prisma.exitPermit.create({
@@ -93,7 +98,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
         id: randomUUID(),
         companyId,
         requestNumber,
-        employeeId: userId,
+        employeeId,
         departmentId: dto.departmentId ?? null,
         direction: dto.direction,
         date: dto.date ?? new Date(),
@@ -124,15 +129,8 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       }
     }
 
-    if (dto.employeeId){
-        const employee = await this.prisma.user.findFirst({
-            where: activeOnly({employeeId: dto.employeeId, companyId}),
-            select: {id: true},
-        });
-
-        if (!employee){
-            throw new NotFoundException('Employee not found');
-        }
+    if (dto.employeeId !== undefined) {
+      await this.resolveTargetEmployeeId(dto.employeeId, companyId, userId);
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -165,7 +163,6 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
               quantity: item.quantity ?? 1,
               unit: item.unit?.trim() ?? null,
               documentId: item.documentId ?? null,
-              updatedBy: userId,
             })),
           });
         }
@@ -604,7 +601,14 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       throw new NotFoundException("Exit permit not found");
     }
 
-    if (request.employeeId !== userId) {
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      "hr",
+      "view",
+    );
+
+    if (!isHrViewer && request.employeeId !== userId) {
       throw new ForbiddenException(
         "Only the request owner can edit this exit permit",
       );
@@ -617,6 +621,47 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       throw new BadRequestException(
         "Only draft or returned exit permits can be edited",
       );
+    }
+  }
+
+  /**
+   * Resolves the employee a permit belongs to.
+   * HR viewers may assign any company employee; others may only use their own user id.
+   */
+  private async resolveTargetEmployeeId(
+    employeeId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<string> {
+    await this.assertEmployeeInCompany(employeeId, companyId);
+
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      "hr",
+      "view",
+    );
+
+    if (!isHrViewer && employeeId !== userId) {
+      throw new ForbiddenException(
+        "You can only create or assign exit permits for yourself",
+      );
+    }
+
+    return employeeId;
+  }
+
+  private async assertEmployeeInCompany(
+    employeeId: string,
+    companyId: string,
+  ): Promise<void> {
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true },
+    });
+
+    if (!employee) {
+      throw new NotFoundException("Employee not found");
     }
   }
 

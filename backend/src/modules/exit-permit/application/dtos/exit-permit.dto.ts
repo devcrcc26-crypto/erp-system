@@ -20,9 +20,10 @@ enum ExitPermitDirection{
 }
 
 export class CreateExitPermitDto{
-    @ApiProperty()
+    @ApiPropertyOptional({ description: 'Target employee user id. Defaults to the current user. HR may assign another employee.' })
+    @IsOptional()
     @IsUUID()
-    employeeId!: string;
+    employeeId?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
