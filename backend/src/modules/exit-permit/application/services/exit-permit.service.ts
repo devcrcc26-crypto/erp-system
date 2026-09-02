@@ -92,21 +92,40 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       userId,
     );
     const requestNumber = await this.nextRequestNumber();
+    const requestId = randomUUID();
 
-    const request = await this.prisma.exitPermit.create({
-      data: {
-        id: randomUUID(),
-        companyId,
-        requestNumber,
-        employeeId,
-        departmentId: dto.departmentId ?? null,
-        direction: dto.direction,
-        date: dto.date ?? new Date(),
-        status: ExitPermitStatus.DRAFT,
-        createdBy: userId,
-        updatedBy: userId,
-      },
+    const request = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.exitPermit.create({
+        data: {
+          id: requestId,
+          companyId,
+          requestNumber,
+          employeeId,
+          departmentId: dto.departmentId ?? null,
+          direction: dto.direction,
+          date: dto.date ?? new Date(),
+          status: ExitPermitStatus.DRAFT,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+
+      if (dto.items?.length) {
+        await tx.exitPermitItem.createMany({
+          data: dto.items.map((item) => ({
+            requestId: created.id,
+            itemName: item.itemName.trim(),
+            issue: item.issue?.trim() ?? null,
+            quantity: item.quantity ?? 1,
+            unit: item.unit?.trim() ?? null,
+            documentId: item.documentId ?? null,
+          })),
+        });
+      }
+
+      return created;
     });
+
     return this.getRequest(request.id, companyId, userId);
   }
 

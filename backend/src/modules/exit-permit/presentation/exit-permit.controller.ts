@@ -52,7 +52,10 @@ export class ExitPermitController {
 
     @Post()
     @DelegatePermissionCheck()
-    @ApiOperation({ summary: 'Create a draft exit permit (no items yet)' })
+    @ApiOperation({
+        summary:
+            'Create a draft exit permit, optionally with line items in the request body',
+    })
     async create(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,

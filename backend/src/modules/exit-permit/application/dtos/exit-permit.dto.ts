@@ -42,8 +42,11 @@ export class CreateExitPermitDto{
     @IsDate()
     date?: Date;
 
-    @ApiProperty()
-    @IsNotEmpty()
+    @ApiPropertyOptional({
+        description:
+            'Optional line items. Images must be added later via POST :id/items.',
+    })
+    @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => CreateExitPermitItemDto)
