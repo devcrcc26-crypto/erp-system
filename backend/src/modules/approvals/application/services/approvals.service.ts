@@ -104,6 +104,7 @@ const REQUEST_DETAIL_INCLUDE = {
   vehicleRefueling: { select: { id: true } },
   officialSeal: { select: { id: true } },
   projectSeal: { select: { id: true } },
+  exitPermit: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -345,6 +346,7 @@ export class ApprovalsService {
       request.vehicleRefueling?.id ??
       request.officialSeal?.id ??
       request.projectSeal?.id ??
+      request.exitPermit?.id ??
       null; 
 
     return {
