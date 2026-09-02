@@ -741,8 +741,8 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
 
   private async ensureAttachmentFolder(
     request: { id: string; requestNumber: string; attachmentFolderId: string | null },
-    userId: string,
     companyId: string,
+    userId: string,
   ) {
     if (request.attachmentFolderId) {
         return request.attachmentFolderId;
