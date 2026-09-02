@@ -10,7 +10,7 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nes
 import {PermissionsGuard} from "@/shared/permissions/permissions.guard";
 import { RequireAnyPermission } from "@/shared/permissions/require-any-permission.decorator";
 import { DelegatePermissionCheck } from "@/shared/permissions/delegate-permission-check.decorator";
-import { FileInterceptor } from "@nestjs/platform-express";
+import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { memoryStorage } from "multer";
 
 
@@ -177,7 +177,7 @@ export class ExitPermitController {
             },
         },
     })
-    @UseInterceptors(FileInterceptor('files', { storage: memoryStorage() }))
+    @UseInterceptors(FilesInterceptor('files', 10, { storage: memoryStorage() }))
     submit(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,
