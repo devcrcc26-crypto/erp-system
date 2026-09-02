@@ -1,17 +1,24 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+} from "@nestjs/common";
 import { PrismaService } from "../../../../shared/prisma/prisma.service";
 import { ApprovalDecisionRegistry } from "../../../approvals/application/services/approval-decision-registry.service";
 import { randomUUID } from "crypto";
 import { CreateExitPermitDto, CreateExitPermitItemDto, ExitPermitStatus, UpdateExitPermitDto, UpdateExitPermitItemDto, ListExitPermitsDto } from "../dtos/exit-permit.dto";
 import { activeOnly } from "../../../../shared/prisma/soft-delete.util";
 import { PermissionService } from "@/shared/permissions/permission.service";
-import { ForbiddenException } from "@nestjs/common";
 import { ALLOWED_IMAGE_MIME_TYPES, ALLOWED_UPLOAD_MIME_TYPES, STORAGE_BUCKETS, STORAGE_SERVICE } from "@/shared/storage/storage.constants";
 import { Prisma, FolderContextType, ApprovalRequestStatus } from "@prisma/client";
 import { IStorageService } from "@/shared/storage/storage.interface";
 import { HrApprovalChainService } from "@/modules/hr-shared/application/services/hr-approval-chain.service";
 import { buildPaginatedResult, buildPrismaPagination } from "@/shared/utils/pagination.util";
-import { isRFC3339 } from "class-validator";
 import { ApprovalDecisionListener, ApprovalFinalDecision } from "@/modules/approvals/application/ports/approval-decision.listener";
 import { ApprovalsService } from "@/modules/approvals/application/services/approvals.service";
 
@@ -91,6 +98,18 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       companyId,
       userId,
     );
+
+    if (dto.departmentId) {
+      const department = await this.prisma.department.findFirst({
+        where: activeOnly({ id: dto.departmentId, companyId }),
+        select: { id: true },
+      });
+
+      if (!department) {
+        throw new NotFoundException("Department not found");
+      }
+    }
+
     const requestNumber = await this.nextRequestNumber();
     const requestId = randomUUID();
 
@@ -263,6 +282,9 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     await this.prisma.exitPermitItem.update({
         where: {id: itemId},
         data: {
+            ...(dto.itemName !== undefined
+              ? { itemName: dto.itemName.trim() }
+              : {}),
             issue: dto.issue?.trim() ?? existing.issue,
             quantity: dto.quantity ?? existing.quantity,
             unit: dto.unit?.trim() ?? existing.unit,
@@ -315,7 +337,16 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
         throw new BadRequestException('Add at least one item before submitting');
     }
 
-    const resolvedTiers = 
+    if (
+      request.status !== ExitPermitStatus.DRAFT &&
+      request.status !== ExitPermitStatus.RETURNED
+    ) {
+      throw new BadRequestException(
+        'Only draft or returned exit permits can be submitted',
+      );
+    }
+
+    const resolvedTiers =
     await this.hrApprovalChain.buildExitPermitApprovalChain(userId, companyId);
 
     if (resolvedTiers.length === 0){

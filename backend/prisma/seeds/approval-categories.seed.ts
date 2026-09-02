@@ -57,7 +57,7 @@ const tier = (
 });
 
 /**
- * HR approval categories from the requirements list (13 total).
+ * HR approval categories from the requirements list (14 total).
  * Contact Form Registration is intentionally excluded.
  */
 const CATEGORIES: CategorySeedDef[] = [
@@ -683,6 +683,43 @@ const CATEGORIES: CategorySeedDef[] = [
       },
     ],
   },
+  {
+    code: 'EXIT_PERMIT',
+    name: 'Exit Permit',
+    description:
+      'Equipment and materials exit or entrance permit for site security.',
+    module: 'HR',
+    numberPrefix: 'EP',
+    icon: 'ExportOutlined',
+    sortOrder: 140,
+    formSchema: {
+      fields: [
+        {
+          name: 'direction',
+          label: 'Direction',
+          type: 'select',
+          options: ['EXIT', 'ENTRANCE'],
+          required: true,
+        },
+        { name: 'date', label: 'Permit Date', type: 'date', required: true },
+        {
+          name: 'itemCount',
+          label: 'Number of Items',
+          type: 'number',
+          required: true,
+        },
+      ],
+    },
+    approvalRules: [
+      {
+        name: 'Default',
+        tiers: [
+          tier('Department Head', 'DEPARTMENT_HEAD', 1),
+          tier('HR Officer', 'HR', 2),
+        ],
+      },
+    ],
+  },
 ];
 
 /** Maps short aliases in category rules to seeded Role.name values. */
@@ -707,7 +744,7 @@ export interface SeedApprovalCategoriesOptions {
 }
 
 /**
- * Clears existing approval categories for the company, then upserts the 13 HR categories.
+ * Clears existing approval categories for the company, then upserts HR categories.
  */
 export async function seedApprovalCategories(
   prisma: PrismaClient,

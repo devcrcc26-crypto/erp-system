@@ -107,9 +107,9 @@ export class ExitPermitController {
             type: 'object',
             properties: {
                 itemName: { type: 'string' },
-                modelSpec: { type: 'string' },
-                description: { type: 'string' },
+                issue: { type: 'string' },
                 quantity: { type: 'number' },
+                unit: { type: 'string' },
             },
         },
     })
@@ -134,9 +134,9 @@ export class ExitPermitController {
             type: 'object',
             properties: {
                 itemName: { type: 'string' },
-                modelSpec: { type: 'string' },
-                description: { type: 'string' },
+                issue: { type: 'string' },
                 quantity: { type: 'number' },
+                unit: { type: 'string' },
             },
         },
     })

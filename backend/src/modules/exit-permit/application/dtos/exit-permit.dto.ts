@@ -27,8 +27,7 @@ export class CreateExitPermitDto{
 
     @ApiPropertyOptional()
     @IsOptional()
-    @IsString()
-    @MaxLength(100)
+    @IsUUID()
     departmentId?: string;
 
     @ApiProperty()
@@ -111,11 +110,18 @@ export class CreateExitPermitItemDto{
 
     @ApiPropertyOptional()
     @IsOptional()
-    @IsString()
+    @IsUUID()
     documentId?: string;
 }
 
 export class UpdateExitPermitItemDto{
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(100)
+    itemName?: string;
+
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()
@@ -136,7 +142,7 @@ export class UpdateExitPermitItemDto{
 
     @ApiPropertyOptional()
     @IsOptional()
-    @IsString()
+    @IsUUID()
     documentId?: string;
 }
 
@@ -168,7 +174,7 @@ export class ListExitPermitsDto{
 
     @ApiPropertyOptional()
     @IsOptional()
-    @IsString()
+    @IsEnum(ExitPermitStatus)
     status?: ExitPermitStatus;
 
     @ApiPropertyOptional()
