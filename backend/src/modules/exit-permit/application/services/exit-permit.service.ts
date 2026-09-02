@@ -225,8 +225,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             documentId,
         }
     });
-    await this.getRequest(requestId, companyId, userId);
-    
+    return this.getRequest(requestId, companyId, userId);
   }
 
   async updateItem(
@@ -270,8 +269,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             documentId,
         }
     });
-    await this.getRequest(requestId, companyId, userId);
-
+    return this.getRequest(requestId, companyId, userId);
   }
 
   async deleteItem(
@@ -291,7 +289,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     }
 
     await this.prisma.exitPermitItem.delete({where: {id: itemId}});
-    await this.getRequest(requestId, companyId, userId);
+    return this.getRequest(requestId, companyId, userId);
   }
 
   async submitRequest(
