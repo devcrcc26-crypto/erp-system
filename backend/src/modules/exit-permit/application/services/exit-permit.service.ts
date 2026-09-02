@@ -439,13 +439,6 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
            }
         } : {}),
         ...(filters.direction ? { direction: filters.direction } : {}),
-        ...(filters.employeeId ? { employeeId: filters.employeeId } : {}),
-        ...(filters.search?.trim() ? {
-            OR: [
-                {requestNumber: {contains: filters.search.trim(), mode: 'insensitive' as const}},
-                {items: {some: {itemName: {contains: filters.search.trim(), mode: 'insensitive' as const}}}},
-            ],
-        } : {}),
     };
 
     const [rows, total] = await Promise.all([
