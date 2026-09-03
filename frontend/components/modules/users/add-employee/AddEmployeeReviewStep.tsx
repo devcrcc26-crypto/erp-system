@@ -5,6 +5,8 @@ import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useUser } from '@/lib/query/users';
+import { useLeavePolicies } from '@/lib/query/leave-policy';
+import { useDepartments, useEngineeringDisciplineOptions, usePositions } from '@/lib/query/org';
 import { formatUserName } from '@/lib/utils/user-display';
 import { formatEmployeeAddress } from '@/components/modules/users/EmployeeProfileFormFields';
 import type { Role } from '@/lib/api/types';
@@ -32,6 +34,21 @@ export default function AddEmployeeReviewStep({
   const reportsToName = reportsToQuery.data
     ? formatUserName(reportsToQuery.data)
     : '-';
+
+  const departmentsQuery = useDepartments({ page: 1, limit: 100 }, true);
+  const positionsQuery = usePositions({ page: 1, limit: 100 }, true);
+  const { options: disciplineOptions } = useEngineeringDisciplineOptions(true, true);
+  const leavePoliciesQuery = useLeavePolicies();
+
+  const departmentName =
+    (departmentsQuery.data?.data ?? []).find((d) => d.id === values.departmentId)?.name ?? '-';
+  const positionName =
+    (positionsQuery.data?.data ?? []).find((p) => p.id === values.positionId)?.title ?? '-';
+  const disciplineName =
+    disciplineOptions.find((d) => d.value === values.engineeringDisciplineId)?.label ?? '-';
+  const leavePolicyName =
+    (leavePoliciesQuery.data ?? []).find((p) => p.id === values.leavePolicyId)?.name ?? '-';
+
   const hasEmail = Boolean(values.email?.trim());
   const emergencyContacts = values.emergencyContacts ?? [];
   const reviewDescription =
@@ -95,8 +112,26 @@ export default function AddEmployeeReviewStep({
           <Descriptions.Item label={t('users.form.employeeType')}>
             {values.employeeType ? t(`hr.employeeType.${values.employeeType}`) : '-'}
           </Descriptions.Item>
+          <Descriptions.Item label={t('users.form.department')}>
+            {departmentName}
+          </Descriptions.Item>
+          <Descriptions.Item label={t('users.form.position')}>
+            {positionName}
+          </Descriptions.Item>
+          <Descriptions.Item label={t('users.form.discipline')}>
+            {disciplineName}
+          </Descriptions.Item>
           <Descriptions.Item label={t('users.form.reportsTo')}>
             {reportsToName}
+          </Descriptions.Item>
+          <Descriptions.Item label={t('users.form.leavePolicy')}>
+            {leavePolicyName}
+          </Descriptions.Item>
+          <Descriptions.Item label={t('users.form.educationLevel')}>
+            {values.educationLevel ? t(`hr.educationLevel.${values.educationLevel}`) : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label={t('users.form.fieldOfStudy')}>
+            {values.fieldOfStudy?.trim() || '-'}
           </Descriptions.Item>
           <Descriptions.Item label={t('users.form.experienceStartDate')}>
             {values.experienceStartDate
