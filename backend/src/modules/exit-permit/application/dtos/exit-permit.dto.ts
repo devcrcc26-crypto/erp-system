@@ -1,8 +1,6 @@
 import { ApiPropertyOptional, ApiProperty } from "@nestjs/swagger";
-import {  IsArray, IsDate, IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateNested } from "class-validator";
+import { IsArray, IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
-
-
 
 enum ExitPermitStatus{
     DRAFT = 'DRAFT',
@@ -17,6 +15,38 @@ enum ExitPermitStatus{
 enum ExitPermitDirection{
     ENTRANCE = 'ENTRANCE',
     EXIT = 'EXIT',
+}
+
+export class CreateExitPermitItemDto{
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(100)
+    itemName!: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    issue?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
+    quantity?: number;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    unit?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsUUID()
+    documentId?: string;
 }
 
 export class CreateExitPermitDto{
@@ -37,9 +67,8 @@ export class CreateExitPermitDto{
 
     @ApiPropertyOptional()
     @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    date?: Date;
+    @IsDateString()
+    date?: string;
 
     @ApiPropertyOptional({
         description:
@@ -50,7 +79,6 @@ export class CreateExitPermitDto{
     @ValidateNested({ each: true })
     @Type(() => CreateExitPermitItemDto)
     items?: CreateExitPermitItemDto[];
-    
 }
 
 export class UpdateExitPermitDto{
@@ -71,9 +99,8 @@ export class UpdateExitPermitDto{
 
     @ApiPropertyOptional()
     @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    date?: Date;
+    @IsDateString()
+    date?: string;
 
     @ApiPropertyOptional()
     @IsOptional()
@@ -81,37 +108,6 @@ export class UpdateExitPermitDto{
     @ValidateNested({ each: true })
     @Type(() => CreateExitPermitItemDto)
     items?: CreateExitPermitItemDto[];
-}
-
-export class CreateExitPermitItemDto{
-    @ApiProperty()
-    @IsString()
-    @IsNotEmpty()
-    @MaxLength(100)
-    itemName!: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    @MaxLength(100)
-    issue?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsNumber()
-    @Min(1)
-    quantity?: number;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    @MaxLength(100)
-    unit?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsUUID()
-    documentId?: string;
 }
 
 export class UpdateExitPermitItemDto{
@@ -130,6 +126,7 @@ export class UpdateExitPermitItemDto{
 
     @ApiPropertyOptional()
     @IsOptional()
+    @Type(() => Number)
     @IsNumber()
     @Min(1)
     quantity?: number;
@@ -160,7 +157,6 @@ export class ListExitPermitsDto{
     @IsInt()
     @Min(1)
     limit?: number;
-
 
     @ApiPropertyOptional()
     @IsOptional()

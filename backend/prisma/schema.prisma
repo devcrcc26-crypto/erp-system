@@ -754,6 +754,7 @@ model User {
 
   exitPermitsEmployee             ExitPermit[]              @relation("ExitPermitEmployee")
   exitPermitsCreated              ExitPermit[]              @relation("ExitPermitCreator")
+  exitPermitsSubmitted            ExitPermit[]              @relation("ExitPermitSubmitter")
 
 
   createdAssets                   CompanyAsset[]            @relation("AssetCreator")
@@ -4996,6 +4997,8 @@ approvalRequestId   String?            @unique @map("approval_request_id")
 attachmentFolderId  String?            @map("attachment_folder_id")
 completedAt         DateTime?          @map("completed_at")
 submittedAt         DateTime?          @map("submitted_at")
+submittedBy         String?            @map("submitted_by")
+isOnBehalf          Boolean            @default(false) @map("is_on_behalf")
 createdBy           String             @map("created_by")
 updatedBy           String             @map("updated_by")
 createdAt           DateTime           @default(now()) @map("created_at")
@@ -5007,6 +5010,7 @@ deletedBy           String?            @map("deleted_by")
 company             Company            @relation(fields: [companyId], references: [id])
 employee            User               @relation("ExitPermitEmployee", fields: [employeeId], references: [id])
 creator             User               @relation("ExitPermitCreator", fields: [createdBy], references: [id])
+submitter           User?              @relation("ExitPermitSubmitter", fields: [submittedBy], references: [id])
 department          Department?         @relation(fields: [departmentId], references: [id])
 approvalRequest     ApprovalRequest?   @relation(fields: [approvalRequestId], references: [id])
 attachmentFolder    DocumentFolder?    @relation(fields: [attachmentFolderId], references: [id])
@@ -5019,6 +5023,8 @@ items               ExitPermitItem[]
 @@index([companyId, createdAt], map: "idx_exit_permit_company_created")
 @@index([companyId, deletedAt], map: "idx_exit_permit_company_deleted")
 @@index([departmentId], map: "idx_exit_permit_department")
+@@index([submittedBy], map: "idx_exit_permit_submitted_by")
+@@index([isOnBehalf], map: "idx_exit_permit_on_behalf")
 @@map("exit_permit")
 }
 

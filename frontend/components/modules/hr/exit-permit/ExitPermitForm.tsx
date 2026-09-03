@@ -447,7 +447,7 @@ export default function ExitPermitForm({
                 requiredMark={false}
                 component={false}
               >
-                <div className="erp-form-grid-2">
+                <div className="erp-form-grid-1">
                   <Form.Item
                     name="itemName"
                     label={t('hr.form.itemName')}
@@ -572,6 +572,12 @@ export default function ExitPermitForm({
                   <ReviewItem
                     label={t('hr.form.employee')}
                     value={findEmployee(detailsSnapshot.employeeId)}
+                  />
+                ) : null}
+                {canViewHr && detailsSnapshot.employeeId ? (
+                  <ReviewItem
+                    label={t('hr.table.onBehalf')}
+                    value={t('hr.labels.yes')}
                   />
                 ) : null}
                 <ReviewItem

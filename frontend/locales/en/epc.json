@@ -2243,6 +2243,7 @@
       "sheetNumber": "Sheet #",
       "tripNumber": "Trip #",
       "employee": "Employee",
+      "onBehalf": "On behalf",
       "submittedBy": "Submitted by",
       "title": "Title",
       "status": "Status",

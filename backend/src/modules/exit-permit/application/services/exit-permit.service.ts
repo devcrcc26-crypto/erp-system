@@ -51,6 +51,8 @@ const DEPARTMENT_SELECT = {
 
 const REQUEST_DETAIL_INCLUDE = {
     employee: { select: USER_SELECT },
+    creator: { select: USER_SELECT },
+    submitter: { select: USER_SELECT },
     department: { select: DEPARTMENT_SELECT },
     items: {
         orderBy: { createdAt: 'asc' as const },
@@ -129,7 +131,8 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
           employeeId,
           departmentId: dto.departmentId ?? null,
           direction: dto.direction,
-          date: dto.date ?? new Date(),
+          date: dto.date ? new Date(dto.date) : new Date(),
+          isOnBehalf: employeeId !== userId,
           status: ExitPermitStatus.DRAFT,
           createdBy: userId,
           updatedBy: userId,
@@ -183,12 +186,15 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
         where: { id },
         data: {
           ...(dto.direction !== undefined ? { direction: dto.direction } : {}),
-          ...(dto.date !== undefined ? { date: dto.date ?? null } : {}),
+          ...(dto.date !== undefined ? { date: new Date(dto.date) } : {}),
           ...(dto.departmentId !== undefined
             ? { departmentId: dto.departmentId ?? null }
             : {}),
           ...(dto.employeeId !== undefined
-            ? { employeeId: dto.employeeId }
+            ? {
+                employeeId: dto.employeeId,
+                isOnBehalf: dto.employeeId !== userId,
+              }
             : {}),
           updatedBy: userId,
         },
@@ -336,8 +342,10 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
         throw new NotFoundException('Exit permit not found');
     }
 
-    if (request.employeeId !== userId){
-        throw new ForbiddenException('Only the request owner can submit it');
+    if (!(await this.canActForRequest(request, companyId, userId))) {
+        throw new ForbiddenException(
+          'Only the employee or HR can submit this exit permit',
+        );
     }
 
     if (request.items.length === 0){
@@ -354,7 +362,10 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     }
 
     const resolvedTiers =
-    await this.hrApprovalChain.buildExitPermitApprovalChain(userId, companyId);
+    await this.hrApprovalChain.buildExitPermitApprovalChain(
+      request.employeeId,
+      companyId,
+    );
 
     if (resolvedTiers.length === 0){
         if (files?.length > 0){
@@ -367,6 +378,8 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             data: {
                 status: ExitPermitStatus.APPROVED,
                 submittedAt: now,
+                submittedBy: userId,
+                isOnBehalf: request.employeeId !== userId || request.isOnBehalf,
                 completedAt: now,
                 updatedBy: userId,
             }
@@ -388,6 +401,8 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             date: request.date, 
             departmentId: request.departmentId,
             employeeId: request.employeeId,
+            submittedBy: userId,
+            isOnBehalf: request.employeeId !== userId || request.isOnBehalf,
         },
     },
     companyId,
@@ -410,6 +425,8 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             status: ExitPermitStatus.SUBMITTED,
             approvalRequestId: approval.id,
             submittedAt: new Date(),
+            submittedBy: userId,
+            isOnBehalf: request.employeeId !== userId || request.isOnBehalf,
             completedAt: null,
             updatedBy: userId,
         }
@@ -487,6 +504,8 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             orderBy: { createdAt: 'desc' },
             include: {
                 employee: { select: USER_SELECT },
+                creator: { select: USER_SELECT },
+                submitter: { select: USER_SELECT },
                 department: { select: DEPARTMENT_SELECT },
                 _count: { select: { items: true } },
                 approvalRequest: {
@@ -536,8 +555,10 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     if (!request){
         throw new NotFoundException('Exit permit not found');
     }
-    if (request.employeeId !== userId){
-        throw new ForbiddenException('Only the request owner can cancel it');
+    if (!(await this.canActForRequest(request, companyId, userId))) {
+        throw new ForbiddenException(
+          'Only the employee or HR can cancel this exit permit',
+        );
     }
     if (request.status !== ExitPermitStatus.DRAFT && request.status !== ExitPermitStatus.SUBMITTED){
         throw new BadRequestException('Only draft or submitted requests can be cancelled');
@@ -607,29 +628,41 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     return `EP-${String(seq).padStart(4, "0")}`;
   }
 
+  private async canActForRequest(
+    request: { employeeId: string; createdBy: string },
+    companyId: string,
+    userId: string,
+  ): Promise<boolean> {
+    if (request.employeeId === userId || request.createdBy === userId) {
+      return true;
+    }
+
+    return this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+  }
+
   private async assertCanView(
     request: {
       employeeId: string;
+      createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
     companyId: string,
     userId: string,
   ) {
-    const isHrViewer = await this.permissionService.hasPermission(
-      userId,
-      companyId,
-      "hr",
-      "view",
-    );
+    if (await this.canActForRequest(request, companyId, userId)) {
+      return;
+    }
 
-    if (isHrViewer) return;
-
-    const isOwner = request.employeeId === userId;
     const isTierApprover =
       request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
       false;
 
-    if (!isOwner && !isTierApprover) {
+    if (!isTierApprover) {
       throw new ForbiddenException(
         "You do not have access to this exit permit",
       );
@@ -643,23 +676,16 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
   ) {
     const request = await this.prisma.exitPermit.findFirst({
       where: activeOnly({ id: requestId, companyId }),
-      select: { id: true, employeeId: true, status: true },
+      select: { id: true, employeeId: true, createdBy: true, status: true },
     });
 
     if (!request) {
       throw new NotFoundException("Exit permit not found");
     }
 
-    const isHrViewer = await this.permissionService.hasPermission(
-      userId,
-      companyId,
-      "hr",
-      "view",
-    );
-
-    if (!isHrViewer && request.employeeId !== userId) {
+    if (!(await this.canActForRequest(request, companyId, userId))) {
       throw new ForbiddenException(
-        "Only the request owner can edit this exit permit",
+        "Only the employee or HR can edit this exit permit",
       );
     }
 

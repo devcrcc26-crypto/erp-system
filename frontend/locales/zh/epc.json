@@ -2243,6 +2243,7 @@
       "sheetNumber": "表单编号",
       "tripNumber": "出差编号",
       "employee": "员工",
+      "onBehalf": "代提",
       "submittedBy": "提交人",
       "title": "标题",
       "status": "状态",

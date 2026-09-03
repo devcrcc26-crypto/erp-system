@@ -105,6 +105,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/attendance': 'nav.hr.attendance',
   '/hr/employee-evaluation': 'nav.hr.employeeEvaluation',
   '/hr/equipment-and-materials-exit-permit': 'nav.hr.equipmentAndMaterialsExitPermit',
+  '/hr/equipment-and-materials-exit-permit/new': 'pages.hr.exitPermit.new',
 };
 
 /** Route → page subtitle (description) i18n keys for MainContentHeader. */
@@ -153,6 +154,8 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/approvals/new/inspection-repair': 'pages.hr.inspectionRepair.formDescription',
   '/approvals/new/official-seal': 'pages.hr.officialSeal.formDescription',
   '/approvals/new/project-seal': 'pages.hr.projectSeal.formDescription',
+  '/approvals/new/exit-permit': 'pages.hr.exitPermit.formDescription',
+  
 };
 
 function descriptionKeyFor(pathname: string): string | undefined {
@@ -773,6 +776,7 @@ function resolveRouteMetaCore(
     pathname === '/approvals/new/purchase-request' ||
     pathname === '/approvals/new/material-requisition' ||
     pathname === '/approvals/new/equipment-and-materials-exit-permit' ||
+    pathname === '/approvals/new/exit-permit' ||
     pathname === '/approvals/new/consumables' ||
     pathname === '/approvals/new/vehicle-application' ||
     pathname === '/approvals/new/vehicle-refueling' ||

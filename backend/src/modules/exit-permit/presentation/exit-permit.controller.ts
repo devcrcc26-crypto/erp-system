@@ -18,7 +18,7 @@ async function parseDto<T extends object>(
   cls: new () => T,
   body: Record<string, unknown>,
 ): Promise<T> {
-  const dto = plainToInstance(cls, body);
+  const dto = plainToInstance(cls, body, { enableImplicitConversion: true });
   const errors = await validate(dto, {
     whitelist: true,
     forbidNonWhitelisted: true,

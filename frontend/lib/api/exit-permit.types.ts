@@ -69,14 +69,18 @@ export interface ExitPermitListItem {
   direction: ExitPermitDirection;
   date: string;
   status: ExitPermitStatus;
+  isOnBehalf: boolean;
   approvalRequestId?: string | null;
   attachmentFolderId?: string | null;
   itemCount: number;
   currentTierLabel?: string | null;
   employee?: ExitPermitUserSummary;
+  creator?: ExitPermitUserSummary;
+  submitter?: ExitPermitUserSummary | null;
   department?: ExitPermitDepartmentSummary | null;
   approvalRequest?: ExitPermitApprovalRequestSummary | null;
   createdBy: string;
+  submittedBy?: string | null;
   updatedBy: string;
   createdAt: string;
   updatedAt: string;

@@ -61,7 +61,23 @@ export default function ExitPermitListPageContent(): React.ReactNode {
         title: t('hr.table.employee'),
         dataIndex: 'employee',
         key: 'employee',
-        render: (_: unknown, row: ExitPermitListItem) => formatExitPermitEmployeeName(row.employee),
+        render: (_: unknown, row: ExitPermitListItem) => (
+          <span>
+            {formatExitPermitEmployeeName(row.employee)}
+            {row.isOnBehalf ? (
+              <Tag className="ml-2" color="blue">
+                {t('hr.table.onBehalf')}
+              </Tag>
+            ) : null}
+          </span>
+        ),
+      },
+      {
+        title: t('hr.table.submittedBy'),
+        dataIndex: 'submitter',
+        key: 'submitter',
+        render: (_: unknown, row: ExitPermitListItem) =>
+          formatExitPermitEmployeeName(row.submitter ?? row.creator),
       },
       {
         title: t('hr.table.direction'),
