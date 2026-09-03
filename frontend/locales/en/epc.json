@@ -1055,7 +1055,9 @@
     "expandNavigation": "Expand navigation",
     "brandTitle": "CCECC",
     "brandShort": "CP",
-    "brandWorkspace": "CCECC workspace"
+    "brandWorkspace": "CCECC workspace",
+    "searchNavigation": "Find a module",
+    "noNavResults": "No modules match your search."
   },
   "placeholder": {
     "comingSoon": "Coming soon",

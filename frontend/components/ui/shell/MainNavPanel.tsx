@@ -1,20 +1,20 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  DownOutlined,
-} from '@ant-design/icons';
+import { useEffect, useMemo, useState } from 'react';
 import {
   buildIconRailNav,
   flattenIconRailNav,
   resolveIconRailKey,
-  type IconRailGroup,
   type IconRailItem,
 } from '@/config/navConfig';
-import { getNavIcon, navIconClassName } from '@/lib/navigation/nav-icons';
+import NavDomainRail from '@/components/ui/shell/nav/NavDomainRail';
+import NavModulePanel from '@/components/ui/shell/nav/NavModulePanel';
+import {
+  buildNavDomains,
+  findNavDomain,
+  firstPanelDomainKey,
+} from '@/components/ui/shell/nav/nav-domains';
 import {
   useCanViewMyComments,
   useCanViewMyWork,
@@ -45,193 +45,15 @@ import {
 } from '@/hooks/use-org-nav-access';
 import { canViewGlobalNavKey } from '@/lib/navigation/project-nav-visibility';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSidebarGroupOpen } from '@/hooks/useSidebarGroupOpen';
 import { tokens } from '@/lib/theme/tokens';
-import { SHELL_TOP_HEADER_HEIGHT } from '@/components/ui/shell/shell-layout';
-import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
-
-function railItemClass(isActive: boolean, isExpanded: boolean): string {
-  const base =
-    'relative flex shrink-0 items-center no-underline transition-colors duration-150';
-  if (isExpanded) {
-    return [
-      base,
-      'w-full gap-2.5 rounded-md px-3 py-2 text-[14px] leading-[22px]',
-      isActive ? 'font-semibold' : 'font-normal',
-    ].join(' ');
-  }
-  return [
-    base,
-    'mx-auto h-9 w-9 justify-center rounded-md text-[16px]',
-    isActive ? 'font-semibold' : 'font-normal',
-  ].join(' ');
-}
-
-function railItemStyle(isActive: boolean): React.CSSProperties {
-  if (isActive) {
-    return {
-      backgroundColor: tokens.colorSidebarActive,
-      color: tokens.colorSidebarTextActive,
-      boxShadow: `inset 3px 0 0 ${tokens.colorSidebarAccent}`,
-      fontFamily: tokens.fontFamily,
-    };
-  }
-  return {
-    color: tokens.colorSidebarText,
-    fontFamily: tokens.fontFamily,
-  };
-}
-
-function RailNavButton({
-  item,
-  label,
-  isActive,
-  isExpanded,
-  onNavigate,
-}: {
-  item: IconRailItem;
-  label: string;
-  isActive: boolean;
-  isExpanded: boolean;
-  onNavigate?: () => void;
-}): React.ReactNode {
-  return (
-    <Link
-      href={item.href}
-      onClick={onNavigate}
-      title={label}
-      aria-label={label}
-      aria-current={isActive ? 'page' : undefined}
-      className={[
-        railItemClass(isActive, isExpanded),
-        !isActive && isExpanded
-          ? 'hover:bg-[var(--color-sidebar-hover)]'
-          : '',
-        !isActive && !isExpanded
-          ? 'hover:bg-[var(--color-sidebar-hover)]'
-          : '',
-      ].join(' ')}
-      style={railItemStyle(isActive)}
-    >
-      <span
-        className={navIconClassName}
-        style={
-          isActive
-            ? { color: tokens.colorSidebarAccent }
-            : { color: tokens.colorSidebarText }
-        }
-      >
-        {getNavIcon(item.iconKey)}
-      </span>
-      <span
-        className={[
-          'truncate transition-all duration-200 ease-in-out',
-          isExpanded ? 'w-auto opacity-100' : 'w-0 overflow-hidden opacity-0',
-        ].join(' ')}
-        style={{ fontFamily: tokens.fontFamily }}
-      >
-        {label}
-      </span>
-    </Link>
-  );
-}
-
-function RailGroupHeader({
-  label,
-  open,
-  onToggle,
-}: {
-  label: string;
-  open: boolean;
-  onToggle: () => void;
-}): React.ReactNode {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={open}
-      className="mb-1 mt-3 flex w-full items-center gap-1.5 rounded-md px-3 py-1.5 text-left transition-colors hover:bg-[var(--color-sidebar-hover)] first:mt-0"
-      style={{ color: tokens.colorSidebarGroupLabel, fontFamily: tokens.fontFamily }}
-    >
-      <span className="min-w-0 flex-1 truncate text-[12px] font-semibold tracking-[0.04em]">
-        {label}
-      </span>
-      <DownOutlined
-        className="shrink-0 text-[10px] transition-transform duration-150"
-        style={{
-          transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
-        }}
-      />
-    </button>
-  );
-}
-
-function RailNavGroup({
-  group,
-  visibleItems,
-  selectedKey,
-  isExpanded,
-  onNavigate,
-  t,
-}: {
-  group: IconRailGroup;
-  visibleItems: IconRailItem[];
-  selectedKey: string;
-  isExpanded: boolean;
-  onNavigate?: () => void;
-  t: (key: string) => string;
-}): React.ReactNode {
-  const { open, toggle } = useSidebarGroupOpen(
-    group.storageKey,
-    group.defaultOpen,
-  );
-
-  if (visibleItems.length === 0) {
-    return null;
-  }
-
-  if (!isExpanded) {
-    return (
-      <>
-        {visibleItems.map((item) => (
-          <RailNavButton
-            key={item.key}
-            item={item}
-            label={t(item.labelKey)}
-            isActive={selectedKey === item.key}
-            isExpanded={false}
-            onNavigate={onNavigate}
-          />
-        ))}
-      </>
-    );
-  }
-
-  return (
-    <section className="flex flex-col gap-0.5 pb-1">
-      <RailGroupHeader
-        label={t(group.labelKey)}
-        open={open}
-        onToggle={toggle}
-      />
-      {open
-        ? visibleItems.map((item) => (
-            <RailNavButton
-              key={item.key}
-              item={item}
-              label={t(item.labelKey)}
-              isActive={selectedKey === item.key}
-              isExpanded={isExpanded}
-              onNavigate={onNavigate}
-            />
-          ))
-        : null}
-    </section>
-  );
-}
+import {
+  NAV_DOMAIN_RAIL_WIDTH,
+  SHELL_TOP_HEADER_HEIGHT,
+} from '@/components/ui/shell/shell-layout';
 
 /**
- * Shared main navigation panel - icon rail (desktop) and drawer (mobile).
+ * Main navigation: domain rail plus the selected domain's module panel.
+ * Collapsed (`isExpanded === false`) renders the rail only, with flyout panels.
  */
 export default function MainNavPanel({
   isExpanded,
@@ -291,132 +113,96 @@ export default function MainNavPanel({
     canViewDisciplinesCatalog: !permLoading && canViewDisciplinesCatalog,
   });
 
-  function isItemVisible(item: IconRailItem): boolean {
-    return item.visible && canViewGlobalNavKey(item.key, epc, pm);
-  }
+  const visibleStructure = useMemo(() => {
+    function isItemVisible(item: IconRailItem): boolean {
+      return item.visible && canViewGlobalNavKey(item.key, epc, pm);
+    }
 
-  const visibleTopItems = navStructure.topItems.filter(isItemVisible);
-  const visibleGroups = navStructure.groups.map((group) => ({
-    group,
-    items: group.items.filter(isItemVisible),
-  }));
-  const visibleStandalone = navStructure.standalone.filter(isItemVisible);
-  const visibleNavItems = flattenIconRailNav({
-    topItems: visibleTopItems,
-    groups: visibleGroups.map(({ group, items }) => ({ ...group, items })),
-    standalone: visibleStandalone,
-  });
-  const selectedKey = resolveIconRailKey(pathname, visibleNavItems);
+    return {
+      topItems: navStructure.topItems.filter(isItemVisible),
+      groups: navStructure.groups.map((group) => ({
+        ...group,
+        items: group.items.filter(isItemVisible),
+      })),
+      standalone: navStructure.standalone.filter(isItemVisible),
+    };
+  }, [navStructure, epc, pm]);
+
+  const selectedKey = resolveIconRailKey(
+    pathname,
+    flattenIconRailNav(visibleStructure),
+  );
+
+  const domains = useMemo(
+    () => buildNavDomains(visibleStructure, selectedKey),
+    [visibleStructure, selectedKey],
+  );
+
+  const [browsedDomainKey, setBrowsedDomainKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const active = findNavDomain(domains, domains.activeDomainKey);
+    if (active !== null && active.items.length > 0) {
+      setBrowsedDomainKey(active.key);
+    }
+  }, [domains]);
+
+  const panelDomainKey = browsedDomainKey ?? firstPanelDomainKey(domains);
+  const panelDomain = findNavDomain(domains, panelDomainKey);
+  const showPanel = isExpanded && panelDomain !== null;
+
+  if (permLoading) {
+    return (
+      <div
+        className="flex h-full"
+        style={{ background: tokens.colorSidebarBg }}
+        aria-busy
+      >
+        <div
+          className="flex h-full shrink-0 flex-col gap-2 px-2 pt-3"
+          style={{
+            width: NAV_DOMAIN_RAIL_WIDTH,
+            paddingTop: SHELL_TOP_HEADER_HEIGHT + 12,
+          }}
+        >
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={index}
+              className="erp-page-skeleton mx-auto h-10 w-10 rounded-[8px]"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      className="flex h-full flex-col"
-      style={{
-        background: tokens.colorSidebarBg,
-        borderRight: `0.5px solid ${tokens.colorSidebarBorder}`,
-      }}
+      className="flex h-full min-h-0"
+      style={{ background: tokens.colorSidebarBg }}
     >
-      <div
-        className={[
-          'flex shrink-0 items-center',
-          isExpanded ? 'px-3' : 'justify-center px-2',
-        ].join(' ')}
-        style={{
-          height: SHELL_TOP_HEADER_HEIGHT,
-          borderBottom: `1px solid ${tokens.colorSidebarBorder}`,
-        }}
-      >
-        {isExpanded ? (
-          <div className="flex min-w-0 items-center gap-2.5">
-            <BrandLogo size={26} onDark className="shrink-0" />
-            <h1
-              className="m-0 truncate text-[14px] font-semibold tracking-[-0.01em]"
-              style={{
-                color: tokens.colorSidebarTextActive,
-                fontFamily: tokens.fontFamily,
-              }}
-            >
-              {t('shell.brandTitle')}
-            </h1>
-          </div>
-        ) : (
-          <div
-            className="flex items-center justify-center"
-            title={t('shell.brandTitle')}
-            aria-label={t('shell.brandWorkspace')}
-          >
-            <BrandLogo size={26} onDark />
-          </div>
-        )}
-      </div>
+      <NavDomainRail
+        primary={domains.primary}
+        utility={domains.utility}
+        activeDomainKey={domains.activeDomainKey}
+        browsedDomainKey={panelDomainKey}
+        selectedKey={selectedKey}
+        showPanel={showPanel}
+        onBrowseDomain={setBrowsedDomainKey}
+        onNavigate={onNavigate}
+        t={t}
+      />
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2.5 py-3">
-        {permLoading ? (
-          Array.from({ length: 4 }).map((_, index) => (
-            <div
-              key={index}
-              className={[
-                'erp-page-skeleton rounded-md',
-                isExpanded ? 'h-9 w-full' : 'mx-auto h-9 w-9',
-              ].join(' ')}
-            />
-          ))
-        ) : (
-          <>
-            {visibleTopItems.length > 0 ? (
-              <section className="mb-2 flex flex-col gap-0.5">
-                {visibleTopItems.map((item) => (
-                  <RailNavButton
-                    key={item.key}
-                    item={item}
-                    label={t(item.labelKey)}
-                    isActive={selectedKey === item.key}
-                    isExpanded={isExpanded}
-                    onNavigate={onNavigate}
-                  />
-                ))}
-              </section>
-            ) : null}
+      {showPanel && panelDomain ? (
+        <NavModulePanel
+          domain={panelDomain}
+          selectedKey={selectedKey}
+          onNavigate={onNavigate}
+          t={t}
+        />
+      ) : null}
 
-            {visibleGroups.map(({ group, items }) => (
-              <RailNavGroup
-                key={group.key}
-                group={group}
-                visibleItems={items}
-                selectedKey={selectedKey}
-                isExpanded={isExpanded}
-                onNavigate={onNavigate}
-                t={t}
-              />
-            ))}
-
-            {visibleStandalone.length > 0 ? (
-              <section
-                className={[
-                  'flex flex-col gap-0.5',
-                  isExpanded ? 'mt-3 pt-3' : 'mt-2',
-                ].join(' ')}
-                style={
-                  isExpanded
-                    ? { borderTop: `1px solid ${tokens.colorSidebarBorder}` }
-                    : undefined
-                }
-              >
-                {visibleStandalone.map((item) => (
-                  <RailNavButton
-                    key={item.key}
-                    item={item}
-                    label={t(item.labelKey)}
-                    isActive={selectedKey === item.key}
-                    isExpanded={isExpanded}
-                    onNavigate={onNavigate}
-                  />
-                ))}
-              </section>
-            ) : null}
-          </>
-        )}
-      </nav>
+      {isExpanded && !showPanel ? <div className="min-w-0 flex-1" /> : null}
     </div>
   );
 }

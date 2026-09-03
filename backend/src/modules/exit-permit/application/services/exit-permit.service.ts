@@ -344,7 +344,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
 
     if (!(await this.canActForRequest(request, companyId, userId))) {
         throw new ForbiddenException(
-          'Only the employee or HR can submit this exit permit',
+          'Only the employee, HR, or a full-access role can submit this exit permit',
         );
     }
 
@@ -361,11 +361,22 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       );
     }
 
+    const submittedOnBehalf = request.employeeId !== userId;
+    const isOnBehalf =
+      submittedOnBehalf || request.employeeId !== request.createdBy;
+
     const resolvedTiers =
     await this.hrApprovalChain.buildExitPermitApprovalChain(
       request.employeeId,
       companyId,
+      { submittedOnBehalf },
     );
+
+    if (submittedOnBehalf && resolvedTiers.length === 0) {
+      throw new BadRequestException(
+        'On-behalf exit permits require at least one approval tier',
+      );
+    }
 
     if (resolvedTiers.length === 0){
         if (files?.length > 0){
@@ -379,14 +390,14 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
                 status: ExitPermitStatus.APPROVED,
                 submittedAt: now,
                 submittedBy: userId,
-                isOnBehalf: request.employeeId !== userId || request.isOnBehalf,
+                isOnBehalf,
                 completedAt: now,
                 updatedBy: userId,
             }
         });
 
         this.logger.log(
-            `Exit permit ${request.requestNumber} auto-approved (HR+ submitter, no further tiers)`,
+            `Exit permit ${request.requestNumber} auto-approved (employee is HR+ on a self-submit)`,
         );
         return this.getRequest(id, companyId, userId);
     }
@@ -402,7 +413,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             departmentId: request.departmentId,
             employeeId: request.employeeId,
             submittedBy: userId,
-            isOnBehalf: request.employeeId !== userId || request.isOnBehalf,
+            isOnBehalf,
         },
     },
     companyId,
@@ -426,7 +437,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             approvalRequestId: approval.id,
             submittedAt: new Date(),
             submittedBy: userId,
-            isOnBehalf: request.employeeId !== userId || request.isOnBehalf,
+            isOnBehalf,
             completedAt: null,
             updatedBy: userId,
         }
@@ -557,7 +568,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     }
     if (!(await this.canActForRequest(request, companyId, userId))) {
         throw new ForbiddenException(
-          'Only the employee or HR can cancel this exit permit',
+          'Only the employee, HR, or a full-access role can cancel this exit permit',
         );
     }
     if (request.status !== ExitPermitStatus.DRAFT && request.status !== ExitPermitStatus.SUBMITTED){
@@ -633,16 +644,11 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     companyId: string,
     userId: string,
   ): Promise<boolean> {
-    if (request.employeeId === userId || request.createdBy === userId) {
+    if (request.employeeId === userId) {
       return true;
     }
 
-    return this.permissionService.hasPermission(
-      userId,
-      companyId,
-      'hr',
-      'view',
-    );
+    return this.hrApprovalChain.isHrOrFullAccessActor(userId, companyId);
   }
 
   private async assertCanView(
@@ -654,7 +660,22 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     companyId: string,
     userId: string,
   ) {
-    if (await this.canActForRequest(request, companyId, userId)) {
+    if (request.employeeId === userId || request.createdBy === userId) {
+      return;
+    }
+
+    if (await this.hrApprovalChain.isHrOrFullAccessActor(userId, companyId)) {
+      return;
+    }
+
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+
+    if (isHrViewer) {
       return;
     }
 
@@ -685,7 +706,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
 
     if (!(await this.canActForRequest(request, companyId, userId))) {
       throw new ForbiddenException(
-        "Only the employee or HR can edit this exit permit",
+        "Only the employee, HR, or a full-access role can edit this exit permit",
       );
     }
 
@@ -701,7 +722,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
 
   /**
    * Resolves the employee a permit belongs to.
-   * HR viewers may assign any company employee; others may only use their own user id.
+   * HR and full-access roles may assign any company employee; others may only use their own user id.
    */
   private async resolveTargetEmployeeId(
     employeeId: string,
@@ -710,16 +731,18 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
   ): Promise<string> {
     await this.assertEmployeeInCompany(employeeId, companyId);
 
-    const isHrViewer = await this.permissionService.hasPermission(
+    if (employeeId === userId) {
+      return employeeId;
+    }
+
+    const canFileOnBehalf = await this.hrApprovalChain.isHrOrFullAccessActor(
       userId,
       companyId,
-      "hr",
-      "view",
     );
 
-    if (!isHrViewer && employeeId !== userId) {
+    if (!canFileOnBehalf) {
       throw new ForbiddenException(
-        "You can only create or assign exit permits for yourself",
+        "Only HR or a full-access role can create exit permits on behalf of another employee",
       );
     }
 

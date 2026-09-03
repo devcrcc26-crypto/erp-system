@@ -1055,7 +1055,9 @@
     "expandNavigation": "展开导航",
     "brandTitle": "CCECC",
     "brandShort": "C",
-    "brandWorkspace": "CCECC 工作区"
+    "brandWorkspace": "CCECC 工作区",
+    "searchNavigation": "查找模块",
+    "noNavResults": "没有匹配的模块。"
   },
   "placeholder": {
     "comingSoon": "即将推出",

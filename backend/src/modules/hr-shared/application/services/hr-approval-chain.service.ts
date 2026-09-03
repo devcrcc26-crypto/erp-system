@@ -10,6 +10,23 @@ interface ChainTierDraft {
   resolver: string;
 }
 
+/** HR and full-access roles that may create or submit HR requests on behalf of another employee. */
+export const HR_OR_FULL_ACCESS_ROLES: readonly string[] = [
+  'HR Officer',
+  'HR Manager',
+  'General Manager',
+  'Managing Director',
+  'System Administrator',
+];
+
+export interface ExitPermitChainOptions {
+  /**
+   * When true, do not skip Discipline Lead / HR Officer because the employee
+   * occupies that tier. On-behalf filings still require those people to approve.
+   */
+  submittedOnBehalf?: boolean;
+}
+
 /**
  * Builds Discipline Lead → HR Officer → (optional) General Manager chains
  * for HR workflows (leave, overtime, etc.).
@@ -116,62 +133,58 @@ export class HrApprovalChainService {
     }));
   }
 
+  /**
+   * Exit permit chain for the **employee** the permit belongs to.
+   * Self-submit: Discipline Lead and HR Officer skip themselves (HR+ auto-approves).
+   * On-behalf: those tiers still run, even if the employee occupies them.
+   */
   async buildExitPermitApprovalChain(
-    submitterId: string,
+    employeeId: string,
     companyId: string,
+    options?: ExitPermitChainOptions,
   ): Promise<ResolvedApprovalTier[]> {
-    const primaryRole =
-      (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
+    const submittedOnBehalf = options?.submittedOnBehalf === true;
 
-    const submitter = await this.prisma.user.findFirst({
-      where: activeOnly({ id: submitterId, companyId }),
+    if (submittedOnBehalf) {
+      return this.buildOnBehalfExitPermitChain(employeeId, companyId);
+    }
+
+    const primaryRole =
+      (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
       include: {
         ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
       },
     });
-    
-    if (!submitter) {
+
+    if (!employee) {
       throw new BadRequestException('Employee not found');
     }
 
-    const isHrOrAbove = [
-      'HR Officer',
-      'HR Manager',
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(primaryRole);
+    const isHrOrAbove = HR_OR_FULL_ACCESS_ROLES.includes(primaryRole);
 
-    const isGmOrAbove = [
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(primaryRole);
-    
     const isDisciplineLeadOrAbove =
       [
         'Discipline Lead',
-        'HR Officer',
-        'HR Manager',
-        'General Manager',
-        'Managing Director',
-        'System Administrator',
-      ].includes(primaryRole) || submitter.ledDisciplines.length > 0;
+        ...HR_OR_FULL_ACCESS_ROLES,
+      ].includes(primaryRole) || employee.ledDisciplines.length > 0;
 
     const tiers: ChainTierDraft[] = [];
 
     if (!isDisciplineLeadOrAbove) {
-        const disciplineLead = await this.getDisciplineLead(
-          submitterId,
-          companyId,
-        );
+      const disciplineLead = await this.getDisciplineLead(
+        employeeId,
+        companyId,
+      );
 
-        tiers.push({
-          order: 1,
-          label: 'Discipline Lead',
-          approverId: disciplineLead.id,
-          resolver: 'DISCIPLINE_LEAD',
-        });
+      tiers.push({
+        order: 1,
+        label: 'Discipline Lead',
+        approverId: disciplineLead.id,
+        resolver: 'DISCIPLINE_LEAD',
+      });
     }
 
     if (!isHrOrAbove) {
@@ -184,6 +197,68 @@ export class HrApprovalChainService {
       });
     }
 
+    return this.finalizeTiers(tiers);
+  }
+
+  /**
+   * True when the user may file HR documents for another employee.
+   */
+  async isHrOrFullAccessActor(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    const primaryRole = await this.getPrimaryRoleName(userId, companyId);
+    return primaryRole !== null && HR_OR_FULL_ACCESS_ROLES.includes(primaryRole);
+  }
+
+  /**
+   * On-behalf filings always require Discipline Lead (when assigned) and HR Officer,
+   * including when that approver is the employee the permit is for.
+   */
+  private async buildOnBehalfExitPermitChain(
+    employeeId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true },
+    });
+
+    if (!employee) {
+      throw new BadRequestException('Employee not found');
+    }
+
+    const tiers: ChainTierDraft[] = [];
+
+    try {
+      const disciplineLead = await this.getDisciplineLead(
+        employeeId,
+        companyId,
+      );
+      tiers.push({
+        order: 1,
+        label: 'Discipline Lead',
+        approverId: disciplineLead.id,
+        resolver: 'DISCIPLINE_LEAD',
+      });
+    } catch (error: unknown) {
+      if (!(error instanceof BadRequestException)) {
+        throw error;
+      }
+    }
+
+    const hrOfficer = await this.getHROfficer(companyId);
+    tiers.push({
+      order: tiers.length + 1,
+      label: 'HR Officer',
+      approverId: hrOfficer.id,
+      resolver: 'ROLE:HR Officer',
+    });
+
+    return this.finalizeTiers(tiers);
+  }
+
+  private finalizeTiers(tiers: ChainTierDraft[]): ResolvedApprovalTier[] {
     const uniqueTiers = tiers.filter(
       (tier, index, self) =>
         index === self.findIndex((t) => t.approverId === tier.approverId),
@@ -195,8 +270,8 @@ export class HrApprovalChainService {
       approverId: tier.approverId,
       resolver: tier.resolver,
     }));
-
   }
+
   /**
    * Approval chain for material requisitions.
    * Employee → Discipline Lead → HR Officer → General Manager.

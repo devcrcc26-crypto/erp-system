@@ -16,14 +16,15 @@ export interface IconRailItem {
   readonly href: string;
   readonly iconKey: string;
   readonly visible: boolean;
+  /** Optional badge count to display next to the nav item */
+  readonly badge?: number;
 }
 
 export interface IconRailGroup {
   readonly key: string;
   readonly labelKey: string;
-  /** localStorage key for collapsed/expanded persistence */
-  readonly storageKey: string;
-  readonly defaultOpen: boolean;
+  /** Rail icon for the group's domain button. */
+  readonly iconKey: string;
   readonly items: readonly IconRailItem[];
 }
 
@@ -231,8 +232,7 @@ export function buildIconRailNav(
   const projectManagement: IconRailGroup = {
     key: 'pm',
     labelKey: 'nav.groups.projectManagement',
-    storageKey: 'sidebar_pm_open',
-    defaultOpen: true,
+    iconKey: 'domain-projects',
     items: [
       {
         key: '/projects',
@@ -352,8 +352,7 @@ export function buildIconRailNav(
   const humanResources: IconRailGroup = {
     key: 'hr',
     labelKey: 'nav.groups.humanResources',
-    storageKey: 'sidebar_hr_open',
-    defaultOpen: true,
+    iconKey: 'domain-hr',
     items: [
       {
         key: '/users',
@@ -522,8 +521,7 @@ export function buildIconRailNav(
   const organization: IconRailGroup = {
     key: 'organization',
     labelKey: 'nav.groups.organization',
-    storageKey: 'sidebar_organization_open',
-    defaultOpen: true,
+    iconKey: 'domain-organization',
     items: [
       {
         key: '/departments',
@@ -559,8 +557,7 @@ export function buildIconRailNav(
   const hrConfiguration: IconRailGroup = {
     key: 'hr-configuration',
     labelKey: 'nav.groups.hrConfiguration',
-    storageKey: 'sidebar_hr_configuration_open',
-    defaultOpen: true,
+    iconKey: 'domain-hr-configuration',
     items: [
       {
         key: '/hr/leave-policy',

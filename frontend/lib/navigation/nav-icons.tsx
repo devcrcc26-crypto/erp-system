@@ -99,6 +99,12 @@ function lucideNavIcon(Icon: LucideIcon): NavIconComponent {
 export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   dashboard: DashboardOutlined,
   projects: ProjectOutlined,
+
+  // Sidebar rail domains — one per module group
+  'domain-projects': ProjectOutlined,
+  'domain-hr': lucideNavIcon(Users),
+  'domain-hr-configuration': lucideNavIcon(ClipboardList),
+  'domain-organization': ApartmentOutlined,
   'review-inbox': InboxOutlined,
   'my-comments': CommentOutlined,
   'my-work': CheckSquareOutlined,

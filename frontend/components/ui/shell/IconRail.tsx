@@ -1,96 +1,65 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { Tooltip } from 'antd';
 import MainNavPanel from '@/components/ui/shell/MainNavPanel';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useRailExpanded } from '@/hooks/useRailExpanded';
 import { tokens } from '@/lib/theme/tokens';
-import {
-  RAIL_EXPANDED_WIDTH,
-  SHELL_TOP_HEADER_HEIGHT,
-} from '@/components/ui/shell/shell-layout';
-
-const COLLAPSE_BUTTON_SIZE = 24;
+import { RAIL_EXPANDED_WIDTH } from '@/components/ui/shell/shell-layout';
 
 /**
- * Desktop icon rail. Hidden below lg — use MainNavPanel in a drawer on mobile.
+ * Desktop sidebar shell. Hidden below lg — mobile uses MobileNavDrawer.
  */
 export default function IconRail(): React.ReactNode {
   const { isExpanded, layoutWidth, toggleExpanded } = useRailExpanded();
   const { t } = useEpcTranslation();
 
-  function handleToggleKeyDown(
-    event: React.KeyboardEvent<HTMLButtonElement>,
-  ): void {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      toggleExpanded();
-    }
-  }
-
-  function handleToggleClick(event: React.MouseEvent<HTMLButtonElement>): void {
-    event.preventDefault();
-    event.stopPropagation();
-    toggleExpanded();
-  }
+  const toggleLabel = isExpanded
+    ? t('shell.collapseNavigation')
+    : t('shell.expandNavigation');
 
   return (
     <div
-      className="relative z-40 hidden h-full shrink-0 overflow-visible lg:block"
+      className="relative z-40 hidden h-full shrink-0 lg:block"
       style={{ width: layoutWidth }}
     >
       <aside
-        className="relative flex h-full flex-col transition-[width] duration-200 ease-in-out"
+        className="relative flex h-full flex-col overflow-hidden transition-[width] duration-200 ease-in-out"
         style={{
           width: layoutWidth,
+          maxWidth: RAIL_EXPANDED_WIDTH,
           background: tokens.colorSidebarBg,
+          borderRight: `1px solid ${tokens.colorSidebarBorder}`,
         }}
         aria-label={t('shell.mainNavigation')}
       >
-        <div
-          className="flex h-full flex-col"
-          style={{ maxWidth: RAIL_EXPANDED_WIDTH, width: '100%' }}
-        >
+        <div className="min-h-0 flex-1">
           <MainNavPanel isExpanded={isExpanded} />
         </div>
-      </aside>
 
-      <button
-        type="button"
-        onClick={handleToggleClick}
-        onKeyDown={handleToggleKeyDown}
-        title={
-          isExpanded
-            ? t('shell.collapseNavigation')
-            : t('shell.expandNavigation')
-        }
-        aria-label={
-          isExpanded
-            ? t('shell.collapseNavigation')
-            : t('shell.expandNavigation')
-        }
-        aria-pressed={isExpanded}
-        className="absolute z-[60] flex items-center justify-center rounded-full transition-colors hover:opacity-95"
-        style={{
-          top: SHELL_TOP_HEADER_HEIGHT + 10,
-          left: layoutWidth - COLLAPSE_BUTTON_SIZE / 2,
-          width: COLLAPSE_BUTTON_SIZE,
-          height: COLLAPSE_BUTTON_SIZE,
-          background: tokens.colorCardBg,
-          color: tokens.colorTextSecondary,
-          border: `1px solid ${tokens.colorBorder}`,
-          boxShadow:
-            '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.08)',
-        }}
-      >
-        {isExpanded ? (
-          <LeftOutlined style={{ fontSize: 11 }} />
-        ) : (
-          <RightOutlined style={{ fontSize: 11 }} />
-        )}
-      </button>
+        <div
+          className="flex shrink-0 items-center justify-center py-2"
+          style={{ borderTop: `1px solid ${tokens.colorSidebarBorder}` }}
+        >
+          <Tooltip title={toggleLabel} placement="right">
+            <button
+              type="button"
+              onClick={toggleExpanded}
+              aria-label={toggleLabel}
+              aria-pressed={isExpanded}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors hover:bg-[var(--color-sidebar-hover)]"
+              style={{ color: tokens.colorSidebarIcon }}
+            >
+              {isExpanded ? (
+                <LeftOutlined style={{ fontSize: 12 }} />
+              ) : (
+                <RightOutlined style={{ fontSize: 12 }} />
+              )}
+            </button>
+          </Tooltip>
+        </div>
+      </aside>
     </div>
   );
 }

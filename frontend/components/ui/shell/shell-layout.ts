@@ -1,11 +1,19 @@
-// UI polish pass - styles only, no logic changes
+/** Domain rail (icon column) width (px). */
+export const NAV_DOMAIN_RAIL_WIDTH = 56;
 
-/** Icon rail layout widths (px). */
-export const RAIL_COLLAPSED_WIDTH = 64;
-export const RAIL_EXPANDED_WIDTH = 256;
+/** Module panel (per-domain link list) width (px). */
+export const NAV_MODULE_PANEL_WIDTH = 236;
 
-/** Shared top header height for sidebar brand bar and main content actions bar (px). */
-export const SHELL_TOP_HEADER_HEIGHT = 56;
+/** Icon rail layout widths (px) — collapsed hides the module panel. */
+export const RAIL_COLLAPSED_WIDTH = NAV_DOMAIN_RAIL_WIDTH;
+export const RAIL_EXPANDED_WIDTH =
+  NAV_DOMAIN_RAIL_WIDTH + NAV_MODULE_PANEL_WIDTH;
+
+/**
+ * Shared utility-bar height (px). Aligns the sidebar brand band, the sidebar
+ * domain-title band, and the main content utility bar on one horizontal seam.
+ */
+export const SHELL_TOP_HEADER_HEIGHT = 48;
 
 /** Project context sidebar width (px). */
 export const CONTEXT_SIDEBAR_WIDTH = 220;

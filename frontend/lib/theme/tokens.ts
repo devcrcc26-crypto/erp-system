@@ -46,9 +46,11 @@ export const tokens = {
   colorSidebarHover: 'rgba(255, 255, 255, 0.06)',
   colorSidebarBorder: 'rgba(255, 255, 255, 0.08)',
   colorSidebarText: 'rgba(255, 255, 255, 0.72)',
+  colorSidebarTextMuted: 'rgba(255, 255, 255, 0.42)',
   colorSidebarTextActive: '#FFFFFF',
   colorSidebarAccent: '#1D9E75',
   colorSidebarGroupLabel: 'rgba(255, 255, 255, 0.45)',
+  colorSidebarIcon: 'rgba(255, 255, 255, 0.48)',
 
   colorPageBg: '#F0F2F5',
   colorCardBg: '#FFFFFF',
