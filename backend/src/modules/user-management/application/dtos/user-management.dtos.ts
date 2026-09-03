@@ -45,7 +45,16 @@ export class EmergencyContactDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsEmail()
-  @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    return normalizeEmail(trimmed);
+  })
   email?: string;
 }
 
@@ -263,6 +272,24 @@ export class UpdateUserDto extends PartialType(
   @ValidateIf((_, value) => value !== null)
   @IsEntityUuid()
   reportsToUserId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEntityUuid()
+  leavePolicyId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEntityUuid()
+  departmentId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEntityUuid()
+  positionId?: string | null;
 }
 
 export class UsersQueryDto extends PaginationQueryDto {

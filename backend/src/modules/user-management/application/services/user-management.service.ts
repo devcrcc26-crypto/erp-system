@@ -1125,8 +1125,8 @@ export class UserManagementService {
     >,
   ): Prisma.UserUncheckedUpdateInput {
     return {
-      firstName: rest.firstName,
-      lastName: rest.lastName,
+      firstName: rest.firstName?.trim() || undefined,
+      lastName: rest.lastName?.trim() || undefined,
       chineseName: rest.chineseName?.trim() || undefined,
       phone: rest.phone?.trim() || undefined,
       branchId: rest.branchId,

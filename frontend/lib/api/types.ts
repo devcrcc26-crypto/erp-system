@@ -296,9 +296,10 @@ export interface UpdateUserRequest {
   chineseName?: string;
   phone?: string;
   branchId?: string;
-  departmentId?: string;
-  positionId?: string;
+  departmentId?: string | null;
+  positionId?: string | null;
   reportsToUserId?: string | null;
+  leavePolicyId?: string | null;
   discipline?: UserDiscipline | null;
   engineeringDisciplineId?: string | null;
   preferredLanguage?: string;
@@ -322,7 +323,6 @@ export interface UpdateUserRequest {
   fieldOfStudy?: string;
   experienceStartDate?: string;
   emergencyContacts?: EmergencyContact[];
-  leavePolicyId?: string | null;
 }
 
 export interface AssignUserRoleRequest {

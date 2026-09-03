@@ -229,14 +229,22 @@ export function StepperForm({
       >
         {isSections ? (
           <div className={`flex flex-col ${compact ? 'gap-3' : 'gap-6'}`}>
-            {active.content}
+            {steps.map((step, index) => (
+              <div key={index} style={{ display: index === current ? undefined : 'none' }}>
+                {step.content}
+              </div>
+            ))}
           </div>
         ) : (
           <div
             className={`rounded-lg border bg-white ${compact ? 'p-4' : 'p-6'}`}
             style={{ borderColor: 'rgba(0,0,0,0.08)' }}
           >
-            {active.content}
+            {steps.map((step, index) => (
+              <div key={index} style={{ display: index === current ? undefined : 'none' }}>
+                {step.content}
+              </div>
+            ))}
           </div>
         )}
       </div>

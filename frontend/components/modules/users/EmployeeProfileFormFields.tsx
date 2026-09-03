@@ -307,6 +307,25 @@ export function EmployeeProfileFormFields({
   return content;
 }
 
+/** Ant Design may return ISO strings for DatePicker values after step unmount. */
+function formatFormDate(value: Dayjs | string | undefined | null): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (dayjs.isDayjs(value)) {
+    return value.isValid() ? value.format('YYYY-MM-DD') : undefined;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    const parsed = dayjs(trimmed);
+    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : trimmed;
+  }
+  return undefined;
+}
+
 export function buildEmployeeProfilePayload(
   values: EmployeeProfileFormValues,
 ): Pick<
@@ -340,13 +359,13 @@ export function buildEmployeeProfilePayload(
     addressWoreda: values.addressWoreda?.trim() || undefined,
     addressHouseNumber: values.addressHouseNumber?.trim() || undefined,
     gender: values.gender,
-    dateOfBirth: values.dateOfBirth?.format('YYYY-MM-DD'),
+    dateOfBirth: formatFormDate(values.dateOfBirth),
     nationalId: values.nationalId?.trim() || undefined,
     nationality: values.nationality,
     employeeType: values.employeeType,
     educationLevel: values.educationLevel,
     fieldOfStudy: values.fieldOfStudy?.trim() || undefined,
-    experienceStartDate: values.experienceStartDate?.format('YYYY-MM-DD'),
+    experienceStartDate: formatFormDate(values.experienceStartDate),
     emergencyContacts: normalizeEmergencyContacts(values.emergencyContacts),
     leavePolicyId: values.leavePolicyId,
   };

@@ -24,7 +24,7 @@ import {
 } from '@/components/modules/users/add-employee/add-employee.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { ApiRequestError } from '@/lib/api/errors';
+import { ApiRequestError, toApiRequestError } from '@/lib/api/errors';
 import type { CreateUserRequest, Role, UpdateUserRequest, UserDetail } from '@/lib/api/types';
 import {
   useAssignRole,
@@ -197,12 +197,12 @@ export default function AddEmployeeForm({
     try {
       if (isEdit && userId) {
         const body: UpdateUserRequest = {
-          firstName: values.firstName.trim(),
-          lastName: values.lastName.trim(),
+          firstName: (values.firstName ?? '').trim(),
+          lastName: (values.lastName ?? '').trim(),
           chineseName: values.chineseName?.trim() || undefined,
           phone: values.phone?.trim() || undefined,
-          departmentId: values.departmentId,
-          positionId: values.positionId,
+          departmentId: values.departmentId ?? null,
+          positionId: values.positionId ?? null,
           reportsToUserId: values.reportsToUserId ?? null,
           engineeringDisciplineId: values.engineeringDisciplineId ?? null,
           isActive: values.isActive,
@@ -280,12 +280,10 @@ export default function AddEmployeeForm({
 
       onSuccess({ userId: user.id, email: invitedAddress ?? null });
     } catch (err) {
+      const apiError = toApiRequestError(err);
       setError(
-        err instanceof ApiRequestError
-          ? err.message
-          : isEdit
-            ? t('users.updateError')
-            : t('users.createError'),
+        apiError.message ||
+          (isEdit ? t('users.updateError') : t('users.createError')),
       );
     }
   }
