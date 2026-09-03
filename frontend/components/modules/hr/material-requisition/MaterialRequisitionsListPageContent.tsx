@@ -231,7 +231,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
         <Alert
           type="error"
           showIcon
-          message={
+          title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
               : 'Failed to load material requisitions'

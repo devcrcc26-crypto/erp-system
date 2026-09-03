@@ -10,6 +10,7 @@ import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 /**
  * New material requisition page — same page chrome as Add Employee (`/users/new`).
  */
+
 export default function MaterialRequisitionFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();

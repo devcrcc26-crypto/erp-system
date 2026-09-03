@@ -597,8 +597,7 @@ export default function MaterialRequisitionForm({
           showIcon
           title={formError}
           className="mb-4"
-          closable
-          onClose={() => setFormError(null)}
+          closable={{onClose: () => setFormError(null)}}
         />
       ) : null}
       <StepperForm
