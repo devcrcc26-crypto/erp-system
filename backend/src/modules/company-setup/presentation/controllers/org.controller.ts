@@ -140,6 +140,16 @@ export class OrgController {
     return this.companySetupService.listDepartments(this.ctx(user), query);
   }
 
+  @Get('departments/:id')
+  @RequirePermission('departments', 'view')
+  @ApiOperation({ summary: 'Get a department by id' })
+  getDepartment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.companySetupService.getDepartment(this.ctx(user), id);
+  }
+
   @Post('departments')
   @RequirePermission('departments', 'create')
   createDepartment(

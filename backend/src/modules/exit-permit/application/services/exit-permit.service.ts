@@ -43,8 +43,15 @@ type UploadedFile = {
     buffer: Buffer;
 };
 
+const DEPARTMENT_SELECT = {
+    id: true,
+    name: true,
+    nameZh: true,
+} as const;
+
 const REQUEST_DETAIL_INCLUDE = {
     employee: { select: USER_SELECT },
+    department: { select: DEPARTMENT_SELECT },
     items: {
         orderBy: { createdAt: 'asc' as const },
         include: {
@@ -480,6 +487,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             orderBy: { createdAt: 'desc' },
             include: {
                 employee: { select: USER_SELECT },
+                department: { select: DEPARTMENT_SELECT },
                 _count: { select: { items: true } },
                 approvalRequest: {
                     select: {

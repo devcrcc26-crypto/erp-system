@@ -16,6 +16,12 @@ export interface ExitPermitUserSummary {
   email?: string | null;
 }
 
+export interface ExitPermitDepartmentSummary {
+  id: string;
+  name: string;
+  nameZh?: string | null;
+}
+
 export interface ExitPermitDocumentSummary {
   id: string;
   name: string;
@@ -68,6 +74,7 @@ export interface ExitPermitListItem {
   itemCount: number;
   currentTierLabel?: string | null;
   employee?: ExitPermitUserSummary;
+  department?: ExitPermitDepartmentSummary | null;
   approvalRequest?: ExitPermitApprovalRequestSummary | null;
   createdBy: string;
   updatedBy: string;

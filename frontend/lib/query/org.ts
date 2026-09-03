@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   apiDelete,
+  apiGet,
   apiGetPaginated,
   apiPatch,
   apiPost,
@@ -57,11 +58,22 @@ export const orgKeys = {
   all: ['org'] as const,
   departments: (params: PaginationParams & { isActive?: boolean }) =>
     [...orgKeys.all, 'departments', params] as const,
+  department: (id: string) => [...orgKeys.all, 'department', id] as const,
   disciplines: (params: PaginationParams & { activeOnly?: boolean }) =>
     [...orgKeys.all, 'engineering-disciplines', params] as const,
   positions: (params: PaginationParams & { isActive?: boolean }) =>
     [...orgKeys.all, 'positions', params] as const,
 };
+
+/** Single department by id (name, code, status). */
+export function useDepartment(id: string, enabled = true) {
+  return useQuery({
+    queryKey: orgKeys.department(id),
+    queryFn: () => apiGet<DepartmentRow>(`/departments/${id}`),
+    enabled: Boolean(id) && enabled,
+    retry: false,
+  });
+}
 
 export function useDepartments(
   params: PaginationParams & { isActive?: boolean } = { page: 1, limit: 100 },

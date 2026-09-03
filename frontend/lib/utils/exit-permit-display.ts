@@ -1,5 +1,6 @@
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import type {
+  ExitPermitDepartmentSummary,
   ExitPermitDirection,
   ExitPermitStatus,
   ExitPermitUserSummary,
@@ -67,4 +68,16 @@ export function formatExitPermitEmployeeName(
 ): string {
   if (!user) return '-';
   return formatUserName(user);
+}
+
+export function formatExitPermitDepartmentName(
+  department?: ExitPermitDepartmentSummary | null,
+): string {
+  if (!department) return '-';
+  const english = department.name?.trim();
+  const chinese = department.nameZh?.trim();
+  if (english && chinese) {
+    return `${english} (${chinese})`;
+  }
+  return english || chinese || '-';
 }
