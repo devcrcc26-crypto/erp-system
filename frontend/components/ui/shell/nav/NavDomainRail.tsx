@@ -240,18 +240,16 @@ export default function NavDomainRail({
         aria-label={t('shell.mainNavigation')}
       >
         {primary.map(renderDomain)}
-
-        {utility.length > 0 ? (
-          <>
-            <span
-              aria-hidden
-              className="mx-auto my-1 h-px w-6 shrink-0"
-              style={{ background: tokens.colorSidebarBorder }}
-            />
-            {utility.map(renderDomain)}
-          </>
-        ) : null}
       </nav>
+
+      {utility.length > 0 ? (
+        <div
+          className="flex shrink-0 flex-col gap-1 px-0 pb-2 pt-1"
+          style={{ borderTop: `1px solid ${tokens.colorSidebarBorder}` }}
+        >
+          {utility.map(renderDomain)}
+        </div>
+      ) : null}
     </div>
   );
 }

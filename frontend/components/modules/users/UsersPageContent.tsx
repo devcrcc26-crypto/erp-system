@@ -9,9 +9,6 @@ import {
   Dropdown,
   Input,
   Select,
-  Space,
-  Spin,
-  Tag,
   Tooltip,
   type MenuProps,
 } from 'antd';
@@ -37,7 +34,6 @@ import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
 import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -71,36 +67,6 @@ import {
 } from '@/lib/utils/user-status';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
-
-const ROLE_COLOR_MAP: Record<string, string> = {
-  'System Administrator': 'red',
-  'Project Administrator': 'volcano',
-  'Managing Director': 'orange',
-  'General Manager': 'gold',
-  'Project Director': 'yellow',
-  'Project Manager': 'lime',
-  'Chief Engineer': 'geekblue',
-  'Deputy Chief': 'blue',
-  'Department Chief': 'cyan',
-  'Discipline Lead': 'purple',
-  'Discipline Owner': 'magenta',
-  'Institute Chief': 'processing',
-  Designer: 'green',
-  Reviewer: 'success',
-  'Site Coordinator': 'orange',
-  'Site Engineer': 'default',
-  'Document Controller': 'geekblue',
-  Dispatcher: 'warning',
-  'Planning Engineer': 'default',
-  'Procurement Officer': 'default',
-  'Finance Manager': 'default',
-  Accountant: 'default',
-  'HR Officer': 'default',
-  'Safety Officer': 'error',
-  'Client Consultant': 'default',
-  Storekeeper: 'default',
-  Employee: 'default',
-};
 
 const COLUMN_SORT_FIELD: Record<string, UsersListSortField> = {
   name: 'name',
@@ -169,7 +135,7 @@ function UserListAvatar({ user }: { user: User }): React.ReactNode {
 
   return (
     <Avatar
-      size={32}
+      size={36}
       src={photoQuery.data?.url}
       icon={!photoQuery.data?.url && !initials ? <UserOutlined /> : undefined}
       style={{
@@ -185,6 +151,10 @@ function UserListAvatar({ user }: { user: User }): React.ReactNode {
       {initials}
     </Avatar>
   );
+}
+
+function CellDash(): React.ReactNode {
+  return <span className="erp-table-meta">—</span>;
 }
 
 export default function UsersPageContent(): React.ReactNode {
@@ -379,9 +349,9 @@ export default function UsersPageContent(): React.ReactNode {
 
   if (usersQuery.isLoading && !usersQuery.data) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-          <Spin />
+      <div className="erp-pro-list-page">
+        <div className="erp-pro-card flex items-center justify-center py-16">
+          <div className="erp-page-skeleton h-8 w-8 rounded-full" />
         </div>
       </div>
     );
@@ -488,7 +458,7 @@ export default function UsersPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page">
       {importOpen ? (
         <UserImportModal
           onClose={() => setImportOpen(false)}
@@ -517,7 +487,7 @@ export default function UsersPageContent(): React.ReactNode {
         onCancel={() => setDeletingUser(null)}
       />
 
-      {actionMessage && (
+      {actionMessage ? (
         <Alert
           type={actionMessage.type === 'success' ? 'success' : 'error'}
           showIcon
@@ -525,8 +495,9 @@ export default function UsersPageContent(): React.ReactNode {
           closable
           onClose={() => setActionMessage(null)}
         />
-      )}
-<div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           label={t('users.stats.total')}
           value={userStats.totalCount}
@@ -553,8 +524,50 @@ export default function UsersPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar">
+          <div className="min-w-0">
+            <h3 className="erp-pro-card-toolbar-title">{t('users.allUsers')}</h3>
+            <p className="m-0 mt-0.5 text-[12px]" style={{ color: tokens.colorTextTertiary }}>
+              {meta.total === 1
+                ? t('users.userCountOne')
+                : t('users.userCount', { count: meta.total })}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={usersQuery.isFetching && !usersQuery.isLoading}
+                onClick={() => void handleRefresh()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              icon={<DownloadOutlined />}
+              loading={exportingUsers}
+              onClick={() => void handleExportExcel()}
+            >
+              {t('users.exportExcel')}
+            </Button>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setImportOpen(true)}
+            >
+              {t('common.importFromExcel')}
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/users/new')}
+            >
+              {t('users.addEmployee')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-pro-filter-bar erp-filter-bar">
           <Input.Search
             placeholder={t('users.searchPlaceholder')}
             className="w-full min-w-0 sm:w-72"
@@ -663,73 +676,14 @@ export default function UsersPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          <Button onClick={handleResetFilters} style={{ borderRadius: 0 }}>
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={usersQuery.isFetching && !usersQuery.isLoading}
-              onClick={() => void handleRefresh()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="users" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {t('users.allUsers')}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {meta.total === 1
-                ? t('users.userCountOne')
-                : t('users.userCount', { count: meta.total })}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            <Button
-              icon={<DownloadOutlined />}
-              loading={exportingUsers}
-              onClick={() => void handleExportExcel()}
-              style={{ borderRadius: 0 }}
-            >
-              {t('users.exportExcel')}
-            </Button>
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => setImportOpen(true)}
-              style={{ borderRadius: 0 }}
-            >
-              {t('common.importFromExcel')}
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/users/new')}
-              style={{ borderRadius: 0 }}
-            >
-              {t('users.addEmployee')}
-            </Button>
-          </Space>
+          <Button onClick={handleResetFilters}>{t('common.reset')}</Button>
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<User>
             rowKey="id"
             className="erp-pro-table"
-            size="small"
+            size="middle"
             dataSource={users}
             scroll={false}
             pagination={
@@ -743,7 +697,7 @@ export default function UsersPageContent(): React.ReactNode {
             onChange={handleTableChange}
             onRow={(record) => ({
               onClick: () => router.push(`/users/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4] ',
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
@@ -760,37 +714,31 @@ export default function UsersPageContent(): React.ReactNode {
             }}
             columns={[
               {
-                title: '',
-                key: 'avatar',
-                width: 48,
-                render: (_, record) => <UserListAvatar user={record} />,
-              },
-              {
                 title: t('common.name'),
                 key: 'name',
                 sorter: true,
                 render: (_, record) => (
-                  <div className="min-w-0 py-0.5">
-                    <p
-                      className="m-0 text-sm font-medium"
-                      style={{ color: tokens.colorTextPrimary }}
-                    >
-                      {record.firstName} {record.lastName}
-                    </p>
-                    {record.chineseName ? (
+                  <div className="flex min-w-0 items-center gap-3">
+                    <UserListAvatar user={record} />
+                    <div className="min-w-0">
                       <p
-                        className="m-0 text-xs"
-                        style={{ color: tokens.colorTextTertiary }}
+                        className="m-0 truncate text-[13px] font-medium"
+                        style={{ color: tokens.colorTextPrimary }}
                       >
-                        {record.chineseName}
+                        {record.firstName} {record.lastName}
+                        {record.chineseName ? (
+                          <span
+                            className="ml-1.5 font-normal"
+                            style={{ color: tokens.colorTextTertiary }}
+                          >
+                            {record.chineseName}
+                          </span>
+                        ) : null}
                       </p>
-                    ) : null}
-                    <p
-                      className="m-0 truncate text-xs"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
-                      {record.email ?? t('users.noEmailNoLogin')}
-                    </p>
+                      <p className="erp-table-meta m-0 truncate">
+                        {record.email ?? t('users.noEmailNoLogin')}
+                      </p>
+                    </div>
                   </div>
                 ),
               },
@@ -798,16 +746,10 @@ export default function UsersPageContent(): React.ReactNode {
                 title: 'ID',
                 dataIndex: 'employeeId',
                 key: 'employeeId',
-                width: 100,
+                width: 104,
                 responsive: ['md'],
-                render: (id: string | null | undefined) => (
-                  <span
-                    className="font-[family-name:var(--font-mono)] text-xs"
-                    style={{ color: tokens.colorTextSecondary }}
-                  >
-                    {id ?? '—'}
-                  </span>
-                ),
+                render: (id: string | null | undefined) =>
+                  id ? <span className="erp-table-mono">{id}</span> : <CellDash />,
               },
               {
                 title: t('common.department'),
@@ -816,8 +758,12 @@ export default function UsersPageContent(): React.ReactNode {
                 responsive: ['md'],
                 sorter: true,
                 render: (_, record) =>
-                  record.department?.name ?? (
-                    <span style={{ color: tokens.colorTextSecondary }}>—</span>
+                  record.department?.name ? (
+                    <span style={{ color: tokens.colorTextSecondary }}>
+                      {record.department.name}
+                    </span>
+                  ) : (
+                    <CellDash />
                   ),
               },
               {
@@ -827,54 +773,46 @@ export default function UsersPageContent(): React.ReactNode {
                 responsive: ['lg'],
                 sorter: true,
                 render: (_, record) =>
-                  record.position?.title ?? (
-                    <span style={{ color: tokens.colorTextSecondary }}>—</span>
+                  record.position?.title ? (
+                    <span style={{ color: tokens.colorTextSecondary }}>
+                      {record.position.title}
+                    </span>
+                  ) : (
+                    <CellDash />
                   ),
               },
               {
-                title: 'Type',
+                title: t('users.form.employeeType'),
                 dataIndex: 'employeeType',
                 key: 'employeeType',
-                width: 110,
-                responsive: ['lg'],
+                width: 120,
+                responsive: ['xl'],
                 render: (type: EmployeeType | null | undefined) =>
                   type ? (
-                    <span
-                      className="text-xs"
-                      style={{ color: tokens.colorTextSecondary }}
-                    >
+                    <span className="erp-table-meta">
                       {t(`hr.employeeType.${type}`)}
                     </span>
                   ) : (
-                    '—'
+                    <CellDash />
                   ),
               },
               {
                 title: t('common.discipline'),
                 key: 'discipline',
                 ellipsis: { showTitle: true },
-                responsive: ['lg'],
+                responsive: ['xl'],
                 render: (_, record) => {
                   if (!record.engineeringDisciplineId) {
-                    return '—';
+                    return <CellDash />;
                   }
                   const name =
                     record.engineeringDiscipline?.name ??
                     disciplineNameById.get(record.engineeringDisciplineId) ??
                     '—';
-                  const nameZh = record.engineeringDiscipline?.nameZh;
                   return (
-                    <div className="flex flex-col">
-                      <span className="text-sm">{name}</span>
-                      {nameZh ? (
-                        <span
-                          className="text-xs"
-                          style={{ color: tokens.colorTextSecondary }}
-                        >
-                          {nameZh}
-                        </span>
-                      ) : null}
-                    </div>
+                    <span style={{ color: tokens.colorTextSecondary }}>
+                      {name}
+                    </span>
                   );
                 },
               },
@@ -890,31 +828,19 @@ export default function UsersPageContent(): React.ReactNode {
                       isPrimary: assignment.isPrimary,
                     })) ?? [];
                   if (roles.length === 0) {
-                    return '—';
+                    return <CellDash />;
                   }
                   const topRole = pickTopLevelRoleName(roles, '');
                   if (!topRole) {
-                    return '—';
+                    return <CellDash />;
                   }
-                  const isPrimary = roles.some(
-                    (role) => role.name === topRole && role.isPrimary,
-                  );
-                  return (
-                    <Space size={4}>
-                      <Tag color={ROLE_COLOR_MAP[topRole] ?? 'default'}>
-                        {topRole}
-                      </Tag>
-                      {/* {isPrimary ? (
-                        <Tag color="gold">{t('users.primaryRole')}</Tag>
-                      ) : null} */}
-                    </Space>
-                  );
+                  return <span className="erp-table-pill">{topRole}</span>;
                 },
               },
               {
                 title: t('common.status'),
                 key: 'status',
-                width: 120,
+                width: 118,
                 sorter: true,
                 render: (_, record) => (
                   <StatusBadge
@@ -926,10 +852,11 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: '',
                 key: 'actions',
-                width: 56,
+                width: 48,
+                align: 'right',
                 render: (_, record) => (
                   <div
-                    className="flex items-center justify-end"
+                    className="erp-table-row-actions flex items-center justify-end"
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
                   >
@@ -939,13 +866,12 @@ export default function UsersPageContent(): React.ReactNode {
                       disabled={resendInvitation.isPending}
                     >
                       <Button
-                        size="small"
                         type="text"
+                        size="small"
                         icon={<MoreOutlined />}
                         aria-label={t('users.actionsFor', {
                           name: `${record.firstName} ${record.lastName}`,
                         })}
-                        style={{ borderRadius: 0 }}
                       />
                     </Dropdown>
                   </div>

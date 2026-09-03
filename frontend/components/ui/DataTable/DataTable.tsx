@@ -1,5 +1,3 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import { Table } from 'antd';
@@ -9,15 +7,15 @@ import { useIsLgUp, useIsMdUp } from '@/hooks/useMediaQuery';
 import { defaultTablePagination } from '@/lib/theme/table-pagination';
 
 /**
- * Thin wrapper around Ant Design Table with consistent ERP styling and mobile scroll.
- * Pagination is enabled by default; pass `pagination={false}` to disable.
- * Pass `scroll={false}` to skip Ant Design’s internal scroll container (page scrolls normally).
+ * Shared Ant Design Table with ERP list styling and responsive pagination.
+ * Pass `pagination={false}` to disable; `scroll={false}` to use page scroll.
  */
 export default function DataTable<T extends object>({
   scroll,
   size,
   className,
   pagination,
+  bordered = false,
   ...props
 }: Omit<TableProps<T>, 'scroll'> & {
   scroll?: TableProps<T>['scroll'] | false;
@@ -57,11 +55,11 @@ export default function DataTable<T extends object>({
     <div className="erp-table-scroll min-w-0 w-full overflow-x-auto overflow-y-clip">
       <Table<T>
         size={resolvedSize}
+        bordered={bordered}
         pagination={resolvedPagination}
         scroll={resolvedScroll}
         className={['erp-data-table', className].filter(Boolean).join(' ')}
         {...props}
-        style={{ ...props.style }}
       />
     </div>
   );

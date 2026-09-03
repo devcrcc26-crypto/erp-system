@@ -41,13 +41,14 @@ export default function StatusBadge({
       variant="filled"
       style={{
         margin: 0,
-        borderRadius: 20,
+        border: 'none',
+        borderRadius: 999,
         color: colors.color,
         backgroundColor: colors.bg,
         fontWeight: 500,
         fontSize: 11,
         lineHeight: '1.4',
-        padding: '3px 10px',
+        padding: '2px 8px',
       }}
     >
       {label}
