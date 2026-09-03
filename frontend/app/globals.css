@@ -698,42 +698,213 @@ main::-webkit-scrollbar,
   background: rgba(15, 23, 42, 0.04) !important;
 }
 
-/* Users list — compact single-line filter row */
+/* Users page — segmented stat bar */
+.erp-users-stat-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: #fff;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.erp-users-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-right: 1px solid #eef1f4;
+  min-width: 0;
+}
+
+.erp-users-stat:last-child {
+  border-right: none;
+}
+
+.erp-users-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.erp-users-stat-label {
+  margin: 0;
+  font-size: calc(11px * var(--erp-font-scale));
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-users-stat-value {
+  margin: 3px 0 0;
+  font-size: calc(22px * var(--erp-font-scale));
+  font-weight: 700;
+  line-height: 1.1;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+  .erp-users-stat-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .erp-users-stat:nth-child(2) {
+    border-right: none;
+  }
+
+  .erp-users-stat:nth-child(1),
+  .erp-users-stat:nth-child(2) {
+    border-bottom: 1px solid #eef1f4;
+  }
+}
+
+@media (max-width: 520px) {
+  .erp-users-stat-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-users-stat {
+    border-right: none;
+    border-bottom: 1px solid #eef1f4;
+  }
+
+  .erp-users-stat:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Users page — card shell polish */
+.erp-users-page .erp-pro-card {
+  border-radius: 12px;
+  border-color: #e8ebef;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.erp-users-page .erp-pro-card-toolbar {
+  padding: 16px 20px;
+  border-bottom-color: #eef1f4;
+}
+
+.erp-users-page .erp-pro-card-toolbar-title {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.erp-users-count-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: calc(12px * var(--erp-font-scale));
+  font-weight: 600;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Users list — filter row */
 .erp-users-filter-bar {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  gap: 10px;
+  padding: 14px 20px;
+  background: #fbfcfd;
+  border-bottom: 1px solid #eef1f4;
   overflow-x: auto;
 }
 
+.erp-users-filter-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .erp-users-filter-search {
-  flex: 1 1 220px;
-  min-width: 180px;
-  max-width: 320px;
+  flex: 0 1 340px;
+  min-width: 200px;
 }
 
 .erp-users-filter-select {
-  flex: 0 0 160px;
-  width: 160px;
+  flex: 0 0 168px;
+  width: 168px;
 }
 
-.erp-users-filter-bar .ant-input-search,
+.erp-users-filter-bar .ant-input-search .ant-input,
+.erp-users-filter-bar .ant-input-affix-wrapper,
 .erp-users-filter-bar .ant-select-selector,
 .erp-users-filter-bar .ant-btn {
-  border-radius: 6px !important;
+  border-radius: 8px !important;
 }
 
-/* Sticky header + fixed name column polish inside Ant scroll container */
-.erp-users-table .ant-table-thead > tr:not(.ant-table-measure-row) > th {
+.erp-users-filter-bar .ant-select-single .ant-select-selector,
+.erp-users-filter-bar .ant-input-affix-wrapper,
+.erp-users-filter-bar .ant-input-search .ant-btn {
+  height: 36px;
+}
+
+.erp-users-filter-bar .ant-select-single .ant-select-selector .ant-select-selection-item,
+.erp-users-filter-bar .ant-select-single .ant-select-selector .ant-select-selection-placeholder {
+  line-height: 34px;
+}
+
+/* Users list — redesigned table: lighter header, no zebra, structured cells */
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr:not(.ant-table-measure-row)
+  > th,
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr:not(.ant-table-measure-row)
+  > th.ant-table-cell {
   position: sticky;
   top: 0;
   z-index: 3;
-  background: #f8fafc !important;
+  background: #ffffff !important;
+  color: #64748b !important;
+  font-size: calc(11px * var(--erp-font-scale)) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
 }
 
+.erp-data-table.erp-pro-table.erp-users-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding-top: 15px !important;
+  padding-bottom: 15px !important;
+  vertical-align: middle;
+}
+
+/* No zebra — quiet rows, hover-only emphasis */
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:nth-child(even)
+  > td {
+  background: transparent;
+}
+
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td {
+  background: #f6f8fa !important;
+}
+
+/* Fixed-left identity column tracks the row background */
 .erp-users-table .ant-table-cell-fix-left,
 .erp-users-table .ant-table-cell-fix-left-first {
   background: #fff !important;
@@ -742,23 +913,131 @@ main::-webkit-scrollbar,
 
 .erp-users-table .ant-table-thead .ant-table-cell-fix-left,
 .erp-users-table .ant-table-thead .ant-table-cell-fix-left-first {
-  background: #f8fafc !important;
+  background: #ffffff !important;
   z-index: 5;
 }
 
 .erp-users-table .ant-table-tbody > tr:nth-child(even) .ant-table-cell-fix-left,
-.erp-users-table .ant-table-tbody > tr:nth-child(even) .ant-table-cell-fix-left-first {
-  background: #fafbfc !important;
+.erp-users-table
+  .ant-table-tbody
+  > tr:nth-child(even)
+  .ant-table-cell-fix-left-first {
+  background: #fff !important;
 }
 
 .erp-users-table .ant-table-tbody > tr:hover .ant-table-cell-fix-left,
 .erp-users-table .ant-table-tbody > tr:hover .ant-table-cell-fix-left-first {
-  background: #f1f5f9 !important;
+  background: #f6f8fa !important;
+}
+
+/* Identity cell */
+.erp-users-avatar {
+  border-radius: 10px !important;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.05);
+  flex-shrink: 0;
+}
+
+.erp-users-name {
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.erp-users-name-alt {
+  font-size: calc(12px * var(--erp-font-scale));
+  font-weight: 400;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.erp-users-email {
+  font-size: calc(12px * var(--erp-font-scale));
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* Employee ID chip */
+.erp-users-id-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: calc(11.5px * var(--erp-font-scale));
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #475569;
+  white-space: nowrap;
+}
+
+/* Strong / sub text for the department + position cells */
+.erp-users-cell-strong {
+  font-size: calc(13px * var(--erp-font-scale));
+  color: #334155;
+  line-height: 1.35;
+}
+
+.erp-users-cell-sub {
+  font-size: calc(12px * var(--erp-font-scale));
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.erp-users-dash {
+  color: #cbd5e1;
+}
+
+/* Role tag — outlined, lighter than the filled pill */
+.erp-users-role-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 3px 10px;
+  border: 1px solid #d5dde5;
+  border-radius: 999px;
+  background: #fff;
+  font-size: calc(12px * var(--erp-font-scale));
+  font-weight: 500;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Status — consistent dot + label for every state */
+.erp-users-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 500;
+  color: #334155;
+}
+
+.erp-users-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 767px) {
+  .erp-users-page .erp-pro-card-toolbar {
+    padding: 12px 14px;
+  }
+
   .erp-users-filter-bar {
     flex-wrap: wrap;
+    padding: 12px 14px;
+  }
+
+  .erp-users-filter-spacer {
+    display: none;
   }
 
   .erp-users-filter-search {

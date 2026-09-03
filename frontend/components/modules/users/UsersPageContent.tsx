@@ -36,9 +36,7 @@ import {
 import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import UserImportModal from '@/components/modules/users/UserImportModal';
@@ -139,7 +137,9 @@ function UserListAvatar({ user }: { user: User }): React.ReactNode {
 
   return (
     <Avatar
-      size={36}
+      size={40}
+      shape="square"
+      className="erp-users-avatar"
       src={photoQuery.data?.url}
       icon={!photoQuery.data?.url && !initials ? <UserOutlined /> : undefined}
       style={{
@@ -147,9 +147,8 @@ function UserListAvatar({ user }: { user: User }): React.ReactNode {
           ? undefined
           : tokens.colorPrimaryLight,
         color: tokens.colorPrimary,
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: 600,
-        flexShrink: 0,
       }}
     >
       {initials}
@@ -176,9 +175,52 @@ function TruncateText({
   );
 }
 
-/**
- * Active → quiet green-dot + text. Pending / Inactive / No login → filled badge.
- */
+const USER_STATUS_DOT: Record<'success' | 'warning' | 'default', string> = {
+  success: '#16a34a',
+  warning: '#d97706',
+  default: '#94a3b8',
+};
+
+const USER_STAT_ACCENT: Record<
+  'teal' | 'green' | 'amber' | 'slate',
+  { bg: string; fg: string }
+> = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  slate: { bg: '#EEF1F4', fg: '#64748B' },
+};
+
+/** One segment of the users-page stat bar: tinted icon chip + label + value. */
+function UserStat({
+  label,
+  value,
+  accent,
+  icon,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof USER_STAT_ACCENT;
+  icon: React.ReactNode;
+}): React.ReactNode {
+  const tint = USER_STAT_ACCENT[accent];
+  return (
+    <div className="erp-users-stat">
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </div>
+  );
+}
+
+/** One consistent dot + label for every status (active / pending / inactive / no login). */
 function UserStatusIndicator({
   user,
   t,
@@ -189,27 +231,15 @@ function UserStatusIndicator({
   const variant = userStatusVariant(user);
   const label = userStatusLabel(user, t);
 
-  if (variant === 'success') {
-    return (
-      <span
-        className="inline-flex items-center gap-1.5 text-[13px] font-medium"
-        style={{ color: tokens.colorTextPrimary }}
-      >
-        <span
-          aria-hidden
-          className="h-1.5 w-1.5 shrink-0 rounded-full"
-          style={{ background: tokens.colorGreen600 }}
-        />
-        {label}
-      </span>
-    );
-  }
-
   return (
-    <StatusBadge
-      label={label}
-      variant={variant === 'warning' ? 'warning' : 'default'}
-    />
+    <span className="erp-users-status">
+      <span
+        aria-hidden
+        className="erp-users-status-dot"
+        style={{ background: USER_STATUS_DOT[variant] }}
+      />
+      {label}
+    </span>
   );
 }
 
@@ -536,7 +566,7 @@ export default function UsersPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className="erp-pro-list-page">
+    <div className="erp-pro-list-page erp-users-page">
       {importOpen ? (
         <UserImportModal
           onClose={() => setImportOpen(false)}
@@ -575,45 +605,40 @@ export default function UsersPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
+      <div className="erp-users-stat-bar">
+        <UserStat
           label={t('users.stats.total')}
           value={userStats.totalCount}
-          color="teal"
-          icon={<Users size={14} />}
+          accent="teal"
+          icon={<Users size={15} />}
         />
-        <StatCard
+        <UserStat
           label={t('users.stats.active')}
           value={userStats.activeCount}
-          color="green"
+          accent="green"
           icon={<CheckCircleOutlined />}
         />
-        <StatCard
+        <UserStat
           label={t('users.stats.pending')}
           value={userStats.pendingCount}
-          color="amber"
+          accent="amber"
           icon={<ClockCircleOutlined />}
         />
-        <StatCard
+        <UserStat
           label={t('users.stats.inactive')}
           value={userStats.inactiveCount}
-          color="default"
+          accent="slate"
           icon={<UserDeleteOutlined />}
         />
       </div>
 
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar">
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{t('users.allUsers')}</h3>
-            <p
-              className="m-0 mt-0.5 text-[12px]"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {meta.total === 1
-                ? t('users.userCountOne')
-                : t('users.userCount', { count: meta.total })}
-            </p>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -669,6 +694,7 @@ export default function UsersPageContent(): React.ReactNode {
             }}
             aria-label={t('users.searchPlaceholder')}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           <Select
             placeholder={t('users.filterDepartment')}
             className="erp-users-filter-select"
@@ -795,7 +821,7 @@ export default function UsersPageContent(): React.ReactNode {
             className="erp-pro-table erp-users-table"
             size="middle"
             dataSource={users}
-            scroll={{ x: 920 }}
+            scroll={{ x: 1128 }}
             pagination={
               pagination
                 ? {
@@ -828,18 +854,9 @@ export default function UsersPageContent(): React.ReactNode {
                 key: 'name',
                 sorter: true,
                 fixed: 'left',
-                width: 280,
+                width: 300,
                 render: (_, record) => {
                   const fullName = `${record.firstName} ${record.lastName}`.trim();
-                  const positionTitle = record.position?.title ?? null;
-                  const disciplineName = record.engineeringDisciplineId
-                    ? (record.engineeringDiscipline?.name ??
-                      disciplineNameById.get(record.engineeringDisciplineId) ??
-                      null)
-                    : null;
-                  const secondaryLine = [positionTitle, disciplineName]
-                    .filter(Boolean)
-                    .join(' · ');
 
                   return (
                     <div className="flex min-w-0 items-center gap-3">
@@ -848,33 +865,25 @@ export default function UsersPageContent(): React.ReactNode {
                         <div className="flex min-w-0 items-baseline gap-1.5">
                           <TruncateText
                             value={fullName}
-                            className="text-[13px] font-semibold"
-                            style={{ color: tokens.colorTextPrimary }}
+                            className="erp-users-name"
                           />
                           {record.chineseName ? (
                             <TruncateText
                               value={record.chineseName}
-                              className="max-w-[40%] text-[12px] font-normal"
-                              style={{ color: tokens.colorTextSecondary }}
+                              className="erp-users-name-alt max-w-[38%]"
                             />
                           ) : null}
                         </div>
                         {record.email ? (
                           <TruncateText
                             value={record.email}
-                            className="erp-table-meta mt-0.5"
+                            className="erp-users-email mt-0.5"
                           />
                         ) : (
-                          <p className="erp-table-meta m-0 mt-0.5">
+                          <p className="erp-users-email m-0 mt-0.5">
                             {t('users.noEmailNoLogin')}
                           </p>
                         )}
-                        {secondaryLine ? (
-                          <TruncateText
-                            value={secondaryLine}
-                            className="erp-table-meta mt-0.5"
-                          />
-                        ) : null}
                       </div>
                     </div>
                   );
@@ -884,29 +893,68 @@ export default function UsersPageContent(): React.ReactNode {
                 title: 'ID',
                 dataIndex: 'employeeId',
                 key: 'employeeId',
-                width: 110,
+                width: 120,
                 render: (id: string | null | undefined) =>
                   id ? (
-                    <TruncateText value={id} className="erp-table-mono" />
-                  ) : null,
+                    <span className="erp-users-id-chip">{id}</span>
+                  ) : (
+                    <span className="erp-users-dash">—</span>
+                  ),
+              },
+              {
+                title: t('common.position'),
+                key: 'position',
+                width: 190,
+                sorter: true,
+                render: (_, record) => {
+                  const positionTitle = record.position?.title ?? null;
+                  const disciplineName = record.engineeringDisciplineId
+                    ? (record.engineeringDiscipline?.name ??
+                      disciplineNameById.get(record.engineeringDisciplineId) ??
+                      null)
+                    : null;
+
+                  if (!positionTitle && !disciplineName) {
+                    return <span className="erp-users-dash">—</span>;
+                  }
+
+                  return (
+                    <div className="min-w-0">
+                      {positionTitle ? (
+                        <TruncateText
+                          value={positionTitle}
+                          className="erp-users-cell-strong"
+                        />
+                      ) : null}
+                      {disciplineName ? (
+                        <TruncateText
+                          value={disciplineName}
+                          className="erp-users-cell-sub mt-0.5"
+                        />
+                      ) : null}
+                    </div>
+                  );
+                },
               },
               {
                 title: t('common.department'),
                 key: 'department',
-                width: 160,
+                width: 170,
                 sorter: true,
                 render: (_, record) =>
                   record.department?.name ? (
                     <TruncateText
                       value={record.department.name}
-                      style={{ color: tokens.colorTextPrimary }}
+                      className="erp-users-cell-strong"
                     />
-                  ) : null,
+                  ) : (
+                    <span className="erp-users-dash">—</span>
+                  ),
               },
               {
                 title: t('common.role'),
                 key: 'roles',
-                width: 160,
+                width: 170,
                 render: (_, record) => {
                   const roles =
                     record.userRoles?.map((assignment) => ({
@@ -914,17 +962,15 @@ export default function UsersPageContent(): React.ReactNode {
                       isPrimary: assignment.isPrimary,
                     })) ?? [];
                   if (roles.length === 0) {
-                    return null;
+                    return <span className="erp-users-dash">—</span>;
                   }
                   const topRole = pickTopLevelRoleName(roles, '');
                   if (!topRole) {
-                    return null;
+                    return <span className="erp-users-dash">—</span>;
                   }
                   return (
                     <Tooltip title={topRole} mouseEnterDelay={0.35}>
-                      <span className="erp-table-pill max-w-full">
-                        {topRole}
-                      </span>
+                      <span className="erp-users-role-tag">{topRole}</span>
                     </Tooltip>
                   );
                 },
@@ -932,7 +978,7 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: t('common.status'),
                 key: 'status',
-                width: 120,
+                width: 130,
                 sorter: true,
                 render: (_, record) => (
                   <UserStatusIndicator user={record} t={t} />

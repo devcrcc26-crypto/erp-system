@@ -247,6 +247,9 @@ export class UpdateUserDto extends PartialType(
     'discipline',
     'engineeringDisciplineId',
     'reportsToUserId',
+    'leavePolicyId',
+    'departmentId',
+    'positionId',
   ] as const),
 ) {
   @ApiPropertyOptional()
