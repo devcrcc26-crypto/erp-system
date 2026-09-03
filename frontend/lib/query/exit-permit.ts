@@ -50,7 +50,7 @@ function buildListQuery(params: ListExitPermitsParams): string {
   return toQueryString({ ...rest, status: statusValue });
 }
 
-function buildExitPermitItemFormData(
+export function buildExitPermitItemFormData(
   payload: AddExitPermitItemPayload | UpdateExitPermitItemPayload,
 ): FormData {
   const formData = new FormData();

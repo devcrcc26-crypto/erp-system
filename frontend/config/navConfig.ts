@@ -145,6 +145,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/approvals/new/expense-claim': 'pages.hr.expenseClaim.formDescription',
   '/approvals/new/purchase-request': 'pages.hr.purchaseRequest.formDescription',
   '/approvals/new/material-requisition': 'pages.hr.materialRequisition.formDescription',
+  '/approvals/new/equipment-and-materials-exit-permit': 'pages.hr.exitPermit.formDescription',
   '/approvals/new/consumables': 'pages.hr.consumables.formDescription',
   '/approvals/new/per-diem': 'pages.hr.perDiem.formDescription',
   '/approvals/new/vehicle-application': 'pages.hr.vehicleApplication.formDescription',
@@ -771,6 +772,7 @@ function resolveRouteMetaCore(
     pathname === '/approvals/new/per-diem' ||
     pathname === '/approvals/new/purchase-request' ||
     pathname === '/approvals/new/material-requisition' ||
+    pathname === '/approvals/new/equipment-and-materials-exit-permit' ||
     pathname === '/approvals/new/consumables' ||
     pathname === '/approvals/new/vehicle-application' ||
     pathname === '/approvals/new/vehicle-refueling' ||

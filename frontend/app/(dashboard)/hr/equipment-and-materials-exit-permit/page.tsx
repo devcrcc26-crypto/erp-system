@@ -1,5 +1,5 @@
-import HrComingSoonPage from "@/components/modules/hr/HrComingSoonPage";
+import ExitPermitListPageContent from '@/components/modules/hr/exit-permit/ExitPermitListPageContent';
 
-export default function EquipmentAndMaterialExitPermitPage() {
-  return <HrComingSoonPage titleKey="nav.hr.equipmentAndMaterialsExitPermit" />;
+export default function EquipmentAndMaterialExitPermitPage(): React.ReactNode {
+  return <ExitPermitListPageContent />;
 }

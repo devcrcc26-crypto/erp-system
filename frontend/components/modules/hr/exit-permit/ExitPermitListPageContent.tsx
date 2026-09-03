@@ -1,3 +1,5 @@
+'use client';
+
 import { useTablePagination } from "@/hooks/use-table-pagination";
 import { ExitPermitStatus } from "@/lib/api/exit-permit.types";
 import { useExitPermits } from "@/lib/query/exit-permit";
