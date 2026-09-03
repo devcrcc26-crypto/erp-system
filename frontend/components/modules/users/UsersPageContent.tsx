@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation';
 import {
   Alert,
   Avatar,
+  Badge,
   Button,
   Dropdown,
   Input,
+  Popover,
   Select,
+  Space,
   Tooltip,
   type MenuProps,
 } from 'antd';
@@ -22,6 +25,7 @@ import {
   ClockCircleOutlined,
   DownloadOutlined,
   EditOutlined,
+  FilterOutlined,
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -153,8 +157,60 @@ function UserListAvatar({ user }: { user: User }): React.ReactNode {
   );
 }
 
-function CellDash(): React.ReactNode {
-  return <span className="erp-table-meta">—</span>;
+/** Truncates long cell text and exposes the full value on hover. */
+function TruncateText({
+  value,
+  className = '',
+  style,
+}: {
+  value: string;
+  className?: string;
+  style?: React.CSSProperties;
+}): React.ReactNode {
+  return (
+    <Tooltip title={value} mouseEnterDelay={0.35}>
+      <span className={`block truncate ${className}`.trim()} style={style}>
+        {value}
+      </span>
+    </Tooltip>
+  );
+}
+
+/**
+ * Active → quiet green-dot + text. Pending / Inactive / No login → filled badge.
+ */
+function UserStatusIndicator({
+  user,
+  t,
+}: {
+  user: User;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}): React.ReactNode {
+  const variant = userStatusVariant(user);
+  const label = userStatusLabel(user, t);
+
+  if (variant === 'success') {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 text-[13px] font-medium"
+        style={{ color: tokens.colorTextPrimary }}
+      >
+        <span
+          aria-hidden
+          className="h-1.5 w-1.5 shrink-0 rounded-full"
+          style={{ background: tokens.colorGreen600 }}
+        />
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <StatusBadge
+      label={label}
+      variant={variant === 'warning' ? 'warning' : 'default'}
+    />
+  );
 }
 
 export default function UsersPageContent(): React.ReactNode {
@@ -170,6 +226,7 @@ export default function UsersPageContent(): React.ReactNode {
     text: string;
   } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -342,6 +399,27 @@ export default function UsersPageContent(): React.ReactNode {
     setNationalityFilter(undefined);
     resetPage();
   }
+
+  const moreFilterCount = useMemo(() => {
+    let count = 0;
+    if (disciplineFilter) count += 1;
+    if (positionFilter) count += 1;
+    if (employeeTypeFilter) count += 1;
+    if (nationalityFilter) count += 1;
+    return count;
+  }, [
+    disciplineFilter,
+    positionFilter,
+    employeeTypeFilter,
+    nationalityFilter,
+  ]);
+
+  const hasActiveFilters = Boolean(
+    appliedSearch ||
+      departmentFilter ||
+      statusFilter !== undefined ||
+      moreFilterCount > 0,
+  );
 
   async function handleRefresh(): Promise<void> {
     await usersQuery.refetch();
@@ -528,7 +606,10 @@ export default function UsersPageContent(): React.ReactNode {
         <div className="erp-pro-card-toolbar">
           <div className="min-w-0">
             <h3 className="erp-pro-card-toolbar-title">{t('users.allUsers')}</h3>
-            <p className="m-0 mt-0.5 text-[12px]" style={{ color: tokens.colorTextTertiary }}>
+            <p
+              className="m-0 mt-0.5 text-[12px]"
+              style={{ color: tokens.colorTextSecondary }}
+            >
               {meta.total === 1
                 ? t('users.userCountOne')
                 : t('users.userCount', { count: meta.total })}
@@ -544,33 +625,35 @@ export default function UsersPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Button
-              icon={<DownloadOutlined />}
-              loading={exportingUsers}
-              onClick={() => void handleExportExcel()}
-            >
-              {t('users.exportExcel')}
-            </Button>
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => setImportOpen(true)}
-            >
-              {t('common.importFromExcel')}
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/users/new')}
-            >
-              {t('users.addEmployee')}
-            </Button>
+            <Space.Compact>
+              <Button
+                icon={<DownloadOutlined />}
+                loading={exportingUsers}
+                onClick={() => void handleExportExcel()}
+              >
+                {t('users.exportExcel')}
+              </Button>
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportOpen(true)}
+              >
+                {t('common.importFromExcel')}
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => router.push('/users/new')}
+              >
+                {t('users.addEmployee')}
+              </Button>
+            </Space.Compact>
           </div>
         </div>
 
-        <div className="erp-pro-filter-bar erp-filter-bar">
+        <div className="erp-users-filter-bar">
           <Input.Search
             placeholder={t('users.searchPlaceholder')}
-            className="w-full min-w-0 sm:w-72"
+            className="erp-users-filter-search min-w-0"
             allowClear
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -584,21 +667,11 @@ export default function UsersPageContent(): React.ReactNode {
               setAppliedSearch('');
               resetPage();
             }}
-          />
-          <Select
-            placeholder={t('users.filterDiscipline')}
-            className="w-full min-w-0 sm:w-40"
-            allowClear
-            options={disciplineFilterOptions}
-            value={disciplineFilter}
-            onChange={(value?: string) => {
-              setDisciplineFilter(value);
-              resetPage();
-            }}
+            aria-label={t('users.searchPlaceholder')}
           />
           <Select
             placeholder={t('users.filterDepartment')}
-            className="w-full min-w-0 sm:w-40"
+            className="erp-users-filter-select"
             allowClear
             options={departmentFilterOptions}
             value={departmentFilter}
@@ -606,21 +679,11 @@ export default function UsersPageContent(): React.ReactNode {
               setDepartmentFilter(value);
               resetPage();
             }}
-          />
-          <Select
-            placeholder={t('users.filterPosition')}
-            className="w-full min-w-0 sm:w-44"
-            allowClear
-            options={positionFilterOptions}
-            value={positionFilter}
-            onChange={(value?: string) => {
-              setPositionFilter(value);
-              resetPage();
-            }}
+            aria-label={t('common.department')}
           />
           <Select
             placeholder={t('users.filterStatus')}
-            className="w-full min-w-0 sm:w-36"
+            className="erp-users-filter-select"
             allowClear
             options={[
               { label: t('common.active'), value: true },
@@ -631,61 +694,108 @@ export default function UsersPageContent(): React.ReactNode {
               setStatusFilter(value);
               resetPage();
             }}
+            aria-label={t('common.status')}
           />
-          <Select
-            placeholder={t('users.form.employeeType')}
-            className="w-full min-w-0 sm:w-36"
-            allowClear
-            options={[
-              {
-                value: 'PERMANENT',
-                label: t('hr.employeeType.PERMANENT'),
-              },
-              {
-                value: 'CONTRACT',
-                label: t('hr.employeeType.CONTRACT'),
-              },
-              {
-                value: 'TEMPORARY',
-                label: t('hr.employeeType.TEMPORARY'),
-              },
-            ]}
-            value={employeeTypeFilter}
-            onChange={(value?: EmployeeType) => {
-              setEmployeeTypeFilter(value);
-              resetPage();
-            }}
-          />
-          <Select
-            placeholder={t('users.form.nationality')}
-            className="w-full min-w-0 sm:w-36"
-            allowClear
-            options={[
-              {
-                value: 'ETHIOPIAN',
-                label: t('hr.nationality.ETHIOPIAN'),
-              },
-              {
-                value: 'CHINESE',
-                label: t('hr.nationality.CHINESE'),
-              },
-            ]}
-            value={nationalityFilter}
-            onChange={(value?: Nationality) => {
-              setNationalityFilter(value);
-              resetPage();
-            }}
-          />
-          <Button onClick={handleResetFilters}>{t('common.reset')}</Button>
+          <Popover
+            trigger="click"
+            placement="bottomLeft"
+            open={moreFiltersOpen}
+            onOpenChange={setMoreFiltersOpen}
+            content={
+              <div className="flex w-[260px] flex-col gap-3 p-1">
+                <Select
+                  placeholder={t('users.filterDiscipline')}
+                  className="w-full"
+                  allowClear
+                  options={disciplineFilterOptions}
+                  value={disciplineFilter}
+                  onChange={(value?: string) => {
+                    setDisciplineFilter(value);
+                    resetPage();
+                  }}
+                  aria-label={t('common.discipline')}
+                />
+                <Select
+                  placeholder={t('users.filterPosition')}
+                  className="w-full"
+                  allowClear
+                  options={positionFilterOptions}
+                  value={positionFilter}
+                  onChange={(value?: string) => {
+                    setPositionFilter(value);
+                    resetPage();
+                  }}
+                  aria-label={t('common.position')}
+                />
+                <Select
+                  placeholder={t('users.form.employeeType')}
+                  className="w-full"
+                  allowClear
+                  options={[
+                    {
+                      value: 'PERMANENT',
+                      label: t('hr.employeeType.PERMANENT'),
+                    },
+                    {
+                      value: 'CONTRACT',
+                      label: t('hr.employeeType.CONTRACT'),
+                    },
+                    {
+                      value: 'TEMPORARY',
+                      label: t('hr.employeeType.TEMPORARY'),
+                    },
+                  ]}
+                  value={employeeTypeFilter}
+                  onChange={(value?: EmployeeType) => {
+                    setEmployeeTypeFilter(value);
+                    resetPage();
+                  }}
+                  aria-label={t('users.form.employeeType')}
+                />
+                <Select
+                  placeholder={t('users.form.nationality')}
+                  className="w-full"
+                  allowClear
+                  options={[
+                    {
+                      value: 'ETHIOPIAN',
+                      label: t('hr.nationality.ETHIOPIAN'),
+                    },
+                    {
+                      value: 'CHINESE',
+                      label: t('hr.nationality.CHINESE'),
+                    },
+                  ]}
+                  value={nationalityFilter}
+                  onChange={(value?: Nationality) => {
+                    setNationalityFilter(value);
+                    resetPage();
+                  }}
+                  aria-label={t('users.form.nationality')}
+                />
+              </div>
+            }
+          >
+            <Badge count={moreFilterCount} size="small" offset={[-2, 2]}>
+              <Button icon={<FilterOutlined />}>
+                {t('users.moreFilters')}
+              </Button>
+            </Badge>
+          </Popover>
+          {hasActiveFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
         </div>
 
         <div className="erp-pro-table-card-body">
           <DataTable<User>
             rowKey="id"
-            className="erp-pro-table"
+            className="erp-pro-table erp-users-table"
             size="middle"
             dataSource={users}
-            scroll={false}
+            scroll={{ x: 920 }}
             pagination={
               pagination
                 ? {
@@ -717,110 +827,86 @@ export default function UsersPageContent(): React.ReactNode {
                 title: t('common.name'),
                 key: 'name',
                 sorter: true,
-                render: (_, record) => (
-                  <div className="flex min-w-0 items-center gap-3">
-                    <UserListAvatar user={record} />
-                    <div className="min-w-0">
-                      <p
-                        className="m-0 truncate text-[13px] font-medium"
-                        style={{ color: tokens.colorTextPrimary }}
-                      >
-                        {record.firstName} {record.lastName}
-                        {record.chineseName ? (
-                          <span
-                            className="ml-1.5 font-normal"
-                            style={{ color: tokens.colorTextTertiary }}
-                          >
-                            {record.chineseName}
-                          </span>
+                fixed: 'left',
+                width: 280,
+                render: (_, record) => {
+                  const fullName = `${record.firstName} ${record.lastName}`.trim();
+                  const positionTitle = record.position?.title ?? null;
+                  const disciplineName = record.engineeringDisciplineId
+                    ? (record.engineeringDiscipline?.name ??
+                      disciplineNameById.get(record.engineeringDisciplineId) ??
+                      null)
+                    : null;
+                  const secondaryLine = [positionTitle, disciplineName]
+                    .filter(Boolean)
+                    .join(' · ');
+
+                  return (
+                    <div className="flex min-w-0 items-center gap-3">
+                      <UserListAvatar user={record} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-baseline gap-1.5">
+                          <TruncateText
+                            value={fullName}
+                            className="text-[13px] font-semibold"
+                            style={{ color: tokens.colorTextPrimary }}
+                          />
+                          {record.chineseName ? (
+                            <TruncateText
+                              value={record.chineseName}
+                              className="max-w-[40%] text-[12px] font-normal"
+                              style={{ color: tokens.colorTextSecondary }}
+                            />
+                          ) : null}
+                        </div>
+                        {record.email ? (
+                          <TruncateText
+                            value={record.email}
+                            className="erp-table-meta mt-0.5"
+                          />
+                        ) : (
+                          <p className="erp-table-meta m-0 mt-0.5">
+                            {t('users.noEmailNoLogin')}
+                          </p>
+                        )}
+                        {secondaryLine ? (
+                          <TruncateText
+                            value={secondaryLine}
+                            className="erp-table-meta mt-0.5"
+                          />
                         ) : null}
-                      </p>
-                      <p className="erp-table-meta m-0 truncate">
-                        {record.email ?? t('users.noEmailNoLogin')}
-                      </p>
+                      </div>
                     </div>
-                  </div>
-                ),
+                  );
+                },
               },
               {
                 title: 'ID',
                 dataIndex: 'employeeId',
                 key: 'employeeId',
-                width: 104,
-                responsive: ['md'],
+                width: 110,
                 render: (id: string | null | undefined) =>
-                  id ? <span className="erp-table-mono">{id}</span> : <CellDash />,
+                  id ? (
+                    <TruncateText value={id} className="erp-table-mono" />
+                  ) : null,
               },
               {
                 title: t('common.department'),
                 key: 'department',
-                ellipsis: { showTitle: true },
-                responsive: ['md'],
+                width: 160,
                 sorter: true,
                 render: (_, record) =>
                   record.department?.name ? (
-                    <span style={{ color: tokens.colorTextSecondary }}>
-                      {record.department.name}
-                    </span>
-                  ) : (
-                    <CellDash />
-                  ),
-              },
-              {
-                title: t('common.position'),
-                key: 'position',
-                ellipsis: { showTitle: true },
-                responsive: ['lg'],
-                sorter: true,
-                render: (_, record) =>
-                  record.position?.title ? (
-                    <span style={{ color: tokens.colorTextSecondary }}>
-                      {record.position.title}
-                    </span>
-                  ) : (
-                    <CellDash />
-                  ),
-              },
-              {
-                title: t('users.form.employeeType'),
-                dataIndex: 'employeeType',
-                key: 'employeeType',
-                width: 120,
-                responsive: ['xl'],
-                render: (type: EmployeeType | null | undefined) =>
-                  type ? (
-                    <span className="erp-table-meta">
-                      {t(`hr.employeeType.${type}`)}
-                    </span>
-                  ) : (
-                    <CellDash />
-                  ),
-              },
-              {
-                title: t('common.discipline'),
-                key: 'discipline',
-                ellipsis: { showTitle: true },
-                responsive: ['xl'],
-                render: (_, record) => {
-                  if (!record.engineeringDisciplineId) {
-                    return <CellDash />;
-                  }
-                  const name =
-                    record.engineeringDiscipline?.name ??
-                    disciplineNameById.get(record.engineeringDisciplineId) ??
-                    '—';
-                  return (
-                    <span style={{ color: tokens.colorTextSecondary }}>
-                      {name}
-                    </span>
-                  );
-                },
+                    <TruncateText
+                      value={record.department.name}
+                      style={{ color: tokens.colorTextPrimary }}
+                    />
+                  ) : null,
               },
               {
                 title: t('common.role'),
                 key: 'roles',
-                ellipsis: { showTitle: true },
-                responsive: ['md'],
+                width: 160,
                 render: (_, record) => {
                   const roles =
                     record.userRoles?.map((assignment) => ({
@@ -828,32 +914,36 @@ export default function UsersPageContent(): React.ReactNode {
                       isPrimary: assignment.isPrimary,
                     })) ?? [];
                   if (roles.length === 0) {
-                    return <CellDash />;
+                    return null;
                   }
                   const topRole = pickTopLevelRoleName(roles, '');
                   if (!topRole) {
-                    return <CellDash />;
+                    return null;
                   }
-                  return <span className="erp-table-pill">{topRole}</span>;
+                  return (
+                    <Tooltip title={topRole} mouseEnterDelay={0.35}>
+                      <span className="erp-table-pill max-w-full">
+                        {topRole}
+                      </span>
+                    </Tooltip>
+                  );
                 },
               },
               {
                 title: t('common.status'),
                 key: 'status',
-                width: 118,
+                width: 120,
                 sorter: true,
                 render: (_, record) => (
-                  <StatusBadge
-                    label={userStatusLabel(record, t)}
-                    variant={userStatusVariant(record)}
-                  />
+                  <UserStatusIndicator user={record} t={t} />
                 ),
               },
               {
                 title: '',
                 key: 'actions',
-                width: 48,
+                width: 52,
                 align: 'right',
+                fixed: 'right',
                 render: (_, record) => (
                   <div
                     className="erp-table-row-actions flex items-center justify-end"

@@ -596,7 +596,7 @@ main::-webkit-scrollbar,
   font-size: calc(13px * var(--erp-font-scale));
   font-weight: 400;
   line-height: 1.45;
-  color: rgba(0, 0, 0, 0.88);
+  color: rgba(15, 23, 42, 0.92);
   border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
   transition: background-color 0.12s ease;
   vertical-align: middle;
@@ -607,9 +607,14 @@ main::-webkit-scrollbar,
   border-bottom: none !important;
 }
 
+.erp-data-table .ant-table-tbody > tr:nth-child(even) > td,
+.erp-pro-table .ant-table-tbody > tr:nth-child(even) > td {
+  background: #fafbfc;
+}
+
 .erp-data-table .ant-table-tbody > tr:hover > td,
 .erp-pro-table .ant-table-tbody > tr:hover > td {
-  background: #f7f8f9 !important;
+  background: #f1f5f9 !important;
 }
 
 .erp-data-table .ant-table-tbody > tr.ant-table-row-selected > td,
@@ -655,7 +660,7 @@ main::-webkit-scrollbar,
 
 /* Quiet meta text used inside table cells */
 .erp-table-meta {
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(51, 65, 85, 0.88);
   font-size: calc(12px * var(--erp-font-scale));
   line-height: 1.4;
 }
@@ -663,7 +668,7 @@ main::-webkit-scrollbar,
 .erp-table-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: calc(12px * var(--erp-font-scale));
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(51, 65, 85, 0.92);
   letter-spacing: 0.01em;
 }
 
@@ -674,8 +679,8 @@ main::-webkit-scrollbar,
   margin: 0;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #f1f3f5;
-  color: rgba(0, 0, 0, 0.65);
+  background: #f1f5f9;
+  color: rgba(15, 23, 42, 0.78);
   font-size: calc(12px * var(--erp-font-scale));
   font-weight: 500;
   line-height: 1.4;
@@ -685,12 +690,87 @@ main::-webkit-scrollbar,
 }
 
 .erp-table-row-actions .ant-btn {
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(51, 65, 85, 0.75);
 }
 
 .erp-table-row-actions .ant-btn:hover {
-  color: rgba(0, 0, 0, 0.88);
-  background: rgba(0, 0, 0, 0.04) !important;
+  color: rgba(15, 23, 42, 0.92);
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Users list — compact single-line filter row */
+.erp-users-filter-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
+}
+
+.erp-users-filter-search {
+  flex: 1 1 220px;
+  min-width: 180px;
+  max-width: 320px;
+}
+
+.erp-users-filter-select {
+  flex: 0 0 160px;
+  width: 160px;
+}
+
+.erp-users-filter-bar .ant-input-search,
+.erp-users-filter-bar .ant-select-selector,
+.erp-users-filter-bar .ant-btn {
+  border-radius: 6px !important;
+}
+
+/* Sticky header + fixed name column polish inside Ant scroll container */
+.erp-users-table .ant-table-thead > tr:not(.ant-table-measure-row) > th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f8fafc !important;
+}
+
+.erp-users-table .ant-table-cell-fix-left,
+.erp-users-table .ant-table-cell-fix-left-first {
+  background: #fff !important;
+  z-index: 4;
+}
+
+.erp-users-table .ant-table-thead .ant-table-cell-fix-left,
+.erp-users-table .ant-table-thead .ant-table-cell-fix-left-first {
+  background: #f8fafc !important;
+  z-index: 5;
+}
+
+.erp-users-table .ant-table-tbody > tr:nth-child(even) .ant-table-cell-fix-left,
+.erp-users-table .ant-table-tbody > tr:nth-child(even) .ant-table-cell-fix-left-first {
+  background: #fafbfc !important;
+}
+
+.erp-users-table .ant-table-tbody > tr:hover .ant-table-cell-fix-left,
+.erp-users-table .ant-table-tbody > tr:hover .ant-table-cell-fix-left-first {
+  background: #f1f5f9 !important;
+}
+
+@media (max-width: 767px) {
+  .erp-users-filter-bar {
+    flex-wrap: wrap;
+  }
+
+  .erp-users-filter-search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .erp-users-filter-select {
+    flex: 1 1 calc(50% - 4px);
+    width: auto;
+    min-width: 140px;
+  }
 }
 
 .erp-pro-tabs.ant-tabs {

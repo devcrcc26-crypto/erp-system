@@ -1077,6 +1077,7 @@
     "filterDepartment": "全部部门",
     "filterPosition": "全部职位",
     "filterStatus": "全部状态",
+    "moreFilters": "更多筛选",
     "updateEmployee": "更新员工",
     "detailNotFound": "未找到该员工。",
     "backToList": "返回用户列表",

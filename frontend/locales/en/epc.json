@@ -1083,6 +1083,7 @@
     "filterDepartment": "All departments",
     "filterPosition": "All positions",
     "filterStatus": "All statuses",
+    "moreFilters": "More filters",
     "sendInvitation": "Send invitation",
     "sendingInvitation": "Sending invitation…",
     "createUser": "Create user",
