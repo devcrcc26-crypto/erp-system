@@ -3846,7 +3846,8 @@ main::-webkit-scrollbar,
   }
 }
 
-.erp-flight-form-page .ant-btn {
+.erp-flight-form-page .ant-btn,
+.erp-business-trip-form-page .ant-btn {
   border-radius: 8px;
 }
 
@@ -3854,12 +3855,19 @@ main::-webkit-scrollbar,
 .erp-flight-form-page .ant-input-affix-wrapper,
 .erp-flight-form-page .ant-input-textarea textarea,
 .erp-flight-form-page .ant-select-selector,
-.erp-flight-form-page .ant-picker {
+.erp-flight-form-page .ant-picker,
+.erp-business-trip-form-page .ant-input,
+.erp-business-trip-form-page .ant-input-affix-wrapper,
+.erp-business-trip-form-page .ant-input-textarea textarea,
+.erp-business-trip-form-page .ant-select-selector,
+.erp-business-trip-form-page .ant-picker,
+.erp-business-trip-form-page .ant-input-number {
   border-radius: 8px !important;
 }
 
 @media (max-width: 767px) {
-  .erp-flight-form-page .erp-flight-form-actions .ant-btn {
+  .erp-flight-form-page .erp-flight-form-actions .ant-btn,
+  .erp-business-trip-form-page .erp-business-trip-form-actions .ant-btn {
     width: 100%;
   }
 }

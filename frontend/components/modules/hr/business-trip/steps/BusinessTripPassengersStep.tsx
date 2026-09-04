@@ -1,13 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card, Checkbox, Col, Input, Row, Select, Space, Tag, Typography } from 'antd';
+import { Checkbox, Col, Input, Row, Select } from 'antd';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import type {
   BusinessTripSelectablePassenger,
   FlightVisaStatus,
 } from '@/lib/api/business-trip.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { tokens } from '@/lib/theme/tokens';
 import type { BusinessTripPassengerValues } from './business-trip-stepper.types';
 
 /**
@@ -71,24 +71,17 @@ export default function BusinessTripPassengersStep({
   }
 
   return (
-    <div
-      className="rounded-lg p-3 sm:p-4"
-      style={{
-        border: `1px solid ${tokens.colorBorder}`,
-        background: tokens.colorCardBg,
-      }}
+    <FormLayout
+      variant="pro"
+      dense
+      title={t('hr.form.passengers')}
+      description={t('pages.hr.businessTrip.passengersStepDescription')}
     >
-      <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-        {t('hr.form.passengers')}
-      </Typography.Title>
-
-      <div className="mb-4">
-        <Typography.Text
-          style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-        >
+      <div className="mb-0">
+        <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
           {t('hr.form.selectPassengers')}{' '}
-          <span style={{ color: tokens.colorRed600 }}>*</span>
-        </Typography.Text>
+          <span className="text-[#DC2626]">*</span>
+        </label>
         <Select
           mode="multiple"
           allowClear
@@ -104,88 +97,80 @@ export default function BusinessTripPassengersStep({
       </div>
 
       {values.length > 0 ? (
-        <div className="mt-4 flex flex-col gap-3">
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            {t('hr.form.passportNumber')}
-          </Typography.Text>
+        <div className="mt-5 flex flex-col gap-3">
+          <p className="m-0 text-[13px] text-[var(--color-text-secondary)]">
+            {t('pages.hr.businessTrip.internationalPassengerHint')}
+          </p>
           {values.map((passenger) => (
-            <Card
+            <div
               key={passenger.employeeId}
-              size="small"
-              title={
-                <Space size={6}>
-                  <Tag color="blue">{passenger.name}</Tag>
-                </Space>
-              }
+              className="overflow-hidden rounded-[10px] border border-[#e8ebef] bg-[#fbfcfd]"
             >
-              <Row gutter={12}>
-                <Col xs={24} sm={10}>
-                  <div className="mb-2">
-                    <Typography.Text
-                      style={{ display: 'block', marginBottom: 4, fontSize: 13 }}
-                    >
-                      {t('hr.form.passportNumber')}{' '}
-                      <span style={{ color: tokens.colorRed600 }}>*</span>
-                    </Typography.Text>
-                    <Input
-                      size="small"
-                      placeholder={t('hr.form.passportNumber')}
-                      maxLength={20}
-                      value={passenger.passportNumber ?? ''}
-                      onChange={(e) =>
-                        updatePassenger(passenger.employeeId, {
-                          passportNumber: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </Col>
-                <Col xs={24} sm={7}>
-                  <div className="mb-2 flex items-center gap-1 pt-6">
-                    <Checkbox
-                      checked={passenger.visaRequired}
-                      onChange={(e) =>
-                        updatePassenger(passenger.employeeId, {
-                          visaRequired: e.target.checked,
-                          visaStatus: e.target.checked
-                            ? passenger.visaStatus
-                            : undefined,
-                        })
-                      }
-                    >
-                      {t('hr.form.visaRequired')}
-                    </Checkbox>
-                  </div>
-                </Col>
-                {passenger.visaRequired ? (
-                  <Col xs={24} sm={7}>
-                    <div className="mb-2">
-                      <Typography.Text
-                        style={{
-                          display: 'block',
-                          marginBottom: 4,
-                          fontSize: 13,
-                        }}
-                      >
-                        {t('hr.form.visaStatus')}
-                      </Typography.Text>
-                      <Select
-                        size="small"
-                        className="w-full"
-                        options={visaStatusOptions}
-                        value={passenger.visaStatus ?? 'NOT_APPLIED'}
-                        onChange={(visaStatus: FlightVisaStatus) =>
-                          updatePassenger(passenger.employeeId, { visaStatus })
+              <div className="border-b border-[#eef1f4] bg-white px-3 py-2.5 sm:px-4">
+                <span className="erp-users-role-tag">{passenger.name}</span>
+              </div>
+              <div className="px-3 py-3 sm:px-4">
+                <Row gutter={[12, 0]}>
+                  <Col xs={24} sm={10}>
+                    <div className="mb-2 sm:mb-0">
+                      <label className="mb-1.5 block text-[13px] text-[var(--color-text-primary)]">
+                        {t('hr.form.passportNumber')}{' '}
+                        <span className="text-[#DC2626]">*</span>
+                      </label>
+                      <Input
+                        placeholder={t('hr.form.passportNumber')}
+                        maxLength={20}
+                        value={passenger.passportNumber ?? ''}
+                        onChange={(e) =>
+                          updatePassenger(passenger.employeeId, {
+                            passportNumber: e.target.value,
+                          })
                         }
                       />
                     </div>
                   </Col>
-                ) : null}
-              </Row>
-            </Card>
+                  <Col xs={24} sm={7}>
+                    <div className="mb-2 flex items-center gap-1 sm:mb-0 sm:pt-7">
+                      <Checkbox
+                        checked={passenger.visaRequired}
+                        onChange={(e) =>
+                          updatePassenger(passenger.employeeId, {
+                            visaRequired: e.target.checked,
+                            visaStatus: e.target.checked
+                              ? passenger.visaStatus
+                              : undefined,
+                          })
+                        }
+                      >
+                        {t('hr.form.visaRequired')}
+                      </Checkbox>
+                    </div>
+                  </Col>
+                  {passenger.visaRequired ? (
+                    <Col xs={24} sm={7}>
+                      <div>
+                        <label className="mb-1.5 block text-[13px] text-[var(--color-text-primary)]">
+                          {t('hr.form.visaStatus')}
+                        </label>
+                        <Select
+                          className="w-full"
+                          options={visaStatusOptions}
+                          value={passenger.visaStatus ?? 'NOT_APPLIED'}
+                          onChange={(visaStatus: FlightVisaStatus) =>
+                            updatePassenger(passenger.employeeId, {
+                              visaStatus,
+                            })
+                          }
+                        />
+                      </div>
+                    </Col>
+                  ) : null}
+                </Row>
+              </div>
+            </div>
           ))}
         </div>
       ) : null}
-    </div>
+    </FormLayout>
   );
 }

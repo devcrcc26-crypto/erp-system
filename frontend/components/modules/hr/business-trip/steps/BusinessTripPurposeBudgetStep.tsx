@@ -1,6 +1,7 @@
 'use client';
 
-import { Col, Input, InputNumber, Row, Typography } from 'antd';
+import { Col, Input, InputNumber, Row } from 'antd';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { tokens } from '@/lib/theme/tokens';
 import { formatEtb } from '@/lib/utils/business-trip-display';
@@ -29,25 +30,17 @@ export default function BusinessTripPurposeBudgetStep({
     (Number(values.estimatedOtherCost) || 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div
-        className="rounded-lg p-3 sm:p-4"
-        style={{
-          border: `1px solid ${tokens.colorBorder}`,
-          background: tokens.colorCardBg,
-        }}
+    <div className="flex flex-col gap-4">
+      <FormLayout
+        variant="pro"
+        dense
+        title={t('hr.labels.purpose')}
+        description={t('pages.hr.businessTrip.purposeStepDescription')}
       >
-        <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-          {t('hr.labels.purpose')}
-        </Typography.Title>
-
         <div className="mb-4">
-          <Typography.Text
-            style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-          >
-            {t('hr.form.purpose')}{' '}
-            <span style={{ color: tokens.colorRed600 }}>*</span>
-          </Typography.Text>
+          <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+            {t('hr.form.purpose')} <span className="text-[#DC2626]">*</span>
+          </label>
           <Input.TextArea
             rows={3}
             maxLength={2000}
@@ -58,14 +51,12 @@ export default function BusinessTripPurposeBudgetStep({
           />
         </div>
 
-        <Row gutter={16}>
+        <Row gutter={[16, 0]}>
           <Col xs={24} sm={12}>
             <div className="mb-4">
-              <Typography.Text
-                style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-              >
+              <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
                 {t('hr.form.hostOrganization')}
-              </Typography.Text>
+              </label>
               <Input
                 value={values.hostOrganization}
                 onChange={(e) => patch({ hostOrganization: e.target.value })}
@@ -76,11 +67,9 @@ export default function BusinessTripPurposeBudgetStep({
           </Col>
           <Col xs={24} sm={12}>
             <div className="mb-4">
-              <Typography.Text
-                style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-              >
+              <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
                 {t('hr.form.hostContact')}
-              </Typography.Text>
+              </label>
               <Input
                 value={values.hostContact}
                 onChange={(e) => patch({ hostContact: e.target.value })}
@@ -92,11 +81,9 @@ export default function BusinessTripPurposeBudgetStep({
         </Row>
 
         <div className="mb-4">
-          <Typography.Text
-            style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-          >
+          <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
             {t('hr.form.expectedOutcomes')}
-          </Typography.Text>
+          </label>
           <Input.TextArea
             rows={3}
             maxLength={2000}
@@ -107,12 +94,10 @@ export default function BusinessTripPurposeBudgetStep({
           />
         </div>
 
-        <div>
-          <Typography.Text
-            style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-          >
+        <div className="mb-0">
+          <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
             {t('hr.form.itinerary')}
-          </Typography.Text>
+          </label>
           <Input.TextArea
             rows={3}
             maxLength={2000}
@@ -122,27 +107,20 @@ export default function BusinessTripPurposeBudgetStep({
             placeholder={t('hr.form.itinerary')}
           />
         </div>
-      </div>
+      </FormLayout>
 
-      <div
-        className="rounded-lg p-3 sm:p-4"
-        style={{
-          border: `1px solid ${tokens.colorBorder}`,
-          background: tokens.colorCardBg,
-        }}
+      <FormLayout
+        variant="pro"
+        dense
+        title={t('hr.section.budgetEstimate')}
+        description={t('pages.hr.businessTrip.budgetStepDescription')}
       >
-        <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-          {t('hr.section.budgetEstimate')}
-        </Typography.Title>
-
-        <Row gutter={16}>
+        <Row gutter={[16, 0]}>
           <Col xs={24} sm={12}>
             <div className="mb-4">
-              <Typography.Text
-                style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-              >
+              <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
                 {t('hr.form.estimatedFlightCost')}
-              </Typography.Text>
+              </label>
               <InputNumber
                 className="w-full"
                 min={0}
@@ -150,18 +128,18 @@ export default function BusinessTripPurposeBudgetStep({
                 placeholder="0"
                 value={values.estimatedFlightCost ?? undefined}
                 onChange={(v) =>
-                  patch({ estimatedFlightCost: typeof v === 'number' ? v : null })
+                  patch({
+                    estimatedFlightCost: typeof v === 'number' ? v : null,
+                  })
                 }
               />
             </div>
           </Col>
           <Col xs={24} sm={12}>
             <div className="mb-4">
-              <Typography.Text
-                style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-              >
+              <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
                 {t('hr.form.estimatedAccommodationCost')}
-              </Typography.Text>
+              </label>
               <InputNumber
                 className="w-full"
                 min={0}
@@ -179,11 +157,9 @@ export default function BusinessTripPurposeBudgetStep({
           </Col>
           <Col xs={24} sm={12}>
             <div className="mb-4">
-              <Typography.Text
-                style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-              >
+              <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
                 {t('hr.form.estimatedPerDiem')}
-              </Typography.Text>
+              </label>
               <InputNumber
                 className="w-full"
                 min={0}
@@ -191,18 +167,18 @@ export default function BusinessTripPurposeBudgetStep({
                 placeholder="0"
                 value={values.estimatedPerDiem ?? undefined}
                 onChange={(v) =>
-                  patch({ estimatedPerDiem: typeof v === 'number' ? v : null })
+                  patch({
+                    estimatedPerDiem: typeof v === 'number' ? v : null,
+                  })
                 }
               />
             </div>
           </Col>
           <Col xs={24} sm={12}>
             <div className="mb-4">
-              <Typography.Text
-                style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-              >
+              <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
                 {t('hr.form.estimatedOtherCost')}
-              </Typography.Text>
+              </label>
               <InputNumber
                 className="w-full"
                 min={0}
@@ -210,7 +186,9 @@ export default function BusinessTripPurposeBudgetStep({
                 placeholder="0"
                 value={values.estimatedOtherCost ?? undefined}
                 onChange={(v) =>
-                  patch({ estimatedOtherCost: typeof v === 'number' ? v : null })
+                  patch({
+                    estimatedOtherCost: typeof v === 'number' ? v : null,
+                  })
                 }
               />
             </div>
@@ -218,20 +196,23 @@ export default function BusinessTripPurposeBudgetStep({
         </Row>
 
         <div
-          className="rounded-md px-4 py-3"
+          className="rounded-[10px] px-4 py-3"
           style={{
             background: tokens.colorPrimaryLight,
             border: `1px solid ${tokens.colorBorder}`,
           }}
         >
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+          <p className="m-0 text-[13px] text-[var(--color-text-secondary)]">
             {t('hr.form.estimatedTotal')}
-          </Typography.Text>
-          <Typography.Title level={4} style={{ margin: '4px 0 0' }}>
+          </p>
+          <p
+            className="m-0 mt-1 text-xl font-semibold tabular-nums"
+            style={{ color: tokens.colorTextPrimary }}
+          >
             {formatEtb(estimatedTotal)}
-          </Typography.Title>
+          </p>
         </div>
-      </div>
+      </FormLayout>
     </div>
   );
 }
