@@ -1221,6 +1221,8 @@
       "email": "Email",
       "emailHint": "Leave blank for site workers who will not log in.",
       "emailPlaceholder": "Leave blank if no login needed",
+      "field": "Field",
+      "value": "Value",
       "phone": "Phone",
       "role": "Role",
       "roleHint": "Optional. Assign system access now or later.",

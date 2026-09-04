@@ -1,12 +1,17 @@
 'use client';
 
-import { Descriptions, Table } from 'antd';
 import dayjs from 'dayjs';
+import type { ColumnsType } from 'antd/es/table';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useUser } from '@/lib/query/users';
 import { useLeavePolicies } from '@/lib/query/leave-policy';
-import { useDepartments, useEngineeringDisciplineOptions, usePositions } from '@/lib/query/org';
+import {
+  useDepartments,
+  useEngineeringDisciplineOptions,
+  usePositions,
+} from '@/lib/query/org';
 import { formatUserName } from '@/lib/utils/user-display';
 import { formatEmployeeAddress } from '@/components/modules/users/EmployeeProfileFormFields';
 import type { Role } from '@/lib/api/types';
@@ -21,6 +26,21 @@ interface AddEmployeeReviewStepProps {
   mode?: 'create' | 'edit';
 }
 
+interface ReviewRow {
+  key: string;
+  label: string;
+  value: string;
+}
+
+interface EmergencyContactRow {
+  key: number;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+}
+
 export default function AddEmployeeReviewStep({
   values,
   roles,
@@ -30,24 +50,35 @@ export default function AddEmployeeReviewStep({
 }: AddEmployeeReviewStepProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const roleName = roles.find((role) => role.id === values.roleId)?.name ?? '-';
-  const reportsToQuery = useUser(values.reportsToUserId ?? '', Boolean(values.reportsToUserId));
+  const reportsToQuery = useUser(
+    values.reportsToUserId ?? '',
+    Boolean(values.reportsToUserId),
+  );
   const reportsToName = reportsToQuery.data
     ? formatUserName(reportsToQuery.data)
     : '-';
 
   const departmentsQuery = useDepartments({ page: 1, limit: 100 }, true);
   const positionsQuery = usePositions({ page: 1, limit: 100 }, true);
-  const { options: disciplineOptions } = useEngineeringDisciplineOptions(true, true);
+  const { options: disciplineOptions } = useEngineeringDisciplineOptions(
+    true,
+    true,
+  );
   const leavePoliciesQuery = useLeavePolicies();
 
   const departmentName =
-    (departmentsQuery.data?.data ?? []).find((d) => d.id === values.departmentId)?.name ?? '-';
+    (departmentsQuery.data?.data ?? []).find(
+      (d) => d.id === values.departmentId,
+    )?.name ?? '-';
   const positionName =
-    (positionsQuery.data?.data ?? []).find((p) => p.id === values.positionId)?.title ?? '-';
+    (positionsQuery.data?.data ?? []).find((p) => p.id === values.positionId)
+      ?.title ?? '-';
   const disciplineName =
-    disciplineOptions.find((d) => d.value === values.engineeringDisciplineId)?.label ?? '-';
+    disciplineOptions.find((d) => d.value === values.engineeringDisciplineId)
+      ?.label ?? '-';
   const leavePolicyName =
-    (leavePoliciesQuery.data ?? []).find((p) => p.id === values.leavePolicyId)?.name ?? '-';
+    (leavePoliciesQuery.data ?? []).find((p) => p.id === values.leavePolicyId)
+      ?.name ?? '-';
 
   const hasEmail = Boolean(values.email?.trim());
   const emergencyContacts = values.emergencyContacts ?? [];
@@ -58,136 +89,273 @@ export default function AddEmployeeReviewStep({
         ? t('users.form.reviewInviteHelp')
         : t('users.form.reviewRecordOnlyHelp');
 
+  const summaryRows: ReviewRow[] = [
+    {
+      key: 'fullName',
+      label: t('users.form.fullName'),
+      value: [values.firstName, values.middleName, values.lastName]
+        .filter(Boolean)
+        .join(' '),
+    },
+    ...(values.chineseName
+      ? [
+          {
+            key: 'chineseName',
+            label: t('users.form.chineseName'),
+            value: values.chineseName,
+          },
+        ]
+      : []),
+    {
+      key: 'email',
+      label: t('users.form.email'),
+      value: values.email?.trim() || t('users.form.noEmail'),
+    },
+    {
+      key: 'phone',
+      label: t('users.form.phone'),
+      value: values.phone?.trim() || '-',
+    },
+    { key: 'role', label: t('users.form.role'), value: roleName },
+    {
+      key: 'active',
+      label: t('users.form.activeAccount'),
+      value: values.isActive ? t('common.active') : t('common.inactive'),
+    },
+    {
+      key: 'gender',
+      label: t('users.form.gender'),
+      value: values.gender ? t(`hr.gender.${values.gender}`) : '-',
+    },
+    {
+      key: 'dob',
+      label: t('users.form.dateOfBirth'),
+      value: values.dateOfBirth
+        ? dayjs(values.dateOfBirth).format('YYYY-MM-DD')
+        : '-',
+    },
+    {
+      key: 'nationalId',
+      label: t('users.form.nationalId'),
+      value: values.nationalId?.trim() || '-',
+    },
+    {
+      key: 'address',
+      label: t('users.sectionAddress'),
+      value: formatEmployeeAddress(values) || '-',
+    },
+    {
+      key: 'employeeId',
+      label: t('users.form.employeeId'),
+      value: values.employeeId?.trim() || t('users.form.autoGenerated'),
+    },
+    {
+      key: 'nationality',
+      label: t('users.form.nationality'),
+      value: values.nationality
+        ? t(`hr.nationality.${values.nationality}`)
+        : '-',
+    },
+    {
+      key: 'employeeType',
+      label: t('users.form.employeeType'),
+      value: values.employeeType
+        ? t(`hr.employeeType.${values.employeeType}`)
+        : '-',
+    },
+    {
+      key: 'department',
+      label: t('users.form.department'),
+      value: departmentName,
+    },
+    {
+      key: 'position',
+      label: t('users.form.position'),
+      value: positionName,
+    },
+    {
+      key: 'discipline',
+      label: t('users.form.discipline'),
+      value: disciplineName,
+    },
+    {
+      key: 'reportsTo',
+      label: t('users.form.reportsTo'),
+      value: reportsToName,
+    },
+    {
+      key: 'leavePolicy',
+      label: t('users.form.leavePolicy'),
+      value: leavePolicyName,
+    },
+    {
+      key: 'education',
+      label: t('users.form.educationLevel'),
+      value: values.educationLevel
+        ? t(`hr.educationLevel.${values.educationLevel}`)
+        : '-',
+    },
+    {
+      key: 'fieldOfStudy',
+      label: t('users.form.fieldOfStudy'),
+      value: values.fieldOfStudy?.trim() || '-',
+    },
+    {
+      key: 'experience',
+      label: t('users.form.experienceStartDate'),
+      value: values.experienceStartDate
+        ? dayjs(values.experienceStartDate).format('YYYY-MM-DD')
+        : '-',
+    },
+    {
+      key: 'photo',
+      label: t('users.profilePhoto'),
+      value: pendingPhoto
+        ? pendingPhoto.name
+        : t('users.form.noPhotoSelected'),
+    },
+    {
+      key: 'documents',
+      label: t('users.form.profileDocuments'),
+      value:
+        pendingDocuments.length > 0
+          ? t('users.form.documentsCount', {
+              count: pendingDocuments.length,
+            })
+          : t('users.form.noDocumentsSelected'),
+    },
+  ];
+
+  const summaryColumns: ColumnsType<ReviewRow> = [
+    {
+      title: t('users.form.field'),
+      dataIndex: 'label',
+      key: 'label',
+      width: '32%',
+      render: (value: string) => (
+        <span className="erp-users-cell-strong">{value}</span>
+      ),
+    },
+    {
+      title: t('users.form.value'),
+      dataIndex: 'value',
+      key: 'value',
+      render: (value: string) =>
+        value === '-' ? (
+          <span className="erp-users-dash">-</span>
+        ) : (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
+    },
+  ];
+
+  const emergencyRows: EmergencyContactRow[] = emergencyContacts.map(
+    (contact, index) => ({
+      key: index,
+      firstName: contact.firstName?.trim() || '-',
+      middleName: contact.middleName?.trim() || '-',
+      lastName: contact.lastName?.trim() || '-',
+      phone: contact.phone?.trim() || '-',
+      email: contact.email?.trim() || '-',
+    }),
+  );
+
+  const emergencyColumns: ColumnsType<EmergencyContactRow> = [
+    {
+      title: t('users.form.emergencyContactFirstName'),
+      dataIndex: 'firstName',
+      key: 'firstName',
+      render: (value: string) =>
+        value === '-' ? (
+          <span className="erp-users-dash">-</span>
+        ) : (
+          <span className="erp-users-name">{value}</span>
+        ),
+    },
+    {
+      title: t('users.form.emergencyContactMiddleName'),
+      dataIndex: 'middleName',
+      key: 'middleName',
+      render: (value: string) =>
+        value === '-' ? (
+          <span className="erp-users-dash">-</span>
+        ) : (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
+    },
+    {
+      title: t('users.form.emergencyContactLastName'),
+      dataIndex: 'lastName',
+      key: 'lastName',
+      render: (value: string) =>
+        value === '-' ? (
+          <span className="erp-users-dash">-</span>
+        ) : (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
+    },
+    {
+      title: t('users.form.emergencyContactPhone'),
+      dataIndex: 'phone',
+      key: 'phone',
+      render: (value: string) =>
+        value === '-' ? (
+          <span className="erp-users-dash">-</span>
+        ) : (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
+    },
+    {
+      title: t('users.form.emergencyContactEmail'),
+      dataIndex: 'email',
+      key: 'email',
+      ellipsis: true,
+      render: (value: string) =>
+        value === '-' ? (
+          <span className="erp-users-dash">-</span>
+        ) : (
+          <span className="erp-users-email">{value}</span>
+        ),
+    },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="erp-employee-form-sections">
       <FormLayout
         variant="pro"
         title={t('users.steps.review')}
         description={reviewDescription}
       >
-        <Descriptions
-          column={1}
-          bordered
-          size="small"
-          styles={{
-            root: { borderRadius: 2, overflow: 'hidden' },
-          }}
-        >
-          <Descriptions.Item label={t('users.form.fullName')}>
-            {[values.firstName, values.middleName, values.lastName].filter(Boolean).join(' ')}
-          </Descriptions.Item>
-          {values.chineseName ? (
-            <Descriptions.Item label={t('users.form.chineseName')}>
-              {values.chineseName}
-            </Descriptions.Item>
-          ) : null}
-          <Descriptions.Item label={t('users.form.email')}>
-            {values.email?.trim() || t('users.form.noEmail')}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.phone')}>
-            {values.phone?.trim() || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.role')}>{roleName}</Descriptions.Item>
-          <Descriptions.Item label={t('users.form.activeAccount')}>
-            {values.isActive ? t('common.active') : t('common.inactive')}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.gender')}>
-            {values.gender ? t(`hr.gender.${values.gender}`) : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.dateOfBirth')}>
-            {values.dateOfBirth ? dayjs(values.dateOfBirth).format('YYYY-MM-DD') : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.nationalId')}>
-            {values.nationalId?.trim() || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.sectionAddress')}>
-            {formatEmployeeAddress(values) || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.employeeId')}>
-            {values.employeeId?.trim() || t('users.form.autoGenerated')}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.nationality')}>
-            {values.nationality ? t(`hr.nationality.${values.nationality}`) : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.employeeType')}>
-            {values.employeeType ? t(`hr.employeeType.${values.employeeType}`) : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.department')}>
-            {departmentName}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.position')}>
-            {positionName}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.discipline')}>
-            {disciplineName}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.reportsTo')}>
-            {reportsToName}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.leavePolicy')}>
-            {leavePolicyName}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.educationLevel')}>
-            {values.educationLevel ? t(`hr.educationLevel.${values.educationLevel}`) : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.fieldOfStudy')}>
-            {values.fieldOfStudy?.trim() || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.experienceStartDate')}>
-            {values.experienceStartDate
-              ? dayjs(values.experienceStartDate).format('YYYY-MM-DD')
-              : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.profilePhoto')}>
-            {pendingPhoto
-              ? pendingPhoto.name
-              : t('users.form.noPhotoSelected')}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('users.form.profileDocuments')}>
-            {pendingDocuments.length > 0
-              ? t('users.form.documentsCount', { count: pendingDocuments.length })
-              : t('users.form.noDocumentsSelected')}
-          </Descriptions.Item>
-        </Descriptions>
+        <div className="erp-employee-review-table-shell">
+          <DataTable<ReviewRow>
+            rowKey="key"
+            className="erp-pro-table erp-users-table erp-employee-review-table"
+            size="middle"
+            pagination={false}
+            scroll={false}
+            columns={summaryColumns}
+            dataSource={summaryRows}
+          />
+        </div>
       </FormLayout>
 
       <FormLayout variant="pro" title={t('users.sectionEmergencyContact')}>
-        <div className="overflow-hidden rounded-[2px]">
-          <Table
-            size="small"
+        <div className="erp-employee-review-table-shell">
+          <DataTable<EmergencyContactRow>
+            rowKey="key"
+            className="erp-pro-table erp-users-table erp-employee-review-table"
+            size="middle"
             pagination={false}
-            locale={{ emptyText: t('users.form.noEmergencyContacts') }}
-            dataSource={emergencyContacts.map((contact, index) => ({
-              key: index,
-              ...contact,
-            }))}
-            columns={[
-              {
-                title: t('users.form.emergencyContactFirstName'),
-                dataIndex: 'firstName',
-                render: (value: string | undefined) => value?.trim() || '-',
-              },
-              {
-                title: t('users.form.emergencyContactMiddleName'),
-                dataIndex: 'middleName',
-                render: (value: string | undefined) => value?.trim() || '-',
-              },
-              {
-                title: t('users.form.emergencyContactLastName'),
-                dataIndex: 'lastName',
-                render: (value: string | undefined) => value?.trim() || '-',
-              },
-              {
-                title: t('users.form.emergencyContactPhone'),
-                dataIndex: 'phone',
-                render: (value: string | undefined) => value?.trim() || '-',
-              },
-              {
-                title: t('users.form.emergencyContactEmail'),
-                dataIndex: 'email',
-                render: (value: string | undefined) => value?.trim() || '-',
-              },
-            ]}
+            scroll={false}
+            columns={emergencyColumns}
+            dataSource={emergencyRows}
+            locale={{
+              emptyText: (
+                <div className="erp-emergency-contacts__empty border-0 py-8">
+                  {t('users.form.noEmergencyContacts')}
+                </div>
+              ),
+            }}
           />
         </div>
       </FormLayout>

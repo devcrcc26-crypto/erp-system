@@ -8,7 +8,6 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { useUser } from '@/lib/query/users';
-import { tokens } from '@/lib/theme/tokens';
 
 export default function EditEmployeeFormContent({
   userId,
@@ -24,7 +23,7 @@ export default function EditEmployeeFormContent({
     () => (
       <Button
         onClick={() => router.push(`/users/${userId}`)}
-        style={{ borderRadius: 2 }}
+        style={{ borderRadius: 8 }}
       >
         {t('users.form.cancel')}
       </Button>
@@ -42,21 +41,17 @@ export default function EditEmployeeFormContent({
   }
 
   if (userQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col">
-      <p
-        className="mb-4 mt-0 text-[14px] leading-relaxed"
-        style={{ color: tokens.colorTextSecondary, fontFamily: tokens.fontFamily }}
-      >
-        {userQuery.data
-          ? `${userQuery.data.firstName} ${userQuery.data.lastName}${
-              userQuery.data.email ? ` · ${userQuery.data.email}` : ''
-            }`
-          : t('users.form.editEmployeeDescription')}
-      </p>
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
       <AddEmployeeForm userId={userId} onSuccess={handleSuccess} />
     </div>
   );

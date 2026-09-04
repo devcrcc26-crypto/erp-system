@@ -1221,6 +1221,8 @@
       "email": "邮箱",
       "emailHint": "现场工人等无需登录者可留空。",
       "emailPlaceholder": "无需登录则留空",
+      "field": "字段",
+      "value": "值",
       "phone": "电话",
       "role": "角色",
       "roleHint": "可选。可立即或稍后分配系统权限。",

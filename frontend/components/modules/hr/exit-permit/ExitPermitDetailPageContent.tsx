@@ -59,7 +59,7 @@ import { tokens } from '@/lib/theme/tokens';
 const EXIT_PERMIT_LIST_PATH = '/hr/equipment-and-materials-exit-permit';
 
 /**
- * Exit permit detail — items, attachments, cancel, and approval chain.
+ * Exit permit detail - items, attachments, cancel, and approval chain.
  */
 export default function ExitPermitDetailPageContent({
   permitId,
@@ -235,7 +235,7 @@ export default function ExitPermitDetailPageContent({
       dataIndex: 'issue',
       key: 'issue',
       ellipsis: true,
-      render: (value: string | null | undefined) => value || '—',
+      render: (value: string | null | undefined) => value || '-',
     },
     {
       title: t('hr.table.itemImage'),
@@ -272,7 +272,7 @@ export default function ExitPermitDetailPageContent({
       dataIndex: 'unit',
       key: 'unit',
       width: 80,
-      render: (value: string | null | undefined) => value || '—',
+      render: (value: string | null | undefined) => value || '-',
     },
     ...(canEdit
       ? [

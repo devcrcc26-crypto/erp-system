@@ -46,7 +46,7 @@ const USER_STATUS_DOT: Record<'success' | 'warning' | 'default', string> = {
 
 function displayValue(value: string | number | null | undefined): string {
   if (value == null || value === '') {
-    return '—';
+    return '-';
   }
   return String(value);
 }
@@ -66,7 +66,7 @@ function formatAddress(user: UserDetail): string {
     user.addressRegion,
     user.addressCountry,
   ].filter((part): part is string => Boolean(part && part.trim()));
-  return parts.length > 0 ? parts.join(', ') : '—';
+  return parts.length > 0 ? parts.join(', ') : '-';
 }
 
 type ProfileTab = 'overview' | 'leave' | 'perDiem';
@@ -123,7 +123,7 @@ function UserStatusIndicator({
 }
 
 /**
- * Employee detail — visual language aligned with the Users list page.
+ * Employee detail - visual language aligned with the Users list page.
  */
 export default function EmployeeDetailPageContent({
   userId,
@@ -320,7 +320,7 @@ export default function EmployeeDetailPageContent({
             <p className="erp-users-cell-sub m-0 mt-1">
               {[user.position?.title, user.department?.name]
                 .filter(Boolean)
-                .join(' · ') || '—'}
+                .join(' · ') || '-'}
             </p>
           </div>
         </div>
@@ -347,7 +347,7 @@ export default function EmployeeDetailPageContent({
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('users.form.reportsTo')}</p>
             <p className="erp-employee-meta-value">
-              {user.reportsTo ? formatUserName(user.reportsTo) : '—'}
+              {user.reportsTo ? formatUserName(user.reportsTo) : '-'}
             </p>
           </div>
         </div>
@@ -373,7 +373,7 @@ export default function EmployeeDetailPageContent({
               {t('users.exportTable.lastLogin')}
             </p>
             <p className="erp-employee-meta-value">
-              {user.lastLogin ? formatProjectDate(user.lastLogin) : '—'}
+              {user.lastLogin ? formatProjectDate(user.lastLogin) : '-'}
             </p>
           </div>
         </div>
@@ -445,12 +445,12 @@ export default function EmployeeDetailPageContent({
                       {displayValue(user.chineseName)}
                     </MetaItem>
                     <MetaItem label={t('users.form.gender')}>
-                      {user.gender ? t(`hr.gender.${user.gender}`) : '—'}
+                      {user.gender ? t(`hr.gender.${user.gender}`) : '-'}
                     </MetaItem>
                     <MetaItem label={t('users.form.dateOfBirth')}>
                       {user.dateOfBirth
                         ? formatProjectDate(user.dateOfBirth)
-                        : '—'}
+                        : '-'}
                     </MetaItem>
                     <MetaItem label={t('users.form.nationalId')}>
                       {displayValue(user.nationalId)}
@@ -458,7 +458,7 @@ export default function EmployeeDetailPageContent({
                     <MetaItem label={t('users.form.nationality')}>
                       {user.nationality
                         ? t(`hr.nationality.${user.nationality}`)
-                        : '—'}
+                        : '-'}
                     </MetaItem>
                   </div>
                 </DetailSection>
@@ -501,13 +501,13 @@ export default function EmployeeDetailPageContent({
                           {user.employeeId}
                         </span>
                       ) : (
-                        '—'
+                        '-'
                       )}
                     </MetaItem>
                     <MetaItem label={t('users.form.employeeType')}>
                       {user.employeeType
                         ? t(`hr.employeeType.${user.employeeType}`)
-                        : '—'}
+                        : '-'}
                     </MetaItem>
                     <MetaItem label={t('common.department')}>
                       {displayValue(user.department?.name)}
@@ -516,7 +516,7 @@ export default function EmployeeDetailPageContent({
                       {displayValue(user.position?.title)}
                     </MetaItem>
                     <MetaItem label={t('users.form.reportsTo')}>
-                      {user.reportsTo ? formatUserName(user.reportsTo) : '—'}
+                      {user.reportsTo ? formatUserName(user.reportsTo) : '-'}
                     </MetaItem>
                     <MetaItem label={t('common.discipline')}>
                       {user.engineeringDiscipline ? (
@@ -531,7 +531,7 @@ export default function EmployeeDetailPageContent({
                           ) : null}
                         </div>
                       ) : (
-                        '—'
+                        '-'
                       )}
                     </MetaItem>
                     <MetaItem label={t('users.form.leavePolicy')}>
@@ -545,7 +545,7 @@ export default function EmployeeDetailPageContent({
                     <MetaItem label={t('users.form.educationLevel')}>
                       {user.educationLevel
                         ? t(`hr.educationLevel.${user.educationLevel}`)
-                        : '—'}
+                        : '-'}
                     </MetaItem>
                     <MetaItem label={t('users.form.fieldOfStudy')}>
                       {displayValue(user.fieldOfStudy)}
@@ -553,12 +553,12 @@ export default function EmployeeDetailPageContent({
                     <MetaItem label={t('users.form.experienceStartDate')}>
                       {user.experienceStartDate
                         ? formatProjectDate(user.experienceStartDate)
-                        : '—'}
+                        : '-'}
                     </MetaItem>
                     <MetaItem label={t('users.form.yearsOfExperience')}>
                       {user.yearsOfExperience != null
                         ? String(user.yearsOfExperience)
-                        : '—'}
+                        : '-'}
                     </MetaItem>
                   </div>
                 </DetailSection>
@@ -577,12 +577,12 @@ export default function EmployeeDetailPageContent({
                     <MetaItem label={t('users.detailEmailVerified')}>
                       {user.emailVerifiedAt
                         ? formatProjectDate(user.emailVerifiedAt)
-                        : '—'}
+                        : '-'}
                     </MetaItem>
                     <MetaItem label={t('users.exportTable.lastLogin')}>
                       {user.lastLogin
                         ? formatProjectDate(user.lastLogin)
-                        : '—'}
+                        : '-'}
                     </MetaItem>
                     <MetaItem label={t('users.detailCreatedAt')}>
                       {formatProjectDate(user.createdAt)}

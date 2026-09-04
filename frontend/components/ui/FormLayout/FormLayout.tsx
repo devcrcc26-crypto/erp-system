@@ -61,26 +61,36 @@ export default function FormLayout({
         body: { padding: hasHeader ? '0' : bodyOnlyPad },
       }}
       style={{
-        borderRadius: isPro ? 2 : tokens.borderRadiusCard,
-        border: isPro ? 'none' : `0.5px solid ${tokens.colorBorder}`,
+        borderRadius: isPro ? 12 : tokens.borderRadiusCard,
+        border: isPro ? '1px solid #e8ebef' : `0.5px solid ${tokens.colorBorder}`,
         boxShadow: isPro
-          ? '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)'
+          ? '0 1px 3px rgba(15, 23, 42, 0.04)'
           : 'none',
         background: tokens.colorCardBg,
+        overflow: isPro ? 'hidden' : undefined,
       }}
     >
       {hasHeader && (
         <div
           className={`flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 ${headerPad}`}
-          style={{ borderBottom: `0.5px solid ${tokens.colorBorder}` }}
+          style={{
+            borderBottom: isPro
+              ? '1px solid #eef1f4'
+              : `0.5px solid ${tokens.colorBorder}`,
+            background: isPro ? '#fbfcfd' : undefined,
+          }}
         >
           <div className="min-w-0 flex-1">
             {title && (
               <div
-                className={`font-medium leading-[1.5] ${
-                  isPro ? (dense ? 'text-[14px]' : 'text-[16px]') : 'text-[13px]'
-                }`}
-                style={{ color: tokens.colorTextPrimary }}
+                className={
+                  isPro
+                    ? 'erp-form-layout-pro-title'
+                    : 'text-[13px] font-medium leading-[1.5]'
+                }
+                style={
+                  isPro ? undefined : { color: tokens.colorTextPrimary }
+                }
               >
                 {title}
               </div>

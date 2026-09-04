@@ -35,13 +35,13 @@ interface EmployeeProfilePhotoProps {
   canEdit?: boolean;
   size?: number;
   /**
-   * `hero` — avatar with compact icon actions under it (identity headers).
-   * `panel` — avatar beside labelled controls (form sections).
+   * `hero` - avatar with compact icon actions under it (identity headers).
+   * `panel` - avatar beside labelled controls (form sections).
    */
   variant?: EmployeeProfilePhotoVariant;
   /**
-   * `user` — `/users/:id/photo` (requires users.edit).
-   * `self` — `/auth/me/photo` (signed-in user).
+   * `user` - `/users/:id/photo` (requires users.edit).
+   * `self` - `/auth/me/photo` (signed-in user).
    */
   source?: EmployeeProfilePhotoSource;
 }

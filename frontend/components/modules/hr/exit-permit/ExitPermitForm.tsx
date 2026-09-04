@@ -80,7 +80,7 @@ function nextKey(): string {
 }
 
 /**
- * Exit permit create form — same StepperForm chrome as Add Employee.
+ * Exit permit create form - same StepperForm chrome as Add Employee.
  */
 export default function ExitPermitForm({
   onSuccess,
@@ -146,14 +146,14 @@ export default function ExitPermitForm({
   }
 
   function findDepartment(id: string | null | undefined): string {
-    if (!id) return '—';
+    if (!id) return '-';
     return (
-      departmentOptions.find((option) => option.value === id)?.label ?? '—'
+      departmentOptions.find((option) => option.value === id)?.label ?? '-'
     );
   }
 
   function findEmployee(id: string | null | undefined): string {
-    if (!id) return '—';
+    if (!id) return '-';
     return lookupUserName(id);
   }
 
@@ -298,7 +298,7 @@ export default function ExitPermitForm({
       dataIndex: 'issue',
       key: 'issue',
       ellipsis: true,
-      render: (value: string | undefined) => value || '—',
+      render: (value: string | undefined) => value || '-',
     },
     {
       title: t('hr.table.quantity'),
@@ -313,7 +313,7 @@ export default function ExitPermitForm({
       dataIndex: 'file',
       key: 'file',
       ellipsis: true,
-      render: (value: File | undefined) => value?.name || '—',
+      render: (value: File | undefined) => value?.name || '-',
     },
     {
       title: '',
@@ -551,7 +551,7 @@ export default function ExitPermitForm({
                           detailsSnapshot.direction,
                           t,
                         )
-                      : '—'
+                      : '-'
                   }
                 />
                 <ReviewItem
@@ -561,7 +561,7 @@ export default function ExitPermitForm({
                       ? formatDisplayDate(
                           detailsSnapshot.date.format('YYYY-MM-DD'),
                         )
-                      : '—'
+                      : '-'
                   }
                 />
                 <ReviewItem

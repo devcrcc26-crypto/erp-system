@@ -10,7 +10,7 @@ import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 const EXIT_PERMIT_LIST_PATH = '/hr/equipment-and-materials-exit-permit';
 
 /**
- * New exit permit page — same page chrome as Add Employee (`/users/new`).
+ * New exit permit page - same page chrome as Add Employee (`/users/new`).
  */
 export default function ExitPermitFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

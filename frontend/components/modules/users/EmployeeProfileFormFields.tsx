@@ -301,7 +301,7 @@ export function EmployeeProfileFormFields({
   );
 
   if (layout === 'sections') {
-    return <div className="flex flex-col gap-6">{content}</div>;
+    return <div className="erp-employee-form-sections">{content}</div>;
   }
 
   return content;

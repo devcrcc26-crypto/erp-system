@@ -52,7 +52,7 @@ export default function AddEmployeePendingPhoto({
             return false;
           }}
         >
-          <Button icon={<CameraOutlined />} style={{ borderRadius: 2 }}>
+          <Button icon={<CameraOutlined />} style={{ borderRadius: 8 }}>
             {value ? t('users.changePhoto') : t('users.uploadPhoto')}
           </Button>
         </Upload>

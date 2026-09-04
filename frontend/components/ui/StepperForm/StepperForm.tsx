@@ -148,7 +148,7 @@ export function StepperForm({
       <Button
         onClick={handleBack}
         disabled={current === 0 || isSubmitting || validating}
-        style={{ borderRadius: 2 }}
+        style={{ borderRadius: 8 }}
       >
         {t('hr.buttons.back')}
       </Button>
@@ -157,7 +157,7 @@ export function StepperForm({
           <Button
             onClick={handleReset}
             disabled={isSubmitting || validating}
-            style={{ borderRadius: 2 }}
+            style={{ borderRadius: 8 }}
           >
             {resolvedResetLabel}
           </Button>
@@ -168,7 +168,7 @@ export function StepperForm({
             onClick={() => void handleNext()}
             loading={validating}
             disabled={isSubmitting}
-            style={{ borderRadius: 2 }}
+            style={{ borderRadius: 8 }}
           >
             {t('hr.buttons.next')}
           </Button>
@@ -178,7 +178,7 @@ export function StepperForm({
             onClick={() => void handleSubmit()}
             loading={isSubmitting}
             disabled={validating}
-            style={{ borderRadius: 2 }}
+            style={{ borderRadius: 8 }}
           >
             {resolvedSubmitLabel}
           </Button>
@@ -205,7 +205,7 @@ export function StepperForm({
       <div
         className={`sticky top-0 z-10 shrink-0 px-0 ${
           compact ? 'pb-3 pt-1' : 'pb-4 pt-2'
-        } ${isSections ? '' : 'border-b bg-white px-4 sm:px-6'}`}
+        } ${isSections ? 'erp-stepper-form__steps-shell' : 'border-b bg-white px-4 sm:px-6'}`}
         style={isSections ? undefined : { borderColor: 'rgba(0,0,0,0.06)' }}
       >
         <div className="min-w-0 overflow-x-auto">

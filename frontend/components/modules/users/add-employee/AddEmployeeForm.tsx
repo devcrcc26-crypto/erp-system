@@ -295,7 +295,7 @@ export default function AddEmployeeForm({
       {
         title: t('users.steps.account'),
         content: (
-          <>
+          <div className="erp-employee-form-sections">
             <FormLayout
               variant="pro"
               title={t('users.sectionAccountIdentity')}
@@ -387,7 +387,7 @@ export default function AddEmployeeForm({
                 </Form.Item>
               </div>
             </FormLayout>
-          </>
+          </div>
         ),
         validate: () => validateStep(0),
       },
@@ -405,7 +405,7 @@ export default function AddEmployeeForm({
       {
         title: t('users.steps.employment'),
         content: (
-          <>
+          <div className="erp-employee-form-sections">
             <EmployeeProfileFormFields
               mode={profileMode}
               sections={['employment']}
@@ -457,7 +457,7 @@ export default function AddEmployeeForm({
                 </Form.Item>
               </div>
             </FormLayout>
-          </>
+          </div>
         ),
         validate: () => validateStep(2),
       },
@@ -475,7 +475,7 @@ export default function AddEmployeeForm({
       {
         title: t('users.steps.leaveDocuments'),
         content: (
-          <>
+          <div className="erp-employee-form-sections">
             <EmployeeProfileFormFields
               mode={profileMode}
               sections={['leave']}
@@ -519,7 +519,7 @@ export default function AddEmployeeForm({
                 </FormLayout>
               </>
             )}
-          </>
+          </div>
         ),
         validate: () => validateStep(4),
       },

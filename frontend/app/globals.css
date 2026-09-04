@@ -394,7 +394,7 @@ main::-webkit-scrollbar,
   min-width: 100%;
 }
 
-/* Ant Design measure row (scroll.x) — keep collapsed when thead padding overrides apply */
+/* Ant Design measure row (scroll.x) - keep collapsed when thead padding overrides apply */
 .erp-data-table .ant-table-thead > tr.ant-table-measure-row,
 .erp-pro-table .ant-table-thead > tr.ant-table-measure-row {
   height: 0 !important;
@@ -698,7 +698,7 @@ main::-webkit-scrollbar,
   background: rgba(15, 23, 42, 0.04) !important;
 }
 
-/* Users page — segmented stat bar */
+/* Users page - segmented stat bar */
 .erp-users-stat-bar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -785,7 +785,7 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Users page — card shell polish */
+/* Users page - card shell polish */
 .erp-users-page .erp-pro-card {
   border-radius: 12px;
   border-color: #e8ebef;
@@ -814,7 +814,7 @@ main::-webkit-scrollbar,
   font-variant-numeric: tabular-nums;
 }
 
-/* Users list — filter row */
+/* Users list - filter row */
 .erp-users-filter-bar {
   display: flex;
   flex-wrap: nowrap;
@@ -859,7 +859,7 @@ main::-webkit-scrollbar,
   line-height: 34px;
 }
 
-/* Users list — redesigned table: lighter header, no zebra, structured cells */
+/* Users list - redesigned table: lighter header, no zebra, structured cells */
 .erp-data-table.erp-pro-table.erp-users-table
   .ant-table-thead
   > tr:not(.ant-table-measure-row)
@@ -889,7 +889,7 @@ main::-webkit-scrollbar,
   vertical-align: middle;
 }
 
-/* No zebra — quiet rows, hover-only emphasis */
+/* No zebra - quiet rows, hover-only emphasis */
 .erp-data-table.erp-pro-table.erp-users-table
   .ant-table-tbody
   > tr:nth-child(even)
@@ -992,7 +992,7 @@ main::-webkit-scrollbar,
   color: #cbd5e1;
 }
 
-/* Role tag — outlined, lighter than the filled pill */
+/* Role tag - outlined, lighter than the filled pill */
 .erp-users-role-tag {
   display: inline-flex;
   align-items: center;
@@ -1009,7 +1009,7 @@ main::-webkit-scrollbar,
   text-overflow: ellipsis;
 }
 
-/* Status — consistent dot + label for every state */
+/* Status - consistent dot + label for every state */
 .erp-users-status {
   display: inline-flex;
   align-items: center;
@@ -1032,7 +1032,116 @@ main::-webkit-scrollbar,
   color: #92400e;
 }
 
-/* Employee detail — same chrome as users list */
+/* Add / edit employee form - users page chrome */
+.erp-employee-form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-employee-form-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.erp-employee-form-page .erp-stepper-form > .min-h-0 > .flex.flex-col {
+  gap: 20px;
+}
+
+.erp-form-layout-pro-title {
+  margin: 0;
+  font-size: calc(12px * var(--erp-font-scale));
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.erp-employee-form-page .erp-stepper-form__steps-shell {
+  margin-bottom: 4px;
+  padding: 14px 18px !important;
+  background: #fff;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.erp-employee-form-page .erp-stepper-form__footer {
+  border-color: #eef1f4 !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 -8px 24px -12px rgba(15, 23, 42, 0.12) !important;
+}
+
+.erp-employee-form-page .erp-stepper-form__footer .ant-btn {
+  border-radius: 8px !important;
+  height: 36px;
+}
+
+.erp-employee-form-page .erp-stepper-form {
+  padding-bottom: 96px !important;
+}
+
+.erp-emergency-contacts__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.erp-emergency-contacts__empty {
+  padding: 28px 16px;
+  border: 1px dashed #d5dde5;
+  border-radius: 10px;
+  background: #fbfcfd;
+  text-align: center;
+  font-size: calc(13px * var(--erp-font-scale));
+  color: #94a3b8;
+}
+
+.erp-emergency-contacts__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erp-emergency-contacts__card {
+  padding: 14px 16px 16px;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.erp-emergency-contacts__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.erp-employee-review-table-shell {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.erp-employee-review-table.ant-table-wrapper,
+.erp-employee-review-table .ant-table,
+.erp-employee-review-table .ant-table-container,
+.erp-employee-review-table .ant-table-content,
+.erp-employee-review-table table {
+  width: 100% !important;
+}
+
+/* Employee detail - same chrome as users list */
 .erp-employee-detail-page {
   display: flex;
   flex-direction: column;
@@ -1202,7 +1311,7 @@ main::-webkit-scrollbar,
   gap: 16px;
 }
 
-/* Square segment tabs — leave / list module switchers */
+/* Square segment tabs - leave / list module switchers */
 .erp-list-tabs.ant-tabs {
   margin-top: 0;
 }
@@ -1353,7 +1462,7 @@ main::-webkit-scrollbar,
   background: var(--color-surface-secondary) !important;
 }
 
-/* Pro list tables — must follow erp-data-table so these win when both classes apply */
+/* Pro list tables - must follow erp-data-table so these win when both classes apply */
 .erp-data-table.erp-pro-table .ant-table-thead > tr:not(.ant-table-measure-row) > th,
 .erp-data-table.erp-pro-table .ant-table-thead > tr:not(.ant-table-measure-row) > th.ant-table-cell {
   background: #fafafa !important;
@@ -1626,8 +1735,9 @@ main::-webkit-scrollbar,
 .erp-advanced-form .ant-input-number,
 .erp-advanced-form .ant-picker,
 .erp-advanced-form .ant-select-selector {
-  border-radius: 2px !important;
-  background-color: #f5f5f5 !important;
+  border-radius: 8px !important;
+  background-color: #fff !important;
+  border-color: #e2e8f0 !important;
 }
 
 .erp-advanced-form .ant-input-affix-wrapper > input.ant-input,

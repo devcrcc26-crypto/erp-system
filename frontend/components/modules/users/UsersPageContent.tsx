@@ -898,7 +898,7 @@ export default function UsersPageContent(): React.ReactNode {
                   id ? (
                     <span className="erp-users-id-chip">{id}</span>
                   ) : (
-                    <span className="erp-users-dash">—</span>
+                    <span className="erp-users-dash">-</span>
                   ),
               },
               {
@@ -915,7 +915,7 @@ export default function UsersPageContent(): React.ReactNode {
                     : null;
 
                   if (!positionTitle && !disciplineName) {
-                    return <span className="erp-users-dash">—</span>;
+                    return <span className="erp-users-dash">-</span>;
                   }
 
                   return (
@@ -948,7 +948,7 @@ export default function UsersPageContent(): React.ReactNode {
                       className="erp-users-cell-strong"
                     />
                   ) : (
-                    <span className="erp-users-dash">—</span>
+                    <span className="erp-users-dash">-</span>
                   ),
               },
               {
@@ -962,11 +962,11 @@ export default function UsersPageContent(): React.ReactNode {
                       isPrimary: assignment.isPrimary,
                     })) ?? [];
                   if (roles.length === 0) {
-                    return <span className="erp-users-dash">—</span>;
+                    return <span className="erp-users-dash">-</span>;
                   }
                   const topRole = pickTopLevelRoleName(roles, '');
                   if (!topRole) {
-                    return <span className="erp-users-dash">—</span>;
+                    return <span className="erp-users-dash">-</span>;
                   }
                   return (
                     <Tooltip title={topRole} mouseEnterDelay={0.35}>
