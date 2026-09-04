@@ -11,7 +11,6 @@ import PmDashboard from '@/components/modules/dashboard/PmDashboard';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useCapabilitiesReady, usePmCapabilities } from '@/hooks/use-pm-capabilities';
-import { layout } from '@/lib/theme/layout';
 import { useAuthStore } from '@/stores/auth.store';
 
 /**
@@ -31,8 +30,10 @@ export default function DashboardPageContent(): React.ReactNode {
 
   if (!capabilitiesReady) {
     return (
-      <div className={layout.loadingCard}>
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }

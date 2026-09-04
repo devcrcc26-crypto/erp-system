@@ -33,7 +33,6 @@ import {
 } from '@/components/modules/dashboard/DashboardStats';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useHrDashboard } from '@/lib/query/dashboard';
-import { layout } from '@/lib/theme/layout';
 import { tokens } from '@/lib/theme/tokens';
 import {
   formatLeaveStatus,
@@ -166,18 +165,20 @@ export default function HrDashboard({
 
   if (loading && !hr) {
     return (
-      <div className={layout.loadingCard}>
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   if (!hr) {
     return (
-      <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
-        <p className="m-0 text-sm text-[var(--color-text-tertiary)]">
-          {t(`${HR}.loadFailed`)}
-        </p>
+      <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
+        <div className="erp-pro-card p-6">
+          <p className="erp-users-cell-sub m-0">{t(`${HR}.loadFailed`)}</p>
+        </div>
       </div>
     );
   }
@@ -236,17 +237,17 @@ export default function HrDashboard({
   );
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="m-0 text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
-          {greeting}, {firstName}
-        </h1>
-        <p className="m-0 mt-1 text-sm text-[var(--color-text-tertiary)]">
+    <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
+      <div className="erp-dashboard-greeting erp-pro-card">
+        <p className="erp-dashboard-greeting-eyebrow m-0">
           {t(`${HR}.title`)} · {today}
         </p>
+        <h1 className="erp-dashboard-greeting-title m-0">
+          {greeting}, {firstName}
+        </h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="erp-users-stat-bar erp-dashboard-stat-bar--4">
         <StatCard
           label={t(`${HR}.kpi.employees`)}
           value={hr.totalEmployees}
@@ -278,7 +279,7 @@ export default function HrDashboard({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="erp-users-stat-bar erp-dashboard-stat-bar--3">
         <StatCard
           label={t(`${HR}.kpi.flightTickets`)}
           value={hr.pendingFlightBookings}
@@ -310,7 +311,7 @@ export default function HrDashboard({
       </div>
 
       {(leaveTrend.length > 0 || leaveByTypeData.length > 0) && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-5">
           {leaveTrend.length > 0 ? (
             <div
               className={
@@ -491,7 +492,7 @@ export default function HrDashboard({
       )}
 
       {(pendingByModule.length > 0 || headcountByDepartment.length > 0) && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
           {pendingByModule.length > 0 ? (
             <ChartCard
               title={t(`${HR}.chart.pendingApprovals.title`)}
@@ -725,7 +726,7 @@ export default function HrDashboard({
         </ChartCard>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <ChartCard
           title={t(`${HR}.recentLeave`)}
           icon={<CalendarOutlined />}
@@ -734,11 +735,9 @@ export default function HrDashboard({
           }
         >
           {hr.recentLeaveRequests.length === 0 ? (
-            <p className="m-0 text-sm text-[var(--color-text-tertiary)]">
-              {t(`${HR}.noRecentLeave`)}
-            </p>
+            <p className="erp-users-cell-sub m-0">{t(`${HR}.noRecentLeave`)}</p>
           ) : (
-            <div className="divide-y divide-[rgba(0,0,0,0.06)]">
+            <div className="divide-y divide-[#eef1f4]">
               {hr.recentLeaveRequests.map((req) => (
                 <div
                   key={req.id}
@@ -751,10 +750,10 @@ export default function HrDashboard({
                       </span>
                     </div>
                     <div className="min-w-0">
-                      <p className="m-0 truncate text-sm font-medium text-[var(--color-text-primary)]">
+                      <p className="erp-users-cell-strong m-0 truncate">
                         {req.employeeName}
                       </p>
-                      <p className="m-0 mt-0.5 text-xs text-[var(--color-text-tertiary)]">
+                      <p className="erp-users-cell-sub m-0 mt-0.5">
                         {formatLeaveType(req.leaveType, t)} ·{' '}
                         {t(`${HR}.daysShort`, { days: req.days })} ·{' '}
                         {formatProjectDate(req.startDate)}
@@ -777,11 +776,11 @@ export default function HrDashboard({
           icon={<SendOutlined />}
         >
           {hr.upcomingTravel.length === 0 ? (
-            <p className="m-0 py-6 text-center text-sm text-[var(--color-text-tertiary)]">
+            <p className="erp-users-cell-sub m-0 py-6 text-center">
               {t(`${HR}.upcomingTravel.empty`)}
             </p>
           ) : (
-            <div className="divide-y divide-[rgba(0,0,0,0.06)]">
+            <div className="divide-y divide-[#eef1f4]">
               {hr.upcomingTravel.map((trip) => (
                 <div
                   key={trip.id}
@@ -796,10 +795,10 @@ export default function HrDashboard({
                       }}
                     />
                     <div className="min-w-0">
-                      <p className="m-0 truncate text-sm font-medium text-[var(--color-text-primary)]">
+                      <p className="erp-users-cell-strong m-0 truncate">
                         {trip.destination}
                       </p>
-                      <p className="m-0 mt-0.5 text-xs text-[var(--color-text-tertiary)]">
+                      <p className="erp-users-cell-sub m-0 mt-0.5">
                         {trip.number} ·{' '}
                         {t(
                           trip.passengerCount !== 1

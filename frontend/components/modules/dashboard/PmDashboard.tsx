@@ -34,7 +34,6 @@ import {
 } from '@/components/modules/dashboard/DashboardStats';
 import type { PortfolioDashboardStats } from '@/lib/api/reporting.types';
 import { useMyDashboard, usePortfolioDashboardStats } from '@/lib/query/dashboard';
-import { layout } from '@/lib/theme/layout';
 
 function statusCount(map: Record<string, number> | undefined, key: string): number {
   return map?.[key] ?? 0;
@@ -240,18 +239,22 @@ export default function PmDashboard({
 
   if (loading && !stats) {
     return (
-      <div className={layout.loadingCard}>
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div className={`${layout.cardSurface} ${layout.cardPadding}`}>
-        <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-          Unable to load portfolio dashboard.
-        </p>
+      <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
+        <div className="erp-pro-card p-6">
+          <p className="erp-users-cell-sub m-0">
+            Unable to load portfolio dashboard.
+          </p>
+        </div>
       </div>
     );
   }
@@ -259,8 +262,8 @@ export default function PmDashboard({
   const activity = myQuery.data?.recentActivity ?? [];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+    <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
+      <div className="erp-users-stat-bar erp-dashboard-stat-bar--6">
         <StatCard
           label="Active Projects"
           value={stats.activeProjects}
@@ -311,17 +314,17 @@ export default function PmDashboard({
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <ProjectStatusDonut stats={stats} />
         <RiskBreakdown stats={stats} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <IssuesByStatus stats={stats} />
         <PunchListByStatus stats={stats} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <AttentionNeeded stats={stats} />
         <RecentActivity items={activity} />
       </div>
