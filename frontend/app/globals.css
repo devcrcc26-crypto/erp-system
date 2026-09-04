@@ -412,6 +412,80 @@ main::-webkit-scrollbar,
   overflow: hidden !important;
 }
 
+/* Shell main content header - users chrome */
+.erp-shell-header {
+  background: #ffffff;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.erp-shell-header-bar {
+  background: #ffffff;
+}
+
+.erp-shell-header-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid #e8ebef;
+  border-radius: 10px;
+  background: #fbfcfd;
+  color: #64748b;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.erp-shell-header-menu-btn:hover {
+  background: #e1f5ee;
+  border-color: #b8e6d5;
+  color: #0f6e56;
+}
+
+.erp-shell-header-title {
+  margin: 0;
+  font-size: calc(17px * var(--erp-font-scale));
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+
+.erp-shell-header-title--mobile {
+  font-size: calc(15px * var(--erp-font-scale));
+}
+
+.erp-shell-header-subtitle {
+  margin: 2px 0 0;
+  font-size: calc(12px * var(--erp-font-scale));
+  line-height: 1.3;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erp-shell-header-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.erp-shell-header-extra .ant-btn {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.erp-shell-breadcrumb-bar {
+  background: #fbfcfd;
+  border-bottom: 1px solid #eef1f4;
+}
+
 /* Shell breadcrumb - Ant Design trail in main header */
 .shell-breadcrumb.ant-breadcrumb {
   font-size: calc(13px * var(--erp-font-scale));
