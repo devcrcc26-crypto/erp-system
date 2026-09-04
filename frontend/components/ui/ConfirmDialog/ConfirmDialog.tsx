@@ -1,7 +1,8 @@
 'use client';
 
-import { Modal } from 'antd';
+import { Button, Modal } from 'antd';
 import type { ReactNode } from 'react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 export default function ConfirmDialog({
   open,
@@ -31,33 +32,67 @@ export default function ConfirmDialog({
   return (
     <Modal
       open={open}
-      title={title}
+      title={null}
+      footer={null}
       onCancel={onCancel}
-      onOk={onConfirm}
-      okText={confirmLabel}
-      cancelText={cancelLabel}
-      confirmLoading={confirmLoading}
-      okButtonProps={{
-        danger,
-        disabled: confirmDisabled,
-        style: { borderRadius: 0 },
-      }}
-      cancelButtonProps={{
-        style: { borderRadius: 0 },
-      }}
       centered
-      rootClassName="erp-responsive-modal"
-      className="erp-responsive-modal"
+      width={420}
+      rootClassName="erp-confirm-dialog"
+      className="erp-confirm-dialog"
       classNames={{
-        content: 'erp-responsive-modal-content',
+        content: 'erp-confirm-dialog-content',
       }}
       styles={{
-        content: { borderRadius: 0, overflow: 'hidden' },
+        content: {
+          borderRadius: 14,
+          overflow: 'hidden',
+          padding: 0,
+        },
       }}
       destroyOnHidden
+      closable={!confirmLoading}
+      mask={{ closable: !confirmLoading }}
     >
-      {description && <p className="text-sm text-slate-600">{description}</p>}
-      {children}
+      <div className="erp-confirm-dialog-body">
+        <div
+          className={`erp-confirm-dialog-icon${danger ? ' erp-confirm-dialog-icon--danger' : ''}`}
+          aria-hidden
+        >
+          {danger ? (
+            <Trash2 size={22} strokeWidth={1.75} />
+          ) : (
+            <AlertTriangle size={22} strokeWidth={1.75} />
+          )}
+        </div>
+
+        <div className="erp-confirm-dialog-copy">
+          <h3 className="erp-confirm-dialog-title">{title}</h3>
+          {description ? (
+            <div className="erp-confirm-dialog-description">{description}</div>
+          ) : null}
+          {children}
+        </div>
+
+        <div className="erp-confirm-dialog-actions">
+          <Button
+            onClick={onCancel}
+            disabled={confirmLoading}
+            className="erp-confirm-dialog-btn"
+          >
+            {cancelLabel}
+          </Button>
+          <Button
+            type="primary"
+            danger={danger}
+            loading={confirmLoading}
+            disabled={confirmDisabled}
+            onClick={onConfirm}
+            className="erp-confirm-dialog-btn"
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
     </Modal>
   );
 }

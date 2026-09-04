@@ -6,15 +6,24 @@ import {
   Button,
   Checkbox,
   Modal,
-  Space,
   Spin,
-  Tag,
   Upload,
 } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import {
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  Upload as UploadIcon,
+} from 'lucide-react';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { ImportCommitResult, ImportPreviewResult, ImportRowStatus } from '@/lib/api/types';
+import type {
+  ImportCommitResult,
+  ImportPreviewResult,
+  ImportRowStatus,
+} from '@/lib/api/types';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import {
   downloadUserImportTemplate,
@@ -44,15 +53,15 @@ function statusLabel(status: ImportRowStatus, t: TranslateFn): string {
   }
 }
 
-function statusColor(status: ImportRowStatus): string {
+function statusVariant(status: ImportRowStatus): StatusBadgeVariant {
   switch (status) {
     case 'ok':
-      return 'green';
+      return 'success';
     case 'error':
-      return 'red';
+      return 'error';
     case 'duplicate':
     case 'duplicate_in_file':
-      return 'gold';
+      return 'warning';
     default:
       return 'default';
   }
@@ -64,6 +73,45 @@ function pluralKey(
   pluralKeyName: string,
 ): string {
   return count === 1 ? singularKey : pluralKeyName;
+}
+
+function ImportStepTabs({
+  step,
+  labels,
+}: {
+  step: ImportStep;
+  labels: { upload: string; preview: string; result: string };
+}): React.ReactNode {
+  const steps: ImportStep[] = ['upload', 'preview', 'result'];
+  const activeIndex = steps.indexOf(step);
+
+  return (
+    <ol className="erp-user-import-steps" aria-label="Import steps">
+      {steps.map((key, index) => {
+        const state =
+          index < activeIndex
+            ? 'done'
+            : index === activeIndex
+              ? 'active'
+              : 'todo';
+        return (
+          <li
+            key={key}
+            className={`erp-user-import-step erp-user-import-step--${state}`}
+          >
+            <span className="erp-user-import-step-index" aria-hidden>
+              {index < activeIndex ? (
+                <CheckCircle2 size={14} strokeWidth={2} />
+              ) : (
+                index + 1
+              )}
+            </span>
+            <span className="erp-user-import-step-label">{labels[key]}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
 }
 
 export default function UserImportModal({
@@ -182,23 +230,38 @@ export default function UserImportModal({
   const footer =
     step === 'result'
       ? [
-          <Button key="done" type="primary" onClick={onClose}>
+          <Button
+            key="done"
+            type="primary"
+            className="erp-user-import-btn"
+            onClick={onClose}
+          >
             {t('common.done')}
           </Button>,
         ]
       : [
-          step === 'preview' && (
-            <Button key="reset" onClick={handleReset} disabled={isBusy}>
+          step === 'preview' ? (
+            <Button
+              key="reset"
+              className="erp-user-import-btn"
+              onClick={handleReset}
+              disabled={isBusy}
+            >
               {t('users.import.chooseAnotherFile')}
             </Button>
-          ),
-          <Button key="cancel" onClick={onClose}>
+          ) : null,
+          <Button
+            key="cancel"
+            className="erp-user-import-btn"
+            onClick={onClose}
+          >
             {t('common.cancel')}
           </Button>,
-          step === 'preview' && (
+          step === 'preview' ? (
             <Button
               key="import"
               type="primary"
+              className="erp-user-import-btn"
               onClick={() => void handleImport()}
               loading={importUsers.isPending}
               disabled={!preview || preview.valid === 0}
@@ -212,165 +275,286 @@ export default function UserImportModal({
                 { count: validCount },
               )}
             </Button>
-          ),
+          ) : null,
         ].filter(Boolean);
 
   return (
     <Modal
       open
-      title={t('users.import.title')}
+      title={null}
       onCancel={onClose}
       footer={footer}
-      width={800}
-      className="erp-responsive-modal"
+      width={840}
+      centered
+      rootClassName="erp-user-import-modal"
+      className="erp-user-import-modal"
+      classNames={{
+        content: 'erp-user-import-modal-content',
+        footer: 'erp-user-import-modal-footer',
+        body: 'erp-user-import-modal-body',
+      }}
+      styles={{
+        content: {
+          borderRadius: 14,
+          overflow: 'hidden',
+          padding: 0,
+        },
+      }}
       destroyOnHidden
+      mask={{ closable: !isBusy }}
+      closable={!isBusy}
     >
-      <p className="mb-4 text-sm text-slate-500">
-        {t('users.import.description')}
-      </p>
-
-      {step === 'upload' && (
-        <Space orientation="vertical" size="middle" className="w-full">
-          <Button
-            onClick={() => void handleDownloadTemplate()}
-            loading={isDownloadingTemplate}
-          >
-            {t('users.import.downloadTemplate')}
-          </Button>
-
-          <Upload
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            showUploadList={false}
-            beforeUpload={(file: File) => {
-              void handleFileChange(file);
-              return false;
-            }}
-            disabled={isBusy}
-          >
-            <Button
-              type="primary"
-              icon={<UploadOutlined />}
-              loading={importPreview.isPending}
-            >
-              {t('users.import.chooseFile')}
-            </Button>
-          </Upload>
-          <p className="text-xs text-slate-500">
-            {t('users.import.requiredColumns')}
-          </p>
-        </Space>
-      )}
-
-      {step === 'preview' && preview && (
-        <div className="space-y-4">
-          <Space wrap>
-            <Tag color="green">
-              {t('users.import.readyCount', { count: preview.valid })}
-            </Tag>
-            <Tag color="red">
-              {t('users.import.invalidCount', { count: preview.invalid })}
-            </Tag>
-            <Tag color="gold">
-              {t('users.import.duplicateCount', { count: preview.duplicate })}
-            </Tag>
-          </Space>
-
-          <DataTable
-            rowKey="line"
-            dataSource={preview.rows}
-            scroll={{ x: true }}
-            columns={[
-              { title: t('users.import.line'), dataIndex: 'line', width: 70 },
-              {
-                title: t('common.email'),
-                key: 'email',
-                render: (_, row) => row.email || '-',
-              },
-              {
-                title: t('users.import.name'),
-                key: 'name',
-                render: (_, row) => `${row.firstName} ${row.lastName}`,
-              },
-              {
-                title: t('common.chineseName'),
-                key: 'chineseName',
-                render: (_, row) => row.chineseName || '-',
-              },
-              {
-                title: t('common.role'),
-                key: 'role',
-                render: (_, row) => row.role?.trim() || '-',
-              },
-              {
-                title: t('common.status'),
-                key: 'status',
-                render: (_, row) => (
-                  <Tag color={statusColor(row.status)} title={row.message}>
-                    {statusLabel(row.status, t)}
-                  </Tag>
-                ),
-              },
-            ]}
-          />
-
-          <Checkbox
-            checked={sendInvitations}
-            disabled={inviteableCount === 0}
-            onChange={(event: { target: { checked: boolean } }) =>
-              setSendInvitations(event.target.checked)
-            }
-          >
-            {t('users.import.sendInvitationsNow')}
-          </Checkbox>
-
-          {sendInvitations && inviteableCount > 0 && (
-            <p className="text-xs text-slate-500">
-              {t('users.import.invitationHint', { count: inviteableCount })}
+      <div className="erp-user-import">
+        <div className="erp-user-import-header">
+          <div className="erp-user-import-header-icon" aria-hidden>
+            <FileSpreadsheet size={22} strokeWidth={1.75} />
+          </div>
+          <div className="erp-user-import-header-copy">
+            <h3 className="erp-user-import-title">{t('users.import.title')}</h3>
+            <p className="erp-user-import-desc">
+              {t('users.import.description')}
             </p>
-          )}
-          {inviteableCount === 0 && validCount > 0 && (
-            <p className="text-xs text-slate-500">
-              {t('users.import.recordOnlyHint')}
-            </p>
-          )}
+          </div>
         </div>
-      )}
 
-      {step === 'result' && result && (
-        <div className="space-y-3 text-sm text-slate-700">
-          <p>
-            {t(
-              pluralKey(
-                result.created,
-                'users.import.created',
-                'users.import.createdPlural',
-              ),
-              { count: result.created },
-            )}
-          </p>
-          <p>
-            {t(
-              pluralKey(
-                result.skipped,
-                'users.import.skipped',
-                'users.import.skippedPlural',
-              ),
-              { count: result.skipped },
-            )}
-          </p>
-          {sendInvitations && (
-            <>
-              <p>
-                {t(
-                  pluralKey(
-                    result.invitationsSent,
-                    'users.import.invitationsSent',
-                    'users.import.invitationsSentPlural',
-                  ),
-                  { count: result.invitationsSent },
-                )}
-              </p>
-              {result.invitationsFailed > 0 && (
+        <ImportStepTabs
+          step={step}
+          labels={{
+            upload: t('users.import.chooseFile'),
+            preview: t('users.import.ready'),
+            result: t('common.done'),
+          }}
+        />
+
+        <div className="erp-user-import-panel">
+          {step === 'upload' ? (
+            <div className="erp-user-import-upload">
+              <div className="erp-user-import-actions">
+                <Button
+                  className="erp-user-import-btn"
+                  icon={<Download size={15} />}
+                  onClick={() => void handleDownloadTemplate()}
+                  loading={isDownloadingTemplate}
+                >
+                  {t('users.import.downloadTemplate')}
+                </Button>
+              </div>
+
+              <Upload.Dragger
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                showUploadList={false}
+                beforeUpload={(file: File) => {
+                  void handleFileChange(file);
+                  return false;
+                }}
+                disabled={isBusy}
+                className="erp-user-import-dropzone"
+              >
+                <div className="erp-user-import-dropzone-inner">
+                  <div className="erp-user-import-dropzone-icon" aria-hidden>
+                    {importPreview.isPending ? (
+                      <Spin />
+                    ) : (
+                      <UploadIcon size={24} strokeWidth={1.75} />
+                    )}
+                  </div>
+                  <p className="erp-user-import-dropzone-title">
+                    {t('users.import.chooseFile')}
+                  </p>
+                  <p className="erp-user-import-dropzone-hint">
+                    {t('users.import.requiredColumns')}
+                  </p>
+                </div>
+              </Upload.Dragger>
+            </div>
+          ) : null}
+
+          {step === 'preview' && preview ? (
+            <div className="erp-user-import-preview">
+              {selectedFile ? (
+                <div className="erp-user-import-file-chip">
+                  <FileSpreadsheet size={14} strokeWidth={1.75} />
+                  <span className="truncate">{selectedFile.name}</span>
+                </div>
+              ) : null}
+
+              <div className="erp-user-import-stats">
+                <div className="erp-user-import-stat erp-user-import-stat--ready">
+                  <span className="erp-user-import-stat-value">
+                    {preview.valid}
+                  </span>
+                  <span className="erp-user-import-stat-label">
+                    {t('users.import.ready')}
+                  </span>
+                </div>
+                <div className="erp-user-import-stat erp-user-import-stat--invalid">
+                  <span className="erp-user-import-stat-value">
+                    {preview.invalid}
+                  </span>
+                  <span className="erp-user-import-stat-label">
+                    {t('users.import.invalid')}
+                  </span>
+                </div>
+                <div className="erp-user-import-stat erp-user-import-stat--duplicate">
+                  <span className="erp-user-import-stat-value">
+                    {preview.duplicate}
+                  </span>
+                  <span className="erp-user-import-stat-label">
+                    {t('users.import.duplicate')}
+                  </span>
+                </div>
+              </div>
+
+              <div className="erp-user-import-table-wrap">
+                <DataTable
+                  rowKey="line"
+                  className="erp-pro-table erp-users-table"
+                  size="small"
+                  dataSource={preview.rows}
+                  scroll={{ x: true, y: 280 }}
+                  pagination={false}
+                  columns={[
+                    {
+                      title: t('users.import.line'),
+                      dataIndex: 'line',
+                      width: 70,
+                      render: (value: number) => (
+                        <span className="erp-users-id-chip">{value}</span>
+                      ),
+                    },
+                    {
+                      title: t('common.email'),
+                      key: 'email',
+                      render: (_, row) => (
+                        <span className="erp-users-cell-strong">
+                          {row.email || '-'}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: t('users.import.name'),
+                      key: 'name',
+                      render: (_, row) => (
+                        <span className="erp-users-cell-strong">
+                          {`${row.firstName} ${row.lastName}`}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: t('common.chineseName'),
+                      key: 'chineseName',
+                      render: (_, row) => (
+                        <span className="erp-users-cell-sub">
+                          {row.chineseName || '-'}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: t('common.role'),
+                      key: 'role',
+                      render: (_, row) => (
+                        <span className="erp-users-cell-sub">
+                          {row.role?.trim() || '-'}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: t('common.status'),
+                      key: 'status',
+                      width: 140,
+                      render: (_, row) => (
+                        <StatusBadge
+                          label={statusLabel(row.status, t)}
+                          variant={statusVariant(row.status)}
+                        />
+                      ),
+                    },
+                  ]}
+                />
+              </div>
+
+              <div className="erp-user-import-invite">
+                <Checkbox
+                  checked={sendInvitations}
+                  disabled={inviteableCount === 0}
+                  onChange={(event: { target: { checked: boolean } }) =>
+                    setSendInvitations(event.target.checked)
+                  }
+                >
+                  {t('users.import.sendInvitationsNow')}
+                </Checkbox>
+                {sendInvitations && inviteableCount > 0 ? (
+                  <p className="erp-user-import-hint">
+                    {t('users.import.invitationHint', {
+                      count: inviteableCount,
+                    })}
+                  </p>
+                ) : null}
+                {inviteableCount === 0 && validCount > 0 ? (
+                  <p className="erp-user-import-hint">
+                    {t('users.import.recordOnlyHint')}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {step === 'result' && result ? (
+            <div className="erp-user-import-result">
+              <div className="erp-user-import-result-icon" aria-hidden>
+                <CheckCircle2 size={28} strokeWidth={1.75} />
+              </div>
+              <div className="erp-user-import-result-stats">
+                <div className="erp-user-import-stat erp-user-import-stat--ready">
+                  <span className="erp-user-import-stat-value">
+                    {result.created}
+                  </span>
+                  <span className="erp-user-import-stat-label">
+                    {t(
+                      pluralKey(
+                        result.created,
+                        'users.import.created',
+                        'users.import.createdPlural',
+                      ),
+                      { count: result.created },
+                    )}
+                  </span>
+                </div>
+                <div className="erp-user-import-stat">
+                  <span className="erp-user-import-stat-value">
+                    {result.skipped}
+                  </span>
+                  <span className="erp-user-import-stat-label">
+                    {t(
+                      pluralKey(
+                        result.skipped,
+                        'users.import.skipped',
+                        'users.import.skippedPlural',
+                      ),
+                      { count: result.skipped },
+                    )}
+                  </span>
+                </div>
+                {sendInvitations ? (
+                  <div className="erp-user-import-stat erp-user-import-stat--ready">
+                    <span className="erp-user-import-stat-value">
+                      {result.invitationsSent}
+                    </span>
+                    <span className="erp-user-import-stat-label">
+                      {t(
+                        pluralKey(
+                          result.invitationsSent,
+                          'users.import.invitationsSent',
+                          'users.import.invitationsSentPlural',
+                        ),
+                        { count: result.invitationsSent },
+                      )}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              {sendInvitations && result.invitationsFailed > 0 ? (
                 <Alert
                   type="warning"
                   showIcon
@@ -383,41 +567,41 @@ export default function UserImportModal({
                     { count: result.invitationsFailed },
                   )}
                 />
-              )}
-            </>
-          )}
-          {result.errors.length > 0 && (
+              ) : null}
+
+              {result.errors.length > 0 ? (
+                <Alert
+                  type="error"
+                  showIcon
+                  title={t('users.import.errorsTitle')}
+                  description={
+                    <ul className="mt-1 list-disc pl-5">
+                      {result.errors.map((error) => (
+                        <li key={`${error.line}-${error.email ?? 'no-email'}`}>
+                          {t('users.import.errorLine', {
+                            line: error.line,
+                            email: error.email ?? t('users.noEmailNoLogin'),
+                            message: error.message,
+                          })}
+                        </li>
+                      ))}
+                    </ul>
+                  }
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          {errorMessage ? (
             <Alert
               type="error"
               showIcon
-              title={t('users.import.errorsTitle')}
-              description={
-                <ul className="mt-1 list-disc pl-5">
-                  {result.errors.map((error) => (
-                    <li key={`${error.line}-${error.email ?? 'no-email'}`}>
-                      {t('users.import.errorLine', {
-                        line: error.line,
-                        email: error.email ?? t('users.noEmailNoLogin'),
-                        message: error.message,
-                      })}
-                    </li>
-                  ))}
-                </ul>
-              }
+              title={errorMessage}
+              className="erp-user-import-error"
             />
-          )}
+          ) : null}
         </div>
-      )}
-
-      {errorMessage && (
-        <Alert type="error" showIcon title={errorMessage} className="!mt-4" />
-      )}
-
-      {isBusy && step === 'upload' && (
-        <div className="mt-4 flex justify-center">
-          <Spin />
-        </div>
-      )}
+      </div>
     </Modal>
   );
 }

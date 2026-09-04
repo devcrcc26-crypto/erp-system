@@ -34,7 +34,7 @@ export default function StatusBadge({
   label: string;
   variant?: StatusBadgeVariant;
 }): React.ReactNode {
-  const colors = VARIANT_COLORS[variant];
+  const colors = VARIANT_COLORS[variant] ?? VARIANT_COLORS.default;
 
   return (
     <Tag

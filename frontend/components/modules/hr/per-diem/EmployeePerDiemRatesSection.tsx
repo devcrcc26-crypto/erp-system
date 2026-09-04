@@ -132,7 +132,7 @@ function PerDiemRateCard({
           <div className="ms-auto">
             <StatusBadge
               label={activeValue ? activeLabel : inactiveLabel}
-              variant={activeValue ? 'approved' : 'draft'}
+              variant={activeValue ? 'success' : 'default'}
             />
           </div>
         )}
