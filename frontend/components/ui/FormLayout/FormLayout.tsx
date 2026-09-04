@@ -17,6 +17,7 @@ export default function FormLayout({
   extra,
   children,
   className,
+  bodyClassName,
   variant = 'default',
   dense = false,
 }: {
@@ -25,6 +26,8 @@ export default function FormLayout({
   extra?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Override default body padding (e.g. `p-0` for full-bleed tables). */
+  bodyClassName?: string;
   variant?: FormLayoutVariant;
   /** Smaller padding for compact steppers and dense forms. */
   dense?: boolean;
@@ -52,13 +55,21 @@ export default function FormLayout({
     : isPro
       ? '24px'
       : '16px 18px';
+  const resolvedBodyClassName = hasHeader
+    ? (bodyClassName ?? bodyPad)
+    : bodyClassName;
 
   return (
     <Card
       variant="borderless"
       className={`erp-responsive-card ${className ?? ''}`}
       styles={{
-        body: { padding: hasHeader ? '0' : bodyOnlyPad },
+        body: {
+          padding:
+            hasHeader || bodyClassName
+              ? '0'
+              : bodyOnlyPad,
+        },
       }}
       style={{
         borderRadius: isPro ? 12 : tokens.borderRadiusCard,
@@ -111,7 +122,7 @@ export default function FormLayout({
           )}
         </div>
       )}
-      <div className={hasHeader ? bodyPad : undefined}>{children}</div>
+      <div className={resolvedBodyClassName}>{children}</div>
     </Card>
   );
 }
