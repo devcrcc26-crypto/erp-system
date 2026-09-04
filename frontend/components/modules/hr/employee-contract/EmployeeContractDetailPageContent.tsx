@@ -1,15 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, DatePicker, Form, Input, Skeleton } from 'antd';
+import {
+  Alert,
+  Button,
+  DatePicker,
+  Form,
+  Grid,
+  Input,
+  Skeleton,
+  Space,
+} from 'antd';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  StopOutlined,
+} from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
-import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
@@ -30,13 +40,55 @@ import {
 } from '@/lib/utils/employee-contract-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { tokens } from '@/lib/theme/tokens';
 
 interface TerminateFormValues {
   terminatedAt?: dayjs.Dayjs;
   terminationReason: string;
 }
 
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header">
+        <h3 className="erp-employee-section-title">{title}</h3>
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function formatMoney(
+  value: string | number | null | undefined,
+  currency: string,
+): string {
+  if (value == null || value === '') {
+    return '-';
+  }
+  const num = typeof value === 'number' ? value : Number(value);
+  if (Number.isNaN(num)) {
+    return String(value);
+  }
+  return `${currency} ${num.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/**
+ * Employee contract detail - Users / employee profile chrome.
+ */
 export default function EmployeeContractDetailPageContent({
   contractId,
 }: {
@@ -45,6 +97,9 @@ export default function EmployeeContractDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const detailQuery = useEmployeeContract(contractId);
   const terminateMutation = useTerminateEmployeeContract(contractId);
@@ -55,6 +110,7 @@ export default function EmployeeContractDetailPageContent({
 
   const contract = detailQuery.data;
   const canManage = canViewHr && contract?.status === 'ACTIVE';
+  const currency = t('hr.currency.ETB');
 
   async function handleTerminate(): Promise<void> {
     const values = await terminateForm.validateFields();
@@ -92,193 +148,263 @@ export default function EmployeeContractDetailPageContent({
   }
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page">
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !contract) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        title={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : t('hr.messages.employeeContractNotFound')
-        }
-        action={
-          <Button onClick={() => router.push('/hr/employee-contract')}>
-            {t('hr.buttons.backToList')}
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <Alert
+          type="error"
+          showIcon
+          title={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : t('hr.messages.employeeContractNotFound')
+          }
+          action={
+            <Button onClick={() => router.push('/hr/employee-contract')}>
+              {t('hr.buttons.backToList')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/employee-contract')}
-        >
-          {t('hr.buttons.back')}
-        </Button>
-        {canManage ? (
-          <>
-            <Button
-              className="ml-auto"
-              onClick={() =>
-                router.push(`/hr/employee-contract/${contractId}/edit`)
-              }
-            >
-              {t('hr.buttons.editEmployeeContract')}
-            </Button>
-            <Button danger onClick={() => setTerminateOpen(true)}>
-              {t('hr.buttons.terminateContract')}
-            </Button>
-            <Button
-              danger
-              type="primary"
-              onClick={() => setConfirmDelete(true)}
-            >
-              {t('hr.buttons.delete')}
-            </Button>
-          </>
-        ) : null}
-      </div>
+  const employeeName = formatEmployeeContractEmployeeName(contract.employee);
+  const hasCompensation =
+    contract.basicSalary != null ||
+    contract.transportationAllowance != null ||
+    contract.monthlyBonus != null ||
+    contract.netSalary != null;
 
-      <div className="flex flex-col gap-4">
-        <div
-          className="rounded-lg overflow-hidden"
-          style={{
-            background: tokens.colorCardBg,
-            border: `1px solid ${tokens.colorBorder}`,
-          }}
-        >
-          <div className="px-5 py-4">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: tokens.colorTextTertiary }}
+  return (
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push('/hr/employee-contract')}
+              aria-label={t('hr.buttons.backToList')}
+            >
+              {isNarrow ? undefined : t('hr.buttons.back')}
+            </Button>
+          </div>
+          {canManage ? (
+            <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+              <Button
+                icon={<StopOutlined />}
+                danger
+                onClick={() => setTerminateOpen(true)}
+                aria-label={t('hr.buttons.terminateContract')}
               >
+                {isNarrow ? undefined : t('hr.buttons.terminateContract')}
+              </Button>
+              <Space.Compact>
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={() =>
+                    router.push(`/hr/employee-contract/${contractId}/edit`)
+                  }
+                  aria-label={t('hr.buttons.editEmployeeContract')}
+                >
+                  {isNarrow
+                    ? undefined
+                    : isCompact
+                      ? t('common.update')
+                      : t('hr.buttons.editEmployeeContract')}
+                </Button>
+                <Button
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label={t('hr.buttons.delete')}
+                >
+                  {isNarrow ? undefined : t('hr.buttons.delete')}
+                </Button>
+              </Space.Compact>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">
                 {contract.contractNumber}
               </span>
-              <span style={{ color: tokens.colorBorder }}>|</span>
               <StatusBadge
                 label={formatEmployeeContractStatus(contract.status, t)}
                 variant={employeeContractStatusVariant(contract.status)}
               />
+              <span className="erp-users-role-tag">
+                {formatEmployeeContractType(contract.contractType, t)}
+              </span>
             </div>
-            <h2
-              className="text-lg font-semibold leading-snug m-0"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {t('pages.hr.employeeContract.detail')} —{' '}
-              {formatEmployeeContractEmployeeName(contract.employee)}
-            </h2>
-            <p
-              className="mt-1 text-sm m-0"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {formatEmployeeContractType(contract.contractType, t)}
-              {contract.signedAt
-                ? ` | ${t('hr.labels.signedAt')} ${formatProjectDate(contract.signedAt)}`
-                : null}
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0">
+                {employeeName}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5">
+              {contract.employee?.email ?? t('pages.hr.employeeContract.detail')}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-1">
+              {[
+                `${t('hr.labels.signedAt')} ${formatProjectDate(contract.signedAt)}`,
+                `${t('hr.labels.startDate')} ${formatProjectDate(contract.startDate)}`,
+                contract.endDate
+                  ? `${t('hr.labels.endDate')} ${formatProjectDate(contract.endDate)}`
+                  : t('hr.labels.openEnded'),
+              ].join(' · ')}
             </p>
           </div>
         </div>
+      </div>
 
-        <SummaryStrip
-          items={[
-            {
-              label: t('hr.labels.contractType'),
-              value: formatEmployeeContractType(contract.contractType, t),
-            },
-            {
-              label: t('hr.labels.signedAt'),
-              value: formatProjectDate(contract.signedAt),
-            },
-            {
-              label: t('hr.labels.startDate'),
-              value: formatProjectDate(contract.startDate),
-            },
-            {
-              label: t('hr.labels.endDate'),
-              value: contract.endDate
-                ? formatProjectDate(contract.endDate)
-                : t('hr.labels.openEnded'),
-            },
-          ]}
-        />
-
-        <SectionCard
-          title={t('hr.section.contractDetails')}
-          bodyClassName="px-5 py-4"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MetaItem label={t('hr.labels.employee')}>
-              {formatEmployeeContractEmployeeName(contract.employee)}
-            </MetaItem>
-            <MetaItem label={t('hr.table.status')}>
-              <StatusBadge
-                label={formatEmployeeContractStatus(contract.status, t)}
-                variant={employeeContractStatusVariant(contract.status)}
-              />
-            </MetaItem>
-            <MetaItem label={t('hr.labels.contractType')}>
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.contractType')}</p>
+            <p className="erp-employee-meta-value">
               {formatEmployeeContractType(contract.contractType, t)}
-            </MetaItem>
-            <MetaItem label={t('hr.labels.signedAt')}>
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.signedAt')}</p>
+            <p className="erp-employee-meta-value">
               {formatProjectDate(contract.signedAt)}
-            </MetaItem>
-            <MetaItem label={t('hr.labels.startDate')}>
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.startDate')}</p>
+            <p className="erp-employee-meta-value">
               {formatProjectDate(contract.startDate)}
-            </MetaItem>
-            <MetaItem label={t('hr.labels.endDate')}>
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.endDate')}</p>
+            <p className="erp-employee-meta-value">
               {contract.endDate
                 ? formatProjectDate(contract.endDate)
                 : t('hr.labels.openEnded')}
-            </MetaItem>
-            {contract.terminatedAt ? (
-              <>
-                <MetaItem label={t('hr.labels.terminatedAt')}>
-                  {formatProjectDate(contract.terminatedAt)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="erp-pro-card">
+        <div className="erp-employee-tab-panel erp-contract-detail-body">
+          <DetailSection title={t('hr.section.contractDetails')}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <MetaItem label={t('hr.labels.employee')}>
+                {employeeName}
+              </MetaItem>
+              <MetaItem label={t('hr.table.status')}>
+                <StatusBadge
+                  label={formatEmployeeContractStatus(contract.status, t)}
+                  variant={employeeContractStatusVariant(contract.status)}
+                />
+              </MetaItem>
+              <MetaItem label={t('hr.labels.contractType')}>
+                {formatEmployeeContractType(contract.contractType, t)}
+              </MetaItem>
+              <MetaItem label={t('hr.labels.signedAt')}>
+                {formatProjectDate(contract.signedAt)}
+              </MetaItem>
+              <MetaItem label={t('hr.labels.startDate')}>
+                {formatProjectDate(contract.startDate)}
+              </MetaItem>
+              <MetaItem label={t('hr.labels.endDate')}>
+                {contract.endDate
+                  ? formatProjectDate(contract.endDate)
+                  : t('hr.labels.openEnded')}
+              </MetaItem>
+              {contract.probationEndDate ? (
+                <MetaItem label={t('hr.labels.probationEndDate')}>
+                  {formatProjectDate(contract.probationEndDate)}
                 </MetaItem>
-                <MetaItem label={t('hr.labels.terminationReason')}>
-                  <p className="whitespace-pre-wrap leading-relaxed m-0">
-                    {contract.terminationReason ?? '-'}
+              ) : null}
+              {contract.governedBy ? (
+                <MetaItem label={t('hr.labels.governedBy')}>
+                  {contract.governedBy}
+                </MetaItem>
+              ) : null}
+              {contract.terminatedAt ? (
+                <>
+                  <MetaItem label={t('hr.labels.terminatedAt')}>
+                    {formatProjectDate(contract.terminatedAt)}
+                  </MetaItem>
+                  <MetaItem label={t('hr.labels.terminationReason')}>
+                    <p className="m-0 whitespace-pre-wrap leading-relaxed">
+                      {contract.terminationReason ?? '-'}
+                    </p>
+                  </MetaItem>
+                </>
+              ) : null}
+              {contract.notes ? (
+                <MetaItem label={t('hr.labels.notes')}>
+                  <p className="m-0 whitespace-pre-wrap leading-relaxed">
+                    {contract.notes}
                   </p>
                 </MetaItem>
-              </>
-            ) : null}
-            {contract.notes ? (
-              <MetaItem label={t('hr.labels.notes')}>
-                <p className="whitespace-pre-wrap leading-relaxed m-0">
-                  {contract.notes}
-                </p>
+              ) : null}
+              {contract.creator ? (
+                <MetaItem label={t('hr.labels.createdBy')}>
+                  {formatEmployeeContractEmployeeName(contract.creator)}
+                </MetaItem>
+              ) : null}
+              <MetaItem label={t('hr.table.createdDate')}>
+                {formatProjectDate(contract.createdAt)}
               </MetaItem>
-            ) : null}
-            {contract.creator ? (
-              <MetaItem label={t('hr.labels.createdBy')}>
-                {formatEmployeeContractEmployeeName(contract.creator)}
-              </MetaItem>
-            ) : null}
-            <MetaItem label={t('hr.table.createdDate')}>
-              {formatProjectDate(contract.createdAt)}
-            </MetaItem>
-          </div>
-        </SectionCard>
+            </div>
+          </DetailSection>
 
-        <SectionCard
-          title={t('hr.labels.supportingAttachments')}
-          bodyClassName="px-5 py-4"
-        >
-          <AttachmentDownloadList
-            documents={contract.attachmentFolder?.documents}
-            emptyLabel={t('hr.empty.noAttachments')}
-          />
-        </SectionCard>
+          {hasCompensation ? (
+            <DetailSection title={t('hr.section.compensation')}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <MetaItem label={t('hr.labels.basicSalary')}>
+                  {formatMoney(contract.basicSalary, currency)}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.transportationAllowance')}>
+                  {formatMoney(contract.transportationAllowance, currency)}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.monthlyBonus')}>
+                  {formatMoney(contract.monthlyBonus, currency)}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.netSalary')}>
+                  {formatMoney(contract.netSalary, currency)}
+                </MetaItem>
+              </div>
+            </DetailSection>
+          ) : null}
+
+          <DetailSection
+            title={t('hr.labels.supportingAttachments')}
+            className="erp-employee-section--docs"
+          >
+            <AttachmentDownloadList
+              documents={contract.attachmentFolder?.documents}
+              emptyLabel={t('hr.empty.noAttachments')}
+            />
+          </DetailSection>
+        </div>
       </div>
 
       <ConfirmDialog

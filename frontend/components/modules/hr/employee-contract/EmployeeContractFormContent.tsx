@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Alert, Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import EmployeeContractForm, {
@@ -16,13 +17,11 @@ import {
   useEmployeeContract,
   useUpdateEmployeeContract,
 } from '@/lib/query/employee-contract';
-import {
-  contractTypeRequiresEndDate,
-} from '@/lib/utils/employee-contract-display';
+import { contractTypeRequiresEndDate } from '@/lib/utils/employee-contract-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 /**
- * Full-page create / edit employee contract — layout aligned with Leave Policy and Users.
+ * Full-page create / edit employee contract - Users form chrome.
  */
 export default function EmployeeContractFormContent({
   contractId,
@@ -40,7 +39,18 @@ export default function EmployeeContractFormContent({
 
   const saving = createMutation.isPending || updateMutation.isPending;
 
-  useSetHeaderExtra(null);
+  const headerExtra = useMemo(
+    () => (
+      <Button
+        onClick={() => router.push('/hr/employee-contract')}
+        style={{ borderRadius: 8 }}
+      >
+        {t('common.cancel')}
+      </Button>
+    ),
+    [router, t],
+  );
+  useSetHeaderExtra(headerExtra);
 
   async function handleSubmit(
     values: EmployeeContractFormValues,
@@ -133,8 +143,10 @@ export default function EmployeeContractFormContent({
 
   if (isEdit && detailQuery.isLoading && !detailQuery.data) {
     return (
-      <div className="flex justify-center p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
@@ -178,16 +190,7 @@ export default function EmployeeContractFormContent({
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-end gap-2">
-        <Button
-            onClick={() => router.push('/hr/employee-contract')}
-            className="shrink-0"
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.cancel')}
-          </Button>
-      </div>
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-contract-form-page">
       <EmployeeContractForm
         mode={isEdit ? 'edit' : 'create'}
         contract={isEdit ? detailQuery.data : undefined}

@@ -2832,6 +2832,7 @@
       "sealedProof": "Sealed Document (Proof)",
       "sealedDocument": "Sealed Document",
       "contractDetails": "Contract Details",
+      "compensation": "Compensation",
       "entryDetails": "Entry details"
     }
   }

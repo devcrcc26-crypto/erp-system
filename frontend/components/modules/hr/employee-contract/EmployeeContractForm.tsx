@@ -272,7 +272,7 @@ export default function EmployeeContractForm({
             type="primary"
             htmlType="submit"
             loading={isSubmitting}
-            style={{ borderRadius: 0 }}
+            style={{ borderRadius: 8 }}
           >
             {submitLabel}
           </Button>

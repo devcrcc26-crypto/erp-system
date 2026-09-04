@@ -2832,6 +2832,7 @@
       "sealedProof": "已用印文件（凭证）",
       "sealedDocument": "已用印文件",
       "contractDetails": "合同详情",
+      "compensation": "薪酬",
       "entryDetails": "记录详情"
     }
   }
