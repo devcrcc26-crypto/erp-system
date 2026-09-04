@@ -494,7 +494,7 @@ export default function AddEmployeeForm({
                   />
                 </FormLayout>
                 <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
-                  <EmployeeProfileDocuments userId={userId} />
+                  <EmployeeProfileDocuments userId={userId} embedded />
                   <div className="mt-4">
                     <AddEmployeePendingDocuments
                       value={pendingDocuments}

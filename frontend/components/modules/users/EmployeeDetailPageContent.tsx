@@ -85,17 +85,24 @@ function DetailSection({
   title,
   children,
   className = '',
+  bodyClassName = '',
+  extra,
 }: {
   title: string;
   children: React.ReactNode;
   className?: string;
+  bodyClassName?: string;
+  extra?: React.ReactNode;
 }): React.ReactNode {
   return (
     <div className={`erp-employee-section ${className}`.trim()}>
       <div className="erp-employee-section-header">
         <h3 className="erp-employee-section-title">{title}</h3>
+        {extra ? <div className="erp-employee-section-extra">{extra}</div> : null}
       </div>
-      <div className="erp-employee-section-body">{children}</div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -650,8 +657,11 @@ export default function EmployeeDetailPageContent({
                 )}
               </DetailSection>
 
-              <DetailSection title={t('users.form.profileDocuments')}>
-                <EmployeeProfileDocuments userId={user.id} />
+              <DetailSection
+                title={t('users.form.profileDocuments')}
+                className="erp-employee-section--docs"
+              >
+                <EmployeeProfileDocuments userId={user.id} embedded />
               </DetailSection>
             </div>
           )}

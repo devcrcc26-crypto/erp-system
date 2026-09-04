@@ -1,7 +1,8 @@
 'use client';
 
 import { Button, Input, Upload } from 'antd';
-import { DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { FilePlus2 } from 'lucide-react';
 import ProfileFileTypeIcon, {
   profileFileMetaLine,
 } from '@/components/modules/users/ProfileFileTypeIcon';
@@ -45,56 +46,59 @@ export default function AddEmployeePendingDocuments({
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-slate-500">{t('users.form.documentsHelp')}</p>
-      <Upload multiple beforeUpload={handleSelect} showUploadList={false}>
-        <Button icon={<UploadOutlined />}>{t('users.form.selectDocuments')}</Button>
-      </Upload>
+    <div className="erp-profile-docs erp-profile-docs--embedded">
+      <p className="m-0 text-sm text-slate-500">{t('users.form.documentsHelp')}</p>
+      <div className="erp-profile-docs-toolbar">
+        <Upload multiple beforeUpload={handleSelect} showUploadList={false}>
+          <Button icon={<PlusOutlined />}>{t('users.form.selectDocuments')}</Button>
+        </Upload>
+      </div>
       {value.length > 0 ? (
-        <div className="erp-profile-doc-list divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="erp-profile-docs-grid">
           {value.map((item) => (
-            <div
+            <article
               key={item.uid}
-              className="erp-profile-doc-row flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              className="erp-profile-doc-card erp-profile-doc-card--pending"
             >
-              <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+              <div className="erp-profile-doc-card-top">
                 <ProfileFileTypeIcon name={item.file.name} fileType={item.file.type} />
-                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className="truncate text-sm font-medium text-slate-900"
-                      title={item.file.name}
-                    >
-                      {item.file.name}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      {profileFileMetaLine(
-                        item.file.name,
-                        item.file.type,
-                        item.file.size,
-                      )}
-                    </div>
-                  </div>
-                  <Input
-                    size="small"
-                    className="sm:max-w-[220px]"
-                    placeholder={t('users.form.documentLabel')}
-                    value={item.label}
-                    onChange={(event) => updateLabel(item.uid, event.target.value)}
-                  />
-                </div>
+                <Button
+                  type="text"
+                  danger
+                  size="small"
+                  className="erp-profile-doc-card-action"
+                  icon={<DeleteOutlined />}
+                  onClick={() => remove(item.uid)}
+                  aria-label={t('common.delete')}
+                />
               </div>
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => remove(item.uid)}
-              />
-            </div>
+              <div className="erp-profile-doc-card-body">
+                <p className="erp-profile-doc-card-name" title={item.file.name}>
+                  {item.file.name}
+                </p>
+                <p className="erp-profile-doc-card-meta">
+                  {profileFileMetaLine(item.file.name, item.file.type, item.file.size)}
+                </p>
+                <Input
+                  size="small"
+                  className="erp-profile-doc-card-label"
+                  placeholder={t('users.form.documentLabel')}
+                  value={item.label}
+                  onChange={(event) => updateLabel(item.uid, event.target.value)}
+                />
+              </div>
+            </article>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-400">{t('users.form.noDocumentsSelected')}</p>
+        <div className="erp-profile-docs-empty">
+          <div className="erp-profile-docs-empty-icon" aria-hidden>
+            <FilePlus2 size={22} strokeWidth={1.6} />
+          </div>
+          <p className="erp-profile-docs-empty-title">
+            {t('users.form.noDocumentsSelected')}
+          </p>
+        </div>
       )}
     </div>
   );

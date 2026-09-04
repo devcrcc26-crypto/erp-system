@@ -1,8 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Spin, Upload } from 'antd';
-import { DeleteOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Input, Spin, Tooltip, Upload } from 'antd';
+import {
+  DeleteOutlined,
+  DownloadOutlined,
+  PlusOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
+import { FilePlus2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ProfileFileTypeIcon, {
   profileFileMetaLine,
@@ -27,9 +33,11 @@ interface PendingUpload {
 interface EmployeeProfileDocumentsProps {
   userId: string;
   canDelete?: boolean;
+  /** Hide the inner title when already wrapped by a section/card header. */
+  embedded?: boolean;
 }
 
-function PendingDocumentRow({
+function PendingDocumentCard({
   fileName,
   fileType,
   fileSizeBytes,
@@ -47,33 +55,41 @@ function PendingDocumentRow({
   labelPlaceholder: string;
 }): React.ReactNode {
   return (
-    <div className="erp-profile-doc-row flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+    <article className="erp-profile-doc-card erp-profile-doc-card--pending">
+      <div className="erp-profile-doc-card-top">
         <ProfileFileTypeIcon name={fileName} fileType={fileType} />
-        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-slate-900" title={fileName}>
-              {fileName}
-            </div>
-            <div className="text-xs text-slate-500">
-              {profileFileMetaLine(fileName, fileType, fileSizeBytes)}
-            </div>
-          </div>
-          <Input
+        <Tooltip title={labelPlaceholder}>
+          <Button
+            type="text"
+            danger
             size="small"
-            className="sm:max-w-[220px]"
-            placeholder={labelPlaceholder}
-            value={label}
-            onChange={(event) => onLabelChange(event.target.value)}
+            className="erp-profile-doc-card-action"
+            icon={<DeleteOutlined />}
+            onClick={onRemove}
+            aria-label="Remove"
           />
-        </div>
+        </Tooltip>
       </div>
-      <Button type="text" danger icon={<DeleteOutlined />} onClick={onRemove} />
-    </div>
+      <div className="erp-profile-doc-card-body">
+        <p className="erp-profile-doc-card-name" title={fileName}>
+          {fileName}
+        </p>
+        <p className="erp-profile-doc-card-meta">
+          {profileFileMetaLine(fileName, fileType, fileSizeBytes)}
+        </p>
+        <Input
+          size="small"
+          className="erp-profile-doc-card-label"
+          placeholder={labelPlaceholder}
+          value={label}
+          onChange={(event) => onLabelChange(event.target.value)}
+        />
+      </div>
+    </article>
   );
 }
 
-function SavedDocumentRow({
+function SavedDocumentCard({
   document,
   canDelete,
   isDeleting,
@@ -95,42 +111,51 @@ function SavedDocumentRow({
   const dateLabel = new Date(document.createdAt).toLocaleDateString();
 
   return (
-    <div className="erp-profile-doc-row flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+    <article className="erp-profile-doc-card">
+      <div className="erp-profile-doc-card-top">
         <ProfileFileTypeIcon name={document.name} fileType={document.fileType} />
-        <div className="min-w-0 flex-1">
-          <div
-            className="truncate text-sm font-medium text-slate-900"
-            title={document.name}
-          >
-            {document.name}
-          </div>
-          <div className="text-xs text-slate-500">
-            {profileFileMetaLine(
-              document.name,
-              document.fileType,
-              document.fileSizeBytes,
-              dateLabel,
-            )}
-          </div>
+        <div className="erp-profile-doc-card-actions">
+          <Tooltip title={downloadLabel}>
+            <Button
+              type="text"
+              size="small"
+              className="erp-profile-doc-card-action"
+              icon={<DownloadOutlined />}
+              loading={isDownloading}
+              onClick={onDownload}
+              aria-label={downloadLabel}
+            />
+          </Tooltip>
+          {canDelete ? (
+            <Tooltip title={deleteLabel}>
+              <Button
+                type="text"
+                danger
+                size="small"
+                className="erp-profile-doc-card-action"
+                icon={<DeleteOutlined />}
+                loading={isDeleting}
+                onClick={onDelete}
+                aria-label={deleteLabel}
+              />
+            </Tooltip>
+          ) : null}
         </div>
       </div>
-      <div className="flex shrink-0 gap-1 ps-14 sm:ps-0">
-        <Button
-          type="link"
-          icon={<DownloadOutlined />}
-          loading={isDownloading}
-          onClick={onDownload}
-        >
-          {downloadLabel}
-        </Button>
-        {canDelete ? (
-          <Button type="link" danger loading={isDeleting} onClick={onDelete}>
-            {deleteLabel}
-          </Button>
-        ) : null}
+      <div className="erp-profile-doc-card-body">
+        <p className="erp-profile-doc-card-name" title={document.name}>
+          {document.name}
+        </p>
+        <p className="erp-profile-doc-card-meta">
+          {profileFileMetaLine(
+            document.name,
+            document.fileType,
+            document.fileSizeBytes,
+            dateLabel,
+          )}
+        </p>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -140,6 +165,7 @@ function SavedDocumentRow({
 export default function EmployeeProfileDocuments({
   userId,
   canDelete = true,
+  embedded = false,
 }: EmployeeProfileDocumentsProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -232,21 +258,37 @@ export default function EmployeeProfileDocuments({
   }
 
   const documents = documentsQuery.data ?? [];
+  const hasPending = pending.length > 0;
+  const hasDocuments = documents.length > 0;
 
   return (
-    <div className="mt-4 space-y-4">
-      <div className="text-sm font-semibold text-slate-700">
-        {t('users.form.profileDocuments')}
+    <div className={`erp-profile-docs ${embedded ? 'erp-profile-docs--embedded' : ''}`.trim()}>
+      {!embedded ? (
+        <div className="erp-profile-docs-header">
+          <h3 className="erp-profile-docs-title">{t('users.form.profileDocuments')}</h3>
+        </div>
+      ) : null}
+
+      <div className="erp-profile-docs-toolbar">
+        <Upload multiple beforeUpload={handleSelectFiles} showUploadList={false}>
+          <Button icon={<PlusOutlined />}>{t('users.form.selectDocuments')}</Button>
+        </Upload>
+        {hasPending ? (
+          <Button
+            type="primary"
+            icon={<UploadOutlined />}
+            loading={uploadMutation.isPending}
+            onClick={() => void handleUpload()}
+          >
+            {t('users.form.uploadDocuments')}
+          </Button>
+        ) : null}
       </div>
 
-      <Upload multiple beforeUpload={handleSelectFiles} showUploadList={false}>
-        <Button icon={<UploadOutlined />}>{t('users.form.selectDocuments')}</Button>
-      </Upload>
-
-      {pending.length > 0 ? (
-        <div className="erp-profile-doc-list divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {hasPending ? (
+        <div className="erp-profile-docs-grid">
           {pending.map((item) => (
-            <PendingDocumentRow
+            <PendingDocumentCard
               key={item.uid}
               fileName={item.file.name}
               fileType={item.file.type}
@@ -258,16 +300,6 @@ export default function EmployeeProfileDocuments({
             />
           ))}
         </div>
-      ) : null}
-
-      {pending.length > 0 ? (
-        <Button
-          type="primary"
-          loading={uploadMutation.isPending}
-          onClick={() => void handleUpload()}
-        >
-          {t('users.form.uploadDocuments')}
-        </Button>
       ) : null}
 
       <ConfirmDialog
@@ -289,10 +321,10 @@ export default function EmployeeProfileDocuments({
       />
 
       <Spin spinning={documentsQuery.isLoading}>
-        {documents.length > 0 ? (
-          <div className="erp-profile-doc-list divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        {hasDocuments ? (
+          <div className="erp-profile-docs-grid">
             {documents.map((document) => (
-              <SavedDocumentRow
+              <SavedDocumentCard
                 key={document.id}
                 document={document}
                 canDelete={canDelete}
@@ -305,8 +337,18 @@ export default function EmployeeProfileDocuments({
               />
             ))}
           </div>
-        ) : !documentsQuery.isLoading ? (
-          <p className="text-sm text-slate-400">{t('users.noDocuments')}</p>
+        ) : !documentsQuery.isLoading && !hasPending ? (
+          <div className="erp-profile-docs-empty">
+            <div className="erp-profile-docs-empty-icon" aria-hidden>
+              <FilePlus2 size={22} strokeWidth={1.6} />
+            </div>
+            <p className="erp-profile-docs-empty-title">{t('users.noDocuments')}</p>
+            <Upload multiple beforeUpload={handleSelectFiles} showUploadList={false}>
+              <Button type="link" icon={<PlusOutlined />}>
+                {t('users.form.selectDocuments')}
+              </Button>
+            </Upload>
+          </div>
         ) : null}
       </Spin>
     </div>
