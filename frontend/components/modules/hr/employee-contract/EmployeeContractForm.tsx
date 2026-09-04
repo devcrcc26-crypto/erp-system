@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Button,
+  Alert,
   DatePicker,
   Form,
   Input,
@@ -13,17 +13,37 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
+  EmployeeContractCurrency,
   EmployeeContractDetail,
   EmployeeContractType,
 } from '@/lib/api/employee-contract.types';
+import type { SupportedCurrency } from '@/lib/api/per-diem.types';
+import {
+  useCreateEmployeeContract,
+  useUpdateEmployeeContract,
+} from '@/lib/query/employee-contract';
+import { useCurrencyRates } from '@/lib/query/currency';
+import { useUser } from '@/lib/query/users';
 import {
   EMPLOYEE_CONTRACT_TYPE_OPTIONS,
   contractTypeRequiresEndDate,
+  formatEmployeeContractEmployeeName,
   formatEmployeeContractType,
 } from '@/lib/utils/employee-contract-display';
+import {
+  convertCurrencyAmount,
+  roundCurrencyAmount,
+} from '@/lib/utils/currency-convert';
+import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
+import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
+import { tokens } from '@/lib/theme/tokens';
 
 export interface EmployeeContractFormValues {
   employeeId: string;
@@ -32,6 +52,7 @@ export interface EmployeeContractFormValues {
   startDate: dayjs.Dayjs;
   endDate?: dayjs.Dayjs | null;
   notes?: string;
+  currency: EmployeeContractCurrency;
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
@@ -43,12 +64,40 @@ export interface EmployeeContractFormValues {
 interface EmployeeContractFormProps {
   mode?: 'create' | 'edit';
   contract?: EmployeeContractDetail;
-  isSubmitting?: boolean;
-  submitLabel: string;
-  onSubmit: (values: EmployeeContractFormValues) => void | Promise<void>;
-  formId?: string;
-  showFooterActions?: boolean;
+  onSuccess: (result: EmployeeContractDetail) => void;
 }
+
+const DETAILS_FIELDS = [
+  'employeeId',
+  'contractType',
+  'signedAt',
+  'startDate',
+  'endDate',
+  'probationEndDate',
+  'governedBy',
+  'notes',
+] as const;
+
+const COMPENSATION_FIELDS = [
+  'currency',
+  'basicSalary',
+  'transportationAllowance',
+  'monthlyBonus',
+  'netSalary',
+] as const;
+
+const COMPENSATION_AMOUNT_FIELDS = [
+  'basicSalary',
+  'transportationAllowance',
+  'monthlyBonus',
+  'netSalary',
+] as const;
+
+const CURRENCY_OPTIONS: Array<{ value: SupportedCurrency; label: string }> = [
+  { value: 'ETB', label: 'ETB' },
+  { value: 'USD', label: 'USD' },
+  { value: 'CNY', label: 'CNY' },
+];
 
 function CurrencyInputNumber({
   value,
@@ -84,6 +133,7 @@ function valuesFromContract(
     startDate: dayjs(contract.startDate),
     endDate: contract.endDate ? dayjs(contract.endDate) : undefined,
     notes: contract.notes ?? undefined,
+    currency: contract.currency ?? 'ETB',
     basicSalary: contract.basicSalary ? Number(contract.basicSalary) : undefined,
     transportationAllowance: contract.transportationAllowance
       ? Number(contract.transportationAllowance)
@@ -100,26 +150,87 @@ function valuesFromContract(
 }
 
 function defaultValues(): Partial<EmployeeContractFormValues> {
-  return { contractType: 'FIXED_TERM' };
+  return { contractType: 'FIXED_TERM', currency: 'ETB' };
 }
 
+function ReviewItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): React.ReactNode {
+  return (
+    <div className="min-w-0">
+      <p
+        className="mb-0.5 text-xs font-medium uppercase tracking-wide"
+        style={{ color: tokens.colorTextTertiary }}
+      >
+        {label}
+      </p>
+      <p
+        className="m-0 whitespace-pre-wrap text-sm"
+        style={{ color: tokens.colorTextPrimary }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Employee contract create/edit - StepperForm chrome like Add Employee.
+ */
 export default function EmployeeContractForm({
   mode = 'create',
   contract,
-  isSubmitting = false,
-  submitLabel,
-  onSubmit,
-  formId = 'employee-contract-form',
-  showFooterActions = false,
+  onSuccess,
 }: EmployeeContractFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
   const [form] = Form.useForm<EmployeeContractFormValues>();
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [detailsSnapshot, setDetailsSnapshot] =
+    useState<Partial<EmployeeContractFormValues>>(defaultValues());
+  const previousCurrencyRef = useRef<SupportedCurrency | null>(null);
+
+  const createMutation = useCreateEmployeeContract();
+  const updateMutation = useUpdateEmployeeContract(contract?.id ?? '');
+  const ratesQuery = useCurrencyRates(true);
+
   const contractType =
-    Form.useWatch('contractType', form) ?? contract?.contractType ?? 'FIXED_TERM';
+    Form.useWatch('contractType', form) ??
+    detailsSnapshot.contractType ??
+    contract?.contractType ??
+    'FIXED_TERM';
+  const currency =
+    (Form.useWatch('currency', form) as SupportedCurrency | undefined) ??
+    detailsSnapshot.currency ??
+    contract?.currency ??
+    'ETB';
   const basicSalary = Form.useWatch('basicSalary', form);
   const transportationAllowance = Form.useWatch('transportationAllowance', form);
   const monthlyBonus = Form.useWatch('monthlyBonus', form);
+  const employeeId = Form.useWatch('employeeId', form) ?? detailsSnapshot.employeeId;
+  const formValues = Form.useWatch([], form) as
+    | EmployeeContractFormValues
+    | undefined;
   const requiresEndDate = contractTypeRequiresEndDate(contractType);
+
+  const selectedEmployeeQuery = useUser(employeeId ?? '', Boolean(employeeId));
+
+  const rateHint =
+    ratesQuery.data?.USD != null && ratesQuery.data?.CNY != null
+      ? t('hr.messages.currencyRatesHint', {
+          usd: ratesQuery.data.USD.toLocaleString(undefined, {
+            maximumFractionDigits: 4,
+          }),
+          cny: ratesQuery.data.CNY.toLocaleString(undefined, {
+            maximumFractionDigits: 4,
+          }),
+        })
+      : undefined;
 
   const typeOptions = useMemo(
     () =>
@@ -131,153 +242,595 @@ export default function EmployeeContractForm({
   );
 
   useEffect(() => {
-    form.setFieldsValue(
-      contract ? valuesFromContract(contract) : defaultValues(),
-    );
+    if (!contract) {
+      previousCurrencyRef.current = 'ETB';
+      return;
+    }
+    const values = valuesFromContract(contract);
+    form.setFieldsValue(values);
+    setDetailsSnapshot(values);
+    previousCurrencyRef.current = values.currency;
   }, [contract, form]);
 
-  async function handleFinish(
-    values: EmployeeContractFormValues,
-  ): Promise<void> {
-    await onSubmit(values);
+  function captureSnapshot(): Partial<EmployeeContractFormValues> {
+    const values = form.getFieldsValue(true) as EmployeeContractFormValues;
+    setDetailsSnapshot(values);
+    return values;
   }
+
+  function convertCompensationToCurrency(next: SupportedCurrency): void {
+    const previous = previousCurrencyRef.current;
+    if (!previous || previous === next) {
+      previousCurrencyRef.current = next;
+      return;
+    }
+    if (!ratesQuery.data) {
+      messageApi.warning(t('hr.messages.currencyRatesUnavailable'));
+      previousCurrencyRef.current = next;
+      return;
+    }
+
+    const updates: Partial<
+      Record<(typeof COMPENSATION_AMOUNT_FIELDS)[number], number>
+    > = {};
+    for (const field of COMPENSATION_AMOUNT_FIELDS) {
+      const current = form.getFieldValue(field) as number | undefined;
+      if (current == null || !Number.isFinite(current)) {
+        continue;
+      }
+      const converted = convertCurrencyAmount(
+        current,
+        previous,
+        next,
+        ratesQuery.data,
+      );
+      if (converted == null) {
+        messageApi.warning(t('hr.messages.currencyRatesUnavailable'));
+        previousCurrencyRef.current = next;
+        return;
+      }
+      updates[field] = roundCurrencyAmount(converted);
+    }
+    if (Object.keys(updates).length > 0) {
+      form.setFieldsValue(updates);
+    }
+    previousCurrencyRef.current = next;
+  }
+
+  function resetForm(): void {
+    if (mode === 'edit' && contract) {
+      const values = valuesFromContract(contract);
+      form.setFieldsValue(values);
+      setDetailsSnapshot(values);
+      previousCurrencyRef.current = values.currency;
+    } else {
+      form.resetFields();
+      form.setFieldsValue(defaultValues());
+      setDetailsSnapshot(defaultValues());
+      previousCurrencyRef.current = 'ETB';
+    }
+    setFormError(null);
+  }
+
+  async function validateDetailsStep(): Promise<boolean> {
+    try {
+      const fields: string[] = [
+        'employeeId',
+        'contractType',
+        'signedAt',
+        'startDate',
+      ];
+      if (contractTypeRequiresEndDate(form.getFieldValue('contractType'))) {
+        fields.push('endDate');
+      }
+      await form.validateFields(fields);
+
+      const values = form.getFieldsValue(true) as EmployeeContractFormValues;
+      if (values.startDate.isBefore(values.signedAt, 'day')) {
+        messageApi.error(t('hr.validation.startAfterSigned'));
+        return false;
+      }
+      if (
+        contractTypeRequiresEndDate(values.contractType) &&
+        values.endDate &&
+        values.endDate.isBefore(values.startDate, 'day')
+      ) {
+        messageApi.error(t('hr.validation.endAfterStart'));
+        return false;
+      }
+
+      captureSnapshot();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function validateCompensationStep(): Promise<boolean> {
+    try {
+      await form.validateFields([...COMPENSATION_FIELDS]);
+      captureSnapshot();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function handleSubmit(): Promise<void> {
+    setFormError(null);
+    let values: EmployeeContractFormValues;
+    try {
+      values = await form.validateFields([
+        ...DETAILS_FIELDS,
+        ...COMPENSATION_FIELDS,
+      ]);
+    } catch {
+      messageApi.error(t('hr.validation.required'));
+      return;
+    }
+
+    if (values.startDate.isBefore(values.signedAt, 'day')) {
+      messageApi.error(t('hr.validation.startAfterSigned'));
+      return;
+    }
+
+    const needsEndDate = contractTypeRequiresEndDate(values.contractType);
+    if (needsEndDate && !values.endDate) {
+      messageApi.error(t('hr.validation.endDateRequired'));
+      return;
+    }
+    if (
+      needsEndDate &&
+      values.endDate &&
+      values.endDate.isBefore(values.startDate, 'day')
+    ) {
+      messageApi.error(t('hr.validation.endAfterStart'));
+      return;
+    }
+
+    const endDate = needsEndDate
+      ? values.endDate?.format('YYYY-MM-DD')
+      : undefined;
+
+    const salaryPayload = {
+      currency: values.currency ?? 'ETB',
+      basicSalary: values.basicSalary,
+      transportationAllowance: values.transportationAllowance,
+      monthlyBonus: values.monthlyBonus,
+      netSalary:
+        values.netSalary ??
+        (values.basicSalary != null &&
+        values.transportationAllowance != null &&
+        values.monthlyBonus != null
+          ? values.basicSalary +
+            values.transportationAllowance +
+            values.monthlyBonus
+          : undefined),
+      probationEndDate: values.probationEndDate?.format('YYYY-MM-DD'),
+      governedBy: values.governedBy?.trim() || undefined,
+    };
+
+    setSubmitting(true);
+    try {
+      const result =
+        mode === 'edit' && contract
+          ? await updateMutation.mutateAsync({
+              contractType: values.contractType,
+              signedAt: values.signedAt.format('YYYY-MM-DD'),
+              startDate: values.startDate.format('YYYY-MM-DD'),
+              endDate: needsEndDate ? endDate : null,
+              notes: values.notes?.trim() || undefined,
+              ...salaryPayload,
+            })
+          : await createMutation.mutateAsync({
+              employeeId: values.employeeId,
+              contractType: values.contractType,
+              signedAt: values.signedAt.format('YYYY-MM-DD'),
+              startDate: values.startDate.format('YYYY-MM-DD'),
+              endDate,
+              notes: values.notes?.trim() || undefined,
+              ...salaryPayload,
+            });
+
+      messageApi.success(
+        mode === 'edit'
+          ? t('hr.messages.employeeContractUpdated')
+          : t('hr.messages.employeeContractCreated'),
+      );
+      onSuccess(result);
+    } catch (error: unknown) {
+      const fallback =
+        mode === 'edit'
+          ? t('hr.messages.failedToUpdateEmployeeContract')
+          : t('hr.messages.failedToCreateEmployeeContract');
+      notifyApiError(error, fallback, messageApi);
+      setFormError(fallback);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const reviewValues: Partial<EmployeeContractFormValues> =
+    detailsSnapshot.employeeId || detailsSnapshot.signedAt
+      ? detailsSnapshot
+      : (formValues ?? detailsSnapshot);
+
+  const employeeLabel = selectedEmployeeQuery.data
+    ? formatUserName(selectedEmployeeQuery.data)
+    : contract?.employee
+      ? formatEmployeeContractEmployeeName(contract.employee)
+      : reviewValues.employeeId || '-';
+
+  const computedNet =
+    reviewValues.netSalary ??
+    (reviewValues.basicSalary != null &&
+    reviewValues.transportationAllowance != null &&
+    reviewValues.monthlyBonus != null
+      ? reviewValues.basicSalary +
+        reviewValues.transportationAllowance +
+        reviewValues.monthlyBonus
+      : undefined);
+
+  const steps = useMemo(
+    () => [
+      {
+        title: t('hr.section.contractDetails'),
+        validate: () => validateDetailsStep(),
+        content: (
+          <FormLayout
+            variant="pro"
+            dense
+            title={t('hr.section.contractDetails')}
+            description={t('pages.hr.employeeContract.detailsStepDescription')}
+          >
+            <div className="erp-form-grid-2">
+              <Form.Item
+                name="employeeId"
+                label={t('hr.form.employee')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.selectEmployee'),
+                  },
+                ]}
+              >
+                <UserSelect
+                  placeholder={t('hr.placeholder.employee')}
+                  allowClear={false}
+                  disabled={mode === 'edit'}
+                />
+              </Form.Item>
+              <Form.Item
+                name="contractType"
+                label={t('hr.form.contractType')}
+                rules={[
+                  { required: true, message: t('hr.validation.required') },
+                ]}
+              >
+                <Select
+                  options={typeOptions}
+                  onChange={(value: EmployeeContractType) => {
+                    if (value === 'OPEN_ENDED') {
+                      form.setFieldValue('endDate', undefined);
+                    }
+                  }}
+                />
+              </Form.Item>
+              <Form.Item
+                name="signedAt"
+                label={t('hr.form.signedAt')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.selectDate'),
+                  },
+                ]}
+              >
+                <DatePicker className="w-full" />
+              </Form.Item>
+              <Form.Item
+                name="startDate"
+                label={t('hr.form.startDate')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.selectDate'),
+                  },
+                ]}
+              >
+                <DatePicker className="w-full" />
+              </Form.Item>
+              {requiresEndDate ? (
+                <Form.Item
+                  name="endDate"
+                  label={t('hr.form.endDate')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.endDateRequired'),
+                    },
+                  ]}
+                >
+                  <DatePicker className="w-full" />
+                </Form.Item>
+              ) : null}
+              <Form.Item
+                name="probationEndDate"
+                label={t('hr.labels.probationEndDate')}
+              >
+                <DatePicker className="w-full" />
+              </Form.Item>
+              <Form.Item name="governedBy" label={t('hr.labels.governedBy')}>
+                <Input placeholder={t('hr.placeholder.governedBy')} />
+              </Form.Item>
+              <Form.Item
+                name="notes"
+                label={t('hr.form.notes')}
+                className="md:col-span-2"
+              >
+                <Input.TextArea rows={3} maxLength={2000} showCount />
+              </Form.Item>
+            </div>
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.section.compensation'),
+        validate: () => validateCompensationStep(),
+        content: (
+          <FormLayout
+            variant="pro"
+            dense
+            title={t('hr.section.compensation')}
+            description={t(
+              'pages.hr.employeeContract.compensationStepDescription',
+            )}
+          >
+            <div className="mb-4 max-w-xs">
+              <Form.Item
+                name="currency"
+                label={t('hr.form.currency')}
+                rules={[{ required: true }]}
+                extra={rateHint}
+                className="mb-0"
+              >
+                <Select
+                  className="erp-contract-currency-select"
+                  loading={ratesQuery.isLoading}
+                  options={CURRENCY_OPTIONS}
+                  onChange={(value: SupportedCurrency) => {
+                    convertCompensationToCurrency(value);
+                  }}
+                />
+              </Form.Item>
+            </div>
+            {ratesQuery.isError ? (
+              <Alert
+                type="warning"
+                showIcon
+                title={t('hr.messages.currencyRatesUnavailable')}
+                className="mb-4"
+              />
+            ) : null}
+            <div className="erp-form-grid-2">
+              <Form.Item name="basicSalary" label={t('hr.labels.basicSalary')}>
+                <CurrencyInputNumber
+                  min={0}
+                  precision={2}
+                  currencySuffix={currency}
+                />
+              </Form.Item>
+              <Form.Item
+                name="transportationAllowance"
+                label={t('hr.labels.transportationAllowance')}
+              >
+                <CurrencyInputNumber
+                  min={0}
+                  precision={2}
+                  currencySuffix={currency}
+                />
+              </Form.Item>
+              <Form.Item
+                name="monthlyBonus"
+                label={t('hr.labels.monthlyBonus')}
+              >
+                <CurrencyInputNumber
+                  min={0}
+                  precision={2}
+                  currencySuffix={currency}
+                />
+              </Form.Item>
+              <Form.Item name="netSalary" label={t('hr.labels.netSalary')}>
+                <CurrencyInputNumber
+                  min={0}
+                  precision={2}
+                  currencySuffix={currency}
+                  placeholder={
+                    basicSalary != null &&
+                    transportationAllowance != null &&
+                    monthlyBonus != null
+                      ? String(
+                          basicSalary + transportationAllowance + monthlyBonus,
+                        )
+                      : undefined
+                  }
+                />
+              </Form.Item>
+            </div>
+          </FormLayout>
+        ),
+      },
+      {
+        title: t('hr.form.reviewSubmit'),
+        content: (
+          <div className="erp-employee-form-sections">
+            <FormLayout
+              variant="pro"
+              dense
+              title={t('hr.form.reviewSubmit')}
+              description={t('pages.hr.employeeContract.reviewStepDescription')}
+            >
+              <div className="erp-form-grid-2">
+                <ReviewItem
+                  label={t('hr.form.employee')}
+                  value={employeeLabel}
+                />
+                <ReviewItem
+                  label={t('hr.form.contractType')}
+                  value={formatEmployeeContractType(
+                    reviewValues.contractType ?? 'FIXED_TERM',
+                    t,
+                  )}
+                />
+                <ReviewItem
+                  label={t('hr.form.signedAt')}
+                  value={
+                    reviewValues.signedAt
+                      ? formatProjectDate(
+                          reviewValues.signedAt.toISOString(),
+                        )
+                      : '-'
+                  }
+                />
+                <ReviewItem
+                  label={t('hr.form.startDate')}
+                  value={
+                    reviewValues.startDate
+                      ? formatProjectDate(
+                          reviewValues.startDate.toISOString(),
+                        )
+                      : '-'
+                  }
+                />
+                <ReviewItem
+                  label={t('hr.form.endDate')}
+                  value={
+                    contractTypeRequiresEndDate(reviewValues.contractType)
+                      ? reviewValues.endDate
+                        ? formatProjectDate(
+                            reviewValues.endDate.toISOString(),
+                          )
+                        : '-'
+                      : t('hr.labels.openEnded')
+                  }
+                />
+                <ReviewItem
+                  label={t('hr.labels.probationEndDate')}
+                  value={
+                    reviewValues.probationEndDate
+                      ? formatProjectDate(
+                          reviewValues.probationEndDate.toISOString(),
+                        )
+                      : '-'
+                  }
+                />
+                <ReviewItem
+                  label={t('hr.labels.governedBy')}
+                  value={reviewValues.governedBy?.trim() || '-'}
+                />
+                {reviewValues.notes?.trim() ? (
+                  <ReviewItem
+                    label={t('hr.form.notes')}
+                    value={reviewValues.notes.trim()}
+                  />
+                ) : null}
+              </div>
+            </FormLayout>
+
+            <FormLayout
+              variant="pro"
+              dense
+              title={t('hr.section.compensation')}
+            >
+              <div className="erp-form-grid-2">
+                <ReviewItem
+                  label={t('hr.form.currency')}
+                  value={reviewValues.currency ?? currency}
+                />
+                <ReviewItem
+                  label={t('hr.labels.basicSalary')}
+                  value={formatCurrencyAmount(
+                    reviewValues.basicSalary,
+                    reviewValues.currency ?? currency,
+                  )}
+                />
+                <ReviewItem
+                  label={t('hr.labels.transportationAllowance')}
+                  value={formatCurrencyAmount(
+                    reviewValues.transportationAllowance,
+                    reviewValues.currency ?? currency,
+                  )}
+                />
+                <ReviewItem
+                  label={t('hr.labels.monthlyBonus')}
+                  value={formatCurrencyAmount(
+                    reviewValues.monthlyBonus,
+                    reviewValues.currency ?? currency,
+                  )}
+                />
+                <ReviewItem
+                  label={t('hr.labels.netSalary')}
+                  value={formatCurrencyAmount(
+                    computedNet,
+                    reviewValues.currency ?? currency,
+                  )}
+                />
+              </div>
+            </FormLayout>
+          </div>
+        ),
+      },
+    ],
+    [
+      t,
+      mode,
+      typeOptions,
+      requiresEndDate,
+      currency,
+      rateHint,
+      ratesQuery.isLoading,
+      ratesQuery.isError,
+      basicSalary,
+      transportationAllowance,
+      monthlyBonus,
+      employeeLabel,
+      reviewValues,
+      computedNet,
+      form,
+    ],
+  );
 
   return (
     <Form<EmployeeContractFormValues>
-      id={formId}
       form={form}
       layout="vertical"
-      className="flex min-h-0 flex-1 flex-col gap-4"
-      initialValues={defaultValues()}
-      onFinish={(values) => void handleFinish(values)}
+      requiredMark={false}
+      preserve
+      className="flex min-h-0 flex-1 flex-col"
+      initialValues={contract ? undefined : defaultValues()}
     >
-      <FormLayout variant="pro" dense title={t('hr.section.contractDetails')}>
-        <div className="erp-form-grid-2">
-          <Form.Item
-            name="employeeId"
-            label={t('hr.form.employee')}
-            rules={[
-              { required: true, message: t('hr.validation.selectEmployee') },
-            ]}
-          >
-            <UserSelect
-              placeholder={t('hr.placeholder.employee')}
-              allowClear={false}
-              disabled={mode === 'edit'}
-            />
-          </Form.Item>
-          <Form.Item
-            name="contractType"
-            label={t('hr.form.contractType')}
-            rules={[{ required: true, message: t('hr.validation.required') }]}
-          >
-            <Select
-              options={typeOptions}
-              onChange={(value: EmployeeContractType) => {
-                if (value === 'OPEN_ENDED') {
-                  form.setFieldValue('endDate', undefined);
-                }
-              }}
-            />
-          </Form.Item>
-          <Form.Item
-            name="signedAt"
-            label={t('hr.form.signedAt')}
-            rules={[
-              { required: true, message: t('hr.validation.selectDate') },
-            ]}
-          >
-            <DatePicker className="w-full" />
-          </Form.Item>
-          <Form.Item
-            name="startDate"
-            label={t('hr.form.startDate')}
-            rules={[
-              { required: true, message: t('hr.validation.selectDate') },
-            ]}
-          >
-            <DatePicker className="w-full" />
-          </Form.Item>
-          {requiresEndDate ? (
-            <Form.Item
-              name="endDate"
-              label={t('hr.form.endDate')}
-              rules={[
-                { required: true, message: t('hr.validation.endDateRequired') },
-              ]}
-            >
-              <DatePicker className="w-full" />
-            </Form.Item>
-          ) : null}
-          <Form.Item name="basicSalary" label={t('hr.labels.basicSalary')}>
-            <CurrencyInputNumber
-              min={0}
-              precision={2}
-              currencySuffix={t('hr.currency.ETB')}
-            />
-          </Form.Item>
-          <Form.Item
-            name="transportationAllowance"
-            label={t('hr.labels.transportationAllowance')}
-          >
-            <CurrencyInputNumber
-              min={0}
-              precision={2}
-              currencySuffix={t('hr.currency.ETB')}
-            />
-          </Form.Item>
-          <Form.Item name="monthlyBonus" label={t('hr.labels.monthlyBonus')}>
-            <CurrencyInputNumber
-              min={0}
-              precision={2}
-              currencySuffix={t('hr.currency.ETB')}
-            />
-          </Form.Item>
-          <Form.Item name="netSalary" label={t('hr.labels.netSalary')}>
-            <CurrencyInputNumber
-              min={0}
-              precision={2}
-              currencySuffix={t('hr.currency.ETB')}
-              placeholder={
-                basicSalary != null &&
-                transportationAllowance != null &&
-                monthlyBonus != null
-                  ? String(basicSalary + transportationAllowance + monthlyBonus)
-                  : undefined
-              }
-            />
-          </Form.Item>
-          <Form.Item
-            name="probationEndDate"
-            label={t('hr.labels.probationEndDate')}
-          >
-            <DatePicker className="w-full" />
-          </Form.Item>
-          <Form.Item name="governedBy" label={t('hr.labels.governedBy')}>
-            <Input placeholder={t('hr.placeholder.governedBy')} />
-          </Form.Item>
-          <Form.Item
-            name="notes"
-            label={t('hr.form.notes')}
-            className="md:col-span-2"
-          >
-            <Input.TextArea rows={3} maxLength={2000} showCount />
-          </Form.Item>
-        </div>
-      </FormLayout>
-
-      {showFooterActions ? (
-        <div className="flex justify-end">
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={isSubmitting}
-            style={{ borderRadius: 8 }}
-          >
-            {submitLabel}
-          </Button>
-        </div>
+      {formError ? (
+        <Alert
+          type="error"
+          showIcon
+          title={formError}
+          className="mb-4"
+          closable
+          onClose={() => setFormError(null)}
+        />
       ) : null}
+      <StepperForm
+        steps={steps}
+        onSubmit={handleSubmit}
+        onReset={resetForm}
+        isSubmitting={submitting}
+        contentVariant="sections"
+        submitLabel={
+          mode === 'edit'
+            ? t('hr.buttons.save')
+            : t('hr.buttons.createContract')
+        }
+      />
     </Form>
   );
 }

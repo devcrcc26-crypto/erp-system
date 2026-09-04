@@ -3,25 +3,16 @@
 import { useMemo } from 'react';
 import { Alert, Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
-import EmployeeContractForm, {
-  type EmployeeContractFormValues,
-} from '@/components/modules/hr/employee-contract/EmployeeContractForm';
-import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
-import { useAppMessage } from '@/hooks/use-app-message';
+import EmployeeContractForm from '@/components/modules/hr/employee-contract/EmployeeContractForm';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
-import {
-  useCreateEmployeeContract,
-  useEmployeeContract,
-  useUpdateEmployeeContract,
-} from '@/lib/query/employee-contract';
-import { contractTypeRequiresEndDate } from '@/lib/utils/employee-contract-display';
-import { notifyApiError } from '@/lib/utils/notify-api-error';
+import type { EmployeeContractDetail } from '@/lib/api/employee-contract.types';
+import { useEmployeeContract } from '@/lib/query/employee-contract';
 
 /**
- * Full-page create / edit employee contract - Users form chrome.
+ * Full-page create / edit employee contract - stepper chrome like Add Employee.
  */
 export default function EmployeeContractFormContent({
   contractId,
@@ -30,14 +21,9 @@ export default function EmployeeContractFormContent({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
-  const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
   const isEdit = Boolean(contractId);
   const detailQuery = useEmployeeContract(contractId ?? '', isEdit);
-  const createMutation = useCreateEmployeeContract();
-  const updateMutation = useUpdateEmployeeContract(contractId ?? '');
-
-  const saving = createMutation.isPending || updateMutation.isPending;
 
   const headerExtra = useMemo(
     () => (
@@ -52,87 +38,8 @@ export default function EmployeeContractFormContent({
   );
   useSetHeaderExtra(headerExtra);
 
-  async function handleSubmit(
-    values: EmployeeContractFormValues,
-  ): Promise<void> {
-    if (values.startDate.isBefore(values.signedAt, 'day')) {
-      messageApi.error(t('hr.validation.startAfterSigned'));
-      return;
-    }
-
-    const requiresEndDate = contractTypeRequiresEndDate(values.contractType);
-
-    if (requiresEndDate && !values.endDate) {
-      messageApi.error(t('hr.validation.endDateRequired'));
-      return;
-    }
-
-    if (
-      requiresEndDate &&
-      values.endDate &&
-      values.endDate.isBefore(values.startDate, 'day')
-    ) {
-      messageApi.error(t('hr.validation.endAfterStart'));
-      return;
-    }
-
-    const endDate = requiresEndDate
-      ? values.endDate?.format('YYYY-MM-DD')
-      : undefined;
-
-    const salaryPayload = {
-      basicSalary: values.basicSalary,
-      transportationAllowance: values.transportationAllowance,
-      monthlyBonus: values.monthlyBonus,
-      netSalary:
-        values.netSalary ??
-        (values.basicSalary != null &&
-        values.transportationAllowance != null &&
-        values.monthlyBonus != null
-          ? values.basicSalary +
-            values.transportationAllowance +
-            values.monthlyBonus
-          : undefined),
-      probationEndDate: values.probationEndDate?.format('YYYY-MM-DD'),
-      governedBy: values.governedBy?.trim() || undefined,
-    };
-
-    try {
-      const result =
-        isEdit && contractId
-          ? await updateMutation.mutateAsync({
-              contractType: values.contractType,
-              signedAt: values.signedAt.format('YYYY-MM-DD'),
-              startDate: values.startDate.format('YYYY-MM-DD'),
-              endDate: requiresEndDate ? endDate : null,
-              notes: values.notes?.trim() || undefined,
-              ...salaryPayload,
-            })
-          : await createMutation.mutateAsync({
-              employeeId: values.employeeId,
-              contractType: values.contractType,
-              signedAt: values.signedAt.format('YYYY-MM-DD'),
-              startDate: values.startDate.format('YYYY-MM-DD'),
-              endDate,
-              notes: values.notes?.trim() || undefined,
-              ...salaryPayload,
-            });
-
-      messageApi.success(
-        isEdit
-          ? t('hr.messages.employeeContractUpdated')
-          : t('hr.messages.employeeContractCreated'),
-      );
-      router.push(`/hr/employee-contract/${result.id}`);
-    } catch (error: unknown) {
-      notifyApiError(
-        error,
-        isEdit
-          ? t('hr.messages.failedToUpdateEmployeeContract')
-          : t('hr.messages.failedToCreateEmployeeContract'),
-        messageApi,
-      );
-    }
+  function handleSuccess(result: EmployeeContractDetail): void {
+    router.push(`/hr/employee-contract/${result.id}`);
   }
 
   if (!canViewHr) {
@@ -194,22 +101,7 @@ export default function EmployeeContractFormContent({
       <EmployeeContractForm
         mode={isEdit ? 'edit' : 'create'}
         contract={isEdit ? detailQuery.data : undefined}
-        isSubmitting={saving}
-        submitLabel={
-          isEdit ? t('hr.buttons.save') : t('hr.buttons.createContract')
-        }
-        onSubmit={handleSubmit}
-        formId="employee-contract-form"
-        showFooterActions={false}
-      />
-
-      <FormPageFooter
-        submitLabel={
-          isEdit ? t('hr.buttons.save') : t('hr.buttons.createContract')
-        }
-        formId="employee-contract-form"
-        useFormAttribute
-        isSubmitting={saving}
+        onSuccess={handleSuccess}
       />
     </div>
   );

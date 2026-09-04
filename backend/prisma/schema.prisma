@@ -4841,6 +4841,7 @@ model EmployeeContract{
   terminatedAt              DateTime?                     @map("terminated_at") @db.Date
   terminationReason         String?                       @map("termination_reason")
   notes                     String?
+  currency                  SupportedCurrency             @default(ETB)
   basicSalary               Decimal?                      @map("basic_salary") @db.Decimal(14, 2)
   transportationAllowance   Decimal?                      @map("transportation_allowance") @db.Decimal(14, 2)
   monthlyBonus              Decimal?                      @map("monthly_bonus") @db.Decimal(14, 2)

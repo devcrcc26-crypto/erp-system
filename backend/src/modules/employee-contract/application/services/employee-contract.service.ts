@@ -99,6 +99,7 @@ export class EmployeeContractService {
                 startDate,
                 endDate,
                 notes: dto.notes?.trim() || null,
+                currency: dto.currency ?? 'ETB',
                 basicSalary: this.toDecimal(dto.basicSalary),
                 transportationAllowance: this.toDecimal(dto.transportationAllowance),
                 monthlyBonus: this.toDecimal(dto.monthlyBonus),
@@ -193,6 +194,7 @@ export class EmployeeContractService {
                 ...(dto.startDate !== undefined ? {startDate} : {}),
                 ...(dto.endDate !== undefined ? {endDate} : {}),
                 ...(dto.notes !== undefined ? {notes: dto.notes?.trim() || null} : {}),
+                ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
                 ...(dto.basicSalary !== undefined
                     ? { basicSalary: this.toDecimal(dto.basicSalary) }
                     : {}),

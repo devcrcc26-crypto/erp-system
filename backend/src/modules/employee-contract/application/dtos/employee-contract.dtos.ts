@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { EmployeeContractStatus, EmployeeContractType } from '@prisma/client';
+import { EmployeeContractStatus, EmployeeContractType, SupportedCurrency } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
@@ -64,6 +64,14 @@ export class CreateEmployeeContractDto {
   @MaxLength(2000)
   notes?: string;
 
+  @ApiPropertyOptional({
+    enum: SupportedCurrency,
+    default: SupportedCurrency.ETB,
+  })
+  @IsOptional()
+  @IsEnum(SupportedCurrency)
+  currency?: SupportedCurrency;
+
   @ApiPropertyOptional({ example: 25000 })
   @IsOptional()
   @Type(() => Number)
@@ -126,6 +134,11 @@ export class UpdateEmployeeContractDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @ApiPropertyOptional({ enum: SupportedCurrency })
+  @IsOptional()
+  @IsEnum(SupportedCurrency)
+  currency?: SupportedCurrency;
 
   @ApiPropertyOptional({ example: 25000 })
   @IsOptional()

@@ -1998,6 +1998,14 @@ main::-webkit-scrollbar,
   border-radius: 8px !important;
 }
 
+.erp-contract-currency-select {
+  min-width: 140px;
+}
+
+.erp-contract-currency-select .ant-select-selector {
+  border-radius: 8px !important;
+}
+
 .erp-per-diem-rate-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

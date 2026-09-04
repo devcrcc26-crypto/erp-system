@@ -38,6 +38,7 @@ import {
   formatEmployeeContractStatus,
   formatEmployeeContractType,
 } from '@/lib/utils/employee-contract-display';
+import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
@@ -73,17 +74,7 @@ function formatMoney(
   value: string | number | null | undefined,
   currency: string,
 ): string {
-  if (value == null || value === '') {
-    return '-';
-  }
-  const num = typeof value === 'number' ? value : Number(value);
-  if (Number.isNaN(num)) {
-    return String(value);
-  }
-  return `${currency} ${num.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return formatCurrencyAmount(value, currency);
 }
 
 /**
@@ -110,7 +101,7 @@ export default function EmployeeContractDetailPageContent({
 
   const contract = detailQuery.data;
   const canManage = canViewHr && contract?.status === 'ACTIVE';
-  const currency = t('hr.currency.ETB');
+  const currency = contract?.currency ?? 'ETB';
 
   async function handleTerminate(): Promise<void> {
     const values = await terminateForm.validateFields();
@@ -379,6 +370,9 @@ export default function EmployeeContractDetailPageContent({
           {hasCompensation ? (
             <DetailSection title={t('hr.section.compensation')}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <MetaItem label={t('hr.form.currency')}>
+                  {currency}
+                </MetaItem>
                 <MetaItem label={t('hr.labels.basicSalary')}>
                   {formatMoney(contract.basicSalary, currency)}
                 </MetaItem>
