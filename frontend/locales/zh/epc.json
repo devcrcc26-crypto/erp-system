@@ -194,6 +194,12 @@
         "detailsStepDescription": "选择假期类型与日期，天数会自动计算。",
         "documentsStepDescription": "可选上传证明材料（如医疗证明）。",
         "reviewStepDescription": "确认请假信息与附件后提交。",
+        "exportSuccess": "请假申请 Excel 已下载。",
+        "exportError": "无法生成 Excel 文件，请重试。",
+        "exportSheetName": "请假申请",
+        "balancesExportSuccess": "假期余额 Excel 已下载。",
+        "balancesExportError": "无法生成 Excel 文件，请重试。",
+        "balancesExportSheetName": "假期余额",
         "stats": {
           "total": "全部",
           "pending": "待处理",
@@ -429,6 +435,9 @@
         "contractCount": "{{count}} 份合同",
         "contractCountOne": "1 份合同",
         "emptyFiltered": "没有符合筛选条件的劳动合同",
+        "exportSuccess": "劳动合同 Excel 已下载。",
+        "exportError": "无法生成 Excel 文件，请重试。",
+        "exportSheetName": "劳动合同",
         "stats": {
           "total": "全部",
           "active": "生效中",
@@ -1562,6 +1571,58 @@
     "photoTooLarge": "照片大小不能超过 5 MB。"
   },
   "hr": {
+    "import": {
+      "downloadTemplate": "下载模板",
+      "chooseFile": "选择 .xlsx 文件",
+      "chooseAnotherFile": "选择其他文件",
+      "ready": "就绪",
+      "invalid": "无效",
+      "duplicate": "重复",
+      "duplicateInFile": "文件内重复",
+      "line": "行号",
+      "label": "行",
+      "message": "说明",
+      "skipped": "已跳过 {{count}} 行。",
+      "skippedPlural": "已跳过 {{count}} 行。",
+      "errorsTitle": "导入错误",
+      "errorLine": "第 {{line}} 行（{{label}}）：{{message}}",
+      "downloadError": "无法下载模板。",
+      "readError": "无法读取导入文件。",
+      "importError": "导入失败，请重试。",
+      "contracts": {
+        "title": "从 Excel 导入劳动合同",
+        "description": "上传表格批量创建劳动合同。已有生效合同的员工将跳过。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、contractType、signedAt、startDate。可选：endDate、currency、basicSalary、transportationAllowance、monthlyBonus、netSalary、probationEndDate、governedBy、notes。",
+        "importRows": "导入 {{count}} 份合同",
+        "importRowsPlural": "导入 {{count}} 份合同",
+        "created": "已创建 {{count}} 份合同。",
+        "createdPlural": "已创建 {{count}} 份合同。",
+        "summary": "已导入 {{created}} 份合同"
+      },
+      "leaveRequests": {
+        "title": "从 Excel 导入请假申请",
+        "description": "上传表格代员工提交请假申请。有效行将进入审批流程。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、leaveType、startDate、endDate、days。可选：reason。",
+        "importRows": "导入 {{count}} 条申请",
+        "importRowsPlural": "导入 {{count}} 条申请",
+        "created": "已创建 {{count}} 条请假申请。",
+        "createdPlural": "已创建 {{count}} 条请假申请。",
+        "summary": "已导入 {{created}} 条请假申请"
+      },
+      "leaveBalances": {
+        "title": "从 Excel 导入假期余额",
+        "description": "上传表格设置或更新年假、产假、病假的应享天数与结转天数。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、year、leaveType（ANNUAL|MATERNITY|SICK）、entitled。可选：broughtForward。",
+        "importRows": "导入 {{count}} 条余额",
+        "importRowsPlural": "导入 {{count}} 条余额",
+        "created": "已创建 {{count}} 条余额。",
+        "createdPlural": "已创建 {{count}} 条余额。",
+        "updated": "已更新 {{count}} 条余额。",
+        "updatedPlural": "已更新 {{count}} 条余额。",
+        "summary": "已导入 {{created}} 条假期余额",
+        "summaryWithUpdate": "新建 {{created}} 条，更新 {{updated}} 条"
+      }
+    },
     "assetStatus": {
       "AVAILABLE": "可用",
       "IN_USE": "使用中",

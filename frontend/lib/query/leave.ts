@@ -11,6 +11,7 @@ import {
   apiGetPaginated,
   apiPatch,
   apiPostForm,
+  downloadApiFile,
 } from '@/lib/api/client';
 import type {
   LeaveBalance,
@@ -22,7 +23,11 @@ import type {
   SubmitLeaveRequestPayload,
   UpdateLeaveRequestPayload,
 } from '@/lib/api/leave.types';
-import type { PaginationMeta } from '@/lib/api/types';
+import type {
+  HrImportCommitResult,
+  HrImportPreviewResult,
+  PaginationMeta,
+} from '@/lib/api/types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
@@ -328,4 +333,94 @@ export function useDeleteLeaveRequest() {
       void queryClient.removeQueries({ queryKey: leaveKeys.detail(id) });
     },
   });
+}
+
+const LEAVE_BALANCE_IMPORT_PATH = '/hr/leave-balances/import';
+
+/**
+ * Preview leave request Excel import without writing.
+ */
+export function useLeaveRequestImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${LEAVE_PATH}/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit leave request Excel import (submits on behalf of employees).
+ */
+export function useLeaveRequestImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(`${LEAVE_PATH}/import`, formData);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.myLists() });
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.balances() });
+    },
+  });
+}
+
+/**
+ * Downloads the leave request import template.
+ */
+export async function downloadLeaveRequestImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${LEAVE_PATH}/import/template`,
+    'leave-request-import-template.xlsx',
+  );
+}
+
+/**
+ * Preview leave balance Excel import without writing.
+ */
+export function useLeaveBalanceImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${LEAVE_BALANCE_IMPORT_PATH}/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit leave balance Excel import (upsert entitlements).
+ */
+export function useLeaveBalanceImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(LEAVE_BALANCE_IMPORT_PATH, formData);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.balances() });
+    },
+  });
+}
+
+/**
+ * Downloads the leave balance import template.
+ */
+export async function downloadLeaveBalanceImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${LEAVE_BALANCE_IMPORT_PATH}/template`,
+    'leave-balance-import-template.xlsx',
+  );
 }

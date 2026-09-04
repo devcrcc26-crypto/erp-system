@@ -1,27 +1,34 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Dropdown,
   Grid,
   Input,
   InputNumber,
+  Space,
   Spin,
   Tooltip,
 } from 'antd';
 import {
   CalendarOutlined,
   ClockCircleOutlined,
+  DownloadOutlined,
+  MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
   UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -30,13 +37,20 @@ import type {
   LeaveBalance,
 } from '@/lib/api/leave.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useLeaveBalancesAll } from '@/lib/query/leave';
+import {
+  downloadLeaveBalanceImportTemplate,
+  useLeaveBalanceImport,
+  useLeaveBalanceImportPreview,
+  useLeaveBalancesAll,
+} from '@/lib/query/leave';
 import {
   formatLeaveEmployeeName,
   formatLeaveType,
 } from '@/lib/utils/leave-display';
+import { exportLeaveBalancesExcel } from '@/lib/utils/leave-export-excel';
 import { filterLeaveBalances } from '@/lib/utils/leave-list-filter';
 import { leaveHistoryPath } from '@/lib/utils/leave-history-path';
+import { useAuthStore } from '@/stores/auth.store';
 
 const LOW_BALANCE_THRESHOLD = 5;
 
@@ -111,6 +125,7 @@ function renderBalanceCell(balance: LeaveBalance | null): React.ReactNode {
 export default function LeaveBalancesListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const { params, resetPage, bindMeta } = useTablePagination(10);
@@ -118,6 +133,11 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
   const [year, setYear] = useState(currentYear);
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const authUser = useAuthStore((state) => state.user);
+  const importPreview = useLeaveBalanceImportPreview();
+  const importCommit = useLeaveBalanceImport();
 
   const balancesQuery = useLeaveBalancesAll({ year }, true);
   const allRows = balancesQuery.data ?? [];
@@ -129,6 +149,22 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       }),
     [allRows, appliedSearch],
   );
+
+  const handleExportExcel = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      await exportLeaveBalancesExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.leave.balancesExportSheetName'),
+        rows: filtered,
+      });
+      messageApi.success(t('pages.hr.leave.balancesExportSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.leave.balancesExportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
 
   const meta: PaginationMeta = useMemo(() => {
     const total = filtered.length;
@@ -230,6 +266,20 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
 
   return (
     <>
+      {importOpen ? (
+        <HrImportModal
+          entity="leaveBalances"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void balancesQuery.refetch();
+          }}
+          downloadTemplate={downloadLeaveBalanceImportTemplate}
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       {balancesQuery.isError ? (
         <Alert
           type="error"
@@ -293,6 +343,49 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            {isCompact ? (
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'export',
+                      icon: <DownloadOutlined />,
+                      label: t('users.exportExcel'),
+                      disabled: exporting,
+                      onClick: () => void handleExportExcel(),
+                    },
+                    {
+                      key: 'import',
+                      icon: <UploadOutlined />,
+                      label: t('common.importFromExcel'),
+                      onClick: () => setImportOpen(true),
+                    },
+                  ],
+                }}
+                trigger={['click']}
+              >
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
+                />
+              </Dropdown>
+            ) : (
+              <Space.Compact>
+                <Button
+                  icon={<DownloadOutlined />}
+                  loading={exporting}
+                  onClick={() => void handleExportExcel()}
+                >
+                  {t('users.exportExcel')}
+                </Button>
+                <Button
+                  icon={<UploadOutlined />}
+                  onClick={() => setImportOpen(true)}
+                >
+                  {t('common.importFromExcel')}
+                </Button>
+              </Space.Compact>
+            )}
           </div>
         </div>
 

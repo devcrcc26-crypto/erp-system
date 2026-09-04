@@ -9,7 +9,19 @@ import {
 } from "../api/employee-contract.types";
 import { toQueryString } from "./pm-query-utils";
 import { PaginatedResult } from "../api/types";
-import { apiGet, apiGetPaginated, apiPost, apiPatch, apiDelete } from "../api/client";
+import {
+  apiGet,
+  apiGetPaginated,
+  apiPost,
+  apiPostForm,
+  apiPatch,
+  apiDelete,
+  downloadApiFile,
+} from "../api/client";
+import type {
+  HrImportCommitResult,
+  HrImportPreviewResult,
+} from "../api/types";
 
 const CONTRACT_PATH = "/hr/employee-contracts";
 
@@ -237,4 +249,55 @@ export function useDeleteEmployeeContractRecord() {
       });
     },
   });
+}
+
+/**
+ * Preview employee contract Excel import without writing.
+ */
+export function useEmployeeContractImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${CONTRACT_PATH}/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit employee contract Excel import.
+ */
+export function useEmployeeContractImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return apiPostForm<HrImportCommitResult>(
+        `${CONTRACT_PATH}/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.myLists(),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the employee contract import template.
+ */
+export async function downloadEmployeeContractImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${CONTRACT_PATH}/import/template`,
+    "employee-contract-import-template.xlsx",
+  );
 }

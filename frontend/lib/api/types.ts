@@ -369,6 +369,34 @@ export interface ImportCommitResult {
   errors: ImportCommitError[];
 }
 
+/** Shared preview row for HR Excel imports (contracts, leave, balances). */
+export interface HrImportRowPreview {
+  line: number;
+  label: string;
+  status: ImportRowStatus;
+  message?: string;
+}
+
+export interface HrImportPreviewResult {
+  valid: number;
+  invalid: number;
+  duplicate: number;
+  rows: HrImportRowPreview[];
+}
+
+export interface HrImportCommitError {
+  line: number;
+  label?: string;
+  message: string;
+}
+
+export interface HrImportCommitResult {
+  created: number;
+  updated?: number;
+  skipped: number;
+  errors: HrImportCommitError[];
+}
+
 export interface Role {
   id: string;
   companyId: string;

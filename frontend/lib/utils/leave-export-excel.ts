@@ -8,77 +8,44 @@ import {
   downloadExcelWorkbook,
   formatExportDate,
 } from '@/lib/utils/excel-export';
-import {
-  formatLeaveEmployeeName,
-  formatLeaveStatus,
-  formatLeaveType,
-} from '@/lib/utils/leave-display';
-
-export interface LeaveRequestsExportLabels {
-  sheetName: string;
-  requestNumber: string;
-  employeeEmail: string;
-  employeeName: string;
-  employeeId: string;
-  leaveType: string;
-  startDate: string;
-  endDate: string;
-  days: string;
-  reason: string;
-  status: string;
-  submittedAt: string;
-}
-
-export interface LeaveBalancesExportLabels {
-  sheetName: string;
-  employeeEmail: string;
-  employeeName: string;
-  employeeId: string;
-  year: string;
-  leaveType: string;
-  entitled: string;
-  broughtForward: string;
-  used: string;
-  pending: string;
-  remaining: string;
-}
+import { formatLeaveEmployeeName } from '@/lib/utils/leave-display';
 
 /**
- * Downloads leave requests as Excel.
+ * Downloads leave requests as Excel (import-compatible camelCase headers).
  */
 export async function exportLeaveRequestsExcel(input: {
   companyName: string;
-  labels: LeaveRequestsExportLabels;
+  sheetName: string;
   rows: LeaveRequestListItem[];
 }): Promise<void> {
-  const { labels, rows, companyName } = input;
+  const { rows, companyName, sheetName } = input;
   await downloadExcelWorkbook({
-    sheetName: labels.sheetName,
+    sheetName,
     fileName: buildExportFileName('leave-requests', companyName),
     columns: [
-      { header: labels.requestNumber, key: 'requestNumber', width: 16 },
-      { header: labels.employeeEmail, key: 'employeeEmail', width: 28 },
-      { header: labels.employeeName, key: 'employeeName', width: 22 },
-      { header: labels.employeeId, key: 'employeeId', width: 36 },
-      { header: labels.leaveType, key: 'leaveType', width: 14 },
-      { header: labels.startDate, key: 'startDate', width: 12 },
-      { header: labels.endDate, key: 'endDate', width: 12 },
-      { header: labels.days, key: 'days', width: 10 },
-      { header: labels.reason, key: 'reason', width: 32 },
-      { header: labels.status, key: 'status', width: 12 },
-      { header: labels.submittedAt, key: 'submittedAt', width: 14 },
+      { header: 'requestNumber', key: 'requestNumber', width: 16 },
+      { header: 'employeeEmail', key: 'employeeEmail', width: 28 },
+      { header: 'employeeName', key: 'employeeName', width: 22 },
+      { header: 'employeeId', key: 'employeeId', width: 36 },
+      { header: 'leaveType', key: 'leaveType', width: 14 },
+      { header: 'startDate', key: 'startDate', width: 12 },
+      { header: 'endDate', key: 'endDate', width: 12 },
+      { header: 'days', key: 'days', width: 10 },
+      { header: 'reason', key: 'reason', width: 32 },
+      { header: 'status', key: 'status', width: 12 },
+      { header: 'submittedAt', key: 'submittedAt', width: 14 },
     ],
     rows: rows.map((row) => ({
       requestNumber: cell(row.requestNumber),
       employeeEmail: cell(row.employee?.email),
       employeeName: formatLeaveEmployeeName(row.employee),
       employeeId: cell(row.employeeId),
-      leaveType: formatLeaveType(row.leaveType),
+      leaveType: cell(row.leaveType),
       startDate: formatExportDate(row.startDate),
       endDate: formatExportDate(row.endDate),
       days: cell(row.days),
       reason: cell(row.reason),
-      status: formatLeaveStatus(row.status),
+      status: cell(row.status),
       submittedAt: formatExportDate(row.submittedAt),
     })),
   });
@@ -89,10 +56,10 @@ export async function exportLeaveRequestsExcel(input: {
  */
 export async function exportLeaveBalancesExcel(input: {
   companyName: string;
-  labels: LeaveBalancesExportLabels;
+  sheetName: string;
   rows: EmployeeLeaveBalanceSummary[];
 }): Promise<void> {
-  const { labels, rows, companyName } = input;
+  const { rows, companyName, sheetName } = input;
   const flatRows: Array<Record<string, string | number>> = [];
 
   for (const row of rows) {
@@ -110,7 +77,7 @@ export async function exportLeaveBalancesExcel(input: {
         employeeName: formatLeaveEmployeeName(row.employee),
         employeeId: cell(row.employeeId),
         year: cell(row.year),
-        leaveType: formatLeaveType(entry.key),
+        leaveType: entry.key,
         entitled: cell(entry.balance.entitled),
         broughtForward: cell(entry.balance.broughtForward),
         used: cell(entry.balance.used),
@@ -121,19 +88,19 @@ export async function exportLeaveBalancesExcel(input: {
   }
 
   await downloadExcelWorkbook({
-    sheetName: labels.sheetName,
+    sheetName,
     fileName: buildExportFileName('leave-balances', companyName),
     columns: [
-      { header: labels.employeeEmail, key: 'employeeEmail', width: 28 },
-      { header: labels.employeeName, key: 'employeeName', width: 22 },
-      { header: labels.employeeId, key: 'employeeId', width: 36 },
-      { header: labels.year, key: 'year', width: 10 },
-      { header: labels.leaveType, key: 'leaveType', width: 14 },
-      { header: labels.entitled, key: 'entitled', width: 12 },
-      { header: labels.broughtForward, key: 'broughtForward', width: 14 },
-      { header: labels.used, key: 'used', width: 10 },
-      { header: labels.pending, key: 'pending', width: 10 },
-      { header: labels.remaining, key: 'remaining', width: 12 },
+      { header: 'employeeEmail', key: 'employeeEmail', width: 28 },
+      { header: 'employeeName', key: 'employeeName', width: 22 },
+      { header: 'employeeId', key: 'employeeId', width: 36 },
+      { header: 'year', key: 'year', width: 10 },
+      { header: 'leaveType', key: 'leaveType', width: 14 },
+      { header: 'entitled', key: 'entitled', width: 12 },
+      { header: 'broughtForward', key: 'broughtForward', width: 14 },
+      { header: 'used', key: 'used', width: 10 },
+      { header: 'pending', key: 'pending', width: 10 },
+      { header: 'remaining', key: 'remaining', width: 12 },
     ],
     rows: flatRows,
   });

@@ -5,75 +5,50 @@ import {
   downloadExcelWorkbook,
   formatExportDate,
 } from '@/lib/utils/excel-export';
-import {
-  formatEmployeeContractEmployeeName,
-  formatEmployeeContractStatus,
-  formatEmployeeContractType,
-} from '@/lib/utils/employee-contract-display';
-
-export interface EmployeeContractsExportLabels {
-  sheetName: string;
-  contractNumber: string;
-  employeeEmail: string;
-  employeeName: string;
-  employeeId: string;
-  contractType: string;
-  status: string;
-  signedAt: string;
-  startDate: string;
-  endDate: string;
-  currency: string;
-  basicSalary: string;
-  transportationAllowance: string;
-  monthlyBonus: string;
-  netSalary: string;
-  probationEndDate: string;
-  governedBy: string;
-  notes: string;
-}
+import { formatEmployeeContractEmployeeName } from '@/lib/utils/employee-contract-display';
 
 /**
- * Downloads employee contracts as an Excel file (import-compatible headers).
+ * Downloads employee contracts as Excel (import-compatible camelCase headers).
  */
 export async function exportEmployeeContractsExcel(input: {
   companyName: string;
-  labels: EmployeeContractsExportLabels;
+  sheetName: string;
   rows: EmployeeContractListItem[];
 }): Promise<void> {
-  const { labels, rows, companyName } = input;
+  const { rows, companyName, sheetName } = input;
   await downloadExcelWorkbook({
-    sheetName: labels.sheetName,
+    sheetName,
     fileName: buildExportFileName('employee-contracts', companyName),
     columns: [
-      { header: labels.contractNumber, key: 'contractNumber', width: 16 },
-      { header: labels.employeeEmail, key: 'employeeEmail', width: 28 },
-      { header: labels.employeeName, key: 'employeeName', width: 22 },
-      { header: labels.employeeId, key: 'employeeId', width: 36 },
-      { header: labels.contractType, key: 'contractType', width: 14 },
-      { header: labels.status, key: 'status', width: 12 },
-      { header: labels.signedAt, key: 'signedAt', width: 12 },
-      { header: labels.startDate, key: 'startDate', width: 12 },
-      { header: labels.endDate, key: 'endDate', width: 12 },
-      { header: labels.currency, key: 'currency', width: 10 },
-      { header: labels.basicSalary, key: 'basicSalary', width: 14 },
+      { header: 'contractNumber', key: 'contractNumber', width: 16 },
+      { header: 'employeeEmail', key: 'employeeEmail', width: 28 },
+      { header: 'employeeName', key: 'employeeName', width: 22 },
+      { header: 'employeeId', key: 'employeeId', width: 36 },
+      { header: 'contractType', key: 'contractType', width: 14 },
+      { header: 'status', key: 'status', width: 12 },
+      { header: 'signedAt', key: 'signedAt', width: 12 },
+      { header: 'startDate', key: 'startDate', width: 12 },
+      { header: 'endDate', key: 'endDate', width: 12 },
+      { header: 'currency', key: 'currency', width: 10 },
+      { header: 'basicSalary', key: 'basicSalary', width: 14 },
       {
-        header: labels.transportationAllowance,
+        header: 'transportationAllowance',
         key: 'transportationAllowance',
         width: 18,
       },
-      { header: labels.monthlyBonus, key: 'monthlyBonus', width: 14 },
-      { header: labels.netSalary, key: 'netSalary', width: 14 },
-      { header: labels.probationEndDate, key: 'probationEndDate', width: 14 },
-      { header: labels.governedBy, key: 'governedBy', width: 28 },
-      { header: labels.notes, key: 'notes', width: 28 },
+      { header: 'monthlyBonus', key: 'monthlyBonus', width: 14 },
+      { header: 'netSalary', key: 'netSalary', width: 14 },
+      { header: 'probationEndDate', key: 'probationEndDate', width: 14 },
+      { header: 'governedBy', key: 'governedBy', width: 28 },
+      { header: 'notes', key: 'notes', width: 28 },
     ],
     rows: rows.map((row) => ({
       contractNumber: cell(row.contractNumber),
       employeeEmail: cell(row.employee?.email),
       employeeName: formatEmployeeContractEmployeeName(row.employee),
       employeeId: cell(row.employeeId),
-      contractType: formatEmployeeContractType(row.contractType),
-      status: formatEmployeeContractStatus(row.status),
+      contractType: cell(row.contractType),
+      status: cell(row.status),
       signedAt: formatExportDate(row.signedAt),
       startDate: formatExportDate(row.startDate),
       endDate: formatExportDate(row.endDate),

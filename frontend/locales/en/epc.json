@@ -194,6 +194,12 @@
         "detailsStepDescription": "Choose leave type and dates. Days are calculated automatically.",
         "documentsStepDescription": "Optionally attach supporting documents such as medical certificates.",
         "reviewStepDescription": "Confirm leave details and attachments before submitting.",
+        "exportSuccess": "Leave requests Excel downloaded.",
+        "exportError": "Could not generate the Excel file. Please try again.",
+        "exportSheetName": "Leave Requests",
+        "balancesExportSuccess": "Leave balances Excel downloaded.",
+        "balancesExportError": "Could not generate the Excel file. Please try again.",
+        "balancesExportSheetName": "Leave Balances",
         "stats": {
           "total": "Total",
           "pending": "Pending",
@@ -429,6 +435,9 @@
         "contractCount": "{{count}} contracts",
         "contractCountOne": "1 contract",
         "emptyFiltered": "No employee contracts match your filters",
+        "exportSuccess": "Employee contracts Excel downloaded.",
+        "exportError": "Could not generate the Excel file. Please try again.",
+        "exportSheetName": "Contracts",
         "stats": {
           "total": "Total",
           "active": "Active",
@@ -1562,6 +1571,58 @@
     "photoTooLarge": "Photo must be 5 MB or smaller."
   },
   "hr": {
+    "import": {
+      "downloadTemplate": "Download template",
+      "chooseFile": "Choose .xlsx file",
+      "chooseAnotherFile": "Choose another file",
+      "ready": "Ready",
+      "invalid": "Invalid",
+      "duplicate": "Duplicate",
+      "duplicateInFile": "Duplicate in file",
+      "line": "Line",
+      "label": "Row",
+      "message": "Message",
+      "skipped": "{{count}} row skipped.",
+      "skippedPlural": "{{count}} rows skipped.",
+      "errorsTitle": "Errors during import",
+      "errorLine": "Line {{line}} ({{label}}): {{message}}",
+      "downloadError": "Could not download template.",
+      "readError": "Could not read the import file.",
+      "importError": "Import failed. Please try again.",
+      "contracts": {
+        "title": "Import employee contracts",
+        "description": "Upload a spreadsheet to create employment contracts. Employees who already have an active contract are skipped.",
+        "requiredColumns": "Required: employeeEmail or employeeId, contractType, signedAt, startDate. Optional: endDate, currency, basicSalary, transportationAllowance, monthlyBonus, netSalary, probationEndDate, governedBy, notes.",
+        "importRows": "Import {{count}} contract",
+        "importRowsPlural": "Import {{count}} contracts",
+        "created": "{{count}} contract created.",
+        "createdPlural": "{{count}} contracts created.",
+        "summary": "{{created}} contracts imported"
+      },
+      "leaveRequests": {
+        "title": "Import leave requests",
+        "description": "Upload a spreadsheet to submit leave requests on behalf of employees. Valid rows enter the approval workflow.",
+        "requiredColumns": "Required: employeeEmail or employeeId, leaveType, startDate, endDate, days. Optional: reason.",
+        "importRows": "Import {{count}} request",
+        "importRowsPlural": "Import {{count}} requests",
+        "created": "{{count}} leave request created.",
+        "createdPlural": "{{count}} leave requests created.",
+        "summary": "{{created}} leave requests imported"
+      },
+      "leaveBalances": {
+        "title": "Import leave balances",
+        "description": "Upload a spreadsheet to set or update entitled days and brought-forward balances for annual, maternity, and sick leave.",
+        "requiredColumns": "Required: employeeEmail or employeeId, year, leaveType (ANNUAL|MATERNITY|SICK), entitled. Optional: broughtForward.",
+        "importRows": "Import {{count}} balance",
+        "importRowsPlural": "Import {{count}} balances",
+        "created": "{{count}} balance created.",
+        "createdPlural": "{{count}} balances created.",
+        "updated": "{{count}} balance updated.",
+        "updatedPlural": "{{count}} balances updated.",
+        "summary": "{{created}} leave balances imported",
+        "summaryWithUpdate": "{{created}} created, {{updated}} updated"
+      }
+    },
     "assetStatus": {
       "AVAILABLE": "Available",
       "IN_USE": "In Use",
