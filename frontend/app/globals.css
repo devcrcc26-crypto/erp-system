@@ -1640,6 +1640,144 @@ main::-webkit-scrollbar,
   color: #64748b;
 }
 
+/* Profile leave tab */
+.erp-leave-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-leave-year-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-leave-year-label {
+  font-size: calc(11px * var(--erp-font-scale));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.erp-leave-year-input.ant-input-number {
+  width: 96px;
+  border-radius: 8px;
+}
+
+.erp-leave-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .erp-leave-balance-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.erp-leave-balance-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.erp-leave-balance-card:hover {
+  border-color: #d7dee8;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.erp-leave-balance-card--empty {
+  background: #fbfcfd;
+}
+
+.erp-leave-balance-card--low {
+  border-color: #f3d9a8;
+  background: #fffbeb;
+}
+
+.erp-leave-balance-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-leave-balance-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.erp-leave-balance-label {
+  margin: 0;
+  font-size: calc(11px * var(--erp-font-scale));
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.erp-leave-balance-value {
+  margin: 2px 0 0;
+  line-height: 1;
+}
+
+.erp-leave-balance-remaining {
+  font-size: calc(28px * var(--erp-font-scale));
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-leave-balance-pool {
+  margin-left: 4px;
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.erp-leave-balance-empty {
+  margin: 8px 0 0;
+  font-size: calc(20px * var(--erp-font-scale));
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.erp-leave-balance-track {
+  height: 6px;
+  margin-top: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef2f6;
+}
+
+.erp-leave-balance-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.erp-leave-balance-meta {
+  margin: 0;
+  font-size: calc(12px * var(--erp-font-scale));
+  color: #64748b;
+}
+
+.erp-leave-history-table.erp-data-table .ant-table {
+  border-radius: 0;
+}
+
 @media (max-width: 767px) {
   .erp-users-page .erp-pro-card-toolbar {
     padding: 12px 14px;

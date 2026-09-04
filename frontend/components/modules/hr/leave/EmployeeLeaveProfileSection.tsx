@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Button, InputNumber, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import { CalendarDays } from 'lucide-react';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -31,7 +31,6 @@ import {
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { tokens } from '@/lib/theme/tokens';
 
 const HISTORY_PAGE_SIZE = 10;
 const LOW_BALANCE_THRESHOLD = 5;
@@ -44,6 +43,12 @@ interface EmployeeLeaveProfileSectionProps {
   employeeId?: string;
 }
 
+const BALANCE_ACCENT: Record<string, string> = {
+  ANNUAL: '#1d9e75',
+  MATERNITY: '#be185d',
+  SICK: '#2563eb',
+};
+
 function pickBalance(
   balances: LeaveBalance[],
   leaveType: LeaveType,
@@ -51,81 +56,102 @@ function pickBalance(
   return balances.find((row) => row.leaveType === leaveType) ?? null;
 }
 
+function LeaveProfileSection({
+  title,
+  action,
+  children,
+  bodyClassName = '',
+}: {
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  bodyClassName?: string;
+}): React.ReactNode {
+  return (
+    <div className="erp-employee-section">
+      <div className="erp-employee-section-header">
+        <h3 className="erp-employee-section-title">{title}</h3>
+        {action ? <div className="erp-employee-section-extra">{action}</div> : null}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function BalanceTile({
+  leaveType,
   label,
   balance,
 }: {
+  leaveType: LeaveType;
   label: string;
   balance: LeaveBalance | null;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const accent = BALANCE_ACCENT[leaveType] ?? '#64748b';
 
   if (!balance) {
     return (
-      <div
-        className="rounded-md p-3"
-        style={{
-          border: `1px solid ${tokens.colorBorder}`,
-          background: tokens.colorPageBg,
-        }}
-      >
-        <p
-          className="m-0 text-xs font-medium uppercase tracking-wide"
-          style={{ color: tokens.colorTextTertiary }}
-        >
-          {label}
-        </p>
-        <p
-          className="m-0 mt-2 text-sm"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          —
-        </p>
-      </div>
+      <article className="erp-leave-balance-card erp-leave-balance-card--empty">
+        <div className="erp-leave-balance-card-head">
+          <span
+            className="erp-leave-balance-dot"
+            style={{ background: accent }}
+            aria-hidden
+          />
+          <p className="erp-leave-balance-label">{label}</p>
+        </div>
+        <p className="erp-leave-balance-empty">-</p>
+      </article>
     );
   }
 
-  const isLow = balance.remaining <= LOW_BALANCE_THRESHOLD;
   const pool = balance.entitled + balance.broughtForward;
+  const isLow = balance.remaining <= LOW_BALANCE_THRESHOLD;
+  const pct =
+    pool > 0
+      ? Math.max(0, Math.min(100, Math.round((balance.remaining / pool) * 100)))
+      : 0;
 
   return (
-    <div
-      className="rounded-md p-3"
-      style={{
-        border: `1px solid ${tokens.colorBorder}`,
-        background: tokens.colorCardBg,
-      }}
+    <article
+      className={`erp-leave-balance-card${isLow ? ' erp-leave-balance-card--low' : ''}`}
     >
-      <p
-        className="m-0 text-xs font-medium uppercase tracking-wide"
-        style={{ color: tokens.colorTextTertiary }}
-      >
-        {label}
-      </p>
-      <p className="m-0 mt-2">
+      <div className="erp-leave-balance-card-head">
         <span
-          className="text-2xl font-semibold tabular-nums"
-          style={{ color: isLow ? '#BA7517' : tokens.colorTextPrimary }}
+          className="erp-leave-balance-dot"
+          style={{ background: isLow ? '#ba7517' : accent }}
+          aria-hidden
+        />
+        <p className="erp-leave-balance-label">{label}</p>
+      </div>
+      <p className="erp-leave-balance-value">
+        <span
+          className="erp-leave-balance-remaining"
+          style={{ color: isLow ? '#ba7517' : '#0f172a' }}
         >
           {balance.remaining}
         </span>
-        <span
-          className="ml-1 text-sm"
-          style={{ color: tokens.colorTextTertiary }}
-        >
-          / {pool}
-        </span>
+        <span className="erp-leave-balance-pool">/ {pool}</span>
       </p>
-      <p
-        className="m-0 mt-1 text-xs"
-        style={{ color: tokens.colorTextSecondary }}
-      >
+      <div className="erp-leave-balance-track" aria-hidden>
+        <div
+          className="erp-leave-balance-fill"
+          style={{
+            width: `${pct}%`,
+            background: isLow ? '#ba7517' : accent,
+          }}
+        />
+      </div>
+      <p className="erp-leave-balance-meta">
         {t('hr.leave.usedPending', {
           used: balance.used,
           pending: balance.pending,
         })}
       </p>
-    </div>
+    </article>
   );
 }
 
@@ -197,11 +223,7 @@ export default function EmployeeLeaveProfileSection({
       { leaveType: 'MATERNITY' as const, balance: summary?.maternity ?? null },
       { leaveType: 'SICK' as const, balance: summary?.sick ?? null },
     ];
-  }, [
-    isSelf,
-    myBalancesQuery.data,
-    employeeBalancesQuery.data?.data,
-  ]);
+  }, [isSelf, myBalancesQuery.data, employeeBalancesQuery.data?.data]);
 
   const allHistory = useMemo(() => {
     const rows = isSelf
@@ -233,7 +255,7 @@ export default function EmployeeLeaveProfileSection({
         key: 'requestNumber',
         width: 140,
         render: (value: string) => (
-          <span className="font-medium tabular-nums">{value}</span>
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
       {
@@ -253,7 +275,9 @@ export default function EmployeeLeaveProfileSection({
         dataIndex: 'startDate',
         key: 'startDate',
         width: 120,
-        render: (value: string) => formatProjectDate(value),
+        render: (value: string) => (
+          <span className="erp-users-cell-strong">{formatProjectDate(value)}</span>
+        ),
       },
       {
         title: t('hr.table.endDate'),
@@ -261,7 +285,9 @@ export default function EmployeeLeaveProfileSection({
         key: 'endDate',
         width: 120,
         responsive: ['md'],
-        render: (value: string) => formatProjectDate(value),
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">{formatProjectDate(value)}</span>
+        ),
       },
       {
         title: t('hr.table.days'),
@@ -269,6 +295,9 @@ export default function EmployeeLeaveProfileSection({
         key: 'days',
         width: 72,
         align: 'right',
+        render: (value: number) => (
+          <span className="erp-users-cell-strong tabular-nums">{value}</span>
+        ),
       },
       {
         title: t('common.status'),
@@ -304,12 +333,7 @@ export default function EmployeeLeaveProfileSection({
   }
 
   const historyAction = isSelf ? (
-    <Button
-      type="primary"
-      size="small"
-      onClick={handleNewLeaveRequest}
-      style={{ borderRadius: 2 }}
-    >
+    <Button type="primary" size="small" onClick={handleNewLeaveRequest}>
       {t('hr.buttons.newLeaveRequest')}
     </Button>
   ) : canViewHr ? (
@@ -323,18 +347,12 @@ export default function EmployeeLeaveProfileSection({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <SectionCard
+    <div className="erp-leave-profile">
+      <LeaveProfileSection
         title={t('hr.section.leaveBalance')}
-        bodyClassName="p-4"
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {t('hr.table.year')}
-            </span>
+          <div className="erp-leave-year-control">
+            <span className="erp-leave-year-label">{t('hr.table.year')}</span>
             <InputNumber
               min={2000}
               max={2100}
@@ -345,57 +363,50 @@ export default function EmployeeLeaveProfileSection({
                 }
               }}
               size="small"
-              style={{ width: 96 }}
+              className="erp-leave-year-input"
             />
           </div>
         }
       >
         {balancesError ? (
-          <Alert
-            type="error"
-            showIcon
-            title={errorMessage(balancesError)}
-          />
+          <Alert type="error" showIcon title={errorMessage(balancesError)} />
         ) : balancesLoading ? (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center py-10">
             <Spin />
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="erp-leave-balance-grid">
             {displayBalances.map(({ leaveType, balance }) => (
               <BalanceTile
                 key={leaveType}
+                leaveType={leaveType}
                 label={formatLeaveType(leaveType, t)}
                 balance={balance}
               />
             ))}
           </div>
         )}
-      </SectionCard>
+      </LeaveProfileSection>
 
-      <SectionCard
+      <LeaveProfileSection
         title={t('hr.leave.historyTitle')}
-        bodyClassName="p-0"
         action={historyAction}
+        bodyClassName="!p-0"
       >
         {historyError ? (
           <div className="p-4">
-            <Alert
-              type="error"
-              showIcon
-              title={errorMessage(historyError)}
-            />
+            <Alert type="error" showIcon title={errorMessage(historyError)} />
           </div>
         ) : (
           <DataTable<LeaveRequestListItem>
             rowKey="id"
             size="small"
+            className="erp-pro-table erp-users-table erp-leave-history-table"
             loading={historyLoading}
             columns={columns}
             dataSource={historyRows}
             onRow={(record) => ({
-              onClick: () =>
-                router.push(`/hr/leave-requests/${record.id}`),
+              onClick: () => router.push(`/hr/leave-requests/${record.id}`),
               style: { cursor: 'pointer' },
             })}
             pagination={{
@@ -407,12 +418,15 @@ export default function EmployeeLeaveProfileSection({
             }}
             locale={{
               emptyText: (
-                <TableEmptyState title={t('hr.leave.noHistory')} />
+                <TableEmptyState
+                  icon={<CalendarDays size={28} strokeWidth={1.5} />}
+                  title={t('hr.leave.noHistory')}
+                />
               ),
             }}
           />
         )}
-      </SectionCard>
+      </LeaveProfileSection>
     </div>
   );
 }
