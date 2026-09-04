@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Skeleton, Space } from 'antd';
+import { Alert, Button, Grid, Skeleton, Space } from 'antd';
 import {
   CalendarOutlined,
   EditOutlined,
@@ -142,6 +142,9 @@ export default function EmployeeDetailPageContent({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
   const currentUserQuery = useCurrentUser();
@@ -254,24 +257,27 @@ export default function EmployeeDetailPageContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
       <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
               type="text"
               icon={<ArrowLeft size={16} />}
               onClick={() => router.push('/users')}
               aria-label={t('users.backToList')}
             >
-              {t('users.backToList')}
+              {isNarrow ? undefined : t('users.backToList')}
             </Button>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
             {showResend ? (
               <Button
                 loading={resendInvitation.isPending}
                 onClick={() => void handleResend()}
+                className="erp-employee-toolbar-resend"
               >
-                {t('users.resendVerification')}
+                {isCompact
+                  ? t('users.resendVerificationShort')
+                  : t('users.resendVerification')}
               </Button>
             ) : null}
             <Space.Compact>
@@ -279,15 +285,17 @@ export default function EmployeeDetailPageContent({
                 type="primary"
                 icon={<EditOutlined />}
                 onClick={() => router.push(`/users/${user.id}/edit`)}
+                aria-label={t('common.update')}
               >
-                {t('common.update')}
+                {isNarrow ? undefined : t('common.update')}
               </Button>
               <Button
                 danger
                 icon={<UserDeleteOutlined />}
                 onClick={() => setConfirmDelete(true)}
+                aria-label={t('common.delete')}
               >
-                {t('common.delete')}
+                {isNarrow ? undefined : t('common.delete')}
               </Button>
             </Space.Compact>
           </div>
@@ -300,11 +308,11 @@ export default function EmployeeDetailPageContent({
             firstName={user.firstName}
             lastName={user.lastName}
             canEdit
-            size={88}
+            size={isNarrow ? 72 : 88}
             variant="hero"
           />
-          <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               {user.employeeId ? (
                 <span className="erp-users-id-chip">{user.employeeId}</span>
               ) : null}
@@ -313,8 +321,8 @@ export default function EmployeeDetailPageContent({
                 <span className="erp-users-role-tag">{primaryRole}</span>
               ) : null}
             </div>
-            <div className="flex min-w-0 flex-wrap items-baseline gap-2">
-              <h2 className="erp-users-name m-0 text-[22px] leading-tight">
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0">
                 {fullName}
               </h2>
               {user.chineseName ? (
@@ -395,7 +403,9 @@ export default function EmployeeDetailPageContent({
             onClick={() => setActiveTab('overview')}
           >
             <UserOutlined />
-            {t('users.tabOverview')}
+            <span className="erp-employee-tab-label">
+              {t('users.tabOverview')}
+            </span>
           </button>
           <button
             type="button"
@@ -404,7 +414,7 @@ export default function EmployeeDetailPageContent({
             onClick={() => setActiveTab('leave')}
           >
             <CalendarOutlined />
-            {t('users.tabLeave')}
+            <span className="erp-employee-tab-label">{t('users.tabLeave')}</span>
           </button>
           {showPerDiemTab ? (
             <button
@@ -414,7 +424,9 @@ export default function EmployeeDetailPageContent({
               onClick={() => setActiveTab('perDiem')}
             >
               <WalletOutlined />
-              {t('users.tabPerDiem')}
+              <span className="erp-employee-tab-label">
+                {isNarrow ? t('users.tabPerDiemShort') : t('users.tabPerDiem')}
+              </span>
             </button>
           ) : null}
         </div>

@@ -1393,6 +1393,10 @@ main::-webkit-scrollbar,
   border-right: none;
 }
 
+.erp-employee-meta-bar .erp-users-stat:nth-child(-n + 3) {
+  border-bottom: 1px solid #eef1f4;
+}
+
 .erp-employee-meta-value {
   margin: 4px 0 0;
   font-size: calc(14px * var(--erp-font-scale));
@@ -1404,35 +1408,39 @@ main::-webkit-scrollbar,
   text-overflow: ellipsis;
 }
 
+.erp-employee-hero-name {
+  font-size: calc(22px * var(--erp-font-scale));
+  line-height: 1.25;
+  word-break: break-word;
+}
+
 @media (max-width: 900px) {
   .erp-employee-meta-bar {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .erp-employee-meta-bar .erp-users-stat:nth-child(2) {
+  .erp-employee-meta-bar .erp-users-stat {
+    border-right: 1px solid #eef1f4;
+    border-bottom: 1px solid #eef1f4;
+  }
+
+  .erp-employee-meta-bar .erp-users-stat:nth-child(2n) {
     border-right: none;
   }
 
-  .erp-employee-meta-bar .erp-users-stat:nth-child(1),
-  .erp-employee-meta-bar .erp-users-stat:nth-child(2),
-  .erp-employee-meta-bar .erp-users-stat:nth-child(3),
-  .erp-employee-meta-bar .erp-users-stat:nth-child(4) {
-    border-bottom: 1px solid #eef1f4;
+  .erp-employee-meta-bar .erp-users-stat:nth-last-child(-n + 2) {
+    border-bottom: none;
   }
 }
 
 @media (max-width: 520px) {
-  .erp-employee-meta-bar {
-    grid-template-columns: 1fr;
-  }
-
   .erp-employee-meta-bar .erp-users-stat {
-    border-right: none;
-    border-bottom: 1px solid #eef1f4;
+    padding: 12px 14px;
   }
 
-  .erp-employee-meta-bar .erp-users-stat:last-child {
-    border-bottom: none;
+  .erp-employee-meta-value {
+    font-size: calc(13px * var(--erp-font-scale));
+    white-space: normal;
   }
 }
 
@@ -1441,7 +1449,14 @@ main::-webkit-scrollbar,
   border: 0;
   border-bottom: 1px solid #eef1f4;
   border-radius: 12px 12px 0 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.erp-employee-detail-page .erp-employee-tabbar::-webkit-scrollbar {
+  display: none;
 }
 
 .erp-employee-detail-page .erp-employee-tabbar button[aria-selected='true'] {
@@ -1501,6 +1516,100 @@ main::-webkit-scrollbar,
   border: 1px solid #e8ebef;
   border-radius: 10px;
   background: #fbfcfd;
+}
+
+@media (max-width: 767px) {
+  .erp-employee-detail-page {
+    gap: 12px;
+  }
+
+  .erp-employee-detail-page .erp-pro-card-toolbar,
+  .erp-employee-toolbar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .erp-employee-toolbar-back {
+    flex: 0 0 auto;
+  }
+
+  .erp-employee-toolbar-actions {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .erp-employee-toolbar-resend {
+    max-width: 100%;
+  }
+
+  .erp-employee-hero {
+    padding: 16px 14px 18px;
+    gap: 14px;
+  }
+
+  .erp-employee-hero-name {
+    font-size: calc(18px * var(--erp-font-scale));
+  }
+
+  .erp-employee-detail-page .erp-employee-tabbar {
+    flex-wrap: nowrap;
+  }
+
+  .erp-employee-detail-page .erp-employee-tabbar button {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    padding: 10px 8px;
+    gap: 6px;
+    font-size: calc(12px * var(--erp-font-scale));
+  }
+
+  .erp-employee-tab-panel {
+    padding: 14px 12px;
+  }
+
+  .erp-employee-section-header {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+
+  .erp-employee-section-body {
+    padding: 12px;
+  }
+
+  .erp-employee-section--docs .erp-employee-section-body {
+    padding: 12px;
+  }
+
+  .erp-employee-detail-page .erp-profile-docs-grid,
+  .erp-employee-detail-page .erp-leave-balance-grid,
+  .erp-employee-detail-page .erp-per-diem-rate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-employee-detail-page .erp-leave-year-control {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .erp-employee-toolbar-actions .ant-space-compact {
+    width: 100%;
+  }
+
+  .erp-employee-toolbar-actions .ant-space-compact .ant-btn {
+    flex: 1 1 auto;
+  }
+
+  .erp-employee-toolbar-actions {
+    flex-wrap: wrap;
+  }
+
+  .erp-employee-toolbar-resend {
+    width: 100%;
+  }
 }
 
 /* Profile documents - file cards */
