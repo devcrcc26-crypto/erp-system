@@ -3765,6 +3765,76 @@ main::-webkit-scrollbar,
   }
 }
 
+/* Flight application detail — four-stat meta bar */
+@media (min-width: 901px) {
+  .erp-flight-detail-page .erp-employee-meta-bar {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .erp-flight-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n) {
+    border-right: 1px solid #eef1f4;
+  }
+
+  .erp-flight-detail-page .erp-employee-meta-bar .erp-users-stat:last-child {
+    border-right: none;
+  }
+
+  .erp-flight-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(-n + 3) {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .erp-flight-detail-page .erp-employee-meta-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .erp-flight-detail-page .erp-employee-meta-bar .erp-users-stat {
+    border-right: 1px solid #eef1f4;
+    border-bottom: 1px solid #eef1f4;
+  }
+
+  .erp-flight-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(2n) {
+    border-right: none;
+  }
+
+  .erp-flight-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-last-child(-n + 2) {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .erp-flight-detail-page .erp-employee-hero-name {
+    font-size: calc(17px * var(--erp-font-scale));
+  }
+
+  .erp-flight-detail-page .erp-users-email {
+    text-align: center;
+  }
+}
+
+.erp-flight-form-page .ant-btn {
+  border-radius: 8px;
+}
+
+.erp-flight-form-page .ant-input,
+.erp-flight-form-page .ant-input-affix-wrapper,
+.erp-flight-form-page .ant-input-textarea textarea,
+.erp-flight-form-page .ant-select-selector,
+.erp-flight-form-page .ant-picker {
+  border-radius: 8px !important;
+}
+
+@media (max-width: 767px) {
+  .erp-flight-form-page .erp-flight-form-actions .ant-btn {
+    width: 100%;
+  }
+}
+
 /* Overtime add/edit entry drawer */
 .erp-overtime-entry-drawer .ant-drawer-header {
   min-height: 64px;

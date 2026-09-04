@@ -331,9 +331,9 @@ export default function FlightTicketAssignmentPanel({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)] m-0">
+    <div className="erp-employee-section overflow-hidden">
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">
           {t('hr.table.ticket')}
         </h3>
         <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">

@@ -9,14 +9,13 @@ import {
   Radio,
   Row,
   Select,
-  Typography,
 } from 'antd';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { tokens } from '@/lib/theme/tokens';
 import type { FlightTripDetailsValues } from './flight-stepper.types';
 
 /**
- * Step 1 — trip routing and travel metadata.
+ * Step 1 — trip routing and travel metadata (FormLayout chrome from parent).
  */
 export default function FlightTripDetailsStep({
   values,
@@ -40,26 +39,19 @@ export default function FlightTripDetailsStep({
   }
 
   return (
-    <div
-      className="rounded-lg p-3 sm:p-4"
-      style={{
-        border: `1px solid ${tokens.colorBorder}`,
-        background: tokens.colorCardBg,
-      }}
+    <FormLayout
+      variant="pro"
+      dense
+      title={t('hr.form.tripDetails')}
+      description={t('pages.hr.flight.tripStepDescription')}
     >
-      <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-        {t('hr.form.tripDetails')}
-      </Typography.Title>
-
-      <Row gutter={16}>
+      <Row gutter={[16, 0]}>
         <Col xs={24} sm={12}>
           <div className="mb-4">
-            <Typography.Text
-              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-            >
+            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.tripType')}{' '}
-              <span style={{ color: tokens.colorRed600 }}>*</span>
-            </Typography.Text>
+              <span className="text-[#DC2626]">*</span>
+            </label>
             <Radio.Group
               value={values.tripType}
               onChange={(e) =>
@@ -76,7 +68,7 @@ export default function FlightTripDetailsStep({
           </div>
         </Col>
         <Col xs={24} sm={12}>
-          <div className="mb-4 flex items-center pt-7">
+          <div className="mb-4 flex items-center sm:pt-7">
             <Checkbox
               checked={values.isInternational}
               onChange={(e) => patch({ isInternational: e.target.checked })}
@@ -87,15 +79,13 @@ export default function FlightTripDetailsStep({
         </Col>
       </Row>
 
-      <Row gutter={16}>
+      <Row gutter={[16, 0]}>
         <Col xs={24} sm={12}>
           <div className="mb-4">
-            <Typography.Text
-              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-            >
+            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.originCountry')}{' '}
-              <span style={{ color: tokens.colorRed600 }}>*</span>
-            </Typography.Text>
+              <span className="text-[#DC2626]">*</span>
+            </label>
             <Input
               value={values.originCountry}
               onChange={(e) => patch({ originCountry: e.target.value })}
@@ -106,12 +96,10 @@ export default function FlightTripDetailsStep({
         </Col>
         <Col xs={24} sm={12}>
           <div className="mb-4">
-            <Typography.Text
-              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-            >
+            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.originCity')}{' '}
-              <span style={{ color: tokens.colorRed600 }}>*</span>
-            </Typography.Text>
+              <span className="text-[#DC2626]">*</span>
+            </label>
             <Input
               value={values.originCity}
               onChange={(e) => patch({ originCity: e.target.value })}
@@ -122,34 +110,26 @@ export default function FlightTripDetailsStep({
         </Col>
       </Row>
 
-      <Row gutter={16}>
-        <Col xs={24}>
-          <div className="mb-4">
-            <Typography.Text
-              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-            >
-              {t('hr.form.destination')}{' '}
-              <span style={{ color: tokens.colorRed600 }}>*</span>
-            </Typography.Text>
-            <Input
-              value={values.destination}
-              onChange={(e) => patch({ destination: e.target.value })}
-              placeholder={t('hr.placeholder.enterDestination')}
-              maxLength={100}
-            />
-          </div>
-        </Col>
-      </Row>
+      <div className="mb-4">
+        <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+          {t('hr.form.destination')}{' '}
+          <span className="text-[#DC2626]">*</span>
+        </label>
+        <Input
+          value={values.destination}
+          onChange={(e) => patch({ destination: e.target.value })}
+          placeholder={t('hr.placeholder.enterDestination')}
+          maxLength={100}
+        />
+      </div>
 
-      <Row gutter={16}>
+      <Row gutter={[16, 0]}>
         <Col xs={24} sm={values.tripType === 'ROUND_TRIP' ? 12 : 24}>
           <div className="mb-4">
-            <Typography.Text
-              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-            >
+            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.departureDate')}{' '}
-              <span style={{ color: tokens.colorRed600 }}>*</span>
-            </Typography.Text>
+              <span className="text-[#DC2626]">*</span>
+            </label>
             <DatePicker
               className="w-full"
               showTime={{ format: 'HH:mm' }}
@@ -162,12 +142,10 @@ export default function FlightTripDetailsStep({
         {values.tripType === 'ROUND_TRIP' ? (
           <Col xs={24} sm={12}>
             <div className="mb-4">
-              <Typography.Text
-                style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-              >
+              <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
                 {t('hr.form.returnDate')}{' '}
-                <span style={{ color: tokens.colorRed600 }}>*</span>
-              </Typography.Text>
+                <span className="text-[#DC2626]">*</span>
+              </label>
               <DatePicker
                 className="w-full"
                 showTime={{ format: 'HH:mm' }}
@@ -180,14 +158,12 @@ export default function FlightTripDetailsStep({
         ) : null}
       </Row>
 
-      <Row gutter={16}>
+      <Row gutter={[16, 0]}>
         <Col xs={24} sm={12}>
           <div className="mb-4">
-            <Typography.Text
-              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-            >
+            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.kmAtDeparture')}
-            </Typography.Text>
+            </label>
             <Input
               type="number"
               min={0}
@@ -195,8 +171,7 @@ export default function FlightTripDetailsStep({
               onChange={(e) => {
                 const raw = e.target.value;
                 patch({
-                  kmAtDeparture:
-                    raw === '' ? null : Number(raw),
+                  kmAtDeparture: raw === '' ? null : Number(raw),
                 });
               }}
               placeholder={t('hr.placeholder.enterKmReading')}
@@ -205,11 +180,9 @@ export default function FlightTripDetailsStep({
         </Col>
         <Col xs={24} sm={12}>
           <div className="mb-4">
-            <Typography.Text
-              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-            >
+            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.kmAtReturn')}
-            </Typography.Text>
+            </label>
             <Input
               type="number"
               min={0}
@@ -231,11 +204,9 @@ export default function FlightTripDetailsStep({
       Number.isFinite(values.kmAtDeparture) &&
       Number.isFinite(values.kmAtReturn) ? (
         <div className="mb-4">
-          <Typography.Text
-            style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-          >
+          <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
             {t('hr.form.kmDifference')}
-          </Typography.Text>
+          </label>
           <Input
             disabled
             value={String(values.kmAtReturn - values.kmAtDeparture)}
@@ -244,12 +215,9 @@ export default function FlightTripDetailsStep({
       ) : null}
 
       <div className="mb-4">
-        <Typography.Text
-          style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-        >
-          {t('hr.form.purpose')}{' '}
-          <span style={{ color: tokens.colorRed600 }}>*</span>
-        </Typography.Text>
+        <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+          {t('hr.form.purpose')} <span className="text-[#DC2626]">*</span>
+        </label>
         <Input.TextArea
           rows={3}
           maxLength={2000}
@@ -260,13 +228,11 @@ export default function FlightTripDetailsStep({
         />
       </div>
 
-      <div>
-        <Typography.Text
-          style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-        >
+      <div className="mb-0">
+        <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
           {t('hr.form.ticketClass')}{' '}
-          <span style={{ color: tokens.colorRed600 }}>*</span>
-        </Typography.Text>
+          <span className="text-[#DC2626]">*</span>
+        </label>
         <Select
           className="w-full"
           options={ticketClassOptions}
@@ -275,6 +241,6 @@ export default function FlightTripDetailsStep({
           placeholder={t('hr.form.ticketClass')}
         />
       </div>
-    </div>
+    </FormLayout>
   );
 }

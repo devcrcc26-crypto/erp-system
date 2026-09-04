@@ -1,9 +1,9 @@
 'use client';
 
-import { Checkbox, Input, Typography } from 'antd';
+import { Checkbox, Input } from 'antd';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { tokens } from '@/lib/theme/tokens';
 import type { FlightAdditionalValues } from './flight-stepper.types';
 
 /**
@@ -25,18 +25,13 @@ export default function FlightAdditionalStep({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div
-        className="rounded-lg p-3 sm:p-4"
-        style={{
-          border: `1px solid ${tokens.colorBorder}`,
-          background: tokens.colorCardBg,
-        }}
+    <div className="flex flex-col gap-4">
+      <FormLayout
+        variant="pro"
+        dense
+        title={t('hr.section.additionalOptions')}
+        description={t('pages.hr.flight.additionalStepDescription')}
       >
-        <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-          {t('hr.section.additionalOptions')}
-        </Typography.Title>
-
         <div className="mb-3">
           <Checkbox
             checked={values.accommodationRequired}
@@ -51,11 +46,9 @@ export default function FlightAdditionalStep({
 
         {values.accommodationRequired ? (
           <div className="mb-4">
-            <Typography.Text
-              style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-            >
+            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.accommodationDetails')}
-            </Typography.Text>
+            </label>
             <Input.TextArea
               rows={3}
               maxLength={1000}
@@ -68,7 +61,7 @@ export default function FlightAdditionalStep({
           </div>
         ) : null}
 
-        <div className="mb-3">
+        <div className="mb-4">
           <Checkbox
             checked={values.perDiemRequired}
             onChange={(e) => patch({ perDiemRequired: e.target.checked })}
@@ -78,12 +71,10 @@ export default function FlightAdditionalStep({
           </Checkbox>
         </div>
 
-        <div>
-          <Typography.Text
-            style={{ display: 'block', marginBottom: 8, fontSize: 13 }}
-          >
+        <div className="mb-0">
+          <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
             {t('hr.form.notes')}
-          </Typography.Text>
+          </label>
           <Input.TextArea
             rows={3}
             maxLength={2000}
@@ -94,24 +85,14 @@ export default function FlightAdditionalStep({
             disabled={disabled}
           />
         </div>
-      </div>
+      </FormLayout>
 
-      <div
-        className="rounded-lg p-3 sm:p-4"
-        style={{
-          border: `1px solid ${tokens.colorBorder}`,
-          background: tokens.colorCardBg,
-        }}
+      <FormLayout
+        variant="pro"
+        dense
+        title={t('hr.labels.supportingAttachments')}
+        description={t('hr.form.supportingDocuments')}
       >
-        <Typography.Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>
-          {t('hr.labels.supportingAttachments')}
-        </Typography.Title>
-        <Typography.Paragraph
-          type="secondary"
-          style={{ marginBottom: 12, fontSize: 13 }}
-        >
-          {t('hr.form.supportingDocuments')}
-        </Typography.Paragraph>
         <FileUploadInput
           files={values.files}
           onChange={(files) => patch({ files })}
@@ -119,7 +100,7 @@ export default function FlightAdditionalStep({
           multiple
           disabled={disabled}
         />
-      </div>
+      </FormLayout>
     </div>
   );
 }

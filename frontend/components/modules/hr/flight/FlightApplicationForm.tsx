@@ -49,7 +49,7 @@ const INITIAL_ADDITIONAL: FlightAdditionalValues = {
 };
 
 /**
- * Multi-step flight application form (trip → passengers → review & submit).
+ * Multi-step flight application form — same StepperForm chrome as Add Employee.
  */
 export function FlightApplicationForm({
   onSuccess,
@@ -102,25 +102,25 @@ export function FlightApplicationForm({
         validate: (): boolean => {
           const errors: string[] = [];
           if (!tripDetails.originCountry.trim()) {
-            errors.push('Origin country is required');
+            errors.push(t('hr.validation.originCountryRequired'));
           }
           if (!tripDetails.originCity.trim()) {
-            errors.push('Origin city is required');
+            errors.push(t('hr.validation.originCityRequired'));
           }
           if (!tripDetails.destination.trim()) {
-            errors.push('Destination is required');
+            errors.push(t('hr.validation.destinationRequired'));
           }
           if (!tripDetails.departureDate) {
-            errors.push('Departure date is required');
+            errors.push(t('hr.validation.departureDateRequired'));
           }
           if (
             tripDetails.tripType === 'ROUND_TRIP' &&
             !tripDetails.returnDate
           ) {
-            errors.push('Return date is required for round trips');
+            errors.push(t('hr.validation.returnDateRequired'));
           }
           if (!tripDetails.purpose.trim()) {
-            errors.push('Purpose is required');
+            errors.push(t('hr.validation.purposeRequiredFlight'));
           }
           if (errors.length > 0) {
             for (const error of errors) {
@@ -144,7 +144,7 @@ export function FlightApplicationForm({
         ),
         validate: (): boolean => {
           if (passengers.length === 0) {
-            messageApi.error('At least one passenger is required');
+            messageApi.error(t('hr.validation.passengersRequired'));
             return false;
           }
           if (tripDetails.isInternational) {
@@ -153,9 +153,9 @@ export function FlightApplicationForm({
             );
             if (missing.length > 0) {
               messageApi.error(
-                `Passport number required for: ${missing
-                  .map((p) => p.name)
-                  .join(', ')}`,
+                t('hr.validation.passportRequiredFor', {
+                  names: missing.map((p) => p.name).join(', '),
+                }),
               );
               return false;
             }
@@ -166,7 +166,7 @@ export function FlightApplicationForm({
       {
         title: t('hr.form.reviewSubmit'),
         content: (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
             <FlightAdditionalStep
               values={additional}
               onChange={setAdditional}
@@ -195,7 +195,7 @@ export function FlightApplicationForm({
 
   async function handleSubmit(): Promise<void> {
     if (!tripDetails.departureDate) {
-      messageApi.error('Departure date is required');
+      messageApi.error(t('hr.validation.departureDateRequired'));
       return;
     }
     try {
@@ -241,24 +241,28 @@ export function FlightApplicationForm({
         })),
         files: additional.files,
       });
-      messageApi.success('Flight application submitted');
+      messageApi.success(t('hr.messages.flightApplicationSubmitted'));
       onSuccess?.(created);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to submit flight application', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToSubmitFlightApplication'),
+        messageApi,
+      );
     }
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col">
+    <div className="flex min-h-0 w-full flex-col">
       {submitMutation.isError ? (
         <Alert
           type="error"
           showIcon
-          className="mx-0 mt-0"
-          message={
+          className="mb-4"
+          title={
             submitMutation.error instanceof ApiRequestError
               ? submitMutation.error.message
-              : 'Submit failed'
+              : t('hr.messages.failedToSubmitFlightApplication')
           }
         />
       ) : null}

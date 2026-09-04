@@ -1,18 +1,44 @@
 'use client';
 
-import { Card, Descriptions } from 'antd';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { tokens } from '@/lib/theme/tokens';
 import { formatTicketClass, formatTripType } from '@/lib/utils/flight-display';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   FlightAdditionalValues,
   FlightPassengerValues,
   FlightTripDetailsValues,
 } from './flight-stepper.types';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
+
+function ReviewItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): React.ReactNode {
+  return (
+    <div className="min-w-0">
+      <p
+        className="mb-0.5 text-xs font-medium uppercase tracking-wide"
+        style={{ color: tokens.colorTextTertiary }}
+      >
+        {label}
+      </p>
+      <p
+        className="m-0 whitespace-pre-wrap break-words text-sm"
+        style={{ color: tokens.colorTextPrimary }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
 
 /**
- * Read-only review card shown on the final flight application step.
+ * Read-only review section on the final flight application step.
+ * Uses a simple grid (not Ant Descriptions) to avoid span/column warnings.
  */
 export default function FlightSummary({
   tripDetails,
@@ -24,78 +50,127 @@ export default function FlightSummary({
   additional: FlightAdditionalValues;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+
+  const origin =
+    [tripDetails.originCity, tripDetails.originCountry]
+      .filter(Boolean)
+      .join(', ') || '—';
+
+  const kmDifference =
+    tripDetails.kmAtDeparture != null && tripDetails.kmAtReturn != null
+      ? String(tripDetails.kmAtReturn - tripDetails.kmAtDeparture)
+      : '—';
+
   return (
-    <Card
+    <FormLayout
+      variant="pro"
+      dense
       title={t('hr.labels.reviewApplication')}
-      size="small"
-      styles={{
-        body: { background: tokens.colorGray50 },
-      }}
+      description={t('pages.hr.flight.reviewStepDescription')}
     >
-      <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
-        <Descriptions.Item label={t('hr.labels.tripType')}>
-          {formatTripType(tripDetails.tripType, t)}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.international')}>
-          {tripDetails.isInternational ? t('hr.labels.yes') : t('hr.labels.no')}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.origin')}>
-          {[tripDetails.originCity, tripDetails.originCountry]
-            .filter(Boolean)
-            .join(', ') || '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.destination')}>
-          {tripDetails.destination || '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.departure')}>
-          {tripDetails.departureDate
-            ? formatDisplayDateTime(tripDetails.departureDate.toISOString())
-            : '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.return')}>
-          {tripDetails.returnDate
-            ? formatDisplayDateTime(tripDetails.returnDate.toISOString())
-            : t('hr.tripType.ONE_WAY')}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.form.kmAtDeparture')}>
-          {tripDetails.kmAtDeparture != null
-            ? String(tripDetails.kmAtDeparture)
-            : '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.form.kmAtReturn')}>
-          {tripDetails.kmAtReturn != null
-            ? String(tripDetails.kmAtReturn)
-            : '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.form.kmDifference')}>
-          {tripDetails.kmAtDeparture != null &&
-          tripDetails.kmAtReturn != null
-            ? String(tripDetails.kmAtReturn - tripDetails.kmAtDeparture)
-            : '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.purpose')} span={2}>
-          {tripDetails.purpose || '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.ticketClass')}>
-          {formatTicketClass(tripDetails.ticketClass, t)}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.passengers')}>
-          {passengers.length > 0
-            ? passengers.map((p) => p.name).join(', ')
-            : '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.accommodation')}>
-          {additional.accommodationRequired ? t('hr.labels.required') : t('hr.labels.notRequired')}
-        </Descriptions.Item>
-        <Descriptions.Item label={t('hr.labels.perDiem')}>
-          {additional.perDiemRequired ? t('hr.labels.required') : t('hr.labels.notRequired')}
-        </Descriptions.Item>
-        {additional.files.length > 0 ? (
-          <Descriptions.Item label={t('hr.section.attachments')} span={2}>
-            {additional.files.map((f) => f.name).join(', ')}
-          </Descriptions.Item>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <ReviewItem
+          label={t('hr.labels.tripType')}
+          value={formatTripType(tripDetails.tripType, t)}
+        />
+        <ReviewItem
+          label={t('hr.labels.international')}
+          value={
+            tripDetails.isInternational ? t('hr.labels.yes') : t('hr.labels.no')
+          }
+        />
+        <ReviewItem label={t('hr.labels.origin')} value={origin} />
+        <ReviewItem
+          label={t('hr.labels.destination')}
+          value={tripDetails.destination || '—'}
+        />
+        <ReviewItem
+          label={t('hr.labels.departure')}
+          value={
+            tripDetails.departureDate
+              ? formatDisplayDateTime(tripDetails.departureDate.toISOString())
+              : '—'
+          }
+        />
+        <ReviewItem
+          label={t('hr.labels.return')}
+          value={
+            tripDetails.returnDate
+              ? formatDisplayDateTime(tripDetails.returnDate.toISOString())
+              : t('hr.tripType.ONE_WAY')
+          }
+        />
+        <ReviewItem
+          label={t('hr.form.kmAtDeparture')}
+          value={
+            tripDetails.kmAtDeparture != null
+              ? String(tripDetails.kmAtDeparture)
+              : '—'
+          }
+        />
+        <ReviewItem
+          label={t('hr.form.kmAtReturn')}
+          value={
+            tripDetails.kmAtReturn != null
+              ? String(tripDetails.kmAtReturn)
+              : '—'
+          }
+        />
+        <ReviewItem label={t('hr.form.kmDifference')} value={kmDifference} />
+        <ReviewItem
+          label={t('hr.labels.ticketClass')}
+          value={formatTicketClass(tripDetails.ticketClass, t)}
+        />
+        <div className="sm:col-span-2">
+          <ReviewItem
+            label={t('hr.labels.purpose')}
+            value={tripDetails.purpose || '—'}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <ReviewItem
+            label={t('hr.labels.passengers')}
+            value={
+              passengers.length > 0
+                ? passengers.map((p) => p.name).join(', ')
+                : '—'
+            }
+          />
+        </div>
+        <ReviewItem
+          label={t('hr.labels.accommodation')}
+          value={
+            additional.accommodationRequired
+              ? additional.accommodationDetails.trim() ||
+                t('hr.labels.required')
+              : t('hr.labels.notRequired')
+          }
+        />
+        <ReviewItem
+          label={t('hr.labels.perDiem')}
+          value={
+            additional.perDiemRequired
+              ? t('hr.labels.required')
+              : t('hr.labels.notRequired')
+          }
+        />
+        {additional.notes.trim() ? (
+          <div className="sm:col-span-2">
+            <ReviewItem
+              label={t('hr.labels.notes')}
+              value={additional.notes.trim()}
+            />
+          </div>
         ) : null}
-      </Descriptions>
-    </Card>
+        {additional.files.length > 0 ? (
+          <div className="sm:col-span-2">
+            <ReviewItem
+              label={t('hr.section.attachments')}
+              value={additional.files.map((f) => f.name).join(', ')}
+            />
+          </div>
+        ) : null}
+      </div>
+    </FormLayout>
   );
 }
