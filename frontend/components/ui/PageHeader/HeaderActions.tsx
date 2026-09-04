@@ -125,7 +125,7 @@ export default function HeaderActions({
     <button
       type="button"
       className={[
-        'flex shrink-0 items-center rounded-lg transition-colors',
+        'erp-shell-profile-trigger flex shrink-0 items-center rounded-[10px] transition-colors',
         compact ? 'gap-0 p-0.5' : 'gap-2 px-1.5 py-1',
         menuOpen
           ? 'bg-[var(--color-teal-50)]'
@@ -144,17 +144,14 @@ export default function HeaderActions({
           color: tokens.colorBlue800,
           fontWeight: 600,
           fontSize: 12,
-          border: menuOpen ? `2px solid ${tokens.colorPrimary}` : '2px solid transparent',
+          border: menuOpen
+            ? `2px solid ${tokens.colorPrimary}`
+            : '2px solid transparent',
         }}
       >
         {avatarInitial}
       </Avatar>
-      <div
-        className={[
-          'text-[13px] text-left',
-          compact ? 'hidden' : 'hidden md:block',
-        ].join(' ')}
-      >
+      <div className="erp-shell-profile-meta hidden text-left text-[13px] xl:block">
         <p
           className="m-0 max-w-[140px] truncate font-medium leading-[1.4]"
           style={{ color: tokens.colorTextPrimary }}
@@ -173,7 +170,7 @@ export default function HeaderActions({
 
   const dropdownContent = (
     <div
-      className="flex w-[300px] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)] sm:w-[320px]"
+      className="flex w-[min(320px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
       onClick={(event) => event.stopPropagation()}
     >
       <div className="border-b border-[rgba(0,0,0,0.06)] px-4 py-4">
@@ -240,7 +237,7 @@ export default function HeaderActions({
             >
               {t('common.language')}
             </span>
-            <LanguageControl compact={compact} />
+            <LanguageControl compact />
           </div>
           <div className="flex items-center justify-between gap-3 rounded-lg bg-[var(--color-surface-secondary)] px-3 py-2.5">
             <span
@@ -249,7 +246,7 @@ export default function HeaderActions({
             >
               {t('common.fontSize')}
             </span>
-            <FontSizeControl compact={compact} />
+            <FontSizeControl compact />
           </div>
         </div>
       </div>
@@ -270,13 +267,10 @@ export default function HeaderActions({
   );
 
   return (
-    <div
-      className={[
-        'flex shrink-0 items-center',
-        compact ? 'gap-1' : 'gap-2',
-      ].join(' ')}
-    >
-      <LanguageControl compact={compact} />
+    <div className="erp-shell-header-actions-cluster flex shrink-0 items-center gap-0.5 sm:gap-1.5">
+      <div className="hidden sm:block">
+        <LanguageControl compact />
+      </div>
       <NotificationPanel />
       <Dropdown
         open={menuOpen}

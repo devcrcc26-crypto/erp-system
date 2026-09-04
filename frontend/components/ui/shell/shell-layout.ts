@@ -13,7 +13,7 @@ export const RAIL_EXPANDED_WIDTH =
  * Shared utility-bar height (px). Aligns the sidebar brand band, the sidebar
  * domain-title band, and the main content utility bar on one horizontal seam.
  */
-export const SHELL_TOP_HEADER_HEIGHT = 48;
+export const SHELL_TOP_HEADER_HEIGHT = 56;
 
 /** Project context sidebar width (px). */
 export const CONTEXT_SIDEBAR_WIDTH = 220;

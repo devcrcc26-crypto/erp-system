@@ -2281,6 +2281,10 @@
       "totalHours": "Total Hours",
       "taskDescription": "Task Description",
       "liveHoursBreakdown": "Live breakdown — Regular {{regular}} · Night {{night}} · Weekend {{weekend}} · Holiday {{holiday}}",
+      "overtimeEntryHint": "Record overtime worked during {{period}}. Hours are categorized automatically from date, time, and holiday flag.",
+      "overtimeEntryDateHint": "Must fall within {{period}}.",
+      "overtimeHolidayHint": "Mark this day as a public holiday so hours count under holiday overtime.",
+      "hoursPreviewEmpty": "Select date and start/end times to preview the hour categories.",
       "vendor": "Vendor",
       "vendorContact": "Vendor Contact",
       "requiredByDate": "Required By",
@@ -2810,6 +2814,7 @@
       "selectProjectSealDateNeeded": "Select date needed",
       "selectProjectSealUrgency": "Select urgency",
       "enterReason": "Optional - describe the reason for leave",
+      "overtimeTaskDescription": "Describe the overtime work performed",
       "enterNotes": "Any additional information for the approver",
       "enterKmReading": "e.g. 45200",
       "enterCategory": "e.g. Transport, Meals, Accommodation",
@@ -2906,7 +2911,8 @@
       "sealedDocument": "Sealed Document",
       "contractDetails": "Contract Details",
       "compensation": "Compensation",
-      "entryDetails": "Entry details"
+      "entryDetails": "Entry details",
+      "hoursPreview": "Hours preview"
     }
   }
 }

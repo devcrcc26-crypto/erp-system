@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo } from 'react';
-import { Button, Drawer, Form } from 'antd';
+import { Button, Drawer, Form, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import OvertimeEntryForm, {
   type OvertimeEntryFormValues,
@@ -13,6 +13,7 @@ import {
   useAddOvertimeEntry,
   useUpdateOvertimeEntry,
 } from '@/lib/query/overtime';
+import { detailDrawerStyles } from '@/lib/theme/layout';
 import {
   calculateOvertimeHours,
   parseOvertimeDateOnly,
@@ -43,6 +44,11 @@ export default function OvertimeEntryFormDrawer({
   const addMutation = useAddOvertimeEntry(sheetId);
   const updateMutation = useUpdateOvertimeEntry(sheetId);
   const saving = addMutation.isPending || updateMutation.isPending;
+
+  const periodLabel = useMemo(() => {
+    const monthName = t(`hr.months.${sheetMonth}`);
+    return `${monthName} ${sheetYear}`;
+  }, [sheetMonth, sheetYear, t]);
 
   const disabledDate = useCallback(
     (current: Dayjs | null): boolean => {
@@ -124,31 +130,55 @@ export default function OvertimeEntryFormDrawer({
     }
   }
 
+  const title = editingEntry
+    ? t('hr.form.editEntry')
+    : t('hr.buttons.addEntry');
+
   return (
     <Drawer
       open={open}
       title={
-        editingEntry ? t('hr.form.editEntry') : t('hr.buttons.addEntry')
+        <div className="min-w-0 py-1">
+          <div className="text-[15px] font-semibold leading-snug text-[var(--color-text-primary)]">
+            {title}
+          </div>
+          <div className="mt-0.5 text-[12px] font-normal text-[var(--color-text-secondary)]">
+            {periodLabel}
+          </div>
+        </div>
       }
       size={520}
-      className="erp-responsive-drawer"
+      className="erp-responsive-drawer erp-overtime-entry-drawer"
+      styles={detailDrawerStyles}
       onClose={onClose}
       destroyOnHidden
-      extra={
-        <Button
-          type="primary"
-          loading={saving}
-          onClick={() => form.submit()}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.save')}
-        </Button>
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button onClick={onClose} disabled={saving}>
+            {t('hr.buttons.cancel')}
+          </Button>
+          <Button
+            type="primary"
+            loading={saving}
+            onClick={() => form.submit()}
+          >
+            {t('hr.buttons.save')}
+          </Button>
+        </div>
       }
     >
+      <Typography.Paragraph
+        type="secondary"
+        style={{ marginTop: 0, marginBottom: 16, fontSize: 13 }}
+      >
+        {t('hr.labels.overtimeEntryHint', { period: periodLabel })}
+      </Typography.Paragraph>
+
       <OvertimeEntryForm
         form={form}
         disabledDate={disabledDate}
         liveHours={liveHours}
+        periodLabel={periodLabel}
         onFinish={handleSubmit}
       />
     </Drawer>

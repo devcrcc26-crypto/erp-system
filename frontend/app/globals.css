@@ -431,67 +431,47 @@ main::-webkit-scrollbar,
   overflow: hidden !important;
 }
 
-/* Shell main content header - users chrome */
+/* Shell main content header — light chrome, responsive */
 .erp-shell-header {
   background: #ffffff;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid var(--color-sidebar-border, #e8ebef);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
 }
 
-.erp-shell-header-bar {
+.erp-shell-header-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 8px 12px;
   background: #ffffff;
 }
 
-.erp-shell-header-menu-btn {
+.erp-shell-header-leading {
   display: flex;
+  order: 1;
+  min-width: 0;
+  flex: 1 1 auto;
   align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
+  gap: 10px;
+}
+
+.erp-shell-header-trailing {
+  display: flex;
+  order: 2;
   flex-shrink: 0;
-  border: 1px solid #e8ebef;
-  border-radius: 10px;
-  background: #fbfcfd;
-  color: #64748b;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.erp-shell-header-menu-btn:hover {
-  background: #e1f5ee;
-  border-color: #b8e6d5;
-  color: #0f6e56;
-}
-
-.erp-shell-header-title {
-  margin: 0;
-  font-size: calc(17px * var(--erp-font-scale));
-  font-weight: 650;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  color: #0f172a;
-}
-
-.erp-shell-header-title--mobile {
-  font-size: calc(15px * var(--erp-font-scale));
-}
-
-.erp-shell-header-subtitle {
-  margin: 2px 0 0;
-  font-size: calc(12px * var(--erp-font-scale));
-  line-height: 1.3;
-  color: #64748b;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  align-items: center;
+  gap: 6px;
 }
 
 .erp-shell-header-extra {
   display: flex;
+  order: 3;
+  flex: 1 1 100%;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
 }
 
@@ -500,21 +480,168 @@ main::-webkit-scrollbar,
   font-weight: 600;
 }
 
+.erp-shell-header-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-sidebar-border, #e8ebef);
+  border-radius: 10px;
+  background: #f5f7f9;
+  color: #64748b;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* Match IconRail: sidebar is `lg:block`, so hamburger only below lg */
+@media (max-width: 1023.98px) {
+  .erp-shell-header-menu-btn {
+    display: flex;
+  }
+}
+
+.erp-shell-header-menu-btn:hover {
+  background: #e1f5ee;
+  border-color: #b8e6d5;
+  color: #0f6e56;
+}
+
+.erp-shell-header-titles {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+
+.erp-shell-header-title {
+  margin: 0;
+  font-size: calc(15px * var(--erp-font-scale));
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erp-shell-header-subtitle {
+  margin: 0;
+  max-width: 100%;
+  font-size: calc(12px * var(--erp-font-scale));
+  line-height: 1.3;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile: hide long subtitles so the bar stays one line */
+@media (max-width: 639px) {
+  .erp-shell-header-subtitle {
+    display: none;
+  }
+}
+
 .erp-shell-breadcrumb-bar {
-  background: #fbfcfd;
-  border-bottom: 1px solid #eef1f4;
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px 8px;
+  background: #f8fafb;
+  border-top: 1px solid #eef1f4;
+}
+
+@media (min-width: 640px) {
+  .erp-shell-header-main {
+    padding: 0 16px;
+    min-height: 56px;
+  }
+
+  .erp-shell-header-title {
+    font-size: calc(16px * var(--erp-font-scale));
+  }
+
+  .erp-shell-breadcrumb-bar {
+    padding-inline: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .erp-shell-header-main {
+    flex-wrap: nowrap;
+    padding: 0 24px;
+    gap: 16px;
+  }
+
+  .erp-shell-header-leading {
+    gap: 12px;
+  }
+
+  .erp-shell-header-extra {
+    order: 2;
+    flex: 0 1 auto;
+    justify-content: flex-end;
+  }
+
+  .erp-shell-header-trailing {
+    order: 3;
+    gap: 10px;
+  }
+
+  .erp-shell-header-title {
+    font-size: calc(17px * var(--erp-font-scale));
+  }
+
+  .erp-shell-breadcrumb-bar {
+    padding: 7px 24px 9px;
+  }
 }
 
 /* Shell breadcrumb - Ant Design trail in main header */
 .shell-breadcrumb.ant-breadcrumb {
-  font-size: calc(13px * var(--erp-font-scale));
+  font-size: calc(12px * var(--erp-font-scale));
   font-weight: 400;
   line-height: 1.4;
 }
 
+@media (min-width: 640px) {
+  .shell-breadcrumb.ant-breadcrumb {
+    font-size: calc(13px * var(--erp-font-scale));
+  }
+}
+
 .shell-breadcrumb.ant-breadcrumb ol {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   row-gap: 2px;
+  overflow: hidden;
+}
+
+.shell-breadcrumb.ant-breadcrumb li {
+  display: inline-flex;
+  max-width: 42vw;
+}
+
+.shell-breadcrumb.ant-breadcrumb li .ant-breadcrumb-link,
+.shell-breadcrumb.ant-breadcrumb li > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .shell-breadcrumb.ant-breadcrumb li {
+    max-width: none;
+  }
+
+  .shell-breadcrumb.ant-breadcrumb ol {
+    flex-wrap: wrap;
+  }
 }
 
 .shell-breadcrumb.ant-breadcrumb li,
@@ -530,7 +657,7 @@ main::-webkit-scrollbar,
 
 .shell-breadcrumb.ant-breadcrumb .ant-breadcrumb-separator {
   margin-inline: 6px;
-  font-size: calc(13px * var(--erp-font-scale));
+  font-size: calc(12px * var(--erp-font-scale));
   color: var(--color-text-tertiary);
 }
 
@@ -541,7 +668,7 @@ main::-webkit-scrollbar,
 }
 
 .shell-breadcrumb-link:hover {
-  color: var(--color-text-primary) !important;
+  color: var(--color-teal-600, #0f6e56) !important;
 }
 
 /* Shell nav links - override Ant Design / browser default blue */
@@ -3269,4 +3396,31 @@ main::-webkit-scrollbar,
   .erp-contract-detail-body {
     padding: 12px 14px 16px;
   }
+}
+
+/* Overtime add/edit entry drawer */
+.erp-overtime-entry-drawer .ant-drawer-header {
+  min-height: 64px;
+  height: auto;
+  align-items: flex-start;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.erp-overtime-entry-drawer .ant-drawer-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-overtime-entry-drawer .erp-overtime-holiday-check.ant-checkbox-wrapper {
+  align-items: flex-start;
+  margin-inline-start: 0;
+}
+
+.erp-overtime-entry-drawer .erp-overtime-holiday-check .ant-checkbox {
+  margin-top: 2px;
+}
+
+.erp-overtime-entry-drawer .ant-drawer-footer .ant-btn {
+  border-radius: 8px;
 }

@@ -6,10 +6,14 @@ import MainNavPanel from '@/components/ui/shell/MainNavPanel';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useRailExpanded } from '@/hooks/useRailExpanded';
 import { tokens } from '@/lib/theme/tokens';
-import { RAIL_EXPANDED_WIDTH } from '@/components/ui/shell/shell-layout';
+import {
+  NAV_DOMAIN_RAIL_WIDTH,
+  RAIL_EXPANDED_WIDTH,
+} from '@/components/ui/shell/shell-layout';
 
 /**
  * Desktop sidebar shell. Hidden below lg — mobile uses MobileNavDrawer.
+ * Expand/collapse lives under the icon rail only (not the module panel).
  */
 export default function IconRail(): React.ReactNode {
   const { isExpanded, layoutWidth, toggleExpanded } = useRailExpanded();
@@ -39,28 +43,45 @@ export default function IconRail(): React.ReactNode {
         </div>
 
         <div
-          className="flex shrink-0 items-center justify-center py-2"
+          className="flex shrink-0"
           style={{
             borderTop: `1px solid ${tokens.colorSidebarBorder}`,
-            background: tokens.colorSidebarBg,
+            background: tokens.colorSidebarRailBg,
           }}
         >
-          <Tooltip title={toggleLabel} placement="right">
-            <button
-              type="button"
-              onClick={toggleExpanded}
-              aria-label={toggleLabel}
-              aria-pressed={isExpanded}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent transition-colors hover:bg-[var(--color-sidebar-hover)]"
-              style={{ color: tokens.colorSidebarIcon }}
-            >
-              {isExpanded ? (
-                <LeftOutlined style={{ fontSize: 12 }} />
-              ) : (
-                <RightOutlined style={{ fontSize: 12 }} />
-              )}
-            </button>
-          </Tooltip>
+          <div
+            className="flex items-center justify-center py-2"
+            style={{
+              width: NAV_DOMAIN_RAIL_WIDTH,
+              borderRight: isExpanded
+                ? `1px solid ${tokens.colorSidebarBorder}`
+                : undefined,
+            }}
+          >
+            <Tooltip title={toggleLabel} placement="right">
+              <button
+                type="button"
+                onClick={toggleExpanded}
+                aria-label={toggleLabel}
+                aria-pressed={isExpanded}
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent transition-colors hover:bg-[var(--color-sidebar-hover)]"
+                style={{ color: tokens.colorSidebarIcon }}
+              >
+                {isExpanded ? (
+                  <LeftOutlined style={{ fontSize: 12 }} />
+                ) : (
+                  <RightOutlined style={{ fontSize: 12 }} />
+                )}
+              </button>
+            </Tooltip>
+          </div>
+          {isExpanded ? (
+            <div
+              className="min-w-0 flex-1"
+              style={{ background: tokens.colorSidebarBg }}
+              aria-hidden
+            />
+          ) : null}
         </div>
       </aside>
     </div>

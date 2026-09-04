@@ -66,7 +66,7 @@ export default function NotificationPanel(): React.ReactNode {
 
   const dropdownContent = (
     <div
-      className="flex w-[380px] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+      className="flex w-[min(380px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
       onClick={(event) => event.stopPropagation()}
     >
       <div className="border-b border-[rgba(0,0,0,0.06)] px-4 pb-3 pt-4">

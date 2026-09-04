@@ -2280,6 +2280,10 @@
       "totalHours": "总时长",
       "taskDescription": "工作内容",
       "liveHoursBreakdown": "实时分类 — 常规 {{regular}} · 夜间 {{night}} · 周末 {{weekend}} · 假日 {{holiday}}",
+      "overtimeEntryHint": "记录 {{period}} 期间的加班。系统会根据日期、时间和假日标记自动分类工时。",
+      "overtimeEntryDateHint": "必须在 {{period}} 范围内。",
+      "overtimeHolidayHint": "若当天为公共假日，请勾选，以便计入假日加班。",
+      "hoursPreviewEmpty": "选择日期和起止时间后即可预览工时分类。",
       "vendor": "供应商",
       "vendorContact": "供应商联系方式",
       "requiredByDate": "需求日期",
@@ -2810,6 +2814,7 @@
       "selectProjectSealDateNeeded": "请选择需用日期",
       "selectProjectSealUrgency": "请选择紧急程度",
       "enterReason": "可选 - 请描述请假原因",
+      "overtimeTaskDescription": "请描述加班工作内容",
       "enterNotes": "填写任何需要告知审批人的信息",
       "enterKmReading": "例如：45200",
       "enterCategory": "例如：交通、餐饮、住宿",
@@ -2906,7 +2911,8 @@
       "sealedDocument": "已用印文件",
       "contractDetails": "合同详情",
       "compensation": "薪酬",
-      "entryDetails": "记录详情"
+      "entryDetails": "记录详情",
+      "hoursPreview": "工时预览"
     }
   }
 }
