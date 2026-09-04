@@ -39,10 +39,8 @@ import type {
   FlightApplicationListItem,
   FlightApplicationStatus,
 } from '@/lib/api/flight.types';
-import {
-  useFlightApplications,
-  useFlightNeedsTicketCount,
-} from '@/lib/query/flight';
+import type { PaginationMeta } from '@/lib/api/types';
+import { useFlightApplicationsAll } from '@/lib/query/flight';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
   flightStatusVariant,
@@ -52,20 +50,19 @@ import {
   getCurrentStepLabel,
   tripTypeVariant,
 } from '@/lib/utils/flight-display';
+import {
+  filterFlightApplications,
+  statusesForFlightMode,
+  type FlightStatusMode,
+} from '@/lib/utils/flight-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 type ListTab = 'ALL' | 'NEEDS_TICKET';
-type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
 
-const PENDING_STATUSES: FlightApplicationStatus[] = [
-  'SUBMITTED',
-  'IN_REVIEW',
-  'RETURNED',
-  'DRAFT',
-];
-const APPROVED_STATUSES: FlightApplicationStatus[] = ['APPROVED'];
-const REJECTED_STATUSES: FlightApplicationStatus[] = ['REJECTED', 'CANCELLED'];
+const PENDING_STATUSES = statusesForFlightMode('pending');
+const APPROVED_STATUSES = statusesForFlightMode('approved');
+const REJECTED_STATUSES = statusesForFlightMode('rejected');
 
 const STAT_ACCENT = {
   teal: { bg: '#E1F5EE', fg: '#1D9E75' },
@@ -74,19 +71,6 @@ const STAT_ACCENT = {
   red: { bg: '#FCEBEB', fg: '#D32F2F' },
   blue: { bg: '#E6F1FB', fg: '#185FA5' },
 } as const;
-
-function statusesForMode(mode: StatusMode): FlightApplicationStatus[] {
-  switch (mode) {
-    case 'pending':
-      return PENDING_STATUSES;
-    case 'approved':
-      return APPROVED_STATUSES;
-    case 'rejected':
-      return REJECTED_STATUSES;
-    default:
-      return [];
-  }
-}
 
 function FlightStat({
   label,
@@ -126,6 +110,7 @@ function FlightStat({
 
 /**
  * Flight applications list — Users chrome (stat bar, filter row, rounded table).
+ * Search and filters run on the frontend against a full list fetch.
  */
 export default function FlightApplicationsListPageContent(): React.ReactNode {
   const router = useRouter();
@@ -140,7 +125,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [listTab, setListTab] = useState<ListTab>('ALL');
-  const [statusMode, setStatusMode] = useState<StatusMode>('all');
+  const [statusMode, setStatusMode] = useState<FlightStatusMode>('all');
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [internationalFilter, setInternationalFilter] = useState<
@@ -153,58 +138,16 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
 
   const needsTicketTab = listTab === 'NEEDS_TICKET' && canViewHr;
 
-  const statsQuery = useFlightApplications(
-    { page: 1, limit: 100 },
-    canViewHr || canAccess,
-  );
-
-  const listParams = useMemo(
-    () => ({
-      ...params,
-      search: appliedSearch.trim() || undefined,
-      status: needsTicketTab
-        ? undefined
-        : statusesForMode(statusMode).length > 0
-          ? statusesForMode(statusMode)
-          : undefined,
-      needsTicket: needsTicketTab ? true : undefined,
-      isInternational:
-        internationalFilter === 'true'
-          ? true
-          : internationalFilter === 'false'
-            ? false
-            : undefined,
-      submittedById: canViewHr ? submittedById : undefined,
-      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
-      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
-    }),
-    [
-      params,
-      appliedSearch,
-      statusMode,
-      internationalFilter,
-      submittedById,
-      dateRange,
-      canViewHr,
-      needsTicketTab,
-    ],
-  );
-
-  const listQuery = useFlightApplications(listParams, canViewHr || canAccess);
-  const needsTicketCountQuery = useFlightNeedsTicketCount(canViewHr);
-  const needsTicketCount = needsTicketCountQuery.data ?? 0;
+  const listQuery = useFlightApplicationsAll(canViewHr || canAccess);
 
   const usersQuery = useUsersDirectory(
     { page: 1, limit: 100 },
     { enabled: canViewHr },
   );
 
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-  const totalCount = meta?.total ?? rows.length;
+  const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
-    const allRows = statsQuery.data?.data ?? [];
     const pending = allRows.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
@@ -214,14 +157,62 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     const rejected = allRows.filter((row) =>
       REJECTED_STATUSES.includes(row.status),
     ).length;
+    const needsTicket = allRows.filter(
+      (row) => row.needsTicketAttachment === true,
+    ).length;
     return {
-      all: statsQuery.data?.meta?.total ?? allRows.length,
+      all: allRows.length,
       pending,
       approved,
       rejected,
-      needsTicket: needsTicketCount,
+      needsTicket,
     };
-  }, [statsQuery.data, needsTicketCount]);
+  }, [allRows]);
+
+  const filtered = useMemo(
+    () =>
+      filterFlightApplications(allRows, {
+        search: appliedSearch,
+        statusMode: needsTicketTab ? 'all' : statusMode,
+        needsTicket: needsTicketTab || undefined,
+        isInternational:
+          internationalFilter === 'true'
+            ? true
+            : internationalFilter === 'false'
+              ? false
+              : undefined,
+        submittedById: canViewHr ? submittedById : undefined,
+        dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+        dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+      }),
+    [
+      allRows,
+      appliedSearch,
+      statusMode,
+      needsTicketTab,
+      internationalFilter,
+      submittedById,
+      dateRange,
+      canViewHr,
+    ],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const columns: ColumnsType<FlightApplicationListItem> = useMemo(
     () => [
@@ -346,7 +337,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     [canViewHr, isNarrow, t],
   );
 
-  function handleStatusMode(mode: StatusMode): void {
+  function handleStatusMode(mode: FlightStatusMode): void {
     setListTab('ALL');
     setStatusMode(mode);
     resetPage();
@@ -468,7 +459,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
             <span className="erp-users-count-pill">
-              {totalCount.toLocaleString()}
+              {meta.total.toLocaleString()}
             </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">

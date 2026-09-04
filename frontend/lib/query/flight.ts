@@ -52,6 +52,40 @@ function buildListQuery(params: ListFlightApplicationsParams): string {
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the flight applications list endpoint (filter locally).
+ */
+async function fetchAllFlightApplicationPages(): Promise<
+  FlightApplicationListItem[]
+> {
+  const first = await apiGetPaginated<FlightApplicationListItem>(
+    `${FLIGHT_PATH}${buildListQuery({ page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<FlightApplicationListItem>(
+        `${FLIGHT_PATH}${buildListQuery({
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
 /**
  * Paginated flight applications.
  */
@@ -65,6 +99,18 @@ export function useFlightApplications(
       apiGetPaginated<FlightApplicationListItem>(
         `${FLIGHT_PATH}${buildListQuery(params)}`,
       ),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * All flight applications (all pages) for client-side filter/search.
+ */
+export function useFlightApplicationsAll(enabled = true) {
+  return useQuery({
+    queryKey: [...flightKeys.lists(), 'all'] as const,
+    queryFn: () => fetchAllFlightApplicationPages(),
     enabled,
     retry: false,
   });
