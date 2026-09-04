@@ -1,111 +1,41 @@
 'use client';
 
-import { Alert, Button, Form, Input } from 'antd';
+import { Button } from 'antd';
 import { useRouter } from 'next/navigation';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
-import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
-import { useAppMessage } from '@/hooks/use-app-message';
+import ExpenseClaimForm from '@/components/modules/hr/expense-claim/ExpenseClaimForm';
+import type { ExpenseClaimDetail } from '@/lib/api/expense-claim.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { ApiRequestError } from '@/lib/api/errors';
-import { useCreateExpenseClaim } from '@/lib/query/expense-claim';
-import { notifyApiError } from '@/lib/utils/notify-api-error';
-
-interface ClaimFormValues {
-  title: string;
-  description?: string;
-}
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 
 /**
- * Standalone expense claim creation form under Approvals → New Request.
- * Creates a draft, then continues to the claim detail page to add line
- * items (with live currency conversion) and submit for approval.
+ * New expense claim page — same page chrome as Add Employee (`/users/new`).
  */
 export default function ExpenseClaimFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
-  const messageApi = useAppMessage();
-  const [form] = Form.useForm<ClaimFormValues>();
-  const createMutation = useCreateExpenseClaim();
 
-  async function handleSubmit(values: ClaimFormValues): Promise<void> {
-    try {
-      const created = await createMutation.mutateAsync({
-        title: values.title.trim(),
-        description: values.description?.trim() || undefined,
-      });
-      messageApi.success(t('hr.messages.draftClaimCreated'));
+  useSetHeaderExtra(null);
+
+  function handleSuccess(created: ExpenseClaimDetail): void {
+    if (created.approvalRequestId) {
+      router.push(`/approvals/${created.approvalRequestId}`);
+    } else {
       router.push(`/hr/expense-claims/${created.id}`);
-    } catch (error: unknown) {
-      notifyApiError(
-        error,
-        t('hr.messages.failedToCreateExpenseClaim'),
-        messageApi,
-      );
     }
   }
 
   return (
-    <HrFormPageShell
-      title={t('pages.hr.expenseClaim.new')}
-      description={t('pages.hr.expenseClaim.formDescription')}
-      cancelLabel={t('hr.buttons.cancel')}
-      cancelHref="/approvals/new"
-      headerExtra={
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-expense-claim-form-page">
+      <div className="flex shrink-0 items-center justify-end gap-2">
         <Button
-          type="primary"
-          loading={createMutation.isPending}
-          onClick={() => form.submit()}
-          style={{ borderRadius: 0 }}
+          onClick={() => router.push('/approvals/new')}
+          className="shrink-0"
+          style={{ borderRadius: 8 }}
         >
-          {t('hr.buttons.next')}
+          {t('hr.buttons.cancel')}
         </Button>
-      }
-    >
-      {createMutation.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          style={{ marginBottom: 16 }}
-          title={
-            createMutation.error instanceof ApiRequestError
-              ? createMutation.error.message
-              : t('hr.messages.failedToCreateExpenseClaim')
-          }
-        />
-      ) : null}
-
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-        <SectionCard
-          title={t('hr.section.requestDetails')}
-          bodyClassName="px-3 py-4 sm:px-5"
-        >
-          <Form
-            form={form}
-            layout="vertical"
-            requiredMark={false}
-            onFinish={(values) => void handleSubmit(values)}
-          >
-            <Form.Item
-              name="title"
-              label={t('hr.form.title')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.titleRequired'),
-                },
-              ]}
-            >
-              <Input
-                placeholder={t('hr.placeholder.enterTitle')}
-                maxLength={200}
-              />
-            </Form.Item>
-            <Form.Item name="description" label={t('hr.form.description')}>
-              <Input.TextArea rows={4} maxLength={4000} showCount />
-            </Form.Item>
-          </Form>
-        </SectionCard>
       </div>
-    </HrFormPageShell>
+      <ExpenseClaimForm onSuccess={handleSuccess} />
+    </div>
   );
 }

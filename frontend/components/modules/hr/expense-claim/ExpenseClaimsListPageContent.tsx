@@ -5,6 +5,7 @@ import {
   Alert,
   Button,
   Dropdown,
+  Grid,
   Input,
   Select,
   Spin,
@@ -21,19 +22,17 @@ import {
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ExpenseClaimListItem } from '@/lib/api/expense-claim.types';
@@ -44,7 +43,6 @@ import {
 } from '@/lib/query/expense-claim';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useUsersDirectory } from '@/lib/query/users';
-import { tokens } from '@/lib/theme/tokens';
 import {
   expenseClaimStatusVariant,
   formatEtbAmount,
@@ -68,13 +66,58 @@ const PENDING_STATUSES = statusesForExpenseClaimMode('pending');
 const APPROVED_STATUSES = statusesForExpenseClaimMode('approved');
 const REJECTED_STATUSES = statusesForExpenseClaimMode('rejected');
 
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
+
+function ExpenseClaimStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
+
 /**
- * Company or personal expense claim list — layout aligned with Users page.
+ * Expense claims list — Users chrome (stat bar, filter row, rounded table).
  */
 export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
   const canViewHr = useCanViewHr();
   const canManage = canViewHr;
   const currentUser = useCurrentUser();
@@ -88,8 +131,6 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [deletingClaim, setDeletingClaim] =
     useState<ExpenseClaimListItem | null>(null);
-
-  useSetHeaderExtra(null);
 
   const listQuery = useExpenseClaimsAll({}, true);
 
@@ -218,14 +259,9 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         title: t('hr.table.claimNumber'),
         dataIndex: 'claimNumber',
         key: 'claimNumber',
-        width: 120,
+        width: 130,
         render: (value: string) => (
-          <span
-            className="font-[family-name:var(--font-mono)] text-xs font-medium"
-            style={{ color: tokens.colorPrimary }}
-          >
-            {value}
-          </span>
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
       ...(canViewHr
@@ -236,18 +272,12 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
               width: 220,
               responsive: ['md'],
               render: (_: unknown, row: ExpenseClaimListItem) => (
-                <div className="min-w-0 py-0.5">
-                  <p
-                    className="m-0 text-sm font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
-                  >
+                <div className="min-w-0">
+                  <p className="erp-users-cell-strong m-0">
                     {formatExpenseClaimEmployeeName(row.employee)}
                   </p>
                   {row.employee?.email ? (
-                    <p
-                      className="m-0 truncate text-xs"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
+                    <p className="erp-users-email m-0 mt-0.5">
                       {row.employee.email}
                     </p>
                   ) : null}
@@ -262,9 +292,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         key: 'title',
         ellipsis: true,
         render: (value: string) => (
-          <span className="text-sm" style={{ color: tokens.colorTextPrimary }}>
-            {value}
-          </span>
+          <span className="erp-users-cell-strong">{value}</span>
         ),
       },
       {
@@ -274,6 +302,9 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         width: 80,
         align: 'right',
         responsive: ['md'],
+        render: (value: number) => (
+          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+        ),
       },
       {
         title: t('hr.table.total'),
@@ -282,7 +313,9 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         width: 140,
         align: 'right',
         render: (value: number | string) => (
-          <span className="text-sm font-medium">{formatEtbAmount(value)}</span>
+          <span className="erp-users-cell-strong tabular-nums">
+            {formatEtbAmount(value)}
+          </span>
         ),
       },
       {
@@ -303,7 +336,11 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         key: 'createdAt',
         width: 120,
         responsive: ['lg'],
-        render: (value: string) => formatProjectDate(value),
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">
+            {formatProjectDate(value)}
+          </span>
+        ),
       },
       {
         title: '',
@@ -316,7 +353,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
           }
           return (
             <div
-              className="flex items-center justify-end"
+              className="erp-table-row-actions flex items-center justify-end"
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
@@ -326,7 +363,6 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
                   type="text"
                   icon={<MoreOutlined />}
                   aria-label={t('common.actions')}
-                  style={{ borderRadius: 0 }}
                 />
               </Dropdown>
             </div>
@@ -334,13 +370,13 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         },
       },
     ],
-    [canManage, currentUserId, router, t],
+    [canManage, canViewHr, currentUserId, router, t],
   );
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+      <div className="erp-pro-list-page erp-users-page erp-expense-claims-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
       </div>
@@ -348,7 +384,18 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-expense-claims-page">
+      <ConfirmDialog
+        open={Boolean(deletingClaim)}
+        title={t('hr.empty.deleteExpenseClaimTitle')}
+        description={t('hr.empty.deleteExpenseClaimDescription')}
+        confirmLabel={t('common.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDeleteClaim()}
+        onCancel={() => setDeletingClaim(null)}
+      />
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -361,78 +408,84 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <ConfirmDialog
-        open={Boolean(deletingClaim)}
-        title={t('hr.empty.deleteExpenseClaimTitle')}
-        description={t('hr.empty.deleteExpenseClaimDescription')}
-        confirmLabel={t('common.delete')}
-        danger
-        confirmLoading={deleteMutation.isPending}
-        onConfirm={() => void handleDeleteClaim()}
-        onCancel={() => setDeletingClaim(null)}
-      />
-<div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+      <div className="erp-users-stat-bar">
+        <ExpenseClaimStat
+          label={t('pages.hr.expenseClaim.stats.total')}
+          value={statusCounts.all}
+          accent="teal"
+          icon={<DollarOutlined />}
+          active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.total')}
-            value={statusCounts.all}
-            color="blue"
-            icon={<DollarOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <ExpenseClaimStat
+          label={t('pages.hr.expenseClaim.stats.pending')}
+          value={statusCounts.pending}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+          active={statusMode === 'pending'}
           onClick={() => handleStatusMode('pending')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.pending')}
-            value={statusCounts.pending}
-            color="amber"
-            icon={<ClockCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <ExpenseClaimStat
+          label={t('pages.hr.expenseClaim.stats.approved')}
+          value={statusCounts.approved}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statusMode === 'approved'}
           onClick={() => handleStatusMode('approved')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.approved')}
-            value={statusCounts.approved}
-            color="green"
-            icon={<CheckCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <ExpenseClaimStat
+          label={t('pages.hr.expenseClaim.stats.rejected')}
+          value={statusCounts.rejected}
+          accent="red"
+          icon={<CloseCircleOutlined />}
+          active={statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.rejected')}
-            value={statusCounts.rejected}
-            color="default"
-            icon={<CloseCircleOutlined />}
-          />
-        </button>
+        />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <Input.Search
-            placeholder={t('pages.hr.expenseClaim.searchPlaceholder')}
-            className="w-full min-w-0 sm:w-72"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/approvals/new/expense-claim')}
+            >
+              {t('hr.buttons.newExpenseClaim')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.hr.expenseClaim.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onSearch={(value) => {
+            onChange={(e) => {
+              const value = e.target.value;
               setSearch(value);
               setAppliedSearch(value.trim());
+              resetPage();
+            }}
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
               resetPage();
             }}
             onClear={() => {
@@ -441,13 +494,15 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           {canViewHr ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
-              className="w-full min-w-0 sm:w-48"
+              className="erp-users-filter-select"
+              loading={usersQuery.isLoading}
               options={(usersQuery.data?.data ?? []).map((user) => ({
                 value: user.id,
                 label: formatUserName(user),
@@ -459,67 +514,25 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
               }}
             />
           ) : null}
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-expense" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {meta.total === 1
-                ? t('pages.hr.expenseClaim.claimCountOne')
-                : t('pages.hr.expenseClaim.claimCount', { count: meta.total })}
-            </span>
-          </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => router.push('/approvals/new/expense-claim')}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.buttons.newExpenseClaim')}
-          </Button>
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<ExpenseClaimListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
             loading={listQuery.isFetching && rows.length === 0}
-            scroll={false}
+            scroll={{ x: isCompact ? 720 : 1000 }}
             onRow={(record) => ({
               onClick: () => router.push(`/hr/expense-claims/${record.id}`),
-              style: { cursor: 'pointer' },
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
@@ -546,7 +559,10 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
                 />
               ),
             }}
-            pagination={bindMeta(meta)}
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+            }}
           />
         </div>
       </div>

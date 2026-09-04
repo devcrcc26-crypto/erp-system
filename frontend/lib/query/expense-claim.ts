@@ -148,6 +148,15 @@ function itemFormData(payload: AddExpenseClaimItemPayload | UpdateExpenseClaimIt
   return formData;
 }
 
+/**
+ * Builds multipart form data for creating or updating an expense claim line item.
+ */
+export function buildExpenseClaimItemFormData(
+  payload: AddExpenseClaimItemPayload | UpdateExpenseClaimItemPayload,
+): FormData {
+  return itemFormData(payload);
+}
+
 /** Adds a line item (with optional receipt) to a draft claim. */
 export function useAddExpenseClaimItem(claimId: string) {
   const queryClient = useQueryClient();

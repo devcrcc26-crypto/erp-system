@@ -3408,6 +3408,33 @@ main::-webkit-scrollbar,
   border-radius: 8px;
 }
 
+.erp-expense-claim-form-page .ant-btn {
+  border-radius: 8px;
+}
+
+.erp-expense-claim-form-page .ant-input,
+.erp-expense-claim-form-page .ant-input-affix-wrapper,
+.erp-expense-claim-form-page .ant-input-textarea textarea {
+  border-radius: 8px;
+}
+
+.erp-expense-item-drawer .ant-drawer-header {
+  min-height: 64px;
+  height: auto;
+  align-items: flex-start;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.erp-expense-item-drawer .ant-drawer-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-expense-item-drawer .ant-drawer-footer .ant-btn {
+  border-radius: 8px;
+}
+
 @media (max-width: 640px) {
   .erp-contract-detail-body {
     padding: 12px 14px 16px;

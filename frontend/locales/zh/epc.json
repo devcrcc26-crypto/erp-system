@@ -297,10 +297,26 @@
         "listDescription": "审核并处理员工报销申请。",
         "myListDescription": "提交并跟踪您的费用报销审批流程。",
         "formDescription": "先填写报销基本信息，然后在下一页添加明细及收据。",
+        "newHeading": "创建报销申请",
+        "editDescription": "更新报销标题与说明。明细请在报销详情页管理。",
+        "detailsStepDescription": "请填写清晰的标题，便于审批人快速识别。",
+        "descriptionHint": "可选，供财务或主管参考。",
+        "itemsStepDescription": "请至少添加一条费用明细（金额、币种与收据）。",
+        "reviewStepDescription": "确认报销汇总与明细后提交审批。",
+        "step1Label": "第 1 步 — 基本信息",
+        "step1Hint": "填写本报销的标题与可选说明。",
+        "step2Label": "第 2 步 — 明细",
+        "step2Hint": "添加费用行项目、金额、币种与收据。",
         "searchPlaceholder": "按单号、标题或员工搜索",
         "claimCount": "{{count}} 条报销",
         "claimCountOne": "1 条报销",
-        "emptyFiltered": "没有符合筛选条件的报销记录"
+        "emptyFiltered": "没有符合筛选条件的报销记录",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       },
       "purchaseRequest": {
         "new": "新建采购申请",
@@ -2291,6 +2307,7 @@
       "overtimeEntryDateHint": "必须在 {{period}} 范围内。",
       "overtimeHolidayHint": "若当天为公共假日，请勾选，以便计入假日加班。",
       "hoursPreviewEmpty": "选择日期和起止时间后即可预览工时分类。",
+      "etbPreviewEmpty": "输入金额和币种后即可预览比尔（ETB）等值。",
       "vendor": "供应商",
       "vendorContact": "供应商联系方式",
       "requiredByDate": "需求日期",
@@ -2550,6 +2567,7 @@
       "enterFuelStation": "请输入加油站名称",
       "fuelDateNotFuture": "加油日期不能是将来日期",
       "addPurchaseItem": "请至少添加一条明细",
+      "addExpenseItem": "请至少添加一条带收据的费用明细",
       "completePurchaseDetails": "提交前请先完成申请详情",
       "justificationRequired": "请填写采购理由",
       "itemNameRequired": "请填写物品名称",
@@ -2591,6 +2609,7 @@
     },
     "hints": {
       "replaceReceipt": "当前收据：{{name}}。上传新文件可替换。",
+      "receiptRequired": "请为本费用附上 PDF 或图片收据。",
       "itemImageOptional": "可选的物品照片（JPEG、PNG、WebP 或 GIF）。",
       "replaceItemImage": "当前图片：{{name}}。上传新文件可替换。"
     },
@@ -2620,6 +2639,8 @@
       "deleteExpenseClaimItemDesc": "该明细及收据将被删除，报销合计将重新计算。",
       "addExpenseItemTitle": "添加报销明细",
       "editExpenseItemTitle": "编辑报销明细",
+      "addExpenseItemHint": "金额将自动换算为比尔（ETB）用于审批汇总。",
+      "editExpenseItemHint": "更新明细。仅在需要更换时重新上传收据。",
       "cancelVehicleRefuelingTitle": "取消申请？",
       "cancelVehicleRefuelingDesc": "这将取消车辆加油申请及所有未完成的审批。",
       "cancelPurchaseRequestTitle": "取消采购申请？",
@@ -2834,6 +2855,7 @@
       "enterKmReading": "例如：45200",
       "enterCategory": "例如：交通、餐饮、住宿",
       "enterDescription": "请描述该费用",
+      "enterExpenseClaimDescription": "可选：填写审批人备注（用途、项目等）",
       "enterFuelStation": "填写加油站名称",
       "enterDeviceName": "填写设备或器材名称",
       "enterLocation": "设备位于哪里？",
@@ -2927,7 +2949,9 @@
       "contractDetails": "合同详情",
       "compensation": "薪酬",
       "entryDetails": "记录详情",
-      "hoursPreview": "工时预览"
+      "hoursPreview": "工时预览",
+      "itemDetails": "明细详情",
+      "amountAndCurrency": "金额与币种"
     }
   }
 }

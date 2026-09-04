@@ -297,10 +297,26 @@
         "listDescription": "Review and process employee reimbursement claims.",
         "myListDescription": "Submit and track your expense claims through the approval workflow.",
         "formDescription": "Start with claim details, then add line items with receipts on the next page.",
+        "newHeading": "Create a reimbursement claim",
+        "editDescription": "Update the claim title and description. Line items are managed on the claim page.",
+        "detailsStepDescription": "Give the claim a clear title so approvers can recognize it quickly.",
+        "descriptionHint": "Optional context for finance or your manager.",
+        "itemsStepDescription": "Add at least one expense line with amount, currency, and a receipt.",
+        "reviewStepDescription": "Confirm the claim summary and line items before submitting for approval.",
+        "step1Label": "Step 1 — Details",
+        "step1Hint": "Enter a title and optional description for this claim.",
+        "step2Label": "Step 2 — Items",
+        "step2Hint": "Add expense lines with amounts, currency, and receipts.",
         "searchPlaceholder": "Search by claim #, title, or employee",
         "claimCount": "{{count}} claims",
         "claimCountOne": "1 claim",
-        "emptyFiltered": "No expense claims match your filters"
+        "emptyFiltered": "No expense claims match your filters",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       },
       "purchaseRequest": {
         "new": "New Purchase Request",
@@ -2292,6 +2308,7 @@
       "overtimeEntryDateHint": "Must fall within {{period}}.",
       "overtimeHolidayHint": "Mark this day as a public holiday so hours count under holiday overtime.",
       "hoursPreviewEmpty": "Select date and start/end times to preview the hour categories.",
+      "etbPreviewEmpty": "Enter an amount and currency to preview the ETB equivalent.",
       "vendor": "Vendor",
       "vendorContact": "Vendor Contact",
       "requiredByDate": "Required By",
@@ -2550,6 +2567,7 @@
       "enterFuelStation": "Enter the fuel station name",
       "fuelDateNotFuture": "Fuel date cannot be in the future",
       "addPurchaseItem": "Add at least one line item",
+      "addExpenseItem": "Add at least one expense item with a receipt",
       "completePurchaseDetails": "Complete request details before submitting",
       "justificationRequired": "Enter a justification for this purchase",
       "itemNameRequired": "Enter an item name",
@@ -2591,6 +2609,7 @@
     },
     "hints": {
       "replaceReceipt": "Current receipt: {{name}}. Upload a new file to replace it.",
+      "receiptRequired": "Attach a PDF or image receipt for this expense.",
       "itemImageOptional": "Optional photo of the item (JPEG, PNG, WebP, or GIF).",
       "replaceItemImage": "Current image: {{name}}. Upload a new file to replace it."
     },
@@ -2620,6 +2639,8 @@
       "deleteExpenseClaimItemDesc": "This item and its receipt will be removed and the claim total recalculated.",
       "addExpenseItemTitle": "Add Expense Item",
       "editExpenseItemTitle": "Edit Expense Item",
+      "addExpenseItemHint": "Amounts convert to ETB automatically for approval totals.",
+      "editExpenseItemHint": "Update the line item. Re-upload a receipt only if you need to replace it.",
       "cancelVehicleRefuelingTitle": "Cancel request?",
       "cancelVehicleRefuelingDesc": "This will cancel the vehicle refueling request and any open approval request.",
       "cancelPurchaseRequestTitle": "Cancel purchase request?",
@@ -2834,6 +2855,7 @@
       "enterKmReading": "e.g. 45200",
       "enterCategory": "e.g. Transport, Meals, Accommodation",
       "enterDescription": "Describe the expense",
+      "enterExpenseClaimDescription": "Optional notes for approvers (purpose, project, etc.)",
       "enterFuelStation": "Name of the fuel station",
       "enterDeviceName": "Enter device or equipment name",
       "enterLocation": "Where is the device located?",
@@ -2927,7 +2949,9 @@
       "contractDetails": "Contract Details",
       "compensation": "Compensation",
       "entryDetails": "Entry details",
-      "hoursPreview": "Hours preview"
+      "hoursPreview": "Hours preview",
+      "itemDetails": "Item details",
+      "amountAndCurrency": "Amount & currency"
     }
   }
 }
