@@ -3846,6 +3846,71 @@ main::-webkit-scrollbar,
   }
 }
 
+/* Business trip detail — five-stat meta bar */
+@media (min-width: 901px) {
+  .erp-business-trip-detail-page .erp-employee-meta-bar {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .erp-business-trip-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(3n) {
+    border-right: 1px solid #eef1f4;
+  }
+
+  .erp-business-trip-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:last-child {
+    border-right: none;
+  }
+
+  .erp-business-trip-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(-n + 4) {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .erp-business-trip-detail-page .erp-employee-meta-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .erp-business-trip-detail-page .erp-employee-meta-bar .erp-users-stat {
+    border-right: 1px solid #eef1f4;
+    border-bottom: 1px solid #eef1f4;
+  }
+
+  .erp-business-trip-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(2n) {
+    border-right: none;
+  }
+
+  .erp-business-trip-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(5) {
+    grid-column: 1 / -1;
+    border-right: none;
+  }
+
+  .erp-business-trip-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:last-child {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .erp-business-trip-detail-page .erp-employee-hero-name {
+    font-size: calc(17px * var(--erp-font-scale));
+  }
+
+  .erp-business-trip-detail-page .erp-users-email {
+    text-align: center;
+  }
+}
+
 .erp-flight-form-page .ant-btn,
 .erp-business-trip-form-page .ant-btn {
   border-radius: 8px;

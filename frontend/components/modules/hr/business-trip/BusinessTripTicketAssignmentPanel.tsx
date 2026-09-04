@@ -331,9 +331,9 @@ export default function BusinessTripTicketAssignmentPanel({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-[rgba(0,0,0,0.08)] overflow-hidden">
-      <div className="px-3 py-3 sm:px-5 border-b border-[rgba(0,0,0,0.06)] flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+    <div className="erp-employee-section overflow-hidden">
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">
           {t('hr.table.ticket')}
         </h3>
         <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
@@ -359,15 +359,15 @@ export default function BusinessTripTicketAssignmentPanel({
       </div>
 
       {/* Combined ticket */}
-      <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+      <div className="border-b border-[rgba(0,0,0,0.06)] px-3 py-4 sm:px-5">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
+            <div className="mb-0.5 flex items-center gap-2">
               <FileText
                 size={15}
-                className="text-[var(--color-text-tertiary)] flex-shrink-0"
+                className="flex-shrink-0 text-[var(--color-text-tertiary)]"
               />
-              <h4 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
+              <h4 className="m-0 text-sm font-semibold text-[var(--color-text-primary)]">
                 {t('hr.section.combinedTicket')}
               </h4>
               {combinedTickets.length > 0 && !replacingCombined ? (
@@ -378,7 +378,7 @@ export default function BusinessTripTicketAssignmentPanel({
                 <Tag className="m-0">{t('hr.empty.noTicket')}</Tag>
               )}
             </div>
-            <p className="text-xs text-[var(--color-text-tertiary)] ml-[23px]">
+            <p className="m-0 ml-[23px] text-xs text-[var(--color-text-tertiary)]">
               {t('hr.labels.uploadTickets')}
             </p>
           </div>
@@ -457,7 +457,7 @@ export default function BusinessTripTicketAssignmentPanel({
             ) : null}
           </div>
         ) : (
-          <p className="text-sm text-[var(--color-text-tertiary)] ml-0 sm:ml-[23px]">
+          <p className="m-0 ml-0 text-sm text-[var(--color-text-tertiary)] sm:ml-[23px]">
             {t('hr.empty.noTicket')}
           </p>
         )}
@@ -465,22 +465,22 @@ export default function BusinessTripTicketAssignmentPanel({
 
       {/* Individual tickets */}
       <div>
-        <div className="px-3 py-3 sm:px-5 bg-[var(--color-surface-secondary)] border-b border-[rgba(0,0,0,0.06)]">
-          <div className="flex items-center gap-2 mb-0.5">
+        <div className="border-b border-[rgba(0,0,0,0.06)] bg-[var(--color-surface-secondary)] px-3 py-3 sm:px-5">
+          <div className="mb-0.5 flex items-center gap-2">
             <Users
               size={15}
-              className="text-[var(--color-text-tertiary)] flex-shrink-0"
+              className="flex-shrink-0 text-[var(--color-text-tertiary)]"
             />
-            <h4 className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
+            <h4 className="m-0 text-sm font-semibold text-[var(--color-text-primary)]">
               {t('hr.section.individualTickets')}
             </h4>
           </div>
-          <p className="text-xs text-[var(--color-text-tertiary)] ml-[23px]">
+          <p className="m-0 ml-[23px] text-xs text-[var(--color-text-tertiary)]">
             {t('hr.labels.uploadTickets')}
           </p>
         </div>
 
-        <ul className="m-0 list-none p-0 divide-y divide-[rgba(0,0,0,0.06)]">
+        <ul className="m-0 list-none divide-y divide-[rgba(0,0,0,0.06)] p-0">
           {trip.passengers.map((row) => {
             const tickets = passengerTickets(row);
             const hasOwnTicket = tickets.length > 0;
@@ -492,7 +492,7 @@ export default function BusinessTripTicketAssignmentPanel({
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">
+                      <p className="m-0 text-sm font-medium text-[var(--color-text-primary)]">
                         {row.employee
                           ? formatUserName(row.employee)
                           : row.employeeId}

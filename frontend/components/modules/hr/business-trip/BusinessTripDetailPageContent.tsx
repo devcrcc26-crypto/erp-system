@@ -1,29 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Skeleton, Tag } from 'antd';
-import {
-  ArrowLeft,
-  ArrowRight,
-  BedDouble,
-  Building2,
-  Calendar,
-  FileText,
-  MapPin,
-  Plane,
-  Target,
-  Users,
-} from 'lucide-react';
+import { Alert, Button, Grid, Skeleton, Space } from 'antd';
+import { StopOutlined } from '@ant-design/icons';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import BusinessTripCurrentStepBanner from '@/components/modules/hr/business-trip/BusinessTripCurrentStepBanner';
 import BusinessTripTicketAssignmentPanel from '@/components/modules/hr/business-trip/BusinessTripTicketAssignmentPanel';
-import {
-  MetaItem,
-  SectionCard,
-  SubsectionHeader,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -32,6 +17,8 @@ import {
   useCanManageBusinessTrip,
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type { BusinessTripPassenger } from '@/lib/api/business-trip.types';
@@ -48,11 +35,37 @@ import {
   formatTicketClass,
   formatTripType,
   formatVisaStatus,
+  tripTypeVariant,
 } from '@/lib/utils/business-trip-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
+
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  action?: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">{title}</h3>
+        {action}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function passengerHasTicket(
   row: BusinessTripPassenger,
@@ -66,7 +79,7 @@ function passengerHasTicket(
 }
 
 /**
- * Business trip detail with passengers, tickets, budget, and approval timeline.
+ * Business trip detail — Users / employee profile chrome.
  */
 export default function BusinessTripDetailPageContent({
   tripId,
@@ -76,14 +89,17 @@ export default function BusinessTripDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isNarrow = screens.sm === false;
   const currentUser = useCurrentUser();
   const canManage = useCanManageBusinessTrip();
   const canViewHr = useCanViewHr();
 
   const detailQuery = useBusinessTrip(tripId);
   const cancelMutation = useCancelBusinessTrip(tripId);
-
   const [confirmCancel, setConfirmCancel] = useState(false);
+
+  useSetHeaderExtra(null);
 
   const trip = detailQuery.data;
 
@@ -106,41 +122,55 @@ export default function BusinessTripDetailPageContent({
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
-      messageApi.success('Business trip cancelled');
+      messageApi.success(t('hr.messages.businessTripCancelled'));
       setConfirmCancel(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to cancel business trip', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToCancelBusinessTrip'),
+        messageApi,
+      );
     }
   }
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 10 }} />;
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-business-trip-detail-page">
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !trip) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        message={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : 'Business trip not found'
-        }
-        action={
-          <Button onClick={() => router.push('/hr/business-trips')}>
-            Back to list
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <Alert
+          type="error"
+          showIcon
+          title={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : t('hr.messages.businessTripNotFound')
+          }
+          action={
+            <Button onClick={() => router.push('/hr/business-trips')}>
+              {t('hr.buttons.backToList')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
   const destinationLabel = trip.destinationCity
     ? `${trip.destinationCity}, ${trip.destinationCountry}`
     : trip.destinationCountry;
-
   const originLabel = `${trip.originCity}, ${trip.originCountry}`;
+  const routeTitle = `${originLabel} → ${destinationLabel}`;
+  const submitterName = formatBusinessTripSubmitterName(trip.submitter);
+  const tripTypeLabel = formatTripType(trip.tripType, t);
 
   const visaRequiredCount = trip.passengers.filter((p) => p.visaRequired).length;
   const ticketedCount = trip.passengers.filter((p) =>
@@ -164,104 +194,130 @@ export default function BusinessTripDetailPageContent({
     Boolean(trip.expectedOutcomes) ||
     Boolean(trip.itinerary);
 
-  const hasHost =
-    Boolean(trip.hostOrganization) || Boolean(trip.hostContact);
-
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/business-trips')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.backToList')}
-        </Button>
-      </div>
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-business-trip-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push('/hr/business-trips')}
+              aria-label={t('hr.buttons.backToList')}
+            >
+              {isNarrow ? undefined : t('hr.buttons.back')}
+            </Button>
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {trip.approvalRequestId ? (
+              <Button
+                onClick={() =>
+                  router.push(`/approvals/${trip.approvalRequestId}`)
+                }
+                aria-label={t('hr.buttons.viewInApprovals')}
+              >
+                {isNarrow
+                  ? t('nav.approvals')
+                  : t('hr.buttons.viewInApprovals')}
+              </Button>
+            ) : null}
+            {canCancel ? (
+              <Space.Compact>
+                <Button
+                  danger
+                  icon={<StopOutlined />}
+                  onClick={() => setConfirmCancel(true)}
+                  aria-label={t('hr.buttons.cancel')}
+                >
+                  {isNarrow ? undefined : t('hr.buttons.cancel')}
+                </Button>
+              </Space.Compact>
+            ) : null}
+          </div>
+        </div>
 
-      <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                {trip.tripNumber}
-              </span>
-              <span className="text-[var(--color-border-secondary)]">·</span>
-              <Tag className="m-0">{formatTripType(trip.tripType, t)}</Tag>
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">{trip.tripNumber}</span>
               <StatusBadge
                 label={formatBusinessTripStatus(trip.status, t)}
                 variant={businessTripStatusVariant(trip.status)}
               />
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-              {trip.approvalRequestId ? (
-                <Button
-                  size="small"
-                  onClick={() =>
-                    router.push(`/approvals/${trip.approvalRequestId}`)
-                  }
-                >
-                  {t('hr.buttons.viewInApprovals')}
-                </Button>
-              ) : null}
-              {canCancel ? (
-                <Button
-                  danger
-                  size="small"
-                  onClick={() => setConfirmCancel(true)}
-                >
-                  {t('hr.buttons.cancel')}
-                </Button>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-            <div className="flex-1 min-w-0 rounded-md border border-[rgba(0,0,0,0.06)] bg-[var(--color-page-bg)] px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
-                From
-              </p>
-              <h1 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug m-0">
-                {originLabel}
-              </h1>
-            </div>
-            <div className="hidden sm:flex items-center justify-center flex-shrink-0 px-1">
-              <ArrowRight
-                size={18}
-                className="text-[var(--color-text-tertiary)]"
+              <StatusBadge
+                label={tripTypeLabel}
+                variant={tripTypeVariant(trip.tripType)}
               />
+              <span className="erp-users-role-tag">
+                {t('hr.labels.international')}
+              </span>
             </div>
-            <div className="flex-1 min-w-0 rounded-md border border-[rgba(0,0,0,0.06)] bg-[var(--color-page-bg)] px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
-                To
-              </p>
-              <h2 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug m-0">
-                {destinationLabel}
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {routeTitle}
               </h2>
             </div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-secondary)]">
-            <span>
-              {t('hr.table.submittedBy')}{' '}
-              <span className="font-medium text-[var(--color-text-primary)]">
-                {formatBusinessTripSubmitterName(trip.submitter)}
-              </span>
-            </span>
-            <span className="text-[var(--color-border-secondary)]">·</span>
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar
-                size={13}
-                className="text-[var(--color-text-tertiary)]"
-              />
-              {formatProjectDate(trip.createdAt)}
-            </span>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+              {submitterName}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-1">
+              {[
+                `${t('hr.labels.departure')} ${formatProjectDate(trip.departureDate)}`,
+                trip.returnDate
+                  ? `${t('hr.labels.return')} ${formatProjectDate(trip.returnDate)}`
+                  : tripTypeLabel,
+                `${trip.passengerCount} ${t('hr.labels.passengers').toLowerCase()}`,
+                formatEtb(trip.estimatedTotalCost),
+              ].join(' · ')}
+            </p>
           </div>
         </div>
 
-        <div className="border-t border-[rgba(0,0,0,0.06)]">
+        <div className="border-t border-[#eef1f4]">
           <BusinessTripCurrentStepBanner trip={trip} embedded />
+        </div>
+      </div>
+
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.departure')}</p>
+            <p className="erp-employee-meta-value">
+              {formatProjectDate(trip.departureDate)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.return')}</p>
+            <p className="erp-employee-meta-value">
+              {trip.returnDate ? formatProjectDate(trip.returnDate) : '—'}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.passengers')}</p>
+            <p className="erp-employee-meta-value">{trip.passengerCount}</p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.ticketClass')}</p>
+            <p className="erp-employee-meta-value">
+              {formatTicketClass(trip.ticketClass, t)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.labels.estimatedTotal')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatEtb(trip.estimatedTotalCost)}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -276,347 +332,257 @@ export default function BusinessTripDetailPageContent({
         />
       ) : null}
 
-      <SummaryStrip
-        items={[
-          {
-            label: t('hr.labels.departure'),
-            value: formatProjectDate(trip.departureDate),
-          },
-          {
-            label: t('hr.labels.return'),
-            value: trip.returnDate
-              ? formatProjectDate(trip.returnDate)
-              : t('hr.tripType.ONE_WAY'),
-          },
-          {
-            label: t('hr.labels.passengers'),
-            value: String(trip.passengerCount),
-          },
-          {
-            label: t('hr.labels.ticketClass'),
-            value: formatTicketClass(trip.ticketClass, t),
-          },
-          {
-            label: t('hr.labels.estimatedTotal'),
-            value: formatEtb(trip.estimatedTotalCost),
-            emphasize: true,
-          },
-        ]}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
-        <div className="flex flex-col gap-4 min-w-0">
-          {/* Travel Details */}
-          <SectionCard title={t('hr.labels.travelDetails')}>
-            <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
-              <SubsectionHeader
-                icon={<MapPin size={15} />}
-                title={t('hr.labels.routeSchedule')}
-              />
-              <div className="rounded-md border border-[rgba(0,0,0,0.06)] bg-[var(--color-page-bg)] px-4 py-3 mb-4">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <div className="min-w-0">
-                    <p className="text-xs text-[var(--color-text-tertiary)] mb-0.5">
-                      From
-                    </p>
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
-                      {originLabel}
-                    </p>
-                  </div>
-                  <ArrowRight
-                    size={16}
-                    className="text-[var(--color-text-tertiary)] flex-shrink-0 hidden sm:block"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs text-[var(--color-text-tertiary)] mb-0.5">
-                      To
-                    </p>
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)] m-0">
-                      {destinationLabel}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
-                <MetaItem label={t('hr.labels.departure')}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Calendar
-                      size={13}
-                      className="text-[var(--color-text-tertiary)]"
-                    />
-                    {formatProjectDate(trip.departureDate)}
+      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="erp-pro-card min-w-0 overflow-hidden">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <DetailSection title={t('hr.labels.travelDetails')}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <MetaItem label={t('hr.form.origin')}>
+                  <span className="erp-users-cell-strong">{originLabel}</span>
+                </MetaItem>
+                <MetaItem label={t('hr.form.destination')}>
+                  <span className="erp-users-cell-strong">
+                    {destinationLabel}
                   </span>
                 </MetaItem>
-                <MetaItem label={t('hr.labels.return')}>
-                  {trip.returnDate ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Calendar
-                        size={13}
-                        className="text-[var(--color-text-tertiary)]"
-                      />
-                      {formatProjectDate(trip.returnDate)}
-                    </span>
-                  ) : (
-                    '—'
-                  )}
+                <MetaItem label={t('hr.labels.departure')}>
+                  {formatProjectDate(trip.departureDate)}
                 </MetaItem>
-              </div>
-            </div>
-
-            <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
-              <SubsectionHeader icon={<Plane size={15} />} title={t('hr.labels.flight')} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
+                <MetaItem label={t('hr.labels.return')}>
+                  {trip.returnDate
+                    ? formatProjectDate(trip.returnDate)
+                    : '—'}
+                </MetaItem>
                 <MetaItem label={t('hr.labels.tripType')}>
-                  {formatTripType(trip.tripType, t)}
+                  <StatusBadge
+                    label={tripTypeLabel}
+                    variant={tripTypeVariant(trip.tripType)}
+                  />
                 </MetaItem>
                 <MetaItem label={t('hr.labels.ticketClass')}>
                   {formatTicketClass(trip.ticketClass, t)}
                 </MetaItem>
-              </div>
-            </div>
-
-            <div className="px-3 py-4 sm:px-5">
-              <SubsectionHeader
-                icon={<BedDouble size={15} />}
-                title={t('hr.labels.stayAllowances')}
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
+                <MetaItem label={t('hr.table.submittedBy')}>
+                  {submitterName}
+                </MetaItem>
                 <MetaItem label={t('hr.labels.accommodation')}>
                   {trip.accommodationRequired ? (
-                    <div className="flex flex-col gap-1.5">
-                      <Tag color="blue" className="w-fit m-0">
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="erp-users-role-tag">
                         {t('hr.labels.required')}
-                      </Tag>
+                      </span>
                       {trip.accommodationDetails ? (
-                        <span className="text-[var(--color-text-secondary)] leading-relaxed">
+                        <span className="erp-users-cell-sub">
                           {trip.accommodationDetails}
                         </span>
                       ) : null}
                     </div>
                   ) : (
-                    <span className="text-[var(--color-text-tertiary)]">
+                    <span className="erp-users-cell-sub">
                       {t('hr.labels.notRequired')}
                     </span>
                   )}
                 </MetaItem>
                 <MetaItem label={t('hr.labels.perDiem')}>
                   {trip.perDiemRequired ? (
-                    <Tag color="blue" className="m-0 w-fit">
+                    <span className="erp-users-role-tag">
                       {t('hr.labels.required')}
-                    </Tag>
+                    </span>
                   ) : (
-                    <span className="text-[var(--color-text-tertiary)]">
+                    <span className="erp-users-cell-sub">
                       {t('hr.labels.notRequired')}
                     </span>
                   )}
                 </MetaItem>
-              </div>
-              {trip.notes ? (
-                <div className="mt-4 ml-0 sm:ml-[23px]">
-                  <MetaItem label={t('hr.labels.notes')}>
-                    <p className="whitespace-pre-wrap leading-relaxed m-0">
-                      {trip.notes}
-                    </p>
-                  </MetaItem>
-                </div>
-              ) : null}
-            </div>
-          </SectionCard>
-
-          {/* Purpose & Host */}
-          {hasPurposeContent ? (
-            <SectionCard title={t('hr.labels.purposeHost')}>
-              <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
-                <SubsectionHeader
-                  icon={<FileText size={15} />}
-                  title={t('hr.labels.purpose')}
-                />
-                <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed m-0 ml-0 sm:ml-[23px]">
-                  {trip.purpose}
-                </p>
-              </div>
-
-              {hasHost ? (
-                <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)]">
-                  <SubsectionHeader
-                    icon={<Building2 size={15} />}
-                    title={t('hr.labels.host')}
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 ml-0 sm:ml-[23px]">
-                    {trip.hostOrganization ? (
-                      <MetaItem label={t('hr.labels.organization')}>
-                        {trip.hostOrganization}
-                      </MetaItem>
-                    ) : null}
-                    {trip.hostContact ? (
-                      <MetaItem label={t('hr.labels.contact')}>{trip.hostContact}</MetaItem>
-                    ) : null}
+                {trip.notes?.trim() ? (
+                  <div className="md:col-span-2">
+                    <MetaItem label={t('hr.labels.notes')}>
+                      <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                        {trip.notes}
+                      </p>
+                    </MetaItem>
                   </div>
-                </div>
-              ) : null}
-
-              {trip.expectedOutcomes ? (
-                <div className="px-3 py-4 sm:px-5 border-b border-[rgba(0,0,0,0.06)] last:border-b-0">
-                  <SubsectionHeader
-                    icon={<Target size={15} />}
-                    title={t('hr.labels.expectedOutcomes')}
-                  />
-                  <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed m-0 ml-0 sm:ml-[23px]">
-                    {trip.expectedOutcomes}
-                  </p>
-                </div>
-              ) : null}
-
-              {trip.itinerary ? (
-                <div className="px-3 py-4 sm:px-5">
-                  <SubsectionHeader
-                    icon={<Calendar size={15} />}
-                    title={t('hr.labels.itinerary')}
-                  />
-                  <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap leading-relaxed m-0 ml-0 sm:ml-[23px]">
-                    {trip.itinerary}
-                  </p>
-                </div>
-              ) : null}
-            </SectionCard>
-          ) : null}
-
-          {/* Passengers */}
-          <SectionCard
-            title={t('hr.labels.passengers')}
-            action={
-              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
-                <span className="inline-flex items-center gap-1">
-                  <Users size={12} />
-                  {trip.passengerCount}{' '}
-                  {trip.passengerCount === 1 ? 'person' : 'people'}
-                </span>
-                <span className="text-[var(--color-border-secondary)]">·</span>
-                <span>
-                  {visaRequiredCount} visa
-                  {visaRequiredCount === 1 ? '' : 's'} required
-                </span>
-                <span className="text-[var(--color-border-secondary)]">·</span>
-                <span>
-                  {ticketedCount}/{trip.passengers.length} ticketed
-                </span>
+                ) : null}
               </div>
-            }
-          >
-            <ul className="m-0 list-none p-0 divide-y divide-[rgba(0,0,0,0.06)]">
-              {trip.passengers.map((row) => {
-                const hasTicket = passengerHasTicket(
-                  row,
-                  trip.combinedTicketDocumentId,
-                );
-                const hasOwnTicket =
-                  Boolean(row.ticketDocumentId) ||
-                  (row.tickets?.length ?? 0) > 0;
+            </DetailSection>
 
-                return (
-                  <li key={row.id} className="px-3 py-4 sm:px-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-[var(--color-text-primary)] m-0">
-                          {row.employee
-                            ? formatUserName(row.employee)
-                            : row.employeeId}
+            {hasPurposeContent ? (
+              <DetailSection title={t('hr.labels.purposeHost')}>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {trip.purpose ? (
+                    <div className="md:col-span-2">
+                      <MetaItem label={t('hr.labels.purpose')}>
+                        <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                          {trip.purpose}
                         </p>
-                        {row.employee?.email ? (
-                          <p className="text-xs text-[var(--color-text-tertiary)] mt-0.5 m-0">
-                            {row.employee.email}
+                      </MetaItem>
+                    </div>
+                  ) : null}
+                  {trip.hostOrganization ? (
+                    <MetaItem label={t('hr.labels.organization')}>
+                      {trip.hostOrganization}
+                    </MetaItem>
+                  ) : null}
+                  {trip.hostContact ? (
+                    <MetaItem label={t('hr.labels.contact')}>
+                      {trip.hostContact}
+                    </MetaItem>
+                  ) : null}
+                  {trip.expectedOutcomes ? (
+                    <div className="md:col-span-2">
+                      <MetaItem label={t('hr.labels.expectedOutcomes')}>
+                        <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                          {trip.expectedOutcomes}
+                        </p>
+                      </MetaItem>
+                    </div>
+                  ) : null}
+                  {trip.itinerary ? (
+                    <div className="md:col-span-2">
+                      <MetaItem label={t('hr.labels.itinerary')}>
+                        <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                          {trip.itinerary}
+                        </p>
+                      </MetaItem>
+                    </div>
+                  ) : null}
+                </div>
+              </DetailSection>
+            ) : null}
+
+            <DetailSection
+              title={t('hr.section.passengerDetails')}
+              bodyClassName="!p-0"
+              action={
+                <span className="erp-users-cell-sub text-xs">
+                  {[
+                    `${trip.passengerCount}`,
+                    `${visaRequiredCount} ${t('hr.form.visaRequired').toLowerCase()}`,
+                    `${ticketedCount}/${trip.passengers.length} ${t('hr.table.ticket').toLowerCase()}`,
+                  ].join(' · ')}
+                </span>
+              }
+            >
+              <ul className="m-0 list-none divide-y divide-[#eef1f4] p-0">
+                {trip.passengers.map((row) => {
+                  const hasTicket = passengerHasTicket(
+                    row,
+                    trip.combinedTicketDocumentId,
+                  );
+                  const hasOwnTicket =
+                    Boolean(row.ticketDocumentId) ||
+                    (row.tickets?.length ?? 0) > 0;
+
+                  return (
+                    <li key={row.id} className="px-3 py-4 sm:px-4">
+                      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="erp-users-cell-strong m-0">
+                            {row.employee
+                              ? formatUserName(row.employee)
+                              : row.employeeId}
                           </p>
-                        ) : null}
+                          {row.employee?.email ? (
+                            <p className="erp-users-email m-0 mt-0.5">
+                              {row.employee.email}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {row.visaRequired ? (
+                            <span className="erp-users-role-tag">
+                              {row.visaStatus
+                                ? formatVisaStatus(row.visaStatus, t)
+                                : t('hr.form.visaRequired')}
+                            </span>
+                          ) : (
+                            <span className="erp-users-role-tag">
+                              {t('hr.labels.notRequired')}
+                            </span>
+                          )}
+                          {hasOwnTicket ? (
+                            <StatusBadge
+                              label={t('hr.table.ticket')}
+                              variant="success"
+                            />
+                          ) : hasTicket ? (
+                            <StatusBadge
+                              label={t('hr.labels.combinedTicket')}
+                              variant="info"
+                            />
+                          ) : (
+                            <StatusBadge
+                              label={t('hr.labels.noTicket')}
+                              variant="default"
+                            />
+                          )}
+                        </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {row.visaRequired ? (
-                          <Tag color="volcano" className="m-0">
-                            {row.visaStatus
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <MetaItem label={t('hr.labels.passport')}>
+                          {row.passportNumber ?? (
+                            <span className="erp-users-cell-sub">—</span>
+                          )}
+                        </MetaItem>
+                        <MetaItem label={t('hr.labels.visa')}>
+                          {row.visaRequired
+                            ? row.visaStatus
                               ? formatVisaStatus(row.visaStatus, t)
-                              : t('hr.form.visaRequired')}
-                          </Tag>
-                        ) : (
-                          <Tag className="m-0">{t('hr.labels.notRequired')}</Tag>
-                        )}
-                        {hasOwnTicket ? (
-                          <Tag color="green" className="m-0">
-                            {t('hr.table.ticket')}
-                          </Tag>
-                        ) : hasTicket ? (
-                          <Tag color="blue" className="m-0">
-                            {t('hr.labels.combinedTicket')}
-                          </Tag>
-                        ) : (
-                          <Tag className="m-0">{t('hr.labels.noTicket')}</Tag>
-                        )}
+                              : t('hr.labels.required')
+                            : t('hr.labels.notRequired')}
+                        </MetaItem>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-                      <MetaItem label={t('hr.labels.passport')}>
-                        {row.passportNumber ?? (
-                          <span className="text-[var(--color-text-tertiary)]">
-                            —
-                          </span>
-                        )}
-                      </MetaItem>
-                      <MetaItem label={t('hr.labels.visa')}>
-                        {row.visaRequired
-                          ? row.visaStatus
-                            ? formatVisaStatus(row.visaStatus, t)
-                            : t('hr.labels.required')
-                          : t('hr.labels.notRequired')}
-                      </MetaItem>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </SectionCard>
+                    </li>
+                  );
+                })}
+              </ul>
+            </DetailSection>
 
-          {showTicketPanel ? (
-            <BusinessTripTicketAssignmentPanel trip={trip} />
-          ) : null}
+            {showTicketPanel ? (
+              <BusinessTripTicketAssignmentPanel trip={trip} />
+            ) : null}
 
-          <SectionCard
-            title={t('hr.labels.supportingAttachments')}
-            bodyClassName="px-3 py-4 sm:px-5"
-          >
-            {trip.documents.length > 0 ? (
-              <AttachmentDownloadList documents={trip.documents} />
-            ) : (
-              <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-                {t('hr.empty.noAttachments')}
-              </p>
-            )}
-          </SectionCard>
+            <DetailSection title={t('hr.section.supportingDocuments')}>
+              {trip.documents.length > 0 ? (
+                <AttachmentDownloadList documents={trip.documents} />
+              ) : (
+                <p className="erp-users-cell-sub m-0">
+                  {t('hr.empty.noAttachments')}
+                </p>
+              )}
+            </DetailSection>
+          </div>
         </div>
 
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
-          <SectionCard title={t('hr.labels.budgetEstimate')}>
-            <div className="divide-y divide-[rgba(0,0,0,0.06)]">
-              {budgetRows.map(({ label, value }) => (
-                <div
-                  key={label}
-                  className="flex justify-between items-center px-3 py-2.5 sm:px-5 gap-3"
-                >
-                  <span className="text-sm text-[var(--color-text-secondary)]">
-                    {label}
+        <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-4">
+          <div className="erp-pro-card overflow-hidden">
+            <DetailSection
+              title={t('hr.labels.budgetEstimate')}
+              bodyClassName="!p-0"
+            >
+              <div className="divide-y divide-[#eef1f4]">
+                {budgetRows.map(({ label, value }) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4"
+                  >
+                    <span className="erp-users-cell-sub text-sm">{label}</span>
+                    <span className="erp-users-cell-strong tabular-nums text-sm">
+                      {formatEtb(value)}
+                    </span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-secondary)] px-3 py-3 sm:px-4">
+                  <span className="erp-users-cell-strong text-sm">
+                    {t('hr.labels.estimatedTotal')}
                   </span>
-                  <span className="text-sm tabular-nums text-[var(--color-text-primary)]">
-                    {formatEtb(value)}
+                  <span className="erp-employee-meta-value tabular-nums">
+                    {formatEtb(trip.estimatedTotalCost)}
                   </span>
                 </div>
-              ))}
-              <div className="flex justify-between items-center px-3 py-3 sm:px-5 bg-[var(--color-surface-secondary)] gap-3">
-                <span className="text-sm font-semibold text-[var(--color-text-primary)]">
-                  {t('hr.labels.estimatedTotal')}
-                </span>
-                <span className="text-base font-bold tabular-nums text-[var(--color-text-primary)]">
-                  {formatEtb(trip.estimatedTotalCost)}
-                </span>
               </div>
-            </div>
-          </SectionCard>
+            </DetailSection>
+          </div>
 
           {trip.approvalRequest ? (
             <ApprovalTierTimeline
@@ -624,19 +590,21 @@ export default function BusinessTripDetailPageContent({
               currentTier={trip.approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <SectionCard title={t('hr.labels.approvalChain')} bodyClassName="px-3 py-4 sm:px-5">
-              <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-                {t('hr.empty.noApprovalChain')}
-              </p>
-            </SectionCard>
+            <div className="erp-pro-card">
+              <DetailSection title={t('hr.section.approvalChain')}>
+                <p className="erp-users-cell-sub m-0">
+                  {t('hr.empty.noApprovalChain')}
+                </p>
+              </DetailSection>
+            </div>
           )}
         </aside>
       </div>
 
       <ConfirmDialog
         open={confirmCancel}
-        title={t('hr.labels.cancelTrip')}
-        description={t('hr.labels.cancelTripDesc')}
+        title={t('hr.dialog.cancelBusinessTripTitle')}
+        description={t('hr.dialog.cancelBusinessTripDesc')}
         confirmLabel={t('hr.labels.cancelTripConfirm')}
         danger
         confirmLoading={cancelMutation.isPending}

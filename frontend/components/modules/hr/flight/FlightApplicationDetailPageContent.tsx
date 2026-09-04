@@ -357,7 +357,7 @@ export default function FlightApplicationDetailPageContent({
                 </MetaItem>
                 <MetaItem label={t('hr.labels.accommodation')}>
                   {application.accommodationRequired ? (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col items-start gap-1">
                       <span className="erp-users-role-tag">
                         {t('hr.labels.required')}
                       </span>
