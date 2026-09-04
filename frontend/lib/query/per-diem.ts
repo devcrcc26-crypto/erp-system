@@ -63,6 +63,47 @@ export function useMyActiveEmployeePerDiemCategories(enabled = true) {
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the employee per diem rates list (filter locally).
+ */
+async function fetchAllEmployeePerDiemRatePages(): Promise<
+  EmployeePerDiemRateListItem[]
+> {
+  const first = await apiGetPaginated<EmployeePerDiemRateListItem>(
+    `${EMPLOYEE_RATES_PATH}${toQueryString({
+      page: 1,
+      limit: FETCH_PAGE_SIZE,
+      sortBy: 'lastName',
+      sortOrder: 'asc',
+    })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<EmployeePerDiemRateListItem>(
+        `${EMPLOYEE_RATES_PATH}${toQueryString({
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+          sortBy: 'lastName',
+          sortOrder: 'asc',
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
 /** Paginated employee per diem rates (HR list page). */
 export function useEmployeePerDiemRatesList(
   params: ListEmployeePerDiemRatesParams = {
@@ -79,6 +120,18 @@ export function useEmployeePerDiemRatesList(
       apiGetPaginated<EmployeePerDiemRateListItem>(
         `${EMPLOYEE_RATES_PATH}${toQueryString(params)}`,
       ) as Promise<PaginatedResult<EmployeePerDiemRateListItem>>,
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * All employee per diem rate rows for client-side filter/search.
+ */
+export function useEmployeePerDiemRatesAll(enabled = true) {
+  return useQuery({
+    queryKey: [...employeePerDiemRateKeys.lists(), 'all'] as const,
+    queryFn: () => fetchAllEmployeePerDiemRatePages(),
     enabled,
     retry: false,
   });
@@ -146,8 +199,6 @@ function buildListQuery(params: ListPerDiemRequestsParams): string {
     : status;
   return toQueryString({ ...rest, status: statusValue });
 }
-
-const FETCH_PAGE_SIZE = 100;
 
 /**
  * Loads every page for the per diem requests list endpoint (filter locally).

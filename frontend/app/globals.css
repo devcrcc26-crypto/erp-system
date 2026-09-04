@@ -3461,6 +3461,14 @@ main::-webkit-scrollbar,
   color: #0f766e;
 }
 
+.erp-contract-stat--static {
+  cursor: default;
+}
+
+.erp-contract-stat--static:hover {
+  background: transparent;
+}
+
 .erp-contract-hero {
   justify-content: flex-start;
 }
@@ -3568,12 +3576,14 @@ main::-webkit-scrollbar,
 
 @media (max-width: 767px) {
   .erp-expense-claims-page .erp-users-stat-bar,
-  .erp-per-diem-page .erp-users-stat-bar {
+  .erp-per-diem-page .erp-users-stat-bar,
+  .erp-employee-per-diem-rates-page .erp-users-stat-bar {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .erp-expense-claims-page .erp-users-toolbar-actions,
-  .erp-per-diem-page .erp-users-toolbar-actions {
+  .erp-per-diem-page .erp-users-toolbar-actions,
+  .erp-employee-per-diem-rates-page .erp-users-toolbar-actions {
     width: 100%;
   }
 
@@ -3667,6 +3677,7 @@ main::-webkit-scrollbar,
 @media (max-width: 480px) {
   .erp-expense-claims-page .erp-users-stat-value,
   .erp-per-diem-page .erp-users-stat-value,
+  .erp-employee-per-diem-rates-page .erp-users-stat-value,
   .erp-flight-applications-page .erp-users-stat-value,
   .erp-business-trips-page .erp-users-stat-value {
     font-size: calc(18px * var(--erp-font-scale));
@@ -3674,6 +3685,7 @@ main::-webkit-scrollbar,
 
   .erp-expense-claims-page .erp-users-stat-chip,
   .erp-per-diem-page .erp-users-stat-chip,
+  .erp-employee-per-diem-rates-page .erp-users-stat-chip,
   .erp-flight-applications-page .erp-users-stat-chip,
   .erp-business-trips-page .erp-users-stat-chip {
     width: 30px;
@@ -3962,9 +3974,68 @@ main::-webkit-scrollbar,
   }
 }
 
+/* Employee per diem rates detail — four-stat meta bar */
+@media (min-width: 901px) {
+  .erp-employee-per-diem-detail-page .erp-employee-meta-bar {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .erp-employee-per-diem-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(3n) {
+    border-right: 1px solid #eef1f4;
+  }
+
+  .erp-employee-per-diem-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:last-child {
+    border-right: none;
+  }
+
+  .erp-employee-per-diem-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(-n + 3) {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .erp-employee-per-diem-detail-page .erp-employee-meta-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .erp-employee-per-diem-detail-page .erp-employee-meta-bar .erp-users-stat {
+    border-right: 1px solid #eef1f4;
+    border-bottom: 1px solid #eef1f4;
+  }
+
+  .erp-employee-per-diem-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(2n) {
+    border-right: none;
+  }
+
+  .erp-employee-per-diem-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-last-child(-n + 2) {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .erp-employee-per-diem-detail-page .erp-employee-hero-name {
+    font-size: calc(17px * var(--erp-font-scale));
+  }
+
+  .erp-employee-per-diem-detail-page .erp-users-email {
+    text-align: center;
+  }
+}
+
 .erp-flight-form-page .ant-btn,
 .erp-business-trip-form-page .ant-btn,
-.erp-per-diem-form-page .ant-btn {
+.erp-per-diem-form-page .ant-btn,
+.erp-employee-per-diem-form-page .ant-btn {
   border-radius: 8px;
 }
 
@@ -3983,14 +4054,19 @@ main::-webkit-scrollbar,
 .erp-per-diem-form-page .ant-input-affix-wrapper,
 .erp-per-diem-form-page .ant-input-textarea textarea,
 .erp-per-diem-form-page .ant-select-selector,
-.erp-per-diem-form-page .ant-picker {
+.erp-per-diem-form-page .ant-picker,
+.erp-employee-per-diem-form-page .ant-input,
+.erp-employee-per-diem-form-page .ant-input-affix-wrapper,
+.erp-employee-per-diem-form-page .ant-select-selector,
+.erp-employee-per-diem-form-page .ant-input-number {
   border-radius: 8px !important;
 }
 
 @media (max-width: 767px) {
   .erp-flight-form-page .erp-flight-form-actions .ant-btn,
   .erp-business-trip-form-page .erp-business-trip-form-actions .ant-btn,
-  .erp-per-diem-form-page .erp-per-diem-form-actions .ant-btn {
+  .erp-per-diem-form-page .erp-per-diem-form-actions .ant-btn,
+  .erp-employee-per-diem-form-page .erp-employee-per-diem-form-actions .ant-btn {
     width: 100%;
   }
 }

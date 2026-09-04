@@ -1,20 +1,28 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Empty, Select } from 'antd';
+import { Alert, Button, Empty, Grid, Select } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
+import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useCanManageEmployeePerDiemRates } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { useUsersDirectory } from '@/lib/query/users';
 import { formatUserName } from '@/lib/utils/user-display';
-import { tokens } from '@/lib/theme/tokens';
 
+/**
+ * Configure rates for an employee — form chrome aligned with Add Employee.
+ */
 export default function EmployeePerDiemRatesNewPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isNarrow = screens.sm === false;
   const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
+
+  useSetHeaderExtra(null);
 
   const usersQuery = useUsersDirectory(
     { page: 1, limit: 100, sortBy: 'lastName', sortOrder: 'asc' },
@@ -25,82 +33,92 @@ export default function EmployeePerDiemRatesNewPageContent(): React.ReactNode {
   const [employeeId, setEmployeeId] = useState<string>('');
 
   const selectedEmployee = useMemo(() => {
-    if (!employeeId) return null;
+    if (!employeeId) {
+      return null;
+    }
     return users.find((u) => u.id === employeeId) ?? null;
   }, [employeeId, users]);
 
   if (!canManagePerDiemRates) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
+      <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="flex items-center gap-3 mb-1">
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-employee-per-diem-form-page">
+      <div className="erp-employee-per-diem-form-actions flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/hr/employee-per-diem-rates')}
-          style={{ borderRadius: 0 }}
+          aria-label={t('hr.buttons.backToList')}
+          className="sm:!me-auto"
         >
-          {t('hr.buttons.backToList')}
+          {isNarrow ? undefined : t('hr.buttons.back')}
+        </Button>
+        <Button
+          onClick={() => router.push('/hr/employee-per-diem-rates')}
+          className="shrink-0"
+          style={{ borderRadius: 8 }}
+        >
+          {t('hr.buttons.cancel')}
         </Button>
       </div>
 
-      <div
-        className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4"
+      <FormLayout
+        variant="pro"
+        dense
+        title={t('pages.hr.employeePerDiemRates.addRates')}
+        description={t('pages.hr.employeePerDiemRates.formDescription')}
       >
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[260px]">
-            <p
-              className="m-0 mb-1 text-xs font-medium uppercase tracking-wide"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {t('hr.validation.selectEmployee')}
-            </p>
-            <Select
-              showSearch
-              placeholder={t('hr.validation.selectEmployee')}
-              value={employeeId || undefined}
-              onChange={(v) => setEmployeeId(v)}
-              options={users.map((u) => ({
-                value: u.id,
-                label: formatUserName(u),
-              }))}
-              loading={usersQuery.isLoading}
-              disabled={usersQuery.isLoading || usersQuery.isError}
-              filterOption={(input, option) => {
-                const label = String(option?.label ?? '');
-                return label.toLowerCase().includes(input.toLowerCase());
-              }}
-            />
-          </div>
-
-          {selectedEmployee ? (
-            <div className="min-w-[220px]">
-              <p className="m-0 text-xs font-medium uppercase tracking-wide" style={{ color: tokens.colorTextTertiary }}>
-                {t('hr.table.employee')}
-              </p>
-              <p className="m-0 text-sm font-semibold" style={{ color: tokens.colorTextPrimary }}>
-                {formatUserName(selectedEmployee)}
-              </p>
-            </div>
+        <div className="flex flex-col gap-2">
+          <label className="erp-users-stat-label m-0">
+            {t('hr.validation.selectEmployee')}
+          </label>
+          <Select
+            showSearch
+            placeholder={t('hr.validation.selectEmployee')}
+            value={employeeId || undefined}
+            onChange={(value) => setEmployeeId(value)}
+            options={users.map((u) => ({
+              value: u.id,
+              label: formatUserName(u),
+            }))}
+            loading={usersQuery.isLoading}
+            disabled={usersQuery.isLoading || usersQuery.isError}
+            filterOption={(input, option) => {
+              const label = String(option?.label ?? '');
+              return label.toLowerCase().includes(input.toLowerCase());
+            }}
+            className="w-full max-w-md"
+          />
+          {selectedEmployee?.email ? (
+            <p className="erp-users-email m-0">{selectedEmployee.email}</p>
           ) : null}
         </div>
-      </div>
+      </FormLayout>
 
       {employeeId ? (
-        <EmployeePerDiemRatesSection employeeId={employeeId} editable embedded={false} />
+        <div className="erp-pro-card min-w-0 overflow-hidden">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <EmployeePerDiemRatesSection
+              employeeId={employeeId}
+              editable
+              embedded={false}
+            />
+          </div>
+        </div>
       ) : (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={t('hr.validation.selectEmployee')}
-        />
+        <div className="erp-pro-card p-8">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={t('hr.validation.selectEmployee')}
+          />
+        </div>
       )}
     </div>
   );
 }
-

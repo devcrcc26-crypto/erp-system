@@ -4,9 +4,9 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  Drawer,
+  Grid,
+  Input,
   Spin,
-  Space,
   Tooltip,
 } from 'antd';
 import {
@@ -15,33 +15,40 @@ import {
   EditOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   TeamOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
-import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
-import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanManageEmployeePerDiemRates } from '@/hooks/use-auth-capabilities';
-import { useTablePagination } from '@/hooks/use-table-pagination';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { EmployeePerDiemRateListItem } from '@/lib/api/per-diem.types';
+import type { PaginationMeta } from '@/lib/api/types';
 import {
   PER_DIEM_CATEGORY_FIELDS,
   PER_DIEM_DESTINATION_CATEGORIES,
 } from '@/lib/constants/per-diem-destination-categories';
-import { useEmployeePerDiemRatesList } from '@/lib/query/per-diem';
-import { tokens } from '@/lib/theme/tokens';
+import { useEmployeePerDiemRatesAll } from '@/lib/query/per-diem';
 import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
+import {
+  countActivePerDiemCategories,
+  filterEmployeePerDiemRates,
+  type EmployeePerDiemSetupFilter,
+} from '@/lib/utils/employee-per-diem-list-filter';
 import { formatUserName } from '@/lib/utils/user-display';
 
-type SetupFilter = 'all' | 'configured' | 'pending';
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  blue: { bg: '#E6F1FB', fg: '#185FA5' },
+} as const;
 
 function toRateNumber(value: number | string | null | undefined): number | null {
   if (value == null || value === '') {
@@ -51,83 +58,117 @@ function toRateNumber(value: number | string | null | undefined): number | null 
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function countActiveCategories(
-  row: EmployeePerDiemRateListItem['rate'],
-): number {
-  if (!row) {
-    return 0;
+function RateStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  const className = `erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}${onClick ? '' : ' erp-contract-stat--static'}`;
+
+  if (!onClick) {
+    return (
+      <div className={className}>
+        <span
+          className="erp-users-stat-chip"
+          style={{ background: tint.bg, color: tint.fg }}
+        >
+          {icon}
+        </span>
+        <div className="min-w-0 text-left">
+          <p className="erp-users-stat-label">{label}</p>
+          <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+        </div>
+      </div>
+    );
   }
-  return PER_DIEM_DESTINATION_CATEGORIES.filter((category) => {
-    const { active } = PER_DIEM_CATEGORY_FIELDS[category];
-    return row[active];
-  }).length;
+
+  return (
+    <button type="button" className={className} onClick={onClick}>
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
 }
 
 /**
- * HR table of all employees' per diem destination rates with inline edit drawer.
+ * HR employee per diem rates list — Users chrome.
  */
 export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
   const { params, resetPage, bindMeta } = useTablePagination(10);
+
   const [search, setSearch] = useState('');
-  const [setupFilter, setSetupFilter] = useState<SetupFilter>('all');
-  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
-  const [editingEmployeeName, setEditingEmployeeName] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [setupFilter, setSetupFilter] =
+    useState<EmployeePerDiemSetupFilter>('all');
 
-  const listParams = useMemo(
-    () => ({
-      ...params,
-      search: search.trim() || undefined,
-      sortBy: 'lastName',
-      sortOrder: 'asc' as const,
-    }),
-    [params, search],
-  );
-
-  const statsQuery = useEmployeePerDiemRatesList(
-    {
-      page: 1,
-      limit: 100,
-      search: search.trim() || undefined,
-      sortBy: 'lastName',
-      sortOrder: 'asc',
-    },
-    canManagePerDiemRates,
-  );
-
-  const listQuery = useEmployeePerDiemRatesList(listParams, canManagePerDiemRates);
-
-  const allRows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-  const totalCount = meta?.total ?? allRows.length;
-  const statsRows = statsQuery.data?.data ?? [];
-
-  const filteredRows = useMemo(() => {
-    if (setupFilter === 'configured') {
-      return allRows.filter((row) => row.rate != null);
-    }
-    if (setupFilter === 'pending') {
-      return allRows.filter((row) => row.rate == null);
-    }
-    return allRows;
-  }, [allRows, setupFilter]);
+  const listQuery = useEmployeePerDiemRatesAll(canManagePerDiemRates);
+  const allRows = listQuery.data ?? [];
 
   const stats = useMemo(() => {
-    const configured = statsRows.filter((row) => row.rate != null).length;
-    const pending = statsRows.filter((row) => row.rate == null).length;
-    const activeCategories = statsRows.reduce(
-      (sum, row) => sum + countActiveCategories(row.rate),
+    const configured = allRows.filter((row) => row.rate != null).length;
+    const pending = allRows.filter((row) => row.rate == null).length;
+    const activeCategories = allRows.reduce(
+      (sum, row) => sum + countActivePerDiemCategories(row.rate),
       0,
     );
     return {
-      total: statsQuery.data?.meta?.total ?? statsRows.length,
+      total: allRows.length,
       configured,
       pending,
       activeCategories,
     };
-  }, [statsQuery.data, statsRows]);
+  }, [allRows]);
+
+  const filtered = useMemo(
+    () =>
+      filterEmployeePerDiemRates(allRows, {
+        search: appliedSearch,
+        setupFilter,
+      }),
+    [allRows, appliedSearch, setupFilter],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const categoryColumns = useMemo(
     () =>
@@ -138,29 +179,24 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
           key: category,
           width: 108,
           align: 'right' as const,
-          responsive: ['xl'],
+          responsive: ['xl'] as const,
           render: (_: unknown, row: EmployeePerDiemRateListItem) => {
             const rateRow = row.rate;
             if (!rateRow) {
-              return (
-                <span style={{ color: tokens.colorTextTertiary }}>—</span>
-              );
+              return <span className="erp-users-cell-sub">—</span>;
             }
             const amount = toRateNumber(rateRow[rate]);
             const isActive = rateRow[active];
             if (amount == null) {
-              return (
-                <span style={{ color: tokens.colorTextTertiary }}>—</span>
-              );
+              return <span className="erp-users-cell-sub">—</span>;
             }
             return (
               <span
-                className={isActive ? 'text-sm font-medium' : 'text-sm'}
-                style={{
-                  color: isActive
-                    ? tokens.colorTextPrimary
-                    : tokens.colorTextTertiary,
-                }}
+                className={
+                  isActive
+                    ? 'erp-users-cell-strong text-sm'
+                    : 'erp-users-cell-sub text-sm'
+                }
                 title={isActive ? undefined : t('hr.table.inactiveCategory')}
               >
                 {formatCurrencyAmount(amount, rateRow.currency)}
@@ -177,32 +213,23 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
       {
         title: t('hr.table.employee'),
         key: 'employee',
-        fixed: 'left',
+        fixed: isNarrow ? undefined : 'left',
         width: 220,
         render: (_: unknown, row: EmployeePerDiemRateListItem) => (
-          <button
-            type="button"
-            className="m-0 min-w-0 border-0 bg-transparent p-0 text-left"
-            onClick={(event) => {
-              event.stopPropagation();
-              router.push(`/hr/employee-per-diem-rates/${row.employeeId}`);
-            }}
-          >
-            <p
-              className="m-0 truncate text-sm font-medium hover:underline"
-              style={{ color: tokens.colorPrimary }}
-            >
+          <div className="min-w-0">
+            <p className="erp-users-cell-strong m-0 truncate">
               {formatUserName(row.employee)}
             </p>
             {row.employee.email ? (
-              <p
-                className="m-0 truncate text-xs"
-                style={{ color: tokens.colorTextTertiary }}
-              >
+              <p className="erp-users-email m-0 mt-0.5 truncate">
                 {row.employee.email}
               </p>
             ) : null}
-          </button>
+            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+              {row.employee.department?.name ?? '—'}
+              {row.rate?.currency ? ` · ${row.rate.currency}` : ''}
+            </p>
+          </div>
         ),
       },
       {
@@ -210,23 +237,31 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
         key: 'department',
         width: 150,
         responsive: ['md'],
-        render: (_: unknown, row: EmployeePerDiemRateListItem) =>
-          row.employee.department?.name ?? '—',
+        render: (_: unknown, row: EmployeePerDiemRateListItem) => (
+          <span className="erp-users-cell-sub">
+            {row.employee.department?.name ?? '—'}
+          </span>
+        ),
       },
       {
         title: t('hr.form.currency'),
         key: 'currency',
         width: 90,
+        responsive: ['md'],
         render: (_: unknown, row: EmployeePerDiemRateListItem) =>
-          row.rate?.currency ?? '—',
+          row.rate?.currency ? (
+            <span className="erp-users-role-tag">{row.rate.currency}</span>
+          ) : (
+            <span className="erp-users-cell-sub">—</span>
+          ),
       },
       {
         title: t('pages.hr.employeePerDiemRates.stats.activeCategories'),
         key: 'activeCount',
-        width: 110,
+        width: 120,
         align: 'center',
         render: (_: unknown, row: EmployeePerDiemRateListItem) => {
-          const count = countActiveCategories(row.rate);
+          const count = countActivePerDiemCategories(row.rate);
           if (!row.rate) {
             return (
               <StatusBadge
@@ -236,7 +271,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
             );
           }
           return (
-            <span className="text-sm font-medium">
+            <span className="erp-users-cell-strong">
               {count}/{PER_DIEM_DESTINATION_CATEGORIES.length}
             </span>
           );
@@ -246,44 +281,50 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
       {
         title: t('common.actions'),
         key: 'actions',
-        fixed: 'right',
-        width: 100,
+        fixed: isNarrow ? undefined : 'right',
+        width: isNarrow ? 72 : 100,
         render: (_: unknown, row: EmployeePerDiemRateListItem) => (
           <Button
             type="link"
-            className="px-0"
+            className="!px-0"
             icon={<EditOutlined />}
+            aria-label={t('common.update')}
             onClick={(event) => {
               event.stopPropagation();
-              router.push(`/hr/employee-per-diem-rates/${row.employeeId}/edit`);
+              router.push(
+                `/hr/employee-per-diem-rates/${row.employeeId}/edit`,
+              );
             }}
           >
-            {t('common.update')}
+            {isNarrow ? undefined : t('common.update')}
           </Button>
         ),
       },
     ],
-    [categoryColumns, router, t],
+    [categoryColumns, isNarrow, router, t],
   );
 
-  function handleSetupFilter(mode: SetupFilter): void {
+  function handleSetupFilter(mode: EmployeePerDiemSetupFilter): void {
     setSetupFilter(mode);
     resetPage();
   }
 
   function handleResetFilters(): void {
     setSearch('');
+    setAppliedSearch('');
     setSetupFilter('all');
     resetPage();
   }
 
-  const hasFilters = Boolean(search.trim()) || setupFilter !== 'all';
+  const hasFilters =
+    Boolean(appliedSearch.trim()) || setupFilter !== 'all';
 
   const pageTitle = t('pages.hr.employeePerDiemRates.listTitle');
+  const pageDescription = t('pages.hr.employeePerDiemRates.listDescription');
 
   if (!canManagePerDiemRates) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
+      <div className="erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -291,14 +332,16 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
+    <div className="erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page">
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -311,140 +354,127 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+      <div className="erp-users-stat-bar">
+        <RateStat
+          label={t('pages.hr.employeePerDiemRates.stats.total')}
+          value={stats.total}
+          accent="blue"
+          icon={<TeamOutlined />}
+          active={setupFilter === 'all'}
           onClick={() => handleSetupFilter('all')}
-        >
-          <StatCard
-            label={t('pages.hr.employeePerDiemRates.stats.total')}
-            value={stats.total}
-            color="blue"
-            icon={<TeamOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <RateStat
+          label={t('pages.hr.employeePerDiemRates.stats.configured')}
+          value={stats.configured}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={setupFilter === 'configured'}
           onClick={() => handleSetupFilter('configured')}
-        >
-          <StatCard
-            label={t('pages.hr.employeePerDiemRates.stats.configured')}
-            value={stats.configured}
-            color="green"
-            icon={<CheckCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <RateStat
+          label={t('pages.hr.employeePerDiemRates.stats.pendingSetup')}
+          value={stats.pending}
+          accent="amber"
+          icon={<WarningOutlined />}
+          active={setupFilter === 'pending'}
           onClick={() => handleSetupFilter('pending')}
-        >
-          <StatCard
-            label={t('pages.hr.employeePerDiemRates.stats.pendingSetup')}
-            value={stats.pending}
-            color="amber"
-            icon={<WarningOutlined />}
-          />
-        </button>
-        <StatCard
+        />
+        <RateStat
           label={t('pages.hr.employeePerDiemRates.stats.activeCategories')}
           value={stats.activeCategories}
-          color="teal"
+          accent="teal"
           icon={<BankOutlined />}
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <ListSearchInput
-            committedValue={search}
-            onCommit={(value) => {
-              setSearch(value);
-              resetPage();
-            }}
-            placeholder={t('hr.placeholder.searchEmployeePerDiemRates')}
-            className="w-full min-w-0 sm:w-72"
-          />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-per-diem-rates" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {filteredRows.length}{' '}
-              {setupFilter === 'all'
-                ? totalCount === 1
-                  ? t('pages.hr.employeePerDiemRates.employeeSingular')
-                  : t('pages.hr.employeePerDiemRates.employeePlural')
-                : filteredRows.length === 1
-                  ? t('pages.hr.employeePerDiemRates.employeeSingular')
-                  : t('pages.hr.employeePerDiemRates.employeePlural')}
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
             </span>
           </div>
-
-          <Space wrap size={8}>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
             <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => router.push('/hr/employee-per-diem-rates/new')}
-              style={{ borderRadius: 0 }}
+              aria-label={t('pages.hr.employeePerDiemRates.addRates')}
             >
-              {t('common.update')}
+              {isNarrow
+                ? undefined
+                : t('pages.hr.employeePerDiemRates.addRates')}
             </Button>
-          </Space>
+          </div>
         </div>
 
-        <div className="px-0">
+        <div className="erp-users-filter-bar">
+          <Input
+            allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.hr.employeePerDiemRates.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              setAppliedSearch(value.trim());
+              resetPage();
+            }}
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
+          />
+          <span className="erp-users-filter-spacer" aria-hidden />
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="erp-pro-table-card-body">
           <DataTable<EmployeePerDiemRateListItem>
             rowKey="employeeId"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
-            dataSource={filteredRows}
-            loading={listQuery.isFetching && !listQuery.isLoading}
-            scroll={{ x: 1200 }}
+            dataSource={rows}
+            loading={listQuery.isFetching && rows.length === 0}
+            scroll={{ x: isNarrow ? 560 : isCompact ? 800 : 1200 }}
             onRow={(record) => ({
-              onClick: () => {
-                router.push(`/hr/employee-per-diem-rates/${record.employeeId}`);
-              },
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              onClick: () =>
+                router.push(
+                  `/hr/employee-per-diem-rates/${record.employeeId}`,
+                ),
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
-                  icon={<BankOutlined style={{ fontSize: 24 }} />}
-                  title={t('hr.empty.employeePerDiemRates')}
-                  description={t('hr.empty.employeePerDiemRatesDescription')}
+                  icon={<BankOutlined style={{ fontSize: 28 }} />}
+                  title={
+                    hasFilters
+                      ? t('pages.hr.employeePerDiemRates.emptyFiltered')
+                      : t('hr.empty.employeePerDiemRates')
+                  }
+                  description={pageDescription}
                   action={
                     hasFilters
                       ? {
@@ -452,58 +482,23 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
                           onClick: handleResetFilters,
                         }
                       : {
-                          label: t('common.update'),
-                          onClick: () => router.push('/hr/employee-per-diem-rates/new'),
+                          label: t('pages.hr.employeePerDiemRates.addRates'),
+                          onClick: () =>
+                            router.push('/hr/employee-per-diem-rates/new'),
                         }
                   }
                 />
               ),
             }}
-            pagination={
-              meta
-                ? {
-                    ...bindMeta(meta),
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                  }
-                : undefined
-            }
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
+            }}
           />
         </div>
       </div>
-
-      <Drawer
-        open={editingEmployeeId != null}
-        title={t('hr.dialog.editEmployeePerDiemRates', {
-          name: editingEmployeeName,
-        })}
-        size={720}
-        destroyOnHidden
-        onClose={() => {
-          setEditingEmployeeId(null);
-          setEditingEmployeeName('');
-        }}
-        extra={
-          editingEmployeeId ? (
-            <Button
-              type="link"
-              className="px-0"
-              onClick={() =>
-                router.push(`/hr/employee-per-diem-rates/${editingEmployeeId}`)
-              }
-            >
-              {t('pages.hr.employeePerDiemRates.openProfile')}
-            </Button>
-          ) : null
-        }
-      >
-        {editingEmployeeId ? (
-          <EmployeePerDiemRatesSection
-            employeeId={editingEmployeeId}
-            editable
-            embedded
-          />
-        ) : null}
-      </Drawer>
     </div>
   );
 }
