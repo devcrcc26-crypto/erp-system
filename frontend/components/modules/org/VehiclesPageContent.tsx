@@ -6,9 +6,9 @@ import {
   Alert,
   Button,
   Dropdown,
+  Grid,
   Input,
   Select,
-  Space,
   Spin,
   Tooltip,
   type MenuProps,
@@ -21,12 +21,12 @@ import {
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
 import { CarFront } from 'lucide-react';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
+import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -55,12 +55,17 @@ import {
   vehicleStatusVariant,
 } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { tokens } from '@/lib/theme/tokens';
 
+/**
+ * Company vehicles list — Users chrome (stat bar, filter row, rounded table).
+ */
 export default function VehiclesPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
@@ -143,6 +148,11 @@ export default function VehiclesPageContent(): React.ReactNode {
     };
   }, [statsQuery.data]);
 
+  function handleStatusStatFilter(next: VehicleStatus | undefined): void {
+    setStatusFilter(next);
+    resetPage();
+  }
+
   function handleResetFilters(): void {
     setSearch('');
     setAppliedSearch('');
@@ -218,10 +228,13 @@ export default function VehiclesPageContent(): React.ReactNode {
     [router, t],
   );
 
+  const hasFilters =
+    Boolean(appliedSearch.trim()) || statusFilter !== undefined;
+
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+      <div className="erp-pro-list-page erp-users-page erp-org-vehicles-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
       </div>
@@ -231,7 +244,7 @@ export default function VehiclesPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-org-vehicles-page">
       <VehicleChangeStatusDialog
         open={Boolean(statusModalVehicle)}
         plateNumber={statusModalVehicle?.plateNumber ?? ''}
@@ -282,44 +295,82 @@ export default function VehiclesPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
+      <div className="erp-users-stat-bar">
+        <OrgListStat
           label={t('vehicles.stats.total')}
           value={vehicleStats.totalCount}
-          color="teal"
-          icon={<CarFront size={14} />}
+          accent="teal"
+          icon={<CarFront size={14} strokeWidth={2} />}
+          active={statusFilter === undefined}
+          onClick={() => handleStatusStatFilter(undefined)}
         />
-        <StatCard
+        <OrgListStat
           label={t('vehicles.stats.available')}
           value={vehicleStats.availableCount}
-          color="green"
+          accent="green"
           icon={<CheckCircleOutlined />}
+          active={statusFilter === 'AVAILABLE'}
+          onClick={() => handleStatusStatFilter('AVAILABLE')}
         />
-        <StatCard
+        <OrgListStat
           label={t('vehicles.stats.inUse')}
           value={vehicleStats.inUseCount}
-          color="amber"
+          accent="amber"
           icon={<CarOutlined />}
+          active={statusFilter === 'IN_USE'}
+          onClick={() => handleStatusStatFilter('IN_USE')}
         />
-        <StatCard
+        <OrgListStat
           label={t('vehicles.stats.maintenanceRetired')}
           value={vehicleStats.maintenanceCount}
-          color="default"
+          accent="slate"
           icon={<ToolOutlined />}
+          active={statusFilter === 'MAINTENANCE'}
+          onClick={() => handleStatusStatFilter('MAINTENANCE')}
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <Input.Search
-            placeholder={t('vehicles.searchPlaceholder')}
-            className="w-full min-w-0 sm:w-72"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('vehicles.allVehicles')}
+            </h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void handleRefresh()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/organization/vehicles/new')}
+              aria-label={t('vehicles.addVehicle')}
+            >
+              {isNarrow ? undefined : t('vehicles.addVehicle')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('vehicles.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            onSearch={(value) => {
-              setSearch(value);
-              setAppliedSearch(value.trim());
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
               resetPage();
             }}
             onClear={() => {
@@ -328,9 +379,10 @@ export default function VehiclesPageContent(): React.ReactNode {
               resetPage();
             }}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           <Select
             placeholder={t('vehicles.filterStatus')}
-            className="w-full min-w-0 sm:w-40"
+            className="erp-users-filter-select"
             allowClear
             options={vehicleStatusOptions}
             value={statusFilter}
@@ -339,84 +391,54 @@ export default function VehiclesPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          <Button onClick={handleResetFilters} style={{ borderRadius: 0 }}>
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void handleRefresh()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-vehicle" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {t('vehicles.allVehicles')}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {meta.total === 1
-                ? t('vehicles.vehicleCountOne')
-                : t('vehicles.vehicleCount', { count: meta.total })}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/organization/vehicles/new')}
-              style={{ borderRadius: 0 }}
-            >
-              {t('vehicles.addVehicle')}
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
             </Button>
-          </Space>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<CompanyVehicleListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             dataSource={rows}
-            scroll={false}
+            scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 1000 }}
             loading={listQuery.isLoading}
             pagination={
               pagination
                 ? {
                     ...pagination,
                     pageSizeOptions: ['10', '20', '50', '100'],
+                    simple: isNarrow,
+                    showSizeChanger: !isNarrow,
                   }
                 : undefined
             }
             onRow={(record) => ({
               onClick: () =>
                 router.push(`/organization/vehicles/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
-                  icon={<CarFront />}
+                  icon={<CarFront size={28} strokeWidth={1.5} />}
                   title={t('hr.empty.noVehicles')}
                   description={t('vehicles.emptyDescription')}
-                  action={{
-                    label: t('vehicles.addVehicle'),
-                    onClick: () => router.push('/organization/vehicles/new'),
-                  }}
+                  action={
+                    hasFilters
+                      ? {
+                          label: t('common.reset'),
+                          onClick: handleResetFilters,
+                        }
+                      : {
+                          label: t('vehicles.addVehicle'),
+                          onClick: () =>
+                            router.push('/organization/vehicles/new'),
+                        }
+                  }
                 />
               ),
             }}
@@ -444,12 +466,7 @@ export default function VehiclesPageContent(): React.ReactNode {
                 key: 'plateNumber',
                 width: 130,
                 render: (plate: string) => (
-                  <span
-                    className="font-[family-name:var(--font-mono)] text-sm font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
-                  >
-                    {plate}
-                  </span>
+                  <span className="erp-users-id-chip">{plate}</span>
                 ),
               },
               {
@@ -458,7 +475,11 @@ export default function VehiclesPageContent(): React.ReactNode {
                 key: 'vehicleType',
                 width: 110,
                 responsive: ['md'],
-                render: (value: string) => formatVehicleType(value, t),
+                render: (value: string) => (
+                  <span className="erp-users-cell-sub">
+                    {formatVehicleType(value, t)}
+                  </span>
+                ),
               },
               {
                 title: t('hr.table.make'),
@@ -467,6 +488,9 @@ export default function VehiclesPageContent(): React.ReactNode {
                 width: 120,
                 ellipsis: true,
                 responsive: ['md'],
+                render: (value: string) => (
+                  <span className="erp-users-cell-strong">{value}</span>
+                ),
               },
               {
                 title: t('hr.table.model'),
@@ -475,6 +499,9 @@ export default function VehiclesPageContent(): React.ReactNode {
                 width: 120,
                 ellipsis: true,
                 responsive: ['lg'],
+                render: (value: string) => (
+                  <span className="erp-users-cell-sub">{value}</span>
+                ),
               },
               {
                 title: t('hr.table.year'),
@@ -483,6 +510,9 @@ export default function VehiclesPageContent(): React.ReactNode {
                 width: 70,
                 align: 'right',
                 responsive: ['lg'],
+                render: (value: number) => (
+                  <span className="erp-users-cell-sub">{value}</span>
+                ),
               },
               {
                 title: t('hr.table.fuelType'),
@@ -490,7 +520,11 @@ export default function VehiclesPageContent(): React.ReactNode {
                 key: 'fuelType',
                 width: 90,
                 responsive: ['lg'],
-                render: (value: string) => formatFuelType(value, t),
+                render: (value: string) => (
+                  <span className="erp-users-cell-sub">
+                    {formatFuelType(value, t)}
+                  </span>
+                ),
               },
               {
                 title: t('hr.table.assignedDriver'),
@@ -498,14 +532,17 @@ export default function VehiclesPageContent(): React.ReactNode {
                 width: 160,
                 ellipsis: true,
                 responsive: ['md'],
-                render: (_: unknown, row: CompanyVehicleListItem) =>
-                  formatDriverName(row.assignedDriver),
+                render: (_: unknown, row: CompanyVehicleListItem) => (
+                  <span className="erp-users-cell-sub">
+                    {formatDriverName(row.assignedDriver)}
+                  </span>
+                ),
               },
               {
                 title: t('hr.table.status'),
                 dataIndex: 'status',
                 key: 'status',
-                width: 120,
+                width: isNarrow ? 108 : 120,
                 render: (value: VehicleStatus) => (
                   <StatusBadge
                     label={formatVehicleStatus(value, t)}
@@ -534,7 +571,6 @@ export default function VehiclesPageContent(): React.ReactNode {
                         aria-label={t('vehicles.actionsFor', {
                           plate: record.plateNumber,
                         })}
-                        style={{ borderRadius: 0 }}
                       />
                     </Dropdown>
                   </div>

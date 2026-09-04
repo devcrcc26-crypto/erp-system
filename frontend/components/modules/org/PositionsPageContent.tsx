@@ -5,6 +5,7 @@ import {
   Alert,
   Button,
   Dropdown,
+  Grid,
   Input,
   Spin,
   Tooltip,
@@ -19,14 +20,14 @@ import {
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   StopOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
+import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import PositionFormDrawer from '@/components/modules/org/PositionFormDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import {
@@ -44,7 +45,6 @@ import {
   usePositions,
   type Position,
 } from '@/lib/query/org';
-import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatPositionGrade } from '@/lib/utils/position-grades';
 
@@ -76,6 +76,9 @@ function filterPositions(
 
 export default function PositionsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const permLoading = usePermissionsLoading();
   const canView = useCanViewDepartmentsNav();
   const canManage = useCanManageDepartments();
@@ -203,19 +206,9 @@ export default function PositionsPageContent(): React.ReactNode {
         key: 'title',
         render: (value: string, row: Position) => (
           <div className="min-w-0 py-0.5">
-            <p
-              className="m-0 text-sm font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {value}
-            </p>
+            <p className="erp-users-cell-strong m-0">{value}</p>
             {row.titleZh ? (
-              <p
-                className="m-0 truncate text-xs"
-                style={{ color: tokens.colorTextTertiary }}
-              >
-                {row.titleZh}
-              </p>
+              <p className="erp-users-cell-sub m-0 truncate">{row.titleZh}</p>
             ) : null}
           </div>
         ),
@@ -225,7 +218,11 @@ export default function PositionsPageContent(): React.ReactNode {
         dataIndex: 'grade',
         key: 'grade',
         responsive: ['lg'],
-        render: (value: string | null) => formatPositionGrade(value, t),
+        render: (value: string | null) => (
+          <span className="erp-users-email">
+            {formatPositionGrade(value, t)}
+          </span>
+        ),
       },
       {
         title: t('common.status'),
@@ -256,7 +253,6 @@ export default function PositionsPageContent(): React.ReactNode {
                 type="text"
                 icon={<MoreOutlined />}
                 aria-label={t('common.actions')}
-                style={{ borderRadius: 0 }}
               />
             </Dropdown>
           </div>
@@ -272,71 +268,102 @@ export default function PositionsPageContent(): React.ReactNode {
       allRows.length === 0)
   ) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-org-positions-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   if (!canView) {
     return (
-      <Alert type="warning" showIcon title={t('pages.positions.accessDenied')} />
+      <div className="erp-pro-list-page erp-users-page erp-org-positions-page">
+        <Alert type="warning" showIcon title={t('pages.positions.accessDenied')} />
+      </div>
     );
   }
 
   if (activePositionsQuery.isError || inactivePositionsQuery.isError) {
     return (
-      <Alert type="error" showIcon title={t('pages.positions.loadFailed')} />
+      <div className="erp-pro-list-page erp-users-page erp-org-positions-page">
+        <Alert type="error" showIcon title={t('pages.positions.loadFailed')} />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-<div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+    <div className="erp-pro-list-page erp-users-page erp-org-positions-page">
+      <div className="erp-users-stat-bar">
+        <OrgListStat
+          label={t('pages.positions.stats.total')}
+          value={stats.total}
+          accent="blue"
+          icon={<IdcardOutlined />}
+          active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
-        >
-          <StatCard
-            label={t('pages.positions.stats.total')}
-            value={stats.total}
-            color="blue"
-            icon={<IdcardOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <OrgListStat
+          label={t('common.active')}
+          value={stats.active}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statusMode === 'active'}
           onClick={() => handleStatusMode('active')}
-        >
-          <StatCard
-            label={t('common.active')}
-            value={stats.active}
-            color="green"
-            icon={<CheckCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <OrgListStat
+          label={t('common.inactive')}
+          value={stats.inactive}
+          accent="slate"
+          icon={<StopOutlined />}
+          active={statusMode === 'inactive'}
           onClick={() => handleStatusMode('inactive')}
-        >
-          <StatCard
-            label={t('common.inactive')}
-            value={stats.inactive}
-            color="default"
-            icon={<StopOutlined />}
-          />
-        </button>
+        />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <Input.Search
-            placeholder={t('pages.positions.searchPlaceholder')}
-            className="w-full min-w-0 sm:w-72"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('pages.positions.title')}
+            </h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listFetching && !listLoading}
+                onClick={() => refetchLists()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            {canManage ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setEditing(null);
+                  setReadOnlyDrawer(false);
+                  setDrawerOpen(true);
+                }}
+                aria-label={t('pages.positions.addPosition')}
+              >
+                {isNarrow ? undefined : t('pages.positions.addPosition')}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.positions.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
             value={search}
             onChange={(e) => {
               const value = e.target.value;
@@ -344,9 +371,8 @@ export default function PositionsPageContent(): React.ReactNode {
               setAppliedSearch(value.trim());
               resetPage();
             }}
-            onSearch={(value) => {
-              setSearch(value);
-              setAppliedSearch(value.trim());
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
               resetPage();
             }}
             onClear={() => {
@@ -355,71 +381,29 @@ export default function PositionsPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listFetching && !listLoading}
-              onClick={() => refetchLists()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="positions" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {t('pages.positions.title')}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {meta.total === 1
-                ? t('pages.positions.countOne')
-                : t('pages.positions.count', { count: meta.total })}
-            </span>
-          </div>
-          {canManage ? (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setEditing(null);
-                setReadOnlyDrawer(false);
-                setDrawerOpen(true);
-              }}
-              style={{ borderRadius: 0 }}
-            >
-              {t('pages.positions.addPosition')}
+          <span className="erp-users-filter-spacer" aria-hidden />
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
             </Button>
           ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<Position>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={pageRows}
             loading={listFetching && pageRows.length === 0}
-            scroll={false}
-            pagination={bindMeta(meta)}
+            scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 900 }}
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
+            }}
             locale={{
               emptyText: (
                 <TableEmptyState

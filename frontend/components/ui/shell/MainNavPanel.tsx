@@ -88,30 +88,57 @@ export default function MainNavPanel({
   const canViewPositions = useCanViewDepartmentsNav();
   const canViewDisciplinesCatalog = useCanViewDisciplinesCatalogNav();
 
-  const navStructure = buildIconRailNav({
-    canViewReviewInbox: !permLoading && canViewReviewInbox,
-    canViewMyComments: !permLoading && canViewMyComments,
-    canViewMyWork: !permLoading && canViewMyWork,
-    canViewSubmittals: !permLoading && canViewSubmittals,
-    canViewExternalReleases: !permLoading && canViewExternalReleases,
-    canViewChangeRequests: !permLoading && canViewChangeRequests,
-    canViewRfis: !permLoading && canViewRfis,
-    canViewIssues: !permLoading && canViewIssues,
-    canViewRisks: !permLoading && canViewRisks,
-    canViewPunchList: !permLoading && canViewPunchList,
-    canViewMeetings: !permLoading && canViewMeetings,
-    canViewCorrespondence: !permLoading && canViewCorrespondence,
-    canViewDailyLogs: !permLoading && canViewDailyLogs,
-    canViewApprovals: !permLoading,
-    canViewHr: !permLoading && canViewHr,
-    canViewAuditLogs: !permLoading && canViewAuditLogs,
-    canManageUsers: !permLoading && canManageUsers,
-    canManageRoles: !permLoading && canManageRoles,
-    canViewProjects: !permLoading && pm.projects.canView,
-    canViewDepartments: !permLoading && canViewDepartments,
-    canViewPositions: !permLoading && canViewPositions,
-    canViewDisciplinesCatalog: !permLoading && canViewDisciplinesCatalog,
-  });
+  const navStructure = useMemo(
+    () =>
+      buildIconRailNav({
+        canViewReviewInbox: !permLoading && canViewReviewInbox,
+        canViewMyComments: !permLoading && canViewMyComments,
+        canViewMyWork: !permLoading && canViewMyWork,
+        canViewSubmittals: !permLoading && canViewSubmittals,
+        canViewExternalReleases: !permLoading && canViewExternalReleases,
+        canViewChangeRequests: !permLoading && canViewChangeRequests,
+        canViewRfis: !permLoading && canViewRfis,
+        canViewIssues: !permLoading && canViewIssues,
+        canViewRisks: !permLoading && canViewRisks,
+        canViewPunchList: !permLoading && canViewPunchList,
+        canViewMeetings: !permLoading && canViewMeetings,
+        canViewCorrespondence: !permLoading && canViewCorrespondence,
+        canViewDailyLogs: !permLoading && canViewDailyLogs,
+        canViewApprovals: !permLoading,
+        canViewHr: !permLoading && canViewHr,
+        canViewAuditLogs: !permLoading && canViewAuditLogs,
+        canManageUsers: !permLoading && canManageUsers,
+        canManageRoles: !permLoading && canManageRoles,
+        canViewProjects: !permLoading && pm.projects.canView,
+        canViewDepartments: !permLoading && canViewDepartments,
+        canViewPositions: !permLoading && canViewPositions,
+        canViewDisciplinesCatalog: !permLoading && canViewDisciplinesCatalog,
+      }),
+    [
+      permLoading,
+      canViewReviewInbox,
+      canViewMyComments,
+      canViewMyWork,
+      canViewSubmittals,
+      canViewExternalReleases,
+      canViewChangeRequests,
+      canViewRfis,
+      canViewIssues,
+      canViewRisks,
+      canViewPunchList,
+      canViewMeetings,
+      canViewCorrespondence,
+      canViewDailyLogs,
+      canViewHr,
+      canViewAuditLogs,
+      canManageUsers,
+      canManageRoles,
+      pm.projects.canView,
+      canViewDepartments,
+      canViewPositions,
+      canViewDisciplinesCatalog,
+    ],
+  );
 
   const visibleStructure = useMemo(() => {
     function isItemVisible(item: IconRailItem): boolean {
@@ -120,10 +147,12 @@ export default function MainNavPanel({
 
     return {
       topItems: navStructure.topItems.filter(isItemVisible),
-      groups: navStructure.groups.map((group) => ({
-        ...group,
-        items: group.items.filter(isItemVisible),
-      })),
+      groups: navStructure.groups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter(isItemVisible),
+        }))
+        .filter((group) => group.items.length > 0),
       standalone: navStructure.standalone.filter(isItemVisible),
     };
   }, [navStructure, epc, pm]);
@@ -140,12 +169,13 @@ export default function MainNavPanel({
 
   const [browsedDomainKey, setBrowsedDomainKey] = useState<string | null>(null);
 
+  // Sync the module panel to the route's domain when navigation changes —
+  // not on every domains identity change (that would undo manual rail clicks).
   useEffect(() => {
-    const active = findNavDomain(domains, domains.activeDomainKey);
-    if (active !== null && active.items.length > 0) {
-      setBrowsedDomainKey(active.key);
+    if (domains.activeDomainKey != null) {
+      setBrowsedDomainKey(domains.activeDomainKey);
     }
-  }, [domains]);
+  }, [domains.activeDomainKey]);
 
   const panelDomainKey = browsedDomainKey ?? firstPanelDomainKey(domains);
   const panelDomain = findNavDomain(domains, panelDomainKey);

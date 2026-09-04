@@ -320,6 +320,10 @@ export function canViewGlobalNavKey(
     return true;
   }
 
+  if (key.startsWith('/organization/')) {
+    return true;
+  }
+
   if (epc.navFullAccess) {
     return true;
   }

@@ -5,27 +5,33 @@ import {
   Alert,
   Button,
   Dropdown,
+  Grid,
   Input,
   Spin,
   Tooltip,
   type MenuProps,
 } from 'antd';
 import {
+  AppstoreOutlined,
   BankOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   MoreOutlined,
+  PartitionOutlined,
   PlusOutlined,
+  ProjectOutlined,
   ReloadOutlined,
+  SearchOutlined,
   StopOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
+import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import DepartmentFormDrawer from '@/components/modules/org/DepartmentFormDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanManageDepartments, useCanViewDepartmentsNav } from '@/hooks/use-org-nav-access';
@@ -49,6 +55,8 @@ import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const LEADER_WARNING_DISMISS_KEY = 'erp-departments-leader-warning-dismissed';
+const PAGE_CHROME =
+  'erp-pro-list-page erp-users-page erp-org-departments-page';
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -88,43 +96,50 @@ function DepartmentPortfolioStats({
     {
       label: t('pages.departments.stats.totalProjects'),
       value: metrics.totalProjects,
-      color: 'blue' as const,
+      accent: 'blue' as const,
+      icon: <ProjectOutlined />,
     },
     {
       label: t('pages.departments.stats.activeProjects'),
       value: metrics.activeProjects,
-      color: 'green' as const,
+      accent: 'green' as const,
+      icon: <CheckCircleOutlined />,
     },
     {
       label: t('pages.departments.stats.totalTasks'),
       value: metrics.totalTasks,
-      color: 'teal' as const,
+      accent: 'teal' as const,
+      icon: <UnorderedListOutlined />,
     },
     {
       label: t('pages.departments.stats.totalSubtasks'),
       value: metrics.totalSubtasks,
-      color: 'default' as const,
+      accent: 'slate' as const,
+      icon: <PartitionOutlined />,
     },
     {
       label: t('pages.departments.stats.openSubtasks'),
       value: metrics.openSubtasks,
-      color: 'amber' as const,
+      accent: 'amber' as const,
+      icon: <ClockCircleOutlined />,
     },
     {
       label: t('pages.departments.stats.disciplinesInUse'),
       value: metrics.disciplinesInUse,
-      color: 'blue' as const,
+      accent: 'blue' as const,
+      icon: <AppstoreOutlined />,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="erp-users-stat-bar erp-org-portfolio-stats">
       {cards.map((card) => (
-        <StatCard
+        <OrgListStat
           key={card.label}
           label={card.label}
           value={metrics.isLoading ? 0 : card.value}
-          color={card.color}
+          accent={card.accent}
+          icon={card.icon}
         />
       ))}
     </div>
@@ -145,43 +160,33 @@ function DepartmentLeaderCard({
   const { t } = useEpcTranslation();
 
   return (
-    <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-      <div className="border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
-        <h3 className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-          {t('pages.departments.myDepartment')}
-        </h3>
+    <div className="erp-pro-card overflow-hidden">
+      <div className="erp-pro-card-toolbar erp-users-toolbar">
+        <div className="erp-users-toolbar-title">
+          <h3 className="erp-pro-card-toolbar-title m-0">
+            {t('pages.departments.myDepartment')}
+          </h3>
+        </div>
       </div>
-      <div className="px-3 py-4 sm:px-5">
+      <div className="px-4 py-4 sm:px-5">
         <h2
-          className="m-0 text-base font-semibold"
+          className="erp-users-cell-strong m-0 text-base"
           style={{ color: tokens.colorTextPrimary }}
         >
           {department.name}
         </h2>
         {department.nameZh ? (
-          <p
-            className="mb-0 mt-1 text-xs"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {department.nameZh}
-          </p>
+          <p className="erp-users-email m-0 mt-1">{department.nameZh}</p>
         ) : null}
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt style={{ color: tokens.colorTextTertiary }}>
+            <dt className="erp-users-stat-label">
               {t('pages.departments.table.leader')}
             </dt>
-            <dd
-              className="m-0 font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {leaderLabel}
-            </dd>
+            <dd className="erp-users-cell-strong m-0">{leaderLabel}</dd>
           </div>
           <div>
-            <dt style={{ color: tokens.colorTextTertiary }}>
-              {t('common.status')}
-            </dt>
+            <dt className="erp-users-stat-label">{t('common.status')}</dt>
             <dd className="m-0">
               <StatusBadge
                 label={
@@ -194,26 +199,16 @@ function DepartmentLeaderCard({
             </dd>
           </div>
           <div>
-            <dt style={{ color: tokens.colorTextTertiary }}>
+            <dt className="erp-users-stat-label">
               {t('pages.departments.table.projects')}
             </dt>
-            <dd
-              className="m-0 font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {projectCount}
-            </dd>
+            <dd className="erp-users-cell-strong m-0">{projectCount}</dd>
           </div>
           <div>
-            <dt style={{ color: tokens.colorTextTertiary }}>
+            <dt className="erp-users-stat-label">
               {t('pages.departments.table.activeProjects')}
             </dt>
-            <dd
-              className="m-0 font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {activeProjectCount}
-            </dd>
+            <dd className="erp-users-cell-strong m-0">{activeProjectCount}</dd>
           </div>
         </dl>
       </div>
@@ -223,6 +218,9 @@ function DepartmentLeaderCard({
 
 export default function DepartmentsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const permLoading = usePermissionsLoading();
   const canView = useCanViewDepartmentsNav();
   const canManage = useCanManageDepartments();
@@ -390,19 +388,9 @@ export default function DepartmentsPageContent(): React.ReactNode {
         key: 'name',
         render: (value: string, row) => (
           <div className="min-w-0 py-0.5">
-            <p
-              className="m-0 text-sm font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {value}
-            </p>
+            <p className="erp-users-cell-strong m-0">{value}</p>
             {row.nameZh ? (
-              <p
-                className="m-0 truncate text-xs"
-                style={{ color: tokens.colorTextTertiary }}
-              >
-                {row.nameZh}
-              </p>
+              <p className="erp-users-email m-0 mt-0.5 truncate">{row.nameZh}</p>
             ) : null}
           </div>
         ),
@@ -413,9 +401,11 @@ export default function DepartmentsPageContent(): React.ReactNode {
         responsive: ['md'],
         render: (_value, record) =>
           record.leaderUserId ? (
-            leaderNameById.get(record.leaderUserId) ?? t('common.assigned')
+            <span className="erp-users-cell-strong">
+              {leaderNameById.get(record.leaderUserId) ?? t('common.assigned')}
+            </span>
           ) : (
-            <span className="text-red-600">
+            <span className="erp-users-cell-sub text-red-600">
               {t('pages.departments.table.noLeader')}
             </span>
           ),
@@ -426,7 +416,11 @@ export default function DepartmentsPageContent(): React.ReactNode {
         align: 'right',
         width: 90,
         responsive: ['lg'],
-        render: (_value, record) => countProjectsForDepartment(projects, record),
+        render: (_value, record) => (
+          <span className="erp-users-cell-strong">
+            {countProjectsForDepartment(projects, record)}
+          </span>
+        ),
       },
       {
         title: t('pages.departments.table.activeProjects'),
@@ -434,13 +428,16 @@ export default function DepartmentsPageContent(): React.ReactNode {
         align: 'right',
         width: 90,
         responsive: ['lg'],
-        render: (_value, record) =>
-          countActiveProjectsForDepartment(projects, record),
+        render: (_value, record) => (
+          <span className="erp-users-cell-strong">
+            {countActiveProjectsForDepartment(projects, record)}
+          </span>
+        ),
       },
       {
         title: t('common.status'),
         key: 'isActive',
-        width: 110,
+        width: isNarrow ? 96 : 110,
         render: (_value, record) => (
           <StatusBadge
             label={
@@ -471,7 +468,6 @@ export default function DepartmentsPageContent(): React.ReactNode {
                       type="text"
                       icon={<MoreOutlined />}
                       aria-label={t('common.actions')}
-                      style={{ borderRadius: 0 }}
                     />
                   </Dropdown>
                 </div>
@@ -480,39 +476,51 @@ export default function DepartmentsPageContent(): React.ReactNode {
           ]
         : []),
     ],
-    [canManage, leaderNameById, projects, t],
+    [canManage, isNarrow, leaderNameById, projects, t],
   );
 
   if (permLoading || (listLoading && allRows.length === 0)) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className={PAGE_CHROME}>
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   if (!canView) {
     return (
-      <Alert type="warning" showIcon title={t('pages.departments.accessDenied')} />
+      <div className={PAGE_CHROME}>
+        <Alert
+          type="warning"
+          showIcon
+          title={t('pages.departments.accessDenied')}
+        />
+      </div>
     );
   }
 
   if (!canViewAll && visibleSourceRows.length === 0) {
     return (
-      <Alert
-        type="warning"
-        showIcon
-        title={t('pages.departments.noLeaderAssigned')}
-        description={t('pages.departments.noLeaderAssignedDesc')}
-      />
+      <div className={PAGE_CHROME}>
+        <Alert
+          type="warning"
+          showIcon
+          title={t('pages.departments.noLeaderAssigned')}
+          description={t('pages.departments.noLeaderAssignedDesc')}
+        />
+      </div>
     );
   }
 
   const leaderDepartment = visibleSourceRows[0] ?? null;
 
   return (
-    <div className="flex flex-col gap-4">
-{canViewAll && departmentsWithoutLeader.length > 0 && !warningDismissed ? (
+    <div className={PAGE_CHROME}>
+      {canViewAll &&
+      departmentsWithoutLeader.length > 0 &&
+      !warningDismissed ? (
         <Alert
           type="warning"
           showIcon
@@ -529,56 +537,80 @@ export default function DepartmentsPageContent(): React.ReactNode {
       ) : null}
 
       {canViewAll ? (
-        <DepartmentPortfolioStats departments={allDepartmentsForMetrics} />
-      ) : null}
-
-      {canViewAll ? (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-            <button
-              type="button"
-              className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+          <DepartmentPortfolioStats departments={allDepartmentsForMetrics} />
+
+          <div className="erp-users-stat-bar">
+            <OrgListStat
+              label={t('pages.departments.stats.departmentsTotal')}
+              value={stats.total}
+              accent="blue"
+              icon={<BankOutlined />}
+              active={statusMode === 'all'}
               onClick={() => handleStatusMode('all')}
-            >
-              <StatCard
-                label={t('pages.departments.stats.departmentsTotal')}
-                value={stats.total}
-                color="blue"
-                icon={<BankOutlined />}
-              />
-            </button>
-            <button
-              type="button"
-              className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+            />
+            <OrgListStat
+              label={t('common.active')}
+              value={stats.active}
+              accent="green"
+              icon={<CheckCircleOutlined />}
+              active={statusMode === 'active'}
               onClick={() => handleStatusMode('active')}
-            >
-              <StatCard
-                label={t('common.active')}
-                value={stats.active}
-                color="green"
-                icon={<CheckCircleOutlined />}
-              />
-            </button>
-            <button
-              type="button"
-              className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+            />
+            <OrgListStat
+              label={t('common.inactive')}
+              value={stats.inactive}
+              accent="slate"
+              icon={<StopOutlined />}
+              active={statusMode === 'inactive'}
               onClick={() => handleStatusMode('inactive')}
-            >
-              <StatCard
-                label={t('common.inactive')}
-                value={stats.inactive}
-                color="default"
-                icon={<StopOutlined />}
-              />
-            </button>
+            />
           </div>
 
-          <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-            <div className="erp-filter-bar">
-              <Input.Search
-                placeholder={t('pages.departments.searchPlaceholder')}
-                className="w-full min-w-0 sm:w-72"
+          <div className="erp-pro-card">
+            <div className="erp-pro-card-toolbar erp-users-toolbar">
+              <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+                <h3 className="erp-pro-card-toolbar-title">
+                  {t('pages.departments.title')}
+                </h3>
+                <span className="erp-users-count-pill">
+                  {meta.total.toLocaleString()}
+                </span>
+              </div>
+              <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+                <Tooltip title={t('common.refresh')}>
+                  <Button
+                    type="text"
+                    icon={<ReloadOutlined />}
+                    loading={listFetching && !listLoading}
+                    onClick={() => refetchAll()}
+                    aria-label={t('common.refresh')}
+                  />
+                </Tooltip>
+                {canManage ? (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      setEditing(null);
+                      setDrawerOpen(true);
+                    }}
+                    aria-label={t('pages.departments.addDepartment')}
+                  >
+                    {isNarrow
+                      ? undefined
+                      : t('pages.departments.addDepartment')}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="erp-users-filter-bar">
+              <Input
                 allowClear
+                prefix={<SearchOutlined className="erp-users-search-icon" />}
+                placeholder={t('pages.departments.searchPlaceholder')}
+                className="erp-users-search-input min-w-0"
                 value={search}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -586,9 +618,8 @@ export default function DepartmentsPageContent(): React.ReactNode {
                   setAppliedSearch(value.trim());
                   resetPage();
                 }}
-                onSearch={(value) => {
-                  setSearch(value);
-                  setAppliedSearch(value.trim());
+                onPressEnter={() => {
+                  setAppliedSearch(search.trim());
                   resetPage();
                 }}
                 onClear={() => {
@@ -597,70 +628,27 @@ export default function DepartmentsPageContent(): React.ReactNode {
                   resetPage();
                 }}
               />
-              <Button
-                onClick={handleResetFilters}
-                disabled={!hasFilters}
-                style={{ borderRadius: 0 }}
-              >
-                {t('common.reset')}
-              </Button>
-              <Tooltip title={t('common.refresh')}>
+              <span className="erp-users-filter-spacer" aria-hidden />
+              {hasFilters ? (
                 <Button
-                  type="text"
-                  icon={<ReloadOutlined />}
-                  loading={listFetching && !listLoading}
-                  onClick={() => refetchAll()}
-                  aria-label={t('common.refresh')}
-                  style={{ borderRadius: 0 }}
-                />
-              </Tooltip>
-            </div>
-          </div>
-
-          <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <ListPageNavIcon iconKey="departments" />
-                <h3
-                  className="m-0 text-sm font-semibold"
-                  style={{ color: tokens.colorTextPrimary }}
+                  type="link"
+                  onClick={handleResetFilters}
+                  className="!px-1"
                 >
-                  {t('pages.departments.title')}
-                </h3>
-                <span
-                  className="text-xs"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  {meta.total === 1
-                    ? t('pages.departments.countOne')
-                    : t('pages.departments.count', { count: meta.total })}
-                </span>
-              </div>
-              {canManage ? (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    setEditing(null);
-                    setDrawerOpen(true);
-                  }}
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('pages.departments.addDepartment')}
+                  {t('common.reset')}
                 </Button>
               ) : null}
             </div>
 
-            <div className="px-0">
+            <div className="erp-pro-table-card-body">
               <DataTable<DepartmentRow>
                 rowKey="id"
-                className="erp-pro-table"
-                size="small"
+                className="erp-pro-table erp-users-table"
+                size={isCompact ? 'small' : 'middle'}
                 columns={columns}
                 dataSource={pageRows}
                 loading={listFetching && pageRows.length === 0}
-                scroll={false}
-                pagination={bindMeta(meta)}
+                scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 900 }}
                 locale={{
                   emptyText: (
                     <TableEmptyState
@@ -689,6 +677,12 @@ export default function DepartmentsPageContent(): React.ReactNode {
                       }
                     />
                   ),
+                }}
+                pagination={{
+                  ...bindMeta(meta),
+                  pageSizeOptions: ['10', '20', '50', '100'],
+                  simple: isNarrow,
+                  showSizeChanger: !isNarrow,
                 }}
               />
             </div>
