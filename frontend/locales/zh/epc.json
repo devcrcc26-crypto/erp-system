@@ -411,8 +411,16 @@
         "destinationStepDescription": "选择目的地类别并填写具体地点。",
         "detailsStepDescription": "设置出差日期，可选择关联已批准的差旅或机票申请，并填写备注。",
         "reviewStepDescription": "确认申请内容与预估金额后提交审批。",
+        "searchPlaceholder": "按申请单号或目的地搜索",
+        "emptyFiltered": "没有符合筛选条件的差旅补贴申请",
         "requestSingular": "条申请",
-        "requestPlural": "条申请"
+        "requestPlural": "条申请",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       },
       "employeePerDiemRates": {
         "listTitle": "员工差旅补贴标准",
@@ -1983,6 +1991,10 @@
       "businessTripNotFound": "未找到出差申请",
       "businessTripCancelled": "出差申请已取消",
       "failedToCancelBusinessTrip": "取消出差申请失败",
+      "failedToLoadPerDiemRequests": "加载差旅补贴申请失败",
+      "perDiemRequestNotFound": "未找到差旅补贴申请",
+      "perDiemRequestCancelled": "差旅补贴申请已取消",
+      "failedToCancelPerDiemRequest": "取消差旅补贴申请失败",
       "failedToOpenOvertimeSheet": "打开加班表失败",
       "overtimeSheetNotFound": "未找到加班表",
       "overtimeEntryAdded": "记录已添加",
@@ -2688,6 +2700,8 @@
       "cancelFlightApplicationDesc": "将取消该机票申请及关联的审批请求，此操作无法撤销。",
       "cancelBusinessTripTitle": "取消出差申请？",
       "cancelBusinessTripDesc": "将取消该出差申请及关联的审批请求，此操作无法撤销。",
+      "cancelPerDiemTitle": "取消差旅补贴申请？",
+      "cancelPerDiemDesc": "将取消该差旅补贴申请及关联的审批请求，此操作无法撤销。",
       "deleteExpenseClaimItemTitle": "删除明细？",
       "deleteExpenseClaimItemDesc": "该明细及收据将被删除，报销合计将重新计算。",
       "addExpenseItemTitle": "添加报销明细",

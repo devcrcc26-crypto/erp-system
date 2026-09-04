@@ -5,8 +5,9 @@ import {
   Alert,
   Button,
   DatePicker,
+  Grid,
+  Input,
   Select,
-  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -16,15 +17,13 @@ import {
   CloseCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import { Wallet } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
-import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -35,104 +34,100 @@ import type {
   PerDiemRequestListItem,
   PerDiemStatus,
 } from '@/lib/api/per-diem.types';
-import { usePerDiemRequests } from '@/lib/query/per-diem';
+import type { PaginationMeta } from '@/lib/api/types';
+import { usePerDiemRequestsAll } from '@/lib/query/per-diem';
 import { useUsersDirectory } from '@/lib/query/users';
-import { tokens } from '@/lib/theme/tokens';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import {
   formatPerDiemEmployeeName,
   formatPerDiemStatus,
   perDiemStatusVariant,
 } from '@/lib/utils/per-diem-display';
+import {
+  filterPerDiemRequests,
+  statusesForPerDiemMode,
+  type PerDiemStatusMode,
+} from '@/lib/utils/per-diem-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
-type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
+const PENDING_STATUSES = statusesForPerDiemMode('pending');
+const APPROVED_STATUSES = statusesForPerDiemMode('approved');
+const REJECTED_STATUSES = statusesForPerDiemMode('rejected');
 
-const PENDING_STATUSES: PerDiemStatus[] = [
-  'DRAFT',
-  'SUBMITTED',
-  'IN_REVIEW',
-  'RETURNED',
-];
-const APPROVED_STATUSES: PerDiemStatus[] = ['APPROVED'];
-const REJECTED_STATUSES: PerDiemStatus[] = ['REJECTED', 'CANCELLED'];
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
 
-function statusesForMode(mode: StatusMode): PerDiemStatus[] {
-  switch (mode) {
-    case 'pending':
-      return PENDING_STATUSES;
-    case 'approved':
-      return APPROVED_STATUSES;
-    case 'rejected':
-      return REJECTED_STATUSES;
-    default:
-      return [];
-  }
+function PerDiemStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
 }
 
 /**
- * Company or personal per diem request list — layout aligned with Business Trips.
+ * Per diem requests list — Users chrome (stat bar, filter row, rounded table).
  */
 export default function PerDiemRequestsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
-  const statusOptions = useMemo(
-    () => [
-      { value: 'DRAFT', label: t('hr.status.DRAFT') },
-      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
-      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
-      { value: 'APPROVED', label: t('hr.status.APPROVED') },
-      { value: 'REJECTED', label: t('hr.status.REJECTED') },
-      { value: 'RETURNED', label: t('hr.status.RETURNED') },
-      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
-    ],
-    [t],
-  );
-
-  const [statusMode, setStatusMode] = useState<StatusMode>('all');
+  const [statusMode, setStatusMode] = useState<PerDiemStatusMode>('all');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PerDiemStatus[]>([]);
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
 
-  const statsQuery = usePerDiemRequests({ page: 1, limit: 100 }, true);
-
-  const listParams = useMemo(
-    () => ({
-      ...params,
-      search: search.trim() || undefined,
-      status:
-        statusFilter.length > 0
-          ? statusFilter
-          : statusesForMode(statusMode).length > 0
-            ? statusesForMode(statusMode)
-            : undefined,
-      employeeId: canViewHr ? employeeId : undefined,
-      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
-      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
-    }),
-    [params, search, statusFilter, statusMode, employeeId, dateRange, canViewHr],
-  );
-
-  const listQuery = usePerDiemRequests(listParams, true);
+  const listQuery = usePerDiemRequestsAll(true);
 
   const usersQuery = useUsersDirectory(
     { page: 1, limit: 100 },
     { enabled: canViewHr },
   );
 
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-  const totalCount = meta?.total ?? rows.length;
+  const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
-    const allRows = statsQuery.data?.data ?? [];
     const pending = allRows.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
@@ -143,12 +138,41 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
       REJECTED_STATUSES.includes(row.status),
     ).length;
     return {
-      all: statsQuery.data?.meta?.total ?? allRows.length,
+      all: allRows.length,
       pending,
       approved,
       rejected,
     };
-  }, [statsQuery.data]);
+  }, [allRows]);
+
+  const filtered = useMemo(
+    () =>
+      filterPerDiemRequests(allRows, {
+        search: appliedSearch,
+        statusMode,
+        employeeId: canViewHr ? employeeId : undefined,
+        dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+        dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+      }),
+    [allRows, appliedSearch, statusMode, employeeId, dateRange, canViewHr],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const columns: ColumnsType<PerDiemRequestListItem> = useMemo(
     () => [
@@ -156,14 +180,10 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         title: t('hr.table.requestNumber'),
         dataIndex: 'requestNumber',
         key: 'requestNumber',
-        width: 120,
+        width: 130,
+        responsive: ['md'],
         render: (value: string) => (
-          <span
-            className="font-[family-name:var(--font-mono)] text-xs font-medium"
-            style={{ color: tokens.colorPrimary }}
-          >
-            {value}
-          </span>
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
       ...(canViewHr
@@ -174,18 +194,12 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
               width: 200,
               responsive: ['md'],
               render: (_: unknown, row: PerDiemRequestListItem) => (
-                <div className="min-w-0 py-0.5">
-                  <p
-                    className="m-0 text-sm font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
-                  >
+                <div className="min-w-0">
+                  <p className="erp-users-cell-strong m-0">
                     {formatPerDiemEmployeeName(row.employee)}
                   </p>
                   {row.employee?.email ? (
-                    <p
-                      className="m-0 truncate text-xs"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
+                    <p className="erp-users-email m-0 mt-0.5">
                       {row.employee.email}
                     </p>
                   ) : null}
@@ -197,20 +211,24 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
       {
         title: t('hr.table.destination'),
         key: 'destination',
-        ellipsis: { showTitle: true },
+        ellipsis: true,
         render: (_: unknown, row: PerDiemRequestListItem) => (
           <div className="min-w-0">
-            <p
-              className="m-0 truncate text-sm font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
+            <p className="erp-users-cell-strong m-0 truncate">
               {row.destination}
             </p>
-            <p
-              className="m-0 truncate text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
+            <p className="erp-users-cell-sub m-0 mt-0.5">
               {row.destinationCategory}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+              {row.requestNumber}
+              {canViewHr
+                ? ` · ${formatPerDiemEmployeeName(row.employee)}`
+                : ''}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+              {formatProjectDate(row.startDate)} –{' '}
+              {formatProjectDate(row.endDate)}
             </p>
           </div>
         ),
@@ -221,8 +239,9 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         width: 190,
         responsive: ['md'],
         render: (_: unknown, row: PerDiemRequestListItem) => (
-          <span className="text-sm">
-            {formatProjectDate(row.startDate)} – {formatProjectDate(row.endDate)}
+          <span className="erp-users-cell-sub">
+            {formatProjectDate(row.startDate)} –{' '}
+            {formatProjectDate(row.endDate)}
           </span>
         ),
       },
@@ -233,6 +252,9 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         width: 70,
         align: 'center',
         responsive: ['lg'],
+        render: (value: number) => (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
       },
       {
         title: t('hr.table.total'),
@@ -241,15 +263,15 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         width: 130,
         align: 'right',
         responsive: ['lg'],
-        render: (value: number) => (
-          <span className="font-medium">{formatEtbAmount(value)}</span>
+        render: (value: number | string) => (
+          <span className="erp-users-cell-strong">{formatEtbAmount(value)}</span>
         ),
       },
       {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
-        width: 130,
+        width: isNarrow ? 108 : 130,
         render: (value: PerDiemStatus) => (
           <StatusBadge
             label={formatPerDiemStatus(value, t)}
@@ -258,18 +280,17 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         ),
       },
     ],
-    [canViewHr, t],
+    [canViewHr, isNarrow, t],
   );
 
-  function handleStatusMode(mode: StatusMode): void {
+  function handleStatusMode(mode: PerDiemStatusMode): void {
     setStatusMode(mode);
-    setStatusFilter([]);
     resetPage();
   }
 
   function handleResetFilters(): void {
     setSearch('');
-    setStatusFilter([]);
+    setAppliedSearch('');
     setStatusMode('all');
     setEmployeeId(undefined);
     setDateRange(null);
@@ -277,8 +298,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   }
 
   const hasFilters =
-    Boolean(search.trim()) ||
-    statusFilter.length > 0 ||
+    Boolean(appliedSearch.trim()) ||
     statusMode !== 'all' ||
     employeeId !== undefined ||
     Boolean(dateRange?.[0] || dateRange?.[1]);
@@ -292,14 +312,16 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-per-diem-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-per-diem-page">
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -307,94 +329,107 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
           title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
-              : 'Failed to load per diem requests'
+              : t('hr.messages.failedToLoadPerDiemRequests')
           }
         />
       ) : null}
 
-      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+      <div className="erp-users-stat-bar">
+        <PerDiemStat
+          label={t('pages.hr.perDiem.stats.total')}
+          value={statusCounts.all}
+          accent="teal"
+          icon={<Wallet size={14} strokeWidth={2} />}
+          active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.total')}
-            value={statusCounts.all}
-            color="teal"
-            icon={<Wallet size={14} />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <PerDiemStat
+          label={t('pages.hr.perDiem.stats.pending')}
+          value={statusCounts.pending}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+          active={statusMode === 'pending'}
           onClick={() => handleStatusMode('pending')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.pending')}
-            value={statusCounts.pending}
-            color="amber"
-            icon={<ClockCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <PerDiemStat
+          label={t('pages.hr.perDiem.stats.approved')}
+          value={statusCounts.approved}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statusMode === 'approved'}
           onClick={() => handleStatusMode('approved')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.approved')}
-            value={statusCounts.approved}
-            color="green"
-            icon={<CheckCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <PerDiemStat
+          label={t('pages.hr.perDiem.stats.rejected')}
+          value={statusCounts.rejected}
+          accent="red"
+          icon={<CloseCircleOutlined />}
+          active={statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.rejected')}
-            value={statusCounts.rejected}
-            color="red"
-            icon={<CloseCircleOutlined />}
-          />
-        </button>
+        />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <ListSearchInput
-            committedValue={search}
-            onCommit={(value) => {
-              setSearch(value);
-              resetPage();
-            }}
-            placeholder={t('hr.placeholder.searchPerDiem')}
-            className="w-full min-w-0 sm:w-72"
-          />
-          <Select
-            mode="multiple"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/approvals/new/per-diem')}
+              aria-label={t('hr.buttons.newPerDiem')}
+            >
+              {isNarrow ? undefined : t('hr.buttons.newPerDiem')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
-            placeholder={t('hr.placeholder.status')}
-            className="w-full min-w-0 sm:min-w-[180px] sm:w-auto"
-            options={statusOptions}
-            value={statusFilter}
-            onChange={(value: PerDiemStatus[]) => {
-              setStatusFilter(value);
-              setStatusMode('all');
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.hr.perDiem.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              setAppliedSearch(value.trim());
               resetPage();
             }}
-            maxTagCount="responsive"
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           {canViewHr ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
-              className="w-full min-w-0 sm:w-48"
+              className="erp-users-filter-select"
+              loading={usersQuery.isLoading}
               options={(usersQuery.data?.data ?? []).map((user) => ({
                 value: user.id,
                 label: formatUserName(user),
@@ -408,82 +443,41 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
           ) : null}
           <DatePicker.RangePicker
             value={dateRange}
-            className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
+            className="erp-users-filter-daterange"
             onChange={(value) => {
               setDateRange(value);
               resetPage();
             }}
           />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-per-diem" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {totalCount}{' '}
-              {totalCount === 1
-                ? t('pages.hr.perDiem.requestSingular')
-                : t('pages.hr.perDiem.requestPlural')}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/approvals/new/per-diem')}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.buttons.newPerDiem')}
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
             </Button>
-          </Space>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<PerDiemRequestListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            loading={listQuery.isFetching && !listQuery.isLoading}
-            scroll={false}
+            loading={listQuery.isFetching && rows.length === 0}
+            scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 1000 }}
             onRow={(record) => ({
               onClick: () => router.push(`/hr/per-diem/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
-                  icon={<Wallet size={24} />}
-                  title={t('hr.empty.noPerDiemRequests')}
+                  icon={<Wallet size={28} strokeWidth={1.5} />}
+                  title={
+                    hasFilters
+                      ? t('pages.hr.perDiem.emptyFiltered')
+                      : t('hr.empty.noPerDiemRequests')
+                  }
                   description={pageDescription}
                   action={
                     hasFilters
@@ -493,7 +487,8 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
                         }
                       : {
                           label: t('hr.buttons.newPerDiem'),
-                          onClick: () => router.push('/approvals/new/per-diem'),
+                          onClick: () =>
+                            router.push('/approvals/new/per-diem'),
                         }
                   }
                 />
@@ -502,6 +497,8 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
             pagination={{
               ...bindMeta(meta),
               pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
             }}
           />
         </div>

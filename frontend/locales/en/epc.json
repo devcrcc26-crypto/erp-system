@@ -411,8 +411,16 @@
         "destinationStepDescription": "Choose the destination category and enter the specific location.",
         "detailsStepDescription": "Set travel dates, optionally link an approved trip or flight, and add notes.",
         "reviewStepDescription": "Confirm the request and estimated total, then submit for approval.",
+        "searchPlaceholder": "Search by request # or destination",
+        "emptyFiltered": "No per diem requests match your filters",
         "requestSingular": "request",
-        "requestPlural": "requests"
+        "requestPlural": "requests",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       },
       "employeePerDiemRates": {
         "listTitle": "Employee Per Diem Rates",
@@ -1983,6 +1991,10 @@
       "businessTripNotFound": "Business trip not found",
       "businessTripCancelled": "Business trip cancelled",
       "failedToCancelBusinessTrip": "Failed to cancel business trip",
+      "failedToLoadPerDiemRequests": "Failed to load per diem requests",
+      "perDiemRequestNotFound": "Per diem request not found",
+      "perDiemRequestCancelled": "Per diem request cancelled",
+      "failedToCancelPerDiemRequest": "Failed to cancel per diem request",
       "failedToOpenOvertimeSheet": "Failed to open overtime sheet",
       "overtimeSheetNotFound": "Overtime sheet not found",
       "overtimeEntryAdded": "Entry added",
@@ -2688,6 +2700,8 @@
       "cancelFlightApplicationDesc": "This cancels the flight application and any linked approval request. This cannot be undone.",
       "cancelBusinessTripTitle": "Cancel business trip?",
       "cancelBusinessTripDesc": "This cancels the business trip and any linked approval request. This cannot be undone.",
+      "cancelPerDiemTitle": "Cancel per diem request?",
+      "cancelPerDiemDesc": "This cancels the per diem request and any linked approval request. This cannot be undone.",
       "deleteExpenseClaimItemTitle": "Remove item?",
       "deleteExpenseClaimItemDesc": "This item and its receipt will be removed and the claim total recalculated.",
       "addExpenseItemTitle": "Add Expense Item",

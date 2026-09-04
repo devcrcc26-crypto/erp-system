@@ -147,6 +147,38 @@ function buildListQuery(params: ListPerDiemRequestsParams): string {
   return toQueryString({ ...rest, status: statusValue });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the per diem requests list endpoint (filter locally).
+ */
+async function fetchAllPerDiemRequestPages(): Promise<PerDiemRequestListItem[]> {
+  const first = await apiGetPaginated<PerDiemRequestListItem>(
+    `${REQUESTS_PATH}${buildListQuery({ page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<PerDiemRequestListItem>(
+        `${REQUESTS_PATH}${buildListQuery({
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
 /** Paginated per diem requests. */
 export function usePerDiemRequests(
   params: ListPerDiemRequestsParams = { page: 1, limit: 20 },
@@ -158,6 +190,18 @@ export function usePerDiemRequests(
       apiGetPaginated<PerDiemRequestListItem>(
         `${REQUESTS_PATH}${buildListQuery(params)}`,
       ) as Promise<PaginatedResult<PerDiemRequestListItem>>,
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * All per diem requests (all pages) for client-side filter/search.
+ */
+export function usePerDiemRequestsAll(enabled = true) {
+  return useQuery({
+    queryKey: [...perDiemKeys.lists(), 'all'] as const,
+    queryFn: () => fetchAllPerDiemRequestPages(),
     enabled,
     retry: false,
   });
