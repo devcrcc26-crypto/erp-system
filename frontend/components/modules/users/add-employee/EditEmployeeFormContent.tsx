@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Button, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import AddEmployeeForm from '@/components/modules/users/add-employee/AddEmployeeForm';
@@ -19,18 +18,7 @@ export default function EditEmployeeFormContent({
   const messageApi = useAppMessage();
   const userQuery = useUser(userId);
 
-  const headerExtra = useMemo(
-    () => (
-      <Button
-        onClick={() => router.push(`/users/${userId}`)}
-        style={{ borderRadius: 8 }}
-      >
-        {t('users.form.cancel')}
-      </Button>
-    ),
-    [router, t, userId],
-  );
-  useSetHeaderExtra(headerExtra);
+  useSetHeaderExtra(null);
 
   function handleSuccess(result: { userId: string; email: string | null }): void {
     const name = userQuery.data
@@ -52,6 +40,15 @@ export default function EditEmployeeFormContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        <Button
+          onClick={() => router.push(`/users/${userId}`)}
+          className="shrink-0"
+          style={{ borderRadius: 8 }}
+        >
+          {t('users.form.cancel')}
+        </Button>
+      </div>
       <AddEmployeeForm userId={userId} onSuccess={handleSuccess} />
     </div>
   );

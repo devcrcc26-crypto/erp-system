@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Alert, Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import EmployeeContractForm from '@/components/modules/hr/employee-contract/EmployeeContractForm';
@@ -25,18 +24,7 @@ export default function EmployeeContractFormContent({
   const isEdit = Boolean(contractId);
   const detailQuery = useEmployeeContract(contractId ?? '', isEdit);
 
-  const headerExtra = useMemo(
-    () => (
-      <Button
-        onClick={() => router.push('/hr/employee-contract')}
-        style={{ borderRadius: 8 }}
-      >
-        {t('common.cancel')}
-      </Button>
-    ),
-    [router, t],
-  );
-  useSetHeaderExtra(headerExtra);
+  useSetHeaderExtra(null);
 
   function handleSuccess(result: EmployeeContractDetail): void {
     router.push(`/hr/employee-contract/${result.id}`);
@@ -98,6 +86,15 @@ export default function EmployeeContractFormContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-contract-form-page">
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        <Button
+          onClick={() => router.push('/hr/employee-contract')}
+          className="shrink-0"
+          style={{ borderRadius: 8 }}
+        >
+          {t('common.cancel')}
+        </Button>
+      </div>
       <EmployeeContractForm
         mode={isEdit ? 'edit' : 'create'}
         contract={isEdit ? detailQuery.data : undefined}
