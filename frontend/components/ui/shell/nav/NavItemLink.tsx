@@ -27,11 +27,11 @@ export default function NavItemLink({
       onClick={onNavigate}
       aria-current={isActive ? 'page' : undefined}
       className={[
-        'group relative flex h-[34px] shrink-0 items-center gap-2.5 rounded-[6px] pl-3 pr-2 text-[13px] no-underline',
+        'group relative flex h-9 shrink-0 items-center gap-2.5 rounded-lg pl-3 pr-2 text-[13px] no-underline',
         'transition-colors duration-150',
         isActive
-          ? 'font-medium'
-          : 'font-normal hover:bg-[var(--color-sidebar-hover)]',
+          ? 'font-semibold'
+          : 'font-medium hover:bg-[var(--color-sidebar-hover)]',
       ].join(' ')}
       style={{
         backgroundColor: isActive ? tokens.colorSidebarActive : undefined,

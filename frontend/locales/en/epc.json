@@ -38,6 +38,20 @@
       "hrConfiguration": "HR Configuration",
       "organization": "Organization"
     },
+    "sections": {
+      "workspace": "Workspace",
+      "engineering": "Engineering",
+      "siteOps": "Site operations",
+      "people": "People",
+      "timeOff": "Time & leave",
+      "travelExpenses": "Travel & expenses",
+      "procurement": "Procurement",
+      "fleetAssets": "Fleet & assets",
+      "admin": "Administration",
+      "setup": "Setup",
+      "structure": "Company structure",
+      "companyFleet": "Company fleet"
+    },
     "organization": {
       "vehicles": "Company Vehicles"
     },

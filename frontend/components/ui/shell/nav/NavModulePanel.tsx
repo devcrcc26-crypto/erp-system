@@ -14,6 +14,35 @@ import {
 /** Module count above which the panel shows a filter box. */
 const FILTER_THRESHOLD = 8;
 
+type NavSection = {
+  key: string | null;
+  labelKey: string | null;
+  items: IconRailItem[];
+};
+
+function groupItemsBySection(items: readonly IconRailItem[]): NavSection[] {
+  const sections: NavSection[] = [];
+  const indexByKey = new Map<string, number>();
+
+  for (const item of items) {
+    const sectionKey = item.sectionKey ?? null;
+    const mapKey = sectionKey ?? '__ungrouped__';
+    const existing = indexByKey.get(mapKey);
+    if (existing === undefined) {
+      indexByKey.set(mapKey, sections.length);
+      sections.push({
+        key: sectionKey,
+        labelKey: sectionKey,
+        items: [item],
+      });
+    } else {
+      sections[existing].items.push(item);
+    }
+  }
+
+  return sections;
+}
+
 /**
  * Lists the modules of the selected domain. Long domains (HR) get a filter box.
  */
@@ -49,7 +78,12 @@ export default function NavModulePanel({
     [domain.items, query, t],
   );
 
+  const sections = useMemo(() => groupItemsBySection(items), [items]);
   const showFilter = domain.items.length > FILTER_THRESHOLD;
+  const showSectionLabels =
+    query.length === 0 &&
+    sections.some((section) => section.labelKey !== null) &&
+    sections.length > 1;
 
   return (
     <div
@@ -66,16 +100,16 @@ export default function NavModulePanel({
     >
       {showHeader ? (
         <div
-          className="flex shrink-0 items-end px-3 pb-2"
+          className="flex shrink-0 items-end px-3 pb-2.5"
           style={{
             height: SHELL_TOP_HEADER_HEIGHT,
             borderBottom: `1px solid ${tokens.colorSidebarBorder}`,
           }}
         >
           <h2
-            className="m-0 truncate text-[11px] font-semibold uppercase tracking-[0.1em]"
+            className="m-0 truncate text-[13px] font-semibold tracking-tight"
             style={{
-              color: tokens.colorSidebarTextMuted,
+              color: tokens.colorSidebarText,
               fontFamily: tokens.fontFamily,
             }}
           >
@@ -85,11 +119,11 @@ export default function NavModulePanel({
       ) : null}
 
       {showFilter ? (
-        <div className="shrink-0 px-2 pb-1 pt-2">
+        <div className="shrink-0 px-2.5 pb-1 pt-2.5">
           <label
-            className="flex h-8 items-center gap-2 rounded-[6px] px-2.5"
+            className="flex h-8 items-center gap-2 rounded-lg px-2.5"
             style={{
-              background: 'rgba(255, 255, 255, 0.06)',
+              background: tokens.colorSidebarRailBg,
               border: `1px solid ${tokens.colorSidebarBorder}`,
             }}
           >
@@ -105,7 +139,7 @@ export default function NavModulePanel({
               aria-label={t('shell.searchNavigation')}
               className="min-w-0 flex-1 border-0 bg-transparent text-[13px] outline-none placeholder:opacity-60"
               style={{
-                color: tokens.colorSidebarTextActive,
+                color: tokens.colorSidebarText,
                 fontFamily: tokens.fontFamily,
               }}
             />
@@ -114,17 +148,26 @@ export default function NavModulePanel({
       ) : null}
 
       <div
-        className="erp-main-nav-scroll flex min-h-0 flex-1 flex-col gap-px overflow-y-auto px-2 py-2"
+        className="erp-main-nav-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-2"
         style={{ maxHeight: scrollMaxHeight }}
       >
-        {items.map((item) => (
-          <NavItemLink
-            key={item.key}
-            item={item}
-            label={t(item.labelKey)}
-            isActive={selectedKey === item.key}
-            onNavigate={onNavigate}
-          />
+        {sections.map((section) => (
+          <div key={section.key ?? 'ungrouped'} className="mb-1 last:mb-0">
+            {showSectionLabels && section.labelKey ? (
+              <p className="erp-nav-section-label">{t(section.labelKey)}</p>
+            ) : null}
+            <div className="flex flex-col gap-0.5">
+              {section.items.map((item) => (
+                <NavItemLink
+                  key={item.key}
+                  item={item}
+                  label={t(item.labelKey)}
+                  isActive={selectedKey === item.key}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+          </div>
         ))}
 
         {items.length === 0 ? (

@@ -40,7 +40,10 @@ export default function IconRail(): React.ReactNode {
 
         <div
           className="flex shrink-0 items-center justify-center py-2"
-          style={{ borderTop: `1px solid ${tokens.colorSidebarBorder}` }}
+          style={{
+            borderTop: `1px solid ${tokens.colorSidebarBorder}`,
+            background: tokens.colorSidebarBg,
+          }}
         >
           <Tooltip title={toggleLabel} placement="right">
             <button
@@ -48,7 +51,7 @@ export default function IconRail(): React.ReactNode {
               onClick={toggleExpanded}
               aria-label={toggleLabel}
               aria-pressed={isExpanded}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent transition-colors hover:bg-[var(--color-sidebar-hover)]"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent transition-colors hover:bg-[var(--color-sidebar-hover)]"
               style={{ color: tokens.colorSidebarIcon }}
             >
               {isExpanded ? (

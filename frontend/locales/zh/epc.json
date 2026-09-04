@@ -38,6 +38,20 @@
       "hrConfiguration": "人力资源配置",
       "organization": "组织架构"
     },
+    "sections": {
+      "workspace": "工作区",
+      "engineering": "工程",
+      "siteOps": "现场运营",
+      "people": "人员",
+      "timeOff": "假期与加班",
+      "travelExpenses": "差旅与报销",
+      "procurement": "采购",
+      "fleetAssets": "车队与资产",
+      "admin": "行政",
+      "setup": "配置",
+      "structure": "公司结构",
+      "companyFleet": "公司车队"
+    },
     "organization": {
       "vehicles": "公司车辆"
     },

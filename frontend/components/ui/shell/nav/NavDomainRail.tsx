@@ -16,7 +16,7 @@ import {
 function domainButtonClass(isSelected: boolean): string {
   return [
     'relative mx-auto flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center',
-    'rounded-[8px] border-0 bg-transparent p-0 transition-colors duration-150',
+    'rounded-[10px] border-0 bg-transparent p-0 transition-colors duration-150',
     isSelected ? '' : 'hover:bg-[var(--color-sidebar-hover)]',
   ].join(' ');
 }
@@ -36,7 +36,7 @@ function DomainIcon({
         className={navIconClassName}
         style={{
           color: isSelected
-            ? tokens.colorSidebarTextActive
+            ? tokens.colorSidebarAccent
             : tokens.colorSidebarIcon,
           fontSize: 17,
         }}
@@ -49,7 +49,7 @@ function DomainIcon({
           className="absolute right-1 top-1 h-2 w-2 rounded-full"
           style={{
             background: tokens.colorRed600,
-            boxShadow: `0 0 0 2px ${tokens.colorSidebarBg}`,
+            boxShadow: `0 0 0 2px ${tokens.colorSidebarRailBg}`,
           }}
         />
       ) : null}
@@ -156,7 +156,7 @@ export default function NavDomainRail({
           arrow={false}
           content={
             <div
-              className="overflow-hidden rounded-[8px]"
+              className="overflow-hidden rounded-xl shadow-lg"
               style={{
                 width: NAV_MODULE_PANEL_WIDTH,
                 background: tokens.colorSidebarBg,
@@ -164,14 +164,14 @@ export default function NavDomainRail({
               }}
             >
               <div
-                className="px-3 py-2"
+                className="px-3 py-2.5"
                 style={{
                   borderBottom: `1px solid ${tokens.colorSidebarBorder}`,
                 }}
               >
                 <span
-                  className="text-[11px] font-semibold uppercase tracking-[0.1em]"
-                  style={{ color: tokens.colorSidebarTextMuted }}
+                  className="text-[13px] font-semibold tracking-tight"
+                  style={{ color: tokens.colorSidebarText }}
                 >
                   {label}
                 </span>
@@ -214,7 +214,8 @@ export default function NavDomainRail({
       className="flex h-full shrink-0 flex-col"
       style={{
         width: NAV_DOMAIN_RAIL_WIDTH,
-        background: tokens.colorSidebarBg,
+        background: tokens.colorSidebarRailBg,
+        borderRight: `1px solid ${tokens.colorSidebarBorder}`,
       }}
     >
       <div
@@ -229,14 +230,15 @@ export default function NavDomainRail({
             href="/"
             onClick={onNavigate}
             aria-label={t('shell.brandWorkspace')}
+            className="inline-flex"
           >
-            <BrandLogo size={26} onDark />
+            <BrandLogo size={26} className="rounded-lg" />
           </Link>
         </Tooltip>
       </div>
 
       <nav
-        className="erp-main-nav-scroll flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto py-3"
+        className="erp-main-nav-scroll flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto py-3"
         aria-label={t('shell.mainNavigation')}
       >
         {primary.map(renderDomain)}
@@ -244,7 +246,7 @@ export default function NavDomainRail({
 
       {utility.length > 0 ? (
         <div
-          className="flex shrink-0 flex-col gap-1 px-0 pb-2 pt-1"
+          className="flex shrink-0 flex-col gap-1.5 px-0 pb-2 pt-2"
           style={{ borderTop: `1px solid ${tokens.colorSidebarBorder}` }}
         >
           {utility.map(renderDomain)}
