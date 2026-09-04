@@ -97,6 +97,7 @@ export default function ExpenseClaimDetailPageContent({
   const router = useRouter();
   const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
@@ -278,6 +279,7 @@ export default function ExpenseClaimDetailPageContent({
         dataIndex: 'expenseDate',
         key: 'expenseDate',
         width: 100,
+        responsive: ['sm'],
         render: (v: string) => (
           <span className="erp-users-cell-strong">{formatProjectDate(v)}</span>
         ),
@@ -300,8 +302,14 @@ export default function ExpenseClaimDetailPageContent({
         render: (value: string, row: ExpenseClaimItem) => (
           <div className="min-w-0">
             <span className="erp-users-cell-strong">{value}</span>
+            <p className="erp-users-cell-sub m-0 mt-0.5 sm:hidden">
+              {formatProjectDate(row.expenseDate)}
+            </p>
             <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
               {row.category}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 tabular-nums lg:hidden">
+              {formatCurrencyAmount(row.amount, row.currency)}
             </p>
           </div>
         ),
@@ -319,10 +327,10 @@ export default function ExpenseClaimDetailPageContent({
         ),
       },
       {
-        title: t('hr.table.etbEquivalent'),
+        title: isNarrow ? 'ETB' : t('hr.table.etbEquivalent'),
         dataIndex: 'amountEtb',
         key: 'amountEtb',
-        width: isNarrow ? 112 : 140,
+        width: isNarrow ? 96 : isCompact ? 112 : 140,
         align: 'right',
         render: (v: number | string) => (
           <span className="erp-users-cell-strong tabular-nums">
@@ -333,7 +341,7 @@ export default function ExpenseClaimDetailPageContent({
       {
         title: t('hr.table.receipt'),
         key: 'receipt',
-        width: isNarrow ? 88 : 96,
+        width: isNarrow ? 72 : 96,
         render: (_: unknown, row: ExpenseClaimItem) =>
           row.receipt ? (
             <div
@@ -350,16 +358,27 @@ export default function ExpenseClaimDetailPageContent({
                   />
                 </span>
               </Tooltip>
-              <Tooltip title={t('common.download')}>
+              {!isNarrow ? (
+                <Tooltip title={t('common.download')}>
+                  <Button
+                    type="text"
+                    size="small"
+                    className="erp-expense-receipt-download-btn"
+                    icon={<Download size={15} strokeWidth={1.75} />}
+                    aria-label={t('common.download')}
+                    onClick={() => void handleDownloadReceipt(row.receipt!)}
+                  />
+                </Tooltip>
+              ) : (
                 <Button
                   type="text"
                   size="small"
                   className="erp-expense-receipt-download-btn"
-                  icon={<Download size={15} strokeWidth={1.75} />}
+                  icon={<Download size={14} strokeWidth={1.75} />}
                   aria-label={t('common.download')}
                   onClick={() => void handleDownloadReceipt(row.receipt!)}
                 />
-              </Tooltip>
+              )}
             </div>
           ) : (
             <Tooltip title={t('hr.labels.receiptMissing')}>
@@ -377,8 +396,8 @@ export default function ExpenseClaimDetailPageContent({
             {
               title: '',
               key: 'actions',
-              width: 48,
-              fixed: 'right' as const,
+              width: 44,
+              fixed: isCompact ? undefined : ('right' as const),
               render: (_: unknown, row: ExpenseClaimItem) => {
                 const items: MenuProps['items'] = [
                   {
@@ -416,7 +435,7 @@ export default function ExpenseClaimDetailPageContent({
           ]
         : []),
     ],
-    [canEditItems, isNarrow, t],
+    [canEditItems, isCompact, isNarrow, t],
   );
 
   if (detailQuery.isLoading) {
@@ -468,6 +487,34 @@ export default function ExpenseClaimDetailPageContent({
   const employeeName = formatExpenseClaimEmployeeName(claim.employee);
   const receiptOkCount = claim.items.length - missingReceiptCount;
 
+  const overflowMenuItems: MenuProps['items'] = [];
+  if (claim.approvalRequestId) {
+    overflowMenuItems.push({
+      key: 'approvals',
+      label: t('hr.buttons.viewInApprovals'),
+      onClick: () => router.push(`/approvals/${claim.approvalRequestId}`),
+    });
+  }
+  if (canCancel) {
+    overflowMenuItems.push({
+      key: 'cancel',
+      label: t('hr.buttons.cancelClaim'),
+      icon: <StopOutlined />,
+      danger: true,
+      onClick: () => setConfirmCancel(true),
+    });
+  }
+
+  const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
+
+  const tableScrollX = screens.lg
+    ? 960
+    : screens.md
+      ? 720
+      : screens.sm
+        ? 560
+        : 420;
+
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page">
       <div className="erp-pro-card">
@@ -483,26 +530,42 @@ export default function ExpenseClaimDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
-            {claim.approvalRequestId ? (
-              <Button
-                onClick={() =>
-                  router.push(`/approvals/${claim.approvalRequestId}`)
-                }
-                aria-label={t('hr.buttons.viewInApprovals')}
+            {showOverflowMenu ? (
+              <Dropdown
+                menu={{ items: overflowMenuItems }}
+                trigger={['click']}
               >
-                {isNarrow ? t('nav.approvals') : t('hr.buttons.viewInApprovals')}
-              </Button>
-            ) : null}
-            {canCancel ? (
-              <Button
-                danger
-                icon={<StopOutlined />}
-                onClick={() => setConfirmCancel(true)}
-                aria-label={t('hr.buttons.cancelClaim')}
-              >
-                {isNarrow ? undefined : t('hr.buttons.cancel')}
-              </Button>
-            ) : null}
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
+                />
+              </Dropdown>
+            ) : (
+              <>
+                {claim.approvalRequestId ? (
+                  <Button
+                    onClick={() =>
+                      router.push(`/approvals/${claim.approvalRequestId}`)
+                    }
+                    aria-label={t('hr.buttons.viewInApprovals')}
+                  >
+                    {isCompact
+                      ? t('nav.approvals')
+                      : t('hr.buttons.viewInApprovals')}
+                  </Button>
+                ) : null}
+                {canCancel ? (
+                  <Button
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={() => setConfirmCancel(true)}
+                    aria-label={t('hr.buttons.cancelClaim')}
+                  >
+                    {isCompact ? undefined : t('hr.buttons.cancel')}
+                  </Button>
+                ) : null}
+              </>
+            )}
             {(canEditHeader || canEditItems || canManage) ? (
               <Space.Compact>
                 {canEditHeader ? (
@@ -552,11 +615,13 @@ export default function ExpenseClaimDetailPageContent({
               />
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
-              <h2 className="erp-users-name erp-employee-hero-name m-0">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
                 {claim.title}
               </h2>
             </div>
-            <p className="erp-users-email m-0 mt-1.5">{employeeName}</p>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+              {employeeName}
+            </p>
           </div>
         </div>
       </div>
@@ -610,8 +675,8 @@ export default function ExpenseClaimDetailPageContent({
         />
       ) : null}
 
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0">
+      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="erp-pro-card min-w-0 overflow-hidden">
           <div className="erp-employee-tab-panel erp-contract-detail-body">
             <DetailSection
               title={t('hr.section.items')}
@@ -636,7 +701,7 @@ export default function ExpenseClaimDetailPageContent({
                 columns={columns}
                 dataSource={claim.items}
                 pagination={false}
-                scroll={{ x: screens.lg ? 960 : screens.md ? 760 : 560 }}
+                scroll={{ x: tableScrollX }}
                 locale={{
                   emptyText: (
                     <TableEmptyState
@@ -659,7 +724,7 @@ export default function ExpenseClaimDetailPageContent({
 
             {claim.description?.trim() ? (
               <DetailSection title={t('hr.form.description')}>
-                <p className="m-0 whitespace-pre-wrap leading-relaxed text-[13px] text-[#1a1a1a]">
+                <p className="m-0 whitespace-pre-wrap break-words leading-relaxed text-[13px] text-[#1a1a1a]">
                   {claim.description}
                 </p>
               </DetailSection>
@@ -667,7 +732,7 @@ export default function ExpenseClaimDetailPageContent({
           </div>
         </div>
 
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
+        <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-4">
           {approvalRequest ? (
             <ApprovalTierTimeline
               tiers={tiers}

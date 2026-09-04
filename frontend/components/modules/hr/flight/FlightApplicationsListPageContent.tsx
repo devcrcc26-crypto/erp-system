@@ -5,12 +5,10 @@ import {
   Alert,
   Button,
   DatePicker,
+  Grid,
   Input,
   Select,
-  Space,
   Spin,
-  Tabs,
-  Tag,
   Tooltip,
 } from 'antd';
 import {
@@ -19,17 +17,14 @@ import {
   CloseCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   SendOutlined,
 } from '@ant-design/icons';
 import { Plane } from 'lucide-react';
-import { tokens } from '@/lib/theme/tokens';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
-import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import {
@@ -72,6 +67,14 @@ const PENDING_STATUSES: FlightApplicationStatus[] = [
 const APPROVED_STATUSES: FlightApplicationStatus[] = ['APPROVED'];
 const REJECTED_STATUSES: FlightApplicationStatus[] = ['REJECTED', 'CANCELLED'];
 
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+  blue: { bg: '#E6F1FB', fg: '#185FA5' },
+} as const;
+
 function statusesForMode(mode: StatusMode): FlightApplicationStatus[] {
   switch (mode) {
     case 'pending':
@@ -85,25 +88,51 @@ function statusesForMode(mode: StatusMode): FlightApplicationStatus[] {
   }
 }
 
+function FlightStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
+
 /**
- * Company or personal flight application list — layout aligned with Leave Requests.
+ * Flight applications list — Users chrome (stat bar, filter row, rounded table).
  */
 export default function FlightApplicationsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
-
-  const statusOptions = useMemo(
-    () => [
-      { value: 'DRAFT', label: t('hr.status.DRAFT') },
-      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
-      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
-      { value: 'APPROVED', label: t('hr.status.APPROVED') },
-      { value: 'REJECTED', label: t('hr.status.REJECTED') },
-      { value: 'RETURNED', label: t('hr.status.RETURNED') },
-      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
-    ],
-    [t],
-  );
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
 
   const canAccess = useCanAccessFlight();
   const canViewHr = useCanViewHr();
@@ -113,9 +142,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   const [listTab, setListTab] = useState<ListTab>('ALL');
   const [statusMode, setStatusMode] = useState<StatusMode>('all');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FlightApplicationStatus[]>(
-    [],
-  );
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [internationalFilter, setInternationalFilter] = useState<
     string | undefined
   >();
@@ -134,15 +161,12 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   const listParams = useMemo(
     () => ({
       ...params,
-      search: search.trim() || undefined,
-      status:
-        needsTicketTab
-          ? undefined
-          : statusFilter.length > 0
-            ? statusFilter
-            : statusesForMode(statusMode).length > 0
-              ? statusesForMode(statusMode)
-              : undefined,
+      search: appliedSearch.trim() || undefined,
+      status: needsTicketTab
+        ? undefined
+        : statusesForMode(statusMode).length > 0
+          ? statusesForMode(statusMode)
+          : undefined,
       needsTicket: needsTicketTab ? true : undefined,
       isInternational:
         internationalFilter === 'true'
@@ -156,8 +180,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     }),
     [
       params,
-      search,
-      statusFilter,
+      appliedSearch,
       statusMode,
       internationalFilter,
       submittedById,
@@ -167,11 +190,7 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     ],
   );
 
-  const listQuery = useFlightApplications(
-    listParams,
-    canViewHr || canAccess,
-  );
-
+  const listQuery = useFlightApplications(listParams, canViewHr || canAccess);
   const needsTicketCountQuery = useFlightNeedsTicketCount(canViewHr);
   const needsTicketCount = needsTicketCountQuery.data ?? 0;
 
@@ -211,13 +230,9 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
         dataIndex: 'applicationNumber',
         key: 'applicationNumber',
         width: 130,
+        responsive: ['md'],
         render: (value: string) => (
-          <span
-            className="font-[family-name:var(--font-mono)] text-xs font-medium"
-            style={{ color: tokens.colorPrimary }}
-          >
-            {value}
-          </span>
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
       ...(canViewHr
@@ -228,18 +243,12 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
               width: 200,
               responsive: ['md'],
               render: (_: unknown, row: FlightApplicationListItem) => (
-                <div className="min-w-0 py-0.5">
-                  <p
-                    className="m-0 text-sm font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
-                  >
+                <div className="min-w-0">
+                  <p className="erp-users-cell-strong m-0">
                     {formatFlightSubmitterName(row.submitter)}
                   </p>
                   {row.submitter?.email ? (
-                    <p
-                      className="m-0 truncate text-xs"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
+                    <p className="erp-users-email m-0 mt-0.5">
                       {row.submitter.email}
                     </p>
                   ) : null}
@@ -251,22 +260,22 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
       {
         title: t('hr.table.route'),
         key: 'route',
-        width: 200,
-        ellipsis: { showTitle: true },
+        ellipsis: true,
         render: (_: unknown, row: FlightApplicationListItem) => (
           <div className="min-w-0">
-            <p
-              className="m-0 truncate text-sm"
-              style={{ color: tokens.colorTextPrimary }}
-            >
+            <p className="erp-users-cell-strong m-0 truncate">
               {row.originCity}, {row.originCountry}
-              <span
-                className="mx-1"
-                style={{ color: tokens.colorTextTertiary }}
-              >
-                →
-              </span>
+              <span className="mx-1 text-[#9ca3af]">→</span>
               {row.destination}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+              {row.applicationNumber}
+              {canViewHr
+                ? ` · ${formatFlightSubmitterName(row.submitter)}`
+                : ''}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+              {formatProjectDate(row.departureDate)}
             </p>
           </div>
         ),
@@ -277,7 +286,9 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
         key: 'departureDate',
         width: 120,
         responsive: ['md'],
-        render: (value: string) => formatProjectDate(value),
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">{formatProjectDate(value)}</span>
+        ),
       },
       {
         title: t('hr.table.tripType'),
@@ -298,18 +309,19 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
         key: 'isInternational',
         width: 110,
         responsive: ['lg'],
-        render: (value: boolean) =>
-          value ? (
-            <Tag color="volcano">{t('hr.labels.international')}</Tag>
-          ) : (
-            <Tag>{t('hr.labels.domestic')}</Tag>
-          ),
+        render: (value: boolean) => (
+          <span className="erp-users-role-tag">
+            {value
+              ? t('hr.labels.international')
+              : t('hr.labels.domestic')}
+          </span>
+        ),
       },
       {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
-        width: 130,
+        width: isNarrow ? 108 : 130,
         render: (value: FlightApplicationStatus) => (
           <StatusBadge
             label={formatFlightStatus(value, t)}
@@ -321,47 +333,36 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
         title: t('hr.table.currentStep'),
         key: 'currentStep',
         width: 160,
-        responsive: ['lg'],
+        responsive: ['xl'],
         render: (_: unknown, row: FlightApplicationListItem) => {
           const label = getCurrentStepLabel(row, t);
           if (!label || label === '—') {
-            return (
-              <span style={{ color: tokens.colorTextSecondary }}>—</span>
-            );
+            return <span className="erp-users-cell-sub">—</span>;
           }
-          const color =
-            row.status === 'APPROVED'
-              ? label === t('hr.labels.buyingTicket')
-                ? 'orange'
-                : label === t('hr.labels.completed')
-                  ? 'green'
-                  : 'blue'
-              : 'blue';
-          return <Tag color={color}>{label}</Tag>;
+          return <span className="erp-users-role-tag">{label}</span>;
         },
       },
     ],
-    [canViewHr, t],
+    [canViewHr, isNarrow, t],
   );
 
   function handleStatusMode(mode: StatusMode): void {
     setListTab('ALL');
     setStatusMode(mode);
-    setStatusFilter([]);
     resetPage();
   }
 
   function handleNeedsTicketTab(): void {
     setListTab('NEEDS_TICKET');
     setStatusMode('all');
-    setStatusFilter([]);
     resetPage();
   }
 
   function handleResetFilters(): void {
     setSearch('');
-    setStatusFilter([]);
+    setAppliedSearch('');
     setStatusMode('all');
+    setListTab('ALL');
     setInternationalFilter(undefined);
     setSubmittedById(undefined);
     setDateRange(null);
@@ -369,20 +370,12 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   }
 
   const hasFilters =
-    Boolean(search.trim()) ||
-    statusFilter.length > 0 ||
+    Boolean(appliedSearch.trim()) ||
     statusMode !== 'all' ||
+    listTab !== 'ALL' ||
     internationalFilter !== undefined ||
     submittedById !== undefined ||
     Boolean(dateRange?.[0] || dateRange?.[1]);
-
-  if (!canAccess) {
-    return (
-      <div className="flex flex-col gap-4">
-        <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
-      </div>
-    );
-  }
 
   const pageTitle = canViewHr
     ? t('pages.hr.flight.listTitle')
@@ -391,18 +384,28 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     ? t('pages.hr.flight.listDescription')
     : t('pages.hr.flight.myListDescription');
 
-  const showSkeleton = listQuery.isLoading && !listQuery.data;
-
-  if (showSkeleton) {
+  if (!canAccess) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-flight-applications-page">
+        <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
+      </div>
+    );
+  }
+
+  if (listQuery.isLoading && !listQuery.data) {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-flight-applications-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      className={`erp-pro-list-page erp-users-page erp-flight-applications-page${canViewHr ? ' erp-flight-applications-page--hr' : ''}`}
+    >
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -410,142 +413,119 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
-              : 'Failed to load flight applications'
+              : t('hr.messages.failedToLoadFlightApplications')
           }
         />
       ) : null}
 
-      <div
-        className={`mb-1 grid grid-cols-2 gap-3 ${canViewHr ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}
-      >
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+      <div className="erp-users-stat-bar">
+        <FlightStat
+          label={t('pages.hr.flight.stats.total')}
+          value={statusCounts.all}
+          accent="teal"
+          icon={<Plane size={14} strokeWidth={2} />}
+          active={listTab === 'ALL' && statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
-        >
-          <StatCard
-            label={t('pages.hr.flight.stats.total')}
-            value={statusCounts.all}
-            color="teal"
-            icon={<Plane size={14} />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <FlightStat
+          label={t('pages.hr.flight.stats.pending')}
+          value={statusCounts.pending}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+          active={listTab === 'ALL' && statusMode === 'pending'}
           onClick={() => handleStatusMode('pending')}
-        >
-          <StatCard
-            label={t('pages.hr.flight.stats.pending')}
-            value={statusCounts.pending}
-            color="amber"
-            icon={<ClockCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <FlightStat
+          label={t('pages.hr.flight.stats.approved')}
+          value={statusCounts.approved}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={listTab === 'ALL' && statusMode === 'approved'}
           onClick={() => handleStatusMode('approved')}
-        >
-          <StatCard
-            label={t('pages.hr.flight.stats.approved')}
-            value={statusCounts.approved}
-            color="green"
-            icon={<CheckCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <FlightStat
+          label={t('pages.hr.flight.stats.rejected')}
+          value={statusCounts.rejected}
+          accent="red"
+          icon={<CloseCircleOutlined />}
+          active={listTab === 'ALL' && statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
-        >
-          <StatCard
-            label={t('pages.hr.flight.stats.rejected')}
-            value={statusCounts.rejected}
-            color="red"
-            icon={<CloseCircleOutlined />}
-          />
-        </button>
+        />
         {canViewHr ? (
-          <button
-            type="button"
-            className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+          <FlightStat
+            label={t('hr.tabs.needsTicket')}
+            value={statusCounts.needsTicket}
+            accent="blue"
+            icon={<SendOutlined />}
+            active={listTab === 'NEEDS_TICKET'}
             onClick={handleNeedsTicketTab}
-          >
-            <StatCard
-              label={t('hr.tabs.needsTicket')}
-              value={statusCounts.needsTicket}
-              color="blue"
-              icon={<SendOutlined />}
-            />
-          </button>
+          />
         ) : null}
       </div>
 
-      {canViewHr ? (
-        <Tabs
-          className="erp-list-tabs"
-          activeKey={listTab}
-          onChange={(key) => {
-            setListTab(key as ListTab);
-            if (key === 'ALL') {
-              setStatusMode('all');
-            }
-            resetPage();
-          }}
-          items={[
-            { key: 'ALL', label: t('hr.tabs.allApplications') },
-            {
-              key: 'NEEDS_TICKET',
-              label: (
-                <span className="inline-flex items-center gap-1.5">
-                  {t('hr.tabs.needsTicket')}
-                  {needsTicketCount > 0 ? (
-                    <span
-                      className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
-                      style={{ background: tokens.colorAmber400 }}
-                    >
-                      {needsTicketCount > 99 ? '99+' : needsTicketCount}
-                    </span>
-                  ) : null}
-                </span>
-              ),
-            },
-          ]}
-        />
-      ) : null}
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {totalCount.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            {canCreate ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  router.push('/approvals/new/flight-application')
+                }
+                aria-label={t('hr.buttons.newFlightApplication')}
+              >
+                {isNarrow
+                  ? undefined
+                  : t('hr.buttons.newFlightApplication')}
+              </Button>
+            ) : null}
+          </div>
+        </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <ListSearchInput
-            committedValue={search}
-            onCommit={(value) => {
+        <div className="erp-users-filter-bar">
+          <Input
+            allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.hr.flight.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => {
+              const value = e.target.value;
               setSearch(value);
+              setAppliedSearch(value.trim());
               resetPage();
             }}
-            placeholder={t('hr.placeholder.searchFlight')}
-            className="w-full min-w-0 sm:w-72"
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
           />
-          {!needsTicketTab ? (
-            <Select
-              mode="multiple"
-              allowClear
-              placeholder={t('hr.placeholder.status')}
-              className="w-full min-w-0 sm:min-w-[180px] sm:w-auto"
-              options={statusOptions}
-              value={statusFilter}
-              onChange={(value: FlightApplicationStatus[]) => {
-                setStatusFilter(value);
-                setStatusMode('all');
-                resetPage();
-              }}
-              maxTagCount="responsive"
-            />
-          ) : null}
+          <span className="erp-users-filter-spacer" aria-hidden />
           <Select
             allowClear
             placeholder={`${t('hr.labels.international')} / ${t('hr.labels.domestic')}`}
-            className="w-full min-w-0 sm:min-w-[180px] sm:w-auto"
+            className="erp-users-filter-select"
             options={[
               { value: 'true', label: t('hr.labels.international') },
               { value: 'false', label: t('hr.labels.domestic') },
@@ -562,7 +542,8 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
-              className="w-full min-w-0 sm:w-48"
+              className="erp-users-filter-select"
+              loading={usersQuery.isLoading}
               options={(usersQuery.data?.data ?? []).map((user) => ({
                 value: user.id,
                 label: formatUserName(user),
@@ -576,107 +557,67 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
           ) : null}
           <DatePicker.RangePicker
             value={dateRange}
-            className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
+            className="erp-users-filter-daterange"
             onChange={(value) => {
               setDateRange(value);
               resetPage();
             }}
           />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters && listTab === 'ALL'}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-flight" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {totalCount}{' '}
-              {totalCount === 1 ? 'application' : 'applications'}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            {canCreate ? (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => router.push('/approvals/new/flight-application')}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.buttons.newFlightApplication')}
-              </Button>
-            ) : null}
-          </Space>
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<FlightApplicationListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            loading={listQuery.isFetching && !listQuery.isLoading}
-            scroll={false}
+            loading={listQuery.isFetching && rows.length === 0}
+            scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 1100 }}
             onRow={(record) => ({
-              onClick: () => router.push(`/hr/flight-applications/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              onClick: () =>
+                router.push(`/hr/flight-applications/${record.id}`),
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
-                  icon={<Plane size={24} />}
-                  title={t('hr.empty.noFlightApplications')}
+                  icon={<Plane size={28} strokeWidth={1.5} />}
+                  title={
+                    hasFilters
+                      ? t('pages.hr.flight.emptyFiltered')
+                      : t('hr.empty.noFlightApplications')
+                  }
                   description={pageDescription}
                   action={
-                    hasFilters || listTab !== 'ALL'
+                    hasFilters
                       ? {
                           label: t('common.reset'),
-                          onClick: () => {
-                            handleResetFilters();
-                            setListTab('ALL');
-                          },
+                          onClick: handleResetFilters,
                         }
                       : canCreate
                         ? {
                             label: t('hr.buttons.newFlightApplication'),
                             onClick: () =>
-                              router.push('/approvals/new/flight-application'),
+                              router.push(
+                                '/approvals/new/flight-application',
+                              ),
                           }
                         : undefined
                   }
                 />
               ),
             }}
-            
             pagination={{
               ...bindMeta(meta),
               pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
             }}
           />
         </div>

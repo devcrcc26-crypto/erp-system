@@ -273,11 +273,14 @@
         "myListTitle": "My Flight Applications",
         "listDescription": "Submit and track flight applications through the approval workflow.",
         "myListDescription": "View and submit your own flight applications.",
+        "searchPlaceholder": "Search by application # or route",
+        "emptyFiltered": "No flight applications match your filters",
         "stats": {
           "total": "Total",
           "pending": "Pending",
           "approved": "Approved",
-          "rejected": "Rejected"
+          "rejected": "Rejected",
+          "needsTicket": "Needs Ticket"
         }
       },
       "businessTrip": {
@@ -1950,6 +1953,7 @@
       "failedToLoadLeaveRequests": "Failed to load leave requests",
       "failedToLoadOvertimeSheets": "Failed to load overtime sheets",
       "failedToLoadExpenseClaims": "Failed to load expense claims",
+      "failedToLoadFlightApplications": "Failed to load flight applications",
       "failedToOpenOvertimeSheet": "Failed to open overtime sheet",
       "overtimeSheetNotFound": "Overtime sheet not found",
       "overtimeEntryAdded": "Entry added",
