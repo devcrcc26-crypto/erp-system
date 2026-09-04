@@ -124,7 +124,7 @@ export default function ExpenseClaimEditPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-expense-claim-form-page">
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      <div className="erp-expense-claim-edit-actions flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
         <Button
           onClick={() => router.push(`/hr/expense-claims/${claimId}`)}
           className="shrink-0"
@@ -141,7 +141,7 @@ export default function ExpenseClaimEditPageContent({
         </Button>
       </div>
 
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-0 sm:px-0">
         <div className="overflow-hidden rounded-[12px] border border-[#e8ebef] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
           <div className="border-b border-[#e8ebef] bg-[#fafbfc] px-4 py-3 sm:px-5">
             <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">

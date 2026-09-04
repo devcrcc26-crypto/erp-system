@@ -1963,6 +1963,7 @@
       "failedToCancelOvertimeSheet": "取消加班表失败",
       "expenseClaimNotFound": "未找到费用报销记录",
       "expenseClaimSubmitted": "费用报销已提交审批",
+      "expenseClaimMissingReceipts": "仍有 {{count}} 条明细缺少收据，提交前请补齐。",
       "expenseClaimCancelled": "费用报销已取消",
       "failedToSubmitExpenseClaim": "提交报销失败",
       "failedToCancelExpenseClaim": "取消报销失败",

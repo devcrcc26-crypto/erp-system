@@ -181,7 +181,7 @@ export default function ExpenseClaimItemModal({
       onClose={onClose}
       destroyOnHidden
       footer={
-        <div className="flex justify-end gap-2">
+        <div className="erp-expense-item-drawer-footer flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button onClick={onClose} disabled={saving}>
             {t('hr.buttons.cancel')}
           </Button>
@@ -254,7 +254,7 @@ export default function ExpenseClaimItemModal({
           </DrawerSection>
 
           <DrawerSection title={t('hr.section.amountAndCurrency')}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">
               <Form.Item
                 name="amount"
                 label={t('hr.form.amount')}

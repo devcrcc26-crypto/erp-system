@@ -118,6 +118,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const canManage = canViewHr;
   const currentUser = useCurrentUser();
@@ -260,6 +261,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         dataIndex: 'claimNumber',
         key: 'claimNumber',
         width: 130,
+        responsive: ['md'],
         render: (value: string) => (
           <span className="erp-users-id-chip">{value}</span>
         ),
@@ -288,11 +290,15 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         : []),
       {
         title: t('hr.table.title'),
-        dataIndex: 'title',
         key: 'title',
         ellipsis: true,
-        render: (value: string) => (
-          <span className="erp-users-cell-strong">{value}</span>
+        render: (_: unknown, row: ExpenseClaimListItem) => (
+          <div className="min-w-0">
+            <p className="erp-users-cell-strong m-0 truncate">{row.title}</p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+              {row.claimNumber}
+            </p>
+          </div>
         ),
       },
       {
@@ -301,7 +307,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         key: 'itemCount',
         width: 80,
         align: 'right',
-        responsive: ['md'],
+        responsive: ['lg'],
         render: (value: number) => (
           <span className="erp-users-cell-sub tabular-nums">{value}</span>
         ),
@@ -310,7 +316,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         title: t('hr.table.total'),
         dataIndex: 'totalAmountEtb',
         key: 'totalAmountEtb',
-        width: 140,
+        width: isNarrow ? 110 : 140,
         align: 'right',
         render: (value: number | string) => (
           <span className="erp-users-cell-strong tabular-nums">
@@ -322,7 +328,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
-        width: 130,
+        width: isNarrow ? 108 : 130,
         render: (value: ExpenseClaimListItem['status']) => (
           <StatusBadge
             label={formatExpenseClaimStatus(value, t)}
@@ -335,7 +341,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         dataIndex: 'createdAt',
         key: 'createdAt',
         width: 120,
-        responsive: ['lg'],
+        responsive: ['xl'],
         render: (value: string) => (
           <span className="erp-users-cell-sub">
             {formatProjectDate(value)}
@@ -345,7 +351,8 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
       {
         title: '',
         key: 'actions',
-        width: 56,
+        width: 48,
+        fixed: isCompact ? ('right' as const) : undefined,
         render: (_: unknown, row: ExpenseClaimListItem) => {
           const items = buildActionMenu(row);
           if (!items || items.length === 0) {
@@ -370,7 +377,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         },
       },
     ],
-    [canManage, canViewHr, currentUserId, router, t],
+    [canManage, canViewHr, currentUserId, isCompact, isNarrow, router, t],
   );
 
   if (listQuery.isLoading && !listQuery.data) {
@@ -465,8 +472,9 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => router.push('/approvals/new/expense-claim')}
+              aria-label={t('hr.buttons.newExpenseClaim')}
             >
-              {t('hr.buttons.newExpenseClaim')}
+              {isNarrow ? undefined : t('hr.buttons.newExpenseClaim')}
             </Button>
           </div>
         </div>
@@ -529,7 +537,7 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
             columns={columns}
             dataSource={rows}
             loading={listQuery.isFetching && rows.length === 0}
-            scroll={{ x: isCompact ? 720 : 1000 }}
+            scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 1000 }}
             onRow={(record) => ({
               onClick: () => router.push(`/hr/expense-claims/${record.id}`),
               className: 'cursor-pointer',

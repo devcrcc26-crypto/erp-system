@@ -1963,6 +1963,7 @@
       "failedToCancelOvertimeSheet": "Failed to cancel sheet",
       "expenseClaimNotFound": "Expense claim not found",
       "expenseClaimSubmitted": "Expense claim submitted for approval",
+      "expenseClaimMissingReceipts": "{{count}} item(s) still need a receipt before you can submit.",
       "expenseClaimCancelled": "Expense claim cancelled",
       "failedToSubmitExpenseClaim": "Failed to submit claim",
       "failedToCancelExpenseClaim": "Failed to cancel claim",

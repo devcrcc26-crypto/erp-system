@@ -6,6 +6,7 @@ import {
   Button,
   DatePicker,
   Form,
+  Grid,
   Input,
   InputNumber,
   Select,
@@ -108,6 +109,9 @@ export default function ExpenseClaimForm({
 }: ExpenseClaimFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isNarrow = screens.sm === false;
+  const isCompact = screens.md === false;
   const [detailsForm] = Form.useForm<Step1Values>();
   const [itemForm] = Form.useForm<ItemFormValues>();
 
@@ -314,7 +318,7 @@ export default function ExpenseClaimForm({
       title: t('hr.table.date'),
       dataIndex: 'expenseDate',
       key: 'expenseDate',
-      width: 110,
+      width: 100,
       render: (value: string) => formatDisplayDate(value),
     },
     {
@@ -323,32 +327,42 @@ export default function ExpenseClaimForm({
       key: 'category',
       width: 140,
       ellipsis: true,
+      responsive: ['md'],
     },
     {
       title: t('hr.table.description'),
-      dataIndex: 'description',
       key: 'description',
       ellipsis: true,
+      render: (_: unknown, row: ClientItem) => (
+        <div className="min-w-0">
+          <span className="erp-users-cell-strong">{row.description}</span>
+          <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+            {row.category}
+          </p>
+        </div>
+      ),
     },
     {
       title: t('hr.table.amount'),
       key: 'amount',
-      width: 130,
+      width: 120,
       align: 'right',
+      responsive: ['lg'],
       render: (_: unknown, row: ClientItem) =>
         formatCurrencyAmount(row.amount, row.currency),
     },
     {
       title: t('hr.table.etbEquivalent'),
       key: 'amountEtb',
-      width: 130,
+      width: isNarrow ? 110 : 130,
       align: 'right',
       render: (_: unknown, row: ClientItem) => formatEtbAmount(itemEtb(row)),
     },
     {
       title: t('hr.table.receipt'),
       key: 'receipt',
-      width: 140,
+      width: isNarrow ? 72 : 140,
+      responsive: ['sm'],
       render: (_: unknown, row: ClientItem) =>
         row.file ? (
           <Typography.Text ellipsis className="text-xs">
@@ -361,7 +375,8 @@ export default function ExpenseClaimForm({
     {
       title: '',
       key: 'actions',
-      width: 80,
+      width: 72,
+      fixed: isCompact ? ('right' as const) : undefined,
       render: (_: unknown, row: ClientItem) => (
         <Space size={4}>
           <Button
@@ -369,6 +384,7 @@ export default function ExpenseClaimForm({
             type="text"
             icon={<EditOutlined />}
             onClick={() => openEditItem(row)}
+            aria-label={t('common.update')}
           />
           <Button
             size="small"
@@ -376,6 +392,7 @@ export default function ExpenseClaimForm({
             danger
             icon={<DeleteOutlined />}
             onClick={() => removeItem(row._key)}
+            aria-label={t('common.delete')}
           />
         </Space>
       ),
@@ -577,7 +594,7 @@ export default function ExpenseClaimForm({
                   </Form.Item>
                 </div>
               </Form>
-              <div className="mt-4 flex justify-end gap-2">
+              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end erp-expense-item-form-actions">
                 <Button onClick={cancelItemForm}>{t('hr.buttons.cancel')}</Button>
                 <Button type="primary" onClick={() => void saveItem()}>
                   {editingKey ? t('common.save') : t('hr.buttons.addItem')}
@@ -592,11 +609,12 @@ export default function ExpenseClaimForm({
               columns={itemColumns}
               dataSource={items}
               pagination={false}
+              scroll={{ x: isNarrow ? 480 : isCompact ? 720 : 900 }}
               locale={{ emptyText: t('hr.empty.noItems') }}
               footer={
                 items.length > 0
                   ? () => (
-                      <div className="flex justify-end gap-4 pr-2 text-sm font-medium">
+                      <div className="flex flex-col items-stretch gap-1 px-1 text-sm font-medium sm:flex-row sm:justify-end sm:gap-4 sm:pr-2">
                         <span style={{ color: tokens.colorTextSecondary }}>
                           {t('hr.form.itemCount', { count: items.length })}
                         </span>
@@ -653,9 +671,10 @@ export default function ExpenseClaimForm({
                 columns={reviewItemColumns}
                 dataSource={items}
                 pagination={false}
+                scroll={{ x: isNarrow ? 420 : isCompact ? 640 : 800 }}
                 locale={{ emptyText: t('hr.empty.noItems') }}
                 footer={() => (
-                  <div className="flex justify-end pr-2 text-sm font-medium">
+                  <div className="flex justify-end px-1 text-sm font-medium sm:pr-2">
                     <span style={{ color: tokens.colorTextPrimary }}>
                       {t('hr.table.total')}:{' '}
                       <strong>{formatEtbAmount(totalEtb)}</strong>
@@ -680,6 +699,8 @@ export default function ExpenseClaimForm({
       totalEtb,
       detailsSnapshot,
       liveEtbPreview,
+      isNarrow,
+      isCompact,
     ],
   );
 

@@ -1227,11 +1227,13 @@ main::-webkit-scrollbar,
   vertical-align: middle;
 }
 
-/* No zebra - quiet rows, hover-only emphasis */
+/* No zebra - quiet rows, hover-only emphasis (keep sticky cols opaque) */
 .erp-data-table.erp-pro-table.erp-users-table
   .ant-table-tbody
   > tr:nth-child(even)
-  > td {
+  > td:not(.ant-table-cell-fix):not(.ant-table-cell-fix-left):not(
+      .ant-table-cell-fix-right
+    ):not(.ant-table-cell-fix-start):not(.ant-table-cell-fix-end) {
   background: transparent;
 }
 
@@ -1242,30 +1244,100 @@ main::-webkit-scrollbar,
   background: #f6f8fa !important;
 }
 
-/* Fixed-left identity column tracks the row background */
+/* Sticky / fixed columns — Ant Design 5 (left/right) + 6 (start/end) */
+.erp-users-table .ant-table-cell-fix,
 .erp-users-table .ant-table-cell-fix-left,
-.erp-users-table .ant-table-cell-fix-left-first {
+.erp-users-table .ant-table-cell-fix-left-first,
+.erp-users-table .ant-table-cell-fix-right,
+.erp-users-table .ant-table-cell-fix-right-first,
+.erp-users-table .ant-table-cell-fix-right-last,
+.erp-users-table .ant-table-cell-fix-start,
+.erp-users-table .ant-table-cell-fix-end {
   background: #fff !important;
+  background-color: #fff !important;
   z-index: 4;
 }
 
+.erp-users-table .ant-table-thead .ant-table-cell-fix,
 .erp-users-table .ant-table-thead .ant-table-cell-fix-left,
-.erp-users-table .ant-table-thead .ant-table-cell-fix-left-first {
+.erp-users-table .ant-table-thead .ant-table-cell-fix-left-first,
+.erp-users-table .ant-table-thead .ant-table-cell-fix-right,
+.erp-users-table .ant-table-thead .ant-table-cell-fix-right-first,
+.erp-users-table .ant-table-thead .ant-table-cell-fix-right-last,
+.erp-users-table .ant-table-thead .ant-table-cell-fix-start,
+.erp-users-table .ant-table-thead .ant-table-cell-fix-end {
   background: #ffffff !important;
+  background-color: #ffffff !important;
   z-index: 5;
 }
 
-.erp-users-table .ant-table-tbody > tr:nth-child(even) .ant-table-cell-fix-left,
-.erp-users-table
+.erp-data-table.erp-pro-table.erp-users-table
   .ant-table-tbody
-  > tr:nth-child(even)
-  .ant-table-cell-fix-left-first {
+  > tr
+  > td.ant-table-cell-fix,
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr
+  > td.ant-table-cell-fix-left,
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr
+  > td.ant-table-cell-fix-right,
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr
+  > td.ant-table-cell-fix-start,
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr
+  > td.ant-table-cell-fix-end,
+.erp-pro-table.erp-users-table .ant-table-tbody > tr > td.ant-table-cell-fix,
+.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr
+  > td.ant-table-cell-fix-end,
+.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr
+  > td.ant-table-cell-fix-right {
   background: #fff !important;
+  background-color: #fff !important;
 }
 
-.erp-users-table .ant-table-tbody > tr:hover .ant-table-cell-fix-left,
-.erp-users-table .ant-table-tbody > tr:hover .ant-table-cell-fix-left-first {
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td.ant-table-cell-fix,
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td.ant-table-cell-fix-left,
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td.ant-table-cell-fix-right,
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td.ant-table-cell-fix-start,
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td.ant-table-cell-fix-end,
+.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td.ant-table-cell-fix,
+.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td.ant-table-cell-fix-end,
+.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:hover
+  > td.ant-table-cell-fix-right {
   background: #f6f8fa !important;
+  background-color: #f6f8fa !important;
 }
 
 /* Identity cell */
@@ -3435,9 +3507,108 @@ main::-webkit-scrollbar,
   border-radius: 8px;
 }
 
+.erp-expense-claim-detail-page .erp-employee-toolbar-actions .ant-btn {
+  border-radius: 8px;
+}
+
+.erp-expense-claim-detail-page .erp-expense-claim-total {
+  color: #0f6e56;
+}
+
+.erp-expense-claim-detail-page .erp-expense-receipt-download-btn {
+  color: #6b7280;
+}
+
+.erp-expense-claim-detail-page .erp-expense-receipt-download-btn:hover {
+  color: #0f6e56 !important;
+  background: #e1f5ee !important;
+}
+
+/* Meta bar carries four stats — keep the segmented row aligned on wide screens
+   (the shared 2-up layout below 900px already renders these correctly). */
+.erp-expense-claim-detail-page .erp-employee-meta-bar {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (min-width: 901px) {
+  .erp-expense-claim-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n) {
+    border-right: 1px solid #eef1f4;
+  }
+
+  .erp-expense-claim-detail-page .erp-employee-meta-bar .erp-users-stat:last-child {
+    border-right: none;
+  }
+
+  .erp-expense-claim-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(-n + 3) {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .erp-expense-claims-page .erp-users-stat-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .erp-expense-claims-page .erp-users-toolbar-actions {
+    width: 100%;
+  }
+
+  .erp-expense-claim-detail-page .erp-employee-section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .erp-expense-claim-detail-page .erp-employee-section-header .ant-btn {
+    width: 100%;
+  }
+
+  .erp-expense-claim-detail-page .erp-employee-toolbar-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .erp-expense-claim-detail-page .erp-contract-detail-body {
+    padding: 12px;
+  }
+
+  .erp-expense-claim-form-page .erp-expense-item-form-actions .ant-btn,
+  .erp-expense-claim-form-page .erp-expense-claim-edit-actions .ant-btn {
+    width: 100%;
+  }
+
+  .erp-expense-item-drawer-footer .ant-btn {
+    width: 100%;
+    margin-inline-start: 0 !important;
+  }
+
+  .erp-expense-item-drawer .ant-drawer-body {
+    padding: 12px !important;
+  }
+}
+
 @media (max-width: 640px) {
   .erp-contract-detail-body {
     padding: 12px 14px 16px;
+  }
+
+  .erp-expense-claim-detail-page .erp-profile-file-icon.h-9,
+  .erp-expense-claim-detail-page .erp-expense-receipt-missing {
+    height: 32px;
+    width: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .erp-expense-claims-page .erp-users-stat-value {
+    font-size: calc(18px * var(--erp-font-scale));
+  }
+
+  .erp-expense-claims-page .erp-users-stat-chip {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
   }
 }
 

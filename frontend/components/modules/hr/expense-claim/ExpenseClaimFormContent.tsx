@@ -26,7 +26,7 @@ export default function ExpenseClaimFormContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-expense-claim-form-page">
-      <div className="flex shrink-0 items-center justify-end gap-2">
+      <div className="erp-expense-claim-edit-actions flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
         <Button
           onClick={() => router.push('/approvals/new')}
           className="shrink-0"

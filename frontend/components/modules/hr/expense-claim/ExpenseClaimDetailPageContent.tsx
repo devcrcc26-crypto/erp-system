@@ -5,36 +5,41 @@ import {
   Alert,
   Button,
   Dropdown,
-  Empty,
   Grid,
   Skeleton,
   Space,
+  Tooltip,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DeleteOutlined,
+  EditOutlined,
   MoreOutlined,
   PlusOutlined,
   SendOutlined,
   StopOutlined,
 } from '@ant-design/icons';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, Download, File, Receipt } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import ExpenseClaimItemModal from '@/components/modules/hr/expense-claim/ExpenseClaimItemModal';
-import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
+import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { ExpenseClaimItem } from '@/lib/api/expense-claim.types';
+import type {
+  ExpenseClaimDocumentSummary,
+  ExpenseClaimItem,
+} from '@/lib/api/expense-claim.types';
+import { useApprovalRequest } from '@/lib/query/approvals';
 import {
   useCancelExpenseClaim,
   useDeleteExpenseClaim,
@@ -43,6 +48,7 @@ import {
   useSubmitExpenseClaim,
 } from '@/lib/query/expense-claim';
 import { useCurrentUser } from '@/lib/query/profile';
+import { downloadDocument } from '@/lib/utils/document-download';
 import {
   expenseClaimStatusVariant,
   formatCurrencyAmount,
@@ -80,7 +86,7 @@ function DetailSection({
 }
 
 /**
- * Expense claim detail — Users / employee profile chrome.
+ * Expense claim detail — Users / employee profile chrome (aligned with leave & overtime).
  */
 export default function ExpenseClaimDetailPageContent({
   claimId,
@@ -110,6 +116,26 @@ export default function ExpenseClaimDetailPageContent({
   useSetHeaderExtra(null);
 
   const claim = detailQuery.data;
+  const approvalRequestId = claim?.approvalRequestId ?? null;
+  const approvalQuery = useApprovalRequest(
+    approvalRequestId ?? '',
+    Boolean(approvalRequestId) &&
+      !(
+        claim?.approvalRequest?.tiers &&
+        claim.approvalRequest.tiers.length > 0
+      ),
+  );
+
+  const approvalRequest =
+    claim?.approvalRequest?.tiers && claim.approvalRequest.tiers.length > 0
+      ? claim.approvalRequest
+      : (approvalQuery.data ?? claim?.approvalRequest ?? null);
+
+  const tiers = useMemo(
+    () => (approvalRequest?.tiers ?? []) as ApprovalTier[],
+    [approvalRequest?.tiers],
+  );
+
   const isOwner = Boolean(claim) && claim?.employeeId === currentUser.data?.id;
   const isDraft = claim?.status === 'DRAFT';
   const canManage = canViewHr;
@@ -117,10 +143,18 @@ export default function ExpenseClaimDetailPageContent({
     Boolean(claim) &&
     (claim?.status === 'DRAFT' || claim?.status === 'RETURNED') &&
     (canManage || isOwner);
-  const canEdit = isOwner && isDraft;
+  const canEditItems = Boolean(isOwner && isDraft);
   const canCancel =
-    isOwner && (claim?.status === 'DRAFT' || claim?.status === 'SUBMITTED');
-  const canSubmit = canEdit && (claim?.items.length ?? 0) > 0;
+    Boolean(isOwner) &&
+    (claim?.status === 'DRAFT' || claim?.status === 'SUBMITTED');
+  const missingReceiptCount = useMemo(
+    () => (claim?.items ?? []).filter((item) => !item.receipt).length,
+    [claim?.items],
+  );
+  const canSubmit =
+    canEditItems &&
+    (claim?.items.length ?? 0) > 0 &&
+    missingReceiptCount === 0;
 
   useEffect(() => {
     if (canViewHr || detailQuery.isLoading) {
@@ -153,11 +187,6 @@ export default function ExpenseClaimDetailPageContent({
     router,
   ]);
 
-  const tiers = useMemo(
-    () => (claim?.approvalRequest?.tiers ?? []) as ApprovalTier[],
-    [claim?.approvalRequest?.tiers],
-  );
-
   function openAddItem(): void {
     setEditingItem(null);
     setItemModalOpen(true);
@@ -182,6 +211,20 @@ export default function ExpenseClaimDetailPageContent({
         t('hr.messages.failedToDeleteExpenseClaimItem'),
         messageApi,
       );
+    }
+  }
+
+  async function handleDownloadReceipt(
+    receipt: ExpenseClaimDocumentSummary,
+  ): Promise<void> {
+    try {
+      await downloadDocument(receipt.id, receipt.name);
+    } catch (error: unknown) {
+      const text =
+        error instanceof ApiRequestError
+          ? error.message
+          : 'Unable to download attachment';
+      messageApi.error(text);
     }
   }
 
@@ -234,7 +277,7 @@ export default function ExpenseClaimDetailPageContent({
         title: t('hr.table.date'),
         dataIndex: 'expenseDate',
         key: 'expenseDate',
-        width: 110,
+        width: 100,
         render: (v: string) => (
           <span className="erp-users-cell-strong">{formatProjectDate(v)}</span>
         ),
@@ -244,8 +287,9 @@ export default function ExpenseClaimDetailPageContent({
         dataIndex: 'category',
         key: 'category',
         width: 140,
+        responsive: ['md'],
         render: (value: string) => (
-          <span className="erp-users-cell-sub">{value}</span>
+          <span className="erp-users-role-tag">{value}</span>
         ),
       },
       {
@@ -253,15 +297,21 @@ export default function ExpenseClaimDetailPageContent({
         dataIndex: 'description',
         key: 'description',
         ellipsis: true,
-        render: (value: string) => (
-          <span className="erp-users-cell-strong">{value}</span>
+        render: (value: string, row: ExpenseClaimItem) => (
+          <div className="min-w-0">
+            <span className="erp-users-cell-strong">{value}</span>
+            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+              {row.category}
+            </p>
+          </div>
         ),
       },
       {
         title: t('hr.table.amount'),
         key: 'amount',
-        width: 130,
+        width: 120,
         align: 'right',
+        responsive: ['lg'],
         render: (_: unknown, row: ExpenseClaimItem) => (
           <span className="erp-users-cell-sub tabular-nums">
             {formatCurrencyAmount(row.amount, row.currency)}
@@ -272,7 +322,7 @@ export default function ExpenseClaimDetailPageContent({
         title: t('hr.table.etbEquivalent'),
         dataIndex: 'amountEtb',
         key: 'amountEtb',
-        width: 140,
+        width: isNarrow ? 112 : 140,
         align: 'right',
         render: (v: number | string) => (
           <span className="erp-users-cell-strong tabular-nums">
@@ -283,29 +333,58 @@ export default function ExpenseClaimDetailPageContent({
       {
         title: t('hr.table.receipt'),
         key: 'receipt',
-        width: 120,
+        width: isNarrow ? 88 : 96,
         render: (_: unknown, row: ExpenseClaimItem) =>
           row.receipt ? (
-            <AttachmentDownloadList documents={[row.receipt]} />
+            <div
+              className="flex items-center gap-0.5 sm:gap-1"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <Tooltip title={row.receipt.name}>
+                <span className="inline-flex shrink-0">
+                  <ProfileFileTypeIcon
+                    name={row.receipt.name}
+                    fileType={row.receipt.fileType}
+                    size="sm"
+                  />
+                </span>
+              </Tooltip>
+              <Tooltip title={t('common.download')}>
+                <Button
+                  type="text"
+                  size="small"
+                  className="erp-expense-receipt-download-btn"
+                  icon={<Download size={15} strokeWidth={1.75} />}
+                  aria-label={t('common.download')}
+                  onClick={() => void handleDownloadReceipt(row.receipt!)}
+                />
+              </Tooltip>
+            </div>
           ) : (
-            <span className="text-xs text-[#D32F2F]">
-              {t('hr.labels.receiptMissing')}
-            </span>
+            <Tooltip title={t('hr.labels.receiptMissing')}>
+              <span
+                className="erp-expense-receipt-missing inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#fecaca] bg-[#fef2f2] text-[#DC2626] opacity-70"
+                aria-label={t('hr.labels.receiptMissing')}
+              >
+                <File size={16} strokeWidth={1.75} />
+              </span>
+            </Tooltip>
           ),
       },
-      ...(canEdit
+      ...(canEditItems
         ? [
             {
               title: '',
               key: 'actions',
-              width: 56,
+              width: 48,
               fixed: 'right' as const,
               render: (_: unknown, row: ExpenseClaimItem) => {
                 const items: MenuProps['items'] = [
                   {
                     key: 'edit',
                     label: t('common.update'),
-                    icon: <Pencil size={14} />,
+                    icon: <EditOutlined />,
                     onClick: () => openEditItem(row),
                   },
                   {
@@ -337,14 +416,14 @@ export default function ExpenseClaimDetailPageContent({
           ]
         : []),
     ],
-    [canEdit, t],
+    [canEditItems, isNarrow, t],
   );
 
   if (detailQuery.isLoading) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page">
         <div className="erp-pro-card p-6">
-          <Skeleton active paragraph={{ rows: 6 }} />
+          <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
     );
@@ -387,6 +466,7 @@ export default function ExpenseClaimDetailPageContent({
 
   const backHref = canViewHr ? '/hr/expense-claims' : '/approvals';
   const employeeName = formatExpenseClaimEmployeeName(claim.employee);
+  const receiptOkCount = claim.items.length - missingReceiptCount;
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page">
@@ -408,19 +488,9 @@ export default function ExpenseClaimDetailPageContent({
                 onClick={() =>
                   router.push(`/approvals/${claim.approvalRequestId}`)
                 }
+                aria-label={t('hr.buttons.viewInApprovals')}
               >
-                {t('hr.buttons.viewInApprovals')}
-              </Button>
-            ) : null}
-            {canEditHeader ? (
-              <Button
-                icon={<Pencil size={14} />}
-                onClick={() =>
-                  router.push(`/hr/expense-claims/${claimId}/edit`)
-                }
-                aria-label={t('common.update')}
-              >
-                {isNarrow ? undefined : t('common.update')}
+                {isNarrow ? t('nav.approvals') : t('hr.buttons.viewInApprovals')}
               </Button>
             ) : null}
             {canCancel ? (
@@ -428,14 +498,25 @@ export default function ExpenseClaimDetailPageContent({
                 danger
                 icon={<StopOutlined />}
                 onClick={() => setConfirmCancel(true)}
-                aria-label={t('hr.buttons.cancel')}
+                aria-label={t('hr.buttons.cancelClaim')}
               >
                 {isNarrow ? undefined : t('hr.buttons.cancel')}
               </Button>
             ) : null}
-            {(canEdit || canManage) ? (
+            {(canEditHeader || canEditItems || canManage) ? (
               <Space.Compact>
-                {canEdit ? (
+                {canEditHeader ? (
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={() =>
+                      router.push(`/hr/expense-claims/${claimId}/edit`)
+                    }
+                    aria-label={t('common.update')}
+                  >
+                    {isNarrow ? undefined : t('common.update')}
+                  </Button>
+                ) : null}
+                {canEditItems ? (
                   <Button
                     type="primary"
                     icon={<SendOutlined />}
@@ -476,13 +557,6 @@ export default function ExpenseClaimDetailPageContent({
               </h2>
             </div>
             <p className="erp-users-email m-0 mt-1.5">{employeeName}</p>
-            {claim.submittedAt ? (
-              <p className="erp-users-cell-sub m-0 mt-1">
-                {t('hr.labels.submittedOn', {
-                  date: formatProjectDate(claim.submittedAt),
-                })}
-              </p>
-            ) : null}
           </div>
         </div>
       </div>
@@ -497,45 +571,53 @@ export default function ExpenseClaimDetailPageContent({
         <div className="erp-users-stat">
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('hr.table.total')}</p>
-            <p className="erp-employee-meta-value">
+            <p className="erp-employee-meta-value erp-expense-claim-total">
               {formatEtbAmount(claim.totalAmountEtb)}
             </p>
           </div>
         </div>
         <div className="erp-users-stat">
           <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.table.createdDate')}</p>
+            <p className="erp-users-stat-label">{t('hr.form.receipt')}</p>
             <p className="erp-employee-meta-value">
-              {formatProjectDate(claim.createdAt)}
+              {claim.items.length === 0
+                ? '—'
+                : `${receiptOkCount}/${claim.items.length}`}
             </p>
           </div>
         </div>
         <div className="erp-users-stat">
           <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('common.status')}</p>
+            <p className="erp-users-stat-label">
+              {claim.submittedAt
+                ? t('hr.table.submittedDate')
+                : t('hr.table.createdDate')}
+            </p>
             <p className="erp-employee-meta-value">
-              {formatExpenseClaimStatus(claim.status, t)}
+              {formatProjectDate(claim.submittedAt ?? claim.createdAt)}
             </p>
           </div>
         </div>
       </div>
 
+      {isDraft && missingReceiptCount > 0 ? (
+        <Alert
+          type="warning"
+          showIcon
+          title={t('hr.messages.expenseClaimMissingReceipts', {
+            count: missingReceiptCount,
+          })}
+        />
+      ) : null}
+
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]">
         <div className="erp-pro-card min-w-0">
           <div className="erp-employee-tab-panel erp-contract-detail-body">
-            {claim.description ? (
-              <DetailSection title={t('hr.form.description')}>
-                <p className="m-0 whitespace-pre-wrap text-sm text-[var(--color-text-primary)]">
-                  {claim.description}
-                </p>
-              </DetailSection>
-            ) : null}
-
             <DetailSection
               title={t('hr.section.items')}
               bodyClassName="!p-0"
               action={
-                canEdit ? (
+                canEditItems ? (
                   <Button
                     type="primary"
                     size="small"
@@ -554,40 +636,42 @@ export default function ExpenseClaimDetailPageContent({
                 columns={columns}
                 dataSource={claim.items}
                 pagination={false}
-                scroll={{ x: 960 }}
+                scroll={{ x: screens.lg ? 960 : screens.md ? 760 : 560 }}
                 locale={{
-                  emptyText: <Empty description={t('hr.empty.noItems')} />,
+                  emptyText: (
+                    <TableEmptyState
+                      icon={<Receipt size={28} strokeWidth={1.5} />}
+                      title={t('hr.empty.noItems')}
+                      description={t('pages.hr.expenseClaim.itemsStepDescription')}
+                      action={
+                        canEditItems
+                          ? {
+                              label: t('hr.buttons.addItem'),
+                              onClick: openAddItem,
+                            }
+                          : undefined
+                      }
+                    />
+                  ),
                 }}
               />
             </DetailSection>
 
-            <DetailSection title={t('hr.section.requestDetails')}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <MetaItem label={t('hr.labels.employee')}>
-                  {employeeName}
-                </MetaItem>
-                <MetaItem label={t('hr.table.claimNumber')}>
-                  <span className="erp-users-id-chip">{claim.claimNumber}</span>
-                </MetaItem>
-                <MetaItem label={t('hr.table.status')}>
-                  <StatusBadge
-                    label={formatExpenseClaimStatus(claim.status, t)}
-                    variant={expenseClaimStatusVariant(claim.status)}
-                  />
-                </MetaItem>
-                <MetaItem label={t('hr.table.total')}>
-                  {formatEtbAmount(claim.totalAmountEtb)}
-                </MetaItem>
-              </div>
-            </DetailSection>
+            {claim.description?.trim() ? (
+              <DetailSection title={t('hr.form.description')}>
+                <p className="m-0 whitespace-pre-wrap leading-relaxed text-[13px] text-[#1a1a1a]">
+                  {claim.description}
+                </p>
+              </DetailSection>
+            ) : null}
           </div>
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
-          {claim.approvalRequest ? (
+          {approvalRequest ? (
             <ApprovalTierTimeline
               tiers={tiers}
-              currentTier={claim.approvalRequest.currentTier ?? 0}
+              currentTier={approvalRequest.currentTier ?? 0}
             />
           ) : (
             <div className="erp-pro-card">
