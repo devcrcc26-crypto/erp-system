@@ -285,6 +285,64 @@ export class LeaveBalanceService {
     }
   }
 
+  /**
+   * Upserts entitled + broughtForward for an employee/year/type.
+   * Initializes default rows if missing; remaining is recomputed by the DB generated column.
+   */
+  async upsertEntitlement(
+    employeeId: string,
+    leaveType: LeaveType,
+    year: number,
+    entitled: number,
+    broughtForward: number,
+    companyId: string,
+  ): Promise<{ created: boolean; balance: Record<string, unknown> }> {
+    if (!OWN_BALANCE_LEAVE_TYPES.includes(leaveType)) {
+      throw new BadRequestException(
+        `Leave type ${leaveType} does not support balance entitlements`,
+      );
+    }
+    if (entitled < 0 || broughtForward < 0) {
+      throw new BadRequestException(
+        'entitled and broughtForward must be zero or greater',
+      );
+    }
+
+    const existingBefore = await this.prisma.leaveBalance.findUnique({
+      where: {
+        companyId_employeeId_year_leaveType: {
+          companyId,
+          employeeId,
+          year,
+          leaveType,
+        },
+      },
+      select: { id: true },
+    });
+
+    await this.ensureBalance(employeeId, year, companyId);
+
+    const updated = await this.prisma.leaveBalance.update({
+      where: {
+        companyId_employeeId_year_leaveType: {
+          companyId,
+          employeeId,
+          year,
+          leaveType,
+        },
+      },
+      data: {
+        entitled: new Prisma.Decimal(entitled),
+        broughtForward: new Prisma.Decimal(broughtForward),
+      },
+    });
+
+    return {
+      created: !existingBefore,
+      balance: this.mapBalance(updated),
+    };
+  }
+
   private async assertEmployeeInCompany(
     employeeId: string,
     companyId: string,

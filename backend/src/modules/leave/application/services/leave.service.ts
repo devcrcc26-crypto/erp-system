@@ -128,6 +128,51 @@ export class LeaveService
     userId: string,
     files: UploadedFile[] = [],
   ): Promise<unknown> {
+    return this.submitLeaveForEmployee(
+      userId,
+      dto,
+      companyId,
+      userId,
+      files,
+    );
+  }
+
+  /**
+   * Submits a leave request on behalf of an employee (HR import / proxy).
+   * Uses employeeId for ownership and approval-chain subject; actorUserId for audit fields.
+   */
+  async submitOnBehalf(
+    employeeId: string,
+    dto: SubmitLeaveRequestDto,
+    companyId: string,
+    actorUserId: string,
+  ): Promise<unknown> {
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+    return this.submitLeaveForEmployee(
+      employeeId,
+      dto,
+      companyId,
+      actorUserId,
+      [],
+    );
+  }
+
+  /**
+   * Shared leave submit path for self-service and on-behalf flows.
+   */
+  private async submitLeaveForEmployee(
+    employeeId: string,
+    dto: SubmitLeaveRequestDto,
+    companyId: string,
+    actorUserId: string,
+    files: UploadedFile[] = [],
+  ): Promise<unknown> {
     this.assertDateRange(dto.startDate, dto.endDate, dto.days);
 
     const startDate = this.parseDateOnly(dto.startDate);
@@ -135,20 +180,20 @@ export class LeaveService
     const year = startDate.getUTCFullYear();
     const days = dto.days;
 
-    // Step 1 — resolve chain BEFORE opening any transaction
+    // Step 1 — resolve chain for the leave owner (not necessarily the actor)
     // Leave: Discipline Lead → HR Officer (no General Manager tier)
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
-      userId,
+      employeeId,
       companyId,
       false,
     );
 
     // Step 2 — initialize balance if needed (outside transaction)
-    await this.leaveBalanceService.ensureBalance(userId, year, companyId);
+    await this.leaveBalanceService.ensureBalance(employeeId, year, companyId);
 
     // Step 3 — check balance (outside transaction)
     await this.leaveBalanceService.assertSufficientBalance(
-      userId,
+      employeeId,
       dto.leaveType,
       year,
       days,
@@ -157,7 +202,7 @@ export class LeaveService
 
     const title = `${this.formatLeaveType(dto.leaveType)} leave — ${dto.startDate} to ${dto.endDate}`;
 
-    // Step 4 — approval write only (resolved chain passed in; no lookups in tx)
+    // Step 4 — approval write only (requestedBy = leave owner / chain subject)
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'LEAVE_REQUEST',
@@ -171,7 +216,7 @@ export class LeaveService
         },
       },
       companyId,
-      userId,
+      employeeId,
       {
         resolvedTiers: {
           ruleName: 'Leave org chain',
@@ -191,7 +236,7 @@ export class LeaveService
               id: leaveId,
               companyId,
               requestNumber: approval.requestNumber,
-              employeeId: userId,
+              employeeId,
               leaveType: dto.leaveType,
               startDate,
               endDate,
@@ -200,8 +245,8 @@ export class LeaveService
               status: LeaveRequestStatus.SUBMITTED,
               approvalRequestId: approval.id,
               submittedAt: now,
-              createdBy: userId,
-              updatedBy: userId,
+              createdBy: actorUserId,
+              updatedBy: actorUserId,
             },
           });
         },
@@ -209,11 +254,11 @@ export class LeaveService
       );
 
       if (files.length > 0) {
-        await this.attachFiles(leaveId, companyId, userId, files);
+        await this.attachFiles(leaveId, companyId, actorUserId, files);
       }
 
       await this.leaveBalanceService.adjustBalance(
-        userId,
+        employeeId,
         dto.leaveType,
         year,
         'pending',
@@ -229,14 +274,14 @@ export class LeaveService
         where: { id: approval.id },
         data: {
           status: ApprovalRequestStatus.CANCELLED,
-          updatedBy: userId,
+          updatedBy: actorUserId,
           completedAt: now,
         },
       });
       throw error;
     }
 
-    return this.getRequest(leaveId, companyId, userId);
+    return this.fetchLeaveDetail(leaveId, companyId);
   }
 
   /**
@@ -486,7 +531,34 @@ export class LeaveService
     }
 
     await this.assertCanViewLeaveRequest(leave, companyId, userId);
+    return this.mapLeaveWithBalance(leave, companyId);
+  }
 
+  /**
+   * Loads leave detail + balance without permission checks (post-create return path).
+   */
+  private async fetchLeaveDetail(
+    id: string,
+    companyId: string,
+  ): Promise<unknown> {
+    const leave = await this.prisma.leaveRequest.findFirst({
+      where: activeOnly({ id, companyId }),
+      include: LEAVE_DETAIL_INCLUDE,
+    });
+    if (!leave) {
+      throw new NotFoundException('Leave request not found');
+    }
+    return this.mapLeaveWithBalance(leave, companyId);
+  }
+
+  private async mapLeaveWithBalance(
+    leave: {
+      employeeId: string;
+      leaveType: LeaveType;
+      startDate: Date;
+    } & Record<string, unknown>,
+    companyId: string,
+  ): Promise<Record<string, unknown>> {
     const mapped = this.mapLeave(leave);
     const year = leave.startDate.getUTCFullYear();
     const balances = (await this.leaveBalanceService.getBalance(

@@ -191,6 +191,9 @@
         "myListTitle": "My Leave Requests",
         "listDescription": "Submit and track employee leave through the approval workflow.",
         "myListDescription": "View and submit your own leave requests.",
+        "detailsStepDescription": "Choose leave type and dates. Days are calculated automatically.",
+        "documentsStepDescription": "Optionally attach supporting documents such as medical certificates.",
+        "reviewStepDescription": "Confirm leave details and attachments before submitting.",
         "stats": {
           "total": "Total",
           "pending": "Pending",

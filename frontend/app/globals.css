@@ -974,8 +974,68 @@ main::-webkit-scrollbar,
   gap: 16px;
 }
 
-.erp-leave-page .erp-profile-tabbar {
+.erp-leave-page.erp-pro-list-page {
+  gap: 16px;
+}
+
+.erp-leave-page .erp-profile-tabbar,
+.erp-leave-page .erp-employee-tabbar {
+  margin: 0;
   border-bottom: none;
+}
+
+.erp-leave-balance-panel {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #e1f5ee;
+  background: #f0faf6;
+}
+
+.erp-leave-balance-panel-title {
+  margin: 0 0 8px;
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.erp-leave-balance-summary-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.erp-leave-balance-summary-label {
+  font-size: calc(12px * var(--erp-font-scale));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.erp-leave-balance-summary-value {
+  font-size: calc(22px * var(--erp-font-scale));
+  font-weight: 700;
+  color: #1d9e75;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-leave-balance-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: calc(12px * var(--erp-font-scale));
+  color: #64748b;
+}
+
+.erp-leave-file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.erp-leave-form-page .ant-btn {
+  border-radius: 8px;
 }
 
 .erp-users-filter-bar .ant-select-selector {

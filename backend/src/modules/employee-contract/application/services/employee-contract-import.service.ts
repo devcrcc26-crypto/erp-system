@@ -1,0 +1,746 @@
+import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  EmployeeContractStatus,
+  EmployeeContractType,
+  SupportedCurrency,
+} from '@prisma/client';
+import * as ExcelJS from 'exceljs';
+import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { normalizeEmail } from '../../../../shared/utils/email.util';
+import {
+  ImportCommitResponseDto,
+} from '../../../hr-shared/application/dtos/hr-import.dtos';
+import { CreateEmployeeContractDto } from '../dtos/employee-contract.dtos';
+import {
+  EmployeeContractImportPreviewResponseDto,
+  EmployeeContractImportRowPreviewDto,
+} from '../dtos/employee-contract-import.dtos';
+import { EmployeeContractService } from './employee-contract.service';
+
+type AuditContext = { companyId: string; userId: string };
+
+const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_IMPORT_ROWS = 500;
+
+const ALLOWED_MIME_TYPES = new Set([
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/octet-stream',
+]);
+
+const CONTRACT_TYPE_VALUES = Object.values(EmployeeContractType);
+const CURRENCY_VALUES = Object.values(SupportedCurrency);
+
+const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
+  employeeemail: 'employeeEmail',
+  'employee email': 'employeeEmail',
+  employee_email: 'employeeEmail',
+  email: 'employeeEmail',
+  employeeid: 'employeeId',
+  'employee id': 'employeeId',
+  employee_id: 'employeeId',
+  contracttype: 'contractType',
+  'contract type': 'contractType',
+  contract_type: 'contractType',
+  signedat: 'signedAt',
+  'signed at': 'signedAt',
+  signed_at: 'signedAt',
+  startdate: 'startDate',
+  'start date': 'startDate',
+  start_date: 'startDate',
+  enddate: 'endDate',
+  'end date': 'endDate',
+  end_date: 'endDate',
+  currency: 'currency',
+  basicsalary: 'basicSalary',
+  'basic salary': 'basicSalary',
+  basic_salary: 'basicSalary',
+  transportationallowance: 'transportationAllowance',
+  'transportation allowance': 'transportationAllowance',
+  transportation_allowance: 'transportationAllowance',
+  monthlybonus: 'monthlyBonus',
+  'monthly bonus': 'monthlyBonus',
+  monthly_bonus: 'monthlyBonus',
+  netsalary: 'netSalary',
+  'net salary': 'netSalary',
+  net_salary: 'netSalary',
+  probationenddate: 'probationEndDate',
+  'probation end date': 'probationEndDate',
+  probation_end_date: 'probationEndDate',
+  governedby: 'governedBy',
+  'governed by': 'governedBy',
+  governed_by: 'governedBy',
+  notes: 'notes',
+};
+
+interface ParsedImportRow {
+  line: number;
+  employeeEmail: string;
+  employeeId: string;
+  contractType: string;
+  signedAt: string;
+  startDate: string;
+  endDate: string;
+  currency: string;
+  basicSalary: string;
+  transportationAllowance: string;
+  monthlyBonus: string;
+  netSalary: string;
+  probationEndDate: string;
+  governedBy: string;
+  notes: string;
+}
+
+const DATE_FIELDS = new Set<keyof ParsedImportRow>([
+  'signedAt',
+  'startDate',
+  'endDate',
+  'probationEndDate',
+]);
+
+/**
+ * Excel template / preview / commit for employee contracts.
+ */
+@Injectable()
+export class EmployeeContractImportService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly employeeContractService: EmployeeContractService,
+  ) {}
+
+  /**
+   * Builds a downloadable Excel template for employee contract import.
+   */
+  async buildTemplate(): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Contracts');
+
+    sheet.columns = [
+      { header: 'employeeEmail', key: 'employeeEmail', width: 28 },
+      { header: 'employeeId', key: 'employeeId', width: 36 },
+      { header: 'contractType', key: 'contractType', width: 14 },
+      { header: 'signedAt', key: 'signedAt', width: 12 },
+      { header: 'startDate', key: 'startDate', width: 12 },
+      { header: 'endDate', key: 'endDate', width: 12 },
+      { header: 'currency', key: 'currency', width: 10 },
+      { header: 'basicSalary', key: 'basicSalary', width: 12 },
+      {
+        header: 'transportationAllowance',
+        key: 'transportationAllowance',
+        width: 20,
+      },
+      { header: 'monthlyBonus', key: 'monthlyBonus', width: 12 },
+      { header: 'netSalary', key: 'netSalary', width: 12 },
+      { header: 'probationEndDate', key: 'probationEndDate', width: 16 },
+      { header: 'governedBy', key: 'governedBy', width: 36 },
+      { header: 'notes', key: 'notes', width: 24 },
+    ];
+
+    sheet.addRow({
+      employeeEmail: 'employee@company.local',
+      employeeId: '',
+      contractType: 'FIXED_TERM',
+      signedAt: '2026-01-15',
+      startDate: '2026-02-01',
+      endDate: '2027-01-31',
+      currency: 'ETB',
+      basicSalary: 25000,
+      transportationAllowance: 3000,
+      monthlyBonus: 2000,
+      netSalary: 30000,
+      probationEndDate: '',
+      governedBy: 'Ethiopian Labor Proclamation 1156/2019',
+      notes: 'Sample import row',
+    });
+
+    const instructions = workbook.addWorksheet('Instructions');
+    instructions.addRow(['Column', 'Required', 'Notes']);
+    instructions.addRow([
+      'employeeEmail',
+      'Preferred',
+      'Resolve employee by email (preferred over employeeId)',
+    ]);
+    instructions.addRow([
+      'employeeId',
+      'If no email',
+      'User UUID — required when employeeEmail is blank',
+    ]);
+    instructions.addRow([
+      'contractType',
+      'Yes',
+      'FIXED_TERM | OPEN_ENDED | PROBATION | RENEWAL',
+    ]);
+    instructions.addRow(['signedAt', 'Yes', 'YYYY-MM-DD']);
+    instructions.addRow(['startDate', 'Yes', 'YYYY-MM-DD']);
+    instructions.addRow([
+      'endDate',
+      'Conditional',
+      'Required for FIXED_TERM, PROBATION, RENEWAL',
+    ]);
+    instructions.addRow(['currency', 'No', 'ETB | USD | CNY (default ETB)']);
+    instructions.addRow(['basicSalary', 'No', 'Number']);
+    instructions.addRow(['transportationAllowance', 'No', 'Number']);
+    instructions.addRow(['monthlyBonus', 'No', 'Number']);
+    instructions.addRow(['netSalary', 'No', 'Number']);
+    instructions.addRow(['probationEndDate', 'No', 'YYYY-MM-DD']);
+    instructions.addRow(['governedBy', 'No', 'Governing law / proclamation']);
+    instructions.addRow(['notes', 'No', 'Optional notes']);
+    instructions.addRow([]);
+    instructions.addRow([
+      'Note',
+      '',
+      'Employees with an existing ACTIVE contract are skipped as duplicates.',
+    ]);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  /**
+   * Parses and validates an upload without writing contracts.
+   */
+  async previewImport(
+    ctx: AuditContext,
+    file: Express.Multer.File,
+  ): Promise<EmployeeContractImportPreviewResponseDto> {
+    const rows = await this.parseWorkbook(file);
+    return this.validateRows(ctx, rows);
+  }
+
+  /**
+   * Creates contracts from valid rows via EmployeeContractService.createContract.
+   */
+  async commitImport(
+    ctx: AuditContext,
+    file: Express.Multer.File,
+  ): Promise<ImportCommitResponseDto> {
+    const rows = await this.parseWorkbook(file);
+    const preview = await this.validateRows(ctx, rows);
+
+    const validRows = preview.rows.filter(
+      (row): row is EmployeeContractImportRowPreviewDto & {
+        status: 'ok';
+        employeeId: string;
+        contractType: EmployeeContractType;
+        signedAt: string;
+        startDate: string;
+        currency: SupportedCurrency;
+      } => row.status === 'ok' && Boolean(row.employeeId) && Boolean(row.contractType),
+    );
+    const skipped = preview.rows.length - validRows.length;
+    const errors: ImportCommitResponseDto['errors'] = [];
+    let created = 0;
+
+    for (const row of validRows) {
+      try {
+        const dto: CreateEmployeeContractDto = {
+          employeeId: row.employeeId,
+          contractType: row.contractType,
+          signedAt: row.signedAt,
+          startDate: row.startDate,
+          endDate: row.endDate,
+          currency: row.currency,
+          basicSalary: row.basicSalary,
+          transportationAllowance: row.transportationAllowance,
+          monthlyBonus: row.monthlyBonus,
+          netSalary: row.netSalary,
+          probationEndDate: row.probationEndDate,
+          governedBy: row.governedBy,
+          notes: row.notes,
+        };
+        await this.employeeContractService.createContract(
+          dto,
+          ctx.companyId,
+          ctx.userId,
+        );
+        created += 1;
+      } catch (error) {
+        errors.push({
+          line: row.line,
+          label: row.label,
+          message: error instanceof Error ? error.message : 'Failed to create contract',
+        });
+      }
+    }
+
+    return {
+      created,
+      skipped: skipped + errors.length,
+      errors,
+    };
+  }
+
+  private async parseWorkbook(
+    file: Express.Multer.File,
+  ): Promise<ParsedImportRow[]> {
+    this.assertValidUpload(file);
+    const workbook = await this.loadWorkbookFromBuffer(file.buffer);
+    const sheet = workbook.worksheets[0];
+    if (!sheet) {
+      throw new BadRequestException('Workbook must contain at least one sheet');
+    }
+
+    const headerRow = sheet.getRow(1);
+    const columnMap = new Map<number, keyof ParsedImportRow>();
+    headerRow.eachCell((cell, colNumber) => {
+      const header = this.normalizeHeader(this.cellToString(cell.value));
+      const field = HEADER_ALIASES[header];
+      if (field) {
+        columnMap.set(colNumber, field);
+      }
+    });
+
+    const mapped = new Set(columnMap.values());
+    if (!mapped.has('contractType') || !mapped.has('signedAt') || !mapped.has('startDate')) {
+      throw new BadRequestException(
+        'Missing required columns: contractType, signedAt, startDate. Download the template.',
+      );
+    }
+    if (!mapped.has('employeeEmail') && !mapped.has('employeeId')) {
+      throw new BadRequestException(
+        'Missing employeeEmail or employeeId column. Download the template.',
+      );
+    }
+
+    const rows: ParsedImportRow[] = [];
+    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+      const row = sheet.getRow(rowNumber);
+      if (this.isRowEmpty(row)) {
+        continue;
+      }
+
+      const parsed: ParsedImportRow = {
+        line: rowNumber,
+        employeeEmail: '',
+        employeeId: '',
+        contractType: '',
+        signedAt: '',
+        startDate: '',
+        endDate: '',
+        currency: '',
+        basicSalary: '',
+        transportationAllowance: '',
+        monthlyBonus: '',
+        netSalary: '',
+        probationEndDate: '',
+        governedBy: '',
+        notes: '',
+      };
+
+      columnMap.forEach((field, colNumber) => {
+        const cellValue = row.getCell(colNumber).value;
+        const value = DATE_FIELDS.has(field)
+          ? this.cellToDateString(cellValue).trim()
+          : this.cellToString(cellValue).trim();
+        parsed[field] = value as never;
+      });
+
+      rows.push(parsed);
+      if (rows.length > MAX_IMPORT_ROWS) {
+        throw new BadRequestException(
+          `Import exceeds maximum of ${MAX_IMPORT_ROWS} rows`,
+        );
+      }
+    }
+
+    if (rows.length === 0) {
+      throw new BadRequestException('No data rows found in the spreadsheet');
+    }
+    return rows;
+  }
+
+  private async validateRows(
+    ctx: AuditContext,
+    rows: ParsedImportRow[],
+  ): Promise<EmployeeContractImportPreviewResponseDto> {
+    const employeesInFile = new Set<string>();
+    const previewRows: EmployeeContractImportRowPreviewDto[] = [];
+
+    for (const row of rows) {
+      const preview = await this.validateRow(ctx, row, employeesInFile);
+      previewRows.push(preview);
+      if (preview.status === 'ok' && preview.employeeId) {
+        employeesInFile.add(preview.employeeId);
+      }
+    }
+
+    const valid = previewRows.filter((r) => r.status === 'ok').length;
+    const duplicate = previewRows.filter(
+      (r) => r.status === 'duplicate' || r.status === 'duplicate_in_file',
+    ).length;
+    const invalid = previewRows.length - valid - duplicate;
+
+    return { valid, invalid, duplicate, rows: previewRows };
+  }
+
+  private async validateRow(
+    ctx: AuditContext,
+    row: ParsedImportRow,
+    employeesInFile: Set<string>,
+  ): Promise<EmployeeContractImportRowPreviewDto> {
+    const label =
+      row.employeeEmail.trim() ||
+      row.employeeId.trim() ||
+      `Line ${row.line}`;
+
+    const base: EmployeeContractImportRowPreviewDto = {
+      line: row.line,
+      label,
+      status: 'error',
+      employeeEmail: row.employeeEmail.trim() || undefined,
+      employeeId: row.employeeId.trim() || undefined,
+      contractType: undefined,
+      signedAt: row.signedAt.trim() || undefined,
+      startDate: row.startDate.trim() || undefined,
+      endDate: row.endDate.trim() || undefined,
+      notes: row.notes.trim() || undefined,
+      governedBy: row.governedBy.trim() || undefined,
+    };
+
+    const employee = await this.resolveEmployee(ctx.companyId, row);
+    if (!employee.ok) {
+      return { ...base, status: 'error', message: employee.message };
+    }
+
+    base.label =
+      employee.email ||
+      `${employee.firstName} ${employee.lastName}`.trim() ||
+      employee.id;
+    base.employeeId = employee.id;
+    base.employeeEmail = employee.email ?? undefined;
+
+    if (employeesInFile.has(employee.id)) {
+      return {
+        ...base,
+        status: 'duplicate_in_file',
+        message: 'Duplicate employee in this file',
+      };
+    }
+
+    const contractTypeResult = this.parseEnumField(
+      row.contractType,
+      CONTRACT_TYPE_VALUES,
+      'contractType',
+      true,
+    );
+    if (!contractTypeResult.ok) {
+      return { ...base, status: 'error', message: contractTypeResult.message };
+    }
+
+    const signedAtResult = this.parseImportDate(row.signedAt, 'signedAt', true);
+    if (!signedAtResult.ok) {
+      return { ...base, status: 'error', message: signedAtResult.message };
+    }
+
+    const startDateResult = this.parseImportDate(row.startDate, 'startDate', true);
+    if (!startDateResult.ok) {
+      return { ...base, status: 'error', message: startDateResult.message };
+    }
+
+    const endDateResult = this.parseImportDate(row.endDate, 'endDate', false);
+    if (!endDateResult.ok) {
+      return { ...base, status: 'error', message: endDateResult.message };
+    }
+
+    const requiresEndDate =
+      contractTypeResult.value === EmployeeContractType.FIXED_TERM ||
+      contractTypeResult.value === EmployeeContractType.PROBATION ||
+      contractTypeResult.value === EmployeeContractType.RENEWAL;
+    if (requiresEndDate && !endDateResult.value) {
+      return {
+        ...base,
+        status: 'error',
+        message: `endDate is required for ${contractTypeResult.value}`,
+      };
+    }
+
+    const currencyResult = this.parseEnumField(
+      row.currency || 'ETB',
+      CURRENCY_VALUES,
+      'currency',
+      true,
+    );
+    if (!currencyResult.ok) {
+      return { ...base, status: 'error', message: currencyResult.message };
+    }
+
+    const basicSalary = this.parseOptionalNumber(row.basicSalary, 'basicSalary');
+    if (!basicSalary.ok) {
+      return { ...base, status: 'error', message: basicSalary.message };
+    }
+    const transportationAllowance = this.parseOptionalNumber(
+      row.transportationAllowance,
+      'transportationAllowance',
+    );
+    if (!transportationAllowance.ok) {
+      return {
+        ...base,
+        status: 'error',
+        message: transportationAllowance.message,
+      };
+    }
+    const monthlyBonus = this.parseOptionalNumber(row.monthlyBonus, 'monthlyBonus');
+    if (!monthlyBonus.ok) {
+      return { ...base, status: 'error', message: monthlyBonus.message };
+    }
+    const netSalary = this.parseOptionalNumber(row.netSalary, 'netSalary');
+    if (!netSalary.ok) {
+      return { ...base, status: 'error', message: netSalary.message };
+    }
+
+    const probationEndDateResult = this.parseImportDate(
+      row.probationEndDate,
+      'probationEndDate',
+      false,
+    );
+    if (!probationEndDateResult.ok) {
+      return {
+        ...base,
+        status: 'error',
+        message: probationEndDateResult.message,
+      };
+    }
+
+    const activeExisting = await this.prisma.employeeContract.findFirst({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        employeeId: employee.id,
+        status: EmployeeContractStatus.ACTIVE,
+      }),
+      select: { id: true, contractNumber: true },
+    });
+    if (activeExisting) {
+      return {
+        ...base,
+        status: 'duplicate',
+        message: `Employee already has an active contract (${activeExisting.contractNumber})`,
+        contractType: contractTypeResult.value,
+        signedAt: signedAtResult.value,
+        startDate: startDateResult.value,
+        endDate: endDateResult.value,
+        currency: currencyResult.value,
+      };
+    }
+
+    return {
+      ...base,
+      status: 'ok',
+      contractType: contractTypeResult.value,
+      signedAt: signedAtResult.value,
+      startDate: startDateResult.value,
+      endDate: endDateResult.value,
+      currency: currencyResult.value,
+      basicSalary: basicSalary.value,
+      transportationAllowance: transportationAllowance.value,
+      monthlyBonus: monthlyBonus.value,
+      netSalary: netSalary.value,
+      probationEndDate: probationEndDateResult.value,
+      governedBy: row.governedBy.trim() || undefined,
+      notes: row.notes.trim() || undefined,
+    };
+  }
+
+  private async resolveEmployee(
+    companyId: string,
+    row: ParsedImportRow,
+  ): Promise<
+    | {
+        ok: true;
+        id: string;
+        email: string | null;
+        firstName: string;
+        lastName: string;
+      }
+    | { ok: false; message: string }
+  > {
+    const email = row.employeeEmail.trim();
+    const employeeId = row.employeeId.trim();
+
+    if (email) {
+      if (!this.isValidEmail(email)) {
+        return { ok: false, message: 'Invalid employeeEmail' };
+      }
+      const user = await this.prisma.user.findFirst({
+        where: activeOnly({
+          companyId,
+          email: normalizeEmail(email),
+        }),
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
+      });
+      if (!user) {
+        return { ok: false, message: `Employee not found for email: ${email}` };
+      }
+      return { ok: true, ...user };
+    }
+
+    if (!employeeId) {
+      return {
+        ok: false,
+        message: 'employeeEmail or employeeId is required',
+      };
+    }
+
+    if (!this.isUuid(employeeId)) {
+      return { ok: false, message: 'employeeId must be a valid UUID' };
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ companyId, id: employeeId }),
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+    if (!user) {
+      return { ok: false, message: `Employee not found for id: ${employeeId}` };
+    }
+    return { ok: true, ...user };
+  }
+
+  private parseEnumField<T extends string>(
+    value: string,
+    allowed: readonly T[],
+    fieldLabel: string,
+    required: boolean,
+  ):
+    | { ok: true; value: T }
+    | { ok: false; message: string } {
+    if (!value.trim()) {
+      if (required) {
+        return { ok: false, message: `${fieldLabel} is required` };
+      }
+      return { ok: false, message: `${fieldLabel} is required` };
+    }
+    const normalized = value.trim().toUpperCase();
+    const match = allowed.find((entry) => entry === normalized);
+    if (!match) {
+      return { ok: false, message: `Unknown ${fieldLabel}: ${value}` };
+    }
+    return { ok: true, value: match };
+  }
+
+  private parseImportDate(
+    value: string,
+    fieldLabel: string,
+    required: boolean,
+  ):
+    | { ok: true; value: string | undefined }
+    | { ok: false; message: string } {
+    if (!value.trim()) {
+      if (required) {
+        return { ok: false, message: `${fieldLabel} is required` };
+      }
+      return { ok: true, value: undefined };
+    }
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+    if (!match) {
+      return { ok: false, message: `Invalid ${fieldLabel}: use YYYY-MM-DD` };
+    }
+    return { ok: true, value: `${match[1]}-${match[2]}-${match[3]}` };
+  }
+
+  private parseOptionalNumber(
+    value: string,
+    fieldLabel: string,
+  ):
+    | { ok: true; value: number | undefined }
+    | { ok: false; message: string } {
+    if (!value.trim()) {
+      return { ok: true, value: undefined };
+    }
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      return { ok: false, message: `Invalid ${fieldLabel}: must be a number` };
+    }
+    return { ok: true, value: num };
+  }
+
+  private async loadWorkbookFromBuffer(
+    buffer: Buffer,
+  ): Promise<ExcelJS.Workbook> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as never);
+    return workbook;
+  }
+
+  private assertValidUpload(file: Express.Multer.File): void {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('File is required');
+    }
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      throw new BadRequestException('File exceeds maximum size of 5 MB');
+    }
+    if (file.mimetype && !ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException('Only .xlsx Excel files are supported');
+    }
+  }
+
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
+  }
+
+  private isUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    );
+  }
+
+  private normalizeHeader(value: string): string {
+    return value.trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  private cellToString(value: ExcelJS.CellValue): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (typeof value === 'object' && 'text' in value) {
+      return String(value.text ?? '');
+    }
+    if (typeof value === 'object' && 'result' in value) {
+      return this.cellToString(value.result as ExcelJS.CellValue);
+    }
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    return String(value);
+  }
+
+  private cellToDateString(value: ExcelJS.CellValue): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (value instanceof Date) {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    if (typeof value === 'object' && 'text' in value) {
+      return this.cellToDateString(String(value.text ?? ''));
+    }
+    if (typeof value === 'object' && 'result' in value) {
+      return this.cellToDateString(value.result as ExcelJS.CellValue);
+    }
+    const asString = String(value).trim();
+    const isoMatch = /^(\d{4}-\d{2}-\d{2})/.exec(asString);
+    if (isoMatch) {
+      return isoMatch[1];
+    }
+    return asString;
+  }
+
+  private isRowEmpty(row: ExcelJS.Row): boolean {
+    let hasValue = false;
+    row.eachCell({ includeEmpty: false }, () => {
+      hasValue = true;
+    });
+    return !hasValue;
+  }
+}

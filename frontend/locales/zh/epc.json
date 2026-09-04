@@ -191,6 +191,9 @@
         "myListTitle": "我的请假申请",
         "listDescription": "通过审批流程提交并跟踪员工请假。",
         "myListDescription": "查看并提交您自己的请假申请。",
+        "detailsStepDescription": "选择假期类型与日期，天数会自动计算。",
+        "documentsStepDescription": "可选上传证明材料（如医疗证明）。",
+        "reviewStepDescription": "确认请假信息与附件后提交。",
         "stats": {
           "total": "全部",
           "pending": "待处理",
