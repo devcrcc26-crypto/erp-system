@@ -2,6 +2,9 @@
 
 import { Button, Input, Upload } from 'antd';
 import { DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import ProfileFileTypeIcon, {
+  profileFileMetaLine,
+} from '@/components/modules/users/ProfileFileTypeIcon';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 export interface PendingEmployeeDocument {
@@ -48,20 +51,38 @@ export default function AddEmployeePendingDocuments({
         <Button icon={<UploadOutlined />}>{t('users.form.selectDocuments')}</Button>
       </Upload>
       {value.length > 0 ? (
-        <div className="divide-y divide-slate-200 rounded border border-slate-200">
+        <div className="erp-profile-doc-list divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {value.map((item) => (
             <div
               key={item.uid}
-              className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+              className="erp-profile-doc-row flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-                <span className="min-w-0 flex-1 truncate text-sm">{item.file.name}</span>
-                <Input
-                  size="small"
-                  placeholder={t('users.form.documentLabel')}
-                  value={item.label}
-                  onChange={(event) => updateLabel(item.uid, event.target.value)}
-                />
+              <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+                <ProfileFileTypeIcon name={item.file.name} fileType={item.file.type} />
+                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className="truncate text-sm font-medium text-slate-900"
+                      title={item.file.name}
+                    >
+                      {item.file.name}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {profileFileMetaLine(
+                        item.file.name,
+                        item.file.type,
+                        item.file.size,
+                      )}
+                    </div>
+                  </div>
+                  <Input
+                    size="small"
+                    className="sm:max-w-[220px]"
+                    placeholder={t('users.form.documentLabel')}
+                    value={item.label}
+                    onChange={(event) => updateLabel(item.uid, event.target.value)}
+                  />
+                </div>
               </div>
               <Button
                 type="text"

@@ -29,6 +29,7 @@ import {
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   UploadOutlined,
   UserDeleteOutlined,
   UserOutlined,
@@ -676,15 +677,22 @@ export default function UsersPageContent(): React.ReactNode {
         </div>
 
         <div className="erp-users-filter-bar">
-          <Input.Search
-            placeholder={t('users.searchPlaceholder')}
-            className="erp-users-filter-search min-w-0"
+          <Input
             allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('users.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onSearch={(value) => {
+            onChange={(e) => {
+              const value = e.target.value;
               setSearch(value);
-              setAppliedSearch(value.trim());
+              if (value === '') {
+                setAppliedSearch('');
+                resetPage();
+              }
+            }}
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
               resetPage();
             }}
             onClear={() => {

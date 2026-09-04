@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { Button, Input, Spin, Upload } from 'antd';
 import { DeleteOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ProfileFileTypeIcon, {
+  profileFileMetaLine,
+} from '@/components/modules/users/ProfileFileTypeIcon';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { apiGet } from '@/lib/api/client';
@@ -28,27 +31,42 @@ interface EmployeeProfileDocumentsProps {
 
 function PendingDocumentRow({
   fileName,
+  fileType,
+  fileSizeBytes,
   label,
   onLabelChange,
   onRemove,
   labelPlaceholder,
 }: {
   fileName: string;
+  fileType: string;
+  fileSizeBytes: number;
   label: string;
   onLabelChange: (value: string) => void;
   onRemove: () => void;
   labelPlaceholder: string;
 }): React.ReactNode {
   return (
-    <div className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-        <span className="min-w-0 flex-1 truncate text-sm">{fileName}</span>
-        <Input
-          size="small"
-          placeholder={labelPlaceholder}
-          value={label}
-          onChange={(event) => onLabelChange(event.target.value)}
-        />
+    <div className="erp-profile-doc-row flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+        <ProfileFileTypeIcon name={fileName} fileType={fileType} />
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium text-slate-900" title={fileName}>
+              {fileName}
+            </div>
+            <div className="text-xs text-slate-500">
+              {profileFileMetaLine(fileName, fileType, fileSizeBytes)}
+            </div>
+          </div>
+          <Input
+            size="small"
+            className="sm:max-w-[220px]"
+            placeholder={labelPlaceholder}
+            value={label}
+            onChange={(event) => onLabelChange(event.target.value)}
+          />
+        </div>
       </div>
       <Button type="text" danger icon={<DeleteOutlined />} onClick={onRemove} />
     </div>
@@ -74,15 +92,30 @@ function SavedDocumentRow({
   downloadLabel: string;
   deleteLabel: string;
 }): React.ReactNode {
+  const dateLabel = new Date(document.createdAt).toLocaleDateString();
+
   return (
-    <div className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-slate-900">{document.name}</div>
-        <div className="text-xs text-slate-500">
-          {new Date(document.createdAt).toLocaleDateString()}
+    <div className="erp-profile-doc-row flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <ProfileFileTypeIcon name={document.name} fileType={document.fileType} />
+        <div className="min-w-0 flex-1">
+          <div
+            className="truncate text-sm font-medium text-slate-900"
+            title={document.name}
+          >
+            {document.name}
+          </div>
+          <div className="text-xs text-slate-500">
+            {profileFileMetaLine(
+              document.name,
+              document.fileType,
+              document.fileSizeBytes,
+              dateLabel,
+            )}
+          </div>
         </div>
       </div>
-      <div className="flex shrink-0 gap-1">
+      <div className="flex shrink-0 gap-1 ps-14 sm:ps-0">
         <Button
           type="link"
           icon={<DownloadOutlined />}
@@ -211,11 +244,13 @@ export default function EmployeeProfileDocuments({
       </Upload>
 
       {pending.length > 0 ? (
-        <div className="divide-y divide-slate-200 rounded border border-slate-200">
+        <div className="erp-profile-doc-list divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {pending.map((item) => (
             <PendingDocumentRow
               key={item.uid}
               fileName={item.file.name}
+              fileType={item.file.type}
+              fileSizeBytes={item.file.size}
               label={item.label}
               labelPlaceholder={t('users.form.documentLabel')}
               onLabelChange={(value) => updateLabel(item.uid, value)}
@@ -255,7 +290,7 @@ export default function EmployeeProfileDocuments({
 
       <Spin spinning={documentsQuery.isLoading}>
         {documents.length > 0 ? (
-          <div className="divide-y divide-slate-200 rounded border border-slate-200">
+          <div className="erp-profile-doc-list divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
             {documents.map((document) => (
               <SavedDocumentRow
                 key={document.id}
@@ -270,11 +305,9 @@ export default function EmployeeProfileDocuments({
               />
             ))}
           </div>
-        ) : (
-          !documentsQuery.isLoading ? (
-            <p className="text-sm text-slate-400">{t('users.noDocuments')}</p>
-          ) : null
-        )}
+        ) : !documentsQuery.isLoading ? (
+          <p className="text-sm text-slate-400">{t('users.noDocuments')}</p>
+        ) : null}
       </Spin>
     </div>
   );

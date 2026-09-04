@@ -831,9 +831,50 @@ main::-webkit-scrollbar,
   min-width: 0;
 }
 
-.erp-users-filter-search {
-  flex: 0 1 340px;
-  min-width: 200px;
+.erp-users-search-input {
+  flex: 0 1 360px;
+  min-width: 220px;
+  max-width: 440px;
+}
+
+.erp-users-search-input.ant-input-affix-wrapper {
+  height: 38px !important;
+  padding-inline: 12px 10px !important;
+  border-radius: 10px !important;
+  border-color: #e2e8f0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.erp-users-search-input.ant-input-affix-wrapper:hover {
+  border-color: #cbd5e1 !important;
+}
+
+.erp-users-search-input.ant-input-affix-wrapper-focused,
+.erp-users-search-input.ant-input-affix-wrapper:focus-within {
+  border-color: #94a3b8 !important;
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.12) !important;
+}
+
+.erp-users-search-input .ant-input {
+  font-size: calc(13px * var(--erp-font-scale));
+  color: #0f172a;
+}
+
+.erp-users-search-input .ant-input::placeholder {
+  color: #94a3b8;
+}
+
+.erp-users-search-icon {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.erp-users-search-input.ant-input-affix-wrapper-focused .erp-users-search-icon {
+  color: #1d9e75;
 }
 
 .erp-users-filter-select {
@@ -841,22 +882,17 @@ main::-webkit-scrollbar,
   width: 168px;
 }
 
-.erp-users-filter-bar .ant-input-search .ant-input,
-.erp-users-filter-bar .ant-input-affix-wrapper,
-.erp-users-filter-bar .ant-select-selector,
-.erp-users-filter-bar .ant-btn {
+.erp-users-filter-bar .ant-select-selector {
   border-radius: 8px !important;
 }
 
-.erp-users-filter-bar .ant-select-single .ant-select-selector,
-.erp-users-filter-bar .ant-input-affix-wrapper,
-.erp-users-filter-bar .ant-input-search .ant-btn {
-  height: 36px;
+.erp-users-filter-bar .ant-select-single .ant-select-selector {
+  height: 38px;
 }
 
 .erp-users-filter-bar .ant-select-single .ant-select-selector .ant-select-selection-item,
 .erp-users-filter-bar .ant-select-single .ant-select-selector .ant-select-selection-placeholder {
-  line-height: 34px;
+  line-height: 36px;
 }
 
 /* Users list - redesigned table: lighter header, no zebra, structured cells */
@@ -1212,8 +1248,9 @@ main::-webkit-scrollbar,
 
 .erp-review-doc-item {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   padding: 10px 12px;
   border: 1px solid #e8ebef;
   border-radius: 10px;

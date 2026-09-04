@@ -19,6 +19,9 @@ import { formatUserName } from '@/lib/utils/user-display';
 import { formatEmployeeAddress } from '@/components/modules/users/EmployeeProfileFormFields';
 import type { Role } from '@/lib/api/types';
 import type { AddEmployeeFormValues } from './add-employee.types';
+import ProfileFileTypeIcon, {
+  profileFileMetaLine,
+} from '@/components/modules/users/ProfileFileTypeIcon';
 import type { PendingEmployeeDocument } from './AddEmployeePendingDocuments';
 
 interface AddEmployeeReviewStepProps {
@@ -487,10 +490,25 @@ export default function AddEmployeeReviewStep({
             <ul className="erp-review-doc-list">
               {pendingDocuments.map((doc, index) => (
                 <li key={`${doc.file.name}-${index}`} className="erp-review-doc-item">
-                  <span className="erp-users-cell-strong">{doc.file.name}</span>
-                  {doc.label ? (
-                    <span className="erp-users-cell-sub">{doc.label}</span>
-                  ) : null}
+                  <ProfileFileTypeIcon
+                    name={doc.file.name}
+                    fileType={doc.file.type}
+                    size="sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="erp-users-cell-strong block truncate">
+                      {doc.file.name}
+                    </span>
+                    <span className="erp-users-cell-sub block">
+                      {doc.label
+                        ? `${doc.label} · ${profileFileMetaLine(doc.file.name, doc.file.type, doc.file.size)}`
+                        : profileFileMetaLine(
+                            doc.file.name,
+                            doc.file.type,
+                            doc.file.size,
+                          )}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
