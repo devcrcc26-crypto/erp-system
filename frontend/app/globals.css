@@ -3673,32 +3673,40 @@ main::-webkit-scrollbar,
     font-size: 13px;
   }
 
-  .erp-flight-applications-page .erp-users-stat-value {
+  .erp-flight-applications-page .erp-users-stat-value,
+  .erp-business-trips-page .erp-users-stat-value {
     font-size: calc(18px * var(--erp-font-scale));
   }
 
-  .erp-flight-applications-page .erp-users-stat-chip {
+  .erp-flight-applications-page .erp-users-stat-chip,
+  .erp-business-trips-page .erp-users-stat-chip {
     width: 30px;
     height: 30px;
     font-size: 13px;
   }
 }
 
-/* Flight applications list — 5-stat bar for HR (Needs Ticket) */
-.erp-flight-applications-page--hr .erp-users-stat-bar {
+/* Flight / business trip lists — 5-stat bar for HR (Needs Ticket) */
+.erp-flight-applications-page--hr .erp-users-stat-bar,
+.erp-business-trips-page--hr .erp-users-stat-bar {
   grid-template-columns: repeat(5, 1fr);
 }
 
 @media (min-width: 901px) {
-  .erp-flight-applications-page--hr .erp-users-stat-bar .erp-users-stat:nth-child(4) {
+  .erp-flight-applications-page--hr .erp-users-stat-bar .erp-users-stat:nth-child(4),
+  .erp-business-trips-page--hr .erp-users-stat-bar .erp-users-stat:nth-child(4) {
     border-right: 1px solid #eef1f4;
   }
 
-  .erp-flight-applications-page--hr .erp-users-stat-bar .erp-users-stat:nth-child(5) {
+  .erp-flight-applications-page--hr .erp-users-stat-bar .erp-users-stat:nth-child(5),
+  .erp-business-trips-page--hr .erp-users-stat-bar .erp-users-stat:nth-child(5) {
     border-right: none;
   }
 
   .erp-flight-applications-page--hr
+    .erp-users-stat-bar
+    .erp-users-stat:nth-child(-n + 4),
+  .erp-business-trips-page--hr
     .erp-users-stat-bar
     .erp-users-stat:nth-child(-n + 4) {
     border-bottom: none;
@@ -3706,22 +3714,30 @@ main::-webkit-scrollbar,
 }
 
 @media (max-width: 1100px) {
-  .erp-flight-applications-page--hr .erp-users-stat-bar {
+  .erp-flight-applications-page--hr .erp-users-stat-bar,
+  .erp-business-trips-page--hr .erp-users-stat-bar {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .erp-flight-applications-page--hr .erp-users-stat-bar .erp-users-stat {
+  .erp-flight-applications-page--hr .erp-users-stat-bar .erp-users-stat,
+  .erp-business-trips-page--hr .erp-users-stat-bar .erp-users-stat {
     border-right: 1px solid #eef1f4;
     border-bottom: 1px solid #eef1f4;
   }
 
   .erp-flight-applications-page--hr
     .erp-users-stat-bar
+    .erp-users-stat:nth-child(3n),
+  .erp-business-trips-page--hr
+    .erp-users-stat-bar
     .erp-users-stat:nth-child(3n) {
     border-right: none;
   }
 
   .erp-flight-applications-page--hr
+    .erp-users-stat-bar
+    .erp-users-stat:nth-last-child(-n + 2),
+  .erp-business-trips-page--hr
     .erp-users-stat-bar
     .erp-users-stat:nth-last-child(-n + 2) {
     border-bottom: none;
@@ -3730,16 +3746,22 @@ main::-webkit-scrollbar,
 
 @media (max-width: 900px) {
   .erp-flight-applications-page .erp-users-stat-bar,
-  .erp-flight-applications-page--hr .erp-users-stat-bar {
+  .erp-flight-applications-page--hr .erp-users-stat-bar,
+  .erp-business-trips-page .erp-users-stat-bar,
+  .erp-business-trips-page--hr .erp-users-stat-bar {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .erp-flight-applications-page--hr .erp-users-stat-bar .erp-users-stat {
+  .erp-flight-applications-page--hr .erp-users-stat-bar .erp-users-stat,
+  .erp-business-trips-page--hr .erp-users-stat-bar .erp-users-stat {
     border-right: 1px solid #eef1f4;
     border-bottom: 1px solid #eef1f4;
   }
 
   .erp-flight-applications-page--hr
+    .erp-users-stat-bar
+    .erp-users-stat:nth-child(2n),
+  .erp-business-trips-page--hr
     .erp-users-stat-bar
     .erp-users-stat:nth-child(2n) {
     border-right: none;
@@ -3747,11 +3769,17 @@ main::-webkit-scrollbar,
 
   .erp-flight-applications-page--hr
     .erp-users-stat-bar
+    .erp-users-stat:nth-last-child(-n + 2),
+  .erp-business-trips-page--hr
+    .erp-users-stat-bar
     .erp-users-stat:nth-last-child(-n + 2) {
     border-bottom: none;
   }
 
   .erp-flight-applications-page--hr
+    .erp-users-stat-bar
+    .erp-users-stat:last-child:nth-child(odd),
+  .erp-business-trips-page--hr
     .erp-users-stat-bar
     .erp-users-stat:last-child:nth-child(odd) {
     border-bottom: none;
@@ -3760,7 +3788,8 @@ main::-webkit-scrollbar,
 }
 
 @media (max-width: 767px) {
-  .erp-flight-applications-page .erp-users-toolbar-actions {
+  .erp-flight-applications-page .erp-users-toolbar-actions,
+  .erp-business-trips-page .erp-users-toolbar-actions {
     width: 100%;
   }
 }

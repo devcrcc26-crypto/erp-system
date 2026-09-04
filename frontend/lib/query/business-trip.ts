@@ -53,6 +53,38 @@ function buildListQuery(params: ListBusinessTripsParams): string {
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the business trips list endpoint (filter locally).
+ */
+async function fetchAllBusinessTripPages(): Promise<BusinessTripListItem[]> {
+  const first = await apiGetPaginated<BusinessTripListItem>(
+    `${BUSINESS_TRIP_PATH}${buildListQuery({ page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<BusinessTripListItem>(
+        `${BUSINESS_TRIP_PATH}${buildListQuery({
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
 /**
  * Paginated business trips.
  */
@@ -66,6 +98,18 @@ export function useBusinessTrips(
       apiGetPaginated<BusinessTripListItem>(
         `${BUSINESS_TRIP_PATH}${buildListQuery(params)}`,
       ),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * All business trips (all pages) for client-side filter/search.
+ */
+export function useBusinessTripsAll(enabled = true) {
+  return useQuery({
+    queryKey: [...businessTripKeys.lists(), 'all'] as const,
+    queryFn: () => fetchAllBusinessTripPages(),
     enabled,
     retry: false,
   });

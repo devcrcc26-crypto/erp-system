@@ -5,12 +5,10 @@ import {
   Alert,
   Button,
   DatePicker,
+  Grid,
   Input,
   Select,
-  Space,
   Spin,
-  Tabs,
-  Tag,
   Tooltip,
 } from 'antd';
 import {
@@ -19,17 +17,14 @@ import {
   CloseCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   SendOutlined,
 } from '@ant-design/icons';
 import { Globe } from 'lucide-react';
-import { tokens } from '@/lib/theme/tokens';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
-import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import {
@@ -44,10 +39,8 @@ import type {
   BusinessTripListItem,
   BusinessTripStatus,
 } from '@/lib/api/business-trip.types';
-import {
-  useBusinessTripNeedsTicketCount,
-  useBusinessTrips,
-} from '@/lib/query/business-trip';
+import type { PaginationMeta } from '@/lib/api/types';
+import { useBusinessTripsAll } from '@/lib/query/business-trip';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
   businessTripStatusVariant,
@@ -57,53 +50,74 @@ import {
   getCurrentStepLabel,
   tripTypeVariant,
 } from '@/lib/utils/business-trip-display';
+import {
+  filterBusinessTrips,
+  statusesForBusinessTripMode,
+  type BusinessTripStatusMode,
+} from '@/lib/utils/business-trip-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 type ListTab = 'ALL' | 'NEEDS_TICKET';
-type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
 
-const PENDING_STATUSES: BusinessTripStatus[] = [
-  'SUBMITTED',
-  'IN_REVIEW',
-  'RETURNED',
-  'DRAFT',
-];
-const APPROVED_STATUSES: BusinessTripStatus[] = ['APPROVED'];
-const REJECTED_STATUSES: BusinessTripStatus[] = ['REJECTED', 'CANCELLED'];
+const PENDING_STATUSES = statusesForBusinessTripMode('pending');
+const APPROVED_STATUSES = statusesForBusinessTripMode('approved');
+const REJECTED_STATUSES = statusesForBusinessTripMode('rejected');
 
-function statusesForMode(mode: StatusMode): BusinessTripStatus[] {
-  switch (mode) {
-    case 'pending':
-      return PENDING_STATUSES;
-    case 'approved':
-      return APPROVED_STATUSES;
-    case 'rejected':
-      return REJECTED_STATUSES;
-    default:
-      return [];
-  }
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+  blue: { bg: '#E6F1FB', fg: '#185FA5' },
+} as const;
+
+function BusinessTripStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
 }
 
 /**
- * Company or personal business trip list — layout aligned with Flight Applications.
+ * Business trips list — Users chrome (stat bar, filter row, rounded table).
+ * Search and filters run on the frontend against a full list fetch.
  */
 export default function BusinessTripsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
-
-  const statusOptions = useMemo(
-    () => [
-      { value: 'DRAFT', label: t('hr.status.DRAFT') },
-      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
-      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
-      { value: 'APPROVED', label: t('hr.status.APPROVED') },
-      { value: 'REJECTED', label: t('hr.status.REJECTED') },
-      { value: 'RETURNED', label: t('hr.status.RETURNED') },
-      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
-    ],
-    [t],
-  );
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
 
   const canAccess = useCanAccessBusinessTrip();
   const canViewHr = useCanViewHr();
@@ -111,9 +125,9 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [listTab, setListTab] = useState<ListTab>('ALL');
-  const [statusMode, setStatusMode] = useState<StatusMode>('all');
+  const [statusMode, setStatusMode] = useState<BusinessTripStatusMode>('all');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<BusinessTripStatus[]>([]);
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('');
   const [submittedById, setSubmittedById] = useState<string | undefined>();
   const [dateRange, setDateRange] = useState<
@@ -122,57 +136,16 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
 
   const needsTicketTab = listTab === 'NEEDS_TICKET' && canViewHr;
 
-  const statsQuery = useBusinessTrips(
-    { page: 1, limit: 100 },
-    canViewHr || canAccess,
-  );
-
-  const listParams = useMemo(
-    () => ({
-      ...params,
-      search: search.trim() || undefined,
-      status: needsTicketTab
-        ? undefined
-        : statusFilter.length > 0
-          ? statusFilter
-          : statusesForMode(statusMode).length > 0
-            ? statusesForMode(statusMode)
-            : undefined,
-      needsTicket: needsTicketTab ? true : undefined,
-      destinationCountry: destinationCountry.trim() || undefined,
-      submittedById: canViewHr ? submittedById : undefined,
-      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
-      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
-    }),
-    [
-      params,
-      search,
-      statusFilter,
-      statusMode,
-      destinationCountry,
-      submittedById,
-      dateRange,
-      canViewHr,
-      needsTicketTab,
-    ],
-  );
-
-  const listQuery = useBusinessTrips(listParams, canViewHr || canAccess);
-
-  const needsTicketCountQuery = useBusinessTripNeedsTicketCount(canViewHr);
-  const needsTicketCount = needsTicketCountQuery.data ?? 0;
+  const listQuery = useBusinessTripsAll(canViewHr || canAccess);
 
   const usersQuery = useUsersDirectory(
     { page: 1, limit: 100 },
     { enabled: canViewHr },
   );
 
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-  const totalCount = meta?.total ?? rows.length;
+  const allRows = listQuery.data ?? [];
 
   const statusCounts = useMemo(() => {
-    const allRows = statsQuery.data?.data ?? [];
     const pending = allRows.filter((row) =>
       PENDING_STATUSES.includes(row.status),
     ).length;
@@ -182,14 +155,57 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
     const rejected = allRows.filter((row) =>
       REJECTED_STATUSES.includes(row.status),
     ).length;
+    const needsTicket = allRows.filter(
+      (row) => row.needsTicketAttachment === true,
+    ).length;
     return {
-      all: statsQuery.data?.meta?.total ?? allRows.length,
+      all: allRows.length,
       pending,
       approved,
       rejected,
-      needsTicket: needsTicketCount,
+      needsTicket,
     };
-  }, [statsQuery.data, needsTicketCount]);
+  }, [allRows]);
+
+  const filtered = useMemo(
+    () =>
+      filterBusinessTrips(allRows, {
+        search: appliedSearch,
+        statusMode: needsTicketTab ? 'all' : statusMode,
+        needsTicket: needsTicketTab || undefined,
+        destinationCountry: destinationCountry.trim() || undefined,
+        submittedById: canViewHr ? submittedById : undefined,
+        dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+        dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+      }),
+    [
+      allRows,
+      appliedSearch,
+      statusMode,
+      needsTicketTab,
+      destinationCountry,
+      submittedById,
+      dateRange,
+      canViewHr,
+    ],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const columns: ColumnsType<BusinessTripListItem> = useMemo(
     () => [
@@ -198,13 +214,9 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         dataIndex: 'tripNumber',
         key: 'tripNumber',
         width: 130,
+        responsive: ['md'],
         render: (value: string) => (
-          <span
-            className="font-[family-name:var(--font-mono)] text-xs font-medium"
-            style={{ color: tokens.colorPrimary }}
-          >
-            {value}
-          </span>
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
       ...(canViewHr
@@ -215,18 +227,12 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
               width: 200,
               responsive: ['md'],
               render: (_: unknown, row: BusinessTripListItem) => (
-                <div className="min-w-0 py-0.5">
-                  <p
-                    className="m-0 text-sm font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
-                  >
+                <div className="min-w-0">
+                  <p className="erp-users-cell-strong m-0">
                     {formatBusinessTripSubmitterName(row.submitter)}
                   </p>
                   {row.submitter?.email ? (
-                    <p
-                      className="m-0 truncate text-xs"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
+                    <p className="erp-users-email m-0 mt-0.5">
                       {row.submitter.email}
                     </p>
                   ) : null}
@@ -238,15 +244,21 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
       {
         title: t('hr.table.destination'),
         key: 'destination',
-        ellipsis: { showTitle: true },
+        ellipsis: true,
         render: (_: unknown, row: BusinessTripListItem) => (
           <div className="min-w-0">
-            <p
-              className="m-0 truncate text-sm"
-              style={{ color: tokens.colorTextPrimary }}
-            >
+            <p className="erp-users-cell-strong m-0 truncate">
               {row.destinationCountry}
               {row.destinationCity ? ` · ${row.destinationCity}` : ''}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+              {row.tripNumber}
+              {canViewHr
+                ? ` · ${formatBusinessTripSubmitterName(row.submitter)}`
+                : ''}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+              {formatProjectDate(row.departureDate)}
             </p>
           </div>
         ),
@@ -257,7 +269,9 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         key: 'departureDate',
         width: 120,
         responsive: ['md'],
-        render: (value: string) => formatProjectDate(value),
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">{formatProjectDate(value)}</span>
+        ),
       },
       {
         title: t('hr.table.tripType'),
@@ -276,7 +290,7 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
-        width: 130,
+        width: isNarrow ? 108 : 130,
         render: (value: BusinessTripStatus) => (
           <StatusBadge
             label={formatBusinessTripStatus(value, t)}
@@ -288,47 +302,36 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         title: t('hr.table.currentStep'),
         key: 'currentStep',
         width: 160,
-        responsive: ['lg'],
+        responsive: ['xl'],
         render: (_: unknown, row: BusinessTripListItem) => {
           const label = getCurrentStepLabel(row, t);
           if (!label || label === '—') {
-            return (
-              <span style={{ color: tokens.colorTextSecondary }}>—</span>
-            );
+            return <span className="erp-users-cell-sub">—</span>;
           }
-          const color =
-            row.status === 'APPROVED'
-              ? label === t('hr.labels.buyingTicket')
-                ? 'orange'
-                : label === t('hr.labels.completed')
-                  ? 'green'
-                  : 'blue'
-              : 'blue';
-          return <Tag color={color}>{label}</Tag>;
+          return <span className="erp-users-role-tag">{label}</span>;
         },
       },
     ],
-    [canViewHr, t],
+    [canViewHr, isNarrow, t],
   );
 
-  function handleStatusMode(mode: StatusMode): void {
+  function handleStatusMode(mode: BusinessTripStatusMode): void {
     setListTab('ALL');
     setStatusMode(mode);
-    setStatusFilter([]);
     resetPage();
   }
 
   function handleNeedsTicketTab(): void {
     setListTab('NEEDS_TICKET');
     setStatusMode('all');
-    setStatusFilter([]);
     resetPage();
   }
 
   function handleResetFilters(): void {
     setSearch('');
-    setStatusFilter([]);
+    setAppliedSearch('');
     setStatusMode('all');
+    setListTab('ALL');
     setDestinationCountry('');
     setSubmittedById(undefined);
     setDateRange(null);
@@ -336,20 +339,12 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   }
 
   const hasFilters =
-    Boolean(search.trim()) ||
-    statusFilter.length > 0 ||
+    Boolean(appliedSearch.trim()) ||
     statusMode !== 'all' ||
+    listTab !== 'ALL' ||
     Boolean(destinationCountry.trim()) ||
     submittedById !== undefined ||
     Boolean(dateRange?.[0] || dateRange?.[1]);
-
-  if (!canAccess) {
-    return (
-      <div className="flex flex-col gap-4">
-        <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
-      </div>
-    );
-  }
 
   const pageTitle = canViewHr
     ? t('pages.hr.businessTrip.listTitle')
@@ -358,16 +353,28 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
     ? t('pages.hr.businessTrip.listDescription')
     : t('pages.hr.businessTrip.myListDescription');
 
+  if (!canAccess) {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-business-trips-page">
+        <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
+      </div>
+    );
+  }
+
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-business-trips-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      className={`erp-pro-list-page erp-users-page erp-business-trips-page${canViewHr ? ' erp-business-trips-page--hr' : ''}`}
+    >
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -375,145 +382,122 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
           title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
-              : 'Failed to load business trips'
+              : t('hr.messages.failedToLoadBusinessTrips')
           }
         />
       ) : null}
 
-      <div
-        className={`mb-1 grid grid-cols-2 gap-3 ${canViewHr ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}
-      >
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+      <div className="erp-users-stat-bar">
+        <BusinessTripStat
+          label={t('pages.hr.businessTrip.stats.total')}
+          value={statusCounts.all}
+          accent="teal"
+          icon={<Globe size={14} strokeWidth={2} />}
+          active={listTab === 'ALL' && statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
-        >
-          <StatCard
-            label="Total"
-            value={statusCounts.all}
-            color="teal"
-            icon={<Globe size={14} />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <BusinessTripStat
+          label={t('pages.hr.businessTrip.stats.pending')}
+          value={statusCounts.pending}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+          active={listTab === 'ALL' && statusMode === 'pending'}
           onClick={() => handleStatusMode('pending')}
-        >
-          <StatCard
-            label="Pending"
-            value={statusCounts.pending}
-            color="amber"
-            icon={<ClockCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <BusinessTripStat
+          label={t('pages.hr.businessTrip.stats.approved')}
+          value={statusCounts.approved}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={listTab === 'ALL' && statusMode === 'approved'}
           onClick={() => handleStatusMode('approved')}
-        >
-          <StatCard
-            label="Approved"
-            value={statusCounts.approved}
-            color="green"
-            icon={<CheckCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <BusinessTripStat
+          label={t('pages.hr.businessTrip.stats.rejected')}
+          value={statusCounts.rejected}
+          accent="red"
+          icon={<CloseCircleOutlined />}
+          active={listTab === 'ALL' && statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
-        >
-          <StatCard
-            label="Rejected"
-            value={statusCounts.rejected}
-            color="red"
-            icon={<CloseCircleOutlined />}
-          />
-        </button>
+        />
         {canViewHr ? (
-          <button
-            type="button"
-            className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+          <BusinessTripStat
+            label={t('hr.tabs.needsTicket')}
+            value={statusCounts.needsTicket}
+            accent="blue"
+            icon={<SendOutlined />}
+            active={listTab === 'NEEDS_TICKET'}
             onClick={handleNeedsTicketTab}
-          >
-            <StatCard
-              label={t('hr.tabs.needsTicket')}
-              value={statusCounts.needsTicket}
-              color="blue"
-              icon={<SendOutlined />}
-            />
-          </button>
+          />
         ) : null}
       </div>
 
-      {canViewHr ? (
-        <Tabs
-          className="erp-list-tabs"
-          activeKey={listTab}
-          onChange={(key) => {
-            setListTab(key as ListTab);
-            if (key === 'ALL') {
-              setStatusMode('all');
-            }
-            resetPage();
-          }}
-          items={[
-            { key: 'ALL', label: t('hr.tabs.allTrips') },
-            {
-              key: 'NEEDS_TICKET',
-              label: (
-                <span className="inline-flex items-center gap-1.5">
-                  {t('hr.tabs.needsTicket')}
-                  {needsTicketCount > 0 ? (
-                    <span
-                      className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
-                      style={{ background: tokens.colorAmber400 }}
-                    >
-                      {needsTicketCount > 99 ? '99+' : needsTicketCount}
-                    </span>
-                  ) : null}
-                </span>
-              ),
-            },
-          ]}
-        />
-      ) : null}
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            {canCreate ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => router.push('/approvals/new/business-trip')}
+                aria-label={t('hr.buttons.newBusinessTrip')}
+              >
+                {isNarrow ? undefined : t('hr.buttons.newBusinessTrip')}
+              </Button>
+            ) : null}
+          </div>
+        </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <ListSearchInput
-            committedValue={search}
-            onCommit={(value) => {
+        <div className="erp-users-filter-bar">
+          <Input
+            allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.hr.businessTrip.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => {
+              const value = e.target.value;
               setSearch(value);
+              setAppliedSearch(value.trim());
               resetPage();
             }}
-            placeholder={t('hr.placeholder.searchBusinessTrip')}
-            className="w-full min-w-0 sm:w-72"
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
           />
-          {!needsTicketTab ? (
-            <Select
-              mode="multiple"
-              allowClear
-              placeholder={t('hr.placeholder.status')}
-              className="w-full min-w-0 sm:min-w-[180px] sm:w-auto"
-              options={statusOptions}
-              value={statusFilter}
-              onChange={(value: BusinessTripStatus[]) => {
-                setStatusFilter(value);
-                setStatusMode('all');
-                resetPage();
-              }}
-              maxTagCount="responsive"
-            />
-          ) : null}
+          <span className="erp-users-filter-spacer" aria-hidden />
           <Input
             allowClear
             placeholder={t('hr.form.destinationCountry')}
-            className="w-full min-w-0 sm:w-48"
+            className="erp-users-filter-select"
             value={destinationCountry}
             onChange={(e) => {
               setDestinationCountry(e.target.value);
+              resetPage();
+            }}
+            onClear={() => {
+              setDestinationCountry('');
               resetPage();
             }}
           />
@@ -523,7 +507,8 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
-              className="w-full min-w-0 sm:w-48"
+              className="erp-users-filter-select"
+              loading={usersQuery.isLoading}
               options={(usersQuery.data?.data ?? []).map((user) => ({
                 value: user.id,
                 label: formatUserName(user),
@@ -537,90 +522,48 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
           ) : null}
           <DatePicker.RangePicker
             value={dateRange}
-            className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
+            className="erp-users-filter-daterange"
             onChange={(value) => {
               setDateRange(value);
               resetPage();
             }}
           />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters && listTab === 'ALL'}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-business-trip" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {totalCount} {totalCount === 1 ? 'trip' : 'trips'}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            {canCreate ? (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => router.push('/approvals/new/business-trip')}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.buttons.newBusinessTrip')}
-              </Button>
-            ) : null}
-          </Space>
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<BusinessTripListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            loading={listQuery.isFetching && !listQuery.isLoading}
-            scroll={false}
+            loading={listQuery.isFetching && rows.length === 0}
+            scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 1100 }}
             onRow={(record) => ({
-              onClick: () => router.push(`/hr/business-trips/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              onClick: () =>
+                router.push(`/hr/business-trips/${record.id}`),
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
-                  icon={<Globe size={24} />}
-                  title={t('hr.empty.noBusinessTrips')}
+                  icon={<Globe size={28} strokeWidth={1.5} />}
+                  title={
+                    hasFilters
+                      ? t('pages.hr.businessTrip.emptyFiltered')
+                      : t('hr.empty.noBusinessTrips')
+                  }
                   description={pageDescription}
                   action={
-                    hasFilters || listTab !== 'ALL'
+                    hasFilters
                       ? {
                           label: t('common.reset'),
-                          onClick: () => {
-                            handleResetFilters();
-                            setListTab('ALL');
-                          },
+                          onClick: handleResetFilters,
                         }
                       : canCreate
                         ? {
@@ -636,6 +579,8 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
             pagination={{
               ...bindMeta(meta),
               pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
             }}
           />
         </div>

@@ -295,7 +295,16 @@
         "listTitle": "Business Trips",
         "myListTitle": "My Business Trips",
         "listDescription": "Submit and track international business trips through the approval workflow.",
-        "myListDescription": "View and submit your own business trip requests."
+        "myListDescription": "View and submit your own business trip requests.",
+        "searchPlaceholder": "Search by trip # or destination",
+        "emptyFiltered": "No business trips match your filters",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected",
+          "needsTicket": "Needs Ticket"
+        }
       },
       "expenseClaim": {
         "new": "New Expense Claim",
@@ -1960,6 +1969,7 @@
       "failedToLoadOvertimeSheets": "Failed to load overtime sheets",
       "failedToLoadExpenseClaims": "Failed to load expense claims",
       "failedToLoadFlightApplications": "Failed to load flight applications",
+      "failedToLoadBusinessTrips": "Failed to load business trips",
       "failedToOpenOvertimeSheet": "Failed to open overtime sheet",
       "overtimeSheetNotFound": "Overtime sheet not found",
       "overtimeEntryAdded": "Entry added",
