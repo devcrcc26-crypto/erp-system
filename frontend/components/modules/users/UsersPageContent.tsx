@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Dropdown,
+  Grid,
   Input,
   Popover,
   Select,
@@ -248,6 +249,9 @@ export default function UsersPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const authUser = useAuthStore((state) => state.user);
   const { params, bindMeta, resetPage } = useTablePagination(10);
   const [exportingUsers, setExportingUsers] = useState(false);
@@ -634,14 +638,14 @@ export default function UsersPageContent(): React.ReactNode {
       </div>
 
       <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar">
-          <div className="flex min-w-0 items-center gap-2.5">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{t('users.allUsers')}</h3>
             <span className="erp-users-count-pill">
               {meta.total.toLocaleString()}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
               <Button
                 type="text"
@@ -651,28 +655,65 @@ export default function UsersPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Space.Compact>
-              <Button
-                icon={<DownloadOutlined />}
-                loading={exportingUsers}
-                onClick={() => void handleExportExcel()}
-              >
-                {t('users.exportExcel')}
-              </Button>
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportOpen(true)}
-              >
-                {t('common.importFromExcel')}
-              </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => router.push('/users/new')}
-              >
-                {t('users.addEmployee')}
-              </Button>
-            </Space.Compact>
+            {isCompact ? (
+              <>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export',
+                        icon: <DownloadOutlined />,
+                        label: t('users.exportExcel'),
+                        disabled: exportingUsers,
+                        onClick: () => void handleExportExcel(),
+                      },
+                      {
+                        key: 'import',
+                        icon: <UploadOutlined />,
+                        label: t('common.importFromExcel'),
+                        onClick: () => setImportOpen(true),
+                      },
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button
+                    icon={<MoreOutlined />}
+                    aria-label={t('users.moreActions')}
+                  />
+                </Dropdown>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => router.push('/users/new')}
+                >
+                  {isNarrow ? t('users.addEmployeeShort') : t('users.addEmployee')}
+                </Button>
+              </>
+            ) : (
+              <Space.Compact>
+                <Button
+                  icon={<DownloadOutlined />}
+                  loading={exportingUsers}
+                  onClick={() => void handleExportExcel()}
+                >
+                  {t('users.exportExcel')}
+                </Button>
+                <Button
+                  icon={<UploadOutlined />}
+                  onClick={() => setImportOpen(true)}
+                >
+                  {t('common.importFromExcel')}
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => router.push('/users/new')}
+                >
+                  {t('users.addEmployee')}
+                </Button>
+              </Space.Compact>
+            )}
           </div>
         </div>
 
@@ -732,11 +773,11 @@ export default function UsersPageContent(): React.ReactNode {
           />
           <Popover
             trigger="click"
-            placement="bottomLeft"
+            placement={isCompact ? 'bottom' : 'bottomLeft'}
             open={moreFiltersOpen}
             onOpenChange={setMoreFiltersOpen}
             content={
-              <div className="flex w-[260px] flex-col gap-3 p-1">
+              <div className="erp-users-more-filters flex w-[min(260px,calc(100vw-48px))] flex-col gap-3 p-1">
                 <Select
                   placeholder={t('users.filterDiscipline')}
                   className="w-full"
@@ -812,7 +853,7 @@ export default function UsersPageContent(): React.ReactNode {
           >
             <Badge count={moreFilterCount} size="small" offset={[-2, 2]}>
               <Button icon={<FilterOutlined />}>
-                {t('users.moreFilters')}
+                {isNarrow ? t('users.filtersShort') : t('users.moreFilters')}
               </Button>
             </Badge>
           </Popover>
@@ -827,14 +868,16 @@ export default function UsersPageContent(): React.ReactNode {
           <DataTable<User>
             rowKey="id"
             className="erp-pro-table erp-users-table"
-            size="middle"
+            size={isCompact ? 'small' : 'middle'}
             dataSource={users}
-            scroll={{ x: 1128 }}
+            scroll={{ x: isCompact ? 720 : 1128 }}
             pagination={
               pagination
                 ? {
                     ...pagination,
                     pageSizeOptions: ['10', '20', '50', '100'],
+                    simple: isNarrow,
+                    showSizeChanger: !isNarrow,
                   }
                 : undefined
             }
@@ -861,8 +904,8 @@ export default function UsersPageContent(): React.ReactNode {
                 title: t('common.name'),
                 key: 'name',
                 sorter: true,
-                fixed: 'left',
-                width: 300,
+                fixed: isCompact ? undefined : 'left',
+                width: isCompact ? 220 : 300,
                 render: (_, record) => {
                   const fullName = `${record.firstName} ${record.lastName}`.trim();
 
@@ -875,7 +918,7 @@ export default function UsersPageContent(): React.ReactNode {
                             value={fullName}
                             className="erp-users-name"
                           />
-                          {record.chineseName ? (
+                          {record.chineseName && !isNarrow ? (
                             <TruncateText
                               value={record.chineseName}
                               className="erp-users-name-alt max-w-[38%]"
@@ -902,6 +945,7 @@ export default function UsersPageContent(): React.ReactNode {
                 dataIndex: 'employeeId',
                 key: 'employeeId',
                 width: 120,
+                responsive: ['sm'],
                 render: (id: string | null | undefined) =>
                   id ? (
                     <span className="erp-users-id-chip">{id}</span>
@@ -914,6 +958,7 @@ export default function UsersPageContent(): React.ReactNode {
                 key: 'position',
                 width: 190,
                 sorter: true,
+                responsive: ['lg'],
                 render: (_, record) => {
                   const positionTitle = record.position?.title ?? null;
                   const disciplineName = record.engineeringDisciplineId
@@ -949,6 +994,7 @@ export default function UsersPageContent(): React.ReactNode {
                 key: 'department',
                 width: 170,
                 sorter: true,
+                responsive: ['md'],
                 render: (_, record) =>
                   record.department?.name ? (
                     <TruncateText
@@ -963,6 +1009,7 @@ export default function UsersPageContent(): React.ReactNode {
                 title: t('common.role'),
                 key: 'roles',
                 width: 170,
+                responsive: ['md'],
                 render: (_, record) => {
                   const roles =
                     record.userRoles?.map((assignment) => ({
@@ -986,7 +1033,7 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: t('common.status'),
                 key: 'status',
-                width: 130,
+                width: isCompact ? 100 : 130,
                 sorter: true,
                 render: (_, record) => (
                   <UserStatusIndicator user={record} t={t} />
@@ -997,7 +1044,7 @@ export default function UsersPageContent(): React.ReactNode {
                 key: 'actions',
                 width: 52,
                 align: 'right',
-                fixed: 'right',
+                fixed: isCompact ? undefined : 'right',
                 render: (_, record) => (
                   <div
                     className="erp-table-row-actions flex items-center justify-end"

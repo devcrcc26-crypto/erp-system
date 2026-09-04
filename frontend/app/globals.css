@@ -771,17 +771,19 @@ main::-webkit-scrollbar,
 }
 
 @media (max-width: 520px) {
-  .erp-users-stat-bar {
-    grid-template-columns: 1fr;
-  }
-
   .erp-users-stat {
-    border-right: none;
-    border-bottom: 1px solid #eef1f4;
+    padding: 12px 14px;
+    gap: 10px;
   }
 
-  .erp-users-stat:last-child {
-    border-bottom: none;
+  .erp-users-stat-chip {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .erp-users-stat-value {
+    font-size: calc(18px * var(--erp-font-scale));
   }
 }
 
@@ -1936,28 +1938,88 @@ main::-webkit-scrollbar,
 }
 
 @media (max-width: 767px) {
-  .erp-users-page .erp-pro-card-toolbar {
+  .erp-users-page .erp-pro-card-toolbar,
+  .erp-users-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
     padding: 12px 14px;
+  }
+
+  .erp-users-toolbar-title {
+    width: 100%;
+  }
+
+  .erp-users-toolbar-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .erp-users-filter-bar {
     flex-wrap: wrap;
     padding: 12px 14px;
+    gap: 8px;
   }
 
   .erp-users-filter-spacer {
     display: none;
   }
 
-  .erp-users-filter-search {
+  .erp-users-search-input {
     flex: 1 1 100%;
+    min-width: 0;
     max-width: none;
   }
 
   .erp-users-filter-select {
     flex: 1 1 calc(50% - 4px);
-    width: auto;
-    min-width: 140px;
+    width: auto !important;
+    min-width: 0;
+  }
+
+  .erp-users-filter-bar .ant-badge,
+  .erp-users-filter-bar > .ant-btn {
+    flex: 0 0 auto;
+  }
+
+  .erp-users-page .erp-pro-table-card-body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .erp-users-page .erp-users-table .ant-table-thead > tr > th,
+  .erp-users-page .erp-users-table .ant-table-tbody > tr > td {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .erp-users-page .erp-users-table .ant-pagination {
+    padding: 8px 12px 12px;
+  }
+
+  .erp-users-avatar.ant-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    font-size: 14px !important;
+  }
+
+  .erp-users-name {
+    font-size: calc(13px * var(--erp-font-scale));
+  }
+
+  .erp-users-email {
+    font-size: calc(11px * var(--erp-font-scale));
+  }
+}
+
+@media (max-width: 480px) {
+  .erp-users-filter-select {
+    flex: 1 1 100%;
+  }
+
+  .erp-users-toolbar-actions .ant-btn-primary {
+    flex: 1 1 auto;
   }
 }
 
