@@ -6,11 +6,10 @@ import {
   Button,
   DatePicker,
   Dropdown,
+  Grid,
   Input,
   Select,
-  Space,
   Spin,
-  Tabs,
   Tooltip,
   type MenuProps,
 } from 'antd';
@@ -24,16 +23,15 @@ import {
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import LeaveBalancesListPageContent from '@/components/modules/hr/leave/LeaveBalancesListPageContent';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -68,7 +66,6 @@ import { filterLeaveRequests } from '@/lib/utils/leave-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import { tokens } from '@/lib/theme/tokens';
 
 type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -80,6 +77,13 @@ const PENDING_STATUSES: LeaveRequestStatus[] = [
 ];
 const APPROVED_STATUSES: LeaveRequestStatus[] = ['APPROVED'];
 const REJECTED_STATUSES: LeaveRequestStatus[] = ['REJECTED', 'CANCELLED'];
+
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
 
 function statusesForMode(mode: StatusMode): LeaveRequestStatus[] {
   switch (mode) {
@@ -94,31 +98,52 @@ function statusesForMode(mode: StatusMode): LeaveRequestStatus[] {
   }
 }
 
+function LeaveStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
+
 /**
- * Company or personal leave request list — layout aligned with Users page.
+ * Leave requests list - Users chrome (stat bar, filter row, rounded table).
  */
 export default function LeaveRequestsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
-
-  const leaveTypeOptions = useMemo(
-    () => [
-      { value: 'ANNUAL', label: t('hr.leaveType.ANNUAL') },
-      { value: 'SICK', label: t('hr.leaveType.SICK') },
-      { value: 'UNPAID', label: t('hr.leaveType.UNPAID') },
-      { value: 'MATERNITY', label: t('hr.leaveType.MATERNITY') },
-      { value: 'PATERNITY', label: t('hr.leaveType.PATERNITY') },
-      { value: 'EMERGENCY', label: t('hr.leaveType.EMERGENCY') },
-      { value: 'COMPASSIONATE', label: t('hr.leaveType.COMPASSIONATE') },
-      { value: 'STUDY', label: t('hr.leaveType.STUDY') },
-      { value: 'EXAM', label: t('hr.leaveType.EXAM') },
-    ],
-    [t],
-  );
-
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
   const canAccess = useCanAccessLeave();
   const canViewHr = useCanViewHr();
-  /** HR / System Admin (hr.view) may edit/delete company leave requests. */
   const canManage = canViewHr;
   const canCreate = useCanCreateLeave();
   const messageApi = useAppMessage();
@@ -138,6 +163,21 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   >(null);
   const [deletingRequest, setDeletingRequest] =
     useState<LeaveRequestListItem | null>(null);
+
+  const leaveTypeOptions = useMemo(
+    () => [
+      { value: 'ANNUAL', label: t('hr.leaveType.ANNUAL') },
+      { value: 'SICK', label: t('hr.leaveType.SICK') },
+      { value: 'UNPAID', label: t('hr.leaveType.UNPAID') },
+      { value: 'MATERNITY', label: t('hr.leaveType.MATERNITY') },
+      { value: 'PATERNITY', label: t('hr.leaveType.PATERNITY') },
+      { value: 'EMERGENCY', label: t('hr.leaveType.EMERGENCY') },
+      { value: 'COMPASSIONATE', label: t('hr.leaveType.COMPASSIONATE') },
+      { value: 'STUDY', label: t('hr.leaveType.STUDY') },
+      { value: 'EXAM', label: t('hr.leaveType.EXAM') },
+    ],
+    [t],
+  );
 
   const fetchParams = useMemo(
     () => ({
@@ -219,7 +259,44 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     return filtered.slice(start, start + meta.limit);
   }, [filtered, meta.page, meta.limit]);
 
-  const totalCount = meta.total;
+  const pageTitle = canViewHr
+    ? t('pages.hr.leave.listTitle')
+    : t('pages.hr.leave.myListTitle');
+  const pageDescription = canViewHr
+    ? t('pages.hr.leave.listDescription')
+    : t('pages.hr.leave.myListDescription');
+
+  function handleResetFilters(): void {
+    setSearch('');
+    setAppliedSearch('');
+    setStatusMode('all');
+    setLeaveType(undefined);
+    setDateRange(null);
+    setEmployeeId(undefined);
+    resetPage();
+  }
+
+  function handleStatusMode(mode: StatusMode): void {
+    setStatusMode(mode);
+    resetPage();
+  }
+
+  async function handleDeleteRequest(): Promise<void> {
+    if (!deletingRequest) {
+      return;
+    }
+    try {
+      await deleteMutation.mutateAsync(deletingRequest.id);
+      messageApi.success(t('hr.messages.leaveRequestDeleted'));
+      setDeletingRequest(null);
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToDeleteLeaveRequest'),
+        messageApi,
+      );
+    }
+  }
 
   const columns: ColumnsType<LeaveRequestListItem> = useMemo(
     () => [
@@ -229,12 +306,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         key: 'requestNumber',
         width: 130,
         render: (value: string) => (
-          <span
-            className="font-[family-name:var(--font-mono)] text-xs font-medium"
-            style={{ color: tokens.colorPrimary }}
-          >
-            {value}
-          </span>
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
       ...(canViewHr
@@ -243,20 +315,14 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
               title: t('hr.table.employee'),
               key: 'employee',
               width: 220,
-              responsive: ['md'],
+              responsive: ['md'] as const,
               render: (_: unknown, row: LeaveRequestListItem) => (
                 <div className="min-w-0">
-                  <p
-                    className="m-0 text-sm font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
-                  >
+                  <p className="erp-users-cell-strong m-0">
                     {formatLeaveEmployeeName(row.employee)}
                   </p>
                   {row.employee?.email ? (
-                    <p
-                      className="m-0 truncate text-xs"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
+                    <p className="erp-users-email m-0 mt-0.5">
                       {row.employee.email}
                     </p>
                   ) : null}
@@ -281,28 +347,39 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         title: t('hr.table.startDate'),
         dataIndex: 'startDate',
         key: 'startDate',
-        width: 140,
-        render: (value: string) => formatProjectDate(value),
+        width: 120,
+        render: (value: string) => (
+          <span className="erp-users-cell-strong">
+            {formatProjectDate(value)}
+          </span>
+        ),
       },
       {
         title: t('hr.table.endDate'),
         dataIndex: 'endDate',
         key: 'endDate',
-        width: 140,
+        width: 120,
         responsive: ['md'],
-        render: (value: string) => formatProjectDate(value),
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">
+            {formatProjectDate(value)}
+          </span>
+        ),
       },
       {
         title: t('hr.table.days'),
         dataIndex: 'days',
         key: 'days',
-        width: 140,
+        width: 80,
+        render: (value: number) => (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
       },
       {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
-        width: 140,
+        width: 130,
         render: (value: LeaveRequestStatus) => (
           <StatusBadge
             label={formatLeaveStatus(value, t)}
@@ -315,7 +392,8 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             {
               title: '',
               key: 'actions',
-              width: 56,
+              width: 52,
+              align: 'right' as const,
               render: (_: unknown, record: LeaveRequestListItem) => {
                 const canEditRow =
                   record.status === 'DRAFT' || record.status === 'RETURNED';
@@ -338,7 +416,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
                 });
                 return (
                   <div
-                    className="flex items-center justify-end"
+                    className="erp-table-row-actions flex items-center justify-end"
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
                   >
@@ -348,7 +426,6 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
                         type="text"
                         icon={<MoreOutlined />}
                         aria-label={t('common.actions')}
-                        style={{ borderRadius: 0 }}
                       />
                     </Dropdown>
                   </div>
@@ -361,38 +438,6 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     [canManage, canViewHr, router, t],
   );
 
-  async function handleDeleteRequest(): Promise<void> {
-    if (!deletingRequest) {
-      return;
-    }
-    try {
-      await deleteMutation.mutateAsync(deletingRequest.id);
-      messageApi.success(t('hr.messages.leaveRequestDeleted'));
-      setDeletingRequest(null);
-    } catch (error: unknown) {
-      notifyApiError(
-        error,
-        t('hr.messages.failedToDeleteLeaveRequest'),
-        messageApi,
-      );
-    }
-  }
-
-  function handleResetFilters(): void {
-    setSearch('');
-    setAppliedSearch('');
-    setStatusMode('all');
-    setLeaveType(undefined);
-    setDateRange(null);
-    setEmployeeId(undefined);
-    resetPage();
-  }
-
-  function handleStatusMode(mode: StatusMode): void {
-    setStatusMode(mode);
-    resetPage();
-  }
-
   const hasFilters =
     Boolean(appliedSearch.trim()) ||
     statusMode !== 'all' ||
@@ -402,7 +447,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="erp-pro-list-page erp-users-page erp-leave-page">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -410,16 +455,12 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   const showRequestsSkeleton = listQuery.isLoading && !listQuery.data;
 
-  const pageTitle = canViewHr
-    ? t('pages.hr.leave.listTitle')
-    : t('pages.hr.leave.myListTitle');
-
   const requestsPanel = showRequestsSkeleton ? (
-    <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+    <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
       <Spin />
     </div>
   ) : (
-    <div className="flex flex-col gap-4">
+    <>
       <ConfirmDialog
         open={Boolean(deletingRequest)}
         title={t('hr.empty.deleteLeaveTitle')}
@@ -443,63 +484,77 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+      <div className="erp-users-stat-bar">
+        <LeaveStat
+          label={t('pages.hr.leave.stats.total')}
+          value={statusCounts.all}
+          accent="teal"
+          icon={<CalendarOutlined />}
+          active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
-        >
-          <StatCard
-            label={t('pages.hr.leave.stats.total')}
-            value={statusCounts.all}
-            color="teal"
-            icon={<CalendarOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <LeaveStat
+          label={t('pages.hr.leave.stats.pending')}
+          value={statusCounts.pending}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+          active={statusMode === 'pending'}
           onClick={() => handleStatusMode('pending')}
-        >
-          <StatCard
-            label={t('pages.hr.leave.stats.pending')}
-            value={statusCounts.pending}
-            color="amber"
-            icon={<ClockCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <LeaveStat
+          label={t('pages.hr.leave.stats.approved')}
+          value={statusCounts.approved}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statusMode === 'approved'}
           onClick={() => handleStatusMode('approved')}
-        >
-          <StatCard
-            label={t('pages.hr.leave.stats.approved')}
-            value={statusCounts.approved}
-            color="green"
-            icon={<CheckCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <LeaveStat
+          label={t('pages.hr.leave.stats.rejected')}
+          value={statusCounts.rejected}
+          accent="red"
+          icon={<CloseCircleOutlined />}
+          active={statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
-        >
-          <StatCard
-            label={t('pages.hr.leave.stats.rejected')}
-            value={statusCounts.rejected}
-            color="red"
-            icon={<CloseCircleOutlined />}
-          />
-        </button>
+        />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <Input.Search
-            placeholder={t('hr.placeholder.searchRequest')}
-            className="w-full min-w-0 sm:w-72"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            {canCreate ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => router.push('/approvals/new/leave-request')}
+              >
+                {t('hr.buttons.newLeaveRequest')}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('hr.placeholder.searchRequest')}
+            className="erp-users-search-input min-w-0"
             value={search}
             onChange={(e) => {
               const value = e.target.value;
@@ -507,9 +562,8 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
               setAppliedSearch(value.trim());
               resetPage();
             }}
-            onSearch={(value) => {
-              setSearch(value);
-              setAppliedSearch(value.trim());
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
               resetPage();
             }}
             onClear={() => {
@@ -518,10 +572,11 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           <Select
-            placeholder={t('hr.placeholder.leaveType')}
-            className="w-full min-w-0 sm:w-40"
             allowClear
+            placeholder={t('hr.placeholder.leaveType')}
+            className="erp-users-filter-select"
             options={leaveTypeOptions}
             value={leaveType}
             onChange={(value: LeaveType | undefined) => {
@@ -535,7 +590,8 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
-              className="w-full min-w-0 sm:w-48"
+              className="erp-users-filter-select"
+              loading={usersQuery.isLoading}
               options={(usersQuery.data?.data ?? []).map((user) => ({
                 value: user.id,
                 label: formatUserName(user),
@@ -549,82 +605,41 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           ) : null}
           <DatePicker.RangePicker
             value={dateRange}
-            className="w-full min-w-0 sm:w-[260px]"
+            className="erp-users-filter-daterange"
             onChange={(value) => {
               setDateRange(value);
               resetPage();
             }}
           />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-leave" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {totalCount}{' '}
-              {totalCount === 1 ? 'request' : 'requests'}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            {canCreate ? (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => router.push('/approvals/new/leave-request')}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.buttons.newLeaveRequest')}
-              </Button>
-            ) : null}
-          </Space>
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<LeaveRequestListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            scroll={false}
+            scroll={{ x: isCompact ? 640 : 980 }}
             onRow={(record) => ({
               onClick: () => router.push(`/hr/leave-requests/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
                   icon={<CalendarOutlined />}
-                  title={t('hr.empty.noLeaveRequests')}
-                  description={t('pages.hr.leave.listDescription')}
+                  title={
+                    hasFilters
+                      ? t('hr.empty.noLeaveRequests')
+                      : t('hr.empty.noLeaveRequests')
+                  }
+                  description={pageDescription}
                   action={
                     hasFilters
                       ? {
@@ -645,46 +660,55 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             pagination={{
               ...bindMeta(meta),
               pageSizeOptions: ['10', '20', '50', '100'],
+              simple: screens.sm === false,
+              showSizeChanger: screens.sm !== false,
             }}
           />
         </div>
       </div>
-    </div>
+    </>
   );
 
   if (canViewHr) {
     return (
-      <div className="flex flex-col gap-4">
-        <Tabs
-          className="erp-list-tabs"
-          activeKey={activeTab}
-          onChange={(key) => setActiveTab(key as 'requests' | 'balances')}
-          items={[
-            {
-              key: 'requests',
-              label: (
-                <span className="flex items-center gap-2">
-                  <CalendarOutlined />
-                  {t('hr.tabs.leaveRequests')}
-                </span>
-              ),
-              children: requestsPanel,
-            },
-            {
-              key: 'balances',
-              label: (
-                <span className="flex items-center gap-2">
-                  <WalletOutlined />
-                  {t('hr.tabs.leaveBalances')}
-                </span>
-              ),
-              children: <LeaveBalancesListPageContent />,
-            },
-          ]}
-        />
+      <div className="erp-pro-list-page erp-users-page erp-leave-page">
+        <div className="erp-pro-card">
+          <div className="erp-profile-tabbar erp-employee-tabbar" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'requests'}
+              onClick={() => setActiveTab('requests')}
+            >
+              <CalendarOutlined />
+              <span className="erp-employee-tab-label">
+                {t('hr.tabs.leaveRequests')}
+              </span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'balances'}
+              onClick={() => setActiveTab('balances')}
+            >
+              <WalletOutlined />
+              <span className="erp-employee-tab-label">
+                {t('hr.tabs.leaveBalances')}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div className="erp-leave-tab-panel">
+          {activeTab === 'requests' ? requestsPanel : <LeaveBalancesListPageContent />}
+        </div>
       </div>
     );
   }
 
-  return requestsPanel;
+  return (
+    <div className="erp-pro-list-page erp-users-page erp-leave-page">
+      {requestsPanel}
+    </div>
+  );
 }

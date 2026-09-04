@@ -958,6 +958,26 @@ main::-webkit-scrollbar,
   width: 168px;
 }
 
+.erp-users-filter-daterange {
+  flex: 0 0 260px;
+  min-width: 220px;
+}
+
+.erp-users-filter-daterange.ant-picker {
+  height: 38px !important;
+  border-radius: 10px !important;
+}
+
+.erp-leave-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-leave-page .erp-profile-tabbar {
+  border-bottom: none;
+}
+
 .erp-users-filter-bar .ant-select-selector {
   border-radius: 8px !important;
 }

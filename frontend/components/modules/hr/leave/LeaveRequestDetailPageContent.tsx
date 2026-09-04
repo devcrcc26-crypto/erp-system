@@ -1,19 +1,21 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Skeleton, Tag } from 'antd';
-import { ArrowLeft, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { Alert, Button, Grid, Skeleton, Space } from 'antd';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  StopOutlined,
+} from '@ant-design/icons';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
-import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import {
@@ -32,10 +34,32 @@ import {
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
+
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header">
+        <h3 className="erp-employee-section-title">{title}</h3>
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 /**
- * Leave request detail with approval tier sidebar.
+ * Leave request detail - Users / employee profile chrome.
  */
 export default function LeaveRequestDetailPageContent({
   requestId,
@@ -45,6 +69,8 @@ export default function LeaveRequestDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const canManage = canViewHr;
   const currentUser = useCurrentUser();
@@ -59,7 +85,10 @@ export default function LeaveRequestDetailPageContent({
   const approvalQuery = useApprovalRequest(
     approvalRequestId ?? '',
     Boolean(approvalRequestId) &&
-      !(request?.approvalRequest?.tiers && request.approvalRequest.tiers.length > 0),
+      !(
+        request?.approvalRequest?.tiers &&
+        request.approvalRequest.tiers.length > 0
+      ),
   );
 
   const approvalRequest =
@@ -124,10 +153,14 @@ export default function LeaveRequestDetailPageContent({
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
-      messageApi.success('Leave request cancelled');
+      messageApi.success(t('hr.messages.leaveRequestCancelled'));
       setConfirmCancel(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to cancel leave request', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToCancelLeaveRequest'),
+        messageApi,
+      );
     }
   }
 
@@ -147,25 +180,33 @@ export default function LeaveRequestDetailPageContent({
   }
 
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-detail-page">
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !request) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        title={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : 'Leave request not found'
-        }
-        action={
-          <Button onClick={() => router.push('/hr/leave-requests')}>
-            Back to list
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <Alert
+          type="error"
+          showIcon
+          title={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : t('hr.messages.leaveRequestNotFound')
+          }
+          action={
+            <Button onClick={() => router.push('/hr/leave-requests')}>
+              {t('hr.buttons.backToList')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
@@ -175,191 +216,197 @@ export default function LeaveRequestDetailPageContent({
     request.employeeId !== currentUser.data.id
   ) {
     return (
-      <div className="flex min-h-[240px] items-center justify-center">
-        <Skeleton active paragraph={{ rows: 4 }} />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <div className="flex min-h-[240px] items-center justify-center">
+          <Skeleton active paragraph={{ rows: 4 }} />
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/leave-requests')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.backToList')}
-        </Button>
-      </div>
+  const employeeName = formatLeaveEmployeeName(request.employee);
+  const leaveTypeLabel = formatLeaveType(request.leaveType, t);
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white overflow-hidden">
-        <div className="px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                {request.requestNumber}
-              </span>
-              <span className="text-[var(--color-border-secondary)]">·</span>
-              <Tag className="m-0">{formatLeaveType(request.leaveType, t)}</Tag>
+  return (
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push('/hr/leave-requests')}
+              aria-label={t('hr.buttons.backToList')}
+            >
+              {isNarrow ? undefined : t('hr.buttons.back')}
+            </Button>
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {request.approvalRequestId ? (
+              <Button
+                onClick={() =>
+                  router.push(`/approvals/${request.approvalRequestId}`)
+                }
+              >
+                {t('hr.buttons.viewInApprovals')}
+              </Button>
+            ) : null}
+            {canCancel ? (
+              <Button
+                danger
+                icon={<StopOutlined />}
+                onClick={() => setConfirmCancel(true)}
+                aria-label={t('hr.buttons.cancelRequest')}
+              >
+                {isNarrow ? undefined : t('hr.buttons.cancelRequest')}
+              </Button>
+            ) : null}
+            {(canEdit || canManage) ? (
+              <Space.Compact>
+                {canEdit ? (
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={() =>
+                      router.push(`/hr/leave-requests/${requestId}/edit`)
+                    }
+                    aria-label={t('common.update')}
+                  >
+                    {isNarrow ? undefined : t('common.update')}
+                  </Button>
+                ) : null}
+                {canManage ? (
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => setConfirmDelete(true)}
+                    aria-label={t('common.delete')}
+                  >
+                    {isNarrow ? undefined : t('common.delete')}
+                  </Button>
+                ) : null}
+              </Space.Compact>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">{request.requestNumber}</span>
               <StatusBadge
                 label={formatLeaveStatus(request.status, t)}
                 variant={leaveStatusVariant(request.status)}
               />
+              <span className="erp-users-role-tag">{leaveTypeLabel}</span>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-              {request.approvalRequestId ? (
-                <Button
-                  size="small"
-                  onClick={() =>
-                    router.push(`/approvals/${request.approvalRequestId}`)
-                  }
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('hr.buttons.viewInApprovals')}
-                </Button>
-              ) : null}
-              {canEdit ? (
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<Pencil size={14} />}
-                  onClick={() =>
-                    router.push(`/hr/leave-requests/${requestId}/edit`)
-                  }
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('common.update')}
-                </Button>
-              ) : null}
-              {canCancel ? (
-                <Button
-                  danger
-                  size="small"
-                  onClick={() => setConfirmCancel(true)}
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('hr.buttons.cancelRequest')}
-                </Button>
-              ) : null}
-              {canManage ? (
-                <Button
-                  danger
-                  size="small"
-                  icon={<Trash2 size={14} />}
-                  onClick={() => setConfirmDelete(true)}
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('common.delete')}
-                </Button>
-              ) : null}
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0">
+                {leaveTypeLabel}
+              </h2>
             </div>
-          </div>
-
-          <h1 className="text-lg font-semibold text-[var(--color-text-primary)] leading-snug m-0">
-            {formatLeaveType(request.leaveType, t)}
-          </h1>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--color-text-secondary)]">
-            <span className="font-medium text-[var(--color-text-primary)]">
-              {formatLeaveEmployeeName(request.employee)}
-            </span>
-            {request.submittedAt ? (
-              <>
-                <span className="text-[var(--color-border-secondary)]">·</span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar
-                    size={13}
-                    className="text-[var(--color-text-tertiary)]"
-                  />
-                  {formatProjectDate(request.submittedAt)}
-                </span>
-              </>
-            ) : null}
+            <p className="erp-users-email m-0 mt-1.5">{employeeName}</p>
+            <p className="erp-users-cell-sub m-0 mt-1">
+              {[
+                `${t('hr.labels.startDate')} ${formatProjectDate(request.startDate)}`,
+                `${t('hr.labels.endDate')} ${formatProjectDate(request.endDate)}`,
+                `${request.days} ${t('hr.labels.days').toLowerCase()}`,
+              ].join(' · ')}
+            </p>
           </div>
         </div>
       </div>
 
-      <SummaryStrip
-        items={[
-          { label: t('hr.labels.startDate'), value: formatProjectDate(request.startDate) },
-          { label: t('hr.labels.endDate'), value: formatProjectDate(request.endDate) },
-          { label: t('hr.labels.days'), value: String(request.days), emphasize: true },
-          {
-            label: t('hr.labels.leaveType'),
-            value: formatLeaveType(request.leaveType, t),
-          },
-        ]}
-      />
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.startDate')}</p>
+            <p className="erp-employee-meta-value">
+              {formatProjectDate(request.startDate)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.endDate')}</p>
+            <p className="erp-employee-meta-value">
+              {formatProjectDate(request.endDate)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.days')}</p>
+            <p className="erp-employee-meta-value">{request.days}</p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.leaveType')}</p>
+            <p className="erp-employee-meta-value">{leaveTypeLabel}</p>
+          </div>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 items-start">
-        <div className="flex flex-col gap-4 min-w-0">
-          <SectionCard title={t('hr.section.requestDetails')} bodyClassName="px-3 py-4 sm:px-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-              <MetaItem label={t('hr.labels.employee')}>
-                {formatLeaveEmployeeName(request.employee)}
-              </MetaItem>
-              <MetaItem label={t('hr.labels.leaveType')}>
-                <StatusBadge
-                  label={formatLeaveType(request.leaveType, t)}
-                  variant={leaveTypeVariant(request.leaveType)}
-                />
-              </MetaItem>
-              <MetaItem label={t('hr.labels.startDate')}>
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar
-                    size={13}
-                    className="text-[var(--color-text-tertiary)]"
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="erp-pro-card min-w-0">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <DetailSection title={t('hr.section.requestDetails')}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <MetaItem label={t('hr.labels.employee')}>
+                  {employeeName}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.leaveType')}>
+                  <StatusBadge
+                    label={leaveTypeLabel}
+                    variant={leaveTypeVariant(request.leaveType)}
                   />
+                </MetaItem>
+                <MetaItem label={t('hr.labels.startDate')}>
                   {formatProjectDate(request.startDate)}
-                </span>
-              </MetaItem>
-              <MetaItem label={t('hr.labels.endDate')}>
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar
-                    size={13}
-                    className="text-[var(--color-text-tertiary)]"
-                  />
+                </MetaItem>
+                <MetaItem label={t('hr.labels.endDate')}>
                   {formatProjectDate(request.endDate)}
-                </span>
-              </MetaItem>
-              <MetaItem label={t('hr.labels.days')}>
-                <span className="font-semibold">{request.days}</span>
-              </MetaItem>
-              {request.reason?.trim() ? (
-                <div className="sm:col-span-2">
-                  <MetaItem label={t('hr.labels.reason')}>
-                    <p className="whitespace-pre-wrap leading-relaxed m-0">
-                      {request.reason}
-                    </p>
+                </MetaItem>
+                <MetaItem label={t('hr.labels.days')}>
+                  <span className="font-semibold">{request.days}</span>
+                </MetaItem>
+                {request.reason?.trim() ? (
+                  <div className="md:col-span-2">
+                    <MetaItem label={t('hr.labels.reason')}>
+                      <p className="m-0 whitespace-pre-wrap leading-relaxed">
+                        {request.reason}
+                      </p>
+                    </MetaItem>
+                  </div>
+                ) : null}
+              </div>
+            </DetailSection>
+
+            {request.balance ? (
+              <DetailSection title={t('hr.section.leaveBalance')}>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <MetaItem label={t('hr.labels.entitled')}>
+                    {request.balance.entitled}
+                  </MetaItem>
+                  <MetaItem label={t('hr.labels.broughtForward')}>
+                    {request.balance.broughtForward}
+                  </MetaItem>
+                  <MetaItem label={t('hr.labels.used')}>
+                    {request.balance.used}
+                  </MetaItem>
+                  <MetaItem label={t('hr.labels.pending')}>
+                    {request.balance.pending}
+                  </MetaItem>
+                  <MetaItem label={t('hr.labels.remaining')}>
+                    <span className="font-semibold">
+                      {request.balance.remaining}
+                    </span>
                   </MetaItem>
                 </div>
-              ) : null}
-            </div>
-          </SectionCard>
-
-          {request.balance ? (
-            <SectionCard title={t('hr.section.leaveBalance')} bodyClassName="px-3 py-4 sm:px-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-                <MetaItem label={t('hr.labels.entitled')}>
-                  {request.balance.entitled}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.broughtForward')}>
-                  {request.balance.broughtForward}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.used')}>
-                  {request.balance.used}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.pending')}>
-                  {request.balance.pending}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.remaining')}>
-                  <span className="font-semibold">{request.balance.remaining}</span>
-                </MetaItem>
-              </div>
-            </SectionCard>
-          ) : null}
+              </DetailSection>
+            ) : null}
+          </div>
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
@@ -369,19 +416,21 @@ export default function LeaveRequestDetailPageContent({
               currentTier={approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-3 py-4 sm:px-5">
-              <p className="text-sm text-[var(--color-text-tertiary)] m-0">
-                {t('hr.empty.noApprovalChain')}
-              </p>
-            </SectionCard>
+            <div className="erp-pro-card">
+              <DetailSection title={t('hr.section.approvalChain')}>
+                <p className="erp-users-cell-sub m-0">
+                  {t('hr.empty.noApprovalChain')}
+                </p>
+              </DetailSection>
+            </div>
           )}
         </aside>
       </div>
 
       <ConfirmDialog
         open={confirmCancel}
-        title="Cancel leave request?"
-        description="This will cancel the leave request and release any pending balance. This cannot be undone."
+        title={t('hr.dialog.cancelLeaveTitle')}
+        description={t('hr.dialog.cancelLeaveDesc')}
         confirmLabel={t('hr.buttons.cancelRequest')}
         danger
         confirmLoading={cancelMutation.isPending}
