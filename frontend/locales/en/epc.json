@@ -1608,19 +1608,6 @@
         "created": "{{count}} leave request created.",
         "createdPlural": "{{count}} leave requests created.",
         "summary": "{{created}} leave requests imported"
-      },
-      "leaveBalances": {
-        "title": "Import leave balances",
-        "description": "Upload a spreadsheet to set or update entitled days and brought-forward balances for annual, maternity, and sick leave.",
-        "requiredColumns": "Required: employeeEmail or employeeId, year, leaveType (ANNUAL|MATERNITY|SICK), entitled. Optional: broughtForward.",
-        "importRows": "Import {{count}} balance",
-        "importRowsPlural": "Import {{count}} balances",
-        "created": "{{count}} balance created.",
-        "createdPlural": "{{count}} balances created.",
-        "updated": "{{count}} balance updated.",
-        "updatedPlural": "{{count}} balances updated.",
-        "summary": "{{created}} leave balances imported",
-        "summaryWithUpdate": "{{created}} created, {{updated}} updated"
       }
     },
     "assetStatus": {

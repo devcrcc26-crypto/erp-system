@@ -108,10 +108,7 @@ function ImportStepTabs({
   );
 }
 
-export type HrImportEntityKey =
-  | 'contracts'
-  | 'leaveRequests'
-  | 'leaveBalances';
+export type HrImportEntityKey = 'contracts' | 'leaveRequests';
 
 /**
  * Shared Excel import modal for HR modules (upload → preview → commit).
@@ -193,17 +190,11 @@ export default function HrImportModal({
       setResult(commitResult);
       setStep('result');
 
-      const updated = commitResult.updated ?? 0;
-      const summary =
-        updated > 0
-          ? t(`${entityPrefix}.summaryWithUpdate`, {
-              created: commitResult.created,
-              updated,
-            })
-          : t(`${entityPrefix}.summary`, {
-              created: commitResult.created,
-            });
-      onImported(summary);
+      onImported(
+        t(`${entityPrefix}.summary`, {
+          created: commitResult.created,
+        }),
+      );
     } catch (error) {
       setErrorMessage(
         error instanceof ApiRequestError
@@ -226,7 +217,6 @@ export default function HrImportModal({
 
   const isBusy = previewMutation.isPending || commitMutation.isPending;
   const validCount = preview?.valid ?? 0;
-  const showUpdated = entity === 'leaveBalances';
 
   const footer =
     step === 'result'
@@ -479,23 +469,6 @@ export default function HrImportModal({
                     )}
                   </span>
                 </div>
-                {showUpdated ? (
-                  <div className="erp-user-import-stat erp-user-import-stat--ready">
-                    <span className="erp-user-import-stat-value">
-                      {result.updated ?? 0}
-                    </span>
-                    <span className="erp-user-import-stat-label">
-                      {t(
-                        pluralKey(
-                          result.updated ?? 0,
-                          `${entityPrefix}.updated`,
-                          `${entityPrefix}.updatedPlural`,
-                        ),
-                        { count: result.updated ?? 0 },
-                      )}
-                    </span>
-                  </div>
-                ) : null}
                 <div className="erp-user-import-stat">
                   <span className="erp-user-import-stat-value">
                     {result.skipped}

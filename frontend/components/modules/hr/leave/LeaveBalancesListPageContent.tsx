@@ -4,11 +4,9 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  Dropdown,
   Grid,
   Input,
   InputNumber,
-  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -16,16 +14,13 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   DownloadOutlined,
-  MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UploadOutlined,
   UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
-import HrImportModal from '@/components/modules/hr/HrImportModal';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -37,12 +32,7 @@ import type {
   LeaveBalance,
 } from '@/lib/api/leave.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import {
-  downloadLeaveBalanceImportTemplate,
-  useLeaveBalanceImport,
-  useLeaveBalanceImportPreview,
-  useLeaveBalancesAll,
-} from '@/lib/query/leave';
+import { useLeaveBalancesAll } from '@/lib/query/leave';
 import {
   formatLeaveEmployeeName,
   formatLeaveType,
@@ -134,10 +124,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [exporting, setExporting] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
   const authUser = useAuthStore((state) => state.user);
-  const importPreview = useLeaveBalanceImportPreview();
-  const importCommit = useLeaveBalanceImport();
 
   const balancesQuery = useLeaveBalancesAll({ year }, true);
   const allRows = balancesQuery.data ?? [];
@@ -266,20 +253,6 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
 
   return (
     <>
-      {importOpen ? (
-        <HrImportModal
-          entity="leaveBalances"
-          onClose={() => setImportOpen(false)}
-          onImported={(summary) => {
-            messageApi.success(summary);
-            void balancesQuery.refetch();
-          }}
-          downloadTemplate={downloadLeaveBalanceImportTemplate}
-          previewMutation={importPreview}
-          commitMutation={importCommit}
-        />
-      ) : null}
-
       {balancesQuery.isError ? (
         <Alert
           type="error"
@@ -343,49 +316,13 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {isCompact ? (
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: 'export',
-                      icon: <DownloadOutlined />,
-                      label: t('users.exportExcel'),
-                      disabled: exporting,
-                      onClick: () => void handleExportExcel(),
-                    },
-                    {
-                      key: 'import',
-                      icon: <UploadOutlined />,
-                      label: t('common.importFromExcel'),
-                      onClick: () => setImportOpen(true),
-                    },
-                  ],
-                }}
-                trigger={['click']}
-              >
-                <Button
-                  icon={<MoreOutlined />}
-                  aria-label={t('common.actions')}
-                />
-              </Dropdown>
-            ) : (
-              <Space.Compact>
-                <Button
-                  icon={<DownloadOutlined />}
-                  loading={exporting}
-                  onClick={() => void handleExportExcel()}
-                >
-                  {t('users.exportExcel')}
-                </Button>
-                <Button
-                  icon={<UploadOutlined />}
-                  onClick={() => setImportOpen(true)}
-                >
-                  {t('common.importFromExcel')}
-                </Button>
-              </Space.Compact>
-            )}
+            <Button
+              icon={<DownloadOutlined />}
+              loading={exporting}
+              onClick={() => void handleExportExcel()}
+            >
+              {t('users.exportExcel')}
+            </Button>
           </div>
         </div>
 
