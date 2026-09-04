@@ -1921,6 +1921,8 @@
       "employeePerDiemRatesSaved": "员工差旅补贴标准已保存",
       "employeePerDiemRatesSaveFailed": "保存员工差旅补贴标准失败",
       "employeePerDiemRatesLoadFailed": "加载员工差旅补贴标准失败",
+      "currencyRatesUnavailable": "无法获取汇率，金额未转换。",
+      "currencyRatesHint": "1 USD = {{usd}} ETB · 1 CNY = {{cny}} ETB",
       "noActiveEmployeePerDiemRates": "未配置有效的差旅补贴标准",
       "noActiveEmployeePerDiemRatesDesc": "请先联系人力资源在员工档案中配置您的差旅补贴标准，然后再提交申请。",
       "perDiemSubmitted": "差旅补贴申请已提交",

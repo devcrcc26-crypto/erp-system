@@ -1921,6 +1921,8 @@
       "employeePerDiemRatesSaved": "Employee per diem rates saved",
       "employeePerDiemRatesSaveFailed": "Failed to save employee per diem rates",
       "employeePerDiemRatesLoadFailed": "Failed to load employee per diem rates",
+      "currencyRatesUnavailable": "Exchange rates are unavailable. Amounts were not converted.",
+      "currencyRatesHint": "1 USD = {{usd}} ETB · 1 CNY = {{cny}} ETB",
       "noActiveEmployeePerDiemRates": "No active per diem rates configured",
       "noActiveEmployeePerDiemRatesDesc": "Ask HR to configure your per diem rates on your employee profile before submitting a request.",
       "perDiemSubmitted": "Per diem request submitted",

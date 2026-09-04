@@ -1778,6 +1778,163 @@ main::-webkit-scrollbar,
   border-radius: 0;
 }
 
+/* Profile per diem tab */
+.erp-per-diem-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-per-diem-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.erp-per-diem-desc {
+  margin: 0;
+  font-size: calc(13px * var(--erp-font-scale));
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.erp-per-diem-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.erp-per-diem-currency-select {
+  min-width: 140px;
+}
+
+.erp-per-diem-currency-select .ant-select-selector {
+  border-radius: 8px !important;
+}
+
+.erp-per-diem-rate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.erp-per-diem-rate-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.erp-per-diem-rate-card:hover {
+  border-color: #d7dee8;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.erp-per-diem-rate-card--inactive {
+  opacity: 0.72;
+  background: #fbfcfd;
+}
+
+.erp-per-diem-rate-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.erp-per-diem-rate-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.erp-per-diem-rate-label {
+  margin: 0;
+  font-size: calc(11px * var(--erp-font-scale));
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.erp-per-diem-rate-value {
+  margin: 0;
+  font-size: calc(22px * var(--erp-font-scale));
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-per-diem-rate-meta {
+  margin: 0;
+  font-size: calc(11px * var(--erp-font-scale));
+  color: #94a3b8;
+}
+
+.erp-per-diem-rate-input.ant-space-compact {
+  display: flex;
+  width: 100%;
+}
+
+.erp-per-diem-rate-input .ant-input-number {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.erp-per-diem-rate-input .erp-per-diem-rate-addon.ant-btn {
+  min-width: 48px;
+  padding-inline: 10px;
+  background: #f8fafc !important;
+  color: #64748b !important;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.erp-per-diem-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 36px 16px;
+  border: 1px dashed #d7dee8;
+  border-radius: 12px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.erp-per-diem-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: #e1f5ee;
+  color: #1d9e75;
+}
+
+.erp-per-diem-empty-title {
+  margin: 0;
+  font-size: calc(13px * var(--erp-font-scale));
+  color: #64748b;
+}
+
 @media (max-width: 767px) {
   .erp-users-page .erp-pro-card-toolbar {
     padding: 12px 14px;

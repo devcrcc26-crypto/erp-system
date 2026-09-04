@@ -110,9 +110,11 @@ function BalanceTile({
 
   const pool = balance.entitled + balance.broughtForward;
   const isLow = balance.remaining <= LOW_BALANCE_THRESHOLD;
-  const pct =
+  const consumed = balance.used + balance.pending;
+  // Bar shows leave used (not remaining), so 0 used → empty track.
+  const usedPct =
     pool > 0
-      ? Math.max(0, Math.min(100, Math.round((balance.remaining / pool) * 100)))
+      ? Math.max(0, Math.min(100, Math.round((consumed / pool) * 100)))
       : 0;
 
   return (
@@ -140,7 +142,7 @@ function BalanceTile({
         <div
           className="erp-leave-balance-fill"
           style={{
-            width: `${pct}%`,
+            width: `${usedPct}%`,
             background: isLow ? '#ba7517' : accent,
           }}
         />
