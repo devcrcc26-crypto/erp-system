@@ -1015,6 +1015,20 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname.startsWith('/hr/equipment-and-materials-exit-permit/')) {
+    return {
+      titleKey: 'pages.hr.exitPermit.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.equipmentAndMaterialsExitPermit'),
+          href: '/hr/equipment-and-materials-exit-permit',
+        },
+        { label: t('pages.hr.exitPermit.detail') },
+      ],
+    };
+  }
+
   if (pathname.startsWith('/hr/consumables/')) {
     return {
       titleKey: 'pages.hr.consumables.detail',

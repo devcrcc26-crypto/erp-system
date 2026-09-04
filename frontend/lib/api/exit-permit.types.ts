@@ -25,8 +25,8 @@ export interface ExitPermitDepartmentSummary {
 export interface ExitPermitDocumentSummary {
   id: string;
   name: string;
-  fileType?: string | null;
-  fileSizeBytes?: number | null;
+  fileType?: string;
+  fileSizeBytes?: number;
 }
 
 export interface ExitPermitItem {

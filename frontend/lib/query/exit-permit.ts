@@ -216,6 +216,7 @@ export function useSubmitExitPermit(permitId: string) {
       void queryClient.invalidateQueries({
         queryKey: exitPermitKeys.lists(),
       });
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
       void queryClient.setQueryData(
         exitPermitKeys.detail(permitId),
         updated,

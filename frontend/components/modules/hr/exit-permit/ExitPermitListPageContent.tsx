@@ -325,7 +325,10 @@ export default function ExitPermitListPageContent(): React.ReactNode {
                 : undefined
             }
             onRow={(row) => ({
-              onClick: () => router.push(`/hr/exit-permit/${row.id}`),
+              onClick: () =>
+                router.push(
+                  `/hr/equipment-and-materials-exit-permit/${row.id}`,
+                ),
               className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
             })}
             locale={{
