@@ -292,6 +292,23 @@ export class ExpenseClaimService
       true,
     );
 
+    if (resolvedTiers.length === 0) {
+      const now = new Date();
+      await this.prisma.expenseClaim.update({
+        where: { id: claimId },
+        data: {
+          status: ExpenseClaimStatus.APPROVED,
+          submittedAt: now,
+          completedAt: now,
+          updatedBy: userId,
+        },
+      });
+      this.logger.log(
+        `Expense claim ${claim.claimNumber} auto-approved (no further tiers)`,
+      );
+      return this.getClaim(claimId, companyId, userId);
+    }
+
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'EXPENSE_CLAIM',

@@ -588,53 +588,81 @@ export class HrApprovalChainService {
 
   }
   /**
-   * Org-structure approval chain with duplicate approver collapse.
-   * @param includeGeneralManager When true, appends General Manager as tier 3.
+   * Org-structure approval chain with role-based skips and duplicate collapse.
+   * Regular employees: Discipline Lead → HR Officer → (optional) General Manager.
+   * Discipline Lead / HR+ skip lower tiers they already satisfy (no self-approval).
+   * GM+ with no remaining tiers → empty array (auto-approve).
+   * @param includeGeneralManager When true, appends General Manager unless submitter is GM+.
    */
   async buildOrgApprovalChain(
     employeeId: string,
     companyId: string,
     includeGeneralManager: boolean,
   ): Promise<ResolvedApprovalTier[]> {
+    const primaryRole =
+      (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      include: {
+        ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
+      },
+    });
+
+    if (!employee) {
+      throw new BadRequestException('Employee not found');
+    }
+
+    const isHrOrAbove = HR_OR_FULL_ACCESS_ROLES.includes(primaryRole);
+
+    const isGmOrAbove = [
+      'General Manager',
+      'Managing Director',
+      'System Administrator',
+    ].includes(primaryRole);
+
+    const isDisciplineLeadOrAbove =
+      [
+        'Discipline Lead',
+        ...HR_OR_FULL_ACCESS_ROLES,
+      ].includes(primaryRole) || employee.ledDisciplines.length > 0;
+
     const tiers: ChainTierDraft[] = [];
 
-    const disciplineLead = await this.getDisciplineLead(employeeId, companyId);
-    tiers.push({
-      order: 1,
-      label: 'Discipline Lead',
-      approverId: disciplineLead.id,
-      resolver: 'DISCIPLINE_LEAD',
-    });
+    if (!isDisciplineLeadOrAbove) {
+      const disciplineLead = await this.getDisciplineLead(
+        employeeId,
+        companyId,
+      );
+      tiers.push({
+        order: 1,
+        label: 'Discipline Lead',
+        approverId: disciplineLead.id,
+        resolver: 'DISCIPLINE_LEAD',
+      });
+    }
 
-    const hrOfficer = await this.getHROfficer(companyId);
-    tiers.push({
-      order: 2,
-      label: 'HR Officer',
-      approverId: hrOfficer.id,
-      resolver: 'ROLE:HR Officer',
-    });
+    if (!isHrOrAbove) {
+      const hrOfficer = await this.getHROfficer(companyId);
+      tiers.push({
+        order: tiers.length + 1,
+        label: 'HR Officer',
+        approverId: hrOfficer.id,
+        resolver: 'ROLE:HR Officer',
+      });
+    }
 
-    if (includeGeneralManager) {
+    if (includeGeneralManager && !isGmOrAbove) {
       const gm = await this.getGeneralManager(companyId);
       tiers.push({
-        order: 3,
+        order: tiers.length + 1,
         label: 'General Manager',
         approverId: gm.id,
         resolver: 'ROLE:General Manager',
       });
     }
 
-    const uniqueTiers = tiers.filter(
-      (tier, index, self) =>
-        index === self.findIndex((t) => t.approverId === tier.approverId),
-    );
-
-    return uniqueTiers.map((tier, index) => ({
-      tierOrder: index + 1,
-      label: tier.label,
-      approverId: tier.approverId,
-      resolver: tier.resolver,
-    }));
+    return this.finalizeTiers(tiers);
   }
 
   /**

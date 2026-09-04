@@ -610,6 +610,23 @@ export class OvertimeService
     const monthLabel = `${sheet.year}-${String(sheet.month).padStart(2, '0')}`;
     const title = `Overtime sheet — ${monthLabel} (${Math.round(totalHours * 100) / 100}h)`;
 
+    if (resolvedTiers.length === 0) {
+      const now = new Date();
+      await this.prisma.overtimeSheet.update({
+        where: { id: sheet.id },
+        data: {
+          status: OvertimeSheetStatus.APPROVED,
+          submittedAt: now,
+          completedAt: now,
+          updatedBy: userId,
+        },
+      });
+      this.logger.log(
+        `Overtime sheet ${sheet.sheetNumber} auto-approved (no further tiers)`,
+      );
+      return this.getSheet(sheetId, companyId, userId);
+    }
+
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'OVERTIME_APPLICATION',

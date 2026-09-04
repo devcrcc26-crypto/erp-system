@@ -201,6 +201,50 @@ export class LeaveService
     );
 
     const title = `${this.formatLeaveType(dto.leaveType)} leave — ${dto.startDate} to ${dto.endDate}`;
+    const now = new Date();
+    const leaveId = randomUUID();
+
+    // HR+ / Discipline Lead with no remaining tiers — auto-approve (no self-approval).
+    if (resolvedTiers.length === 0) {
+      const requestNumber = await this.nextLeaveRequestNumber();
+      await this.prisma.leaveRequest.create({
+        data: {
+          id: leaveId,
+          companyId,
+          requestNumber,
+          employeeId,
+          leaveType: dto.leaveType,
+          startDate,
+          endDate,
+          days: new Prisma.Decimal(days),
+          reason: dto.reason?.trim() || null,
+          status: LeaveRequestStatus.APPROVED,
+          submittedAt: now,
+          completedAt: now,
+          createdBy: actorUserId,
+          updatedBy: actorUserId,
+        },
+      });
+
+      if (files.length > 0) {
+        await this.attachFiles(leaveId, companyId, actorUserId, files);
+      }
+
+      await this.leaveBalanceService.adjustBalance(
+        employeeId,
+        dto.leaveType,
+        year,
+        'used',
+        days,
+        companyId,
+      );
+
+      this.logger.log(
+        `Leave request ${requestNumber} auto-approved (no further tiers)`,
+      );
+
+      return this.fetchLeaveDetail(leaveId, companyId);
+    }
 
     // Step 4 — approval write only (requestedBy = leave owner / chain subject)
     const approval = (await this.approvalsService.submitRequest(
@@ -224,9 +268,6 @@ export class LeaveService
         },
       },
     )) as { id: string; requestNumber: string };
-
-    const now = new Date();
-    const leaveId = randomUUID();
 
     try {
       await this.prisma.$transaction(
@@ -781,6 +822,14 @@ export class LeaveService
         leave.companyId,
       );
     }
+  }
+
+  private async nextLeaveRequestNumber(): Promise<string> {
+    const result = await this.prisma.$queryRawUnsafe<
+      Array<{ nextval: bigint | number }>
+    >(`SELECT nextval('leave_request_number_seq') as nextval`);
+    const next = Number(result[0]?.nextval ?? 1);
+    return `LR-${String(next).padStart(4, '0')}`;
   }
 
   private normalizeStatuses(
