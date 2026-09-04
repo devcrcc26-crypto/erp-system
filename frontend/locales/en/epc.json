@@ -235,6 +235,13 @@
         "myDescription": "Your leave balances and request history.",
         "you": "You"
       },
+      "overtimeHistory": {
+        "title": "Overtime hours & history",
+        "description": "Year totals and overtime sheets for {{name}}.",
+        "myTitle": "My overtime hours & history",
+        "myDescription": "Your overtime year totals and sheet history.",
+        "you": "You"
+      },
       "leavePolicy": {
         "new": "New Leave Policy",
         "edit": "Edit Leave Policy",
@@ -2441,6 +2448,14 @@
       "noHistory": "No leave requests yet.",
       "profileLoadError": "Unable to load leave information.",
       "usedPending": "{{used}} used · {{pending}} pending"
+    },
+    "overtime": {
+      "historyTitle": "Overtime history",
+      "yearSummaryTitle": "Overtime this year",
+      "viewAllHistory": "View all",
+      "noHistory": "No overtime sheets yet.",
+      "profileLoadError": "Unable to load overtime information.",
+      "sheetsInYear": "{{count}} sheets"
     },
     "buttons": {
       "newRequest": "New Request",

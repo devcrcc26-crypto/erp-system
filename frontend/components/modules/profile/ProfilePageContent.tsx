@@ -7,6 +7,7 @@ import { User } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
+import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import {
@@ -690,7 +691,10 @@ export default function ProfilePageContent(): React.ReactNode {
         </button>
       </div>
       {activeTab === 'leave' ? (
-        <EmployeeLeaveProfileSection mode="self" />
+        <div className="flex flex-col gap-4">
+          <EmployeeLeaveProfileSection mode="self" />
+          <EmployeeOvertimeProfileSection mode="self" />
+        </div>
       ) : activeTab === 'perDiem' ? (
         profile ? (
           <EmployeePerDiemRatesSection

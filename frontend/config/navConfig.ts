@@ -80,6 +80,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/disciplines': 'pages.disciplinesCatalog.title',
   '/hr/leave-requests': 'nav.hr.leaveRequests',
   '/hr/leave-history/me': 'pages.hr.leaveHistory.myTitle',
+  '/hr/overtime-history/me': 'pages.hr.overtimeHistory.myTitle',
   '/hr/overtime': 'nav.hr.overtime',
   '/hr/expense-claims': 'nav.hr.expenseClaims',
   '/hr/purchase-requests': 'nav.hr.purchaseRequests',
@@ -122,6 +123,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/disciplines': 'pages.disciplinesCatalog.description',
   '/hr/leave-requests': 'pages.hr.leave.listDescription',
   '/hr/leave-history/me': 'pages.hr.leaveHistory.myDescription',
+  '/hr/overtime-history/me': 'pages.hr.overtimeHistory.myDescription',
   '/hr/overtime': 'pages.hr.overtime.listDescription',
   '/hr/expense-claims': 'pages.hr.expenseClaim.listDescription',
   '/hr/purchase-requests': 'pages.hr.purchaseRequest.listDescription',
@@ -699,12 +701,16 @@ export function resolveIconRailKey(
   pathname: string,
   visibleItems: IconRailItem[],
 ): string {
-  if (pathname === '/profile' || pathname === '/hr/leave-history/me') {
+  if (pathname === '/profile' || pathname === '/hr/leave-history/me' || pathname === '/hr/overtime-history/me') {
     return '/profile';
   }
 
   if (pathname.startsWith('/hr/leave-history/')) {
     return '/hr/leave-requests';
+  }
+
+  if (pathname.startsWith('/hr/overtime-history/')) {
+    return '/hr/overtime';
   }
 
   let best: IconRailItem | undefined;
@@ -897,6 +903,28 @@ function resolveRouteMetaCore(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.leaveRequests'), href: '/hr/leave-requests' },
         { label: t('pages.hr.leaveHistory.title') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/overtime-history/me') {
+    return {
+      titleKey: 'pages.hr.overtimeHistory.myTitle',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.profile'), href: '/profile' },
+        { label: t('pages.hr.overtimeHistory.myTitle') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/overtime-history/')) {
+    return {
+      titleKey: 'pages.hr.overtimeHistory.title',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.overtime'), href: '/hr/overtime' },
+        { label: t('pages.hr.overtimeHistory.title') },
       ],
     };
   }

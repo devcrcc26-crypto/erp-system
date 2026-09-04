@@ -12,6 +12,7 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
+import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
@@ -433,14 +434,24 @@ export default function EmployeeDetailPageContent({
 
         <div className="erp-employee-tab-panel">
           {activeTab === 'leave' ? (
-            canViewHr ? (
-              <EmployeeLeaveProfileSection
-                mode="employee"
-                employeeId={user.id}
-              />
-            ) : (
-              <EmployeeLeaveProfileSection mode="self" />
-            )
+            <div className="flex flex-col gap-4">
+              {canViewHr ? (
+                <EmployeeLeaveProfileSection
+                  mode="employee"
+                  employeeId={user.id}
+                />
+              ) : (
+                <EmployeeLeaveProfileSection mode="self" />
+              )}
+              {canViewHr ? (
+                <EmployeeOvertimeProfileSection
+                  mode="employee"
+                  employeeId={user.id}
+                />
+              ) : (
+                <EmployeeOvertimeProfileSection mode="self" />
+              )}
+            </div>
           ) : activeTab === 'perDiem' ? (
             <EmployeePerDiemRatesSection
               employeeId={user.id}

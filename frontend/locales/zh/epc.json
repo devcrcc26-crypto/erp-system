@@ -235,6 +235,13 @@
         "myDescription": "查看您的假期余额与请假申请记录。",
         "you": "我"
       },
+      "overtimeHistory": {
+        "title": "加班工时与记录",
+        "description": "{{name}} 的年度加班汇总与加班表记录。",
+        "myTitle": "我的加班工时与记录",
+        "myDescription": "查看您的年度加班汇总与加班表记录。",
+        "you": "我"
+      },
       "leavePolicy": {
         "new": "新建假期政策",
         "edit": "编辑假期政策",
@@ -2441,6 +2448,14 @@
       "noHistory": "暂无请假申请。",
       "profileLoadError": "无法加载假期信息。",
       "usedPending": "已用 {{used}} · 待批 {{pending}}"
+    },
+    "overtime": {
+      "historyTitle": "加班记录",
+      "yearSummaryTitle": "本年度加班",
+      "viewAllHistory": "查看全部",
+      "noHistory": "暂无加班表。",
+      "profileLoadError": "无法加载加班信息。",
+      "sheetsInYear": "{{count}} 张加班表"
     },
     "buttons": {
       "newRequest": "新建申请",
