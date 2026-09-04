@@ -1,10 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sidebar-bg: #0b1f17;
-  --color-sidebar-active: rgba(29, 158, 117, 0.22);
-  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-bg: #ffffff;
+  --color-sidebar-rail-bg: #f5f7f9;
+  --color-sidebar-active: #e1f5ee;
+  --color-sidebar-hover: rgba(15, 23, 42, 0.04);
   --color-sidebar-accent: #1d9e75;
+  --color-sidebar-border: #e8ebef;
+  --color-sidebar-text: #1a1a1a;
+  --color-sidebar-text-muted: #6b7280;
   --color-page-bg: #f0f2f5;
   --color-fill-quaternary: #fafafa;
   --color-border-secondary: rgba(0, 0, 0, 0.15);
@@ -64,26 +68,41 @@ h6 {
   color: var(--color-text-primary);
 }
 
-/* Ant Design sidebar - dark Pro sider */
+/* Ant Design sidebar - light sider */
 .erp-sidebar-menu.ant-menu .ant-menu-item {
   margin: 0;
   width: 100%;
-  border-radius: 6px;
+  border-radius: 8px;
   font-family: var(--font-sans);
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.72) !important;
+  color: var(--color-sidebar-text) !important;
 }
 
 .erp-sidebar-menu.ant-menu .ant-menu-item-selected {
   background-color: var(--color-sidebar-active) !important;
-  color: #ffffff !important;
+  color: #0f6e56 !important;
   font-weight: 600;
   box-shadow: inset 3px 0 0 var(--color-sidebar-accent);
 }
 
 .erp-sidebar-menu.ant-menu .ant-menu-item:hover:not(.ant-menu-item-selected) {
   background-color: var(--color-sidebar-hover) !important;
-  color: #ffffff !important;
+  color: var(--color-sidebar-text) !important;
+}
+
+.erp-nav-section-label {
+  margin: 10px 10px 4px;
+  padding: 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-sidebar-text-muted);
+  line-height: 1.3;
+}
+
+.erp-nav-section-label:first-child {
+  margin-top: 2px;
 }
 
 /* Project workspace sidebar - grouped engineering nav */

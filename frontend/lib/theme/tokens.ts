@@ -40,17 +40,18 @@ export const tokens = {
   colorGray600: '#5F5E5A',
 
   colorNavy: '#1B2B4B',
-  /** Dark sider — brand-aligned with green active states */
-  colorSidebarBg: '#0B1F17',
-  colorSidebarActive: 'rgba(29, 158, 117, 0.22)',
-  colorSidebarHover: 'rgba(255, 255, 255, 0.06)',
-  colorSidebarBorder: 'rgba(255, 255, 255, 0.08)',
-  colorSidebarText: 'rgba(255, 255, 255, 0.72)',
-  colorSidebarTextMuted: 'rgba(255, 255, 255, 0.42)',
-  colorSidebarTextActive: '#FFFFFF',
+  /** Light sider — high-contrast labels, teal active states */
+  colorSidebarBg: '#FFFFFF',
+  colorSidebarRailBg: '#F5F7F9',
+  colorSidebarActive: '#E1F5EE',
+  colorSidebarHover: 'rgba(15, 23, 42, 0.04)',
+  colorSidebarBorder: '#E8EBEF',
+  colorSidebarText: '#1A1A1A',
+  colorSidebarTextMuted: '#6B7280',
+  colorSidebarTextActive: '#0F6E56',
   colorSidebarAccent: '#1D9E75',
-  colorSidebarGroupLabel: 'rgba(255, 255, 255, 0.45)',
-  colorSidebarIcon: 'rgba(255, 255, 255, 0.48)',
+  colorSidebarGroupLabel: '#6B7280',
+  colorSidebarIcon: '#64748B',
 
   colorPageBg: '#F0F2F5',
   colorCardBg: '#FFFFFF',

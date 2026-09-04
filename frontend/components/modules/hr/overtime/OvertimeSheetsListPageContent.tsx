@@ -5,9 +5,9 @@ import {
   Alert,
   Button,
   Dropdown,
+  Grid,
   Input,
   Select,
-  Space,
   Spin,
   Tooltip,
   type MenuProps,
@@ -21,13 +21,12 @@ import {
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -44,7 +43,6 @@ import type { PaginationMeta } from '@/lib/api/types';
 import { useDeleteOvertimeSheet, useOvertimeSheetsAll } from '@/lib/query/overtime';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useUsersDirectory } from '@/lib/query/users';
-import { tokens } from '@/lib/theme/tokens';
 import {
   formatOvertimeEmployeeName,
   formatOvertimeHours,
@@ -68,13 +66,58 @@ const PENDING_STATUSES = statusesForOvertimeMode('pending');
 const APPROVED_STATUSES = statusesForOvertimeMode('approved');
 const REJECTED_STATUSES = statusesForOvertimeMode('rejected');
 
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
+
+function OvertimeStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
+
 /**
- * Company or personal overtime sheet list — layout aligned with Users page.
+ * Overtime sheets list — Users chrome (stat bar, filter row, rounded table).
  */
 export default function OvertimeSheetsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
 
   const canAccess = useCanAccessOvertime();
   const canViewHr = useCanViewHr();
@@ -243,12 +286,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         key: 'sheetNumber',
         width: 140,
         render: (value: string) => (
-          <span
-            className="font-[family-name:var(--font-mono)] text-xs font-medium"
-            style={{ color: tokens.colorPrimary }}
-          >
-            {value}
-          </span>
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
       ...(canViewHr
@@ -259,18 +297,12 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
               width: 220,
               responsive: ['md'],
               render: (_: unknown, row: OvertimeSheetListItem) => (
-                <div className="min-w-0 py-0.5">
-                  <p
-                    className="m-0 text-sm font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
-                  >
+                <div className="min-w-0">
+                  <p className="erp-users-cell-strong m-0">
                     {formatOvertimeEmployeeName(row.employee)}
                   </p>
                   {row.employee?.email ? (
-                    <p
-                      className="m-0 truncate text-xs"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
+                    <p className="erp-users-email m-0 mt-0.5">
                       {row.employee.email}
                     </p>
                   ) : null}
@@ -284,8 +316,11 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         key: 'period',
         width: 140,
         responsive: ['md'],
-        render: (_: unknown, row: OvertimeSheetListItem) =>
-          formatOvertimePeriod(row.month, row.year, t),
+        render: (_: unknown, row: OvertimeSheetListItem) => (
+          <span className="erp-users-cell-sub">
+            {formatOvertimePeriod(row.month, row.year, t)}
+          </span>
+        ),
       },
       {
         title: t('hr.table.regularHours'),
@@ -294,7 +329,9 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         width: 90,
         align: 'right',
         responsive: ['lg'],
-        render: (value: number) => formatOvertimeHours(value),
+        render: (value: number) => (
+          <span className="erp-users-cell-sub">{formatOvertimeHours(value)}</span>
+        ),
       },
       {
         title: t('hr.table.nightHours'),
@@ -303,7 +340,9 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         width: 90,
         align: 'right',
         responsive: ['lg'],
-        render: (value: number) => formatOvertimeHours(value),
+        render: (value: number) => (
+          <span className="erp-users-cell-sub">{formatOvertimeHours(value)}</span>
+        ),
       },
       {
         title: t('hr.table.weekendHours'),
@@ -312,7 +351,9 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         width: 90,
         align: 'right',
         responsive: ['xl'],
-        render: (value: number) => formatOvertimeHours(value),
+        render: (value: number) => (
+          <span className="erp-users-cell-sub">{formatOvertimeHours(value)}</span>
+        ),
       },
       {
         title: t('hr.table.holidayHours'),
@@ -321,7 +362,9 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         width: 90,
         align: 'right',
         responsive: ['xl'],
-        render: (value: number) => formatOvertimeHours(value),
+        render: (value: number) => (
+          <span className="erp-users-cell-sub">{formatOvertimeHours(value)}</span>
+        ),
       },
       {
         title: t('hr.table.total'),
@@ -330,7 +373,9 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         width: 90,
         align: 'right',
         render: (value: number) => (
-          <span className="text-sm font-medium">{formatOvertimeHours(value)}</span>
+          <span className="erp-users-cell-strong">
+            {formatOvertimeHours(value)}
+          </span>
         ),
       },
       {
@@ -350,10 +395,13 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         key: 'tier',
         width: 80,
         responsive: ['lg'],
-        render: (_: unknown, row: OvertimeSheetListItem) =>
-          row.approvalRequest?.currentTier != null
-            ? String(row.approvalRequest.currentTier)
-            : '—',
+        render: (_: unknown, row: OvertimeSheetListItem) => (
+          <span className="erp-users-cell-sub">
+            {row.approvalRequest?.currentTier != null
+              ? String(row.approvalRequest.currentTier)
+              : '—'}
+          </span>
+        ),
       },
       {
         title: '',
@@ -366,7 +414,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
           }
           return (
             <div
-              className="flex items-center justify-end"
+              className="erp-table-row-actions flex items-center justify-end"
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
@@ -376,7 +424,6 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
                   type="text"
                   icon={<MoreOutlined />}
                   aria-label={t('common.actions')}
-                  style={{ borderRadius: 0 }}
                 />
               </Dropdown>
             </div>
@@ -389,7 +436,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="erp-pro-list-page erp-users-page erp-overtime-page">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -397,8 +444,8 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+      <div className="erp-pro-list-page erp-users-page erp-overtime-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
       </div>
@@ -406,7 +453,18 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-overtime-page">
+      <ConfirmDialog
+        open={Boolean(deletingSheet)}
+        title={t('hr.empty.deleteOvertimeSheetTitle')}
+        description={t('hr.empty.deleteOvertimeSheetDescription')}
+        confirmLabel={t('common.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDeleteSheet()}
+        onCancel={() => setDeletingSheet(null)}
+      />
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -419,73 +477,77 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <ConfirmDialog
-        open={Boolean(deletingSheet)}
-        title={t('hr.empty.deleteOvertimeSheetTitle')}
-        description={t('hr.empty.deleteOvertimeSheetDescription')}
-        confirmLabel={t('common.delete')}
-        danger
-        confirmLoading={deleteMutation.isPending}
-        onConfirm={() => void handleDeleteSheet()}
-        onCancel={() => setDeletingSheet(null)}
-      />
-<div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+      <div className="erp-users-stat-bar">
+        <OvertimeStat
+          label={t('pages.hr.overtime.stats.total')}
+          value={statusCounts.all}
+          accent="teal"
+          icon={<ClockCircleOutlined />}
+          active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
-        >
-          <StatCard
-            label={t('pages.hr.overtime.stats.total')}
-            value={statusCounts.all}
-            color="teal"
-            icon={<ClockCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <OvertimeStat
+          label={t('pages.hr.overtime.stats.pending')}
+          value={statusCounts.pending}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+          active={statusMode === 'pending'}
           onClick={() => handleStatusMode('pending')}
-        >
-          <StatCard
-            label={t('pages.hr.overtime.stats.pending')}
-            value={statusCounts.pending}
-            color="amber"
-            icon={<ClockCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <OvertimeStat
+          label={t('pages.hr.overtime.stats.approved')}
+          value={statusCounts.approved}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statusMode === 'approved'}
           onClick={() => handleStatusMode('approved')}
-        >
-          <StatCard
-            label={t('pages.hr.overtime.stats.approved')}
-            value={statusCounts.approved}
-            color="green"
-            icon={<CheckCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <OvertimeStat
+          label={t('pages.hr.overtime.stats.rejected')}
+          value={statusCounts.rejected}
+          accent="red"
+          icon={<CloseCircleOutlined />}
+          active={statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
-        >
-          <StatCard
-            label={t('pages.hr.overtime.stats.rejected')}
-            value={statusCounts.rejected}
-            color="red"
-            icon={<CloseCircleOutlined />}
-          />
-        </button>
+        />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <Input.Search
-            placeholder={t('hr.placeholder.searchSheet')}
-            className="w-full min-w-0 sm:w-72"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            {canCreate ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => router.push('/approvals/new/overtime')}
+              >
+                {t('hr.buttons.thisMonthSheet')}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('hr.placeholder.searchSheet')}
+            className="erp-users-search-input min-w-0"
             value={search}
             onChange={(e) => {
               const value = e.target.value;
@@ -493,9 +555,8 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
               setAppliedSearch(value.trim());
               resetPage();
             }}
-            onSearch={(value) => {
-              setSearch(value);
-              setAppliedSearch(value.trim());
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
               resetPage();
             }}
             onClear={() => {
@@ -504,13 +565,15 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           {canViewHr ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
-              className="w-full min-w-0 sm:w-48"
+              className="erp-users-filter-select"
+              loading={usersQuery.isLoading}
               options={(usersQuery.data?.data ?? []).map((user) => ({
                 value: user.id,
                 label: formatUserName(user),
@@ -525,7 +588,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
           <Select
             allowClear
             placeholder={t('hr.placeholder.month')}
-            className="w-full min-w-0 sm:w-36"
+            className="erp-users-filter-select"
             options={monthOptions}
             value={month}
             onChange={(value: number | undefined) => {
@@ -536,7 +599,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
           <Select
             allowClear
             placeholder={t('hr.placeholder.year')}
-            className="w-full min-w-0 sm:w-28"
+            className="erp-users-filter-select"
             options={yearOptions.map((y) => ({ value: y, label: String(y) }))}
             value={year}
             onChange={(value: number | undefined) => {
@@ -544,70 +607,24 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-overtime" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {meta.total === 1
-                ? t('pages.hr.overtime.sheetCountOne')
-                : t('pages.hr.overtime.sheetCount', { count: meta.total })}
-            </span>
-          </div>
-          {canCreate ? (
-            <Space wrap size={8}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => router.push('/approvals/new/overtime')}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.buttons.thisMonthSheet')}
-              </Button>
-            </Space>
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
           ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<OvertimeSheetListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            scroll={false}
+            scroll={{ x: isCompact ? 720 : 1100 }}
             onRow={(record) => ({
               onClick: () => router.push(`/hr/overtime/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
@@ -628,7 +645,8 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
                       : canCreate
                         ? {
                             label: t('hr.buttons.thisMonthSheet'),
-                            onClick: () => router.push('/approvals/new/overtime'),
+                            onClick: () =>
+                              router.push('/approvals/new/overtime'),
                           }
                         : undefined
                   }

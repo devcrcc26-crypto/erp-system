@@ -6,19 +6,25 @@ import {
   Button,
   Dropdown,
   Empty,
-  Spin,
+  Grid,
+  Skeleton,
+  Space,
   Typography,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowLeft, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+  DeleteOutlined,
+  MoreOutlined,
+  PlusOutlined,
+  SendOutlined,
+  StopOutlined,
+} from '@ant-design/icons';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import OvertimeEntryFormDrawer from '@/components/modules/hr/overtime/OvertimeEntryFormDrawer';
-import {
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
@@ -51,51 +57,34 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
-function HoursSummaryCards({
-  regular,
-  night,
-  weekend,
-  holiday,
-  total,
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+  action,
 }: {
-  regular: number;
-  night: number;
-  weekend: number;
-  holiday: number;
-  total: number;
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  action?: React.ReactNode;
 }): React.ReactNode {
-  const { t } = useEpcTranslation();
   return (
-    <SummaryStrip
-      items={[
-        {
-          label: t('hr.overtimeCategory.regular'),
-          value: `${formatOvertimeHours(regular)} hrs`,
-        },
-        {
-          label: t('hr.overtimeCategory.night'),
-          value: `${formatOvertimeHours(night)} hrs`,
-        },
-        {
-          label: t('hr.overtimeCategory.weekend'),
-          value: `${formatOvertimeHours(weekend)} hrs`,
-        },
-        {
-          label: t('hr.overtimeCategory.holiday'),
-          value: `${formatOvertimeHours(holiday)} hrs`,
-        },
-        {
-          label: t('hr.overtimeCategory.total'),
-          value: `${formatOvertimeHours(total)} hrs`,
-          emphasize: true,
-        },
-      ]}
-    />
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">{title}</h3>
+        {action}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
   );
 }
 
 /**
- * Monthly overtime sheet detail — editable entries when DRAFT/RETURNED.
+ * Monthly overtime sheet detail — Users / employee profile chrome.
  */
 export default function OvertimeSheetDetailPageContent({
   sheetId,
@@ -105,6 +94,8 @@ export default function OvertimeSheetDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useOvertimeSheet(sheetId);
@@ -285,26 +276,34 @@ export default function OvertimeSheetDetailPageContent({
         dataIndex: 'date',
         key: 'date',
         width: 110,
-        render: (v: string) => formatProjectDate(v),
+        render: (v: string) => (
+          <span className="erp-users-cell-strong">{formatProjectDate(v)}</span>
+        ),
       },
       {
         title: t('hr.form.startTime'),
         dataIndex: 'startTime',
         key: 'startTime',
         width: 80,
+        render: (v: string) => <span className="erp-users-cell-sub">{v}</span>,
       },
       {
         title: t('hr.form.endTime'),
         dataIndex: 'endTime',
         key: 'endTime',
         width: 80,
+        render: (v: string) => <span className="erp-users-cell-sub">{v}</span>,
       },
       {
         title: t('hr.overtimeCategory.holiday'),
         dataIndex: 'isHoliday',
         key: 'isHoliday',
         width: 80,
-        render: (v: boolean) => (v ? t('hr.labels.yes') : '—'),
+        render: (v: boolean) => (
+          <span className="erp-users-cell-sub">
+            {v ? t('hr.labels.yes') : '—'}
+          </span>
+        ),
       },
       {
         title: t('hr.overtimeCategory.regular'),
@@ -312,7 +311,9 @@ export default function OvertimeSheetDetailPageContent({
         key: 'regularHours',
         width: 80,
         align: 'right' as const,
-        render: (v: number) => formatOvertimeHours(v),
+        render: (v: number) => (
+          <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
+        ),
       },
       {
         title: t('hr.overtimeCategory.night'),
@@ -320,7 +321,9 @@ export default function OvertimeSheetDetailPageContent({
         key: 'nightHours',
         width: 80,
         align: 'right' as const,
-        render: (v: number) => formatOvertimeHours(v),
+        render: (v: number) => (
+          <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
+        ),
       },
       {
         title: t('hr.overtimeCategory.weekend'),
@@ -328,7 +331,9 @@ export default function OvertimeSheetDetailPageContent({
         key: 'weekendHours',
         width: 90,
         align: 'right' as const,
-        render: (v: number) => formatOvertimeHours(v),
+        render: (v: number) => (
+          <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
+        ),
       },
       {
         title: t('hr.table.holidayHours'),
@@ -336,7 +341,9 @@ export default function OvertimeSheetDetailPageContent({
         key: 'holidayHours',
         width: 100,
         align: 'right' as const,
-        render: (v: number) => formatOvertimeHours(v),
+        render: (v: number) => (
+          <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
+        ),
       },
       {
         title: t('hr.overtimeCategory.total'),
@@ -344,47 +351,54 @@ export default function OvertimeSheetDetailPageContent({
         key: 'totalHours',
         width: 80,
         align: 'right' as const,
-        render: (v: number) => formatOvertimeHours(v),
+        render: (v: number) => (
+          <span className="erp-users-cell-strong">{formatOvertimeHours(v)}</span>
+        ),
       },
       {
         title: t('hr.labels.taskDescription'),
         dataIndex: 'taskDescription',
         key: 'taskDescription',
         ellipsis: true,
+        render: (v: string) => (
+          <span className="erp-users-cell-sub">{v || '—'}</span>
+        ),
       },
       ...(canEdit
         ? [
             {
-              title: t('hr.table.actions'),
+              title: '',
               key: 'actions',
-              width: 140,
+              width: 56,
               fixed: 'right' as const,
               render: (_: unknown, row: OvertimeEntry) => {
                 const items: MenuProps['items'] = [
                   {
                     key: 'edit',
                     label: t('common.update'),
-                    icon: <Pencil size={14} />,
                     onClick: () => openEditEntry(row),
                   },
                   {
                     key: 'delete',
                     label: t('common.delete'),
-                    icon: <Trash2 size={14} />,
                     danger: true,
                     onClick: () => setDeleteEntryId(row.id),
                   },
                 ];
                 return (
-                  <Dropdown menu={{ items }} trigger={['click']}>
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<MoreHorizontal size={16} />}
-                      onClick={(event) => event.stopPropagation()}
-                      style={{ borderRadius: 0 }}
-                    />
-                  </Dropdown>
+                  <div
+                    className="erp-table-row-actions flex items-center justify-end"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <Dropdown menu={{ items }} trigger={['click']}>
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<MoreOutlined />}
+                        aria-label={t('common.actions')}
+                      />
+                    </Dropdown>
+                  </div>
                 );
               },
             } satisfies ColumnsType<OvertimeEntry>[number],
@@ -396,31 +410,32 @@ export default function OvertimeSheetDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="flex justify-center p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page">
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
       </div>
     );
   }
 
   if (detailQuery.isError || !sheet) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        title={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : t('hr.messages.overtimeSheetNotFound')
-        }
-        action={
-          <Button
-            onClick={() => router.push('/hr/overtime')}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.buttons.backToList')}
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <Alert
+          type="error"
+          showIcon
+          title={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : t('hr.messages.overtimeSheetNotFound')
+          }
+          action={
+            <Button onClick={() => router.push('/hr/overtime')}>
+              {t('hr.buttons.backToList')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
@@ -430,178 +445,258 @@ export default function OvertimeSheetDetailPageContent({
     sheet.employeeId !== currentUser.data.id
   ) {
     return (
-      <div className="flex min-h-[240px] items-center justify-center">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <div className="flex min-h-[240px] items-center justify-center">
+          <Skeleton active paragraph={{ rows: 4 }} />
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/overtime')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.backToList')}
-        </Button>
-      </div>
+  const employeeName = formatOvertimeEmployeeName(sheet.employee);
+  const periodLabel = formatOvertimePeriod(sheet.month, sheet.year, t);
 
-      <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="px-3 py-4 sm:px-5">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                {sheet.sheetNumber}
-              </span>
+  return (
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push('/hr/overtime')}
+              aria-label={t('hr.buttons.backToList')}
+            >
+              {isNarrow ? undefined : t('hr.buttons.back')}
+            </Button>
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {sheet.approvalRequestId ? (
+              <Button
+                onClick={() =>
+                  router.push(`/approvals/${sheet.approvalRequestId}`)
+                }
+              >
+                {t('hr.buttons.viewInApprovals')}
+              </Button>
+            ) : null}
+            {canCancel ? (
+              <Button
+                danger
+                icon={<StopOutlined />}
+                onClick={() => setConfirmCancel(true)}
+                aria-label={t('hr.buttons.cancelSheet')}
+              >
+                {isNarrow ? undefined : t('hr.buttons.cancelSheet')}
+              </Button>
+            ) : null}
+            {(canEdit || canManage) ? (
+              <Space.Compact>
+                {canEdit ? (
+                  <Button
+                    type="primary"
+                    icon={<SendOutlined />}
+                    disabled={!canSubmit}
+                    onClick={() => setConfirmSubmit(true)}
+                    aria-label={t('hr.buttons.submitSheet')}
+                  >
+                    {isNarrow ? undefined : t('hr.buttons.submitSheet')}
+                  </Button>
+                ) : null}
+                {canManage ? (
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => setConfirmDeleteSheet(true)}
+                    aria-label={t('common.delete')}
+                  >
+                    {isNarrow ? undefined : t('common.delete')}
+                  </Button>
+                ) : null}
+              </Space.Compact>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">{sheet.sheetNumber}</span>
               <StatusBadge
                 label={formatOvertimeStatus(sheet.status, t)}
                 variant={overtimeStatusVariant(sheet.status)}
               />
             </div>
-            <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-              {canCancel ? (
-                <Button
-                  danger
-                  size="small"
-                  onClick={() => setConfirmCancel(true)}
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('hr.buttons.cancelSheet')}
-                </Button>
-              ) : null}
-              {canEdit ? (
-                <Button
-                  type="primary"
-                  size="small"
-                  disabled={!canSubmit}
-                  onClick={() => setConfirmSubmit(true)}
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('hr.buttons.submitSheet')}
-                </Button>
-              ) : null}
-              {canManage ? (
-                <Button
-                  danger
-                  size="small"
-                  icon={<Trash2 size={14} />}
-                  onClick={() => setConfirmDeleteSheet(true)}
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('common.delete')}
-                </Button>
-              ) : null}
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0">
+                {periodLabel}
+              </h2>
             </div>
+            <p className="erp-users-email m-0 mt-1.5">{employeeName}</p>
+            <p className="erp-users-cell-sub m-0 mt-1">
+              {`${t('hr.overtimeCategory.total')} ${formatOvertimeHours(sheet.totalHours)} hrs`}
+            </p>
           </div>
-
-          <h1 className="m-0 text-lg font-semibold leading-snug text-[var(--color-text-primary)]">
-            {formatOvertimePeriod(sheet.month, sheet.year, t)}
-          </h1>
-
-          <p className="mb-0 mt-2 text-sm text-[var(--color-text-secondary)]">
-            <span className="font-medium text-[var(--color-text-primary)]">
-              {formatOvertimeEmployeeName(sheet.employee)}
-            </span>
-          </p>
         </div>
       </div>
 
-      <HoursSummaryCards
-        regular={sheet.totalRegularHours}
-        night={sheet.totalNightHours}
-        weekend={sheet.totalWeekendHours}
-        holiday={sheet.totalHolidayHours}
-        total={sheet.totalHours}
-      />
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.overtimeCategory.regular')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatOvertimeHours(sheet.totalRegularHours)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.overtimeCategory.night')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatOvertimeHours(sheet.totalNightHours)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.overtimeCategory.weekend')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatOvertimeHours(sheet.totalWeekendHours)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.overtimeCategory.holiday')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatOvertimeHours(sheet.totalHolidayHours)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.overtimeCategory.total')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatOvertimeHours(sheet.totalHours)}
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[1fr_300px]">
-        <SectionCard
-          title={t('hr.section.entries')}
-          bodyClassName="p-0"
-          action={
-            canEdit ? (
-              <Button
-                type="primary"
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="erp-pro-card min-w-0">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <DetailSection
+              title={t('hr.section.entries')}
+              bodyClassName="!p-0"
+              action={
+                canEdit ? (
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={openAddEntry}
+                  >
+                    {t('hr.buttons.addEntry')}
+                  </Button>
+                ) : undefined
+              }
+            >
+              <DataTable<OvertimeEntry>
+                rowKey="id"
+                className="erp-pro-table erp-users-table"
                 size="small"
-                icon={<Plus size={16} />}
-                onClick={openAddEntry}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.buttons.addEntry')}
-              </Button>
-            ) : undefined
-          }
-        >
-          <DataTable<OvertimeEntry>
-            rowKey="id"
-            className="erp-pro-table"
-            size="small"
-            columns={columns}
-            dataSource={sheet.entries ?? []}
-            pagination={false}
-            scroll={{ x: 1100 }}
-            expandable={{
-              expandedRowRender: (entry) => (
-                <div className="space-y-2 py-1">
-                  <Typography.Text strong style={{ fontSize: 13 }}>
-                    {t('hr.section.attachments')}
-                  </Typography.Text>
-                  <AttachmentDownloadList documents={entry.documents} />
-                  {canEdit ? (
-                    <div className="flex flex-wrap items-end gap-2">
-                      <div className="min-w-[220px] flex-1">
-                        <FileUploadInput
-                          files={entryFiles[entry.id] ?? []}
-                          onChange={(files) =>
-                            setEntryFiles((prev) => ({
-                              ...prev,
-                              [entry.id]: files,
-                            }))
-                          }
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          multiple
-                          disabled={uploadAttachmentsMutation.isPending}
-                        />
-                      </div>
-                      <Button
-                        type="primary"
-                        size="small"
-                        loading={uploadAttachmentsMutation.isPending}
-                        disabled={(entryFiles[entry.id] ?? []).length === 0}
-                        onClick={() => void handleUploadEntryFiles(entry.id)}
-                        style={{ borderRadius: 0 }}
-                      >
-                        {t('hr.buttons.uploadAttachments')}
-                      </Button>
+                columns={columns}
+                dataSource={sheet.entries ?? []}
+                pagination={false}
+                scroll={{ x: 1100 }}
+                expandable={{
+                  expandedRowRender: (entry) => (
+                    <div className="space-y-2 py-1">
+                      <Typography.Text strong style={{ fontSize: 13 }}>
+                        {t('hr.section.attachments')}
+                      </Typography.Text>
+                      <AttachmentDownloadList documents={entry.documents} />
+                      {canEdit ? (
+                        <div className="flex flex-wrap items-end gap-2">
+                          <div className="min-w-[220px] flex-1">
+                            <FileUploadInput
+                              files={entryFiles[entry.id] ?? []}
+                              onChange={(files) =>
+                                setEntryFiles((prev) => ({
+                                  ...prev,
+                                  [entry.id]: files,
+                                }))
+                              }
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              multiple
+                              disabled={uploadAttachmentsMutation.isPending}
+                            />
+                          </div>
+                          <Button
+                            type="primary"
+                            size="small"
+                            loading={uploadAttachmentsMutation.isPending}
+                            disabled={(entryFiles[entry.id] ?? []).length === 0}
+                            onClick={() => void handleUploadEntryFiles(entry.id)}
+                          >
+                            {t('hr.buttons.uploadAttachments')}
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
-                </div>
-              ),
-            }}
-            locale={{
-              emptyText: <Empty description={t('hr.empty.noEntries')} />,
-            }}
-          />
-        </SectionCard>
+                  ),
+                }}
+                locale={{
+                  emptyText: <Empty description={t('hr.empty.noEntries')} />,
+                }}
+              />
+            </DetailSection>
+
+            <DetailSection title={t('hr.section.requestDetails')}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <MetaItem label={t('hr.labels.employee')}>
+                  {employeeName}
+                </MetaItem>
+                <MetaItem label={t('hr.table.period')}>{periodLabel}</MetaItem>
+                <MetaItem label={t('hr.table.sheetNumber')}>
+                  <span className="erp-users-id-chip">{sheet.sheetNumber}</span>
+                </MetaItem>
+                <MetaItem label={t('hr.table.status')}>
+                  <StatusBadge
+                    label={formatOvertimeStatus(sheet.status, t)}
+                    variant={overtimeStatusVariant(sheet.status)}
+                  />
+                </MetaItem>
+              </div>
+            </DetailSection>
+          </div>
+        </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
-          {!sheet.approvalRequestId ? (
-            <SectionCard
-              title={t('hr.section.approvalChain')}
-              bodyClassName="px-3 py-4 sm:px-5"
-            >
-              <p className="m-0 text-sm text-[var(--color-text-tertiary)]">
-                {t('hr.empty.noApprovalChain')}
-              </p>
-            </SectionCard>
-          ) : (
+          {approvalRequest ? (
             <ApprovalTierTimeline
               tiers={tiers}
-              currentTier={approvalRequest?.currentTier ?? 0}
+              currentTier={approvalRequest.currentTier ?? 0}
             />
+          ) : (
+            <div className="erp-pro-card">
+              <DetailSection title={t('hr.section.approvalChain')}>
+                <p className="erp-users-cell-sub m-0">
+                  {t('hr.empty.noApprovalChain')}
+                </p>
+              </DetailSection>
+            </div>
           )}
         </aside>
       </div>
