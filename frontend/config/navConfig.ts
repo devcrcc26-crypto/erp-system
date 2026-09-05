@@ -101,7 +101,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/reports': 'nav.hr.reports',
   '/hr/per-diem': 'nav.hr.perDiem',
   '/hr/employee-per-diem-rates': 'pages.hr.employeePerDiemRates.listTitle',
-  '/hr/leave-policy': 'nav.hr.leavePolicy',
+  '/hr/leave-policy': 'pages.hr.leavePolicy.listTitle',
   '/hr/leave-policy/new': 'pages.hr.leavePolicy.new',
   '/hr/company-asset': 'nav.hr.companyAssets',
   '/hr/company-asset/new': 'pages.hr.companyAsset.new',
@@ -223,7 +223,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/business-trips': 'pages.hr.businessTrip.listDescription',
   '/hr/per-diem': 'pages.hr.perDiem.listDescription',
   '/hr/employee-per-diem-rates': 'pages.hr.employeePerDiemRates.listDescription',
-  '/hr/leave-policy': 'hr.leavePolicy.formDescription',
+  '/hr/leave-policy': 'pages.hr.leavePolicy.listDescription',
   '/hr/leave-policy/new': 'hr.leavePolicy.formDescription',
   '/hr/company-asset': 'pages.hr.companyAsset.listDescription',
   '/hr/company-asset/new': 'pages.hr.companyAsset.formDescription',
@@ -920,12 +920,28 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname === '/hr/leave-policy') {
+    return {
+      titleKey: 'pages.hr.leavePolicy.listTitle',
+      descriptionKey: 'pages.hr.leavePolicy.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.leavePolicy.listTitle') },
+      ],
+    };
+  }
+
   if (pathname === '/hr/leave-policy/new') {
     return {
       titleKey: 'pages.hr.leavePolicy.new',
+      descriptionKey: 'hr.leavePolicy.formDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.hr.leavePolicy'), href: '/hr/leave-policy' },
+        {
+          label: t('pages.hr.leavePolicy.listTitle'),
+          href: '/hr/leave-policy',
+        },
         { label: t('pages.hr.leavePolicy.new') },
       ],
     };
@@ -938,7 +954,10 @@ function resolveRouteMetaCore(
       descriptionKey: 'hr.leavePolicy.formDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.hr.leavePolicy'), href: '/hr/leave-policy' },
+        {
+          label: t('pages.hr.leavePolicy.listTitle'),
+          href: '/hr/leave-policy',
+        },
         {
           label: t('pages.hr.leavePolicy.detail'),
           href: id ? `/hr/leave-policy/${id}` : undefined,
@@ -953,7 +972,10 @@ function resolveRouteMetaCore(
       titleKey: 'pages.hr.leavePolicy.detail',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.hr.leavePolicy'), href: '/hr/leave-policy' },
+        {
+          label: t('pages.hr.leavePolicy.listTitle'),
+          href: '/hr/leave-policy',
+        },
         { label: t('pages.hr.leavePolicy.detail') },
       ],
     };

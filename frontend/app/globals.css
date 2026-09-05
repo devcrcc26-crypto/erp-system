@@ -4174,7 +4174,8 @@ main::-webkit-scrollbar,
 .erp-inspection-repair-form-page .ant-btn,
 .erp-exit-permit-form-page .ant-btn,
 .erp-official-seal-form-page .ant-btn,
-.erp-project-seal-form-page .ant-btn {
+.erp-project-seal-form-page .ant-btn,
+.erp-leave-policy-form-page .ant-btn {
   border-radius: 8px;
 }
 
@@ -4245,7 +4246,13 @@ main::-webkit-scrollbar,
 .erp-project-seal-form-page .ant-input-textarea textarea,
 .erp-project-seal-form-page .ant-select-selector,
 .erp-project-seal-form-page .ant-picker,
-.erp-project-seal-form-page .ant-input-number {
+.erp-project-seal-form-page .ant-input-number,
+.erp-leave-policy-form-page .ant-input,
+.erp-leave-policy-form-page .ant-input-affix-wrapper,
+.erp-leave-policy-form-page .ant-input-textarea textarea,
+.erp-leave-policy-form-page .ant-select-selector,
+.erp-leave-policy-form-page .ant-picker,
+.erp-leave-policy-form-page .ant-input-number {
   border-radius: 8px !important;
 }
 

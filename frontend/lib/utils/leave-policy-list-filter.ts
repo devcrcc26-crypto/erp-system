@@ -1,11 +1,14 @@
 import type { LeavePolicy } from '@/lib/api/leave-policy.types';
 
+export type LeavePolicyStatusMode =
+  | 'all'
+  | 'active'
+  | 'inactive'
+  | 'progressive';
+
 export interface LeavePolicyListFilters {
   search: string;
-  /** `undefined` = all */
-  isActive?: boolean;
-  /** `undefined` = all; filters on annual rule progressive flag */
-  isProgressive?: boolean;
+  statusMode?: LeavePolicyStatusMode;
 }
 
 function policyHasProgressiveAnnual(policy: LeavePolicy): boolean {
@@ -15,27 +18,24 @@ function policyHasProgressiveAnnual(policy: LeavePolicy): boolean {
 }
 
 /**
- * Client-side filter for leave policy list (search + status + progressive).
+ * Client-side filter for leave policy list (search + status mode).
  */
 export function filterLeavePolicies(
   policies: LeavePolicy[],
   filters: LeavePolicyListFilters,
 ): LeavePolicy[] {
   const needle = filters.search.trim().toLowerCase();
+  const mode = filters.statusMode ?? 'all';
 
   return policies.filter((policy) => {
-    if (
-      filters.isActive !== undefined &&
-      policy.isActive !== filters.isActive
-    ) {
+    if (mode === 'active' && !policy.isActive) {
       return false;
     }
-
-    if (filters.isProgressive !== undefined) {
-      const progressive = policyHasProgressiveAnnual(policy);
-      if (progressive !== filters.isProgressive) {
-        return false;
-      }
+    if (mode === 'inactive' && policy.isActive) {
+      return false;
+    }
+    if (mode === 'progressive' && !policyHasProgressiveAnnual(policy)) {
+      return false;
     }
 
     if (!needle) {

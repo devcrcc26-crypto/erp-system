@@ -245,7 +245,9 @@
       "leavePolicy": {
         "new": "New Leave Policy",
         "edit": "Edit Leave Policy",
-        "detail": "Leave Policy"
+        "detail": "Leave Policy",
+        "listTitle": "Leave Policies",
+        "listDescription": "Configure annual, maternity, and sick leave rules for employees."
       },
       "overtime": {
         "new": "This month's sheet",
@@ -2061,6 +2063,12 @@
       "backToList": "Back to leave policies",
       "policyCount": "{{count}} policies",
       "policyCountOne": "1 policy",
+      "stats": {
+        "total": "Total",
+        "active": "Active",
+        "inactive": "Inactive",
+        "progressive": "Progressive"
+      },
       "steps": {
         "details": "Policy details",
         "leaveRules": "Leave rules"

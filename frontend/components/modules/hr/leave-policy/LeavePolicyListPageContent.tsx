@@ -2,12 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   Dropdown,
+  Grid,
   Input,
-  Select,
-  Space,
   Spin,
   Tooltip,
   type MenuProps,
@@ -20,75 +18,120 @@ import {
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   StopOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
-import { ApiRequestError } from '@/lib/api/errors';
 import type { LeavePolicy } from '@/lib/api/leave-policy.types';
 import type { PaginationMeta } from '@/lib/api/types';
+import { useDeleteLeavePolicy, useLeavePolicyList } from '@/lib/query/leave-policy';
 import {
-  useDeleteLeavePolicy,
-  useLeavePolicyList,
-  useRefreshLeaveBalances,
-} from '@/lib/query/leave-policy';
-import { tokens } from '@/lib/theme/tokens';
-import { filterLeavePolicies } from '@/lib/utils/leave-policy-list-filter';
+  filterLeavePolicies,
+  type LeavePolicyStatusMode,
+} from '@/lib/utils/leave-policy-list-filter';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
+const LIST_PATH = '/hr/leave-policy';
+const NEW_PATH = '/hr/leave-policy/new';
+
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  gray: { bg: '#F0F1F3', fg: '#5F6B7A' },
+} as const;
+
+function LeavePolicyStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
+
 /**
- * HR leave policy list — layout aligned with Users page.
+ * Leave policy list — Users chrome (stat bar, filter row, soft table).
  */
 export default function LeavePolicyListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const listQuery = useLeavePolicyList(canViewHr);
   const deleteMutation = useDeleteLeavePolicy();
-  const refreshMutation = useRefreshLeaveBalances();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<boolean | undefined>();
-  const [progressiveFilter, setProgressiveFilter] = useState<
-    boolean | undefined
-  >();
+  const [statusMode, setStatusMode] = useState<LeavePolicyStatusMode>('all');
+
+  const allRows = listQuery.data ?? [];
+
+  const statusCounts = useMemo(() => {
+    return {
+      all: allRows.length,
+      active: allRows.filter((policy) => policy.isActive).length,
+      inactive: allRows.filter((policy) => !policy.isActive).length,
+      progressive: allRows.filter((policy) =>
+        policy.rules.some(
+          (rule) => rule.leaveType === 'ANNUAL' && rule.isProgressive,
+        ),
+      ).length,
+    };
+  }, [allRows]);
 
   const filtered = useMemo(
     () =>
-      filterLeavePolicies(listQuery.data ?? [], {
+      filterLeavePolicies(allRows, {
         search: appliedSearch,
-        isActive: activeFilter,
-        isProgressive: progressiveFilter,
+        statusMode,
       }),
-    [listQuery.data, appliedSearch, activeFilter, progressiveFilter],
+    [allRows, appliedSearch, statusMode],
   );
-
-  const stats = useMemo(() => {
-    const all = listQuery.data ?? [];
-    return {
-      total: all.length,
-      active: all.filter((p) => p.isActive).length,
-      inactive: all.filter((p) => !p.isActive).length,
-      progressive: all.filter((p) =>
-        p.rules.some((r) => r.leaveType === 'ANNUAL' && r.isProgressive),
-      ).length,
-    };
-  }, [listQuery.data]);
 
   const meta: PaginationMeta = useMemo(() => {
     const total = filtered.length;
@@ -120,24 +163,15 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
     }
   }
 
-  async function handleRefreshBalances(): Promise<void> {
-    try {
-      const result = await refreshMutation.mutateAsync(
-        new Date().getFullYear(),
-      );
-      messageApi.success(
-        t('hr.leavePolicy.refreshed', { count: result.refreshed }),
-      );
-    } catch (error: unknown) {
-      notifyApiError(error, t('hr.leavePolicy.refreshFailed'), messageApi);
-    }
-  }
-
   function handleResetFilters(): void {
     setSearch('');
     setAppliedSearch('');
-    setActiveFilter(undefined);
-    setProgressiveFilter(undefined);
+    setStatusMode('all');
+    resetPage();
+  }
+
+  function handleStatusMode(mode: LeavePolicyStatusMode): void {
+    setStatusMode(mode);
     resetPage();
   }
 
@@ -147,7 +181,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         key: 'update',
         icon: <EditOutlined />,
         label: t('common.update'),
-        onClick: () => router.push(`/hr/leave-policy/${row.id}/edit`),
+        onClick: () => router.push(`${LIST_PATH}/${row.id}/edit`),
       },
       {
         key: 'delete',
@@ -159,6 +193,9 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
     ];
   }
 
+  const hasFilters =
+    Boolean(appliedSearch.trim()) || statusMode !== 'all';
+
   const columns: ColumnsType<LeavePolicy> = useMemo(
     () => [
       {
@@ -166,18 +203,10 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         dataIndex: 'name',
         key: 'name',
         render: (_: unknown, row: LeavePolicy) => (
-          <div className="min-w-0 py-0.5">
-            <p
-              className="m-0 text-sm font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {row.name}
-            </p>
+          <div className="min-w-0">
+            <p className="erp-users-cell-strong m-0 truncate">{row.name}</p>
             {row.description ? (
-              <p
-                className="m-0 truncate text-xs"
-                style={{ color: tokens.colorTextTertiary }}
-              >
+              <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
                 {row.description}
               </p>
             ) : null}
@@ -190,7 +219,9 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         key: 'governedBy',
         ellipsis: true,
         responsive: ['lg'],
-        render: (value: string | null) => value || '—',
+        render: (value: string | null) => (
+          <span className="erp-users-cell-sub">{value || '—'}</span>
+        ),
       },
       {
         title: t('hr.leavePolicy.rules'),
@@ -199,6 +230,9 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         width: 100,
         align: 'right',
         responsive: ['md'],
+        render: (value: number) => (
+          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+        ),
       },
       {
         title: t('hr.leavePolicy.employees'),
@@ -207,12 +241,15 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         width: 120,
         align: 'right',
         responsive: ['md'],
+        render: (value: number) => (
+          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+        ),
       },
       {
         title: t('common.status'),
         dataIndex: 'isActive',
         key: 'isActive',
-        width: 110,
+        width: isNarrow ? 100 : 110,
         render: (value: boolean) => (
           <StatusBadge
             label={value ? t('common.active') : t('common.inactive')}
@@ -239,46 +276,44 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
                 type="text"
                 icon={<MoreOutlined />}
                 aria-label={t('common.actions')}
-                style={{ borderRadius: 0 }}
               />
             </Dropdown>
           </div>
         ),
       },
     ],
-    [router, t],
+    [isNarrow, router, t],
   );
 
   if (!canViewHr) {
     return (
-      <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
+      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page">
+        <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
+      </div>
     );
   }
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
-  const hasFilters =
-    Boolean(appliedSearch.trim()) ||
-    activeFilter !== undefined ||
-    progressiveFilter !== undefined;
-
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-leave-policy-page">
       {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={
-            listQuery.error instanceof ApiRequestError
-              ? listQuery.error.message
-              : t('hr.leavePolicy.loadError')
-          }
+        <ErpNotice
+          tone="error"
+          className="mb-4"
+          title={getFriendlyApiErrorMessage(
+            listQuery.error,
+            t('hr.leavePolicy.loadError'),
+            t,
+          )}
         />
       ) : null}
 
@@ -292,44 +327,88 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteId(null)}
       />
-<div className="mb-1 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
-          label="Total"
-          value={stats.total}
-          color="teal"
+
+      <div className="erp-users-stat-bar">
+        <LeavePolicyStat
+          label={t('hr.leavePolicy.stats.total')}
+          value={statusCounts.all}
+          accent="teal"
           icon={<FileTextOutlined />}
+          active={statusMode === 'all'}
+          onClick={() => handleStatusMode('all')}
         />
-        <StatCard
-          label="Active"
-          value={stats.active}
-          color="green"
+        <LeavePolicyStat
+          label={t('hr.leavePolicy.stats.active')}
+          value={statusCounts.active}
+          accent="green"
           icon={<CheckCircleOutlined />}
+          active={statusMode === 'active'}
+          onClick={() => handleStatusMode('active')}
         />
-        <StatCard
-          label="Inactive"
-          value={stats.inactive}
-          color="default"
+        <LeavePolicyStat
+          label={t('hr.leavePolicy.stats.inactive')}
+          value={statusCounts.inactive}
+          accent="gray"
           icon={<StopOutlined />}
+          active={statusMode === 'inactive'}
+          onClick={() => handleStatusMode('inactive')}
         />
-        <StatCard
-          label="Progressive"
-          value={stats.progressive}
-          color="blue"
+        <LeavePolicyStat
+          label={t('hr.leavePolicy.stats.progressive')}
+          value={statusCounts.progressive}
+          accent="amber"
           icon={<ReloadOutlined />}
+          active={statusMode === 'progressive'}
+          onClick={() => handleStatusMode('progressive')}
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <Input.Search
-            placeholder={t('hr.leavePolicy.searchPlaceholder')}
-            className="w-full min-w-0 sm:w-72"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('hr.leavePolicy.listTitle')}
+            </h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push(NEW_PATH)}
+              aria-label={t('hr.leavePolicy.new')}
+            >
+              {isNarrow ? undefined : t('hr.leavePolicy.new')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('hr.leavePolicy.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onSearch={(value) => {
+            onChange={(e) => {
+              const value = e.target.value;
               setSearch(value);
               setAppliedSearch(value.trim());
+              resetPage();
+            }}
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
               resetPage();
             }}
             onClear={() => {
@@ -338,109 +417,27 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
-          <Select
-            allowClear
-            placeholder={t('hr.leavePolicy.filterStatus')}
-            className="w-full min-w-0 sm:w-36"
-            value={activeFilter}
-            onChange={(value?: boolean) => {
-              setActiveFilter(value);
-              resetPage();
-            }}
-            options={[
-              { value: true, label: t('common.active') },
-              { value: false, label: t('common.inactive') },
-            ]}
-          />
-          <Select
-            allowClear
-            placeholder={t('hr.leavePolicy.filterProgressive')}
-            className="w-full min-w-0 sm:w-40"
-            value={progressiveFilter}
-            onChange={(value?: boolean) => {
-              setProgressiveFilter(value);
-              resetPage();
-            }}
-            options={[
-              { value: true, label: t('common.yes') },
-              { value: false, label: t('common.no') },
-            ]}
-          />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-leave-policy" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {t('hr.leavePolicy.listTitle')}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {meta.total === 1
-                ? t('hr.leavePolicy.policyCountOne')
-                : t('hr.leavePolicy.policyCount', { count: meta.total })}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            {/* <Button
-              icon={<ReloadOutlined />}
-              loading={refreshMutation.isPending}
-              onClick={() => void handleRefreshBalances()}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.leavePolicy.refreshBalances')}
-            </Button> */}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/hr/leave-policy/new')}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.leavePolicy.new')}
+          <span className="erp-users-filter-spacer" aria-hidden />
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
             </Button>
-          </Space>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<LeavePolicy>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={pageRows}
-            scroll={false}
+            loading={listQuery.isFetching && pageRows.length === 0}
+            scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 960 }}
             onRow={(record) => ({
-              onClick: () => router.push(`/hr/leave-policy/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              onClick: () => router.push(`${LIST_PATH}/${record.id}`),
+              className: 'cursor-pointer',
             })}
-            pagination={{
-              ...bindMeta(meta),
-              pageSizeOptions: ['10', '20', '50', '100'],
-            }}
             locale={{
               emptyText: (
                 <TableEmptyState
@@ -450,6 +447,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
                       ? t('hr.leavePolicy.emptyFiltered')
                       : t('hr.leavePolicy.empty')
                   }
+                  description={t('pages.hr.leavePolicy.listDescription')}
                   action={
                     hasFilters
                       ? {
@@ -458,11 +456,17 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
                         }
                       : {
                           label: t('hr.leavePolicy.new'),
-                          onClick: () => router.push('/hr/leave-policy/new'),
+                          onClick: () => router.push(NEW_PATH),
                         }
                   }
                 />
               ),
+            }}
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
             }}
           />
         </div>

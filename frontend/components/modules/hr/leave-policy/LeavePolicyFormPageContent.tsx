@@ -1,29 +1,32 @@
 'use client';
 
-import { Alert, Button, Spin } from 'antd';
+import { Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import LeavePolicyForm, {
   buildLeavePolicyRules,
   type LeavePolicyFormValues,
 } from '@/components/modules/hr/leave-policy/LeavePolicyForm';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
-import { ApiRequestError } from '@/lib/api/errors';
 import {
   useCreateLeavePolicy,
   useLeavePolicy,
   useUpdateLeavePolicy,
 } from '@/lib/query/leave-policy';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+
+const LIST_PATH = '/hr/leave-policy';
 
 interface LeavePolicyFormPageContentProps {
   policyId?: string;
 }
 
 /**
- * Full-page create / edit leave policy.
+ * Create / edit leave policy — title in MainContentHeader; cancel + form.
  */
 export default function LeavePolicyFormPageContent({
   policyId,
@@ -53,11 +56,12 @@ export default function LeavePolicyFormPageContent({
       if (isEdit && policyId) {
         await updateMutation.mutateAsync(payload);
         messageApi.success(t('hr.leavePolicy.updated'));
+        router.push(`${LIST_PATH}/${policyId}`);
       } else {
-        await createMutation.mutateAsync(payload);
+        const created = await createMutation.mutateAsync(payload);
         messageApi.success(t('hr.leavePolicy.created'));
+        router.push(`${LIST_PATH}/${created.id}`);
       }
-      router.push('/hr/leave-policy');
     } catch (error: unknown) {
       notifyApiError(
         error,
@@ -71,7 +75,7 @@ export default function LeavePolicyFormPageContent({
 
   if (isEdit && policyQuery.isLoading && !policyQuery.data) {
     return (
-      <div className="flex justify-center p-12">
+      <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page flex justify-center p-12">
         <Spin />
       </div>
     );
@@ -79,28 +83,32 @@ export default function LeavePolicyFormPageContent({
 
   if (isEdit && policyQuery.isError) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        title={
-          policyQuery.error instanceof ApiRequestError
-            ? policyQuery.error.message
-            : t('hr.leavePolicy.loadError')
-        }
-      />
+      <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page">
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            policyQuery.error,
+            t('hr.leavePolicy.loadError'),
+            t,
+          )}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-end gap-2">
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page flex flex-col gap-4">
+      <div className="flex shrink-0 items-center justify-end">
         <Button
-            onClick={() => router.push('/hr/leave-policy')}
-            className="shrink-0"
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.cancel')}
-          </Button>
+          onClick={() =>
+            router.push(
+              isEdit && policyId ? `${LIST_PATH}/${policyId}` : LIST_PATH,
+            )
+          }
+          className="shrink-0"
+        >
+          {t('common.cancel')}
+        </Button>
       </div>
       <LeavePolicyForm
         policy={policyQuery.data}

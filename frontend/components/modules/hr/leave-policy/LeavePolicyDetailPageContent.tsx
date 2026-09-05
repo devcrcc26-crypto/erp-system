@@ -1,29 +1,29 @@
 'use client';
 
-import { useState } from 'react';
-import { Alert, Button, Descriptions, Space, Spin } from 'antd';
+import { useMemo, useState } from 'react';
+import { Button, Dropdown, Grid, Skeleton, Tag } from 'antd';
+import type { MenuProps } from 'antd';
+import { MoreOutlined } from '@ant-design/icons';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import {
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
-import { ApiRequestError } from '@/lib/api/errors';
 import type { LeavePolicyRule } from '@/lib/api/leave-policy.types';
 import {
   useDeleteLeavePolicy,
   useLeavePolicy,
 } from '@/lib/query/leave-policy';
 import { formatLeaveType } from '@/lib/utils/leave-display';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { tokens } from '@/lib/theme/tokens';
 
+const LIST_PATH = '/hr/leave-policy';
 const RULE_ORDER = ['ANNUAL', 'MATERNITY', 'SICK'] as const;
 
 function sortRules(rules: LeavePolicyRule[]): LeavePolicyRule[] {
@@ -38,12 +38,38 @@ function sortRules(rules: LeavePolicyRule[]): LeavePolicyRule[] {
   });
 }
 
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  action?: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">{title}</h3>
+        {action}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 interface LeavePolicyDetailPageContentProps {
   policyId: string;
 }
 
 /**
- * Read-only leave policy detail — chrome aligned with employee detail.
+ * Leave policy detail — Users / employee profile chrome.
  */
 export default function LeavePolicyDetailPageContent({
   policyId,
@@ -51,6 +77,9 @@ export default function LeavePolicyDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const policyQuery = useLeavePolicy(policyId, canViewHr);
   const deleteMutation = useDeleteLeavePolicy();
@@ -64,49 +93,81 @@ export default function LeavePolicyDetailPageContent({
       await deleteMutation.mutateAsync(policyId);
       messageApi.success(t('hr.leavePolicy.deleted'));
       setConfirmDelete(false);
-      router.push('/hr/leave-policy');
+      router.push(LIST_PATH);
     } catch (error: unknown) {
       notifyApiError(error, t('hr.leavePolicy.deleteBlocked'), messageApi);
     }
   }
 
+  const rules = useMemo(
+    () => (policy ? sortRules(policy.rules) : []),
+    [policy],
+  );
+
+  const hasProgressiveAnnual = useMemo(
+    () =>
+      rules.some(
+        (rule) => rule.leaveType === 'ANNUAL' && rule.isProgressive,
+      ),
+    [rules],
+  );
+
   if (!canViewHr) {
     return (
-      <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
+        <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
+      </div>
     );
   }
 
   if (policyQuery.isLoading && !policy) {
     return (
-      <div className="flex justify-center p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
+        <div className="erp-pro-card rounded-xl p-6">
+          <Skeleton active paragraph={{ rows: 6 }} />
+        </div>
       </div>
     );
   }
 
   if (policyQuery.isError || !policy) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        title={
-          policyQuery.error instanceof ApiRequestError
-            ? policyQuery.error.message
-            : t('hr.leavePolicy.loadError')
-        }
-        action={
-          <Button onClick={() => router.push('/hr/leave-policy')}>
-            {t('hr.leavePolicy.backToList')}
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            policyQuery.error,
+            t('hr.leavePolicy.loadError'),
+            t,
+          )}
+          action={
+            <Button onClick={() => router.push(LIST_PATH)}>
+              {t('hr.leavePolicy.backToList')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
-  const rules = sortRules(policy.rules);
+  const overflowMenuItems: MenuProps['items'] = [
+    {
+      key: 'edit',
+      label: t('common.update'),
+      icon: <Pencil size={14} />,
+      onClick: () => router.push(`${LIST_PATH}/${policy.id}/edit`),
+    },
+    {
+      key: 'delete',
+      label: t('common.delete'),
+      icon: <Trash2 size={14} />,
+      danger: true,
+      onClick: () => setConfirmDelete(true),
+    },
+  ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
       <ConfirmDialog
         open={confirmDelete}
         title={t('hr.leavePolicy.deleteTitle')}
@@ -118,148 +179,155 @@ export default function LeavePolicyDetailPageContent({
         onCancel={() => setConfirmDelete(false)}
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/leave-policy')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.leavePolicy.backToList')}
-        </Button>
-        <Space wrap className="ml-auto" size={8}>
-          <Button
-            type="primary"
-            icon={<Pencil size={14} />}
-            onClick={() => router.push(`/hr/leave-policy/${policy.id}/edit`)}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.update')}
-          </Button>
-          <Button
-            danger
-            icon={<Trash2 size={14} />}
-            onClick={() => setConfirmDelete(true)}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.delete')}
-          </Button>
-        </Space>
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push(LIST_PATH)}
+              aria-label={t('hr.buttons.back')}
+            >
+              {isNarrow ? undefined : t('hr.leavePolicy.backToList')}
+            </Button>
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {isNarrow ? (
+              <Dropdown
+                menu={{ items: overflowMenuItems }}
+                trigger={['click']}
+              >
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
+                />
+              </Dropdown>
+            ) : (
+              <>
+                <Button
+                  type="primary"
+                  icon={<Pencil size={14} />}
+                  onClick={() =>
+                    router.push(`${LIST_PATH}/${policy.id}/edit`)
+                  }
+                  aria-label={t('common.update')}
+                >
+                  {isCompact ? undefined : t('common.update')}
+                </Button>
+                <Button
+                  danger
+                  icon={<Trash2 size={14} />}
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label={t('common.delete')}
+                >
+                  {isCompact ? undefined : t('common.delete')}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <StatusBadge
+                label={
+                  policy.isActive ? t('common.active') : t('common.inactive')
+                }
+                variant={policy.isActive ? 'success' : 'default'}
+              />
+              {hasProgressiveAnnual ? (
+                <Tag color="orange">{t('hr.leavePolicy.isProgressive')}</Tag>
+              ) : null}
+            </div>
+            <h1 className="erp-employee-hero-title m-0">{policy.name}</h1>
+            {policy.description ? (
+              <p className="erp-employee-hero-subtitle m-0 mt-1">
+                {policy.description}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+          <div className="erp-users-stat erp-contract-stat">
+            <div className="min-w-0 text-left">
+              <p className="erp-users-stat-label">
+                {t('hr.leavePolicy.governedBy')}
+              </p>
+              <p className="erp-users-stat-value truncate text-base">
+                {policy.governedBy || '—'}
+              </p>
+            </div>
+          </div>
+          <div className="erp-users-stat erp-contract-stat">
+            <div className="min-w-0 text-left">
+              <p className="erp-users-stat-label">
+                {t('hr.leavePolicy.employees')}
+              </p>
+              <p className="erp-users-stat-value">
+                {policy.employeeCount.toLocaleString()}
+              </p>
+            </div>
+          </div>
+          <div className="erp-users-stat erp-contract-stat">
+            <div className="min-w-0 text-left">
+              <p className="erp-users-stat-label">{t('hr.leavePolicy.rules')}</p>
+              <p className="erp-users-stat-value">
+                {policy.ruleCount.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-4 sm:px-5">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <StatusBadge
-            label={
-              policy.isActive ? t('common.active') : t('common.inactive')
-            }
-            variant={policy.isActive ? 'success' : 'default'}
-          />
-        </div>
-        <h1
-          className="m-0 text-lg font-semibold"
-          style={{ color: tokens.colorTextPrimary }}
-        >
-          {policy.name}
-        </h1>
-        {policy.description ? (
-          <p
-            className="mb-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
+      <div className="erp-pro-card">
+        {rules.map((rule) => (
+          <DetailSection
+            key={rule.leaveType}
+            title={formatLeaveType(rule.leaveType, t)}
           >
-            {policy.description}
-          </p>
-        ) : null}
-        <div className="mt-4">
-          <SummaryStrip
-            items={[
-              {
-                label: t('hr.leavePolicy.governedBy'),
-                value: policy.governedBy || '—',
-              },
-              {
-                label: t('hr.leavePolicy.employees'),
-                value: policy.employeeCount,
-              },
-              {
-                label: t('hr.leavePolicy.rules'),
-                value: policy.ruleCount,
-              },
-            ]}
-          />
-        </div>
+            <div className="erp-employee-meta-grid grid gap-4 sm:grid-cols-2">
+              <MetaItem label={t('hr.leavePolicy.baseDays')}>
+                {rule.baseDays}
+              </MetaItem>
+              <MetaItem label={t('hr.leavePolicy.minimumServiceMonths')}>
+                {rule.minimumServiceMonths}
+              </MetaItem>
+              {rule.leaveType === 'ANNUAL' ? (
+                <>
+                  <MetaItem label={t('hr.leavePolicy.isProgressive')}>
+                    {rule.isProgressive ? t('common.yes') : t('common.no')}
+                  </MetaItem>
+                  <MetaItem label={t('hr.leavePolicy.maxCarryForwardDays')}>
+                    {rule.maxCarryForwardDays ?? '—'}
+                  </MetaItem>
+                  {rule.isProgressive ? (
+                    <>
+                      <MetaItem label={t('hr.leavePolicy.incrementDays')}>
+                        {rule.incrementDays ?? '—'}
+                      </MetaItem>
+                      <MetaItem
+                        label={t('hr.leavePolicy.incrementEveryYears')}
+                      >
+                        {rule.incrementEveryYears ?? '—'}
+                      </MetaItem>
+                      <MetaItem label={t('hr.leavePolicy.maxDaysCap')}>
+                        {rule.maxDaysCap ?? '—'}
+                      </MetaItem>
+                    </>
+                  ) : null}
+                </>
+              ) : null}
+              {rule.leaveType === 'SICK' ? (
+                <MetaItem label={t('hr.leavePolicy.requiresReceipt')}>
+                  {rule.requiresReceipt ? t('common.yes') : t('common.no')}
+                </MetaItem>
+              ) : null}
+            </div>
+          </DetailSection>
+        ))}
       </div>
-
-      {rules.map((rule) => (
-        <SectionCard
-          key={rule.leaveType}
-          title={formatLeaveType(rule.leaveType, t)}
-          bodyClassName="px-3 py-4 sm:px-5"
-        >
-          <Descriptions
-            column={{ xs: 1, sm: 1, md: 2 }}
-            size="small"
-            items={[
-              {
-                key: 'baseDays',
-                label: t('hr.leavePolicy.baseDays'),
-                children: rule.baseDays,
-              },
-              {
-                key: 'minimumServiceMonths',
-                label: t('hr.leavePolicy.minimumServiceMonths'),
-                children: rule.minimumServiceMonths,
-              },
-              ...(rule.leaveType === 'ANNUAL'
-                ? [
-                    {
-                      key: 'isProgressive',
-                      label: t('hr.leavePolicy.isProgressive'),
-                      children: rule.isProgressive
-                        ? t('common.yes')
-                        : t('common.no'),
-                    },
-                    {
-                      key: 'maxCarryForwardDays',
-                      label: t('hr.leavePolicy.maxCarryForwardDays'),
-                      children: rule.maxCarryForwardDays ?? '—',
-                    },
-                    ...(rule.isProgressive
-                      ? [
-                          {
-                            key: 'incrementDays',
-                            label: t('hr.leavePolicy.incrementDays'),
-                            children: rule.incrementDays ?? '—',
-                          },
-                          {
-                            key: 'incrementEveryYears',
-                            label: t('hr.leavePolicy.incrementEveryYears'),
-                            children: rule.incrementEveryYears ?? '—',
-                          },
-                          {
-                            key: 'maxDaysCap',
-                            label: t('hr.leavePolicy.maxDaysCap'),
-                            children: rule.maxDaysCap ?? '—',
-                          },
-                        ]
-                      : []),
-                  ]
-                : []),
-              ...(rule.leaveType === 'SICK'
-                ? [
-                    {
-                      key: 'requiresReceipt',
-                      label: t('hr.leavePolicy.requiresReceipt'),
-                      children: rule.requiresReceipt
-                        ? t('common.yes')
-                        : t('common.no'),
-                    },
-                  ]
-                : []),
-            ]}
-          />
-        </SectionCard>
-      ))}
     </div>
   );
 }

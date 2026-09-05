@@ -245,7 +245,9 @@
       "leavePolicy": {
         "new": "新建假期政策",
         "edit": "编辑假期政策",
-        "detail": "假期政策"
+        "detail": "假期政策",
+        "listTitle": "假期政策",
+        "listDescription": "为员工配置年假、产假与病假规则。"
       },
       "overtime": {
         "new": "本月加班表",
@@ -2061,6 +2063,12 @@
       "backToList": "返回请假政策",
       "policyCount": "{{count}} 项政策",
       "policyCountOne": "1 项政策",
+      "stats": {
+        "total": "全部",
+        "active": "启用",
+        "inactive": "停用",
+        "progressive": "累进"
+      },
       "steps": {
         "details": "政策详情",
         "leaveRules": "假期规则"

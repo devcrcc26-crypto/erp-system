@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo } from 'react';
 import {
-  Alert,
   Button,
   Form,
   Input,
   InputNumber,
   Switch,
 } from 'antd';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
@@ -283,10 +283,9 @@ export default function LeavePolicyForm({
             </>
           ) : null}
         </div>
-        <Alert
+        <ErpNotice
           className="mt-3"
-          type="info"
-          showIcon
+          tone="info"
           title={t('hr.leavePolicy.preview')}
           description={t('hr.leavePolicy.previewExample', {
             years: PREVIEW_YEARS,
@@ -335,12 +334,7 @@ export default function LeavePolicyForm({
 
       {showFooterActions ? (
         <div className="flex justify-end">
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={isSubmitting}
-            style={{ borderRadius: 0 }}
-          >
+          <Button type="primary" htmlType="submit" loading={isSubmitting}>
             {submitLabel}
           </Button>
         </div>
