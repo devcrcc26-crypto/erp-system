@@ -388,13 +388,6 @@ export default function CompanyAssetDetailPageContent({
     icon: <EditOutlined />,
     onClick: () => router.push(`/hr/company-asset/${assetId}/edit`),
   });
-  if (canIssue) {
-    overflowMenuItems.push({
-      key: 'issue',
-      label: t('hr.assetButtons.issueAsset'),
-      onClick: () => setIssueModalOpen(true),
-    });
-  }
   if (canReturn) {
     overflowMenuItems.push({
       key: 'return',
@@ -449,11 +442,6 @@ export default function CompanyAssetDetailPageContent({
                     {isCompact
                       ? t('hr.assetLabels.status')
                       : t('hr.assetButtons.changeStatus')}
-                  </Button>
-                ) : null}
-                {canIssue ? (
-                  <Button type="primary" onClick={() => setIssueModalOpen(true)}>
-                    {t('hr.assetButtons.issueAsset')}
                   </Button>
                 ) : null}
                 {canReturn ? (

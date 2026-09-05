@@ -1356,6 +1356,67 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname === '/hr/company-asset/new') {
+    return {
+      titleKey: 'pages.hr.companyAsset.new',
+      descriptionKey: 'pages.hr.companyAsset.formDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.companyAssets'),
+          href: '/hr/company-asset',
+        },
+        { label: t('pages.hr.companyAsset.new') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/company-asset/') && pathname.endsWith('/edit')) {
+    const assetId = pathname.split('/')[3];
+    return {
+      titleKey: 'pages.hr.companyAsset.edit',
+      descriptionKey: 'pages.hr.companyAsset.formDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.companyAssets'),
+          href: '/hr/company-asset',
+        },
+        {
+          label: t('pages.hr.companyAsset.detail'),
+          href: assetId ? `/hr/company-asset/${assetId}` : undefined,
+        },
+        { label: t('pages.hr.companyAsset.edit') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/company-asset/')) {
+    return {
+      titleKey: 'pages.hr.companyAsset.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('nav.hr.companyAssets'),
+          href: '/hr/company-asset',
+        },
+        { label: t('pages.hr.companyAsset.detail') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/company-asset') {
+    return {
+      titleKey: 'pages.hr.companyAsset.listTitle',
+      descriptionKey: 'pages.hr.companyAsset.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.companyAsset.listTitle') },
+      ],
+    };
+  }
+
   if (pathname.startsWith('/hr/')) {
     const titleKey = PAGE_TITLE_KEYS[pathname] ?? 'nav.groups.humanResources';
     return {
