@@ -6,19 +6,22 @@ import {
   Checkbox,
   DatePicker,
   Form,
+  Grid,
   Input,
   InputNumber,
   Select,
-  Space,
   Table,
+  Tooltip,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
+import { Pencil, ShoppingBag, Trash2 } from 'lucide-react';
 import dayjs from 'dayjs';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { apiPost } from '@/lib/api/client';
@@ -102,6 +105,9 @@ export default function ConsumablesRequisitionForm({
 }: ConsumablesRequisitionFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isNarrow = screens.sm === false;
+  const isCompact = screens.md === false;
   const [detailsForm] = Form.useForm<Step1Values>();
   const [itemForm] = Form.useForm<ItemFormValues>();
 
@@ -320,20 +326,37 @@ export default function ConsumablesRequisitionForm({
   }
 
   const totalBudget = sumBudgetAmount(items);
+  const tableScrollX = isNarrow ? 520 : isCompact ? 720 : 960;
 
   const itemColumns: ColumnsType<ClientItem> = [
     {
       title: t('hr.table.itemName'),
-      dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
+      render: (_: unknown, row: ClientItem) => (
+        <div className="min-w-0">
+          <span className="erp-users-cell-strong">{row.itemName}</span>
+          <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+            {[
+              row.itemCode,
+              `${row.quantity} ${row.unit}`.trim(),
+              row.unitPrice != null ? formatEtbAmount(row.unitPrice) : null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || '—'}
+          </p>
+        </div>
+      ),
     },
     {
       title: t('hr.table.itemCode'),
       dataIndex: 'itemCode',
       key: 'itemCode',
-      width: 100,
-      render: (value: string | undefined) => value || '—',
+      width: 110,
+      responsive: ['md'],
+      render: (value: string | undefined) => (
+        <span className="erp-users-cell-sub">{value || '—'}</span>
+      ),
     },
     {
       title: t('hr.form.modelSpec'),
@@ -341,71 +364,114 @@ export default function ConsumablesRequisitionForm({
       key: 'modelSpec',
       width: 120,
       ellipsis: true,
-      render: (value: string | undefined) => value || '—',
+      responsive: ['lg'],
+      render: (value: string | undefined) => (
+        <span className="erp-users-cell-sub">{value || '—'}</span>
+      ),
     },
     {
       title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (value: string | undefined) => value || '—',
+      responsive: ['xl'],
+      render: (value: string | undefined) => (
+        <span className="erp-users-cell-sub">{value || '—'}</span>
+      ),
     },
     {
       title: t('hr.table.quantity'),
       dataIndex: 'quantity',
       key: 'quantity',
-      width: 70,
+      width: isNarrow ? 64 : 80,
       align: 'right',
+      render: (value: number) => (
+        <span className="erp-users-cell-sub tabular-nums">{value}</span>
+      ),
     },
-    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 70 },
+    {
+      title: t('hr.table.unit'),
+      dataIndex: 'unit',
+      key: 'unit',
+      width: 72,
+      responsive: ['sm'],
+      render: (value: string) => (
+        <span className="erp-users-cell-sub">{value}</span>
+      ),
+    },
     {
       title: t('hr.table.unitPrice'),
       key: 'unitPrice',
-      width: 100,
+      width: isNarrow ? 96 : 110,
       align: 'right',
-      render: (_: unknown, row: ClientItem) =>
-        row.unitPrice != null ? formatEtbAmount(row.unitPrice) : '—',
+      responsive: ['md'],
+      render: (_: unknown, row: ClientItem) => (
+        <span className="erp-users-cell-sub tabular-nums">
+          {row.unitPrice != null ? formatEtbAmount(row.unitPrice) : '—'}
+        </span>
+      ),
     },
     {
       title: t('hr.form.budgetAmount'),
       key: 'budgetAmount',
-      width: 110,
+      width: isNarrow ? 100 : 120,
       align: 'right',
       render: (_: unknown, row: ClientItem) => {
         const amount =
           row.budgetAmount ??
           computeLineBudget(row.quantity, row.unitPrice ?? undefined);
-        return amount != null ? formatEtbAmount(amount) : '—';
+        return (
+          <span className="erp-users-cell-strong tabular-nums">
+            {amount != null ? formatEtbAmount(amount) : '—'}
+          </span>
+        );
       },
     },
     {
       title: '',
       key: 'actions',
-      width: 80,
+      width: 72,
+      fixed: isCompact ? ('right' as const) : undefined,
       render: (_: unknown, row: ClientItem) => (
-        <Space size={4}>
-          <Button
-            size="small"
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => openEditItem(row)}
-            style={{ borderRadius: 0 }}
-          />
-          <Button
-            size="small"
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => removeItem(row._key)}
-            style={{ borderRadius: 0 }}
-          />
-        </Space>
+        <div
+          className="erp-table-row-actions flex items-center justify-end gap-0.5"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <Tooltip title={t('common.update')}>
+            <Button
+              size="small"
+              type="text"
+              icon={<Pencil size={14} />}
+              onClick={() => openEditItem(row)}
+              aria-label={t('common.update')}
+            />
+          </Tooltip>
+          <Tooltip title={t('common.delete')}>
+            <Button
+              size="small"
+              type="text"
+              danger
+              icon={<Trash2 size={14} />}
+              onClick={() => removeItem(row._key)}
+              aria-label={t('common.delete')}
+            />
+          </Tooltip>
+        </div>
       ),
     },
   ];
 
   const reviewItemColumns = itemColumns.filter(
     (column) => column.key !== 'actions',
+  );
+
+  const itemsEmpty = (
+    <TableEmptyState
+      icon={<ShoppingBag size={28} strokeWidth={1.5} />}
+      title={t('hr.empty.noItems')}
+      description={t('pages.hr.consumables.itemsStepDescription')}
+    />
   );
 
   const steps = useMemo(
@@ -500,7 +566,6 @@ export default function ConsumablesRequisitionForm({
                       : undefined
                   }
                   onClick={openAddItem}
-                  style={{ borderRadius: 0 }}
                 >
                   {t('hr.buttons.addItem')}
                 </Button>
@@ -514,18 +579,23 @@ export default function ConsumablesRequisitionForm({
               description={t('hr.messages.consumablesLowValueOnlyDesc')}
             />
 
-            <Typography.Text
-              type="secondary"
-              style={{ display: 'block', marginBottom: 12 }}
-            >
-              {t('hr.form.itemCount', { count: items.length })} /{' '}
-              {CONSUMABLES_MAX_ITEMS}
-            </Typography.Text>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <Typography.Text type="secondary" className="text-sm">
+                {t('hr.form.itemCount', { count: items.length })} /{' '}
+                {CONSUMABLES_MAX_ITEMS}
+              </Typography.Text>
+              {totalBudget > 0 ? (
+                <Typography.Text className="text-sm font-medium tabular-nums">
+                  {t('hr.form.totalBudgetAmount')}:{' '}
+                  <strong>{formatEtbAmount(totalBudget)}</strong>
+                </Typography.Text>
+              ) : null}
+            </div>
 
             <div
               className={
                 showItemForm
-                  ? 'mb-4 rounded-none border border-[rgba(0,0,0,0.08)] p-4'
+                  ? 'mb-4 rounded-[12px] border border-[#e8ebef] p-4'
                   : 'hidden'
               }
               style={
@@ -614,41 +684,43 @@ export default function ConsumablesRequisitionForm({
                   </Form.Item>
                 </div>
               </Form>
-              <div className="flex justify-end gap-2">
-                <Button onClick={cancelItemForm} style={{ borderRadius: 0 }}>
-                  {t('hr.buttons.cancel')}
-                </Button>
-                <Button
-                  type="primary"
-                  onClick={() => void saveItem()}
-                  style={{ borderRadius: 0 }}
-                >
+              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button onClick={cancelItemForm}>{t('hr.buttons.cancel')}</Button>
+                <Button type="primary" onClick={() => void saveItem()}>
                   {editingKey ? t('common.save') : t('hr.buttons.addItem')}
                 </Button>
               </div>
             </div>
 
-            <Table<ClientItem>
-              rowKey="_key"
-              size="small"
-              columns={itemColumns}
-              dataSource={items}
-              pagination={false}
-              locale={{ emptyText: t('hr.empty.noItems') }}
-              scroll={{ x: 960 }}
-              footer={
-                items.length > 0 && totalBudget > 0
-                  ? () => (
-                      <div className="flex justify-end pr-2 text-sm font-medium">
-                        <span style={{ color: tokens.colorTextPrimary }}>
-                          {t('hr.form.totalBudgetAmount')}:{' '}
-                          <strong>{formatEtbAmount(totalBudget)}</strong>
-                        </span>
-                      </div>
-                    )
-                  : undefined
-              }
-            />
+            <div className="erp-table-scroll min-w-0 w-full overflow-x-auto overflow-y-clip">
+              <Table<ClientItem>
+                rowKey="_key"
+                size="small"
+                className="erp-data-table erp-pro-table erp-users-table"
+                columns={itemColumns}
+                dataSource={items}
+                pagination={false}
+                locale={{ emptyText: itemsEmpty }}
+                scroll={{ x: tableScrollX }}
+                footer={
+                  items.length > 0
+                    ? () => (
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm sm:justify-end sm:gap-4 sm:pr-2">
+                          <span className="erp-users-cell-sub">
+                            {t('hr.form.itemCount', { count: items.length })}
+                          </span>
+                          {totalBudget > 0 ? (
+                            <span className="erp-users-cell-strong tabular-nums">
+                              {t('hr.form.totalBudgetAmount')}:{' '}
+                              <strong>{formatEtbAmount(totalBudget)}</strong>
+                            </span>
+                          ) : null}
+                        </div>
+                      )
+                    : undefined
+                }
+              />
+            </div>
           </FormLayout>
         ),
       },
@@ -702,27 +774,35 @@ export default function ConsumablesRequisitionForm({
               title={t('hr.section.items')}
               description={t('hr.form.itemCount', { count: items.length })}
             >
-              <Table<ClientItem>
-                rowKey="_key"
-                size="small"
-                columns={reviewItemColumns}
-                dataSource={items}
-                pagination={false}
-                locale={{ emptyText: t('hr.empty.noItems') }}
-                scroll={{ x: 960 }}
-                footer={
-                  items.length > 0 && totalBudget > 0
-                    ? () => (
-                        <div className="flex justify-end pr-2 text-sm font-medium">
-                          <span style={{ color: tokens.colorTextPrimary }}>
-                            {t('hr.form.totalBudgetAmount')}:{' '}
-                            <strong>{formatEtbAmount(totalBudget)}</strong>
-                          </span>
-                        </div>
-                      )
-                    : undefined
-                }
-              />
+              <div className="erp-table-scroll min-w-0 w-full overflow-x-auto overflow-y-clip">
+                <Table<ClientItem>
+                  rowKey="_key"
+                  size="small"
+                  className="erp-data-table erp-pro-table erp-users-table"
+                  columns={reviewItemColumns}
+                  dataSource={items}
+                  pagination={false}
+                  locale={{ emptyText: itemsEmpty }}
+                  scroll={{ x: tableScrollX }}
+                  footer={
+                    items.length > 0
+                      ? () => (
+                          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm sm:justify-end sm:gap-4 sm:pr-2">
+                            <span className="erp-users-cell-sub">
+                              {t('hr.form.itemCount', { count: items.length })}
+                            </span>
+                            {totalBudget > 0 ? (
+                              <span className="erp-users-cell-strong tabular-nums">
+                                {t('hr.form.totalBudgetAmount')}:{' '}
+                                <strong>{formatEtbAmount(totalBudget)}</strong>
+                              </span>
+                            ) : null}
+                          </div>
+                        )
+                      : undefined
+                  }
+                />
+              </div>
             </FormLayout>
 
             <FormLayout
@@ -762,6 +842,10 @@ export default function ConsumablesRequisitionForm({
       departmentsQuery.isLoading,
       departmentOptions,
       totalBudget,
+      tableScrollX,
+      itemsEmpty,
+      isNarrow,
+      isCompact,
     ],
   );
 
