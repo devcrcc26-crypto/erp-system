@@ -3534,7 +3534,8 @@ main::-webkit-scrollbar,
 
 .erp-expense-claim-detail-page .erp-employee-toolbar-actions .ant-btn,
 .erp-purchase-request-detail-page .erp-employee-toolbar-actions .ant-btn,
-.erp-material-requisition-detail-page .erp-employee-toolbar-actions .ant-btn {
+.erp-material-requisition-detail-page .erp-employee-toolbar-actions .ant-btn,
+.erp-consumables-detail-page .erp-employee-toolbar-actions .ant-btn {
   border-radius: 8px;
 }
 
@@ -3556,19 +3557,22 @@ main::-webkit-scrollbar,
 @media (min-width: 901px) {
   .erp-expense-claim-detail-page .erp-employee-meta-bar,
   .erp-purchase-request-detail-page .erp-employee-meta-bar,
-  .erp-material-requisition-detail-page .erp-employee-meta-bar {
+  .erp-material-requisition-detail-page .erp-employee-meta-bar,
+  .erp-consumables-detail-page .erp-employee-meta-bar {
     grid-template-columns: repeat(4, 1fr);
   }
 
   .erp-expense-claim-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n),
   .erp-purchase-request-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n),
-  .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n) {
+  .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n),
+  .erp-consumables-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n) {
     border-right: 1px solid #eef1f4;
   }
 
   .erp-expense-claim-detail-page .erp-employee-meta-bar .erp-users-stat:last-child,
   .erp-purchase-request-detail-page .erp-employee-meta-bar .erp-users-stat:last-child,
-  .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat:last-child {
+  .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat:last-child,
+  .erp-consumables-detail-page .erp-employee-meta-bar .erp-users-stat:last-child {
     border-right: none;
   }
 
@@ -3579,6 +3583,9 @@ main::-webkit-scrollbar,
     .erp-employee-meta-bar
     .erp-users-stat:nth-child(-n + 3),
   .erp-material-requisition-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(-n + 3),
+  .erp-consumables-detail-page
     .erp-employee-meta-bar
     .erp-users-stat:nth-child(-n + 3) {
     border-bottom: none;
@@ -3588,20 +3595,23 @@ main::-webkit-scrollbar,
 @media (max-width: 900px) {
   .erp-expense-claim-detail-page .erp-employee-meta-bar,
   .erp-purchase-request-detail-page .erp-employee-meta-bar,
-  .erp-material-requisition-detail-page .erp-employee-meta-bar {
+  .erp-material-requisition-detail-page .erp-employee-meta-bar,
+  .erp-consumables-detail-page .erp-employee-meta-bar {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .erp-expense-claim-detail-page .erp-employee-meta-bar .erp-users-stat,
   .erp-purchase-request-detail-page .erp-employee-meta-bar .erp-users-stat,
-  .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat {
+  .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat,
+  .erp-consumables-detail-page .erp-employee-meta-bar .erp-users-stat {
     border-right: 1px solid #eef1f4;
     border-bottom: 1px solid #eef1f4;
   }
 
   .erp-expense-claim-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(2n),
   .erp-purchase-request-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(2n),
-  .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(2n) {
+  .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(2n),
+  .erp-consumables-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(2n) {
     border-right: none;
   }
 
@@ -3612,6 +3622,9 @@ main::-webkit-scrollbar,
     .erp-employee-meta-bar
     .erp-users-stat:nth-last-child(-n + 2),
   .erp-material-requisition-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-last-child(-n + 2),
+  .erp-consumables-detail-page
     .erp-employee-meta-bar
     .erp-users-stat:nth-last-child(-n + 2) {
     border-bottom: none;
@@ -3622,6 +3635,7 @@ main::-webkit-scrollbar,
   .erp-expense-claims-page .erp-users-stat-bar,
   .erp-purchase-requests-page .erp-users-stat-bar,
   .erp-material-requisitions-page .erp-users-stat-bar,
+  .erp-consumables-page .erp-users-stat-bar,
   .erp-per-diem-page .erp-users-stat-bar,
   .erp-employee-per-diem-rates-page .erp-users-stat-bar,
   .erp-org-departments-page .erp-users-stat-bar,
@@ -3634,6 +3648,7 @@ main::-webkit-scrollbar,
   .erp-expense-claims-page .erp-users-toolbar-actions,
   .erp-purchase-requests-page .erp-users-toolbar-actions,
   .erp-material-requisitions-page .erp-users-toolbar-actions,
+  .erp-consumables-page .erp-users-toolbar-actions,
   .erp-per-diem-page .erp-users-toolbar-actions,
   .erp-employee-per-diem-rates-page .erp-users-toolbar-actions,
   .erp-org-departments-page .erp-users-toolbar-actions,
@@ -3645,7 +3660,8 @@ main::-webkit-scrollbar,
 
   .erp-expense-claim-detail-page .erp-employee-section-header,
   .erp-purchase-request-detail-page .erp-employee-section-header,
-  .erp-material-requisition-detail-page .erp-employee-section-header {
+  .erp-material-requisition-detail-page .erp-employee-section-header,
+  .erp-consumables-detail-page .erp-employee-section-header {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
@@ -3653,20 +3669,23 @@ main::-webkit-scrollbar,
 
   .erp-expense-claim-detail-page .erp-employee-section-header .ant-btn,
   .erp-purchase-request-detail-page .erp-employee-section-header .ant-btn,
-  .erp-material-requisition-detail-page .erp-employee-section-header .ant-btn {
+  .erp-material-requisition-detail-page .erp-employee-section-header .ant-btn,
+  .erp-consumables-detail-page .erp-employee-section-header .ant-btn {
     width: 100%;
   }
 
   .erp-expense-claim-detail-page .erp-employee-toolbar,
   .erp-purchase-request-detail-page .erp-employee-toolbar,
-  .erp-material-requisition-detail-page .erp-employee-toolbar {
+  .erp-material-requisition-detail-page .erp-employee-toolbar,
+  .erp-consumables-detail-page .erp-employee-toolbar {
     flex-wrap: nowrap;
     gap: 8px;
   }
 
   .erp-expense-claim-detail-page .erp-employee-toolbar-actions,
   .erp-purchase-request-detail-page .erp-employee-toolbar-actions,
-  .erp-material-requisition-detail-page .erp-employee-toolbar-actions {
+  .erp-material-requisition-detail-page .erp-employee-toolbar-actions,
+  .erp-consumables-detail-page .erp-employee-toolbar-actions {
     flex: 1 1 auto;
     min-width: 0;
     flex-wrap: nowrap;
@@ -3676,27 +3695,31 @@ main::-webkit-scrollbar,
 
   .erp-expense-claim-detail-page .erp-employee-toolbar-actions .ant-btn,
   .erp-purchase-request-detail-page .erp-employee-toolbar-actions .ant-btn,
-  .erp-material-requisition-detail-page .erp-employee-toolbar-actions .ant-btn {
+  .erp-material-requisition-detail-page .erp-employee-toolbar-actions .ant-btn,
+  .erp-consumables-detail-page .erp-employee-toolbar-actions .ant-btn {
     padding-inline: 10px;
   }
 
   .erp-expense-claim-detail-page .erp-contract-detail-body,
   .erp-purchase-request-detail-page .erp-contract-detail-body,
-  .erp-material-requisition-detail-page .erp-contract-detail-body {
+  .erp-material-requisition-detail-page .erp-contract-detail-body,
+  .erp-consumables-detail-page .erp-contract-detail-body {
     padding: 12px;
     gap: 12px;
   }
 
   .erp-expense-claim-detail-page .erp-users-email,
   .erp-purchase-request-detail-page .erp-users-email,
-  .erp-material-requisition-detail-page .erp-users-email {
+  .erp-material-requisition-detail-page .erp-users-email,
+  .erp-consumables-detail-page .erp-users-email {
     text-align: center;
   }
 
   .erp-expense-claim-form-page .erp-expense-item-form-actions .ant-btn,
   .erp-expense-claim-form-page .erp-expense-claim-edit-actions .ant-btn,
   .erp-purchase-request-form-page .erp-purchase-request-form-actions .ant-btn,
-  .erp-material-requisition-form-page .erp-material-requisition-form-actions .ant-btn {
+  .erp-material-requisition-form-page .erp-material-requisition-form-actions .ant-btn,
+  .erp-consumables-form-page .erp-consumables-form-actions .ant-btn {
     width: 100%;
   }
 
@@ -3717,13 +3740,15 @@ main::-webkit-scrollbar,
 
   .erp-expense-claim-detail-page .erp-employee-hero,
   .erp-purchase-request-detail-page .erp-employee-hero,
-  .erp-material-requisition-detail-page .erp-employee-hero {
+  .erp-material-requisition-detail-page .erp-employee-hero,
+  .erp-consumables-detail-page .erp-employee-hero {
     padding: 14px 12px 16px;
   }
 
   .erp-expense-claim-detail-page .erp-employee-hero-name,
   .erp-purchase-request-detail-page .erp-employee-hero-name,
-  .erp-material-requisition-detail-page .erp-employee-hero-name {
+  .erp-material-requisition-detail-page .erp-employee-hero-name,
+  .erp-consumables-detail-page .erp-employee-hero-name {
     font-size: calc(17px * var(--erp-font-scale));
   }
 
@@ -3747,7 +3772,8 @@ main::-webkit-scrollbar,
 
   .erp-expense-claim-detail-page .erp-employee-meta-value,
   .erp-purchase-request-detail-page .erp-employee-meta-value,
-  .erp-material-requisition-detail-page .erp-employee-meta-value {
+  .erp-material-requisition-detail-page .erp-employee-meta-value,
+  .erp-consumables-detail-page .erp-employee-meta-value {
     font-size: calc(12px * var(--erp-font-scale));
   }
 }
@@ -3756,6 +3782,7 @@ main::-webkit-scrollbar,
   .erp-expense-claims-page .erp-users-stat-value,
   .erp-purchase-requests-page .erp-users-stat-value,
   .erp-material-requisitions-page .erp-users-stat-value,
+  .erp-consumables-page .erp-users-stat-value,
   .erp-per-diem-page .erp-users-stat-value,
   .erp-employee-per-diem-rates-page .erp-users-stat-value,
   .erp-org-departments-page .erp-users-stat-value,
@@ -3770,6 +3797,7 @@ main::-webkit-scrollbar,
   .erp-expense-claims-page .erp-users-stat-chip,
   .erp-purchase-requests-page .erp-users-stat-chip,
   .erp-material-requisitions-page .erp-users-stat-chip,
+  .erp-consumables-page .erp-users-stat-chip,
   .erp-per-diem-page .erp-users-stat-chip,
   .erp-employee-per-diem-rates-page .erp-users-stat-chip,
   .erp-org-departments-page .erp-users-stat-chip,
@@ -4127,7 +4155,8 @@ main::-webkit-scrollbar,
 .erp-per-diem-form-page .ant-btn,
 .erp-employee-per-diem-form-page .ant-btn,
 .erp-purchase-request-form-page .ant-btn,
-.erp-material-requisition-form-page .ant-btn {
+.erp-material-requisition-form-page .ant-btn,
+.erp-consumables-form-page .ant-btn {
   border-radius: 8px;
 }
 

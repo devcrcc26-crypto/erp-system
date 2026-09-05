@@ -49,6 +49,60 @@ function buildListQuery(params: ListConsumablesRequisitionsParams): string {
   return toQueryString({ ...rest, status: statusValue });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the consumables list endpoint (filter locally).
+ */
+async function fetchAllConsumablesRequisitionPages(
+  params: Omit<
+    ListConsumablesRequisitionsParams,
+    'page' | 'limit' | 'search'
+  > = {},
+): Promise<ConsumablesRequisitionListItem[]> {
+  const first = await apiGetPaginated<ConsumablesRequisitionListItem>(
+    `${CONSUMABLES_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<ConsumablesRequisitionListItem>(
+        `${CONSUMABLES_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All consumables requisitions (all pages) for client-side filter/search. */
+export function useConsumablesRequisitionsAll(
+  params: Omit<
+    ListConsumablesRequisitionsParams,
+    'page' | 'limit' | 'search'
+  > = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...consumablesRequisitionKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllConsumablesRequisitionPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 /** Paginated consumables requisitions. */
 export function useConsumablesRequisitions(
   params: ListConsumablesRequisitionsParams = { page: 1, limit: 20 },

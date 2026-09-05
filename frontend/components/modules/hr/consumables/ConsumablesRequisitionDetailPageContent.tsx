@@ -4,29 +4,29 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  Empty,
+  Dropdown,
   Form,
+  Grid,
   Input,
   InputNumber,
   Modal,
   Skeleton,
-  Space,
   Tag,
-  Typography,
+  Tooltip,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { MoreOutlined, StopOutlined } from '@ant-design/icons';
+import { ArrowLeft, Pencil, ShoppingBag, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
-import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
-import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -36,23 +36,47 @@ import type {
 import { CONSUMABLES_MAX_ITEMS } from '@/lib/api/consumables-requisition.types';
 import {
   useCancelConsumablesRequisition,
-  useDeleteConsumablesRequisitionItem,
   useConsumablesRequisition,
+  useDeleteConsumablesRequisitionItem,
   useUpdateConsumablesRequisitionItem,
 } from '@/lib/query/consumables-requisition';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
+  consumablesRequisitionStatusVariant,
   formatConsumablesRequisitionEmployeeName,
   formatConsumablesRequisitionStatus,
-  consumablesRequisitionStatusVariant,
 } from '@/lib/utils/consumables-requisition-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { tokens } from '@/lib/theme/tokens';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
+
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  action?: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">{title}</h3>
+        {action}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 /**
- * Consumables requisition detail — item editing, cancellation, and approval chain.
+ * Consumables requisition detail — Users / employee profile chrome.
  */
 export default function ConsumablesRequisitionDetailPageContent({
   requisitionId,
@@ -62,11 +86,16 @@ export default function ConsumablesRequisitionDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const currentUser = useCurrentUser();
   const detailQuery = useConsumablesRequisition(requisitionId);
   const cancelMutation = useCancelConsumablesRequisition(requisitionId);
-  const deleteItemMutation = useDeleteConsumablesRequisitionItem(requisitionId);
-  const updateItemMutation = useUpdateConsumablesRequisitionItem(requisitionId);
+  const deleteItemMutation =
+    useDeleteConsumablesRequisitionItem(requisitionId);
+  const updateItemMutation =
+    useUpdateConsumablesRequisitionItem(requisitionId);
 
   const [editingItem, setEditingItem] =
     useState<ConsumablesRequisitionItem | null>(null);
@@ -74,15 +103,21 @@ export default function ConsumablesRequisitionDetailPageContent({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [itemForm] = Form.useForm<UpdateConsumablesRequisitionItemPayload>();
 
+  useSetHeaderExtra(null);
+
   const requisition = detailQuery.data;
   const isOwner =
     Boolean(requisition) && requisition?.employeeId === currentUser.data?.id;
   const isDraftOrReturned =
     requisition?.status === 'DRAFT' || requisition?.status === 'RETURNED';
-  const canEdit = isOwner && isDraftOrReturned;
+  const canEdit = Boolean(isOwner && isDraftOrReturned);
   const canCancel =
-    isOwner &&
+    Boolean(isOwner) &&
     (requisition?.status === 'DRAFT' || requisition?.status === 'SUBMITTED');
+  const canResubmit =
+    Boolean(isOwner) &&
+    requisition?.status === 'RETURNED' &&
+    Boolean(requisition.approvalRequestId);
   const isDirectApproved = Boolean(requisition?.directApproved);
 
   const tiers = useMemo(
@@ -92,17 +127,16 @@ export default function ConsumablesRequisitionDetailPageContent({
 
   function openEditItem(item: ConsumablesRequisitionItem): void {
     setEditingItem(item);
-    itemForm.setFieldsValue({
-      itemName: item.itemName,
-      itemCode: item.itemCode ?? '',
-      description: item.description ?? '',
-      quantity: Number(item.quantity),
-      unit: item.unit,
-    });
+  }
+
+  function closeEditItem(): void {
+    setEditingItem(null);
   }
 
   async function handleUpdateItem(): Promise<void> {
-    if (!editingItem) return;
+    if (!editingItem) {
+      return;
+    }
     try {
       const values = await itemForm.validateFields();
       await updateItemMutation.mutateAsync({
@@ -115,333 +149,563 @@ export default function ConsumablesRequisitionDetailPageContent({
           unit: values.unit,
         },
       });
-      messageApi.success('Item updated');
-      setEditingItem(null);
-      itemForm.resetFields();
+      messageApi.success(t('hr.messages.consumablesRequisitionItemUpdated'));
+      closeEditItem();
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to update item', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.consumablesRequisitionItemUpdateFailed'),
+        messageApi,
+      );
     }
   }
 
   async function handleDeleteItem(): Promise<void> {
-    if (!deleteItemId) return;
+    if (!deleteItemId) {
+      return;
+    }
     try {
       await deleteItemMutation.mutateAsync(deleteItemId);
-      messageApi.success('Item removed');
+      messageApi.success(t('hr.messages.consumablesRequisitionItemRemoved'));
       setDeleteItemId(null);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to remove item', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.consumablesRequisitionItemRemoveFailed'),
+        messageApi,
+      );
     }
   }
 
   async function handleCancel(): Promise<void> {
     try {
       await cancelMutation.mutateAsync();
-      messageApi.success('Consumables requisition cancelled');
+      messageApi.success(t('hr.messages.consumablesRequisitionCancelled'));
       setConfirmCancel(false);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to cancel requisition', messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.consumablesRequisitionCancelFailed'),
+        messageApi,
+      );
     }
   }
 
+  const itemColumns: ColumnsType<ConsumablesRequisitionItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.itemName'),
+        dataIndex: 'itemName',
+        key: 'itemName',
+        ellipsis: true,
+        render: (value: string) => (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
+      },
+      {
+        title: t('hr.table.itemCode'),
+        dataIndex: 'itemCode',
+        key: 'itemCode',
+        width: 120,
+        responsive: ['md'],
+        render: (value: string | null | undefined) => (
+          <span className="erp-users-cell-sub">{value || '—'}</span>
+        ),
+      },
+      {
+        title: t('hr.table.description'),
+        dataIndex: 'description',
+        key: 'description',
+        ellipsis: true,
+        responsive: ['lg'],
+        render: (value: string | null | undefined) => (
+          <span className="erp-users-cell-sub">{value || '—'}</span>
+        ),
+      },
+      {
+        title: t('hr.table.quantity'),
+        dataIndex: 'quantity',
+        key: 'quantity',
+        width: 90,
+        align: 'right',
+        render: (value: number | string) => (
+          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+        ),
+      },
+      {
+        title: t('hr.table.unit'),
+        dataIndex: 'unit',
+        key: 'unit',
+        width: 80,
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">{value}</span>
+        ),
+      },
+      ...(canEdit
+        ? [
+            {
+              title: '',
+              key: 'actions',
+              width: 80,
+              render: (_: unknown, row: ConsumablesRequisitionItem) => (
+                <div
+                  className="erp-table-row-actions flex items-center justify-end gap-0.5"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <Tooltip title={t('common.update')}>
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<Pencil size={14} />}
+                      onClick={() => openEditItem(row)}
+                      aria-label={t('common.update')}
+                    />
+                  </Tooltip>
+                  <Tooltip title={t('common.delete')}>
+                    <Button
+                      size="small"
+                      type="text"
+                      danger
+                      icon={<Trash2 size={14} />}
+                      onClick={() => setDeleteItemId(row.id)}
+                      aria-label={t('common.delete')}
+                    />
+                  </Tooltip>
+                </div>
+              ),
+            } satisfies ColumnsType<ConsumablesRequisitionItem>[number],
+          ]
+        : []),
+    ],
+    [canEdit, t],
+  );
+
   if (detailQuery.isLoading) {
-    return <Skeleton active paragraph={{ rows: 8 }} />;
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-consumables-detail-page">
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
+      </div>
+    );
   }
 
   if (detailQuery.isError || !requisition) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        message={
-          detailQuery.error instanceof ApiRequestError
-            ? detailQuery.error.message
-            : 'Consumables requisition not found'
-        }
-        action={
-          <Button onClick={() => router.push('/hr/consumables')}>
-            Back to list
-          </Button>
-        }
-      />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <Alert
+          type="error"
+          showIcon
+          title={
+            detailQuery.error instanceof ApiRequestError
+              ? detailQuery.error.message
+              : t('hr.messages.consumablesRequisitionNotFound')
+          }
+          action={
+            <Button onClick={() => router.push('/hr/consumables')}>
+              {t('hr.buttons.back')}
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
-  const itemColumns: ColumnsType<ConsumablesRequisitionItem> = [
-    {
-      title: t('hr.table.itemName'),
-      dataIndex: 'itemName',
-      key: 'itemName',
-      ellipsis: true,
-    },
-    {
-      title: t('hr.table.itemCode'),
-      dataIndex: 'itemCode',
-      key: 'itemCode',
-      width: 120,
-      render: (v: string | null | undefined) => v || '-',
-    },
-    {
-      title: t('hr.table.description'),
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-      render: (v: string | null | undefined) => v || '-',
-    },
-    {
-      title: t('hr.table.quantity'),
-      dataIndex: 'quantity',
-      key: 'quantity',
-      width: 90,
-      align: 'right',
-    },
-    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
-    ...(canEdit
-      ? [
-          {
-            title: '',
-            key: 'actions',
-            width: 90,
-            render: (_: unknown, row: ConsumablesRequisitionItem) => (
-              <Space size={4}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<Pencil size={14} />}
-                  onClick={() => openEditItem(row)}
-                />
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<Trash2 size={14} />}
-                  onClick={() => setDeleteItemId(row.id)}
-                />
-              </Space>
-            ),
-          } satisfies ColumnsType<ConsumablesRequisitionItem>[number],
-        ]
-      : []),
-  ];
+  const employeeName = formatConsumablesRequisitionEmployeeName(
+    requisition.employee,
+  );
+  const backHref = '/hr/consumables';
+
+  const overflowMenuItems: MenuProps['items'] = [];
+  if (requisition.approvalRequestId) {
+    overflowMenuItems.push({
+      key: 'approvals',
+      label: canResubmit
+        ? t('hr.buttons.resubmit')
+        : t('hr.buttons.viewInApprovals'),
+      onClick: () =>
+        router.push(`/approvals/${requisition.approvalRequestId}`),
+    });
+  }
+  if (canCancel) {
+    overflowMenuItems.push({
+      key: 'cancel',
+      label: t('hr.buttons.cancelRequest'),
+      icon: <StopOutlined />,
+      danger: true,
+      onClick: () => setConfirmCancel(true),
+    });
+  }
+
+  const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
+  const tableScrollX = screens.lg
+    ? 900
+    : screens.md
+      ? 700
+      : screens.sm
+        ? 540
+        : 400;
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/consumables')}
-        >
-          Back
-        </Button>
-        {canCancel ? (
-          <Button
-            danger
-            className="ml-auto"
-            onClick={() => setConfirmCancel(true)}
-          >
-            Cancel Requisition
-          </Button>
-        ) : null}
-        {requisition.status === 'RETURNED' && isOwner ? (
-          <Button
-            type="primary"
-            className={canCancel ? '' : 'ml-auto'}
-            onClick={() =>
-              router.push(`/approvals/${requisition.approvalRequestId}`)
-            }
-          >
-            Resubmit in Approvals
-          </Button>
-        ) : null}
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
-        <div className="flex flex-col gap-4 min-w-0">
-          <div
-            className="rounded-lg overflow-hidden"
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-            }}
-          >
-            <div className="px-5 py-4">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  {requisition.requestNumber}
-                </span>
-                <span style={{ color: tokens.colorBorder }}>·</span>
-                <StatusBadge
-                  label={formatConsumablesRequisitionStatus(requisition.status, t)}
-                  variant={consumablesRequisitionStatusVariant(
-                    requisition.status,
-                  )}
-                />
-                {requisition.declarationConfirmed ? (
-                  <Tag color="green">{t('hr.labels.declaration')}</Tag>
-                ) : null}
-                {isDirectApproved ? (
-                  <Tag color="blue">Direct approval</Tag>
-                ) : null}
-              </div>
-              <h2
-                className="text-lg font-semibold leading-snug m-0"
-                style={{ color: tokens.colorTextPrimary }}
-              >
-                {requisition.title}
-              </h2>
-              <p
-                className="mt-1 text-sm m-0"
-                style={{ color: tokens.colorTextSecondary }}
-              >
-                {formatConsumablesRequisitionEmployeeName(requisition.employee)}
-                {requisition.submittedAt
-                  ? ` · Submitted ${formatProjectDate(requisition.submittedAt)}`
-                  : null}
-              </p>
-            </div>
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-consumables-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push(backHref)}
+              aria-label={t('hr.buttons.back')}
+            >
+              {isNarrow ? undefined : t('hr.buttons.back')}
+            </Button>
           </div>
-
-          <SummaryStrip
-            items={[
-              { label: t('hr.table.items'), value: String(requisition.items.length) },
-              {
-                label: t('hr.table.requiredBy'),
-                value: requisition.requiredByDate
-                  ? formatProjectDate(requisition.requiredByDate)
-                  : '-',
-              },
-              {
-                label: t('hr.table.department'),
-                value: requisition.department ?? '-',
-              },
-            ]}
-          />
-
-          {canEdit && requisition.status === 'RETURNED' ? (
-            <Alert
-              type="warning"
-              showIcon
-              message="This requisition was returned. Edit items below, then resubmit from Approvals."
-            />
-          ) : null}
-
-          <SectionCard title={t('hr.form.purpose')} bodyClassName="px-5 py-4">
-            <MetaItem label={t('hr.form.purpose')}>
-              <p className="whitespace-pre-wrap leading-relaxed m-0">
-                {requisition.purpose}
-              </p>
-            </MetaItem>
-          </SectionCard>
-
-          <SectionCard title={t('hr.section.items')} bodyClassName="px-5 py-4">
-            {requisition.items.length === 0 ? (
-              <Empty description={t('hr.empty.noItems')} />
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {showOverflowMenu ? (
+              <Dropdown
+                menu={{ items: overflowMenuItems }}
+                trigger={['click']}
+              >
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
+                />
+              </Dropdown>
             ) : (
               <>
-                <DataTable<ConsumablesRequisitionItem>
-                  rowKey="id"
-                  className="erp-pro-table"
-                  size="small"
-                  columns={itemColumns}
-                  dataSource={requisition.items}
-                  pagination={false}
-                  scroll={false}
-                />
-                {requisition.items.length >= CONSUMABLES_MAX_ITEMS ? (
-                  <Typography.Text type="secondary" className="mt-2 block">
-                    Maximum of {CONSUMABLES_MAX_ITEMS} items reached
-                  </Typography.Text>
+                {requisition.approvalRequestId ? (
+                  <Button
+                    type={canResubmit ? 'primary' : 'default'}
+                    onClick={() =>
+                      router.push(
+                        `/approvals/${requisition.approvalRequestId}`,
+                      )
+                    }
+                    aria-label={
+                      canResubmit
+                        ? t('hr.buttons.resubmit')
+                        : t('hr.buttons.viewInApprovals')
+                    }
+                  >
+                    {canResubmit
+                      ? isNarrow
+                        ? undefined
+                        : t('hr.buttons.resubmit')
+                      : isCompact
+                        ? t('nav.approvals')
+                        : t('hr.buttons.viewInApprovals')}
+                  </Button>
+                ) : null}
+                {canCancel ? (
+                  <Button
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={() => setConfirmCancel(true)}
+                    aria-label={t('hr.buttons.cancelRequest')}
+                  >
+                    {isCompact ? undefined : t('hr.buttons.cancelRequest')}
+                  </Button>
                 ) : null}
               </>
             )}
-          </SectionCard>
+          </div>
         </div>
 
-        <div className="min-w-0">
-          <SectionCard title={t('hr.section.approvalChain')} bodyClassName="px-4 py-4">
-            {isDirectApproved ? (
-              <Typography.Text type="secondary">
-                Approved directly — no approval required
-              </Typography.Text>
-            ) : tiers.length > 0 ? (
-              <ApprovalTierTimeline
-                tiers={tiers}
-                currentTier={requisition.approvalRequest?.currentTier ?? 1}
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">
+                {requisition.requestNumber}
+              </span>
+              <StatusBadge
+                label={formatConsumablesRequisitionStatus(requisition.status, t)}
+                variant={consumablesRequisitionStatusVariant(requisition.status)}
               />
-            ) : (
-              <Typography.Text type="secondary">
-                {t('hr.empty.noApprovalChain')}
-              </Typography.Text>
-            )}
-          </SectionCard>
+              {requisition.declarationConfirmed ? (
+                <Tag color="green">{t('hr.labels.declaration')}</Tag>
+              ) : null}
+              {isDirectApproved ? (
+                <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
+              ) : null}
+            </div>
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {requisition.title}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+              {employeeName}
+              {requisition.submittedAt
+                ? ` · ${formatProjectDate(requisition.submittedAt)}`
+                : null}
+            </p>
+          </div>
         </div>
       </div>
 
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.items')}</p>
+            <p className="erp-employee-meta-value">
+              {requisition.items.length}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.requiredBy')}</p>
+            <p className="erp-employee-meta-value">
+              {requisition.requiredByDate
+                ? formatProjectDate(requisition.requiredByDate)
+                : '—'}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.department')}</p>
+            <p className="erp-employee-meta-value truncate">
+              {requisition.department ?? '—'}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {requisition.submittedAt
+                ? t('hr.table.submittedDate')
+                : t('hr.table.createdDate')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatProjectDate(
+                requisition.submittedAt ?? requisition.createdAt,
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {canEdit && requisition.status === 'RETURNED' ? (
+        <Alert
+          type="warning"
+          showIcon
+          title={t('pages.hr.consumables.returnedNotice')}
+          action={
+            requisition.approvalRequestId ? (
+              <Button
+                size="small"
+                onClick={() =>
+                  router.push(`/approvals/${requisition.approvalRequestId}`)
+                }
+              >
+                {t('hr.buttons.viewInApprovals')}
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : null}
+
+      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="erp-pro-card min-w-0 overflow-hidden">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <DetailSection title={t('hr.section.requestDetails')}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <p className="erp-users-stat-label m-0">
+                    {t('hr.form.purpose')}
+                  </p>
+                  <p className="m-0 mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#1a1a1a]">
+                    {requisition.purpose}
+                  </p>
+                </div>
+                {requisition.department ? (
+                  <div>
+                    <p className="erp-users-stat-label m-0">
+                      {t('hr.table.department')}
+                    </p>
+                    <p className="erp-users-cell-strong m-0 mt-1">
+                      {requisition.department}
+                    </p>
+                  </div>
+                ) : null}
+                {requisition.requiredByDate ? (
+                  <div>
+                    <p className="erp-users-stat-label m-0">
+                      {t('hr.form.requiredByDate')}
+                    </p>
+                    <p className="erp-users-cell-strong m-0 mt-1">
+                      {formatProjectDate(requisition.requiredByDate)}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </DetailSection>
+
+            <DetailSection title={t('hr.section.items')} bodyClassName="!p-0">
+              <DataTable<ConsumablesRequisitionItem>
+                rowKey="id"
+                className="erp-pro-table erp-users-table"
+                size="small"
+                columns={itemColumns}
+                dataSource={requisition.items}
+                pagination={false}
+                scroll={{ x: tableScrollX }}
+                locale={{
+                  emptyText: (
+                    <TableEmptyState
+                      icon={<ShoppingBag size={28} strokeWidth={1.5} />}
+                      title={t('hr.empty.noItems')}
+                      description={t(
+                        'pages.hr.consumables.itemsStepDescription',
+                      )}
+                    />
+                  ),
+                }}
+                footer={
+                  requisition.items.length > 0
+                    ? () => (
+                        <div className="flex flex-wrap justify-end gap-3 px-3 py-2 text-sm">
+                          <span className="erp-users-cell-sub">
+                            {t('hr.form.itemCount', {
+                              count: requisition.items.length,
+                            })}
+                          </span>
+                          {requisition.items.length >= CONSUMABLES_MAX_ITEMS ? (
+                            <span className="erp-users-cell-sub">
+                              {t('hr.validation.consumablesMaxItems', {
+                                count: CONSUMABLES_MAX_ITEMS,
+                              })}
+                            </span>
+                          ) : null}
+                        </div>
+                      )
+                    : undefined
+                }
+              />
+            </DetailSection>
+          </div>
+        </div>
+
+        <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-4">
+          {isDirectApproved || tiers.length === 0 ? (
+            <div className="erp-pro-card">
+              <DetailSection title={t('hr.section.approvalChain')}>
+                <p className="erp-users-cell-sub m-0">
+                  {isDirectApproved
+                    ? t('hr.messages.directApprovalNoChain')
+                    : t('hr.empty.noApprovalChain')}
+                </p>
+              </DetailSection>
+            </div>
+          ) : (
+            <ApprovalTierTimeline
+              tiers={tiers}
+              currentTier={requisition.approvalRequest?.currentTier ?? 1}
+            />
+          )}
+        </aside>
+      </div>
+
       <Modal
-        title="Edit Item"
         open={Boolean(editingItem)}
-        onCancel={() => {
-          setEditingItem(null);
-          itemForm.resetFields();
-        }}
+        title={t('hr.dialog.editConsumablesRequisitionItemTitle')}
+        onCancel={closeEditItem}
         onOk={() => void handleUpdateItem()}
+        okText={t('hr.buttons.save')}
         confirmLoading={updateItemMutation.isPending}
-        destroyOnHidden
+        width={560}
+        forceRender
+        afterOpenChange={(open) => {
+          if (open && editingItem) {
+            itemForm.setFieldsValue({
+              itemName: editingItem.itemName,
+              itemCode: editingItem.itemCode ?? '',
+              description: editingItem.description ?? '',
+              quantity: Number(editingItem.quantity),
+              unit: editingItem.unit,
+            });
+            return;
+          }
+          if (!open) {
+            itemForm.resetFields();
+          }
+        }}
+        styles={{ body: { paddingTop: 16 } }}
       >
-        <Form form={itemForm} layout="vertical" className="mt-2">
-          <Form.Item
-            name="itemName"
-            label={t('hr.form.itemName')}
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            <Input maxLength={200} />
-          </Form.Item>
-          <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
-            <Input maxLength={100} />
-          </Form.Item>
-          <Form.Item name="description" label={t('hr.form.description')}>
-            <Input maxLength={1000} />
-          </Form.Item>
-          <Form.Item
-            name="quantity"
-            label={t('hr.form.quantity')}
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            <InputNumber min={0.01} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            name="unit"
-            label={t('hr.form.unit')}
-            rules={[{ required: true, message: 'Required' }]}
-          >
-            <Input maxLength={50} />
-          </Form.Item>
+        <Form form={itemForm} layout="vertical" requiredMark={false}>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item
+              name="itemName"
+              label={t('hr.form.itemName')}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.itemNameRequired'),
+                },
+              ]}
+            >
+              <Input maxLength={200} />
+            </Form.Item>
+            <Form.Item name="itemCode" label={t('hr.form.itemCode')}>
+              <Input maxLength={100} />
+            </Form.Item>
+            <Form.Item
+              name="quantity"
+              label={t('hr.form.quantity')}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.quantityRequired'),
+                },
+              ]}
+            >
+              <InputNumber min={0.01} className="w-full" />
+            </Form.Item>
+            <Form.Item
+              name="unit"
+              label={t('hr.form.unit')}
+              rules={[
+                { required: true, message: t('hr.validation.unitRequired') },
+              ]}
+            >
+              <Input maxLength={50} />
+            </Form.Item>
+            <Form.Item
+              name="description"
+              label={t('hr.form.description')}
+              className="sm:col-span-2"
+            >
+              <Input.TextArea rows={3} maxLength={1000} showCount />
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
 
       <ConfirmDialog
         open={Boolean(deleteItemId)}
-        title="Remove item?"
-        description="This line item will be permanently removed."
-        confirmLabel="Remove"
+        title={t('hr.dialog.deleteConsumablesRequisitionItemTitle')}
+        description={t('hr.dialog.deleteConsumablesRequisitionItemDesc')}
+        confirmLabel={t('hr.buttons.removeItem')}
         danger
         confirmLoading={deleteItemMutation.isPending}
-        onConfirm={() => void handleDeleteItem()}
+        onConfirm={() => {
+          void handleDeleteItem();
+        }}
         onCancel={() => setDeleteItemId(null)}
       />
 
       <ConfirmDialog
         open={confirmCancel}
-        title="Cancel requisition?"
-        description="This will cancel the consumables requisition and any open approval request."
-        confirmLabel="Cancel Requisition"
+        title={t('hr.dialog.cancelConsumablesRequisitionTitle')}
+        description={t('hr.dialog.cancelConsumablesRequisitionDesc')}
+        confirmLabel={t('hr.buttons.cancelRequest')}
         danger
         confirmLoading={cancelMutation.isPending}
-        onConfirm={() => void handleCancel()}
+        onConfirm={() => {
+          void handleCancel();
+        }}
         onCancel={() => setConfirmCancel(false)}
       />
     </div>
