@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Input, Skeleton, Spin, Typography } from 'antd';
+import { Button, Input, Skeleton, Spin, Typography } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import FormSchemaRenderer, {
@@ -10,19 +10,19 @@ import FormSchemaRenderer, {
   type FormSchemaErrors,
   type FormSchemaValues,
 } from '@/components/form-renderer/FormSchemaRenderer';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalCategorySummary } from '@/lib/api/approvals.types';
-import { ApiRequestError } from '@/lib/api/errors';
 import {
   useApprovalCategories,
   useSubmitApprovalRequest,
 } from '@/lib/query/approvals';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const CATEGORY_ROUTES: Record<string, string> = {
@@ -121,20 +121,23 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
 
   if (categoriesQuery.isLoading && !categoriesQuery.data) {
     return (
-      <div className="flex justify-center p-12">
+      <div className="erp-pro-list-page erp-users-page erp-approvals-new-page flex justify-center p-12">
         <Spin />
       </div>
     );
   }
 
   if (categoriesQuery.isError) {
-    const message =
-      categoriesQuery.error instanceof ApiRequestError
-        ? categoriesQuery.error.message
-        : t('pages.approvals.failedToLoadCategories');
     return (
-      <div className="flex flex-col gap-4">
-        <Alert type="error" showIcon title={message} />
+      <div className="erp-pro-list-page erp-users-page erp-approvals-new-page">
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            categoriesQuery.error,
+            t('pages.approvals.failedToLoadCategories'),
+            t,
+          )}
+        />
       </div>
     );
   }
@@ -143,37 +146,16 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
 
   if (!selectedCategory) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1
-              className="m-0 text-xl font-semibold tracking-tight"
-              style={{
-                color: tokens.colorTextPrimary,
-                fontFamily: tokens.fontFamily,
-              }}
-            >
-              {t('pages.approvals.new')}
-            </h1>
-            <p
-              className="mb-0 mt-1 text-sm"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {t('pages.approvals.newDescription')}
-            </p>
-          </div>
-          <Button
-            onClick={() => router.push('/approvals')}
-            style={{ borderRadius: 0 }}
-          >
+      <div className="erp-pro-list-page erp-users-page erp-approvals-new-page flex flex-col gap-4">
+        <div className="flex shrink-0 items-center justify-end">
+          <Button onClick={() => router.push('/approvals')}>
             {t('common.cancel')}
           </Button>
         </div>
 
         {categories.length === 0 ? (
-          <Alert
-            type="info"
-            showIcon
+          <ErpNotice
+            tone="info"
             title={t('pages.approvals.noCategories')}
           />
         ) : (
@@ -183,7 +165,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
                 key={category.id}
                 type="button"
                 onClick={() => handleSelectCategory(category)}
-                className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-4 text-left transition-colors hover:border-[var(--color-primary)] hover:bg-[#F8F7F4]"
+                className="overflow-hidden rounded-xl border border-[#e8ebef] bg-white p-4 text-left shadow-sm transition-colors hover:border-[#f47b20] hover:bg-[#fef0e6]"
               >
                 <div
                   className="text-sm font-semibold"
@@ -206,31 +188,12 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1
-            className="m-0 text-xl font-semibold tracking-tight"
-            style={{
-              color: tokens.colorTextPrimary,
-              fontFamily: tokens.fontFamily,
-            }}
-          >
-            {selectedCategory.name}
-          </h1>
-          <p
-            className="mb-0 mt-1 text-sm"
-            style={{ color: tokens.colorTextSecondary }}
-          >
-            {selectedCategory.description ||
-              t('pages.approvals.dynamicFormDescription')}
-          </p>
-        </div>
+    <div className="erp-pro-list-page erp-users-page erp-approvals-new-page flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={handleBackToCategories}
-          style={{ borderRadius: 0 }}
         >
           {t('pages.approvals.backToCategories')}
         </Button>
@@ -240,38 +203,50 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
         <Skeleton active paragraph={{ rows: 2 }} />
       ) : null}
 
-      <SectionCard
-        title={t('pages.approvals.formSection')}
-        bodyClassName="px-3 py-4 sm:px-5"
-      >
-        <FormSchemaRenderer
-          fields={fields}
-          values={formValues}
-          onChange={setFormValues}
-          errors={errors}
-          disabled={submitMutation.isPending}
-        />
+      <div className="erp-pro-card overflow-hidden">
+        <div className="erp-employee-section">
+          <div className="erp-employee-section-header">
+            <h3 className="erp-employee-section-title m-0">
+              {selectedCategory.name}
+            </h3>
+          </div>
+          <div className="erp-employee-section-body">
+            <p className="erp-users-cell-sub m-0 mb-4">
+              {selectedCategory.description ||
+                t('pages.approvals.dynamicFormDescription')}
+            </p>
+            <FormSchemaRenderer
+              fields={fields}
+              values={formValues}
+              onChange={setFormValues}
+              errors={errors}
+              disabled={submitMutation.isPending}
+            />
 
-        <div className="mt-4 flex flex-col gap-1.5">
-          <label
-            htmlFor="approval-request-title"
-            className="text-sm font-medium"
-            style={{ color: tokens.colorTextPrimary }}
-          >
-            {t('pages.approvals.requestTitle')}
-          </label>
-          <Input
-            id="approval-request-title"
-            placeholder={defaultTitle}
-            value={title}
-            disabled={submitMutation.isPending}
-            onChange={(event) => setTitle(event.target.value)}
-          />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {t('pages.approvals.requestTitleHint', { default: defaultTitle })}
-          </Typography.Text>
+            <div className="mt-4 flex flex-col gap-1.5">
+              <label
+                htmlFor="approval-request-title"
+                className="text-sm font-medium"
+                style={{ color: tokens.colorTextPrimary }}
+              >
+                {t('pages.approvals.requestTitle')}
+              </label>
+              <Input
+                id="approval-request-title"
+                placeholder={defaultTitle}
+                value={title}
+                disabled={submitMutation.isPending}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {t('pages.approvals.requestTitleHint', {
+                  default: defaultTitle,
+                })}
+              </Typography.Text>
+            </div>
+          </div>
         </div>
-      </SectionCard>
+      </div>
 
       <FormPageFooter
         submitLabel={t('pages.approvals.submitRequest')}

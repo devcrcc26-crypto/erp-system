@@ -65,7 +65,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/punch-list': 'nav.punchList',
   '/correspondence': 'nav.correspondence',
   '/daily-logs': 'nav.dailyLogs',
-  '/approvals': 'nav.approvals',
+  '/approvals': 'pages.approvals.listTitle',
   '/users': 'nav.users',
   '/users/new': 'pages.users.new',
   '/teams': 'nav.teams',
@@ -898,12 +898,27 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname === '/approvals') {
+    return {
+      titleKey: 'pages.approvals.listTitle',
+      descriptionKey: 'pages.approvals.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('pages.approvals.listTitle') },
+      ],
+    };
+  }
+
   if (pathname === '/approvals/new') {
     return {
       titleKey: 'pages.approvals.new',
+      descriptionKey: 'pages.approvals.newDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.approvals'), href: '/approvals' },
+        {
+          label: t('pages.approvals.listTitle'),
+          href: '/approvals',
+        },
         { label: t('pages.approvals.new') },
       ],
     };
@@ -911,10 +926,13 @@ function resolveRouteMetaCore(
 
   if (pathname.startsWith('/approvals/')) {
     return {
-      titleKey: 'nav.approvals',
+      titleKey: 'pages.approvals.detail',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.approvals'), href: '/approvals' },
+        {
+          label: t('pages.approvals.listTitle'),
+          href: '/approvals',
+        },
         { label: t('pages.approvals.detail') },
       ],
     };

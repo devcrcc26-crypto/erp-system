@@ -1,13 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Input,
-  Spin,
-  Typography,
-} from 'antd';
+import { Button, Grid, Input, Skeleton, Tag } from 'antd';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalDetailSidebar from '@/components/modules/approvals/ApprovalDetailSidebar';
@@ -33,11 +27,11 @@ import ResubmitPanel, {
 } from '@/components/modules/approvals/ResubmitPanel';
 import ReturnedBanner from '@/components/modules/approvals/ReturnedBanner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
-import { ApiRequestError } from '@/lib/api/errors';
 import type {
   ApprovalRequestDetail,
   ApprovalTier,
@@ -57,6 +51,7 @@ import {
   parseTierConditions,
   resolveDisplayStatus,
 } from '@/lib/utils/approval-display';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
@@ -207,7 +202,6 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       );
     default:
       return <GenericApprovalDetail request={request} />;
-
   }
 }
 
@@ -222,6 +216,8 @@ export default function ApprovalDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isNarrow = screens.sm === false;
   const currentUser = useCurrentUser();
   const currentUserId = currentUser.data?.id ?? '';
 
@@ -391,123 +387,193 @@ export default function ApprovalDetailPageContent({
 
   if (detailQuery.isLoading && !request) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page">
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </div>
       </div>
     );
   }
 
   if (detailQuery.isError || !request) {
-    const message =
-      detailQuery.error instanceof ApiRequestError
-        ? detailQuery.error.message
-        : t('pages.approvals.notFound');
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/approvals')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('pages.approvals.backToList')}
-        </Button>
-        <Alert type="error" showIcon title={message} />
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page">
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            detailQuery.error,
+            t('pages.approvals.notFound'),
+            t,
+          )}
+          action={
+            <Button onClick={() => router.push('/approvals')}>
+              {t('pages.approvals.backToList')}
+            </Button>
+          }
+        />
       </div>
     );
   }
 
+  const submittedDate = formatProjectDate(
+    request.submittedAt ?? request.createdAt ?? null,
+  );
+  const submittedByOn = t('pages.approvals.submittedByOn', {
+    name: formatApprovalUserName(request.requester),
+    date: submittedDate,
+  });
+  const categoryName = request.category?.name?.trim() || null;
+  const currentTierLabel = currentTier?.label?.trim() || null;
+
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/approvals')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('pages.approvals.backToList')}
-        </Button>
-      </div>
-
-      <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="px-3 py-4 sm:px-5">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-              {request.requestNumber}
-            </span>
-            {request.category?.name ? (
-              <>
-                <span className="text-[var(--color-border-secondary)]">·</span>
-                <span className="text-xs text-[var(--color-text-secondary)]">
-                  {request.category.name}
-                </span>
-              </>
-            ) : null}
-            {displayStatus ? (
-              <StatusBadge
-                label={displayStatus.label}
-                variant={displayStatus.variant}
-              />
-            ) : null}
-            {resubmitCount > 0 ? (
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {t('pages.approvals.resubmittedCount', {
-                  count: resubmitCount,
-                })}
-              </Typography.Text>
-            ) : null}
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push('/approvals')}
+              aria-label={t('pages.approvals.backToList')}
+            >
+              {isNarrow ? undefined : t('pages.approvals.backToList')}
+            </Button>
           </div>
+          {isActiveApprover && currentTier ? (
+            <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+              <Button
+                type="primary"
+                disabled={actionsDisabled}
+                title={
+                  actionsDisabled
+                    ? 'Resolve all conditions before approving'
+                    : undefined
+                }
+                onClick={() => setActionModal('approve')}
+              >
+                {t('hr.buttons.approve')}
+              </Button>
+              <Button
+                disabled={actionsDisabled}
+                onClick={() => setActionModal('conditional')}
+              >
+                {t('hr.buttons.conditionallyApprove')}
+              </Button>
+              <Button
+                disabled={actionsDisabled}
+                onClick={() => setActionModal('return')}
+              >
+                {t('hr.buttons.return')}
+              </Button>
+              <Button
+                danger
+                disabled={actionsDisabled}
+                onClick={() => setActionModal('reject')}
+              >
+                {t('hr.buttons.reject')}
+              </Button>
+            </div>
+          ) : null}
+        </div>
 
-          <h1 className="m-0 text-lg font-semibold leading-snug text-[var(--color-text-primary)]">
-            {request.title}
-          </h1>
-
-          <p className="mb-0 mt-2 text-sm text-[var(--color-text-secondary)]">
-            {t('pages.approvals.submittedByOn', {
-              name: formatApprovalUserName(request.requester),
-              date: formatProjectDate(
-                request.submittedAt ?? request.createdAt ?? null,
-              ),
-            })}
-          </p>
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">{request.requestNumber}</span>
+              {displayStatus ? (
+                <StatusBadge
+                  label={displayStatus.label}
+                  variant={displayStatus.variant}
+                />
+              ) : null}
+              {categoryName ? <Tag className="rounded-xl">{categoryName}</Tag> : null}
+              {resubmitCount > 0 ? (
+                <Tag color="orange" className="rounded-xl">
+                  {t('pages.approvals.resubmittedCount', {
+                    count: resubmitCount,
+                  })}
+                </Tag>
+              ) : null}
+            </div>
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {request.title}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+              {submittedByOn}
+            </p>
+          </div>
         </div>
       </div>
 
-      {request.status === 'RETURNED' ? (
-        <ReturnedBanner note={returnNote} />
-      ) : null}
-      {request.status === 'REJECTED' ? (
-        <RejectedBanner note={rejectNote} />
-      ) : null}
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('pages.approvals.table.category')}
+            </p>
+            <p className="erp-employee-meta-value truncate">
+              {categoryName ?? '—'}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('pages.approvals.table.submitted')}
+            </p>
+            <p className="erp-employee-meta-value">{submittedDate || '—'}</p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('pages.approvals.table.currentTier')}
+            </p>
+            <p className="erp-employee-meta-value truncate">
+              {currentTierLabel ?? '—'}
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          {renderTypedDetail(request)}
+      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_360px]">
+        <div className="erp-pro-card min-w-0 overflow-hidden">
+          <div className="flex flex-col gap-4 p-4 sm:p-5">
+            {request.status === 'RETURNED' ? (
+              <ReturnedBanner note={returnNote} />
+            ) : null}
+            {request.status === 'REJECTED' ? (
+              <RejectedBanner note={rejectNote} />
+            ) : null}
 
-          {isRequester && request.status === 'RETURNED' ? (
-            <ResubmitPanel requestId={request.id} returnNote={returnNote} />
-          ) : null}
+            {renderTypedDetail(request)}
 
-          {isRequester &&
-          unresolvedConditions.length > 0 &&
-          (request.status === 'PENDING' ||
-            request.status === 'IN_REVIEW' ||
-            request.status === 'SUBMITTED')
-            ? unresolvedConditions.map(({ condition, index }) => (
-                <ConditionResponsePanel
-                  key={`cond-resp-${index}`}
-                  requestId={request.id}
-                  conditionIndex={index}
-                  conditionText={condition.text}
-                  existingResponses={responses}
-                />
-              ))
-            : null}
+            {isRequester && request.status === 'RETURNED' ? (
+              <ResubmitPanel requestId={request.id} returnNote={returnNote} />
+            ) : null}
 
-          {responses.length > 0 ? (
-            <ResponseHistory responses={responses} />
-          ) : null}
+            {isRequester &&
+            unresolvedConditions.length > 0 &&
+            (request.status === 'PENDING' ||
+              request.status === 'IN_REVIEW' ||
+              request.status === 'SUBMITTED')
+              ? unresolvedConditions.map(({ condition, index }) => (
+                  <ConditionResponsePanel
+                    key={`cond-resp-${index}`}
+                    requestId={request.id}
+                    conditionIndex={index}
+                    conditionText={condition.text}
+                    existingResponses={responses}
+                  />
+                ))
+              : null}
+
+            {responses.length > 0 ? (
+              <ResponseHistory responses={responses} />
+            ) : null}
+          </div>
         </div>
 
         <ApprovalDetailSidebar

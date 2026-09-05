@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   DatePicker,
+  Grid,
   Input,
   Select,
-  Space,
   Spin,
   Tabs,
   Tooltip,
@@ -17,26 +16,24 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  InboxOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
-import { useAuthStore } from '@/stores/auth.store';
 import { useTablePagination } from '@/hooks/use-table-pagination';
-import { ApiRequestError } from '@/lib/api/errors';
 import type {
   ApprovalRequestListItem,
-  ApprovalRequestStatus,
   ApprovalTier,
 } from '@/lib/api/approvals.types';
 import {
@@ -45,38 +42,69 @@ import {
   usePendingMyActionCount,
 } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
-import { tokens } from '@/lib/theme/tokens';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   findCurrentTier,
   formatApprovalUserName,
   resolveDisplayStatus,
 } from '@/lib/utils/approval-display';
+import {
+  statusesForApprovalMode,
+  type ApprovalStatusMode,
+} from '@/lib/utils/approvals-list-filter';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL';
-type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
 
-const PENDING_STATUSES: ApprovalRequestStatus[] = [
-  'PENDING',
-  'IN_REVIEW',
-  'SUBMITTED',
-  'RETURNED',
-  'DRAFT',
-];
-const APPROVED_STATUSES: ApprovalRequestStatus[] = ['APPROVED'];
-const REJECTED_STATUSES: ApprovalRequestStatus[] = ['REJECTED', 'CANCELLED'];
+const NEW_PATH = '/approvals/new';
+const LIST_PATH = '/approvals';
 
-function statusesForMode(mode: StatusMode): ApprovalRequestStatus[] {
-  switch (mode) {
-    case 'pending':
-      return PENDING_STATUSES;
-    case 'approved':
-      return APPROVED_STATUSES;
-    case 'rejected':
-      return REJECTED_STATUSES;
-    default:
-      return [];
-  }
+const PENDING_STATUSES = statusesForApprovalMode('pending');
+const APPROVED_STATUSES = statusesForApprovalMode('approved');
+const REJECTED_STATUSES = statusesForApprovalMode('rejected');
+
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
+
+function ApprovalsStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
 }
 
 function getActionNeeded(
@@ -107,11 +135,14 @@ function resolveDefaultInbox(canViewHr: boolean): InboxTab {
 }
 
 /**
- * Approval inbox — layout aligned with Users and Leave list pages.
+ * Approval inbox — Users/HR chrome with server-side pagination.
  */
 export default function ApprovalsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const isFullAccess = useCanViewHr();
   const currentUser = useCurrentUser();
   const currentUserId = currentUser.data?.id ?? '';
@@ -121,7 +152,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   );
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [statusMode, setStatusMode] = useState<StatusMode>('all');
+  const [statusMode, setStatusMode] = useState<ApprovalStatusMode>('all');
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
@@ -136,7 +167,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   }, [inbox, isFullAccess]);
 
   const statusFilter = useMemo(
-    () => statusesForMode(statusMode),
+    () => statusesForApprovalMode(statusMode),
     [statusMode],
   );
 
@@ -223,138 +254,151 @@ export default function ApprovalsListPageContent(): React.ReactNode {
     resetPage();
   }
 
-  function handleStatusMode(mode: StatusMode): void {
+  function handleStatusMode(mode: ApprovalStatusMode): void {
     setStatusMode(mode);
     resetPage();
   }
 
-  const pageTitle = t('pages.approvals.listTitle');
   const pageDescription = isFullAccess
     ? t('pages.approvals.listDescriptionAdmin')
     : t('pages.approvals.listDescription');
 
-  const columns: ColumnsType<ApprovalRequestListItem> = [
-    {
-      title: t('pages.approvals.table.requestNumber'),
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 140,
-      render: (value: string) => (
-        <span style={{ fontWeight: 600, color: tokens.colorTextPrimary }}>
-          {value}
-        </span>
-      ),
-    },
-    {
-      title: t('pages.approvals.table.title'),
-      dataIndex: 'title',
-      key: 'title',
-      ellipsis: true,
-    },
-    {
-      title: t('pages.approvals.table.category'),
-      key: 'category',
-      width: 180,
-      responsive: ['md'],
-      render: (_, row) => row.category?.name ?? '—',
-    },
-    {
-      title: t('pages.approvals.table.submittedBy'),
-      key: 'requester',
-      width: 160,
-      responsive: ['md'],
-      render: (_, row) => formatApprovalUserName(row.requester),
-    },
-    {
-      title: t('pages.approvals.table.submitted'),
-      key: 'submittedAt',
-      width: 120,
-      responsive: ['lg'],
-      render: (_, row) =>
-        formatProjectDate(row.submittedAt ?? row.createdAt ?? null),
-    },
-    {
-      title: t('pages.approvals.table.status'),
-      key: 'status',
-      width: 160,
-      render: (_, row) => {
-        const current = findCurrentTier(
-          row.tiers as ApprovalTier[] | undefined,
-          row.currentTier,
-        );
-        const display = resolveDisplayStatus(row.status, current, t);
-        return <StatusBadge label={display.label} variant={display.variant} />;
+  const columns: ColumnsType<ApprovalRequestListItem> = useMemo(
+    () => [
+      {
+        title: t('pages.approvals.table.requestNumber'),
+        dataIndex: 'requestNumber',
+        key: 'requestNumber',
+        width: 140,
+        responsive: ['md'],
+        render: (value: string) => (
+          <span className="erp-users-id-chip">{value}</span>
+        ),
       },
-    },
-    ...(inbox === 'PENDING_MY_ACTION'
-      ? [
-          {
-            title: t('pages.approvals.table.actionNeeded'),
-            key: 'actionNeeded',
-            width: 160,
-            render: (_: unknown, row: ApprovalRequestListItem) => (
-              <StatusBadge
-                label={getActionNeeded(row, currentUserId)}
-                variant="warning"
-              />
-            ),
-          } satisfies ColumnsType<ApprovalRequestListItem>[number],
-        ]
-      : []),
-    {
-      title: t('pages.approvals.table.currentTier'),
-      key: 'currentTier',
-      width: 160,
-      responsive: ['lg'],
-      render: (_, row) => {
-        const current = findCurrentTier(
-          row.tiers as ApprovalTier[] | undefined,
-          row.currentTier,
-        );
-        return current?.label ?? '—';
+      {
+        title: t('pages.approvals.table.title'),
+        dataIndex: 'title',
+        key: 'title',
+        ellipsis: true,
+        render: (value: string, row: ApprovalRequestListItem) => (
+          <div className="min-w-0">
+            <p className="erp-users-cell-strong m-0 truncate">{value}</p>
+            {isNarrow ? (
+              <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
+                {row.requestNumber}
+              </p>
+            ) : null}
+          </div>
+        ),
       },
-    },
-  ];
+      {
+        title: t('pages.approvals.table.category'),
+        key: 'category',
+        width: 180,
+        responsive: ['md'],
+        render: (_: unknown, row: ApprovalRequestListItem) => (
+          <span className="erp-users-cell-sub">
+            {row.category?.name ?? '—'}
+          </span>
+        ),
+      },
+      {
+        title: t('pages.approvals.table.submittedBy'),
+        key: 'requester',
+        width: 160,
+        responsive: ['md'],
+        render: (_: unknown, row: ApprovalRequestListItem) => (
+          <span className="erp-users-cell-strong">
+            {formatApprovalUserName(row.requester)}
+          </span>
+        ),
+      },
+      {
+        title: t('pages.approvals.table.submitted'),
+        key: 'submittedAt',
+        width: 120,
+        responsive: ['lg'],
+        render: (_: unknown, row: ApprovalRequestListItem) => (
+          <span className="erp-users-cell-sub">
+            {formatProjectDate(row.submittedAt ?? row.createdAt ?? null)}
+          </span>
+        ),
+      },
+      {
+        title: t('pages.approvals.table.status'),
+        key: 'status',
+        width: isNarrow ? 110 : 160,
+        render: (_: unknown, row: ApprovalRequestListItem) => {
+          const current = findCurrentTier(
+            row.tiers as ApprovalTier[] | undefined,
+            row.currentTier,
+          );
+          const display = resolveDisplayStatus(row.status, current, t);
+          return (
+            <StatusBadge label={display.label} variant={display.variant} />
+          );
+        },
+      },
+      ...(inbox === 'PENDING_MY_ACTION'
+        ? [
+            {
+              title: t('pages.approvals.table.actionNeeded'),
+              key: 'actionNeeded',
+              width: 160,
+              render: (_: unknown, row: ApprovalRequestListItem) => (
+                <StatusBadge
+                  label={getActionNeeded(row, currentUserId)}
+                  variant="warning"
+                />
+              ),
+            } satisfies ColumnsType<ApprovalRequestListItem>[number],
+          ]
+        : []),
+      {
+        title: t('pages.approvals.table.currentTier'),
+        key: 'currentTier',
+        width: 160,
+        ellipsis: true,
+        responsive: ['lg'],
+        render: (_: unknown, row: ApprovalRequestListItem) => {
+          const current = findCurrentTier(
+            row.tiers as ApprovalTier[] | undefined,
+            row.currentTier,
+          );
+          return current?.label ? (
+            <span className="erp-users-role-tag">{current.label}</span>
+          ) : (
+            <span className="erp-users-cell-sub">—</span>
+          );
+        },
+      },
+    ],
+    [currentUserId, inbox, isNarrow, t],
+  );
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
-      </div>
-    );
-  }
-
-  if (listQuery.isError) {
-    const message =
-      listQuery.error instanceof ApiRequestError
-        ? listQuery.error.message
-        : t('pages.approvals.failedToLoad');
-    return (
-      <div className="flex flex-col gap-4">
-        <Alert type="error" showIcon title={message} />
+      <div className="erp-pro-list-page erp-users-page erp-approvals-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="min-w-0">
-        <h1
-          className="m-0 text-xl font-semibold tracking-tight"
-          style={{
-            color: tokens.colorTextPrimary,
-            fontFamily: tokens.fontFamily,
-          }}
-        >
-          {pageTitle}
-        </h1>
-        <p
-          className="mb-0 mt-1 text-sm"
-          style={{ color: tokens.colorTextSecondary }}
-        >
-          {pageDescription}
-        </p>
-      </div>
+    <div className="erp-pro-list-page erp-users-page erp-approvals-page">
+      {listQuery.isError ? (
+        <ErpNotice
+          tone="error"
+          className="mb-4"
+          title={getFriendlyApiErrorMessage(
+            listQuery.error,
+            t('pages.approvals.failedToLoad'),
+            t,
+          )}
+        />
+      ) : null}
 
       <Tabs
         activeKey={inbox}
@@ -373,10 +417,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               <span className="inline-flex items-center gap-1.5">
                 {t('pages.approvals.tabs.pendingMyAction')}
                 {pendingActionCount > 0 ? (
-                  <span
-                    className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
-                    style={{ background: tokens.colorRed400 }}
-                  >
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#D32F2F] px-1 text-[10px] font-bold text-white">
                     {pendingActionCount > 99 ? '99+' : pendingActionCount}
                   </span>
                 ) : null}
@@ -392,66 +433,81 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               ]
             : []),
         ]}
-        className="erp-list-tabs"
+        className="erp-list-tabs mb-3"
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+      <div className="erp-users-stat-bar">
+        <ApprovalsStat
+          label={t('pages.approvals.stats.total')}
+          value={statusCounts.all}
+          accent="teal"
+          icon={<InboxOutlined />}
+          active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.total')}
-            value={statusCounts.all}
-            color="blue"
-            icon={<AuditOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <ApprovalsStat
+          label={t('pages.approvals.stats.pending')}
+          value={statusCounts.pending}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+          active={statusMode === 'pending'}
           onClick={() => handleStatusMode('pending')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.pending')}
-            value={statusCounts.pending}
-            color="amber"
-            icon={<ClockCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <ApprovalsStat
+          label={t('pages.approvals.stats.approved')}
+          value={statusCounts.approved}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statusMode === 'approved'}
           onClick={() => handleStatusMode('approved')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.approved')}
-            value={statusCounts.approved}
-            color="green"
-            icon={<CheckCircleOutlined />}
-          />
-        </button>
-        <button
-          type="button"
-          className="m-0 w-full min-w-0 border-0 bg-transparent p-0 text-left"
+        />
+        <ApprovalsStat
+          label={t('pages.approvals.stats.rejected')}
+          value={statusCounts.rejected}
+          accent="red"
+          icon={<CloseCircleOutlined />}
+          active={statusMode === 'rejected'}
           onClick={() => handleStatusMode('rejected')}
-        >
-          <StatCard
-            label={t('pages.approvals.stats.rejected')}
-            value={statusCounts.rejected}
-            color="red"
-            icon={<CloseCircleOutlined />}
-          />
-        </button>
+        />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <Input.Search
-            placeholder={t('pages.approvals.searchPlaceholder')}
-            className="w-full min-w-0 sm:w-72"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('pages.approvals.listTitle')}
+            </h3>
+            <span className="erp-users-count-pill">
+              {(meta?.total ?? 0).toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push(NEW_PATH)}
+              aria-label={t('pages.approvals.newRequest')}
+            >
+              {isNarrow ? undefined : t('pages.approvals.newRequest')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.approvals.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
             value={search}
             onChange={(e) => {
               const value = e.target.value;
@@ -459,9 +515,8 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               setAppliedSearch(value.trim());
               resetPage();
             }}
-            onSearch={(value) => {
-              setSearch(value);
-              setAppliedSearch(value.trim());
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
               resetPage();
             }}
             onClear={() => {
@@ -470,12 +525,13 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               resetPage();
             }}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           <Select
             allowClear
             showSearch
             optionFilterProp="label"
             placeholder={t('pages.approvals.filterCategory')}
-            className="w-full min-w-0 sm:min-w-[200px] sm:w-auto"
+            className="erp-users-filter-select"
             options={categoryOptions}
             value={categoryId}
             loading={categoriesQuery.isLoading}
@@ -486,78 +542,31 @@ export default function ApprovalsListPageContent(): React.ReactNode {
           />
           <DatePicker.RangePicker
             value={dateRange}
+            className="erp-users-filter-daterange"
             onChange={(value) => {
               setDateRange(value);
               resetPage();
             }}
-            className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
           />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="approvals" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {meta?.total === 1
-                ? t('pages.approvals.requestCountOne')
-                : t('pages.approvals.requestCount', {
-                    count: meta?.total ?? 0,
-                  })}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/approvals/new')}
-              style={{ borderRadius: 0 }}
-            >
-              {t('pages.approvals.newRequest')}
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
             </Button>
-          </Space>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<ApprovalRequestListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            loading={listQuery.isFetching && !listQuery.data}
-            pagination={bindMeta(meta)}
-            scroll={false}
+            loading={listQuery.isFetching && rows.length === 0}
+            scroll={{ x: isNarrow ? 560 : isCompact ? 860 : 1100 }}
             onRow={(record) => ({
-              onClick: () => router.push(`/approvals/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              onClick: () => router.push(`${LIST_PATH}/${record.id}`),
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
@@ -577,11 +586,17 @@ export default function ApprovalsListPageContent(): React.ReactNode {
                         }
                       : {
                           label: t('pages.approvals.newRequest'),
-                          onClick: () => router.push('/approvals/new'),
+                          onClick: () => router.push(NEW_PATH),
                         }
                   }
                 />
               ),
+            }}
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
             }}
           />
         </div>
