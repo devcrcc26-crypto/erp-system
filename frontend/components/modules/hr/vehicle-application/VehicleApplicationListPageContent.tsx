@@ -255,6 +255,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         title: t('hr.table.destination'),
         dataIndex: 'destination',
         key: 'destination',
+        width: isNarrow ? 180 : 260,
         ellipsis: true,
         responsive: ['sm'],
         render: (value: string) => (
@@ -492,7 +493,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
             columns={columns}
             dataSource={rows}
             loading={listQuery.isFetching && rows.length === 0}
-            scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 1100 }}
+            scroll={{ x: isNarrow ? 560 : isCompact ? 860 : 1200 }}
             onRow={(record) => ({
               onClick: () =>
                 router.push(`/hr/vehicle-applications/${record.id}`),

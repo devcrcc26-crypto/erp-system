@@ -3535,7 +3535,8 @@ main::-webkit-scrollbar,
 .erp-expense-claim-detail-page .erp-employee-toolbar-actions .ant-btn,
 .erp-purchase-request-detail-page .erp-employee-toolbar-actions .ant-btn,
 .erp-material-requisition-detail-page .erp-employee-toolbar-actions .ant-btn,
-.erp-consumables-detail-page .erp-employee-toolbar-actions .ant-btn {
+.erp-consumables-detail-page .erp-employee-toolbar-actions .ant-btn,
+.erp-vehicle-application-detail-page .erp-employee-toolbar-actions .ant-btn {
   border-radius: 8px;
 }
 
@@ -3558,21 +3559,24 @@ main::-webkit-scrollbar,
   .erp-expense-claim-detail-page .erp-employee-meta-bar,
   .erp-purchase-request-detail-page .erp-employee-meta-bar,
   .erp-material-requisition-detail-page .erp-employee-meta-bar,
-  .erp-consumables-detail-page .erp-employee-meta-bar {
+  .erp-consumables-detail-page .erp-employee-meta-bar,
+  .erp-vehicle-application-detail-page .erp-employee-meta-bar {
     grid-template-columns: repeat(4, 1fr);
   }
 
   .erp-expense-claim-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n),
   .erp-purchase-request-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n),
   .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n),
-  .erp-consumables-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n) {
+  .erp-consumables-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n),
+  .erp-vehicle-application-detail-page .erp-employee-meta-bar .erp-users-stat:nth-child(3n) {
     border-right: 1px solid #eef1f4;
   }
 
   .erp-expense-claim-detail-page .erp-employee-meta-bar .erp-users-stat:last-child,
   .erp-purchase-request-detail-page .erp-employee-meta-bar .erp-users-stat:last-child,
   .erp-material-requisition-detail-page .erp-employee-meta-bar .erp-users-stat:last-child,
-  .erp-consumables-detail-page .erp-employee-meta-bar .erp-users-stat:last-child {
+  .erp-consumables-detail-page .erp-employee-meta-bar .erp-users-stat:last-child,
+  .erp-vehicle-application-detail-page .erp-employee-meta-bar .erp-users-stat:last-child {
     border-right: none;
   }
 
@@ -3586,6 +3590,9 @@ main::-webkit-scrollbar,
     .erp-employee-meta-bar
     .erp-users-stat:nth-child(-n + 3),
   .erp-consumables-detail-page
+    .erp-employee-meta-bar
+    .erp-users-stat:nth-child(-n + 3),
+  .erp-vehicle-application-detail-page
     .erp-employee-meta-bar
     .erp-users-stat:nth-child(-n + 3) {
     border-bottom: none;
@@ -4160,7 +4167,8 @@ main::-webkit-scrollbar,
 .erp-employee-per-diem-form-page .ant-btn,
 .erp-purchase-request-form-page .ant-btn,
 .erp-material-requisition-form-page .ant-btn,
-.erp-consumables-form-page .ant-btn {
+.erp-consumables-form-page .ant-btn,
+.erp-vehicle-application-form-page .ant-btn {
   border-radius: 8px;
 }
 
@@ -4183,15 +4191,48 @@ main::-webkit-scrollbar,
 .erp-employee-per-diem-form-page .ant-input,
 .erp-employee-per-diem-form-page .ant-input-affix-wrapper,
 .erp-employee-per-diem-form-page .ant-select-selector,
-.erp-employee-per-diem-form-page .ant-input-number {
+.erp-employee-per-diem-form-page .ant-input-number,
+.erp-consumables-form-page .ant-input,
+.erp-consumables-form-page .ant-input-affix-wrapper,
+.erp-consumables-form-page .ant-input-textarea textarea,
+.erp-consumables-form-page .ant-select-selector,
+.erp-consumables-form-page .ant-picker,
+.erp-consumables-form-page .ant-input-number,
+.erp-vehicle-application-form-page .ant-input,
+.erp-vehicle-application-form-page .ant-input-affix-wrapper,
+.erp-vehicle-application-form-page .ant-input-textarea textarea,
+.erp-vehicle-application-form-page .ant-select-selector,
+.erp-vehicle-application-form-page .ant-picker,
+.erp-vehicle-application-form-page .ant-input-number {
   border-radius: 8px !important;
+}
+
+.erp-vehicle-pick-card {
+  border-radius: 12px;
+  border: 1px solid #e8ebef;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.erp-vehicle-pick-card:hover:not(:disabled) {
+  border-color: #d0d5dd;
+}
+
+.erp-vehicle-pick-card--selected {
+  border-color: #f47b20;
+  border-width: 2px;
+  background: #fef0e6;
+  box-shadow: none;
+  padding: calc(0.875rem - 1px);
 }
 
 @media (max-width: 767px) {
   .erp-flight-form-page .erp-flight-form-actions .ant-btn,
   .erp-business-trip-form-page .erp-business-trip-form-actions .ant-btn,
   .erp-per-diem-form-page .erp-per-diem-form-actions .ant-btn,
-  .erp-employee-per-diem-form-page .erp-employee-per-diem-form-actions .ant-btn {
+  .erp-employee-per-diem-form-page .erp-employee-per-diem-form-actions .ant-btn,
+  .erp-consumables-form-page .erp-consumables-form-actions .ant-btn,
+  .erp-vehicle-application-form-page .erp-vehicle-application-form-actions .ant-btn {
     width: 100%;
   }
 }

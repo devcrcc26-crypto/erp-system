@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   DatePicker,
   Form,
   Input,
@@ -17,6 +16,7 @@ import {
   CloseCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -31,6 +31,7 @@ import { useSubmitVehicleApplication } from '@/lib/query/vehicle-application';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDriverName } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 interface VehicleApplicationFormValues {
@@ -297,9 +298,10 @@ export default function VehicleApplicationForm({
       );
       onSuccess(result);
     } catch (error: unknown) {
-      const message = t('hr.messages.vehicleApplicationSubmitFailed');
-      notifyApiError(error, message, messageApi);
-      setFormError(message);
+      const fallback = t('hr.messages.vehicleApplicationSubmitFailed');
+      const friendly = getFriendlyApiErrorMessage(error, fallback, t);
+      notifyApiError(error, fallback, messageApi, t);
+      setFormError(friendly);
     } finally {
       setSubmitting(false);
     }
@@ -373,7 +375,7 @@ export default function VehicleApplicationForm({
             description={
               selectedVehicle
                 ? `${selectedVehicle.plateNumber} — ${selectedVehicle.make} ${selectedVehicle.model}`
-                : t('hr.placeholder.selectVehicle')
+                : t('pages.hr.vehicleApplication.vehicleStepDescription')
             }
           >
             <Form.Item
@@ -390,9 +392,8 @@ export default function VehicleApplicationForm({
             </Form.Item>
 
             {!datesReady ? (
-              <Alert
-                type="info"
-                showIcon
+              <ErpNotice
+                tone="info"
                 title={t('hr.messages.selectDatesForVehicles')}
               />
             ) : availableQuery.isLoading || availableQuery.isFetching ? (
@@ -400,19 +401,17 @@ export default function VehicleApplicationForm({
                 <Spin />
               </div>
             ) : availableQuery.isError ? (
-              <Alert
-                type="error"
-                showIcon
-                title={
-                  availableQuery.error instanceof Error
-                    ? availableQuery.error.message
-                    : t('hr.empty.noVehicles')
-                }
+              <ErpNotice
+                tone="error"
+                title={getFriendlyApiErrorMessage(
+                  availableQuery.error,
+                  t('hr.empty.noVehicles'),
+                  t,
+                )}
               />
             ) : vehicles.length === 0 ? (
-              <Alert
-                type="warning"
-                showIcon
+              <ErpNotice
+                tone="warning"
                 title={t('hr.empty.noVehicles')}
               />
             ) : (
@@ -435,17 +434,9 @@ export default function VehicleApplicationForm({
                         type="button"
                         disabled={!available}
                         onClick={() => handleVehicleSelect(vehicle)}
-                        className="w-full border bg-white p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                        style={{
-                          borderRadius: 2,
-                          borderColor: selected
-                            ? tokens.colorPrimary
-                            : 'rgba(0,0,0,0.08)',
-                          borderWidth: selected ? 2 : 1,
-                          background: selected
-                            ? tokens.colorPrimaryLight
-                            : '#FFFFFF',
-                        }}
+                        className={`erp-vehicle-pick-card w-full p-3.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50${
+                          selected ? ' erp-vehicle-pick-card--selected' : ''
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
@@ -457,24 +448,15 @@ export default function VehicleApplicationForm({
                                     : tokens.colorTextTertiary,
                                 }}
                               />
-                              <p
-                                className="m-0 truncate text-sm font-semibold"
-                                style={{ color: tokens.colorTextPrimary }}
-                              >
+                              <p className="erp-users-cell-strong m-0 truncate">
                                 {vehicle.plateNumber}
                               </p>
                             </div>
-                            <p
-                              className="mb-0 mt-1 truncate text-xs"
-                              style={{ color: tokens.colorTextSecondary }}
-                            >
+                            <p className="erp-users-cell-sub mb-0 mt-1 truncate">
                               {vehicle.make} {vehicle.model}
                             </p>
                             {vehicle.assignedDriver ? (
-                              <p
-                                className="mb-0 mt-1 truncate text-xs"
-                                style={{ color: tokens.colorTextTertiary }}
-                              >
+                              <p className="erp-users-cell-sub mb-0 mt-1 truncate">
                                 {t('hr.labels.driver')}:{' '}
                                 {formatDriverName(vehicle.assignedDriver)}
                               </p>
@@ -508,7 +490,13 @@ export default function VehicleApplicationForm({
         title: t('hr.section.tripDetails'),
         validate: () => validateDetailsStep(),
         content: (
-          <FormLayout variant="pro" title={t('hr.section.tripDetails')}>
+          <FormLayout
+            variant="pro"
+            title={t('hr.section.tripDetails')}
+            description={t(
+              'pages.hr.vehicleApplication.detailsStepDescription',
+            )}
+          >
             <Form.Item
               name="driveType"
               label={t('hr.form.driveType')}
@@ -619,9 +607,9 @@ export default function VehicleApplicationForm({
           <FormLayout
             variant="pro"
             title={t('hr.labels.reviewApplication')}
-            description={t('pages.hr.vehicleApplication.formDescription')}
+            description={t('pages.hr.vehicleApplication.reviewStepDescription')}
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="erp-form-grid-2">
               <ReviewItem
                 label={t('hr.labels.departure')}
                 value={
@@ -708,12 +696,12 @@ export default function VehicleApplicationForm({
       initialValues={{ driveType: 'COMPANY_DRIVER', passengerCount: 1 }}
     >
       {formError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={formError}
+        <ErpNotice
+          tone="error"
           className="mb-4"
+          title={formError}
           closable
+          closeLabel={t('errors.dismiss')}
           onClose={() => setFormError(null)}
         />
       ) : null}
@@ -738,16 +726,8 @@ function ReviewItem({
 }): React.ReactNode {
   return (
     <div className="min-w-0">
-      <p
-        className="mb-0.5 text-xs font-medium uppercase tracking-wide"
-        style={{ color: tokens.colorTextTertiary }}
-      >
-        {label}
-      </p>
-      <p
-        className="m-0 whitespace-pre-wrap text-sm"
-        style={{ color: tokens.colorTextPrimary }}
-      >
+      <p className="erp-users-stat-label mb-0.5">{label}</p>
+      <p className="erp-users-cell-strong m-0 whitespace-pre-wrap text-sm">
         {value}
       </p>
     </div>
