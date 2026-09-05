@@ -2063,6 +2063,8 @@
       "backToList": "Back to leave policies",
       "policyCount": "{{count}} policies",
       "policyCountOne": "1 policy",
+      "inactiveNotice": "This leave policy is inactive and will not apply to new assignments.",
+      "noRules": "No leave rules are configured on this policy.",
       "stats": {
         "total": "Total",
         "active": "Active",

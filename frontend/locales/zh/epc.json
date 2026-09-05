@@ -2063,6 +2063,8 @@
       "backToList": "返回请假政策",
       "policyCount": "{{count}} 项政策",
       "policyCountOne": "1 项政策",
+      "inactiveNotice": "此假期政策已停用，不会应用于新的员工分配。",
+      "noRules": "此政策尚未配置假期规则。",
       "stats": {
         "total": "全部",
         "active": "启用",

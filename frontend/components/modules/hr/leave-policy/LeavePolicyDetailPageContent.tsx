@@ -22,9 +22,12 @@ import {
 import { formatLeaveType } from '@/lib/utils/leave-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { previewEntitlement } from '@/lib/utils/leave-policy-preview';
+import { formatProjectDate } from '@/lib/utils/project-display';
 
 const LIST_PATH = '/hr/leave-policy';
 const RULE_ORDER = ['ANNUAL', 'MATERNITY', 'SICK'] as const;
+const PREVIEW_YEARS = 3;
 
 function sortRules(rules: LeavePolicyRule[]): LeavePolicyRule[] {
   return [...rules].sort((a, b) => {
@@ -104,13 +107,30 @@ export default function LeavePolicyDetailPageContent({
     [policy],
   );
 
-  const hasProgressiveAnnual = useMemo(
-    () =>
-      rules.some(
-        (rule) => rule.leaveType === 'ANNUAL' && rule.isProgressive,
-      ),
+  const annualRule = useMemo(
+    () => rules.find((rule) => rule.leaveType === 'ANNUAL'),
     [rules],
   );
+
+  const hasProgressiveAnnual = Boolean(annualRule?.isProgressive);
+
+  const previewDays = useMemo(() => {
+    if (!annualRule) {
+      return null;
+    }
+    return previewEntitlement(
+      {
+        leaveType: 'ANNUAL',
+        baseDays: annualRule.baseDays,
+        isProgressive: annualRule.isProgressive,
+        incrementDays: annualRule.incrementDays ?? undefined,
+        incrementEveryYears: annualRule.incrementEveryYears ?? undefined,
+        minimumServiceMonths: annualRule.minimumServiceMonths,
+        maxDaysCap: annualRule.maxDaysCap ?? undefined,
+      },
+      PREVIEW_YEARS,
+    );
+  }, [annualRule]);
 
   if (!canViewHr) {
     return (
@@ -123,8 +143,8 @@ export default function LeavePolicyDetailPageContent({
   if (policyQuery.isLoading && !policy) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
-        <div className="erp-pro-card rounded-xl p-6">
-          <Skeleton active paragraph={{ rows: 6 }} />
+        <div className="erp-pro-card p-6">
+          <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
     );
@@ -132,7 +152,7 @@ export default function LeavePolicyDetailPageContent({
 
   if (policyQuery.isError || !policy) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -165,6 +185,7 @@ export default function LeavePolicyDetailPageContent({
       onClick: () => setConfirmDelete(true),
     },
   ];
+  const showOverflowMenu = isNarrow;
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
@@ -188,11 +209,11 @@ export default function LeavePolicyDetailPageContent({
               onClick={() => router.push(LIST_PATH)}
               aria-label={t('hr.buttons.back')}
             >
-              {isNarrow ? undefined : t('hr.leavePolicy.backToList')}
+              {isNarrow ? undefined : t('hr.buttons.back')}
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
-            {isNarrow ? (
+            {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}
                 trigger={['click']}
@@ -237,96 +258,211 @@ export default function LeavePolicyDetailPageContent({
                 variant={policy.isActive ? 'success' : 'default'}
               />
               {hasProgressiveAnnual ? (
-                <Tag color="orange">{t('hr.leavePolicy.isProgressive')}</Tag>
+                <Tag color="orange" className="m-0 rounded-xl">
+                  {t('hr.leavePolicy.isProgressive')}
+                </Tag>
               ) : null}
             </div>
-            <h1 className="erp-employee-hero-title m-0">{policy.name}</h1>
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {policy.name}
+              </h2>
+            </div>
             {policy.description ? (
-              <p className="erp-employee-hero-subtitle m-0 mt-1">
+              <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
                 {policy.description}
               </p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-          <div className="erp-users-stat erp-contract-stat">
-            <div className="min-w-0 text-left">
-              <p className="erp-users-stat-label">
-                {t('hr.leavePolicy.governedBy')}
+            ) : (
+              <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+                {policy.governedBy
+                  ? `${t('hr.leavePolicy.governedBy')}: ${policy.governedBy}`
+                  : t('pages.hr.leavePolicy.listDescription')}
               </p>
-              <p className="erp-users-stat-value truncate text-base">
-                {policy.governedBy || '—'}
-              </p>
-            </div>
-          </div>
-          <div className="erp-users-stat erp-contract-stat">
-            <div className="min-w-0 text-left">
-              <p className="erp-users-stat-label">
-                {t('hr.leavePolicy.employees')}
-              </p>
-              <p className="erp-users-stat-value">
-                {policy.employeeCount.toLocaleString()}
-              </p>
-            </div>
-          </div>
-          <div className="erp-users-stat erp-contract-stat">
-            <div className="min-w-0 text-left">
-              <p className="erp-users-stat-label">{t('hr.leavePolicy.rules')}</p>
-              <p className="erp-users-stat-value">
-                {policy.ruleCount.toLocaleString()}
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="erp-pro-card">
-        {rules.map((rule) => (
-          <DetailSection
-            key={rule.leaveType}
-            title={formatLeaveType(rule.leaveType, t)}
-          >
-            <div className="erp-employee-meta-grid grid gap-4 sm:grid-cols-2">
-              <MetaItem label={t('hr.leavePolicy.baseDays')}>
-                {rule.baseDays}
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.leavePolicy.governedBy')}
+            </p>
+            <p className="erp-employee-meta-value truncate">
+              {policy.governedBy || '—'}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.leavePolicy.employees')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {policy.employeeCount.toLocaleString()}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.leavePolicy.rules')}</p>
+            <p className="erp-employee-meta-value">
+              {policy.ruleCount.toLocaleString()}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.assetLabels.updatedAt')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatProjectDate(policy.updatedAt)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {!policy.isActive ? (
+        <ErpNotice
+          tone="warning"
+          className="mb-0"
+          title={t('hr.leavePolicy.inactiveNotice')}
+        />
+      ) : null}
+
+      <div className="erp-pro-card min-w-0 overflow-hidden">
+        <div className="erp-employee-tab-panel erp-contract-detail-body">
+          <DetailSection title={t('hr.leavePolicy.steps.details')}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <MetaItem label={t('hr.leavePolicy.name')}>
+                {policy.name}
               </MetaItem>
-              <MetaItem label={t('hr.leavePolicy.minimumServiceMonths')}>
-                {rule.minimumServiceMonths}
+              <MetaItem label={t('common.status')}>
+                <StatusBadge
+                  label={
+                    policy.isActive ? t('common.active') : t('common.inactive')
+                  }
+                  variant={policy.isActive ? 'success' : 'default'}
+                />
               </MetaItem>
-              {rule.leaveType === 'ANNUAL' ? (
-                <>
-                  <MetaItem label={t('hr.leavePolicy.isProgressive')}>
-                    {rule.isProgressive ? t('common.yes') : t('common.no')}
+              <MetaItem label={t('hr.leavePolicy.governedBy')}>
+                {policy.governedBy || '—'}
+              </MetaItem>
+              <MetaItem label={t('hr.leavePolicy.employees')}>
+                {policy.employeeCount === 0
+                  ? t('hr.leavePolicy.noEmployees')
+                  : policy.employeeCount.toLocaleString()}
+              </MetaItem>
+              {policy.description ? (
+                <div className="md:col-span-2">
+                  <MetaItem label={t('hr.leavePolicy.description')}>
+                    <span className="whitespace-pre-wrap">
+                      {policy.description}
+                    </span>
                   </MetaItem>
-                  <MetaItem label={t('hr.leavePolicy.maxCarryForwardDays')}>
-                    {rule.maxCarryForwardDays ?? '—'}
-                  </MetaItem>
-                  {rule.isProgressive ? (
-                    <>
-                      <MetaItem label={t('hr.leavePolicy.incrementDays')}>
-                        {rule.incrementDays ?? '—'}
-                      </MetaItem>
-                      <MetaItem
-                        label={t('hr.leavePolicy.incrementEveryYears')}
-                      >
-                        {rule.incrementEveryYears ?? '—'}
-                      </MetaItem>
-                      <MetaItem label={t('hr.leavePolicy.maxDaysCap')}>
-                        {rule.maxDaysCap ?? '—'}
-                      </MetaItem>
-                    </>
-                  ) : null}
-                </>
+                </div>
               ) : null}
-              {rule.leaveType === 'SICK' ? (
-                <MetaItem label={t('hr.leavePolicy.requiresReceipt')}>
-                  {rule.requiresReceipt ? t('common.yes') : t('common.no')}
-                </MetaItem>
-              ) : null}
+              <MetaItem label={t('hr.table.createdDate')}>
+                {formatProjectDate(policy.createdAt)}
+              </MetaItem>
+              <MetaItem label={t('hr.assetLabels.updatedAt')}>
+                {formatProjectDate(policy.updatedAt)}
+              </MetaItem>
             </div>
           </DetailSection>
-        ))}
+
+          {rules.length === 0 ? (
+            <DetailSection title={t('hr.leavePolicy.steps.leaveRules')}>
+              <p className="erp-users-cell-sub m-0">
+                {t('hr.leavePolicy.noRules')}
+              </p>
+            </DetailSection>
+          ) : (
+            rules.map((rule) => (
+              <DetailSection
+                key={rule.leaveType}
+                title={formatLeaveType(rule.leaveType, t)}
+                action={
+                  rule.leaveType === 'ANNUAL' && rule.isProgressive ? (
+                    <Tag color="orange" className="m-0 rounded-xl">
+                      {t('hr.leavePolicy.isProgressive')}
+                    </Tag>
+                  ) : rule.leaveType === 'SICK' && rule.requiresReceipt ? (
+                    <Tag color="blue" className="m-0 rounded-xl">
+                      {t('hr.leavePolicy.requiresReceipt')}
+                    </Tag>
+                  ) : null
+                }
+              >
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <MetaItem label={t('hr.leavePolicy.baseDays')}>
+                    <span className="tabular-nums">{rule.baseDays}</span>
+                  </MetaItem>
+                  <MetaItem label={t('hr.leavePolicy.minimumServiceMonths')}>
+                    <span className="tabular-nums">
+                      {rule.minimumServiceMonths}
+                    </span>
+                  </MetaItem>
+                  {rule.leaveType === 'ANNUAL' ? (
+                    <>
+                      <MetaItem label={t('hr.leavePolicy.isProgressive')}>
+                        {rule.isProgressive ? t('common.yes') : t('common.no')}
+                      </MetaItem>
+                      <MetaItem label={t('hr.leavePolicy.maxCarryForwardDays')}>
+                        <span className="tabular-nums">
+                          {rule.maxCarryForwardDays ?? '—'}
+                        </span>
+                      </MetaItem>
+                      {rule.isProgressive ? (
+                        <>
+                          <MetaItem label={t('hr.leavePolicy.incrementDays')}>
+                            <span className="tabular-nums">
+                              {rule.incrementDays ?? '—'}
+                            </span>
+                          </MetaItem>
+                          <MetaItem
+                            label={t('hr.leavePolicy.incrementEveryYears')}
+                          >
+                            <span className="tabular-nums">
+                              {rule.incrementEveryYears ?? '—'}
+                            </span>
+                          </MetaItem>
+                          <MetaItem label={t('hr.leavePolicy.maxDaysCap')}>
+                            <span className="tabular-nums">
+                              {rule.maxDaysCap ?? '—'}
+                            </span>
+                          </MetaItem>
+                        </>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {rule.leaveType === 'SICK' ? (
+                    <MetaItem label={t('hr.leavePolicy.requiresReceipt')}>
+                      {rule.requiresReceipt ? t('common.yes') : t('common.no')}
+                    </MetaItem>
+                  ) : null}
+                </div>
+
+                {rule.leaveType === 'ANNUAL' &&
+                rule.isProgressive &&
+                previewDays != null ? (
+                  <ErpNotice
+                    className="mt-4"
+                    tone="info"
+                    title={t('hr.leavePolicy.preview')}
+                    description={t('hr.leavePolicy.previewExample', {
+                      years: PREVIEW_YEARS,
+                      days: previewDays,
+                      base: rule.baseDays,
+                    })}
+                  />
+                ) : null}
+              </DetailSection>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
