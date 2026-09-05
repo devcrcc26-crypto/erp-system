@@ -2,37 +2,37 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
-  Empty,
+  Dropdown,
   Form,
+  Grid,
   Input,
   InputNumber,
   Modal,
   Skeleton,
-  Space,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { MoreOutlined, StopOutlined } from '@ant-design/icons';
+import { ArrowLeft, Inbox, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
-import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
-import { ApiRequestError } from '@/lib/api/errors';
 import type {
   ExitPermitItem,
   UpdateExitPermitItemPayload,
@@ -53,13 +53,39 @@ import {
   formatExitPermitStatus,
 } from '@/lib/utils/exit-permit-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { tokens } from '@/lib/theme/tokens';
 
 const EXIT_PERMIT_LIST_PATH = '/hr/equipment-and-materials-exit-permit';
 
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  action?: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">{title}</h3>
+        {action}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /**
- * Exit permit detail - items, attachments, cancel, and approval chain.
+ * Exit permit detail — Users / employee profile chrome.
  */
 export default function ExitPermitDetailPageContent({
   permitId,
@@ -69,6 +95,9 @@ export default function ExitPermitDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const currentUser = useCurrentUser();
   const canViewHr = useCanViewHr();
   const detailQuery = useExitPermit(permitId);
@@ -83,6 +112,8 @@ export default function ExitPermitDetailPageContent({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [itemForm] = Form.useForm<UpdateExitPermitItemPayload>();
+
+  useSetHeaderExtra(null);
 
   const permit = detailQuery.data;
   const isActor =
@@ -124,12 +155,12 @@ export default function ExitPermitDetailPageContent({
         itemId: editingItem.id,
         payload: {
           itemName: values.itemName,
-          issue: (values.issue as string | undefined) || undefined,
+          issue: values.issue?.trim() ? values.issue : undefined,
           quantity:
             values.quantity !== undefined
               ? Number(values.quantity)
               : undefined,
-          unit: (values.unit as string | undefined) || undefined,
+          unit: values.unit?.trim() ? values.unit : undefined,
           file: itemImageFile ?? undefined,
         },
       });
@@ -140,6 +171,7 @@ export default function ExitPermitDetailPageContent({
         error,
         t('hr.messages.exitPermitItemUpdateFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -157,6 +189,7 @@ export default function ExitPermitDetailPageContent({
         error,
         t('hr.messages.exitPermitItemRemoveFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -171,6 +204,7 @@ export default function ExitPermitDetailPageContent({
         error,
         t('hr.messages.exitPermitCancelFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -185,14 +219,118 @@ export default function ExitPermitDetailPageContent({
         error,
         t('hr.messages.exitPermitSubmitFailed'),
         messageApi,
+        t,
       );
     }
   }
 
+  const itemColumns: ColumnsType<ExitPermitItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.itemName'),
+        dataIndex: 'itemName',
+        key: 'itemName',
+        ellipsis: true,
+        render: (value: string) => (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
+      },
+      {
+        title: t('hr.table.issue'),
+        dataIndex: 'issue',
+        key: 'issue',
+        ellipsis: true,
+        render: (value: string | null | undefined) => (
+          <span className="erp-users-cell-sub">{value || '—'}</span>
+        ),
+      },
+      {
+        title: t('hr.table.itemImage'),
+        key: 'image',
+        width: 120,
+        render: (_: unknown, row: ExitPermitItem) =>
+          row.image ? (
+            <AttachmentDownloadList
+              documents={[
+                {
+                  id: row.image.id,
+                  name: row.image.name,
+                  fileType: row.image.fileType ?? undefined,
+                  fileSizeBytes: row.image.fileSizeBytes,
+                },
+              ]}
+            />
+          ) : (
+            <Typography.Text type="secondary" className="text-xs">
+              {t('hr.labels.noItemImage')}
+            </Typography.Text>
+          ),
+      },
+      {
+        title: t('hr.table.quantity'),
+        dataIndex: 'quantity',
+        key: 'quantity',
+        width: 90,
+        align: 'right',
+        render: (value: number | string) => (
+          <span className="erp-users-cell-sub tabular-nums">
+            {Number(value)}
+          </span>
+        ),
+      },
+      {
+        title: t('hr.table.unit'),
+        dataIndex: 'unit',
+        key: 'unit',
+        width: 80,
+        render: (value: string | null | undefined) => (
+          <span className="erp-users-cell-sub">{value || '—'}</span>
+        ),
+      },
+      ...(canEdit
+        ? [
+            {
+              title: '',
+              key: 'actions',
+              width: 80,
+              render: (_: unknown, row: ExitPermitItem) => (
+                <div
+                  className="erp-table-row-actions flex items-center justify-end gap-0.5"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <Tooltip title={t('common.update')}>
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<Pencil size={14} />}
+                      onClick={() => openEditItem(row)}
+                      aria-label={t('common.update')}
+                    />
+                  </Tooltip>
+                  <Tooltip title={t('common.delete')}>
+                    <Button
+                      size="small"
+                      type="text"
+                      danger
+                      icon={<Trash2 size={14} />}
+                      onClick={() => setDeleteItemId(row.id)}
+                      aria-label={t('common.delete')}
+                    />
+                  </Tooltip>
+                </div>
+              ),
+            } satisfies ColumnsType<ExitPermitItem>[number],
+          ]
+        : []),
+    ],
+    [canEdit, t],
+  );
+
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-exit-permit-detail-page">
+        <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
@@ -201,20 +339,16 @@ export default function ExitPermitDetailPageContent({
 
   if (detailQuery.isError || !permit) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <Alert
-          type="error"
-          showIcon
-          title={
-            detailQuery.error instanceof ApiRequestError
-              ? detailQuery.error.message
-              : t('hr.messages.exitPermitNotFound')
-          }
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            detailQuery.error,
+            t('hr.messages.exitPermitNotFound'),
+            t,
+          )}
           action={
-            <Button
-              onClick={() => router.push(EXIT_PERMIT_LIST_PATH)}
-              style={{ borderRadius: 0 }}
-            >
+            <Button onClick={() => router.push(EXIT_PERMIT_LIST_PATH)}>
               {t('hr.buttons.back')}
             </Button>
           }
@@ -223,311 +357,293 @@ export default function ExitPermitDetailPageContent({
     );
   }
 
-  const itemColumns: ColumnsType<ExitPermitItem> = [
-    {
-      title: t('hr.table.itemName'),
-      dataIndex: 'itemName',
-      key: 'itemName',
-      ellipsis: true,
-    },
-    {
-      title: t('hr.table.issue'),
-      dataIndex: 'issue',
-      key: 'issue',
-      ellipsis: true,
-      render: (value: string | null | undefined) => value || '-',
-    },
-    {
-      title: t('hr.table.itemImage'),
-      key: 'image',
-      width: 120,
-      render: (_: unknown, row: ExitPermitItem) =>
-        row.image ? (
-          <AttachmentDownloadList
-            documents={[
-              {
-                id: row.image.id,
-                name: row.image.name,
-                fileType: row.image.fileType ?? undefined,
-                fileSizeBytes: row.image.fileSizeBytes,
-              },
-            ]}
-          />
-        ) : (
-          <Typography.Text type="secondary" className="text-xs">
-            {t('hr.labels.noItemImage')}
-          </Typography.Text>
-        ),
-    },
-    {
-      title: t('hr.table.quantity'),
-      dataIndex: 'quantity',
-      key: 'quantity',
-      width: 90,
-      align: 'right',
-      render: (value: number | string) => Number(value),
-    },
-    {
-      title: t('hr.table.unit'),
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 80,
-      render: (value: string | null | undefined) => value || '-',
-    },
-    ...(canEdit
-      ? [
-          {
-            title: '',
-            key: 'actions',
-            width: 90,
-            render: (_: unknown, row: ExitPermitItem) => (
-              <Space size={4}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<Pencil size={14} />}
-                  onClick={() => openEditItem(row)}
-                  style={{ borderRadius: 0 }}
-                />
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<Trash2 size={14} />}
-                  onClick={() => setDeleteItemId(row.id)}
-                  style={{ borderRadius: 0 }}
-                />
-              </Space>
-            ),
-          } satisfies ColumnsType<ExitPermitItem>[number],
-        ]
-      : []),
-  ];
+  const employeeName = formatExitPermitEmployeeName(permit.employee);
+  const submitLabel =
+    permit.status === 'RETURNED'
+      ? t('hr.buttons.resubmit')
+      : t('hr.buttons.submitRequest');
+
+  const overflowMenuItems: MenuProps['items'] = [];
+  if (permit.approvalRequestId) {
+    overflowMenuItems.push({
+      key: 'approvals',
+      label: t('hr.buttons.viewInApprovals'),
+      onClick: () => router.push(`/approvals/${permit.approvalRequestId}`),
+    });
+  }
+  if (canSubmit) {
+    overflowMenuItems.push({
+      key: 'submit',
+      label: submitLabel,
+      onClick: () => setConfirmSubmit(true),
+    });
+  }
+  if (canCancel) {
+    overflowMenuItems.push({
+      key: 'cancel',
+      label: t('hr.buttons.cancelRequest'),
+      icon: <StopOutlined />,
+      danger: true,
+      onClick: () => setConfirmCancel(true),
+    });
+  }
+
+  const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
+  const tableScrollX = screens.lg
+    ? 900
+    : screens.md
+      ? 700
+      : screens.sm
+        ? 540
+        : 400;
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push(EXIT_PERMIT_LIST_PATH)}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.back')}
-        </Button>
-        <Space wrap size={8} className="ml-auto">
-          {canCancel ? (
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-exit-permit-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
-              danger
-              onClick={() => setConfirmCancel(true)}
-              style={{ borderRadius: 0 }}
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push(EXIT_PERMIT_LIST_PATH)}
+              aria-label={t('hr.buttons.back')}
             >
-              {t('hr.buttons.cancelRequest')}
+              {isNarrow ? undefined : t('hr.buttons.back')}
             </Button>
-          ) : null}
-          {canSubmit ? (
-            <Button
-              type="primary"
-              onClick={() => setConfirmSubmit(true)}
-              style={{ borderRadius: 0 }}
-            >
-              {permit.status === 'RETURNED'
-                ? t('hr.buttons.resubmit')
-                : t('hr.buttons.submitRequest')}
-            </Button>
-          ) : null}
-        </Space>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_320px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <div
-            className="overflow-hidden rounded-none"
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-            }}
-          >
-            <div className="px-3 py-4 sm:px-5">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  {permit.requestNumber}
-                </span>
-                <span style={{ color: tokens.colorBorder }}>·</span>
-                <StatusBadge
-                  label={formatExitPermitStatus(permit.status, t)}
-                  variant={exitPermitStatusVariant(permit.status)}
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {showOverflowMenu ? (
+              <Dropdown
+                menu={{ items: overflowMenuItems }}
+                trigger={['click']}
+              >
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
                 />
-                {permit.isOnBehalf ? (
-                  <Tag color="blue">{t('hr.table.onBehalf')}</Tag>
-                ) : null}
-              </div>
-              <h2
-                className="m-0 text-lg font-semibold leading-snug"
-                style={{ color: tokens.colorTextPrimary }}
-              >
-                {formatExitPermitDirection(permit.direction, t)}
-              </h2>
-              <p
-                className="m-0 mt-1 text-sm"
-                style={{ color: tokens.colorTextSecondary }}
-              >
-                {formatExitPermitEmployeeName(permit.employee)}
-                {permit.submittedAt
-                  ? ` · ${formatProjectDate(permit.submittedAt)}`
-                  : null}
-              </p>
-            </div>
-
-            {permit.status === 'RETURNED' && isActor ? (
-              <div
-                className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5"
-                style={{
-                  background: tokens.colorAmber50,
-                  borderTop: `1px solid ${tokens.colorAmber400}`,
-                }}
-              >
-                <Typography.Text style={{ color: tokens.colorAmber400 }}>
-                  {t('hr.messages.exitPermitReturned')}
-                </Typography.Text>
+              </Dropdown>
+            ) : (
+              <>
                 {permit.approvalRequestId ? (
                   <Button
-                    size="small"
                     onClick={() =>
                       router.push(`/approvals/${permit.approvalRequestId}`)
                     }
-                    style={{ borderRadius: 0 }}
+                    aria-label={t('hr.buttons.viewInApprovals')}
                   >
-                    {t('hr.buttons.viewInApprovals')}
+                    {isCompact
+                      ? t('nav.approvals')
+                      : t('hr.buttons.viewInApprovals')}
                   </Button>
                 ) : null}
-              </div>
-            ) : null}
+                {canCancel ? (
+                  <Button
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={() => setConfirmCancel(true)}
+                    aria-label={t('hr.buttons.cancelRequest')}
+                  >
+                    {isCompact ? undefined : t('hr.buttons.cancelRequest')}
+                  </Button>
+                ) : null}
+                {canSubmit ? (
+                  <Button
+                    type="primary"
+                    onClick={() => setConfirmSubmit(true)}
+                    aria-label={submitLabel}
+                  >
+                    {submitLabel}
+                  </Button>
+                ) : null}
+              </>
+            )}
           </div>
+        </div>
 
-          <SummaryStrip
-            items={[
-              {
-                label: t('hr.table.items'),
-                value: String(permit.items.length),
-              },
-              {
-                label: t('hr.table.direction'),
-                value: formatExitPermitDirection(permit.direction, t),
-              },
-              {
-                label: t('hr.table.date'),
-                value: formatProjectDate(permit.date),
-              },
-            ]}
-          />
-
-          <SectionCard
-            title={t('hr.section.requestDetails')}
-            bodyClassName="px-3 py-4 sm:px-5"
-          >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <MetaItem label={t('hr.table.employee')}>
-                {formatExitPermitEmployeeName(permit.employee)}
-              </MetaItem>
-              <MetaItem label={t('hr.table.submittedBy')}>
-                {formatExitPermitEmployeeName(
-                  permit.submitter ?? permit.creator,
-                )}
-              </MetaItem>
-              <MetaItem label={t('hr.table.department')}>
-                {formatExitPermitDepartmentName(permit.department)}
-              </MetaItem>
-              <MetaItem label={t('hr.table.direction')}>
-                <Tag color={permit.direction === 'ENTRANCE' ? 'green' : 'red'}>
-                  {formatExitPermitDirection(permit.direction, t)}
-                </Tag>
-              </MetaItem>
-              <MetaItem label={t('hr.table.date')}>
-                {formatProjectDate(permit.date)}
-              </MetaItem>
-              {permit.completedAt ? (
-                <MetaItem label={t('hr.labels.completed')}>
-                  {formatProjectDate(permit.completedAt)}
-                </MetaItem>
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">{permit.requestNumber}</span>
+              <StatusBadge
+                label={formatExitPermitStatus(permit.status, t)}
+                variant={exitPermitStatusVariant(permit.status)}
+              />
+              {permit.isOnBehalf ? (
+                <Tag color="blue">{t('hr.table.onBehalf')}</Tag>
               ) : null}
             </div>
-          </SectionCard>
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {formatExitPermitDirection(permit.direction, t)}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+              {employeeName}
+              {permit.submittedAt
+                ? ` · ${formatProjectDate(permit.submittedAt)}`
+                : null}
+            </p>
+          </div>
+        </div>
+      </div>
 
-          <SectionCard
-            title={t('hr.section.items')}
-            bodyClassName="px-3 py-4 sm:px-5"
-          >
-            {permit.items.length === 0 ? (
-              <Empty description={t('hr.empty.noItems')} />
-            ) : (
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.items')}</p>
+            <p className="erp-employee-meta-value">{permit.items.length}</p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.direction')}</p>
+            <p className="erp-employee-meta-value">
+              {formatExitPermitDirection(permit.direction, t)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.date')}</p>
+            <p className="erp-employee-meta-value">
+              {formatProjectDate(permit.date)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.department')}</p>
+            <p className="erp-employee-meta-value truncate">
+              {formatExitPermitDepartmentName(permit.department)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {permit.status === 'RETURNED' && isActor ? (
+        <ErpNotice
+          tone="warning"
+          className="mb-4"
+          title={t('pages.hr.exitPermit.returnedNotice')}
+          action={
+            permit.approvalRequestId ? (
+              <Button
+                size="small"
+                onClick={() =>
+                  router.push(`/approvals/${permit.approvalRequestId}`)
+                }
+              >
+                {t('hr.buttons.viewInApprovals')}
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : null}
+
+      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="erp-pro-card min-w-0 overflow-hidden">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <DetailSection title={t('hr.section.requestDetails')}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <MetaItem label={t('hr.table.employee')}>
+                  {employeeName}
+                </MetaItem>
+                <MetaItem label={t('hr.table.submittedBy')}>
+                  {formatExitPermitEmployeeName(
+                    permit.submitter ?? permit.creator,
+                  )}
+                </MetaItem>
+                <MetaItem label={t('hr.table.department')}>
+                  {formatExitPermitDepartmentName(permit.department)}
+                </MetaItem>
+                <MetaItem label={t('hr.table.direction')}>
+                  <Tag
+                    color={permit.direction === 'ENTRANCE' ? 'green' : 'red'}
+                    className="rounded-xl"
+                  >
+                    {formatExitPermitDirection(permit.direction, t)}
+                  </Tag>
+                </MetaItem>
+                <MetaItem label={t('hr.table.date')}>
+                  {formatProjectDate(permit.date)}
+                </MetaItem>
+                {permit.completedAt ? (
+                  <MetaItem label={t('hr.labels.completed')}>
+                    {formatProjectDate(permit.completedAt)}
+                  </MetaItem>
+                ) : null}
+              </div>
+            </DetailSection>
+
+            <DetailSection title={t('hr.section.items')} bodyClassName="!p-0">
               <DataTable<ExitPermitItem>
                 rowKey="id"
-                className="erp-pro-table"
+                className="erp-pro-table erp-users-table"
                 size="small"
                 columns={itemColumns}
                 dataSource={permit.items}
                 pagination={false}
-                scroll={false}
-                footer={() => (
-                  <div className="flex justify-end pr-2 text-sm font-medium">
-                    <span style={{ color: tokens.colorTextSecondary }}>
-                      {t('hr.form.itemCount', {
-                        count: permit.items.length,
-                      })}
-                    </span>
-                  </div>
-                )}
+                scroll={{ x: tableScrollX }}
+                locale={{
+                  emptyText: (
+                    <TableEmptyState
+                      icon={<Inbox size={28} strokeWidth={1.5} />}
+                      title={t('hr.empty.noItems')}
+                      description={t(
+                        'pages.hr.exitPermit.itemsStepDescription',
+                      )}
+                    />
+                  ),
+                }}
+                footer={
+                  permit.items.length > 0
+                    ? () => (
+                        <div className="flex justify-end px-3 py-2 text-sm">
+                          <span className="erp-users-cell-sub">
+                            {t('hr.form.itemCount', {
+                              count: permit.items.length,
+                            })}
+                          </span>
+                        </div>
+                      )
+                    : undefined
+                }
               />
-            )}
-          </SectionCard>
+            </DetailSection>
 
-          {(permit.documents?.length ?? 0) > 0 ? (
-            <SectionCard
-              title={t('hr.section.attachments')}
-              bodyClassName="px-3 py-4 sm:px-5"
-            >
-              <AttachmentDownloadList
-                documents={(permit.documents ?? []).map((doc) => ({
-                  id: doc.id,
-                  name: doc.name,
-                  fileType: doc.fileType ?? undefined,
-                  fileSizeBytes: doc.fileSizeBytes,
-                }))}
-              />
-            </SectionCard>
-          ) : null}
+            {(permit.documents?.length ?? 0) > 0 ? (
+              <DetailSection title={t('hr.section.attachments')}>
+                <AttachmentDownloadList
+                  documents={(permit.documents ?? []).map((doc) => ({
+                    id: doc.id,
+                    name: doc.name,
+                    fileType: doc.fileType ?? undefined,
+                    fileSizeBytes: doc.fileSizeBytes,
+                  }))}
+                />
+              </DetailSection>
+            ) : null}
+          </div>
         </div>
 
-        <div className="min-w-0">
-          {isDirectApproved ? (
-            <SectionCard
-              title={t('hr.section.approvalChain')}
-              bodyClassName="px-3 py-4 sm:px-4"
-            >
-              <Typography.Text type="secondary">
-                {t('hr.messages.directApprovalNoChain')}
-              </Typography.Text>
-            </SectionCard>
-          ) : tiers.length === 0 ? (
-            <SectionCard
-              title={t('hr.section.approvalChain')}
-              bodyClassName="px-3 py-4 sm:px-4"
-            >
-              <Typography.Text type="secondary">
-                {t('hr.empty.noApprovalChain')}
-              </Typography.Text>
-            </SectionCard>
+        <aside className="min-w-0 lg:sticky lg:top-4">
+          {isDirectApproved || tiers.length === 0 ? (
+            <div className="erp-pro-card overflow-hidden">
+              <DetailSection title={t('hr.section.approvalChain')}>
+                <p className="erp-users-cell-sub m-0">
+                  {isDirectApproved
+                    ? t('hr.messages.directApprovalNoChain')
+                    : t('hr.empty.noApprovalChain')}
+                </p>
+              </DetailSection>
+            </div>
           ) : (
             <ApprovalTierTimeline
               tiers={tiers}
               currentTier={permit.approvalRequest?.currentTier ?? 1}
             />
           )}
-        </div>
+        </aside>
       </div>
 
       <Modal
@@ -614,11 +730,7 @@ export default function ExitPermitDetailPageContent({
         open={confirmSubmit}
         title={t('hr.dialog.submitExitPermitTitle')}
         description={t('hr.dialog.submitExitPermitDesc')}
-        confirmLabel={
-          permit.status === 'RETURNED'
-            ? t('hr.buttons.resubmit')
-            : t('hr.buttons.submitRequest')
-        }
+        confirmLabel={submitLabel}
         confirmLoading={submitMutation.isPending}
         onConfirm={() => {
           void handleSubmit();

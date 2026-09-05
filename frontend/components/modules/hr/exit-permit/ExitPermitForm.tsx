@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   DatePicker,
   Form,
@@ -23,6 +22,7 @@ import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { UserSelect } from '@/components/ui';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -650,12 +650,12 @@ export default function ExitPermitForm({
       className="flex min-h-0 flex-1 flex-col"
     >
       {formError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={formError}
+        <ErpNotice
+          tone="error"
           className="mb-4"
-          closable={{ onClose: () => setFormError(null) }}
+          title={formError}
+          closable
+          onClose={() => setFormError(null)}
         />
       ) : null}
       <StepperForm

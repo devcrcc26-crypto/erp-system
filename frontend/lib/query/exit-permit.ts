@@ -91,6 +91,54 @@ export function useExitPermits(
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the exit permit list (filter locally).
+ */
+async function fetchAllExitPermitPages(
+  params: Omit<ListExitPermitsParams, 'page' | 'limit' | 'search'> = {},
+): Promise<ExitPermitListItem[]> {
+  const first = await apiGetPaginated<ExitPermitListItem>(
+    `${EXIT_PERMIT_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<ExitPermitListItem>(
+        `${EXIT_PERMIT_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All exit permits (all pages) for client-side filter/search. */
+export function useExitPermitsAll(
+  params: Omit<ListExitPermitsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...exitPermitKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllExitPermitPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 /** Single exit permit with items and approval tiers. */
 export function useExitPermit(id: string, enabled = true) {
   return useQuery({

@@ -1,92 +1,249 @@
 'use client';
 
-import { useTablePagination } from "@/hooks/use-table-pagination";
-import { ExitPermitListItem, ExitPermitStatus } from "@/lib/api/exit-permit.types";
-import { useExitPermits } from "@/lib/query/exit-permit";
-import dayjs from "dayjs";
-import { useMemo, useState } from "react";
-import { useCanViewHr } from "@/hooks/use-auth-capabilities";
-import { ApiRequestError } from "@/lib/api/errors";
-import { Alert, Select, DatePicker, Button, Tooltip, Tag } from "antd";
-import { StatCard } from "../../dashboard/DashboardStats";
-import { useEpcTranslation } from "@/hooks/use-epc-translation";
-import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, InboxOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { ListSearchInput, StatusBadge, TableEmptyState } from "@/components/ui";
-import { useUsersDirectory } from "@/lib/query/users";
-import TableUpdatingIndicator from "@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator";
-import ListPageNavIcon from "@/components/ui/ListPageNavIcon/ListPageNavIcon";
-import { tokens } from "@/lib/theme/tokens";
-import { useRouter } from "next/navigation";
-import { ColumnsType } from "antd/es/table";
-import { exitPermitStatusVariant, formatExitPermitDepartmentName, formatExitPermitEmployeeName, formatExitPermitStatus } from "@/lib/utils/exit-permit-display";
-import DataTable from "@/components/ui/DataTable/DataTable";
-import { useDepartments } from "@/lib/query/org";
+import { useMemo, useState } from 'react';
+import {
+  Button,
+  DatePicker,
+  Grid,
+  Input,
+  Select,
+  Spin,
+  Tag,
+  Tooltip,
+} from 'antd';
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  InboxOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import type { Dayjs } from 'dayjs';
+import { useRouter } from 'next/navigation';
+import DataTable from '@/components/ui/DataTable/DataTable';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useTablePagination } from '@/hooks/use-table-pagination';
+import type {
+  ExitPermitDirection,
+  ExitPermitListItem,
+} from '@/lib/api/exit-permit.types';
+import type { PaginationMeta } from '@/lib/api/types';
+import { useExitPermitsAll } from '@/lib/query/exit-permit';
+import { useUsersDirectory } from '@/lib/query/users';
+import {
+  exitPermitStatusVariant,
+  formatExitPermitDepartmentName,
+  formatExitPermitDirection,
+  formatExitPermitEmployeeName,
+  formatExitPermitStatus,
+} from '@/lib/utils/exit-permit-display';
+import {
+  filterExitPermits,
+  statusesForExitPermitMode,
+  type ExitPermitStatusMode,
+} from '@/lib/utils/exit-permit-list-filter';
+import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
+const LIST_PATH = '/hr/equipment-and-materials-exit-permit';
+const NEW_PATH = '/approvals/new/exit-permit';
 
-const { RangePicker } = DatePicker;
+const PENDING_STATUSES = statusesForExitPermitMode('pending');
+const APPROVED_STATUSES = statusesForExitPermitMode('approved');
+const REJECTED_STATUSES = statusesForExitPermitMode('rejected');
 
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
+
+function ExitPermitStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
+
+/**
+ * Exit permit list — Users chrome (stat bar, filter row, soft table).
+ */
 export default function ExitPermitListPageContent(): React.ReactNode {
-
-  const {t} = useEpcTranslation();
+  const { t } = useEpcTranslation();
+  const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
+  const canViewHr = useCanViewHr();
+  const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ExitPermitStatus[]>([]);
-  const canViewHr = useCanViewHr();
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [statusMode, setStatusMode] = useState<ExitPermitStatusMode>('all');
   const [employeeId, setEmployeeId] = useState<string | undefined>();
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
 
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
-  const { params, resetPage, bindMeta } = useTablePagination();
+  const listQuery = useExitPermitsAll({}, true);
+  const usersQuery = useUsersDirectory(
+    { page: 1, limit: 100 },
+    { enabled: canViewHr },
+  );
 
-  const listParams = useMemo(() => ({
-    ...params,
-    search: search.trim() || undefined,
-    status: statusFilter.length > 0 ? statusFilter : undefined,
-    employeeId: canViewHr ? employeeId : undefined,
-    dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
-    dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
-  }), [
-    params,
-    search,
-    statusFilter,
-    employeeId,
-    dateRange,
-    canViewHr,
-  ]);
+  const allRows = listQuery.data ?? [];
 
+  const statusCounts = useMemo(() => {
+    return {
+      all: allRows.length,
+      pending: allRows.filter((row) => PENDING_STATUSES.includes(row.status))
+        .length,
+      approved: allRows.filter((row) => APPROVED_STATUSES.includes(row.status))
+        .length,
+      rejected: allRows.filter((row) => REJECTED_STATUSES.includes(row.status))
+        .length,
+    };
+  }, [allRows]);
 
-  
+  const filtered = useMemo(
+    () =>
+      filterExitPermits(allRows, {
+        search: appliedSearch,
+        statusMode,
+        employeeId: canViewHr ? employeeId : undefined,
+        dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+        dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+      }),
+    [allRows, appliedSearch, statusMode, employeeId, dateRange, canViewHr],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
+
+  const pageTitle = canViewHr
+    ? t('pages.hr.exitPermit.listTitle')
+    : t('pages.hr.exitPermit.myListTitle');
+  const pageDescription = canViewHr
+    ? t('pages.hr.exitPermit.listDescription')
+    : t('pages.hr.exitPermit.myListDescription');
+
+  function handleResetFilters(): void {
+    setSearch('');
+    setAppliedSearch('');
+    setStatusMode('all');
+    setEmployeeId(undefined);
+    setDateRange(null);
+    resetPage();
+  }
+
+  function handleStatusMode(mode: ExitPermitStatusMode): void {
+    setStatusMode(mode);
+    resetPage();
+  }
+
+  const hasFilters =
+    Boolean(appliedSearch.trim()) ||
+    statusMode !== 'all' ||
+    Boolean(employeeId) ||
+    Boolean(dateRange?.[0] || dateRange?.[1]);
+
   const columns: ColumnsType<ExitPermitListItem> = useMemo(
     () => [
       {
-        title: t('hr.table.employee'),
-        dataIndex: 'employee',
-        key: 'employee',
-        render: (_: unknown, row: ExitPermitListItem) => (
-          <span>
-            {formatExitPermitEmployeeName(row.employee)}
-            {row.isOnBehalf ? (
-              <Tag className="ml-2" color="blue">
-                {t('hr.table.onBehalf')}
-              </Tag>
-            ) : null}
-          </span>
+        title: t('hr.table.requestNumber'),
+        dataIndex: 'requestNumber',
+        key: 'requestNumber',
+        width: 130,
+        responsive: ['md'],
+        render: (value: string) => (
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
       {
-        title: t('hr.table.submittedBy'),
-        dataIndex: 'submitter',
-        key: 'submitter',
-        render: (_: unknown, row: ExitPermitListItem) =>
-          formatExitPermitEmployeeName(row.submitter ?? row.creator),
+        title: t('hr.table.employee'),
+        key: 'employee',
+        width: isNarrow ? undefined : 200,
+        render: (_: unknown, row: ExitPermitListItem) => (
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="erp-users-cell-strong m-0 truncate">
+                {formatExitPermitEmployeeName(row.employee)}
+              </p>
+              {row.isOnBehalf ? (
+                <Tag color="blue" className="m-0">
+                  {t('hr.table.onBehalf')}
+                </Tag>
+              ) : null}
+            </div>
+            <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
+              {isNarrow
+                ? row.requestNumber
+                : formatExitPermitDepartmentName(row.department)}
+            </p>
+          </div>
+        ),
       },
       {
         title: t('hr.table.direction'),
         dataIndex: 'direction',
         key: 'direction',
-        width: 100  ,
-        render: (value: 'IN' | 'OUT') => (
-          <Tag color={value === 'IN' ? 'green' : 'red'}>
-            {value === 'IN' ? 'In' : 'Out'}
+        width: 110,
+        responsive: ['sm'],
+        render: (value: ExitPermitDirection) => (
+          <Tag color={value === 'ENTRANCE' ? 'green' : 'red'}>
+            {formatExitPermitDirection(value, t)}
           </Tag>
         ),
       },
@@ -94,19 +251,43 @@ export default function ExitPermitListPageContent(): React.ReactNode {
         title: t('hr.table.date'),
         dataIndex: 'date',
         key: 'date',
-        render: (text: string) => dayjs(text).format('DD/MM/YYYY'),
+        width: 120,
+        responsive: ['md'],
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">
+            {formatProjectDate(value)}
+          </span>
+        ),
       },
       {
         title: t('hr.table.department'),
-        dataIndex: 'department',
         key: 'department',
-        render: (_: unknown, row: ExitPermitListItem) => formatExitPermitDepartmentName(row.department),
+        width: 160,
+        ellipsis: true,
+        responsive: ['lg'],
+        render: (_: unknown, row: ExitPermitListItem) => (
+          <span className="erp-users-cell-sub">
+            {formatExitPermitDepartmentName(row.department)}
+          </span>
+        ),
+      },
+      {
+        title: t('hr.table.items'),
+        dataIndex: 'itemCount',
+        key: 'itemCount',
+        width: 80,
+        align: 'right',
+        responsive: ['lg'],
+        render: (value: number) => (
+          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+        ),
       },
       {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
-        render: (value: ExitPermitStatus) => (
+        width: isNarrow ? 100 : 130,
+        render: (value: ExitPermitListItem['status']) => (
           <StatusBadge
             label={formatExitPermitStatus(value, t)}
             variant={exitPermitStatusVariant(value)}
@@ -119,246 +300,214 @@ export default function ExitPermitListPageContent(): React.ReactNode {
         key: 'currentTierLabel',
         width: 140,
         ellipsis: true,
-        render: (value: string | null | undefined) => value ?? '-',
+        responsive: ['xl'],
+        render: (value: string | null | undefined) =>
+          value ? (
+            <span className="erp-users-role-tag">{value}</span>
+          ) : (
+            <span className="erp-users-cell-sub">—</span>
+          ),
       },
     ],
-    [canViewHr, t],
+    [isNarrow, t],
   );
 
-  const listQuery = useExitPermits(listParams, true);
-
-  const statusCounts = {
-    all: listQuery.data?.meta?.total ?? 0,
-    pending: listQuery.data?.meta?.total ?? 0,
-    approved: listQuery.data?.meta?.total ?? 0,
-    rejected: listQuery.data?.meta?.total ?? 0,
+  if (listQuery.isLoading && !listQuery.data) {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-exit-permit-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
+      </div>
+    );
   }
 
-
-  const statusOptions = useMemo(() => [
-    { value: 'DRAFT', label: t('hr.status.DRAFT') },
-    { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
-    { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
-    { value: 'APPROVED', label: t('hr.status.APPROVED') },
-    { value: 'REJECTED', label: t('hr.status.REJECTED') },
-    { value: 'RETURNED', label: t('hr.status.RETURNED') },
-  ], [t]);
-
-  const meta = listQuery.data?.meta;
-  const rows = listQuery.data?.data ?? [];
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: 100 },
-    { enabled: canViewHr },
-  );
-
-  const hasFilters =
-    Boolean(search.trim()) ||
-    statusFilter.length > 0 ||
-    employeeId !== undefined ||
-    Boolean(dateRange?.[0] || dateRange?.[1]);
-
-  const router = useRouter();
-
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
+    <div className="erp-pro-list-page erp-users-page erp-exit-permit-page">
       {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={
-            listQuery.error instanceof ApiRequestError ? listQuery.error.message : 'Failed to load exit permits'
-          }
+        <ErpNotice
+          tone="error"
+          className="mb-4"
+          title={getFriendlyApiErrorMessage(
+            listQuery.error,
+            t('hr.messages.exitPermitLoadFailed'),
+            t,
+          )}
         />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
-          label={t('pages.approvals.stats.total')}
+      <div className="erp-users-stat-bar">
+        <ExitPermitStat
+          label={t('pages.hr.exitPermit.stats.total')}
           value={statusCounts.all}
-          color="teal"
-          icon={<InboxOutlined size={14} />}
+          accent="teal"
+          icon={<InboxOutlined />}
+          active={statusMode === 'all'}
+          onClick={() => handleStatusMode('all')}
         />
-        <StatCard
-          label={t('pages.approvals.stats.pending')}
+        <ExitPermitStat
+          label={t('pages.hr.exitPermit.stats.pending')}
           value={statusCounts.pending}
-          color="blue"
-          icon={<ClockCircleOutlined size={14} />}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+          active={statusMode === 'pending'}
+          onClick={() => handleStatusMode('pending')}
         />
-        <StatCard
-          label={t('pages.approvals.stats.approved')}
+        <ExitPermitStat
+          label={t('pages.hr.exitPermit.stats.approved')}
           value={statusCounts.approved}
-          color="green"
-          icon={<CheckCircleOutlined size={14} />}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statusMode === 'approved'}
+          onClick={() => handleStatusMode('approved')}
         />
-        <StatCard
-          label={t('pages.approvals.stats.rejected')}
+        <ExitPermitStat
+          label={t('pages.hr.exitPermit.stats.rejected')}
           value={statusCounts.rejected}
-          color="red"
-          icon={<CloseCircleOutlined size={14} />}
+          accent="red"
+          icon={<CloseCircleOutlined />}
+          active={statusMode === 'rejected'}
+          onClick={() => handleStatusMode('rejected')}
         />
       </div>
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <ListSearchInput
-            committedValue={search}
-            onCommit={(value) => {
-              setSearch(value);
-              resetPage();
-            }}
-            placeholder={t('hr.placeholder.searchExitPermit')}
-            className="w-full min-w-0 sm:w-72"
-          />
 
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder={t('hr.placeholder.status')}
-            options={statusOptions}
-            value={statusFilter}
-            onChange={(v) => {
-              setStatusFilter(v);
-              resetPage();
-            }}
-            maxTagCount="responsive"
-            className="w-full min-w-0 sm:min-w-[180px] sm:w-auto"
-          />
-
-          {canViewHr ? (
-            <Select
-              showSearch
-              allowClear
-              placeholder={t('hr.placeholder.employee')}
-              loading={usersQuery.isLoading}
-              value={employeeId}
-              onChange={(v) => {
-                setEmployeeId(v);
-                resetPage();
-              }}
-              className="w-full min-w-0 sm:w-56"
-              filterOption={(input, option) =>
-                String(option?.label ?? '')
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-                }
-                options={
-                  usersQuery.data?.data?.map((u) => ({
-                    value: u.id,
-                    label: `${u.firstName} ${u.lastName}`,
-                  })) ?? []
-                }
-              />
-            ) : null}
-
-            <RangePicker
-              value={dateRange}
-              className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
-              onChange={(v) => {
-                setDateRange(v as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null);
-                resetPage();
-              }}
-              placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
-            />
-
-         <div className="ml-auto flex items-center gap-2">
-           <Button 
-            onClick={() => {
-              setSearch('');
-              setStatusFilter([]);
-              setEmployeeId(undefined);
-              setDateRange(null);
-              resetPage();
-            }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              style={{ borderRadius: 0 }}
-              aria-label={t('common.refresh')}
-            />
-          </Tooltip>
-         </div>
-        </div>
-      </div>
-
-      {listQuery.isFetching && listQuery.data ? (
-        <TableUpdatingIndicator active={listQuery.isFetching} />
-      ) : null}
-      
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-equipment-and-materials-exit-permit" />
-            <h3 className="m-0 text-sm font-semibold" style={{ color: tokens.colorTextPrimary }}>Exit Permits</h3>
-            <span className="text-xs" style={{ color: tokens.colorTextTertiary }}>
-              {meta?.total ?? rows.length}
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
             </span>
           </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => router.push('/approvals/new/exit-permit')}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.buttons.newExitPermit')}
-          </Button>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push(NEW_PATH)}
+              aria-label={t('hr.buttons.newExitPermit')}
+            >
+              {isNarrow ? undefined : t('hr.buttons.newExitPermit')}
+            </Button>
+          </div>
         </div>
-        <div>
+
+        <div className="erp-users-filter-bar">
+          <Input
+            allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.hr.exitPermit.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              setAppliedSearch(value.trim());
+              resetPage();
+            }}
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
+          />
+          <span className="erp-users-filter-spacer" aria-hidden />
+          {canViewHr ? (
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder={t('hr.placeholder.employee')}
+              className="erp-users-filter-select"
+              loading={usersQuery.isLoading}
+              options={(usersQuery.data?.data ?? []).map((user) => ({
+                value: user.id,
+                label: formatUserName(user),
+              }))}
+              value={employeeId}
+              onChange={(value: string | undefined) => {
+                setEmployeeId(value);
+                resetPage();
+              }}
+            />
+          ) : null}
+          <DatePicker.RangePicker
+            value={dateRange}
+            className="erp-users-filter-daterange"
+            onChange={(value) => {
+              setDateRange(value);
+              resetPage();
+            }}
+          />
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="erp-pro-table-card-body">
           <DataTable<ExitPermitListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            scroll={false}
-            loading={listQuery.isFetching && !listQuery.isLoading}
-            pagination={
-              meta
-                ? {
-                    ...bindMeta(meta),
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                  }
-                : undefined
-            }
-            onRow={(row) => ({
-              onClick: () =>
-                router.push(
-                  `/hr/equipment-and-materials-exit-permit/${row.id}`,
-                ),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+            loading={listQuery.isFetching && rows.length === 0}
+            scroll={{ x: isNarrow ? 560 : isCompact ? 860 : 1100 }}
+            onRow={(record) => ({
+              onClick: () => router.push(`${LIST_PATH}/${record.id}`),
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
-                  title={t('hr.empty.exitPermit')}
-                  description={t('hr.empty.exitPermitDescription')}
                   icon={<InboxOutlined />}
+                  title={
+                    hasFilters
+                      ? t('pages.hr.exitPermit.emptyFiltered')
+                      : t('hr.empty.exitPermit')
+                  }
+                  description={
+                    hasFilters
+                      ? pageDescription
+                      : t('hr.empty.exitPermitDescription')
+                  }
                   action={
-                    hasFilters ? {
-                      label: t('common.reset'),
-                      onClick: () => {
-                        setSearch('');
-                        setStatusFilter([]);
-                        setEmployeeId(undefined);
-                        setDateRange(null);
-                        resetPage();
-                      },
-                    } : {
-                      label: t('hr.buttons.newExitPermit'),
-                      onClick: () => router.push('/approvals/new/exit-permit'),
-                    }
+                    hasFilters
+                      ? {
+                          label: t('common.reset'),
+                          onClick: handleResetFilters,
+                        }
+                      : {
+                          label: t('hr.buttons.newExitPermit'),
+                          onClick: () => router.push(NEW_PATH),
+                        }
                   }
                 />
               ),
             }}
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
+            }}
           />
         </div>
       </div>
-      
     </div>
-  )
+  );
 }

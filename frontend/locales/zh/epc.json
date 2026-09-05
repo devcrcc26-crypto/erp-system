@@ -398,6 +398,17 @@
         "itemsStepDescription": "至少添加一条设备或材料明细。物品照片可选。",
         "reviewStepDescription": "提交前请确认出入证摘要。",
         "attachmentsStepDescription": "可选上传证明文件。",
+        "searchPlaceholder": "按申请编号、员工或部门搜索",
+        "emptyFiltered": "没有符合筛选条件的出入证",
+        "returnedNotice": "此出入证已退回。请在审批中查看反馈后重新提交。",
+        "permitSingular": "条出入证",
+        "permitPlural": "条出入证",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        },
         "direction": {
           "ENTRANCE": "入场",
           "EXIT": "出场"
@@ -2203,6 +2214,7 @@
       "materialRequisitionSubmitFailed": "提交材料领用失败",
       "exitPermitSubmitted": "出入证已提交审批",
       "exitPermitSubmitFailed": "提交出入证失败",
+      "exitPermitLoadFailed": "加载出入证失败",
       "exitPermitCancelled": "出入证已取消",
       "exitPermitCancelFailed": "取消出入证失败",
       "exitPermitNotFound": "未找到出入证",

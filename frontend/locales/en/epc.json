@@ -398,6 +398,17 @@
         "itemsStepDescription": "Add at least one equipment or material line item. Item photos are optional.",
         "reviewStepDescription": "Confirm the permit summary before submitting.",
         "attachmentsStepDescription": "Optionally attach supporting documents.",
+        "searchPlaceholder": "Search by request #, employee, or department",
+        "emptyFiltered": "No exit permits match your filters",
+        "returnedNotice": "This permit was returned. Review the feedback in Approvals, then resubmit.",
+        "permitSingular": "permit",
+        "permitPlural": "permits",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        },
         "direction": {
           "ENTRANCE": "Entrance",
           "EXIT": "Exit"
@@ -2203,6 +2214,7 @@
       "materialRequisitionSubmitFailed": "Failed to submit material requisition",
       "exitPermitSubmitted": "Exit permit submitted for approval",
       "exitPermitSubmitFailed": "Failed to submit exit permit",
+      "exitPermitLoadFailed": "Failed to load exit permits",
       "exitPermitCancelled": "Exit permit cancelled",
       "exitPermitCancelFailed": "Failed to cancel exit permit",
       "exitPermitNotFound": "Exit permit not found",

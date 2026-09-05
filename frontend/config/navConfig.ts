@@ -108,7 +108,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/asset-management': 'nav.hr.assetManagement',
   '/hr/attendance': 'nav.hr.attendance',
   '/hr/employee-evaluation': 'nav.hr.employeeEvaluation',
-  '/hr/equipment-and-materials-exit-permit': 'nav.hr.equipmentAndMaterialsExitPermit',
+  '/hr/equipment-and-materials-exit-permit': 'pages.hr.exitPermit.listTitle',
   '/hr/equipment-and-materials-exit-permit/new': 'pages.hr.exitPermit.new',
 };
 
@@ -219,6 +219,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/employee-contract': 'pages.hr.employeeContract.listDescription',
   '/hr/employee-contract/new': 'pages.hr.employeeContract.formDescription',
   '/hr/inspection-repair': 'pages.hr.inspectionRepair.listDescription',
+  '/hr/equipment-and-materials-exit-permit': 'pages.hr.exitPermit.listDescription',
   '/hr/business-trips': 'pages.hr.businessTrip.listDescription',
   '/hr/per-diem': 'pages.hr.perDiem.listDescription',
   '/hr/employee-per-diem-rates': 'pages.hr.employeePerDiemRates.listDescription',
@@ -1143,13 +1144,25 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname === '/hr/equipment-and-materials-exit-permit') {
+    return {
+      titleKey: 'pages.hr.exitPermit.listTitle',
+      descriptionKey: 'pages.hr.exitPermit.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.exitPermit.listTitle') },
+      ],
+    };
+  }
+
   if (pathname.startsWith('/hr/equipment-and-materials-exit-permit/')) {
     return {
       titleKey: 'pages.hr.exitPermit.detail',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
         {
-          label: t('nav.hr.equipmentAndMaterialsExitPermit'),
+          label: t('pages.hr.exitPermit.listTitle'),
           href: '/hr/equipment-and-materials-exit-permit',
         },
         { label: t('pages.hr.exitPermit.detail') },
