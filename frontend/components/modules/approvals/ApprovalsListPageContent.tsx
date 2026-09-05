@@ -36,9 +36,10 @@ import type {
   ApprovalRequestListItem,
   ApprovalTier,
 } from '@/lib/api/approvals.types';
+import type { PaginationMeta } from '@/lib/api/types';
 import {
   useApprovalCategories,
-  useApprovalRequests,
+  useApprovalRequestsAll,
   usePendingMyActionCount,
 } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -49,6 +50,7 @@ import {
   resolveDisplayStatus,
 } from '@/lib/utils/approval-display';
 import {
+  filterApprovalRequests,
   statusesForApprovalMode,
   type ApprovalStatusMode,
 } from '@/lib/utils/approvals-list-filter';
@@ -135,7 +137,7 @@ function resolveDefaultInbox(canViewHr: boolean): InboxTab {
 }
 
 /**
- * Approval inbox — Users/HR chrome with server-side pagination.
+ * Approval inbox — Users chrome with client-side search/filters.
  */
 export default function ApprovalsListPageContent(): React.ReactNode {
   const router = useRouter();
@@ -146,7 +148,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   const isFullAccess = useCanViewHr();
   const currentUser = useCurrentUser();
   const currentUserId = currentUser.data?.id ?? '';
-  const { params, resetPage, bindMeta } = useTablePagination();
+  const { params, resetPage, bindMeta } = useTablePagination(10);
   const [inbox, setInbox] = useState<InboxTab>(() =>
     resolveDefaultInbox(useAuthStore.getState().capabilities.canViewHr),
   );
@@ -166,62 +168,56 @@ export default function ApprovalsListPageContent(): React.ReactNode {
     }
   }, [inbox, isFullAccess]);
 
-  const statusFilter = useMemo(
-    () => statusesForApprovalMode(statusMode),
-    [statusMode],
-  );
-
   const categoriesQuery = useApprovalCategories();
-  const listParams = useMemo(
-    () => ({
-      ...params,
-      inbox,
-      search: appliedSearch.trim() || undefined,
-      status: statusFilter.length > 0 ? statusFilter : undefined,
+  const listQuery = useApprovalRequestsAll({ inbox }, true);
+  const allRows = listQuery.data ?? [];
+
+  const statusCounts = useMemo(() => {
+    const scoped = filterApprovalRequests(allRows, {
+      search: appliedSearch,
       categoryId,
-      dateFrom: dateRange?.[0]?.startOf('day').toISOString(),
-      dateTo: dateRange?.[1]?.endOf('day').toISOString(),
-    }),
-    [params, inbox, appliedSearch, statusFilter, categoryId, dateRange],
+      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+    });
+    return {
+      all: scoped.length,
+      pending: scoped.filter((row) => PENDING_STATUSES.includes(row.status))
+        .length,
+      approved: scoped.filter((row) => APPROVED_STATUSES.includes(row.status))
+        .length,
+      rejected: scoped.filter((row) => REJECTED_STATUSES.includes(row.status))
+        .length,
+    };
+  }, [allRows, appliedSearch, categoryId, dateRange]);
+
+  const filtered = useMemo(
+    () =>
+      filterApprovalRequests(allRows, {
+        search: appliedSearch,
+        statusMode,
+        categoryId,
+        dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+        dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+      }),
+    [allRows, appliedSearch, statusMode, categoryId, dateRange],
   );
 
-  const listQuery = useApprovalRequests(listParams);
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
 
-  const countBase = useMemo(
-    () => ({
-      page: 1,
-      limit: 1,
-      inbox,
-      search: appliedSearch.trim() || undefined,
-      categoryId,
-      dateFrom: dateRange?.[0]?.startOf('day').toISOString(),
-      dateTo: dateRange?.[1]?.endOf('day').toISOString(),
-    }),
-    [inbox, appliedSearch, categoryId, dateRange],
-  );
-
-  const allCountQuery = useApprovalRequests(countBase);
-  const pendingCountQuery = useApprovalRequests({
-    ...countBase,
-    status: PENDING_STATUSES,
-  });
-  const approvedCountQuery = useApprovalRequests({
-    ...countBase,
-    status: APPROVED_STATUSES,
-  });
-  const rejectedCountQuery = useApprovalRequests({
-    ...countBase,
-    status: REJECTED_STATUSES,
-  });
-
-  const statusCounts = {
-    all: allCountQuery.data?.meta.total ?? 0,
-    pending: pendingCountQuery.data?.meta.total ?? 0,
-    approved: approvedCountQuery.data?.meta.total ?? 0,
-    rejected: rejectedCountQuery.data?.meta.total ?? 0,
-  };
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const pendingActionBadgeQuery = usePendingMyActionCount(
     currentUserId,
@@ -478,7 +474,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               {t('pages.approvals.listTitle')}
             </h3>
             <span className="erp-users-count-pill">
-              {(meta?.total ?? 0).toLocaleString()}
+              {meta.total.toLocaleString()}
             </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">

@@ -72,6 +72,61 @@ export function useApprovalRequests(
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for an approvals inbox (filter/search locally).
+ */
+async function fetchAllApprovalRequestPages(
+  params: Omit<ListApprovalRequestsParams, 'page' | 'limit' | 'search' | 'status' | 'categoryId' | 'dateFrom' | 'dateTo'> = {},
+): Promise<ApprovalRequestListItem[]> {
+  const first = await apiGetPaginated<ApprovalRequestListItem>(
+    `${APPROVAL_REQUESTS_PATH}${buildListQuery({
+      ...params,
+      page: 1,
+      limit: FETCH_PAGE_SIZE,
+    })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<ApprovalRequestListItem>(
+        `${APPROVAL_REQUESTS_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All approval requests for an inbox (all pages) for client-side filter/search. */
+export function useApprovalRequestsAll(
+  params: Omit<
+    ListApprovalRequestsParams,
+    'page' | 'limit' | 'search' | 'status' | 'categoryId' | 'dateFrom' | 'dateTo'
+  > = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...approvalKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllApprovalRequestPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 /**
  * Badge total for Pending My Action (approval inbox only).
  */

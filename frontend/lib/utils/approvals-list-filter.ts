@@ -1,4 +1,8 @@
-import type { ApprovalRequestStatus } from '@/lib/api/approvals.types';
+import type {
+  ApprovalRequestListItem,
+  ApprovalRequestStatus,
+} from '@/lib/api/approvals.types';
+import { formatApprovalUserName } from '@/lib/utils/approval-display';
 
 export type ApprovalStatusMode = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -28,4 +32,77 @@ export function statusesForApprovalMode(
     default:
       return [];
   }
+}
+
+/**
+ * Client-side approval search by #, title, category, or requester.
+ */
+export function matchesApprovalSearch(
+  row: ApprovalRequestListItem,
+  search: string,
+): boolean {
+  const needle = search.trim().toLowerCase();
+  if (!needle) {
+    return true;
+  }
+
+  const haystack = [
+    row.requestNumber,
+    row.id,
+    row.title,
+    row.category?.name,
+    row.category?.code,
+    row.categoryCode,
+    formatApprovalUserName(row.requester),
+    row.requester?.email,
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  return haystack.includes(needle);
+}
+
+export interface ApprovalListFilters {
+  search: string;
+  statusMode?: ApprovalStatusMode;
+  categoryId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+/**
+ * Filters approval requests in memory (search, status, category, dates).
+ */
+export function filterApprovalRequests(
+  rows: ApprovalRequestListItem[],
+  filters: ApprovalListFilters,
+): ApprovalRequestListItem[] {
+  return rows.filter((row) => {
+    const mode = filters.statusMode ?? 'all';
+    if (mode !== 'all') {
+      const statuses = statusesForApprovalMode(mode);
+      if (statuses.length > 0 && !statuses.includes(row.status)) {
+        return false;
+      }
+    }
+
+    if (filters.categoryId && row.categoryId !== filters.categoryId) {
+      return false;
+    }
+
+    if (filters.dateFrom || filters.dateTo) {
+      const dateKey = (row.submittedAt ?? row.createdAt ?? '').slice(0, 10);
+      if (!dateKey) {
+        return false;
+      }
+      if (filters.dateFrom && dateKey < filters.dateFrom) {
+        return false;
+      }
+      if (filters.dateTo && dateKey > filters.dateTo) {
+        return false;
+      }
+    }
+
+    return matchesApprovalSearch(row, filters.search);
+  });
 }
