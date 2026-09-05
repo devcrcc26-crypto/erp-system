@@ -1535,6 +1535,8 @@
     "detailTitle": "审计记录详情",
     "emptyTitle": "暂无审计记录",
     "emptyDescription": "用户进行更改后，系统活动将显示在此处。",
+    "emptyFilteredTitle": "无匹配记录",
+    "emptyFilteredDescription": "请清除筛选条件或调整日期范围。",
     "filters": {
       "module": "模块",
       "action": "操作",
@@ -1625,6 +1627,7 @@
   },
   "settings": {
     "title": "设置",
+    "description": "管理公司角色与模块权限。",
     "noPermission": "需要管理员权限才能管理角色与权限。",
     "loadError": "无法加载角色，请稍后重试。",
     "rolesPermissions": "角色与权限",

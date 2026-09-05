@@ -228,6 +228,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/company-asset': 'pages.hr.companyAsset.listDescription',
   '/hr/company-asset/new': 'pages.hr.companyAsset.formDescription',
   '/audit-logs': 'auditLogs.description',
+  '/settings': 'settings.description',
   '/organization/vehicles': 'vehicles.listDescription',
   '/organization/vehicles/new': 'vehicles.form.addDescription',
   '/approvals/new/leave-request': 'pages.hr.leave.detailsStepDescription',

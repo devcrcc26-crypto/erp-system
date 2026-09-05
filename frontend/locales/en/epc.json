@@ -1535,6 +1535,8 @@
     "detailTitle": "Audit entry details",
     "emptyTitle": "No audit entries",
     "emptyDescription": "System activity will appear here as users make changes.",
+    "emptyFilteredTitle": "No matching entries",
+    "emptyFilteredDescription": "Try clearing filters or adjusting the date range.",
     "filters": {
       "module": "Module",
       "action": "Action",
@@ -1625,6 +1627,7 @@
   },
   "settings": {
     "title": "Settings",
+    "description": "Manage roles and module permissions for your company.",
     "noPermission": "Admin access required to manage roles and permissions.",
     "loadError": "Unable to load roles. Please try again later.",
     "rolesPermissions": "Roles & permissions",

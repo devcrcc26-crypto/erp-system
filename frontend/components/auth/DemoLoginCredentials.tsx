@@ -29,10 +29,10 @@ export function DemoLoginCredentials({
     <div>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="m-0 text-xs font-medium text-slate-600">Demo access</p>
+          <p className="m-0 text-xs font-semibold text-slate-700">Demo access</p>
           <p className="m-0 mt-0.5 text-[11px] text-slate-400">
             Shared password{' '}
-            <code className="rounded-sm bg-slate-100 px-1 py-0.5 font-mono text-slate-600">
+            <code className="rounded-md bg-white px-1.5 py-0.5 font-mono text-slate-600 ring-1 ring-[#e8ebef]">
               {DEMO_PASSWORD}
             </code>
           </p>
@@ -49,16 +49,15 @@ export function DemoLoginCredentials({
       </div>
 
       {expanded ? (
-        <div className="mt-3 max-h-[min(40vh,280px)] space-y-1 overflow-y-auto overscroll-contain pr-1">
+        <div className="mt-3 max-h-[min(40vh,280px)] space-y-1.5 overflow-y-auto overscroll-contain pr-1">
           {DEMO_LOGIN_ACCOUNTS.map((account) => (
             <button
               key={account.email}
               type="button"
               onClick={() => handleSelect(account)}
-              className="erp-login-demo-account flex w-full min-w-0 flex-col border px-3 py-2 text-left transition"
-              style={{ borderRadius: 0 }}
+              className="erp-login-demo-account flex w-full min-w-0 flex-col px-3 py-2.5 text-left transition"
             >
-              <span className="text-xs font-medium text-slate-900">
+              <span className="text-xs font-semibold text-slate-900">
                 {account.role}
               </span>
               <span className="text-[11px] text-slate-600">{account.name}</span>
@@ -67,7 +66,7 @@ export function DemoLoginCredentials({
               </span>
               {account.highlight ? (
                 <span
-                  className="mt-1 text-[10px]"
+                  className="mt-1 text-[10px] font-medium"
                   style={{ color: tokens.colorPrimaryHover }}
                 >
                   {account.highlight}

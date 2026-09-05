@@ -1,31 +1,27 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Checkbox, Spin } from 'antd';
+import { Button, Checkbox, Grid, Spin } from 'antd';
 import {
   AppstoreOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import PlaceholderPage from '@/components/PlaceholderPage';
-import { Settings } from 'lucide-react';
-import { ApiRequestError } from '@/lib/api/errors';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import KPICard from '@/components/ui/KPICard/KPICard';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
+import { ApiRequestError } from '@/lib/api/errors';
+import type { Permission, Role, RolePermissionItem } from '@/lib/api/types';
 import {
   usePermissions,
   useRole,
   useRoles,
   useUpdateRolePermissions,
 } from '@/lib/query/roles';
-import type { Permission, Role, RolePermissionItem } from '@/lib/api/types';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
-import { layout } from '@/lib/theme/layout';
-import { tokens } from '@/lib/theme/tokens';
 
 const ACTIONS = [
   'view',
@@ -55,6 +51,12 @@ const ACTION_TITLE_KEYS: Record<PermissionAction, string> = {
   approve: 'settings.actionApprove',
   export: 'settings.actionExport',
 };
+
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  blue: { bg: '#E6F1FB', fg: '#378ADD' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+} as const;
 
 function matrixKey(module: string, action: string): string {
   return `${module}:${action}`;
@@ -127,6 +129,34 @@ function countGrantedPermissions(matrix: Record<string, boolean>): number {
   return Object.values(matrix).filter(Boolean).length;
 }
 
+function SettingsStat({
+  label,
+  value,
+  accent,
+  icon,
+}: {
+  label: string;
+  value: string;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <div className="erp-users-stat">
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 function RoleList({
   roles,
   selectedRoleId,
@@ -140,17 +170,11 @@ function RoleList({
 
   if (roles.length === 0) {
     return (
-      <div className="flex flex-col items-center rounded-xl border border-dashed border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-secondary)] px-4 py-10 text-center">
-        <div
-          className="mb-3 flex h-11 w-11 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: tokens.colorGray50,
-            color: tokens.colorTextTertiary,
-          }}
-        >
+      <div className="flex flex-col items-center rounded-xl border border-dashed border-[#e8ebef] bg-[#f8f9fb] px-4 py-10 text-center">
+        <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F1EFE8] text-[#9AA4B2]">
           <TeamOutlined style={{ fontSize: 18 }} />
-        </div>
-        <p className="m-0 text-sm font-medium text-[var(--color-text-primary)]">
+        </span>
+        <p className="m-0 text-sm font-medium text-[#1A1A1A]">
           {t('settings.noRoles')}
         </p>
       </div>
@@ -168,18 +192,12 @@ function RoleList({
               type="button"
               onClick={() => onSelect(role.id)}
               className={[
-                'relative w-full overflow-hidden rounded-xl border px-4 py-3 text-left transition-colors',
-                isSelected
-                  ? 'border-[rgba(29,158,117,0.25)] bg-[var(--color-teal-50)] shadow-sm'
-                  : 'border-[rgba(0,0,0,0.08)] bg-white hover:border-[rgba(0,0,0,0.12)] hover:bg-[var(--color-surface-secondary)]',
+                'erp-settings-role-btn relative w-full overflow-hidden px-4 py-3 text-left transition-colors',
+                isSelected ? 'erp-settings-role-btn--active' : '',
               ].join(' ')}
             >
               {isSelected ? (
-                <span
-                  className="absolute bottom-2 left-0 top-2 w-[3px] rounded-r-full"
-                  style={{ backgroundColor: tokens.colorPrimary }}
-                  aria-hidden
-                />
+                <span className="erp-settings-role-accent" aria-hidden />
               ) : null}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -187,25 +205,29 @@ function RoleList({
                     className={[
                       'truncate text-sm',
                       isSelected
-                        ? 'font-semibold text-[var(--color-text-primary)]'
-                        : 'font-medium text-[var(--color-text-primary)]',
+                        ? 'font-semibold text-[#1A1A1A]'
+                        : 'font-medium text-[#1A1A1A]',
                     ].join(' ')}
                   >
                     {role.name}
                   </p>
                   {role.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-[var(--color-text-tertiary)]">
+                    <p className="mt-1 line-clamp-2 text-xs text-[#6B7280]">
                       {role.description}
                     </p>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <StatusBadge
-                    label={role.isSystemRole ? t('common.system') : t('common.custom')}
+                    label={
+                      role.isSystemRole ? t('common.system') : t('common.custom')
+                    }
                     variant={role.isSystemRole ? 'info' : 'default'}
                   />
                   <StatusBadge
-                    label={role.isActive ? t('common.active') : t('common.inactive')}
+                    label={
+                      role.isActive ? t('common.active') : t('common.inactive')
+                    }
                     variant={role.isActive ? 'success' : 'default'}
                   />
                 </div>
@@ -218,8 +240,13 @@ function RoleList({
   );
 }
 
+/**
+ * Settings — roles & permissions with Users chrome.
+ */
 export default function SettingsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const screens = Grid.useBreakpoint();
+  const isNarrow = screens.sm === false;
   const permLoading = usePermissionsLoading();
   const canEditRoles = useAuthStore((state) => state.capabilities.canEditRoles);
   const rolesEditable = !permLoading && canEditRoles;
@@ -227,6 +254,8 @@ export default function SettingsPageContent(): React.ReactNode {
   const [matrix, setMatrix] = useState<Record<string, boolean>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+
+  useSetHeaderExtra(null);
 
   const rolesQuery = useRoles({ page: 1, limit: 100 });
   const permissionsQuery = usePermissions(Boolean(selectedRoleId));
@@ -253,15 +282,15 @@ export default function SettingsPageContent(): React.ReactNode {
     if (!roleQuery.data || catalog.length === 0) {
       return;
     }
-    setMatrix(
-      buildMatrixFromRole(catalog, roleQuery.data.rolePermissions),
-    );
+    setMatrix(buildMatrixFromRole(catalog, roleQuery.data.rolePermissions));
   }, [roleQuery.data, catalog]);
 
   if (rolesQuery.isLoading) {
     return (
-      <div className={layout.loadingCard}>
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-settings-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
@@ -272,22 +301,17 @@ export default function SettingsPageContent(): React.ReactNode {
         ? rolesQuery.error.status
         : 0;
 
-    if (status === 403 || status === 401) {
-      return (
-        <PlaceholderPage
-          icon={Settings}
-          title={t('settings.title')}
-          description={t('settings.noPermission')}
-        />
-      );
-    }
-
     return (
-      <PlaceholderPage
-        icon={Settings}
-        title={t('settings.title')}
-        description={t('settings.loadError')}
-      />
+      <div className="erp-pro-list-page erp-users-page erp-settings-page">
+        <ErpNotice
+          tone="error"
+          title={
+            status === 403 || status === 401
+              ? t('settings.noPermission')
+              : t('settings.loadError')
+          }
+        />
+      </div>
     );
   }
 
@@ -340,214 +364,216 @@ export default function SettingsPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div
-        className="overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-      >
-        <div className="border-b border-[rgba(0,0,0,0.06)] px-5 py-4 sm:px-6">
-          <div className="flex items-start gap-3">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-              style={{
-                backgroundColor: tokens.colorPrimaryLight,
-                color: tokens.colorPrimary,
-              }}
-            >
-              <SafetyCertificateOutlined style={{ fontSize: 18 }} />
-            </div>
-            <div className="min-w-0">
-              <h2
-                className="m-0 text-lg font-semibold leading-tight"
-                style={{ color: tokens.colorTextPrimary }}
-              >
-                {t('settings.rolesPermissions')}
-              </h2>
-              <p
-                className="m-0 mt-1 text-sm"
-                style={{ color: tokens.colorTextSecondary }}
-              >
-                {t('settings.rolesPermissionsDescription')}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3 sm:p-5">
-          <KPICard
-            label={t('settings.stats.roles')}
-            value={String(roles.length)}
-            icon={TeamOutlined}
-            iconBg={tokens.colorTeal50}
-            iconColor={tokens.colorTeal400}
-          />
-          <KPICard
-            label={t('settings.stats.modules')}
-            value={String(modules.length)}
-            icon={AppstoreOutlined}
-            iconBg={tokens.colorBlue50}
-            iconColor={tokens.colorBlue400}
-          />
-          <KPICard
-            label={t('settings.stats.granted')}
-            value={selectedRole ? String(grantedCount) : '—'}
-            icon={SafetyCertificateOutlined}
-            iconBg={tokens.colorAmber50}
-            iconColor={tokens.colorAmber400}
-          />
-        </div>
+    <div className="erp-pro-list-page erp-users-page erp-settings-page">
+      <div className="erp-users-stat-bar">
+        <SettingsStat
+          label={t('settings.stats.roles')}
+          value={String(roles.length)}
+          accent="teal"
+          icon={<TeamOutlined />}
+        />
+        <SettingsStat
+          label={t('settings.stats.modules')}
+          value={String(modules.length || '—')}
+          accent="blue"
+          icon={<AppstoreOutlined />}
+        />
+        <SettingsStat
+          label={t('settings.stats.granted')}
+          value={selectedRole ? String(grantedCount) : '—'}
+          accent="amber"
+          icon={<SafetyCertificateOutlined />}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
         <div className="lg:col-span-4">
-          <FormLayout
-            title={t('settings.rolesTitle')}
-            description={t('settings.rolesDescription')}
-            variant="pro"
-          >
-            <RoleList
-              roles={roles}
-              selectedRoleId={selectedRoleId}
-              onSelect={handleSelectRole}
-            />
-          </FormLayout>
+          <div className="erp-pro-card">
+            <div className="erp-pro-card-toolbar erp-users-toolbar">
+              <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+                <h3 className="erp-pro-card-toolbar-title">
+                  {t('settings.rolesTitle')}
+                </h3>
+                <span className="erp-users-count-pill">
+                  {roles.length.toLocaleString()}
+                </span>
+              </div>
+            </div>
+            <div className="px-4 pb-4 pt-1 sm:px-5">
+              <p className="mb-3 mt-0 text-xs text-[#6B7280]">
+                {t('settings.rolesDescription')}
+              </p>
+              <RoleList
+                roles={roles}
+                selectedRoleId={selectedRoleId}
+                onSelect={handleSelectRole}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="lg:col-span-8">
-          <FormLayout
-            title={
-              selectedRole
-                ? t('settings.permissionsForRole', { name: selectedRole.name })
-                : t('settings.permissionsTitle')
-            }
-            description={
-              selectedRole
-                ? t('settings.permissionsDescription')
-                : t('settings.permissionsSelectRole')
-            }
-            variant="pro"
-            extra={
-              selectedRole && rolesEditable ? (
-                <Button
-                  type="primary"
-                  onClick={() => void handleSave()}
-                  loading={updatePermissions.isPending || roleQuery.isLoading}
-                  style={{ backgroundColor: tokens.colorPrimary }}
-                >
-                  {t('settings.savePermissions')}
-                </Button>
-              ) : undefined
-            }
-          >
-            {selectedRole ? (
-              <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-[rgba(0,0,0,0.06)] bg-[var(--color-surface-secondary)] px-3 py-2.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                  {t('settings.editingRole')}
-                </span>
-                <StatusBadge
-                  label={selectedRole.isSystemRole ? t('common.system') : t('common.custom')}
-                  variant={selectedRole.isSystemRole ? 'info' : 'default'}
-                />
-                <StatusBadge
-                  label={selectedRole.isActive ? t('common.active') : t('common.inactive')}
-                  variant={selectedRole.isActive ? 'success' : 'default'}
-                />
-                <StatusBadge
-                  label={t('settings.permissionsGranted', { count: grantedCount })}
-                  variant="info"
-                />
+          <div className="erp-pro-card">
+            <div className="erp-pro-card-toolbar erp-users-toolbar">
+              <div className="erp-users-toolbar-title min-w-0">
+                <h3 className="erp-pro-card-toolbar-title">
+                  {selectedRole
+                    ? t('settings.permissionsForRole', {
+                        name: selectedRole.name,
+                      })
+                    : t('settings.permissionsTitle')}
+                </h3>
               </div>
-            ) : null}
-
-            {!selectedRole ? (
-              <div className="flex flex-col items-center rounded-xl border border-dashed border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-secondary)] px-4 py-12 text-center">
-                <div
-                  className="mb-3 flex h-12 w-12 items-center justify-center rounded-full"
-                  style={{
-                    backgroundColor: tokens.colorGray50,
-                    color: tokens.colorTextTertiary,
-                  }}
-                >
-                  <SafetyCertificateOutlined style={{ fontSize: 20 }} />
-                </div>
-                <p className="m-0 text-sm font-semibold text-[var(--color-text-primary)]">
-                  {t('settings.permissionsEmptyTitle')}
-                </p>
-                <p className="m-0 mt-1 max-w-sm text-sm text-[var(--color-text-secondary)]">
-                  {t('settings.permissionsEmptyDescription')}
-                </p>
+              <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+                {selectedRole && rolesEditable ? (
+                  <Button
+                    type="primary"
+                    icon={isNarrow ? <SafetyCertificateOutlined /> : undefined}
+                    onClick={() => void handleSave()}
+                    loading={updatePermissions.isPending || roleQuery.isLoading}
+                    aria-label={t('settings.savePermissions')}
+                  >
+                    {isNarrow ? undefined : t('settings.savePermissions')}
+                  </Button>
+                ) : null}
               </div>
-            ) : roleQuery.isLoading || permissionsQuery.isLoading ? (
-              <div className="flex justify-center py-12">
-                <Spin />
-              </div>
-            ) : (
-              <div className="overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)]">
-                <DataTable<{ module: string }>
-                  rowKey="module"
-                  dataSource={modules.map((module) => ({ module }))}
-                  pagination={false}
-                  scroll={{ x: 'max-content' }}
-                  columns={[
-                    {
-                      title: t('common.module'),
-                      dataIndex: 'module',
-                      key: 'module',
-                      fixed: 'left',
-                      width: 180,
-                      render: (module: string) => (
-                        <span className="font-medium text-[var(--color-text-primary)]">
-                          {formatModuleLabel(module)}
-                        </span>
-                      ),
-                    },
-                    ...ACTIONS.map((action) => ({
-                      title: t(ACTION_TITLE_KEYS[action]),
-                      key: action,
-                      align: 'center' as const,
-                      width: 88,
-                      render: (_: unknown, record: { module: string }) => {
-                        const permission = permissionFor(record.module, action);
-                        const checked =
-                          matrix[matrixKey(record.module, action)] ?? false;
+            </div>
 
-                        if (!permission) {
-                          return (
-                            <span className="text-[var(--color-text-tertiary)]">
-                              —
-                            </span>
-                          );
-                        }
-
-                        return (
-                          <Checkbox
-                            checked={checked}
-                            disabled={!rolesEditable}
-                            onChange={(event: { target: { checked: boolean } }) =>
-                              handleToggle(record.module, action, event.target.checked)
-                            }
-                          />
-                        );
-                      },
-                    })),
-                  ]}
-                />
-              </div>
-            )}
-
-            {!permLoading && !canEditRoles && selectedRole ? (
-              <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
-                {t('settings.viewOnlyRoles')}
+            <div className="px-4 pb-4 pt-1 sm:px-5">
+              <p className="mb-3 mt-0 text-xs text-[#6B7280]">
+                {selectedRole
+                  ? t('settings.permissionsDescription')
+                  : t('settings.permissionsSelectRole')}
               </p>
-            ) : null}
 
-            {saveError ? (
-              <Alert type="error" showIcon title={saveError} className="!mt-4" />
-            ) : null}
+              {saveError ? (
+                <ErpNotice tone="error" className="mb-4" title={saveError} />
+              ) : null}
+              {saveSuccess ? (
+                <ErpNotice
+                  tone="success"
+                  className="mb-4"
+                  title={saveSuccess}
+                />
+              ) : null}
 
-            {saveSuccess ? (
-              <Alert type="success" showIcon title={saveSuccess} className="!mt-4" />
-            ) : null}
-          </FormLayout>
+              {selectedRole ? (
+                <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[#e8ebef] bg-[#f8f9fb] px-3 py-2.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9AA4B2]">
+                    {t('settings.editingRole')}
+                  </span>
+                  <StatusBadge
+                    label={
+                      selectedRole.isSystemRole
+                        ? t('common.system')
+                        : t('common.custom')
+                    }
+                    variant={selectedRole.isSystemRole ? 'info' : 'default'}
+                  />
+                  <StatusBadge
+                    label={
+                      selectedRole.isActive
+                        ? t('common.active')
+                        : t('common.inactive')
+                    }
+                    variant={selectedRole.isActive ? 'success' : 'default'}
+                  />
+                  <StatusBadge
+                    label={t('settings.permissionsGranted', {
+                      count: grantedCount,
+                    })}
+                    variant="info"
+                  />
+                </div>
+              ) : null}
+
+              {!selectedRole ? (
+                <div className="flex flex-col items-center rounded-xl border border-dashed border-[#e8ebef] bg-[#f8f9fb] px-4 py-12 text-center">
+                  <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#F1EFE8] text-[#9AA4B2]">
+                    <SafetyCertificateOutlined style={{ fontSize: 20 }} />
+                  </span>
+                  <p className="m-0 text-sm font-semibold text-[#1A1A1A]">
+                    {t('settings.permissionsEmptyTitle')}
+                  </p>
+                  <p className="m-0 mt-1 max-w-sm text-sm text-[#6B7280]">
+                    {t('settings.permissionsEmptyDescription')}
+                  </p>
+                </div>
+              ) : roleQuery.isLoading || permissionsQuery.isLoading ? (
+                <div className="flex justify-center py-12">
+                  <Spin />
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-[#e8ebef]">
+                  <DataTable<{ module: string }>
+                    rowKey="module"
+                    className="erp-pro-table erp-users-table"
+                    dataSource={modules.map((module) => ({ module }))}
+                    pagination={false}
+                    scroll={{ x: 'max-content' }}
+                    columns={[
+                      {
+                        title: t('common.module'),
+                        dataIndex: 'module',
+                        key: 'module',
+                        fixed: 'left',
+                        width: 180,
+                        render: (module: string) => (
+                          <span className="erp-users-cell-strong">
+                            {formatModuleLabel(module)}
+                          </span>
+                        ),
+                      },
+                      ...ACTIONS.map((action) => ({
+                        title: t(ACTION_TITLE_KEYS[action]),
+                        key: action,
+                        align: 'center' as const,
+                        width: 88,
+                        render: (_: unknown, record: { module: string }) => {
+                          const permission = permissionFor(
+                            record.module,
+                            action,
+                          );
+                          const checked =
+                            matrix[matrixKey(record.module, action)] ?? false;
+
+                          if (!permission) {
+                            return (
+                              <span className="erp-users-cell-sub">—</span>
+                            );
+                          }
+
+                          return (
+                            <Checkbox
+                              checked={checked}
+                              disabled={!rolesEditable}
+                              onChange={(event: {
+                                target: { checked: boolean };
+                              }) =>
+                                handleToggle(
+                                  record.module,
+                                  action,
+                                  event.target.checked,
+                                )
+                              }
+                            />
+                          );
+                        },
+                      })),
+                    ]}
+                  />
+                </div>
+              )}
+
+              {!permLoading && !canEditRoles && selectedRole ? (
+                <ErpNotice
+                  tone="info"
+                  className="mt-4"
+                  title={t('settings.viewOnlyRoles')}
+                />
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     </div>
