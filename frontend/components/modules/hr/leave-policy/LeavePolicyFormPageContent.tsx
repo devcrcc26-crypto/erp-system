@@ -7,7 +7,6 @@ import LeavePolicyForm, {
   type LeavePolicyFormValues,
 } from '@/components/modules/hr/leave-policy/LeavePolicyForm';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
-import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
@@ -26,7 +25,7 @@ interface LeavePolicyFormPageContentProps {
 }
 
 /**
- * Create / edit leave policy — title in MainContentHeader; cancel + form.
+ * Create / edit leave policy — cancel + stepper form.
  */
 export default function LeavePolicyFormPageContent({
   policyId,
@@ -115,14 +114,6 @@ export default function LeavePolicyFormPageContent({
         isSubmitting={saving}
         submitLabel={t('common.save')}
         onSubmit={handleSubmit}
-        formId="leave-policy-form"
-        showFooterActions={false}
-      />
-      <FormPageFooter
-        submitLabel={t('common.save')}
-        formId="leave-policy-form"
-        useFormAttribute
-        isSubmitting={saving}
       />
     </div>
   );

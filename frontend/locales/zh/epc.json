@@ -247,7 +247,10 @@
         "edit": "编辑假期政策",
         "detail": "假期政策",
         "listTitle": "假期政策",
-        "listDescription": "为员工配置年假、产假与病假规则。"
+        "listDescription": "为员工配置年假、产假与病假规则。",
+        "detailsStepDescription": "填写政策名称，并可设置适用法规与简要说明。",
+        "rulesStepDescription": "配置年假、产假与病假额度规则。",
+        "reviewStepDescription": "保存前请确认政策详情与假期规则。"
       },
       "overtime": {
         "new": "本月加班表",
@@ -2073,7 +2076,8 @@
       },
       "steps": {
         "details": "政策详情",
-        "leaveRules": "假期规则"
+        "leaveRules": "假期规则",
+        "review": "核对"
       }
     },
     "messages": {

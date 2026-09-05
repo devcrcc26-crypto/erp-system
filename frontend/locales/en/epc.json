@@ -247,7 +247,10 @@
         "edit": "Edit Leave Policy",
         "detail": "Leave Policy",
         "listTitle": "Leave Policies",
-        "listDescription": "Configure annual, maternity, and sick leave rules for employees."
+        "listDescription": "Configure annual, maternity, and sick leave rules for employees.",
+        "detailsStepDescription": "Name the policy and optionally set who governs it and a short description.",
+        "rulesStepDescription": "Set annual, maternity, and sick leave entitlements for this policy.",
+        "reviewStepDescription": "Confirm the policy details and leave rules before saving."
       },
       "overtime": {
         "new": "This month's sheet",
@@ -2073,7 +2076,8 @@
       },
       "steps": {
         "details": "Policy details",
-        "leaveRules": "Leave rules"
+        "leaveRules": "Leave rules",
+        "review": "Review"
       }
     },
     "messages": {
