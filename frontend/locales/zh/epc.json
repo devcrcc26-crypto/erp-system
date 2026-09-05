@@ -502,8 +502,17 @@
         "vehicleStepDescription": "选择本次加油的公司车辆及可选司机。",
         "detailsStepDescription": "填写加油日期、加油站、燃油类型及预估用量或费用。",
         "reviewStepDescription": "确认以下信息后提交审批。",
+        "returnedNotice": "此申请已退回。请在审批中查看反馈后重新提交。",
+        "searchPlaceholder": "按申请编号、加油站或车牌搜索",
+        "emptyFiltered": "没有符合筛选条件的加油申请",
         "requestSingular": "条申请",
-        "requestPlural": "条申请"
+        "requestPlural": "条申请",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       },
       "inspectionRepair": {
         "new": "新建检修申请",

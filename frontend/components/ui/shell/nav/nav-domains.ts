@@ -88,7 +88,9 @@ export function findNavDomain(
   );
 }
 
-/** First domain that owns a module panel — the fallback when no route matches. */
-export function firstPanelDomainKey(model: NavDomainModel): string | null {
-  return model.primary.find((domain) => domain.items.length > 0)?.key ?? null;
+/** Domains with child links (HR, Organization) own the second sidebar. */
+export function domainHasModulePanel(
+  domain: NavDomain | null,
+): domain is NavDomain {
+  return domain !== null && domain.items.length > 0;
 }

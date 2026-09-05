@@ -198,7 +198,7 @@
       "comingSoonDescription": "{{module}} will be available in a future update.",
       "accessDenied": "You do not have access to Human Resources.",
       "leave": {
-        "new": "New leave request",
+        "new": "New Leave Request",
         "detail": "Leave request",
         "edit": "Edit leave request",
         "listTitle": "Leave Requests",
@@ -502,8 +502,17 @@
         "vehicleStepDescription": "Choose the company vehicle and optional driver for this refueling.",
         "detailsStepDescription": "Enter fuel date, station, type, and estimated quantity or cost.",
         "reviewStepDescription": "Confirm the details below, then submit for approval.",
+        "returnedNotice": "This request was returned. Review the feedback in Approvals, then resubmit.",
+        "searchPlaceholder": "Search by request #, station, or plate",
+        "emptyFiltered": "No refueling requests match your filters",
         "requestSingular": "request",
-        "requestPlural": "requests"
+        "requestPlural": "requests",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       },
       "inspectionRepair": {
         "new": "New Inspection & Repair Request",

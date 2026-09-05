@@ -12,8 +12,8 @@ import NavDomainRail from '@/components/ui/shell/nav/NavDomainRail';
 import NavModulePanel from '@/components/ui/shell/nav/NavModulePanel';
 import {
   buildNavDomains,
+  domainHasModulePanel,
   findNavDomain,
-  firstPanelDomainKey,
 } from '@/components/ui/shell/nav/nav-domains';
 import {
   useCanViewMyComments,
@@ -54,13 +54,18 @@ import {
 /**
  * Main navigation: domain rail plus the selected domain's module panel.
  * Collapsed (`isExpanded === false`) renders the rail only, with flyout panels.
+ * Expanded shows the module panel only for domains that have one (e.g. HR);
+ * direct destinations (dashboard, approvals, settings) keep the rail alone.
  */
 export default function MainNavPanel({
   isExpanded,
   onNavigate,
+  onModulePanelVisibleChange,
 }: {
   isExpanded: boolean;
   onNavigate?: () => void;
+  /** Notifies the shell when the second sidebar is shown or hidden. */
+  onModulePanelVisibleChange?: (visible: boolean) => void;
 }): React.ReactNode {
   const pathname = usePathname();
   const { t } = useEpcTranslation();
@@ -169,17 +174,26 @@ export default function MainNavPanel({
 
   const [browsedDomainKey, setBrowsedDomainKey] = useState<string | null>(null);
 
-  // Sync the module panel to the route's domain when navigation changes —
-  // not on every domains identity change (that would undo manual rail clicks).
-  useEffect(() => {
-    if (domains.activeDomainKey != null) {
-      setBrowsedDomainKey(domains.activeDomainKey);
-    }
-  }, [domains.activeDomainKey]);
+  const activeDomain = findNavDomain(domains, domains.activeDomainKey);
+  // Only panel domains (HR, Organization, …) keep the second sidebar open
+  // for the current route; direct destinations resolve to null.
+  const routePanelDomainKey = domainHasModulePanel(activeDomain)
+    ? activeDomain.key
+    : null;
 
-  const panelDomainKey = browsedDomainKey ?? firstPanelDomainKey(domains);
-  const panelDomain = findNavDomain(domains, panelDomainKey);
-  const showPanel = isExpanded && panelDomain !== null;
+  // Sync the module panel to the route. Manual rail clicks still open a
+  // panel without waiting for a route change (browsedDomainKey override).
+  useEffect(() => {
+    setBrowsedDomainKey(routePanelDomainKey);
+  }, [pathname, routePanelDomainKey]);
+
+  const panelDomain = findNavDomain(domains, browsedDomainKey);
+  const showPanel =
+    isExpanded && domainHasModulePanel(panelDomain);
+
+  useEffect(() => {
+    onModulePanelVisibleChange?.(showPanel);
+  }, [showPanel, onModulePanelVisibleChange]);
 
   if (permLoading) {
     return (
@@ -215,8 +229,9 @@ export default function MainNavPanel({
         primary={domains.primary}
         utility={domains.utility}
         activeDomainKey={domains.activeDomainKey}
-        browsedDomainKey={panelDomainKey}
+        browsedDomainKey={browsedDomainKey}
         selectedKey={selectedKey}
+        isExpanded={isExpanded}
         showPanel={showPanel}
         onBrowseDomain={setBrowsedDomainKey}
         onNavigate={onNavigate}
@@ -231,8 +246,6 @@ export default function MainNavPanel({
           t={t}
         />
       ) : null}
-
-      {isExpanded && !showPanel ? <div className="min-w-0 flex-1" /> : null}
     </div>
   );
 }

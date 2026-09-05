@@ -67,6 +67,7 @@ export default function NavDomainRail({
   activeDomainKey,
   browsedDomainKey,
   selectedKey,
+  isExpanded,
   showPanel,
   onBrowseDomain,
   onNavigate,
@@ -77,6 +78,8 @@ export default function NavDomainRail({
   activeDomainKey: string | null;
   browsedDomainKey: string | null;
   selectedKey: string;
+  /** Prefer inline module panel over flyouts when true. */
+  isExpanded: boolean;
   /** True when the module panel is visible beside the rail. */
   showPanel: boolean;
   onBrowseDomain: (key: string) => void;
@@ -147,7 +150,9 @@ export default function NavDomainRail({
       </button>
     );
 
-    if (!showPanel) {
+    // Collapsed rail: flyout. Expanded: click opens/switches the inline panel
+    // even when the current route has no second sidebar (e.g. Approvals).
+    if (!isExpanded) {
       return (
         <Popover
           key={domain.key}

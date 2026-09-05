@@ -4168,7 +4168,8 @@ main::-webkit-scrollbar,
 .erp-purchase-request-form-page .ant-btn,
 .erp-material-requisition-form-page .ant-btn,
 .erp-consumables-form-page .ant-btn,
-.erp-vehicle-application-form-page .ant-btn {
+.erp-vehicle-application-form-page .ant-btn,
+.erp-vehicle-refueling-form-page .ant-btn {
   border-radius: 8px;
 }
 
@@ -4203,7 +4204,13 @@ main::-webkit-scrollbar,
 .erp-vehicle-application-form-page .ant-input-textarea textarea,
 .erp-vehicle-application-form-page .ant-select-selector,
 .erp-vehicle-application-form-page .ant-picker,
-.erp-vehicle-application-form-page .ant-input-number {
+.erp-vehicle-application-form-page .ant-input-number,
+.erp-vehicle-refueling-form-page .ant-input,
+.erp-vehicle-refueling-form-page .ant-input-affix-wrapper,
+.erp-vehicle-refueling-form-page .ant-input-textarea textarea,
+.erp-vehicle-refueling-form-page .ant-select-selector,
+.erp-vehicle-refueling-form-page .ant-picker,
+.erp-vehicle-refueling-form-page .ant-input-number {
   border-radius: 8px !important;
 }
 
@@ -4232,7 +4239,8 @@ main::-webkit-scrollbar,
   .erp-per-diem-form-page .erp-per-diem-form-actions .ant-btn,
   .erp-employee-per-diem-form-page .erp-employee-per-diem-form-actions .ant-btn,
   .erp-consumables-form-page .erp-consumables-form-actions .ant-btn,
-  .erp-vehicle-application-form-page .erp-vehicle-application-form-actions .ant-btn {
+  .erp-vehicle-application-form-page .erp-vehicle-application-form-actions .ant-btn,
+  .erp-vehicle-refueling-form-page .erp-vehicle-refueling-form-actions .ant-btn {
     width: 100%;
   }
 }

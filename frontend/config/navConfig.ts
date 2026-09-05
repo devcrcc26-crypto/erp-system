@@ -112,6 +112,88 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/equipment-and-materials-exit-permit/new': 'pages.hr.exitPermit.new',
 };
 
+/** `/approvals/new/...` create forms → specific page title + HR list breadcrumb. */
+const APPROVAL_NEW_ROUTE_META: Record<
+  string,
+  { titleKey: string; listHref: string; listLabelKey: string }
+> = {
+  '/approvals/new/overtime': {
+    titleKey: 'pages.hr.overtime.new',
+    listHref: '/hr/overtime',
+    listLabelKey: 'nav.hr.overtime',
+  },
+  '/approvals/new/flight-application': {
+    titleKey: 'pages.hr.flight.new',
+    listHref: '/hr/flight-applications',
+    listLabelKey: 'nav.hr.flightApplications',
+  },
+  '/approvals/new/business-trip': {
+    titleKey: 'pages.hr.businessTrip.new',
+    listHref: '/hr/business-trips',
+    listLabelKey: 'nav.hr.businessTrips',
+  },
+  '/approvals/new/expense-claim': {
+    titleKey: 'pages.hr.expenseClaim.new',
+    listHref: '/hr/expense-claims',
+    listLabelKey: 'nav.hr.expenseClaims',
+  },
+  '/approvals/new/per-diem': {
+    titleKey: 'pages.hr.perDiem.new',
+    listHref: '/hr/per-diem',
+    listLabelKey: 'nav.hr.perDiem',
+  },
+  '/approvals/new/purchase-request': {
+    titleKey: 'pages.hr.purchaseRequest.new',
+    listHref: '/hr/purchase-requests',
+    listLabelKey: 'nav.hr.purchaseRequests',
+  },
+  '/approvals/new/material-requisition': {
+    titleKey: 'pages.hr.materialRequisition.new',
+    listHref: '/hr/material-requisition',
+    listLabelKey: 'nav.hr.materialRequisition',
+  },
+  '/approvals/new/equipment-and-materials-exit-permit': {
+    titleKey: 'pages.hr.exitPermit.new',
+    listHref: '/hr/equipment-and-materials-exit-permit',
+    listLabelKey: 'nav.hr.equipmentAndMaterialsExitPermit',
+  },
+  '/approvals/new/exit-permit': {
+    titleKey: 'pages.hr.exitPermit.new',
+    listHref: '/hr/equipment-and-materials-exit-permit',
+    listLabelKey: 'nav.hr.equipmentAndMaterialsExitPermit',
+  },
+  '/approvals/new/consumables': {
+    titleKey: 'pages.hr.consumables.new',
+    listHref: '/hr/consumables',
+    listLabelKey: 'nav.hr.consumables',
+  },
+  '/approvals/new/vehicle-application': {
+    titleKey: 'pages.hr.vehicleApplication.new',
+    listHref: '/hr/vehicle-applications',
+    listLabelKey: 'nav.hr.vehicleApplications',
+  },
+  '/approvals/new/vehicle-refueling': {
+    titleKey: 'pages.hr.vehicleRefueling.new',
+    listHref: '/hr/vehicle-refueling',
+    listLabelKey: 'nav.hr.vehicleRefueling',
+  },
+  '/approvals/new/inspection-repair': {
+    titleKey: 'pages.hr.inspectionRepair.new',
+    listHref: '/hr/inspection-repair',
+    listLabelKey: 'nav.hr.inspectionRepair',
+  },
+  '/approvals/new/official-seal': {
+    titleKey: 'pages.hr.officialSeal.new',
+    listHref: '/hr/official-seal',
+    listLabelKey: 'nav.hr.officialSeal',
+  },
+  '/approvals/new/project-seal': {
+    titleKey: 'pages.hr.projectSeal.new',
+    listHref: '/hr/project-seal',
+    listLabelKey: 'nav.hr.projectSeal',
+  },
+};
+
 /** Route → page subtitle (description) i18n keys for MainContentHeader. */
 const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/approvals': 'pages.approvals.listDescription',
@@ -147,7 +229,10 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/audit-logs': 'auditLogs.description',
   '/organization/vehicles': 'vehicles.listDescription',
   '/organization/vehicles/new': 'vehicles.form.addDescription',
-  '/approvals/new/leave-request': 'pages.hr.leave.listDescription',
+  '/approvals/new/leave-request': 'pages.hr.leave.detailsStepDescription',
+  '/approvals/new/overtime': 'pages.hr.overtime.newDescription',
+  '/approvals/new/flight-application': 'pages.hr.flight.formDescription',
+  '/approvals/new/business-trip': 'pages.hr.businessTrip.formDescription',
   '/approvals/new/expense-claim': 'pages.hr.expenseClaim.formDescription',
   '/approvals/new/purchase-request': 'pages.hr.purchaseRequest.formDescription',
   '/approvals/new/material-requisition': 'pages.hr.materialRequisition.formDescription',
@@ -797,29 +882,17 @@ function resolveRouteMetaCore(
     };
   }
 
-  if (
-    pathname === '/approvals/new/overtime' ||
-    pathname === '/approvals/new/flight-application' ||
-    pathname === '/approvals/new/business-trip' ||
-    pathname === '/approvals/new/expense-claim' ||
-    pathname === '/approvals/new/per-diem' ||
-    pathname === '/approvals/new/purchase-request' ||
-    pathname === '/approvals/new/material-requisition' ||
-    pathname === '/approvals/new/equipment-and-materials-exit-permit' ||
-    pathname === '/approvals/new/exit-permit' ||
-    pathname === '/approvals/new/consumables' ||
-    pathname === '/approvals/new/vehicle-application' ||
-    pathname === '/approvals/new/vehicle-refueling' ||
-    pathname === '/approvals/new/inspection-repair' ||
-    pathname === '/approvals/new/official-seal' ||
-    pathname === '/approvals/new/project-seal'
-  ) {
+  const approvalNewMeta = APPROVAL_NEW_ROUTE_META[pathname];
+  if (approvalNewMeta) {
     return {
-      titleKey: 'pages.approvals.new',
+      titleKey: approvalNewMeta.titleKey,
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.approvals'), href: '/approvals' },
-        { label: t('pages.approvals.new'), href: '/approvals/new' },
+        {
+          label: t(approvalNewMeta.listLabelKey),
+          href: approvalNewMeta.listHref,
+        },
+        { label: t(approvalNewMeta.titleKey) },
       ],
     };
   }

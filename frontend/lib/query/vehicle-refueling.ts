@@ -45,6 +45,44 @@ function buildListQuery(params: ListVehicleRefuelingsParams): string {
   return toQueryString({ ...rest, status: statusValue });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the vehicle refueling list (filter locally).
+ */
+async function fetchAllVehicleRefuelingPages(
+  params: Omit<
+    ListVehicleRefuelingsParams,
+    'page' | 'limit' | 'search'
+  > = {},
+): Promise<VehicleRefuelingListItem[]> {
+  const first = await apiGetPaginated<VehicleRefuelingListItem>(
+    `${REFUELING_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<VehicleRefuelingListItem>(
+        `${REFUELING_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
 export function useVehicleRefuelings(
   params: ListVehicleRefuelingsParams = { page: 1, limit: 20 },
   enabled = true,
@@ -55,6 +93,22 @@ export function useVehicleRefuelings(
       apiGetPaginated<VehicleRefuelingListItem>(
         `${REFUELING_PATH}${buildListQuery(params)}`,
       ) as Promise<PaginatedResult<VehicleRefuelingListItem>>,
+    enabled,
+    retry: false,
+  });
+}
+
+/** All vehicle refueling requests (all pages) for client-side filter/search. */
+export function useVehicleRefuelingsAll(
+  params: Omit<
+    ListVehicleRefuelingsParams,
+    'page' | 'limit' | 'search'
+  > = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...vehicleRefuelingKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllVehicleRefuelingPages(params),
     enabled,
     retry: false,
   });

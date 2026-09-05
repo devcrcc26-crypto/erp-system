@@ -2,22 +2,31 @@
 
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { Tooltip } from 'antd';
+import { useState } from 'react';
 import MainNavPanel from '@/components/ui/shell/MainNavPanel';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useRailExpanded } from '@/hooks/useRailExpanded';
 import { tokens } from '@/lib/theme/tokens';
 import {
   NAV_DOMAIN_RAIL_WIDTH,
+  RAIL_COLLAPSED_WIDTH,
   RAIL_EXPANDED_WIDTH,
 } from '@/components/ui/shell/shell-layout';
 
 /**
  * Desktop sidebar shell. Hidden below lg — mobile uses MobileNavDrawer.
  * Expand/collapse lives under the icon rail only (not the module panel).
+ * Width grows only while a module panel (HR, Organization, …) is visible.
  */
 export default function IconRail(): React.ReactNode {
-  const { isExpanded, layoutWidth, toggleExpanded } = useRailExpanded();
+  const { isExpanded, toggleExpanded } = useRailExpanded();
   const { t } = useEpcTranslation();
+  const [modulePanelVisible, setModulePanelVisible] = useState(false);
+
+  const showSecondSidebar = isExpanded && modulePanelVisible;
+  const layoutWidth = showSecondSidebar
+    ? RAIL_EXPANDED_WIDTH
+    : RAIL_COLLAPSED_WIDTH;
 
   const toggleLabel = isExpanded
     ? t('shell.collapseNavigation')
@@ -39,7 +48,10 @@ export default function IconRail(): React.ReactNode {
         aria-label={t('shell.mainNavigation')}
       >
         <div className="min-h-0 flex-1">
-          <MainNavPanel isExpanded={isExpanded} />
+          <MainNavPanel
+            isExpanded={isExpanded}
+            onModulePanelVisibleChange={setModulePanelVisible}
+          />
         </div>
 
         <div
@@ -53,7 +65,7 @@ export default function IconRail(): React.ReactNode {
             className="flex items-center justify-center py-2"
             style={{
               width: NAV_DOMAIN_RAIL_WIDTH,
-              borderRight: isExpanded
+              borderRight: showSecondSidebar
                 ? `1px solid ${tokens.colorSidebarBorder}`
                 : undefined,
             }}
@@ -75,7 +87,7 @@ export default function IconRail(): React.ReactNode {
               </button>
             </Tooltip>
           </div>
-          {isExpanded ? (
+          {showSecondSidebar ? (
             <div
               className="min-w-0 flex-1"
               style={{ background: tokens.colorSidebarBg }}

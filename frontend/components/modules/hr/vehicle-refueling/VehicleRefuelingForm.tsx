@@ -2,14 +2,19 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   DatePicker,
   Form,
   Input,
   InputNumber,
   Select,
+  Spin,
 } from 'antd';
+import {
+  CarOutlined,
+  CheckCircleOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -27,6 +32,7 @@ import {
 } from '@/lib/utils/company-vehicle-display';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 interface FormValues {
@@ -45,7 +51,6 @@ interface VehicleRefuelingFormProps {
   onSuccess: (result: VehicleRefuelingDetail) => void;
 }
 
-const VEHICLE_FIELDS = ['vehicleId'] as const;
 const DETAILS_FIELDS = ['fuelDate', 'fuelType', 'fuelStation'] as const;
 
 function computeTotalCostEtb(
@@ -64,7 +69,7 @@ function computeTotalCostEtb(
 }
 
 /**
- * Vehicle refueling create form — same StepperForm chrome as Add Employee.
+ * Vehicle refueling create form — Users / Add Employee chrome.
  */
 export default function VehicleRefuelingForm({
   onSuccess,
@@ -79,11 +84,16 @@ export default function VehicleRefuelingForm({
   const vehiclesQuery = useCompanyVehicles({ page: 1, limit: 100 });
   const usersQuery = useFullUsersDirectory();
   const formValues = Form.useWatch([], form) as FormValues | undefined;
+  const selectedVehicleId = Form.useWatch('vehicleId', form) as
+    | string
+    | undefined;
 
   const totalCostEtb = computeTotalCostEtb(
     formValues?.requestedLitres,
     formValues?.unitPriceEtb,
   );
+
+  const vehicles = vehiclesQuery.data?.data ?? [];
 
   const driverOptions = useMemo(
     () => toDriverSelectOptions(usersQuery.data ?? []),
@@ -91,15 +101,11 @@ export default function VehicleRefuelingForm({
   );
 
   const selectedVehicle = useMemo(() => {
-    const vehicleId = formValues?.vehicleId;
-    if (!vehicleId) {
+    if (!selectedVehicleId) {
       return null;
     }
-    return (
-      vehiclesQuery.data?.data?.find((vehicle) => vehicle.id === vehicleId) ??
-      null
-    );
-  }, [formValues?.vehicleId, vehiclesQuery.data?.data]);
+    return vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null;
+  }, [selectedVehicleId, vehicles]);
 
   const selectedDriverLabel = useMemo(() => {
     const driverId = formValues?.driverId;
@@ -110,6 +116,11 @@ export default function VehicleRefuelingForm({
       driverOptions.find((option) => option.value === driverId)?.label ?? '—'
     );
   }, [driverOptions, formValues?.driverId]);
+
+  function handleVehicleSelect(vehicleId: string): void {
+    form.setFieldsValue({ vehicleId });
+    setFormError(null);
+  }
 
   function resetForm(): void {
     form.resetFields();
@@ -126,6 +137,14 @@ export default function VehicleRefuelingForm({
     } catch {
       return false;
     }
+  }
+
+  async function validateVehicleStep(): Promise<boolean> {
+    const ok = await validateFields(['vehicleId']);
+    if (!ok) {
+      setFormError(t('hr.validation.selectVehicle'));
+    }
+    return ok;
   }
 
   async function handleSubmit(): Promise<void> {
@@ -164,8 +183,8 @@ export default function VehicleRefuelingForm({
       onSuccess(result);
     } catch (error: unknown) {
       const message = t('hr.messages.vehicleRefuelingSubmitFailed');
-      notifyApiError(error, message, messageApi);
-      setFormError(message);
+      notifyApiError(error, message, messageApi, t);
+      setFormError(getFriendlyApiErrorMessage(error, message, t));
     } finally {
       setSubmitting(false);
     }
@@ -175,37 +194,88 @@ export default function VehicleRefuelingForm({
     () => [
       {
         title: t('hr.form.selectVehicle'),
-        validate: () => validateFields(VEHICLE_FIELDS),
+        validate: () => validateVehicleStep(),
         content: (
           <FormLayout
             variant="pro"
             title={t('hr.form.selectVehicle')}
             description={t('pages.hr.vehicleRefueling.vehicleStepDescription')}
           >
-            <div className="erp-form-grid-2">
-              <Form.Item
-                name="vehicleId"
-                label={t('hr.form.vehicle')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.selectVehicle'),
-                  },
-                ]}
-              >
-                <Select
-                  showSearch
-                  optionFilterProp="label"
-                  placeholder={t('hr.placeholder.selectVehicle')}
-                  loading={vehiclesQuery.isLoading}
-                  options={
-                    vehiclesQuery.data?.data?.map((vehicle) => ({
-                      value: vehicle.id,
-                      label: `${vehicle.plateNumber} — ${vehicle.make} ${vehicle.model}`,
-                    })) ?? []
-                  }
-                />
-              </Form.Item>
+            <Form.Item
+              name="vehicleId"
+              hidden
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.validation.selectVehicle'),
+                },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+
+            {vehiclesQuery.isLoading ? (
+              <div className="flex justify-center py-10">
+                <Spin />
+              </div>
+            ) : vehiclesQuery.isError ? (
+              <ErpNotice
+                tone="error"
+                title={getFriendlyApiErrorMessage(
+                  vehiclesQuery.error,
+                  t('hr.empty.noVehicles'),
+                  t,
+                )}
+              />
+            ) : vehicles.length === 0 ? (
+              <ErpNotice tone="warning" title={t('hr.empty.noVehicles')} />
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {vehicles.map((vehicle) => {
+                  const selected = selectedVehicleId === vehicle.id;
+                  return (
+                    <button
+                      key={vehicle.id}
+                      type="button"
+                      onClick={() => handleVehicleSelect(vehicle.id)}
+                      className={`erp-vehicle-pick-card w-full p-3.5 text-left transition-colors${
+                        selected ? ' erp-vehicle-pick-card--selected' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <CarOutlined
+                              style={{
+                                color: selected
+                                  ? tokens.colorPrimary
+                                  : tokens.colorTextTertiary,
+                              }}
+                            />
+                            <p className="erp-users-cell-strong m-0 truncate">
+                              {vehicle.plateNumber}
+                            </p>
+                          </div>
+                          <p className="erp-users-cell-sub mb-0 mt-1 truncate">
+                            {vehicle.make} {vehicle.model}
+                          </p>
+                        </div>
+                        {selected ? (
+                          <CheckCircleOutlined
+                            style={{
+                              color: tokens.colorPrimary,
+                              fontSize: 16,
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="mt-4 max-w-md">
               <Form.Item name="driverId" label={t('hr.form.driver')}>
                 <Select
                   showSearch
@@ -391,6 +461,11 @@ export default function VehicleRefuelingForm({
                 />
               ) : null}
             </div>
+            <ErpNotice
+              tone="info"
+              className="mt-4"
+              title={t('pages.hr.vehicleRefueling.reviewStepDescription')}
+            />
           </FormLayout>
         ),
       },
@@ -399,10 +474,13 @@ export default function VehicleRefuelingForm({
       t,
       form,
       vehiclesQuery.isLoading,
-      vehiclesQuery.data?.data,
+      vehiclesQuery.isError,
+      vehiclesQuery.error,
+      vehicles,
       usersQuery.isLoading,
       driverOptions,
       selectedVehicle,
+      selectedVehicleId,
       selectedDriverLabel,
       formValues,
       totalCostEtb,
@@ -419,11 +497,10 @@ export default function VehicleRefuelingForm({
       initialValues={{ fuelType: 'DIESEL' }}
     >
       {formError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={formError}
+        <ErpNotice
+          tone="error"
           className="mb-4"
+          title={formError}
           closable
           onClose={() => setFormError(null)}
         />
@@ -480,11 +557,16 @@ function TotalCostPreview({
 
   return (
     <Form.Item label={t('hr.form.totalCostEtb')}>
-      <Input
-        readOnly
-        value={totalCostEtb != null ? formatEtbAmount(totalCostEtb) : '—'}
-        style={{ background: tokens.colorPageBg }}
-      />
+      <div
+        className="erp-refueling-total-preview flex h-8 items-center rounded-lg px-3 text-sm font-semibold tabular-nums"
+        style={{
+          background: totalCostEtb != null ? '#EAF3DE' : tokens.colorPageBg,
+          color: totalCostEtb != null ? '#639922' : tokens.colorTextSecondary,
+          border: `1px solid ${totalCostEtb != null ? '#C0DD97' : tokens.colorBorder}`,
+        }}
+      >
+        {totalCostEtb != null ? formatEtbAmount(totalCostEtb) : '—'}
+      </div>
     </Form.Item>
   );
 }
