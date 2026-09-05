@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   DatePicker,
   Grid,
@@ -25,12 +24,12 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
-import { ApiRequestError } from '@/lib/api/errors';
 import type { PurchaseRequestListItem } from '@/lib/api/purchase-request.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import { usePurchaseRequestsAll } from '@/lib/query/purchase-request';
@@ -48,6 +47,7 @@ import {
 } from '@/lib/utils/purchase-request-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 const PENDING_STATUSES = statusesForPurchaseRequestMode('pending');
 const APPROVED_STATUSES = statusesForPurchaseRequestMode('approved');
@@ -344,14 +344,14 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-purchase-requests-page">
       {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={
-            listQuery.error instanceof ApiRequestError
-              ? listQuery.error.message
-              : t('hr.messages.failedToLoadPurchaseRequests')
-          }
+        <ErpNotice
+          tone="error"
+          className="mb-4"
+          title={getFriendlyApiErrorMessage(
+            listQuery.error,
+            t('hr.messages.failedToLoadPurchaseRequests'),
+            t,
+          )}
         />
       ) : null}
 

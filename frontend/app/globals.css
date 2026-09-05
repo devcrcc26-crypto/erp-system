@@ -4215,6 +4215,120 @@ main::-webkit-scrollbar,
   margin-top: 2px;
 }
 
+/* Inline notices — guidance / warning / error / success */
+.erp-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #e8ebef;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.erp-notice-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.erp-notice-body {
+  padding-top: 1px;
+}
+
+.erp-notice-title {
+  margin: 0;
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 600;
+  line-height: 1.4;
+  color: #0f172a;
+}
+
+.erp-notice-description {
+  margin-top: 4px;
+  font-size: calc(12px * var(--erp-font-scale));
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.erp-notice-description p {
+  margin: 0;
+}
+
+.erp-notice-action {
+  margin-top: 10px;
+}
+
+.erp-notice-close.ant-btn {
+  flex-shrink: 0;
+  color: #94a3b8;
+  margin-top: -2px;
+}
+
+.erp-notice-close.ant-btn:hover {
+  color: #0f172a !important;
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+.erp-notice--info {
+  border-color: #d6e8f8;
+  background: linear-gradient(180deg, #f7fbfe 0%, #ffffff 100%);
+}
+
+.erp-notice--info .erp-notice-chip {
+  background: #e6f1fb;
+  color: #185fa5;
+}
+
+.erp-notice--warning {
+  border-color: #f0e0c4;
+  background: linear-gradient(180deg, #fffbf3 0%, #ffffff 100%);
+}
+
+.erp-notice--warning .erp-notice-chip {
+  background: #faeeda;
+  color: #ba7517;
+}
+
+.erp-notice--error {
+  border-color: #f0d4d4;
+  background: linear-gradient(180deg, #fff8f8 0%, #ffffff 100%);
+}
+
+.erp-notice--error .erp-notice-chip {
+  background: #fcebeb;
+  color: #c43d3c;
+}
+
+.erp-notice--success {
+  border-color: #cfe9df;
+  background: linear-gradient(180deg, #f4fbf8 0%, #ffffff 100%);
+}
+
+.erp-notice--success .erp-notice-chip {
+  background: #e1f5ee;
+  color: #0f6e56;
+}
+
+@media (max-width: 640px) {
+  .erp-notice {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .erp-notice-chip {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+}
+
 .erp-overtime-entry-drawer .ant-drawer-footer .ant-btn {
   border-radius: 8px;
 }

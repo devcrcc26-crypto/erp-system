@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   DatePicker,
   Form,
@@ -15,6 +14,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
@@ -29,6 +29,7 @@ import { useCreateMaterialRequisition } from '@/lib/query/material-requisition';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 interface Step1Values {
   title?: string;
@@ -218,9 +219,10 @@ export default function MaterialRequisitionForm({
       messageApi.success(t('hr.messages.materialRequisitionSubmitted'));
       onSuccess(finalResult);
     } catch (error: unknown) {
-      const message = t('hr.messages.materialRequisitionSubmitFailed');
-      notifyApiError(error, message, messageApi);
-      setFormError(message);
+      const fallback = t('hr.messages.materialRequisitionSubmitFailed');
+      const friendly = getFriendlyApiErrorMessage(error, fallback, t);
+      notifyApiError(error, fallback, messageApi, t);
+      setFormError(friendly);
     } finally {
       setSubmitting(false);
     }
@@ -592,12 +594,13 @@ export default function MaterialRequisitionForm({
       className="flex min-h-0 flex-1 flex-col"
     >
       {formError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={formError}
+        <ErpNotice
+          tone="error"
           className="mb-4"
-          closable={{onClose: () => setFormError(null)}}
+          title={formError}
+          closable
+          closeLabel={t('errors.dismiss')}
+          onClose={() => setFormError(null)}
         />
       ) : null}
       <StepperForm

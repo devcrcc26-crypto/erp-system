@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   DatePicker,
   Grid,
@@ -24,12 +23,12 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
-import { ApiRequestError } from '@/lib/api/errors';
 import type { MaterialRequisitionListItem } from '@/lib/api/material-requisition.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import { useMaterialRequisitionsAll } from '@/lib/query/material-requisition';
@@ -46,6 +45,7 @@ import {
 } from '@/lib/utils/material-requisition-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 const PENDING_STATUSES = statusesForMaterialRequisitionMode('pending');
 const APPROVED_STATUSES = statusesForMaterialRequisitionMode('approved');
@@ -314,14 +314,14 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page erp-material-requisitions-page">
       {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={
-            listQuery.error instanceof ApiRequestError
-              ? listQuery.error.message
-              : t('hr.messages.failedToLoadMaterialRequisitions')
-          }
+        <ErpNotice
+          tone="error"
+          className="mb-4"
+          title={getFriendlyApiErrorMessage(
+            listQuery.error,
+            t('hr.messages.failedToLoadMaterialRequisitions'),
+            t,
+          )}
         />
       ) : null}
 

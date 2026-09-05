@@ -1079,6 +1079,22 @@
     "newPackage": "新建子任务",
     "designPackageSubmittal": "子任务送审"
   },
+  "errors": {
+    "api": {
+      "network": "无法连接服务器。请检查网络后重试。",
+      "unauthorized": "登录已过期，请重新登录。",
+      "forbidden": "您没有执行此操作的权限。",
+      "notFound": "未找到相关内容，可能已被删除。",
+      "conflict": "与现有数据冲突。请刷新后重试。",
+      "validation": "部分信息需要核对。请检查表单后重试。",
+      "badRequest": "无法完成该请求。请核对信息后重试。",
+      "rateLimited": "请求过于频繁，请稍后再试。",
+      "server": "服务暂时出现问题，请稍后再试。",
+      "unexpected": "出现问题，请重试。",
+      "projectStageBlocked": "当前项目阶段不允许此操作。"
+    },
+    "dismiss": "关闭"
+  },
   "common": {
     "save": "保存",
     "saveChanges": "保存更改",

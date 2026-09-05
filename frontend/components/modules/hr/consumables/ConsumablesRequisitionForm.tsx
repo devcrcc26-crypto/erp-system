@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   Checkbox,
   DatePicker,
@@ -17,6 +16,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -33,6 +33,7 @@ import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 interface Step1Values {
   title?: string;
@@ -309,9 +310,10 @@ export default function ConsumablesRequisitionForm({
       );
       onSuccess(finalResult);
     } catch (error: unknown) {
-      const message = t('hr.messages.consumablesRequisitionSubmitFailed');
-      notifyApiError(error, message, messageApi);
-      setFormError(message);
+      const fallback = t('hr.messages.consumablesRequisitionSubmitFailed');
+      const friendly = getFriendlyApiErrorMessage(error, fallback, t);
+      notifyApiError(error, fallback, messageApi, t);
+      setFormError(friendly);
     } finally {
       setSubmitting(false);
     }
@@ -505,9 +507,8 @@ export default function ConsumablesRequisitionForm({
               ) : undefined
             }
           >
-            <Alert
-              type="warning"
-              showIcon
+            <ErpNotice
+              tone="warning"
               className="mb-4"
               title={t('hr.messages.consumablesLowValueOnly')}
               description={t('hr.messages.consumablesLowValueOnlyDesc')}
@@ -773,12 +774,12 @@ export default function ConsumablesRequisitionForm({
       className="flex min-h-0 flex-1 flex-col"
     >
       {formError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={formError}
+        <ErpNotice
+          tone="error"
           className="mb-4"
+          title={formError}
           closable
+          closeLabel={t('errors.dismiss')}
           onClose={() => setFormError(null)}
         />
       ) : null}

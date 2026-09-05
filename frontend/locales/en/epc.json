@@ -1079,6 +1079,22 @@
     "newPackage": "New subtask",
     "designPackageSubmittal": "Subtask submittal"
   },
+  "errors": {
+    "api": {
+      "network": "We could not reach the server. Check your connection and try again.",
+      "unauthorized": "Your session has expired. Please sign in again.",
+      "forbidden": "You do not have permission to do that.",
+      "notFound": "We could not find what you were looking for. It may have been removed.",
+      "conflict": "This conflicts with existing data. Refresh and try again.",
+      "validation": "Some details need attention. Check the form and try again.",
+      "badRequest": "We could not complete that request. Check your details and try again.",
+      "rateLimited": "Too many requests. Wait a moment and try again.",
+      "server": "Something went wrong on our side. Please try again in a moment.",
+      "unexpected": "Something went wrong. Please try again.",
+      "projectStageBlocked": "This action is not available for the project's current stage."
+    },
+    "dismiss": "Dismiss"
+  },
   "common": {
     "save": "Save",
     "saveChanges": "Save changes",

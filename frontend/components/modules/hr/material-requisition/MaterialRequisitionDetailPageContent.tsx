@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   Dropdown,
   Form,
@@ -22,13 +21,13 @@ import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTim
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
-import { ApiRequestError } from '@/lib/api/errors';
 import type {
   MaterialRequisitionItem,
   UpdateMaterialRequisitionItemPayload,
@@ -46,6 +45,7 @@ import {
   materialRequisitionStatusVariant,
 } from '@/lib/utils/material-requisition-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 function DetailSection({
@@ -152,6 +152,7 @@ export default function MaterialRequisitionDetailPageContent({
         error,
         t('hr.messages.materialRequisitionItemUpdateFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -169,6 +170,7 @@ export default function MaterialRequisitionDetailPageContent({
         error,
         t('hr.messages.materialRequisitionItemRemoveFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -183,6 +185,7 @@ export default function MaterialRequisitionDetailPageContent({
         error,
         t('hr.messages.materialRequisitionCancelFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -290,14 +293,13 @@ export default function MaterialRequisitionDetailPageContent({
   if (detailQuery.isError || !requisition) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
-        <Alert
-          type="error"
-          showIcon
-          title={
-            detailQuery.error instanceof ApiRequestError
-              ? detailQuery.error.message
-              : t('hr.messages.materialRequisitionNotFound')
-          }
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            detailQuery.error,
+            t('hr.messages.materialRequisitionNotFound'),
+            t,
+          )}
           action={
             <Button onClick={() => router.push('/hr/material-requisition')}>
               {t('hr.buttons.back')}
@@ -480,9 +482,9 @@ export default function MaterialRequisitionDetailPageContent({
       </div>
 
       {requisition.status === 'RETURNED' && isOwner ? (
-        <Alert
-          type="warning"
-          showIcon
+        <ErpNotice
+          tone="warning"
+          className="mb-4"
           title={t('hr.messages.materialRequisitionReturned')}
           action={
             requisition.approvalRequestId ? (

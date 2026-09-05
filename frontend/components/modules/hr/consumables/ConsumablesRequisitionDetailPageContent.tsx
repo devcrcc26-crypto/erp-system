@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   Dropdown,
   Form,
@@ -22,13 +21,13 @@ import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
-import { ApiRequestError } from '@/lib/api/errors';
 import type {
   ConsumablesRequisitionItem,
   UpdateConsumablesRequisitionItemPayload,
@@ -47,6 +46,7 @@ import {
   formatConsumablesRequisitionStatus,
 } from '@/lib/utils/consumables-requisition-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 function DetailSection({
@@ -156,6 +156,7 @@ export default function ConsumablesRequisitionDetailPageContent({
         error,
         t('hr.messages.consumablesRequisitionItemUpdateFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -173,6 +174,7 @@ export default function ConsumablesRequisitionDetailPageContent({
         error,
         t('hr.messages.consumablesRequisitionItemRemoveFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -187,6 +189,7 @@ export default function ConsumablesRequisitionDetailPageContent({
         error,
         t('hr.messages.consumablesRequisitionCancelFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -294,14 +297,13 @@ export default function ConsumablesRequisitionDetailPageContent({
   if (detailQuery.isError || !requisition) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
-        <Alert
-          type="error"
-          showIcon
-          title={
-            detailQuery.error instanceof ApiRequestError
-              ? detailQuery.error.message
-              : t('hr.messages.consumablesRequisitionNotFound')
-          }
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            detailQuery.error,
+            t('hr.messages.consumablesRequisitionNotFound'),
+            t,
+          )}
           action={
             <Button onClick={() => router.push('/hr/consumables')}>
               {t('hr.buttons.back')}
@@ -488,9 +490,9 @@ export default function ConsumablesRequisitionDetailPageContent({
       </div>
 
       {canEdit && requisition.status === 'RETURNED' ? (
-        <Alert
-          type="warning"
-          showIcon
+        <ErpNotice
+          tone="warning"
+          className="mb-4"
           title={t('pages.hr.consumables.returnedNotice')}
           action={
             requisition.approvalRequestId ? (

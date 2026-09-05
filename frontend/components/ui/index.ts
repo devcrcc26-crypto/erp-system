@@ -4,6 +4,7 @@ export { default as ConfirmDialog } from './ConfirmDialog/ConfirmDialog';
 export { default as DataTable } from './DataTable/DataTable';
 export { default as DocumentAttachmentPanel } from './DocumentAttachmentPanel/DocumentAttachmentPanel';
 export { default as EntityLinkPicker } from './EntityLinkPicker/EntityLinkPicker';
+export { default as ErpNotice } from './ErpNotice/ErpNotice';
 export { default as FormLayout } from './FormLayout/FormLayout';
 export { default as ListSearchInput } from './ListSearchInput/ListSearchInput';
 export { default as NotificationPanel } from './NotificationPanel/NotificationPanel';
