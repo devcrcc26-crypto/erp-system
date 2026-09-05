@@ -4170,7 +4170,8 @@ main::-webkit-scrollbar,
 .erp-consumables-form-page .ant-btn,
 .erp-vehicle-application-form-page .ant-btn,
 .erp-vehicle-refueling-form-page .ant-btn,
-.erp-company-asset-form-page .ant-btn {
+.erp-company-asset-form-page .ant-btn,
+.erp-inspection-repair-form-page .ant-btn {
   border-radius: 8px;
 }
 
@@ -4217,7 +4218,13 @@ main::-webkit-scrollbar,
 .erp-company-asset-form-page .ant-input-textarea textarea,
 .erp-company-asset-form-page .ant-select-selector,
 .erp-company-asset-form-page .ant-picker,
-.erp-company-asset-form-page .ant-input-number {
+.erp-company-asset-form-page .ant-input-number,
+.erp-inspection-repair-form-page .ant-input,
+.erp-inspection-repair-form-page .ant-input-affix-wrapper,
+.erp-inspection-repair-form-page .ant-input-textarea textarea,
+.erp-inspection-repair-form-page .ant-select-selector,
+.erp-inspection-repair-form-page .ant-picker,
+.erp-inspection-repair-form-page .ant-input-number {
   border-radius: 8px !important;
 }
 

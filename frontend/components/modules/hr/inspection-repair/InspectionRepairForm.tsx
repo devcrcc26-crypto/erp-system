@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Form,
   Input,
   InputNumber,
   Radio,
   Select,
 } from 'antd';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -219,9 +219,8 @@ export default function InspectionRepairForm({
             description={t('pages.hr.inspectionRepair.deviceStepDescription')}
           >
             {noAssignedAssets ? (
-              <Alert
-                type="info"
-                showIcon
+              <ErpNotice
+                tone="info"
                 className="mb-4"
                 title={t('hr.messages.noAssignedInspectionAssets')}
               />
@@ -498,11 +497,10 @@ export default function InspectionRepairForm({
       }}
     >
       {formError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={formError}
+        <ErpNotice
+          tone="error"
           className="mb-4"
+          title={formError}
           closable
           onClose={() => setFormError(null)}
         />

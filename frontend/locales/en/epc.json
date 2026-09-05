@@ -525,8 +525,16 @@
         "deviceStepDescription": "Choose an assigned company asset or enter external device details.",
         "detailsStepDescription": "Enter location, request type, urgency, and a clear description of the issue.",
         "reviewStepDescription": "Confirm the asset and request details before submitting.",
+        "searchPlaceholder": "Search by request #, device, or location",
+        "emptyFiltered": "No inspection & repair requests match your filters",
         "requestSingular": "request",
-        "requestPlural": "requests"
+        "requestPlural": "requests",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "active": "In repair",
+          "done": "Completed"
+        }
       },
       "companyAsset": {
         "title": "Company Assets",

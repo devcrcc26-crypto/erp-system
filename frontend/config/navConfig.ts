@@ -1243,6 +1243,18 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname === '/hr/inspection-repair') {
+    return {
+      titleKey: 'pages.hr.inspectionRepair.listTitle',
+      descriptionKey: 'pages.hr.inspectionRepair.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.inspectionRepair.listTitle') },
+      ],
+    };
+  }
+
   if (pathname.startsWith('/hr/inspection-repair/')) {
     return {
       titleKey: 'pages.hr.inspectionRepair.detail',

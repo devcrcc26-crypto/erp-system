@@ -58,6 +58,60 @@ export function useInspectionRepairs(
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the inspection & repair list (filter locally).
+ */
+async function fetchAllInspectionRepairPages(
+  params: Omit<
+    ListInspectionRepairsParams,
+    'page' | 'limit' | 'search'
+  > = {},
+): Promise<InspectionRepairListItem[]> {
+  const first = await apiGetPaginated<InspectionRepairListItem>(
+    `${INSPECTION_REPAIR_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<InspectionRepairListItem>(
+        `${INSPECTION_REPAIR_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All inspection & repair requests (all pages) for client-side filter/search. */
+export function useInspectionRepairsAll(
+  params: Omit<
+    ListInspectionRepairsParams,
+    'page' | 'limit' | 'search'
+  > = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...inspectionRepairKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllInspectionRepairPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useInspectionRepair(id: string, enabled = true) {
   return useQuery({
     queryKey: inspectionRepairKeys.detail(id),

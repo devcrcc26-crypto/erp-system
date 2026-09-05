@@ -8,7 +8,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 
 /**
- * New inspection & repair page — same page chrome as Add Employee.
+ * New inspection & repair — title in MainContentHeader; page shows cancel + form.
  */
 export default function InspectionRepairFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -25,15 +25,14 @@ export default function InspectionRepairFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-end gap-2">
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-inspection-repair-form-page flex flex-col gap-4">
+      <div className="flex shrink-0 items-center justify-end">
         <Button
-            onClick={() => router.push('/hr/inspection-repair')}
-            className="shrink-0"
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.buttons.cancel')}
-          </Button>
+          onClick={() => router.push('/hr/inspection-repair')}
+          className="shrink-0"
+        >
+          {t('hr.buttons.cancel')}
+        </Button>
       </div>
       <InspectionRepairForm onSuccess={handleSuccess} />
     </div>

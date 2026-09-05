@@ -1,22 +1,29 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Form, Radio, Skeleton, Tag, Typography } from 'antd';
-import { ArrowLeft } from 'lucide-react';
+import {
+  Button,
+  Dropdown,
+  Form,
+  Grid,
+  Radio,
+  Skeleton,
+  Tag,
+} from 'antd';
+import type { MenuProps } from 'antd';
+import { MoreOutlined, StopOutlined } from '@ant-design/icons';
+import { ArrowLeft, Wrench } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
-import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
-import { ApiRequestError } from '@/lib/api/errors';
 import type { InspectionRepairStatus } from '@/lib/api/inspection-repair.types';
 import {
   useCancelInspectionRepair,
@@ -24,13 +31,13 @@ import {
   useUpdateInspectionRepair,
 } from '@/lib/query/inspection-repair';
 import { useCurrentUser } from '@/lib/query/profile';
-import { tokens } from '@/lib/theme/tokens';
 import {
   formatInspectionRepairEmployeeName,
   formatInspectionRepairStatus,
   inspectionRepairStatusVariant,
 } from '@/lib/utils/inspection-repair-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 type HrWorkflowStatus = Extract<
@@ -45,6 +52,35 @@ const STATUS_TRANSITIONS: Partial<
   IN_REPAIR: ['REPAIRED', 'REJECTED'],
 };
 
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  action?: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">{title}</h3>
+        {action}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Inspection & repair detail — Users / employee profile chrome.
+ */
 export default function InspectionRepairDetailPageContent({
   requestId,
 }: {
@@ -53,6 +89,9 @@ export default function InspectionRepairDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useInspectionRepair(requestId);
@@ -64,10 +103,13 @@ export default function InspectionRepairDetailPageContent({
     HrWorkflowStatus | undefined
   >();
 
+  useSetHeaderExtra(null);
+
   const request = detailQuery.data;
   const isOwner = request?.employeeId === currentUser.data?.id;
   const canCancel =
-    isOwner && ['DRAFT', 'SUBMITTED'].includes(request?.status ?? '');
+    Boolean(isOwner) &&
+    ['DRAFT', 'SUBMITTED'].includes(request?.status ?? '');
 
   const nextStatuses = useMemo(
     () => (request ? (STATUS_TRANSITIONS[request.status] ?? []) : []),
@@ -110,6 +152,7 @@ export default function InspectionRepairDetailPageContent({
         error,
         t('hr.messages.inspectionRepairCancelFailed'),
         messageApi,
+        t,
       );
     }
   }
@@ -140,14 +183,15 @@ export default function InspectionRepairDetailPageContent({
         error,
         t('hr.messages.inspectionRepairUpdateFailed'),
         messageApi,
+        t,
       );
     }
   }
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-inspection-repair-detail-page">
+        <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
@@ -156,20 +200,16 @@ export default function InspectionRepairDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <Alert
-          type="error"
-          showIcon
-          title={
-            detailQuery.error instanceof ApiRequestError
-              ? detailQuery.error.message
-              : t('hr.messages.inspectionRepairNotFound')
-          }
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            detailQuery.error,
+            t('hr.messages.inspectionRepairNotFound'),
+            t,
+          )}
           action={
-            <Button
-              onClick={() => router.push('/hr/inspection-repair')}
-              style={{ borderRadius: 0 }}
-            >
+            <Button onClick={() => router.push('/hr/inspection-repair')}>
               {t('hr.buttons.backToList')}
             </Button>
           }
@@ -178,242 +218,290 @@ export default function InspectionRepairDetailPageContent({
     );
   }
 
+  const overflowMenuItems: MenuProps['items'] = [];
+  if (request.approvalRequest?.id) {
+    overflowMenuItems.push({
+      key: 'approvals',
+      label: t('hr.buttons.viewInApprovals'),
+      onClick: () =>
+        router.push(`/approvals/${request.approvalRequest?.id}`),
+    });
+  }
+  if (canUpdateStatus) {
+    overflowMenuItems.push({
+      key: 'status',
+      label: t('hr.buttons.updateStatus'),
+      onClick: openStatusModal,
+    });
+  }
+  if (canCancel) {
+    overflowMenuItems.push({
+      key: 'cancel',
+      label: t('hr.buttons.cancelRequest'),
+      icon: <StopOutlined />,
+      danger: true,
+      onClick: () => setConfirmCancel(true),
+    });
+  }
+
+  const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
+
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/inspection-repair')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.back')}
-        </Button>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {canUpdateStatus ? (
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-inspection-repair-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
-              type="primary"
-              onClick={openStatusModal}
-              style={{ borderRadius: 0 }}
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push('/hr/inspection-repair')}
+              aria-label={t('hr.buttons.back')}
             >
-              {t('hr.buttons.updateStatus')}
+              {isNarrow ? undefined : t('hr.buttons.back')}
             </Button>
-          ) : null}
-          {canCancel ? (
-            <Button
-              danger
-              onClick={() => setConfirmCancel(true)}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.buttons.cancelRequest')}
-            </Button>
-          ) : null}
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {showOverflowMenu ? (
+              <Dropdown
+                menu={{ items: overflowMenuItems }}
+                trigger={['click']}
+              >
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
+                />
+              </Dropdown>
+            ) : (
+              <>
+                {request.approvalRequest?.id ? (
+                  <Button
+                    onClick={() =>
+                      router.push(`/approvals/${request.approvalRequest?.id}`)
+                    }
+                  >
+                    {isCompact
+                      ? t('nav.approvals')
+                      : t('hr.buttons.viewInApprovals')}
+                  </Button>
+                ) : null}
+                {canUpdateStatus ? (
+                  <Button type="primary" onClick={openStatusModal}>
+                    {t('hr.buttons.updateStatus')}
+                  </Button>
+                ) : null}
+                {canCancel ? (
+                  <Button
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={() => setConfirmCancel(true)}
+                    aria-label={t('hr.buttons.cancelRequest')}
+                  >
+                    {isCompact ? undefined : t('hr.buttons.cancelRequest')}
+                  </Button>
+                ) : null}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">
+                {request.requestNumber}
+              </span>
+              <StatusBadge
+                label={formatInspectionRepairStatus(request.status, t)}
+                variant={inspectionRepairStatusVariant(request.status)}
+              />
+              {request.assetId ? (
+                <Tag color="blue">{t('hr.form.asset')}</Tag>
+              ) : (
+                <Tag>{t('hr.form.deviceName')}</Tag>
+              )}
+            </div>
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {request.deviceName}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+              {formatInspectionRepairEmployeeName(request.employee)}
+              {request.submittedAt
+                ? ` · ${formatProjectDate(request.submittedAt)}`
+                : null}
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_320px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <div
-            className="overflow-hidden rounded-none"
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-            }}
-          >
-            <div className="px-3 py-4 sm:px-5">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  {request.requestNumber}
-                </span>
-                <span style={{ color: tokens.colorBorder }}>·</span>
-                <StatusBadge
-                  label={formatInspectionRepairStatus(request.status, t)}
-                  variant={inspectionRepairStatusVariant(request.status)}
-                />
-                {request.assetId ? (
-                  <Tag style={{ borderRadius: 0 }}>{t('hr.form.asset')}</Tag>
-                ) : (
-                  <Tag style={{ borderRadius: 0 }}>
-                    {t('hr.form.deviceName')}
-                  </Tag>
-                )}
-              </div>
-              <h2
-                className="m-0 text-lg font-semibold leading-snug"
-                style={{ color: tokens.colorTextPrimary }}
-              >
-                {request.deviceName}
-              </h2>
-              <p
-                className="m-0 mt-1 text-sm"
-                style={{ color: tokens.colorTextSecondary }}
-              >
-                {formatInspectionRepairEmployeeName(request.employee)}
-                {request.submittedAt
-                  ? ` · ${t('hr.table.submittedDate')} ${formatProjectDate(request.submittedAt)}`
-                  : null}
-              </p>
-            </div>
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.form.inspectionType')}
+            </p>
+            <p className="erp-employee-meta-value truncate">
+              {t(`hr.inspectionType.${request.inspectionType}`)}
+            </p>
           </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.form.urgency')}</p>
+            <p className="erp-employee-meta-value">
+              {t(`hr.urgency.${request.urgency}`)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.form.location')}</p>
+            <p className="erp-employee-meta-value truncate">
+              {request.location}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.labels.completedAt')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {request.completedAt
+                ? formatProjectDate(request.completedAt)
+                : '—'}
+            </p>
+          </div>
+        </div>
+      </div>
 
-          <SummaryStrip
-            items={[
-              {
-                label: t('hr.form.inspectionType'),
-                value: t(`hr.inspectionType.${request.inspectionType}`),
-              },
-              {
-                label: t('hr.form.urgency'),
-                value: t(`hr.urgency.${request.urgency}`),
-              },
-              { label: t('hr.form.location'), value: request.location },
-              {
-                label: t('hr.labels.completedAt'),
-                value: request.completedAt
-                  ? formatProjectDate(request.completedAt)
-                  : '—',
-              },
-            ]}
-          />
-
-          <SectionCard
-            title={t('hr.section.requestDetails')}
-            bodyClassName="px-3 py-4 sm:px-5"
-          >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {request.asset ? (
-                <MetaItem label={t('hr.form.asset')}>
-                  {request.asset.serialNumber} — {request.asset.brand}{' '}
-                  {request.asset.model}
-                </MetaItem>
-              ) : null}
-              <MetaItem label={t('hr.form.deviceName')}>
-                {request.deviceName}
-              </MetaItem>
-              <MetaItem label={t('hr.form.make')}>
-                {request.make ?? '—'}
-              </MetaItem>
-              <MetaItem label={t('hr.form.model')}>
-                {request.model ?? '—'}
-              </MetaItem>
-              <MetaItem label={t('hr.form.year')}>
-                {request.year?.toString() ?? '—'}
-              </MetaItem>
-              <MetaItem label={t('hr.form.location')}>
-                {request.location}
-              </MetaItem>
-              <MetaItem label={t('hr.form.description')}>
-                <p className="m-0 whitespace-pre-wrap leading-relaxed">
-                  {request.description}
-                </p>
-              </MetaItem>
-              <MetaItem label={t('hr.form.solution')}>
-                <p className="m-0 whitespace-pre-wrap leading-relaxed">
-                  {request.solution ?? '—'}
-                </p>
-              </MetaItem>
-            </div>
-          </SectionCard>
-
-          {canViewHr ? (
-            <SectionCard
-              title={t('hr.section.updateStatus')}
-              bodyClassName="px-3 py-4 sm:px-5"
-              action={
-                canUpdateStatus ? (
-                  <Button
-                    type="primary"
-                    onClick={openStatusModal}
-                    style={{ borderRadius: 0 }}
-                  >
-                    {t('hr.buttons.updateStatus')}
-                  </Button>
-                ) : undefined
-              }
-            >
-              <div className="flex flex-col gap-4">
-                <div
-                  className="rounded-none border px-3 py-3"
-                  style={{
-                    borderColor: tokens.colorBorder,
-                    background: tokens.colorSurfaceSecondary,
-                  }}
-                >
-                  <p
-                    className="mb-1 text-xs font-medium uppercase tracking-wide"
-                    style={{ color: tokens.colorTextTertiary }}
-                  >
-                    {t('hr.assetDialog.statusCurrentLabel')}
-                  </p>
-                  <StatusBadge
-                    label={formatInspectionRepairStatus(request.status, t)}
-                    variant={inspectionRepairStatusVariant(request.status)}
-                  />
-                </div>
-
-                {canUpdateStatus ? (
-                  <>
-                    <p
-                      className="m-0 text-sm"
-                      style={{ color: tokens.colorTextSecondary }}
-                    >
-                      {t('hr.messages.inspectionRepairStatusActionsHint')}
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      {statusOptions.map((option) => (
-                        <div
-                          key={option.value}
-                          className="flex items-start gap-3 rounded-none border px-3 py-3"
-                          style={{ borderColor: tokens.colorBorder }}
-                        >
-                          <StatusBadge
-                            label={option.label}
-                            variant={inspectionRepairStatusVariant(
-                              option.value,
-                            )}
-                          />
-                          <p
-                            className="m-0 flex-1 text-xs leading-snug"
-                            style={{ color: tokens.colorTextSecondary }}
-                          >
-                            {option.hint}
-                          </p>
-                        </div>
-                      ))}
+      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="erp-pro-card min-w-0 overflow-hidden">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <DetailSection title={t('hr.section.requestDetails')}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {request.asset ? (
+                  <MetaItem label={t('hr.form.asset')}>
+                    <div className="flex items-start gap-2">
+                      <Wrench
+                        size={16}
+                        className="mt-0.5 shrink-0 text-[#6B7280]"
+                        strokeWidth={1.75}
+                      />
+                      <span>
+                        {request.asset.serialNumber} — {request.asset.brand}{' '}
+                        {request.asset.model}
+                      </span>
                     </div>
-                  </>
-                ) : (
-                  <Alert
-                    type="info"
-                    showIcon
-                    title={t('hr.messages.inspectionRepairStatusLocked')}
-                  />
-                )}
+                  </MetaItem>
+                ) : null}
+                <MetaItem label={t('hr.form.deviceName')}>
+                  {request.deviceName}
+                </MetaItem>
+                <MetaItem label={t('hr.form.make')}>
+                  {request.make ?? '—'}
+                </MetaItem>
+                <MetaItem label={t('hr.form.model')}>
+                  {request.model ?? '—'}
+                </MetaItem>
+                <MetaItem label={t('hr.form.year')}>
+                  {request.year?.toString() ?? '—'}
+                </MetaItem>
+                <MetaItem label={t('hr.form.location')}>
+                  {request.location}
+                </MetaItem>
+                <div className="md:col-span-2">
+                  <MetaItem label={t('hr.form.description')}>
+                    <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                      {request.description}
+                    </p>
+                  </MetaItem>
+                </div>
+                <div className="md:col-span-2">
+                  <MetaItem label={t('hr.form.solution')}>
+                    <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                      {request.solution ?? '—'}
+                    </p>
+                  </MetaItem>
+                </div>
               </div>
-            </SectionCard>
-          ) : null}
+            </DetailSection>
+
+            {canViewHr ? (
+              <DetailSection
+                title={t('hr.section.updateStatus')}
+                action={
+                  canUpdateStatus ? (
+                    <Button type="primary" onClick={openStatusModal}>
+                      {t('hr.buttons.updateStatus')}
+                    </Button>
+                  ) : undefined
+                }
+              >
+                <div className="flex flex-col gap-4">
+                  <div className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-3">
+                    <p className="erp-users-stat-label mb-1">
+                      {t('hr.assetDialog.statusCurrentLabel')}
+                    </p>
+                    <StatusBadge
+                      label={formatInspectionRepairStatus(request.status, t)}
+                      variant={inspectionRepairStatusVariant(request.status)}
+                    />
+                  </div>
+
+                  {canUpdateStatus ? (
+                    <>
+                      <p className="erp-users-cell-sub m-0">
+                        {t('hr.messages.inspectionRepairStatusActionsHint')}
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {statusOptions.map((option) => (
+                          <div
+                            key={option.value}
+                            className="flex items-start gap-3 rounded-xl border border-[#e8ebef] px-3 py-3"
+                          >
+                            <StatusBadge
+                              label={option.label}
+                              variant={inspectionRepairStatusVariant(
+                                option.value,
+                              )}
+                            />
+                            <p className="erp-users-cell-sub m-0 flex-1 leading-snug">
+                              {option.hint}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <ErpNotice
+                      tone="info"
+                      title={t('hr.messages.inspectionRepairStatusLocked')}
+                    />
+                  )}
+                </div>
+              </DetailSection>
+            ) : null}
+          </div>
         </div>
 
-        <div className="min-w-0">
+        <aside className="min-w-0 lg:sticky lg:top-4">
           {tiers.length > 0 ? (
             <ApprovalTierTimeline
               tiers={tiers}
               currentTier={request.approvalRequest?.currentTier ?? 1}
             />
           ) : (
-            <SectionCard
-              title={t('hr.section.approvalChain')}
-              bodyClassName="px-3 py-4 sm:px-4"
-            >
-              <Typography.Text type="secondary">
-                {t('hr.empty.noApprovalChain')}
-              </Typography.Text>
-            </SectionCard>
+            <div className="erp-pro-card overflow-hidden">
+              <DetailSection title={t('hr.section.approvalChain')}>
+                <p className="erp-users-cell-sub m-0">
+                  {t('hr.empty.noApprovalChain')}
+                </p>
+              </DetailSection>
+            </div>
           )}
-        </div>
+        </aside>
       </div>
 
       <ConfirmDialog
@@ -428,17 +516,8 @@ export default function InspectionRepairDetailPageContent({
         onCancel={closeStatusModal}
       >
         <div className="mt-3 flex flex-col gap-4">
-          <div
-            className="rounded-none border px-3 py-3"
-            style={{
-              borderColor: tokens.colorBorder,
-              background: tokens.colorSurfaceSecondary,
-            }}
-          >
-            <p
-              className="mb-1 text-xs font-medium uppercase tracking-wide"
-              style={{ color: tokens.colorTextTertiary }}
-            >
+          <div className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-3">
+            <p className="erp-users-stat-label mb-1">
               {t('hr.assetDialog.statusCurrentLabel')}
             </p>
             <StatusBadge
@@ -466,15 +545,9 @@ export default function InspectionRepairDetailPageContent({
                     return (
                       <label
                         key={option.value}
-                        className="m-0 flex w-full cursor-pointer items-center gap-3 rounded-none border px-3 py-3"
-                        style={{
-                          borderColor: selected
-                            ? tokens.colorPrimary
-                            : tokens.colorBorder,
-                          background: selected
-                            ? tokens.colorPrimaryLight
-                            : tokens.colorCardBg,
-                        }}
+                        className={`erp-vehicle-pick-card m-0 flex w-full cursor-pointer items-center gap-3 p-3${
+                          selected ? ' erp-vehicle-pick-card--selected' : ''
+                        }`}
                       >
                         <Radio value={option.value} className="m-0" />
                         <div className="min-w-0 flex-1">
@@ -486,10 +559,7 @@ export default function InspectionRepairDetailPageContent({
                               )}
                             />
                           </div>
-                          <p
-                            className="m-0 text-xs leading-snug"
-                            style={{ color: tokens.colorTextSecondary }}
-                          >
+                          <p className="erp-users-cell-sub m-0 leading-snug">
                             {option.hint}
                           </p>
                         </div>
