@@ -606,8 +606,17 @@
         "detailsStepDescription": "填写用章目的、紧急程度与所需日期。",
         "documentsStepDescription": "可选上传需要加盖公章的文件。",
         "reviewStepDescription": "确认申请详情与附件后提交。",
+        "searchPlaceholder": "按申请编号、文件名或员工搜索",
+        "emptyFiltered": "没有符合筛选条件的公章使用申请",
+        "returnedNotice": "此申请已退回。请在审批中查看反馈后重新提交。",
         "requestSingular": "条申请",
-        "requestPlural": "条申请"
+        "requestPlural": "条申请",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       },
       "projectSeal": {
         "new": "新建项目章使用申请",
@@ -620,8 +629,17 @@
         "detailsStepDescription": "填写用章目的、紧急程度与所需日期。",
         "documentsStepDescription": "可选上传需要加盖项目章的文件。",
         "reviewStepDescription": "确认申请详情与附件后提交。",
+        "searchPlaceholder": "按申请编号、文件名或员工搜索",
+        "emptyFiltered": "没有符合筛选条件的项目章使用申请",
+        "returnedNotice": "此申请已退回。请在审批中查看反馈后重新提交。",
         "requestSingular": "条申请",
-        "requestPlural": "条申请"
+        "requestPlural": "条申请",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       }
     },
     "dashboard": {

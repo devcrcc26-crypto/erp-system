@@ -606,8 +606,17 @@
         "detailsStepDescription": "Enter the purpose, urgency, and when the sealed document is needed.",
         "documentsStepDescription": "Optionally upload the document that needs the official seal.",
         "reviewStepDescription": "Confirm the request details and attachments before submitting.",
+        "searchPlaceholder": "Search by request #, file name, or employee",
+        "emptyFiltered": "No official seal requests match your filters",
+        "returnedNotice": "This request was returned. Review the feedback in Approvals, then resubmit.",
         "requestSingular": "request",
-        "requestPlural": "requests"
+        "requestPlural": "requests",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       },
       "projectSeal": {
         "new": "New Project Seal",
@@ -620,8 +629,17 @@
         "detailsStepDescription": "Enter the purpose, urgency, and when the sealed document is needed.",
         "documentsStepDescription": "Optionally upload the document that needs the project seal.",
         "reviewStepDescription": "Confirm the request details and attachments before submitting.",
+        "searchPlaceholder": "Search by request #, file name, or employee",
+        "emptyFiltered": "No project seal requests match your filters",
+        "returnedNotice": "This request was returned. Review the feedback in Approvals, then resubmit.",
         "requestSingular": "request",
-        "requestPlural": "requests"
+        "requestPlural": "requests",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       }
     },
     "dashboard": {

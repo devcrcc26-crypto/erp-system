@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, DatePicker, Form, Input, Select, Typography } from 'antd';
+import { DatePicker, Form, Input, Select, Typography } from 'antd';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import SealFilePicker, {
@@ -338,11 +339,10 @@ export default function OfficialSealForm({
       initialValues={{ urgency: 'MINOR' }}
     >
       {formError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={formError}
+        <ErpNotice
+          tone="error"
           className="mb-4"
+          title={formError}
           closable
           onClose={() => setFormError(null)}
         />

@@ -5,6 +5,7 @@ import { ListOfficialSealsParams, OfficialSealDetail, OfficialSealListItem, Subm
 import { PaginatedResult } from "../api/types";
 import { toQueryString } from "./pm-query-utils";
 import { appendSealSubmitFields, sealSubmitJsonFields } from "../utils/seal-submit-fields";
+import { approvalKeys } from "./approvals";
 
 const OFFICIAL_SEAL_PATH = '/hr/official-seal';
 
@@ -40,6 +41,54 @@ export function useOfficialSeals(
         enabled,
         retry: false,
     });
+}
+
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the official seal list (filter locally).
+ */
+async function fetchAllOfficialSealPages(
+  params: Omit<ListOfficialSealsParams, 'page' | 'limit' | 'search'> = {},
+): Promise<OfficialSealListItem[]> {
+  const first = await apiGetPaginated<OfficialSealListItem>(
+    `${OFFICIAL_SEAL_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<OfficialSealListItem>(
+        `${OFFICIAL_SEAL_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All official seals (all pages) for client-side filter/search. */
+export function useOfficialSealsAll(
+  params: Omit<ListOfficialSealsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...officialSealKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllOfficialSealPages(params),
+    enabled,
+    retry: false,
+  });
 }
 
 export function useOfficialSeal(id: string, enabled = true){

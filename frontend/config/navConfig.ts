@@ -88,8 +88,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/consumables': 'nav.hr.consumables',
   '/hr/flight-applications': 'nav.hr.flightApplications',
   '/hr/vehicle-applications': 'nav.hr.vehicleApplications',
-  '/hr/official-seal': 'nav.hr.officialSeal',
-  '/hr/project-seal': 'nav.hr.projectSeal',
+  '/hr/official-seal': 'pages.hr.officialSeal.listTitle',
+  '/hr/project-seal': 'pages.hr.projectSeal.listTitle',
   '/hr/official-seal-requests': 'nav.hr.officialSealRequests',
   '/hr/vehicle-refueling': 'nav.hr.vehicleRefueling',
   '/hr/employee-contract': 'nav.hr.employeeContract',
@@ -1359,13 +1359,40 @@ function resolveRouteMetaCore(
       ],
     };
   }
+  if (pathname === '/hr/official-seal') {
+    return {
+      titleKey: 'pages.hr.officialSeal.listTitle',
+      descriptionKey: 'pages.hr.officialSeal.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.officialSeal.listTitle') },
+      ],
+    };
+  }
+
   if (pathname.startsWith('/hr/official-seal/')) {
     return {
       titleKey: 'pages.hr.officialSeal.detail',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.hr.officialSeal'), href: '/hr/official-seal' },
+        {
+          label: t('pages.hr.officialSeal.listTitle'),
+          href: '/hr/official-seal',
+        },
         { label: t('pages.hr.officialSeal.detail') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/project-seal') {
+    return {
+      titleKey: 'pages.hr.projectSeal.listTitle',
+      descriptionKey: 'pages.hr.projectSeal.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.projectSeal.listTitle') },
       ],
     };
   }
@@ -1375,7 +1402,10 @@ function resolveRouteMetaCore(
       titleKey: 'pages.hr.projectSeal.detail',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
-        { label: t('nav.hr.projectSeal'), href: '/hr/project-seal' },
+        {
+          label: t('pages.hr.projectSeal.listTitle'),
+          href: '/hr/project-seal',
+        },
         { label: t('pages.hr.projectSeal.detail') },
       ],
     };

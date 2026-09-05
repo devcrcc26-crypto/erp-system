@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
+  DatePicker,
+  Grid,
+  Input,
   Select,
-  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -13,72 +14,158 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  InboxOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SafetyCertificateOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
-import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
-import { ApiRequestError } from '@/lib/api/errors';
-import type {
-  OfficialSealListItem,
-  OfficialSealStatus,
-} from '@/lib/api/official-seal.types';
-import { useOfficialSeals } from '@/lib/query/official-seal';
+import type { OfficialSealListItem } from '@/lib/api/official-seal.types';
+import type { PaginationMeta } from '@/lib/api/types';
+import { useOfficialSealsAll } from '@/lib/query/official-seal';
 import { useUsersDirectory } from '@/lib/query/users';
-import { tokens } from '@/lib/theme/tokens';
 import {
   formatOfficialSealEmployeeName,
   formatOfficialSealStatus,
   formatOfficialSealUrgency,
   officialSealStatusVariant,
 } from '@/lib/utils/official-seal';
+import {
+  filterOfficialSeals,
+  statusesForOfficialSealMode,
+  type OfficialSealStatusMode,
+} from '@/lib/utils/official-seal-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
-const PENDING_STATUSES: OfficialSealStatus[] = [
-  'DRAFT',
-  'SUBMITTED',
-  'IN_REVIEW',
-  'RETURNED',
-];
+const LIST_PATH = '/hr/official-seal';
+const NEW_PATH = '/approvals/new/official-seal';
+
+const PENDING_STATUSES = statusesForOfficialSealMode('pending');
+const APPROVED_STATUSES = statusesForOfficialSealMode('approved');
+const REJECTED_STATUSES = statusesForOfficialSealMode('rejected');
+
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
+
+function OfficialSealStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
 
 /**
- * Company or personal official seal usage list with filters and stats.
+ * Official seal list — Users chrome (stat bar, filter row, soft table).
  */
 export default function OfficialSealListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<OfficialSealStatus[]>([]);
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [statusMode, setStatusMode] = useState<OfficialSealStatusMode>('all');
   const [employeeId, setEmployeeId] = useState<string | undefined>();
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
 
-  const statusOptions = useMemo(
-    () => [
-      { value: 'DRAFT', label: t('hr.status.DRAFT') },
-      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
-      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
-      { value: 'APPROVED', label: t('hr.status.APPROVED') },
-      { value: 'REJECTED', label: t('hr.status.REJECTED') },
-      { value: 'RETURNED', label: t('hr.status.RETURNED') },
-      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
-      { value: 'SEAL_ISSUED', label: t('hr.status.SEAL_ISSUED') },
-    ],
-    [t],
+  const listQuery = useOfficialSealsAll({}, true);
+  const usersQuery = useUsersDirectory(
+    { page: 1, limit: 100 },
+    { enabled: canViewHr },
   );
+
+  const allRows = listQuery.data ?? [];
+
+  const statusCounts = useMemo(() => {
+    return {
+      all: allRows.length,
+      pending: allRows.filter((row) => PENDING_STATUSES.includes(row.status))
+        .length,
+      approved: allRows.filter((row) => APPROVED_STATUSES.includes(row.status))
+        .length,
+      rejected: allRows.filter((row) => REJECTED_STATUSES.includes(row.status))
+        .length,
+    };
+  }, [allRows]);
+
+  const filtered = useMemo(
+    () =>
+      filterOfficialSeals(allRows, {
+        search: appliedSearch,
+        statusMode,
+        employeeId: canViewHr ? employeeId : undefined,
+        dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+        dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+      }),
+    [allRows, appliedSearch, statusMode, employeeId, dateRange, canViewHr],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const pageTitle = canViewHr
     ? t('pages.hr.officialSeal.listTitle')
@@ -87,55 +174,25 @@ export default function OfficialSealListPageContent(): React.ReactNode {
     ? t('pages.hr.officialSeal.listDescription')
     : t('pages.hr.officialSeal.myListDescription');
 
-  const countsBaseParams = useMemo(
-    () => ({
-      search: search.trim() || undefined,
-      employeeId: canViewHr ? employeeId : undefined,
-    }),
-    [search, canViewHr, employeeId],
-  );
+  function handleResetFilters(): void {
+    setSearch('');
+    setAppliedSearch('');
+    setStatusMode('all');
+    setEmployeeId(undefined);
+    setDateRange(null);
+    resetPage();
+  }
 
-  const listParams = useMemo(
-    () => ({
-      ...params,
-      ...countsBaseParams,
-      status: statusFilter.length > 0 ? statusFilter : undefined,
-    }),
-    [params, countsBaseParams, statusFilter],
-  );
+  function handleStatusMode(mode: OfficialSealStatusMode): void {
+    setStatusMode(mode);
+    resetPage();
+  }
 
-  const listQuery = useOfficialSeals(listParams, true);
-  const totalCountQuery = useOfficialSeals(
-    { page: 1, limit: 1, ...countsBaseParams },
-    true,
-  );
-  const pendingCountQuery = useOfficialSeals(
-    { page: 1, limit: 1, status: PENDING_STATUSES, ...countsBaseParams },
-    true,
-  );
-  const approvedCountQuery = useOfficialSeals(
-    { page: 1, limit: 1, status: ['APPROVED', 'SEAL_ISSUED'], ...countsBaseParams },
-    true,
-  );
-  const rejectedCountQuery = useOfficialSeals(
-    { page: 1, limit: 1, status: ['REJECTED'], ...countsBaseParams },
-    true,
-  );
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: 100 },
-    { enabled: canViewHr },
-  );
-
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-  const totalCount = meta?.total ?? rows.length;
-
-  const statusCounts = {
-    all: totalCountQuery.data?.meta?.total ?? totalCount,
-    pending: pendingCountQuery.data?.meta?.total ?? 0,
-    approved: approvedCountQuery.data?.meta?.total ?? 0,
-    rejected: rejectedCountQuery.data?.meta?.total ?? 0,
-  };
+  const hasFilters =
+    Boolean(appliedSearch.trim()) ||
+    statusMode !== 'all' ||
+    Boolean(employeeId) ||
+    Boolean(dateRange?.[0] || dateRange?.[1]);
 
   const columns: ColumnsType<OfficialSealListItem> = useMemo(
     () => [
@@ -143,53 +200,37 @@ export default function OfficialSealListPageContent(): React.ReactNode {
         title: t('hr.table.requestNumber'),
         dataIndex: 'requestNumber',
         key: 'requestNumber',
-        width: 120,
+        width: 130,
+        responsive: ['md'],
         render: (value: string) => (
-          <span
-            className="font-[family-name:var(--font-mono)] text-xs font-medium"
-            style={{ color: tokens.colorPrimary }}
-          >
-            {value}
-          </span>
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
-      ...(canViewHr
-        ? [
-            {
-              title: t('hr.table.employee'),
-              key: 'employee',
-              width: 200,
-              responsive: ['md'],
-              render: (_: unknown, row: OfficialSealListItem) => (
-                <div className="min-w-0 py-0.5">
-                  <p
-                    className="m-0 text-sm font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
-                  >
-                    {formatOfficialSealEmployeeName(row.employee)}
-                  </p>
-                  {row.employee?.email ? (
-                    <p
-                      className="m-0 truncate text-xs"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
-                      {row.employee.email}
-                    </p>
-                  ) : null}
-                </div>
-              ),
-            } satisfies ColumnsType<OfficialSealListItem>[number],
-          ]
-        : []),
+      {
+        title: t('hr.table.employee'),
+        key: 'employee',
+        width: isNarrow ? undefined : 200,
+        render: (_: unknown, row: OfficialSealListItem) => (
+          <div className="min-w-0">
+            <p className="erp-users-cell-strong m-0 truncate">
+              {formatOfficialSealEmployeeName(row.employee)}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
+              {isNarrow
+                ? row.requestNumber
+                : (row.employee?.email ?? row.fileName)}
+            </p>
+          </div>
+        ),
+      },
       {
         title: t('hr.table.fileName'),
         dataIndex: 'fileName',
         key: 'fileName',
         ellipsis: true,
+        responsive: ['sm'],
         render: (value: string) => (
-          <span className="text-sm" style={{ color: tokens.colorTextPrimary }}>
-            {value}
-          </span>
+          <span className="erp-users-cell-strong">{value}</span>
         ),
       },
       {
@@ -198,7 +239,11 @@ export default function OfficialSealListPageContent(): React.ReactNode {
         key: 'urgency',
         width: 110,
         responsive: ['md'],
-        render: (value: string) => formatOfficialSealUrgency(value, t),
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">
+            {formatOfficialSealUrgency(value, t)}
+          </span>
+        ),
       },
       {
         title: t('hr.table.dateNeeded'),
@@ -206,14 +251,18 @@ export default function OfficialSealListPageContent(): React.ReactNode {
         key: 'dateNeeded',
         width: 120,
         responsive: ['lg'],
-        render: (value: string) => formatProjectDate(value),
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">
+            {formatProjectDate(value)}
+          </span>
+        ),
       },
       {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
-        width: 130,
-        render: (value: OfficialSealStatus) => (
+        width: isNarrow ? 100 : 130,
+        render: (value: OfficialSealListItem['status']) => (
           <StatusBadge
             label={formatOfficialSealStatus(value, t)}
             variant={officialSealStatusVariant(value)}
@@ -226,109 +275,142 @@ export default function OfficialSealListPageContent(): React.ReactNode {
         key: 'currentTierLabel',
         width: 140,
         ellipsis: true,
-        responsive: ['lg'],
+        responsive: ['xl'],
         render: (_: string | null | undefined, row: OfficialSealListItem) =>
-          row.directApproved
-            ? t('hr.labels.directApproval')
-            : (row.currentTierLabel ?? '—'),
+          row.directApproved ? (
+            <span className="erp-users-role-tag">
+              {t('hr.labels.directApproval')}
+            </span>
+          ) : row.currentTierLabel ? (
+            <span className="erp-users-role-tag">{row.currentTierLabel}</span>
+          ) : (
+            <span className="erp-users-cell-sub">—</span>
+          ),
       },
     ],
-    [canViewHr, t],
+    [isNarrow, t],
   );
-
-  function handleResetFilters(): void {
-    setSearch('');
-    setStatusFilter([]);
-    setEmployeeId(undefined);
-    resetPage();
-  }
-
-  const hasFilters =
-    Boolean(search.trim()) ||
-    statusFilter.length > 0 ||
-    employeeId !== undefined;
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-official-seal-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
+    <div className="erp-pro-list-page erp-users-page erp-official-seal-page">
       {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={
-            listQuery.error instanceof ApiRequestError
-              ? listQuery.error.message
-              : t('hr.messages.failedToLoadOfficialSeals')
-          }
+        <ErpNotice
+          tone="error"
+          className="mb-4"
+          title={getFriendlyApiErrorMessage(
+            listQuery.error,
+            t('hr.messages.failedToLoadOfficialSeals'),
+            t,
+          )}
         />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
-          label={t('pages.approvals.stats.total')}
+      <div className="erp-users-stat-bar">
+        <OfficialSealStat
+          label={t('pages.hr.officialSeal.stats.total')}
           value={statusCounts.all}
-          color="teal"
-          icon={<SafetyCertificateOutlined />}
+          accent="teal"
+          icon={<InboxOutlined />}
+          active={statusMode === 'all'}
+          onClick={() => handleStatusMode('all')}
         />
-        <StatCard
-          label={t('pages.approvals.stats.pending')}
+        <OfficialSealStat
+          label={t('pages.hr.officialSeal.stats.pending')}
           value={statusCounts.pending}
-          color="amber"
+          accent="amber"
           icon={<ClockCircleOutlined />}
+          active={statusMode === 'pending'}
+          onClick={() => handleStatusMode('pending')}
         />
-        <StatCard
-          label={t('pages.approvals.stats.approved')}
+        <OfficialSealStat
+          label={t('pages.hr.officialSeal.stats.approved')}
           value={statusCounts.approved}
-          color="blue"
+          accent="green"
           icon={<CheckCircleOutlined />}
+          active={statusMode === 'approved'}
+          onClick={() => handleStatusMode('approved')}
         />
-        <StatCard
-          label={t('pages.approvals.stats.rejected')}
+        <OfficialSealStat
+          label={t('pages.hr.officialSeal.stats.rejected')}
           value={statusCounts.rejected}
-          color="red"
+          accent="red"
           icon={<CloseCircleOutlined />}
+          active={statusMode === 'rejected'}
+          onClick={() => handleStatusMode('rejected')}
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <ListSearchInput
-            committedValue={search}
-            onCommit={(value) => {
-              setSearch(value);
-              resetPage();
-            }}
-            placeholder={t('hr.placeholder.searchOfficialSeal')}
-            className="w-full min-w-0 sm:w-72"
-          />
-          <Select
-            mode="multiple"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push(NEW_PATH)}
+              aria-label={t('hr.buttons.newOfficialSeal')}
+            >
+              {isNarrow ? undefined : t('hr.buttons.newOfficialSeal')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
-            placeholder={t('hr.placeholder.status')}
-            options={statusOptions}
-            value={statusFilter}
-            onChange={(value: OfficialSealStatus[]) => {
-              setStatusFilter(value);
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.hr.officialSeal.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              setAppliedSearch(value.trim());
               resetPage();
             }}
-            maxTagCount="responsive"
-            className="w-full min-w-0 sm:min-w-[180px] sm:w-auto"
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           {canViewHr ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
+              className="erp-users-filter-select"
               loading={usersQuery.isLoading}
-              className="w-full min-w-0 sm:w-48"
               options={(usersQuery.data?.data ?? []).map((user) => ({
                 value: user.id,
                 label: formatUserName(user),
@@ -340,82 +422,43 @@ export default function OfficialSealListPageContent(): React.ReactNode {
               }}
             />
           ) : null}
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      {listQuery.isFetching && listQuery.data ? (
-        <TableUpdatingIndicator active={listQuery.isFetching} />
-      ) : null}
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-official-seal" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {totalCount}{' '}
-              {totalCount === 1
-                ? t('pages.hr.officialSeal.requestSingular')
-                : t('pages.hr.officialSeal.requestPlural')}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/approvals/new/official-seal')}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.buttons.newOfficialSeal')}
+          <DatePicker.RangePicker
+            value={dateRange}
+            className="erp-users-filter-daterange"
+            onChange={(value) => {
+              setDateRange(value);
+              resetPage();
+            }}
+          />
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
             </Button>
-          </Space>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<OfficialSealListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            loading={listQuery.isFetching && !listQuery.isLoading}
-            scroll={false}
+            loading={listQuery.isFetching && rows.length === 0}
+            scroll={{ x: isNarrow ? 560 : isCompact ? 860 : 1100 }}
             onRow={(record) => ({
-              onClick: () => router.push(`/hr/official-seal/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              onClick: () => router.push(`${LIST_PATH}/${record.id}`),
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
-                  icon={
-                    <SafetyCertificateOutlined style={{ fontSize: 24 }} />
+                  icon={<InboxOutlined />}
+                  title={
+                    hasFilters
+                      ? t('pages.hr.officialSeal.emptyFiltered')
+                      : t('hr.empty.noOfficialSealRequests')
                   }
-                  title={t('hr.empty.noOfficialSealRequests')}
                   description={pageDescription}
                   action={
                     hasFilters
@@ -425,21 +468,18 @@ export default function OfficialSealListPageContent(): React.ReactNode {
                         }
                       : {
                           label: t('hr.buttons.newOfficialSeal'),
-                          onClick: () =>
-                            router.push('/approvals/new/official-seal'),
+                          onClick: () => router.push(NEW_PATH),
                         }
                   }
                 />
               ),
             }}
-            pagination={
-              meta
-                ? {
-                    ...bindMeta(meta),
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                  }
-                : undefined
-            }
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
+            }}
           />
         </div>
       </div>

@@ -4172,7 +4172,9 @@ main::-webkit-scrollbar,
 .erp-vehicle-refueling-form-page .ant-btn,
 .erp-company-asset-form-page .ant-btn,
 .erp-inspection-repair-form-page .ant-btn,
-.erp-exit-permit-form-page .ant-btn {
+.erp-exit-permit-form-page .ant-btn,
+.erp-official-seal-form-page .ant-btn,
+.erp-project-seal-form-page .ant-btn {
   border-radius: 8px;
 }
 
@@ -4231,7 +4233,19 @@ main::-webkit-scrollbar,
 .erp-exit-permit-form-page .ant-input-textarea textarea,
 .erp-exit-permit-form-page .ant-select-selector,
 .erp-exit-permit-form-page .ant-picker,
-.erp-exit-permit-form-page .ant-input-number {
+.erp-exit-permit-form-page .ant-input-number,
+.erp-official-seal-form-page .ant-input,
+.erp-official-seal-form-page .ant-input-affix-wrapper,
+.erp-official-seal-form-page .ant-input-textarea textarea,
+.erp-official-seal-form-page .ant-select-selector,
+.erp-official-seal-form-page .ant-picker,
+.erp-official-seal-form-page .ant-input-number,
+.erp-project-seal-form-page .ant-input,
+.erp-project-seal-form-page .ant-input-affix-wrapper,
+.erp-project-seal-form-page .ant-input-textarea textarea,
+.erp-project-seal-form-page .ant-select-selector,
+.erp-project-seal-form-page .ant-picker,
+.erp-project-seal-form-page .ant-input-number {
   border-radius: 8px !important;
 }
 

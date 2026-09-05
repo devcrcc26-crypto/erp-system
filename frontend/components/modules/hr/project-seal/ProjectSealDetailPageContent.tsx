@@ -1,24 +1,30 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Alert, Button, Skeleton, Space, Tag, Typography } from 'antd';
+import {
+  Button,
+  Dropdown,
+  Grid,
+  Skeleton,
+  Tag,
+  Typography,
+} from 'antd';
+import type { MenuProps } from 'antd';
+import { MoreOutlined, StopOutlined } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import SealDocumentGallery from '@/components/modules/hr/shared/SealDocumentGallery';
 import SealRequestDetailFields from '@/components/modules/hr/shared/SealRequestDetailFields';
-import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
-import { ApiRequestError } from '@/lib/api/errors';
 import { PROJECT_SEAL_FILE_ACCEPT } from '@/lib/constants/project-seal-upload';
 import {
   useCancelProjectSeal,
@@ -26,8 +32,8 @@ import {
   useProjectSeal,
 } from '@/lib/query/project-seal';
 import { useCurrentUser } from '@/lib/query/profile';
-import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import {
   formatProjectSealEmployeeName,
   formatProjectSealStatus,
@@ -36,8 +42,36 @@ import {
 } from '@/lib/utils/project-seal';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+const PROJECT_SEAL_LIST_PATH = '/hr/project-seal';
+
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  action?: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">{title}</h3>
+        {action}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /**
- * Project seal detail — aligned with Official Seal / Purchase Request chrome.
+ * Project seal detail — Users / employee profile chrome.
  */
 export default function ProjectSealDetailPageContent({
   sealId,
@@ -48,6 +82,9 @@ export default function ProjectSealDetailPageContent({
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const currentUser = useCurrentUser();
   const detailQuery = useProjectSeal(sealId);
   const cancelMutation = useCancelProjectSeal(sealId);
@@ -56,6 +93,8 @@ export default function ProjectSealDetailPageContent({
 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | undefined>();
+
+  useSetHeaderExtra(null);
 
   const seal = detailQuery.data;
   const showIssueSeal = canViewHr && seal?.status === 'APPROVED';
@@ -84,6 +123,7 @@ export default function ProjectSealDetailPageContent({
         error,
         t('hr.messages.failedToCancelProjectSeal'),
         messageApi,
+        t,
       );
     }
   }
@@ -97,14 +137,19 @@ export default function ProjectSealDetailPageContent({
       }
       messageApi.success(t('hr.messages.projectSealIssued'));
     } catch (error: unknown) {
-      notifyApiError(error, t('hr.messages.failedToIssueSeal'), messageApi);
+      notifyApiError(
+        error,
+        t('hr.messages.failedToIssueSeal'),
+        messageApi,
+        t,
+      );
     }
   }
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-project-seal-detail-page">
+        <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
@@ -113,20 +158,16 @@ export default function ProjectSealDetailPageContent({
 
   if (detailQuery.isError || !seal) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <Alert
-          type="error"
-          showIcon
-          title={
-            detailQuery.error instanceof ApiRequestError
-              ? detailQuery.error.message
-              : t('hr.messages.projectSealRequestNotFound')
-          }
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            detailQuery.error,
+            t('hr.messages.projectSealRequestNotFound'),
+            t,
+          )}
           action={
-            <Button
-              onClick={() => router.push('/hr/project-seal')}
-              style={{ borderRadius: 0 }}
-            >
+            <Button onClick={() => router.push(PROJECT_SEAL_LIST_PATH)}>
               {t('hr.buttons.back')}
             </Button>
           }
@@ -135,254 +176,285 @@ export default function ProjectSealDetailPageContent({
     );
   }
 
+  const employeeName =
+    formatProjectSealEmployeeName(seal.employee) || '—';
+
+  const overflowMenuItems: MenuProps['items'] = [];
+  if (seal.approvalRequestId) {
+    overflowMenuItems.push({
+      key: 'approvals',
+      label: t('hr.buttons.viewInApprovals'),
+      onClick: () => router.push(`/approvals/${seal.approvalRequestId}`),
+    });
+  }
+  if (canCancel) {
+    overflowMenuItems.push({
+      key: 'cancel',
+      label: t('hr.buttons.cancelRequest'),
+      icon: <StopOutlined />,
+      danger: true,
+      onClick: () => setConfirmCancel(true),
+    });
+  }
+
+  const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
+
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/project-seal')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.back')}
-        </Button>
-        <Space wrap size={8} className="ml-auto">
-          {canCancel ? (
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-project-seal-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
-              danger
-              onClick={() => setConfirmCancel(true)}
-              style={{ borderRadius: 0 }}
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push(PROJECT_SEAL_LIST_PATH)}
+              aria-label={t('hr.buttons.back')}
             >
-              {t('hr.buttons.cancelRequest')}
+              {isNarrow ? undefined : t('hr.buttons.back')}
             </Button>
-          ) : null}
-        </Space>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_320px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <div
-            className="overflow-hidden rounded-none"
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-            }}
-          >
-            <div className="px-3 py-4 sm:px-5">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  {seal.requestNumber}
-                </span>
-                <span style={{ color: tokens.colorBorder }}>·</span>
-                <StatusBadge
-                  label={formatProjectSealStatus(seal.status, t)}
-                  variant={projectSealStatusVariant(seal.status)}
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {showOverflowMenu ? (
+              <Dropdown
+                menu={{ items: overflowMenuItems }}
+                trigger={['click']}
+              >
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
                 />
-                {isDirectApproved ? (
-                  <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
-                ) : null}
-                {seal.sealedDocument?.id ? (
-                  <Tag color="green">{t('hr.labels.sealAttached')}</Tag>
-                ) : null}
-                {(seal.documents?.length ?? 0) > 0 ? (
-                  <Tag color="blue">
-                    {t('hr.labels.documentToSealAttached')}
-                  </Tag>
-                ) : null}
-              </div>
-              <h2
-                className="m-0 text-lg font-semibold leading-snug"
-                style={{ color: tokens.colorTextPrimary }}
-              >
-                {t('pages.hr.projectSeal.detail')} — {seal.fileName}
-              </h2>
-              <p
-                className="m-0 mt-1 text-sm"
-                style={{ color: tokens.colorTextSecondary }}
-              >
-                {formatProjectSealEmployeeName(seal.employee) || '—'}
-                {seal.submittedAt
-                  ? ` · ${formatProjectDate(seal.submittedAt)}`
-                  : null}
-              </p>
-            </div>
-
-            {seal.status === 'RETURNED' && isOwner ? (
-              <div
-                className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5"
-                style={{
-                  background: tokens.colorAmber50,
-                  borderTop: `1px solid ${tokens.colorAmber400}`,
-                }}
-              >
-                <Typography.Text style={{ color: tokens.colorAmber400 }}>
-                  {t('hr.messages.projectSealReturned')}
-                </Typography.Text>
+              </Dropdown>
+            ) : (
+              <>
                 {seal.approvalRequestId ? (
                   <Button
-                    size="small"
                     onClick={() =>
                       router.push(`/approvals/${seal.approvalRequestId}`)
                     }
-                    style={{ borderRadius: 0 }}
+                    aria-label={t('hr.buttons.viewInApprovals')}
                   >
-                    {t('hr.buttons.viewInApprovals')}
+                    {isCompact
+                      ? t('nav.approvals')
+                      : t('hr.buttons.viewInApprovals')}
                   </Button>
                 ) : null}
-              </div>
-            ) : null}
-          </div>
-
-          <SummaryStrip
-            items={[
-              {
-                label: t('hr.labels.urgency'),
-                value: formatProjectSealUrgency(seal.urgency, t),
-              },
-              {
-                label: t('hr.labels.dateNeeded'),
-                value: formatProjectDate(seal.dateNeeded ?? null),
-              },
-              {
-                label: t('hr.labels.issued'),
-                value: seal.issuedAt
-                  ? formatProjectDate(seal.issuedAt)
-                  : '—',
-              },
-              {
-                label: t('hr.labels.issuedBy'),
-                value: formatProjectSealEmployeeName(seal.issuer) || '—',
-              },
-            ]}
-          />
-
-          <SectionCard
-            title={t('hr.section.requestDetails')}
-            bodyClassName="px-3 py-4 sm:px-5"
-          >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <MetaItem label={t('hr.form.fileName')}>
-                {seal.fileName}
-              </MetaItem>
-              <MetaItem label={t('hr.form.description')}>
-                <p className="m-0 whitespace-pre-wrap leading-relaxed">
-                  {seal.description}
-                </p>
-              </MetaItem>
-              <MetaItem label={t('hr.labels.dateNeeded')}>
-                {formatProjectDate(seal.dateNeeded ?? null)}
-              </MetaItem>
-              <MetaItem label={t('hr.labels.urgency')}>
-                {formatProjectSealUrgency(seal.urgency, t)}
-              </MetaItem>
-              <SealRequestDetailFields
-                sealCategory={seal.sealCategory}
-                copyCount={seal.copyCount}
-              />
-              {seal.completedAt ? (
-                <MetaItem label={t('hr.labels.completedAt')}>
-                  {formatProjectDate(seal.completedAt)}
-                </MetaItem>
-              ) : null}
-            </div>
-          </SectionCard>
-
-          {(seal.documents?.length ?? 0) > 0 ? (
-            <SectionCard
-              title={t('hr.section.documentToSeal')}
-              bodyClassName="px-3 py-4 sm:px-5"
-            >
-              <SealDocumentGallery
-                variant="tiles"
-                documents={seal.documents}
-                emptyLabel={t('hr.empty.noAttachments')}
-              />
-            </SectionCard>
-          ) : null}
-
-          {showIssueSeal ? (
-            <SectionCard
-              title={t('hr.section.issueSeal')}
-              bodyClassName="px-3 py-4 sm:px-5"
-            >
-              <Alert
-                type="info"
-                showIcon
-                className="mb-4"
-                title={t('hr.messages.issueSealApprovedInfo')}
-                description={
-                  (seal.documents?.length ?? 0) > 0
-                    ? t('hr.messages.issueSealDownloadHint')
-                    : undefined
-                }
-              />
-              <input
-                type="file"
-                ref={fileInputRef}
-                hidden
-                accept={PROJECT_SEAL_FILE_ACCEPT}
-                onChange={(e) => setSelectedFile(e.target.files?.[0])}
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('hr.buttons.chooseDocumentOptional')}
-                </Button>
-                {selectedFile ? (
-                  <Typography.Text type="secondary">
-                    {selectedFile.name}
-                  </Typography.Text>
+                {canCancel ? (
+                  <Button
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={() => setConfirmCancel(true)}
+                    aria-label={t('hr.buttons.cancelRequest')}
+                  >
+                    {isCompact ? undefined : t('hr.buttons.cancelRequest')}
+                  </Button>
                 ) : null}
-                <Button
-                  type="primary"
-                  loading={issueMutation.isPending}
-                  onClick={() => void handleIssueSeal(selectedFile)}
-                  style={{ borderRadius: 0 }}
-                >
-                  {t('hr.buttons.issueSeal')}
-                </Button>
-              </div>
-            </SectionCard>
-          ) : null}
-
-          {seal.sealedDocument ? (
-            <SectionCard
-              title={t('hr.section.sealedProof')}
-              bodyClassName="px-3 py-4 sm:px-5"
-            >
-              <SealDocumentGallery
-                variant="proof"
-                documents={[seal.sealedDocument]}
-                emptyLabel={t('hr.empty.noAttachments')}
-              />
-            </SectionCard>
-          ) : null}
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="min-w-0">
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">{seal.requestNumber}</span>
+              <StatusBadge
+                label={formatProjectSealStatus(seal.status, t)}
+                variant={projectSealStatusVariant(seal.status)}
+              />
+              {isDirectApproved ? (
+                <Tag color="blue">{t('hr.labels.directApproval')}</Tag>
+              ) : null}
+              {seal.sealedDocument?.id ? (
+                <Tag color="green">{t('hr.labels.sealAttached')}</Tag>
+              ) : null}
+              {(seal.documents?.length ?? 0) > 0 ? (
+                <Tag color="blue">
+                  {t('hr.labels.documentToSealAttached')}
+                </Tag>
+              ) : null}
+            </div>
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {seal.fileName}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+              {employeeName}
+              {seal.submittedAt
+                ? ` · ${formatProjectDate(seal.submittedAt)}`
+                : null}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.urgency')}</p>
+            <p className="erp-employee-meta-value">
+              {formatProjectSealUrgency(seal.urgency, t)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.dateNeeded')}</p>
+            <p className="erp-employee-meta-value">
+              {formatProjectDate(seal.dateNeeded ?? null)}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.issued')}</p>
+            <p className="erp-employee-meta-value">
+              {seal.issuedAt ? formatProjectDate(seal.issuedAt) : '—'}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.labels.issuedBy')}</p>
+            <p className="erp-employee-meta-value truncate">
+              {formatProjectSealEmployeeName(seal.issuer) || '—'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {seal.status === 'RETURNED' && isOwner ? (
+        <ErpNotice
+          tone="warning"
+          className="mb-4"
+          title={t('pages.hr.projectSeal.returnedNotice')}
+          action={
+            seal.approvalRequestId ? (
+              <Button
+                size="small"
+                onClick={() =>
+                  router.push(`/approvals/${seal.approvalRequestId}`)
+                }
+              >
+                {t('hr.buttons.viewInApprovals')}
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : null}
+
+      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="erp-pro-card min-w-0 overflow-hidden">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <DetailSection title={t('hr.section.requestDetails')}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <MetaItem label={t('hr.form.fileName')}>
+                  {seal.fileName}
+                </MetaItem>
+                <MetaItem label={t('hr.form.description')}>
+                  <p className="m-0 whitespace-pre-wrap leading-relaxed">
+                    {seal.description}
+                  </p>
+                </MetaItem>
+                <MetaItem label={t('hr.labels.dateNeeded')}>
+                  {formatProjectDate(seal.dateNeeded ?? null)}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.urgency')}>
+                  {formatProjectSealUrgency(seal.urgency, t)}
+                </MetaItem>
+                <SealRequestDetailFields
+                  sealCategory={seal.sealCategory}
+                  copyCount={seal.copyCount}
+                />
+                {seal.completedAt ? (
+                  <MetaItem label={t('hr.labels.completedAt')}>
+                    {formatProjectDate(seal.completedAt)}
+                  </MetaItem>
+                ) : null}
+              </div>
+            </DetailSection>
+
+            {(seal.documents?.length ?? 0) > 0 ? (
+              <DetailSection title={t('hr.section.documentToSeal')}>
+                <SealDocumentGallery
+                  variant="tiles"
+                  documents={seal.documents}
+                  emptyLabel={t('hr.empty.noAttachments')}
+                />
+              </DetailSection>
+            ) : null}
+
+            {showIssueSeal ? (
+              <DetailSection title={t('hr.section.issueSeal')}>
+                <ErpNotice
+                  tone="info"
+                  className="mb-4"
+                  title={t('hr.messages.issueSealApprovedInfo')}
+                  description={
+                    (seal.documents?.length ?? 0) > 0
+                      ? t('hr.messages.issueSealDownloadHint')
+                      : undefined
+                  }
+                />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  hidden
+                  accept={PROJECT_SEAL_FILE_ACCEPT}
+                  onChange={(e) =>
+                    setSelectedFile(e.target.files?.[0] ?? undefined)
+                  }
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button onClick={() => fileInputRef.current?.click()}>
+                    {t('hr.buttons.chooseDocumentOptional')}
+                  </Button>
+                  {selectedFile ? (
+                    <Typography.Text type="secondary">
+                      {selectedFile.name}
+                    </Typography.Text>
+                  ) : null}
+                  <Button
+                    type="primary"
+                    loading={issueMutation.isPending}
+                    onClick={() => void handleIssueSeal(selectedFile)}
+                  >
+                    {t('hr.buttons.issueSeal')}
+                  </Button>
+                </div>
+              </DetailSection>
+            ) : null}
+
+            {seal.sealedDocument ? (
+              <DetailSection title={t('hr.section.sealedProof')}>
+                <SealDocumentGallery
+                  variant="proof"
+                  documents={[seal.sealedDocument]}
+                  emptyLabel={t('hr.empty.noAttachments')}
+                />
+              </DetailSection>
+            ) : null}
+          </div>
+        </div>
+
+        <aside className="min-w-0 lg:sticky lg:top-4">
           {isDirectApproved || tiers.length === 0 ? (
-            <SectionCard
-              title={t('hr.section.approvalChain')}
-              bodyClassName="px-3 py-4 sm:px-4"
-            >
-              <Typography.Text type="secondary">
-                {isDirectApproved
-                  ? t('hr.messages.directApprovalNoChain')
-                  : t('hr.empty.noApprovalChain')}
-              </Typography.Text>
-            </SectionCard>
+            <div className="erp-pro-card overflow-hidden">
+              <DetailSection title={t('hr.section.approvalChain')}>
+                <p className="erp-users-cell-sub m-0">
+                  {isDirectApproved
+                    ? t('hr.messages.directApprovalNoChain')
+                    : t('hr.empty.noApprovalChain')}
+                </p>
+              </DetailSection>
+            </div>
           ) : (
             <ApprovalTierTimeline
               tiers={tiers}
               currentTier={seal.approvalRequest?.currentTier ?? 1}
             />
           )}
-        </div>
+        </aside>
       </div>
 
       <ConfirmDialog
@@ -392,7 +464,9 @@ export default function ProjectSealDetailPageContent({
         confirmLabel={t('hr.buttons.cancelRequest')}
         danger
         confirmLoading={cancelMutation.isPending}
-        onConfirm={() => void handleCancel()}
+        onConfirm={() => {
+          void handleCancel();
+        }}
         onCancel={() => setConfirmCancel(false)}
       />
     </div>

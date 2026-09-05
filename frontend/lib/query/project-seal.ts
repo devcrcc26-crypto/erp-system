@@ -42,6 +42,54 @@ export function useProjectSeals(
     });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the project seal list (filter locally).
+ */
+async function fetchAllProjectSealPages(
+  params: Omit<ListProjectSealsParams, 'page' | 'limit' | 'search'> = {},
+): Promise<ProjectSealListItem[]> {
+  const first = await apiGetPaginated<ProjectSealListItem>(
+    `${PROJECT_SEAL_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<ProjectSealListItem>(
+        `${PROJECT_SEAL_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All project seals (all pages) for client-side filter/search. */
+export function useProjectSealsAll(
+  params: Omit<ListProjectSealsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...projectSealKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllProjectSealPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useProjectSeal(id: string, enabled = true) {
     return useQuery({
         queryKey: projectSealKeys.detail(id),
