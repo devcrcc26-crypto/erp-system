@@ -1,20 +1,32 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Form, Input, Progress, Radio, Skeleton } from 'antd';
-import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+  Button,
+  Dropdown,
+  Form,
+  Grid,
+  Input,
+  Progress,
+  Radio,
+  Skeleton,
+} from 'antd';
+import type { MenuProps } from 'antd';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  MoreOutlined,
+} from '@ant-design/icons';
+import { ArrowLeft, Package } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { ApiRequestError } from '@/lib/api/errors';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type {
   AssetStatus,
   CompanyAssetAssignmentListItem,
@@ -39,6 +51,7 @@ import {
 } from '@/lib/utils/asset-depreciation-display';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -52,6 +65,35 @@ interface ReturnAssetFormValues {
   returnedNotes?: string;
 }
 
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  action?: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">{title}</h3>
+        {action}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Company asset detail — Users / employee profile chrome.
+ */
 export default function CompanyAssetDetailPageContent({
   assetId,
 }: {
@@ -60,9 +102,14 @@ export default function CompanyAssetDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const detailQuery = useCompanyAsset(assetId);
   const statusMutation = useUpdateCompanyAssetStatus(assetId);
   const deleteMutation = useDeleteCompanyAsset();
+
+  useSetHeaderExtra(null);
 
   const assignmentsQuery = useCompanyAssetAssignments(assetId, {
     page: 1,
@@ -102,6 +149,8 @@ export default function CompanyAssetDetailPageContent({
   const canChangeStatus = asset
     ? canChangeAssetStatusManually(asset.status)
     : false;
+  const canIssue = asset?.status === 'AVAILABLE' && !activeAssignment;
+  const canReturn = Boolean(activeAssignment);
   const manualStatusOptions = useMemo(
     () =>
       ASSET_MANUAL_STATUS_OPTIONS.map((option) => ({
@@ -118,7 +167,6 @@ export default function CompanyAssetDetailPageContent({
     if (!user) {
       return '—';
     }
-
     return `${user.firstName} ${user.lastName}`;
   }
 
@@ -130,15 +178,14 @@ export default function CompanyAssetDetailPageContent({
       options?.includeReturnFields ?? Boolean(assignment.returnedAt);
 
     return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <MetaItem label={t('hr.assetLabels.assignedTo')}>
           <div>
-            <p className="m-0 font-medium">{formatUserName(assignment.employee)}</p>
+            <p className="erp-users-cell-strong m-0">
+              {formatUserName(assignment.employee)}
+            </p>
             {assignment.employee.email ? (
-              <p
-                className="m-0 mt-0.5 text-xs"
-                style={{ color: tokens.colorTextTertiary }}
-              >
+              <p className="erp-users-email m-0 mt-0.5">
                 {assignment.employee.email}
               </p>
             ) : null}
@@ -151,11 +198,13 @@ export default function CompanyAssetDetailPageContent({
           {formatUserName(assignment.issuedBy)}
         </MetaItem>
         {assignment.notes ? (
-          <MetaItem label={t('hr.assetLabels.notes')}>
-            <p className="m-0 whitespace-pre-wrap leading-relaxed">
-              {assignment.notes}
-            </p>
-          </MetaItem>
+          <div className="md:col-span-2">
+            <MetaItem label={t('hr.assetLabels.notes')}>
+              <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                {assignment.notes}
+              </p>
+            </MetaItem>
+          </div>
         ) : null}
         {includeReturnFields ? (
           <>
@@ -169,11 +218,13 @@ export default function CompanyAssetDetailPageContent({
               {assignment.returnedTo?.trim() || '—'}
             </MetaItem>
             {assignment.returnedNotes ? (
-              <MetaItem label={t('hr.assetLabels.returnedNotes')}>
-                <p className="m-0 whitespace-pre-wrap leading-relaxed">
-                  {assignment.returnedNotes}
-                </p>
-              </MetaItem>
+              <div className="md:col-span-2">
+                <MetaItem label={t('hr.assetLabels.returnedNotes')}>
+                  <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                    {assignment.returnedNotes}
+                  </p>
+                </MetaItem>
+              </div>
             ) : null}
           </>
         ) : null}
@@ -212,6 +263,7 @@ export default function CompanyAssetDetailPageContent({
         error,
         t('hr.assetMessages.failedToIssueAssignment'),
         messageApi,
+        t,
       );
     }
   }
@@ -245,6 +297,7 @@ export default function CompanyAssetDetailPageContent({
         error,
         t('hr.assetMessages.failedToReturnAssignment'),
         messageApi,
+        t,
       );
     }
   }
@@ -264,7 +317,12 @@ export default function CompanyAssetDetailPageContent({
       setPendingStatus(undefined);
       await detailQuery.refetch();
     } catch (error: unknown) {
-      notifyApiError(error, t('hr.assetMessages.failedToUpdateStatus'), messageApi);
+      notifyApiError(
+        error,
+        t('hr.assetMessages.failedToUpdateStatus'),
+        messageApi,
+        t,
+      );
     }
   }
 
@@ -274,14 +332,19 @@ export default function CompanyAssetDetailPageContent({
       messageApi.success(t('hr.assetMessages.deleted'));
       router.push('/hr/company-asset');
     } catch (error: unknown) {
-      notifyApiError(error, t('hr.assetMessages.failedToDelete'), messageApi);
+      notifyApiError(
+        error,
+        t('hr.assetMessages.failedToDelete'),
+        messageApi,
+        t,
+      );
     }
   }
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page">
+        <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
@@ -290,20 +353,16 @@ export default function CompanyAssetDetailPageContent({
 
   if (detailQuery.isError || !asset) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <Alert
-          type="error"
-          showIcon
-          title={
-            detailQuery.error instanceof ApiRequestError
-              ? detailQuery.error.message
-              : t('hr.assetMessages.notFound')
-          }
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+        <ErpNotice
+          tone="error"
+          title={getFriendlyApiErrorMessage(
+            detailQuery.error,
+            t('hr.assetMessages.notFound'),
+            t,
+          )}
           action={
-            <Button
-              onClick={() => router.push('/hr/company-asset')}
-              style={{ borderRadius: 0 }}
-            >
+            <Button onClick={() => router.push('/hr/company-asset')}>
               {t('hr.assetButtons.back')}
             </Button>
           }
@@ -312,301 +371,353 @@ export default function CompanyAssetDetailPageContent({
     );
   }
 
-  return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/company-asset')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.assetButtons.back')}
-        </Button>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {canChangeStatus ? (
-            <Button
-              onClick={() => {
-                setPendingStatus(asset.status);
-                setStatusModalOpen(true);
-              }}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.assetButtons.changeStatus')}
-            </Button>
-          ) : null}
-          <Button
-            onClick={() => router.push(`/hr/company-asset/${assetId}/edit`)}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.assetButtons.editAsset')}
-          </Button>
-          <Button
-            danger
-            onClick={() => setConfirmDelete(true)}
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.assetButtons.deleteAsset')}
-          </Button>
-        </div>
-      </div>
+  const overflowMenuItems: MenuProps['items'] = [];
+  if (canChangeStatus) {
+    overflowMenuItems.push({
+      key: 'status',
+      label: t('hr.assetButtons.changeStatus'),
+      onClick: () => {
+        setPendingStatus(asset.status);
+        setStatusModalOpen(true);
+      },
+    });
+  }
+  overflowMenuItems.push({
+    key: 'edit',
+    label: t('hr.assetButtons.editAsset'),
+    icon: <EditOutlined />,
+    onClick: () => router.push(`/hr/company-asset/${assetId}/edit`),
+  });
+  if (canIssue) {
+    overflowMenuItems.push({
+      key: 'issue',
+      label: t('hr.assetButtons.issueAsset'),
+      onClick: () => setIssueModalOpen(true),
+    });
+  }
+  if (canReturn) {
+    overflowMenuItems.push({
+      key: 'return',
+      label: t('hr.assetButtons.returnAsset'),
+      onClick: () => setReturnModalOpen(true),
+    });
+  }
+  overflowMenuItems.push({
+    key: 'delete',
+    label: t('hr.assetButtons.deleteAsset'),
+    icon: <DeleteOutlined />,
+    danger: true,
+    onClick: () => setConfirmDelete(true),
+  });
 
-      <div className="flex flex-col gap-3">
-        <div
-          className="overflow-hidden rounded-none"
-          style={{
-            background: tokens.colorCardBg,
-            border: `1px solid ${tokens.colorBorder}`,
-          }}
-        >
-          <div className="px-3 py-4 sm:px-5">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: tokens.colorTextTertiary }}
+  const showOverflowMenu = isNarrow;
+
+  return (
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+            <Button
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push('/hr/company-asset')}
+              aria-label={t('hr.assetButtons.back')}
+            >
+              {isNarrow ? undefined : t('hr.assetButtons.back')}
+            </Button>
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {showOverflowMenu ? (
+              <Dropdown
+                menu={{ items: overflowMenuItems }}
+                trigger={['click']}
               >
-                {asset.serialNumber}
-              </span>
-              <span style={{ color: tokens.colorBorder }}>·</span>
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
+                />
+              </Dropdown>
+            ) : (
+              <>
+                {canChangeStatus ? (
+                  <Button
+                    onClick={() => {
+                      setPendingStatus(asset.status);
+                      setStatusModalOpen(true);
+                    }}
+                  >
+                    {isCompact
+                      ? t('hr.assetLabels.status')
+                      : t('hr.assetButtons.changeStatus')}
+                  </Button>
+                ) : null}
+                {canIssue ? (
+                  <Button type="primary" onClick={() => setIssueModalOpen(true)}>
+                    {t('hr.assetButtons.issueAsset')}
+                  </Button>
+                ) : null}
+                {canReturn ? (
+                  <Button type="primary" onClick={() => setReturnModalOpen(true)}>
+                    {t('hr.assetButtons.returnAsset')}
+                  </Button>
+                ) : null}
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() =>
+                    router.push(`/hr/company-asset/${assetId}/edit`)
+                  }
+                  aria-label={t('hr.assetButtons.editAsset')}
+                >
+                  {isCompact ? undefined : t('hr.assetButtons.editAsset')}
+                </Button>
+                <Button
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label={t('hr.assetButtons.deleteAsset')}
+                >
+                  {isCompact ? undefined : t('hr.assetButtons.deleteAsset')}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">{asset.serialNumber}</span>
               <StatusBadge
                 label={formatAssetStatus(asset.status, t)}
                 variant={assetStatusVariant(asset.status)}
               />
             </div>
-            <h2
-              className="m-0 text-lg font-semibold leading-snug"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {asset.brand} {asset.model}
-            </h2>
-            <p
-              className="m-0 mt-1 text-sm"
-              style={{ color: tokens.colorTextSecondary }}
-            >
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {asset.brand} {asset.model}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
               {asset.type} · {asset.year} · {asset.color}
               {activeAssignment
-                ? ` · ${t('hr.assetLabels.assignedTo')}: ${formatUserName(activeAssignment.employee)}`
+                ? ` · ${formatUserName(activeAssignment.employee)}`
                 : null}
             </p>
           </div>
         </div>
+      </div>
 
-        <SummaryStrip
-          items={[
-            { label: t('hr.assetLabels.brand'), value: asset.brand },
-            { label: t('hr.assetLabels.model'), value: asset.model },
-            { label: t('hr.assetLabels.year'), value: String(asset.year) },
-            {
-              label: t('hr.assetLabels.assignedTo'),
-              value: activeAssignment
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.assetLabels.type')}</p>
+            <p className="erp-employee-meta-value truncate">{asset.type}</p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.assetLabels.year')}</p>
+            <p className="erp-employee-meta-value">{asset.year}</p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.assetLabels.color')}</p>
+            <p className="erp-employee-meta-value truncate">{asset.color}</p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.assetLabels.assignedTo')}
+            </p>
+            <p className="erp-employee-meta-value truncate">
+              {activeAssignment
                 ? formatUserName(activeAssignment.employee)
-                : '—',
-            },
-          ]}
-        />
+                : '—'}
+            </p>
+          </div>
+        </div>
+      </div>
 
-        <SectionCard
-          title={t('hr.assetSection.currentAssignment')}
-          bodyClassName="px-3 py-4 sm:px-5"
-          action={
-            activeAssignment ? (
-              <Button
-                type="primary"
-                onClick={() => setReturnModalOpen(true)}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.assetButtons.returnAsset')}
-              </Button>
-            ) : asset.status === 'AVAILABLE' ? (
-              <Button
-                type="primary"
-                onClick={() => setIssueModalOpen(true)}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.assetButtons.issueAsset')}
-              </Button>
-            ) : undefined
-          }
-        >
-          {activeAssignment ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-center gap-2">
+      <div className="erp-pro-card min-w-0 overflow-hidden">
+        <div className="erp-employee-tab-panel erp-contract-detail-body">
+          <DetailSection
+            title={t('hr.assetSection.currentAssignment')}
+            action={
+              activeAssignment ? (
+                <Button type="primary" onClick={() => setReturnModalOpen(true)}>
+                  {t('hr.assetButtons.returnAsset')}
+                </Button>
+              ) : canIssue ? (
+                <Button type="primary" onClick={() => setIssueModalOpen(true)}>
+                  {t('hr.assetButtons.issueAsset')}
+                </Button>
+              ) : undefined
+            }
+          >
+            {activeAssignment ? (
+              <div className="flex flex-col gap-4">
                 <StatusBadge
                   label={t('hr.assetStatus.IN_USE')}
                   variant={assetStatusVariant('IN_USE')}
                 />
+                {renderAssignmentFields(activeAssignment, {
+                  includeReturnFields: false,
+                })}
               </div>
-              {renderAssignmentFields(activeAssignment, {
-                includeReturnFields: false,
-              })}
-            </div>
-          ) : (
-            <Alert
-              type="info"
-              showIcon
-              title={t('hr.assetMessages.noActiveAssignment')}
-              description={
-                asset.status === 'AVAILABLE'
-                  ? t('hr.assetMessages.issueWhenAvailable')
-                  : t('hr.assetMessages.cannotIssueWhileUnavailable')
-              }
-            />
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title={t('hr.assetSection.assetDetails')}
-          bodyClassName="px-3 py-4 sm:px-5"
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <MetaItem label={t('hr.assetLabels.serialNumber')}>
-              {asset.serialNumber}
-            </MetaItem>
-            <MetaItem label={t('hr.assetLabels.status')}>
-              <StatusBadge
-                label={formatAssetStatus(asset.status, t)}
-                variant={assetStatusVariant(asset.status)}
+            ) : (
+              <ErpNotice
+                tone="info"
+                title={t('hr.assetMessages.noActiveAssignment')}
+                description={
+                  asset.status === 'AVAILABLE'
+                    ? t('hr.assetMessages.issueWhenAvailable')
+                    : t('hr.assetMessages.cannotIssueWhileUnavailable')
+                }
               />
-            </MetaItem>
-            <MetaItem label={t('hr.assetLabels.type')}>
-              {asset.type}
-            </MetaItem>
-            <MetaItem label={t('hr.assetLabels.brand')}>
-              {asset.brand}
-            </MetaItem>
-            <MetaItem label={t('hr.assetLabels.model')}>
-              {asset.model}
-            </MetaItem>
-            <MetaItem label={t('hr.assetLabels.year')}>
-              {asset.year}
-            </MetaItem>
-            <MetaItem label={t('hr.assetLabels.color')}>
-              {asset.color}
-            </MetaItem>
-            <MetaItem label={t('hr.assetLabels.createdAt')}>
-              {formatProjectDate(asset.createdAt)}
-            </MetaItem>
-            <MetaItem label={t('hr.assetLabels.updatedAt')}>
-              {formatProjectDate(asset.updatedAt)}
-            </MetaItem>
-            {asset.description ? (
-              <MetaItem label={t('hr.assetLabels.description')}>
-                <p className="m-0 whitespace-pre-wrap leading-relaxed">
-                  {asset.description}
-                </p>
-              </MetaItem>
-            ) : null}
-            {asset.assetCode ? (
-              <MetaItem label={t('hr.assetLabels.assetCode')}>
-                {asset.assetCode}
-              </MetaItem>
-            ) : null}
-            {asset.cardNumber ? (
-              <MetaItem label={t('hr.assetLabels.cardNumber')}>
-                {asset.cardNumber}
-              </MetaItem>
-            ) : null}
-            {asset.assetName ? (
-              <MetaItem label={t('hr.assetLabels.assetName')}>
-                {asset.assetName}
-              </MetaItem>
-            ) : null}
-            {asset.specifications ? (
-              <MetaItem label={t('hr.assetLabels.specifications')}>
-                {asset.specifications}
-              </MetaItem>
-            ) : null}
-            {asset.assetCategory ? (
-              <MetaItem label={t('hr.assetLabels.assetCategory')}>
-                {asset.assetCategory}
-              </MetaItem>
-            ) : null}
-            {asset.startUseDate ? (
-              <MetaItem label={t('hr.assetLabels.startUseDate')}>
-                {formatProjectDate(asset.startUseDate)}
-              </MetaItem>
-            ) : null}
-            {asset.usefulLifeMonths != null ? (
-              <MetaItem label={t('hr.assetLabels.usefulLifeMonths')}>
-                {asset.usefulLifeMonths}
-              </MetaItem>
-            ) : null}
-            {asset.originalValue != null ? (
-              <MetaItem label={t('hr.assetLabels.originalValue')}>
-                {formatEtbAmount(asset.originalValue)}
-              </MetaItem>
-            ) : null}
-            {asset.managingDepartment ? (
-              <MetaItem label={t('hr.assetLabels.managingDepartment')}>
-                {asset.managingDepartment}
-              </MetaItem>
-            ) : null}
-            {asset.storageLocation ? (
-              <MetaItem label={t('hr.assetLabels.storageLocation')}>
-                {asset.storageLocation}
-              </MetaItem>
-            ) : null}
-            {asset.projectCode ? (
-              <MetaItem label={t('hr.assetLabels.projectCode')}>
-                {asset.projectCode}
-              </MetaItem>
-            ) : null}
-          </div>
-        </SectionCard>
+            )}
+          </DetailSection>
 
-        {depreciation && asset.originalValue != null && asset.usefulLifeMonths ? (
-          <SectionCard
-            title={t('hr.assetSection.depreciationSummary')}
-            bodyClassName="px-3 py-4 sm:px-5"
-          >
-            <DepreciationSummaryCard
-              depreciation={depreciation}
-              originalValue={asset.originalValue}
-              usefulLifeMonths={asset.usefulLifeMonths}
-              t={t}
-            />
-          </SectionCard>
-        ) : null}
-
-        <SectionCard
-          title={t('hr.assetSection.assignmentHistory')}
-          bodyClassName="px-3 py-4 sm:px-5"
-        >
-          {pastAssignments.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {pastAssignments.map((assignment) => (
-                <div
-                  key={assignment.id}
-                  className="rounded-none border px-3 py-4 sm:px-4"
-                  style={{ borderColor: tokens.colorBorder }}
-                >
-                  <div className="mb-4 flex flex-wrap items-center gap-2">
-                    <span
-                      className="text-sm font-semibold"
-                      style={{ color: tokens.colorTextPrimary }}
-                    >
-                      {formatUserName(assignment.employee)}
-                    </span>
-                    <StatusBadge
-                      label={t('hr.assetStatus.AVAILABLE')}
-                      variant={assetStatusVariant('AVAILABLE')}
-                    />
-                  </div>
-                  {renderAssignmentFields(assignment, {
-                    includeReturnFields: true,
-                  })}
+          <DetailSection title={t('hr.assetSection.assetDetails')}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <MetaItem label={t('hr.assetLabels.serialNumber')}>
+                <div className="flex items-start gap-2">
+                  <Package
+                    size={16}
+                    className="mt-0.5 shrink-0 text-[#6B7280]"
+                    strokeWidth={1.75}
+                  />
+                  <span>{asset.serialNumber}</span>
                 </div>
-              ))}
+              </MetaItem>
+              <MetaItem label={t('hr.assetLabels.status')}>
+                <StatusBadge
+                  label={formatAssetStatus(asset.status, t)}
+                  variant={assetStatusVariant(asset.status)}
+                />
+              </MetaItem>
+              <MetaItem label={t('hr.assetLabels.type')}>{asset.type}</MetaItem>
+              <MetaItem label={t('hr.assetLabels.brand')}>{asset.brand}</MetaItem>
+              <MetaItem label={t('hr.assetLabels.model')}>{asset.model}</MetaItem>
+              <MetaItem label={t('hr.assetLabels.year')}>{asset.year}</MetaItem>
+              <MetaItem label={t('hr.assetLabels.color')}>{asset.color}</MetaItem>
+              <MetaItem label={t('hr.assetLabels.createdAt')}>
+                {formatProjectDate(asset.createdAt)}
+              </MetaItem>
+              <MetaItem label={t('hr.assetLabels.updatedAt')}>
+                {formatProjectDate(asset.updatedAt)}
+              </MetaItem>
+              {asset.description ? (
+                <div className="md:col-span-2">
+                  <MetaItem label={t('hr.assetLabels.description')}>
+                    <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
+                      {asset.description}
+                    </p>
+                  </MetaItem>
+                </div>
+              ) : null}
+              {asset.assetCode ? (
+                <MetaItem label={t('hr.assetLabels.assetCode')}>
+                  {asset.assetCode}
+                </MetaItem>
+              ) : null}
+              {asset.cardNumber ? (
+                <MetaItem label={t('hr.assetLabels.cardNumber')}>
+                  {asset.cardNumber}
+                </MetaItem>
+              ) : null}
+              {asset.assetName ? (
+                <MetaItem label={t('hr.assetLabels.assetName')}>
+                  {asset.assetName}
+                </MetaItem>
+              ) : null}
+              {asset.specifications ? (
+                <MetaItem label={t('hr.assetLabels.specifications')}>
+                  {asset.specifications}
+                </MetaItem>
+              ) : null}
+              {asset.assetCategory ? (
+                <MetaItem label={t('hr.assetLabels.assetCategory')}>
+                  {asset.assetCategory}
+                </MetaItem>
+              ) : null}
+              {asset.startUseDate ? (
+                <MetaItem label={t('hr.assetLabels.startUseDate')}>
+                  {formatProjectDate(asset.startUseDate)}
+                </MetaItem>
+              ) : null}
+              {asset.usefulLifeMonths != null ? (
+                <MetaItem label={t('hr.assetLabels.usefulLifeMonths')}>
+                  {asset.usefulLifeMonths}
+                </MetaItem>
+              ) : null}
+              {asset.originalValue != null ? (
+                <MetaItem label={t('hr.assetLabels.originalValue')}>
+                  {formatEtbAmount(asset.originalValue)}
+                </MetaItem>
+              ) : null}
+              {asset.managingDepartment ? (
+                <MetaItem label={t('hr.assetLabels.managingDepartment')}>
+                  {asset.managingDepartment}
+                </MetaItem>
+              ) : null}
+              {asset.storageLocation ? (
+                <MetaItem label={t('hr.assetLabels.storageLocation')}>
+                  {asset.storageLocation}
+                </MetaItem>
+              ) : null}
+              {asset.projectCode ? (
+                <MetaItem label={t('hr.assetLabels.projectCode')}>
+                  {asset.projectCode}
+                </MetaItem>
+              ) : null}
             </div>
-          ) : (
-            <p
-              className="m-0 text-sm"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {t('hr.assetEmpty.noAssignmentHistory')}
-            </p>
-          )}
-        </SectionCard>
+          </DetailSection>
+
+          {depreciation &&
+          asset.originalValue != null &&
+          asset.usefulLifeMonths ? (
+            <DetailSection title={t('hr.assetSection.depreciationSummary')}>
+              <DepreciationSummaryCard
+                depreciation={depreciation}
+                originalValue={asset.originalValue}
+                usefulLifeMonths={asset.usefulLifeMonths}
+                t={t}
+              />
+            </DetailSection>
+          ) : null}
+
+          <DetailSection title={t('hr.assetSection.assignmentHistory')}>
+            {pastAssignments.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {pastAssignments.map((assignment) => (
+                  <div
+                    key={assignment.id}
+                    className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-4 sm:px-4"
+                  >
+                    <div className="mb-4 flex flex-wrap items-center gap-2">
+                      <span className="erp-users-cell-strong">
+                        {formatUserName(assignment.employee)}
+                      </span>
+                      <StatusBadge
+                        label={t('hr.assetStatus.AVAILABLE')}
+                        variant={assetStatusVariant('AVAILABLE')}
+                      />
+                    </div>
+                    {renderAssignmentFields(assignment, {
+                      includeReturnFields: true,
+                    })}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="erp-users-cell-sub m-0">
+                {t('hr.assetEmpty.noAssignmentHistory')}
+              </p>
+            )}
+          </DetailSection>
+        </div>
       </div>
 
       <ConfirmDialog
@@ -632,17 +743,8 @@ export default function CompanyAssetDetailPageContent({
         }}
       >
         <div className="mt-3 flex flex-col gap-4">
-          <div
-            className="rounded-none border px-3 py-3"
-            style={{
-              borderColor: tokens.colorBorder,
-              background: tokens.colorSurfaceSecondary,
-            }}
-          >
-            <p
-              className="mb-1 text-xs font-medium uppercase tracking-wide"
-              style={{ color: tokens.colorTextTertiary }}
-            >
+          <div className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-3">
+            <p className="erp-users-stat-label mb-1">
               {t('hr.assetDialog.statusCurrentLabel')}
             </p>
             <StatusBadge
@@ -670,15 +772,9 @@ export default function CompanyAssetDetailPageContent({
                     return (
                       <label
                         key={option.value}
-                        className="m-0 flex w-full cursor-pointer items-center gap-3 rounded-none border px-3 py-3"
-                        style={{
-                          borderColor: selected
-                            ? tokens.colorPrimary
-                            : tokens.colorBorder,
-                          background: selected
-                            ? tokens.colorPrimaryLight
-                            : tokens.colorCardBg,
-                        }}
+                        className={`erp-vehicle-pick-card m-0 flex w-full cursor-pointer items-center gap-3 p-3${
+                          selected ? ' erp-vehicle-pick-card--selected' : ''
+                        }`}
                       >
                         <Radio value={option.value} className="m-0" />
                         <div className="min-w-0 flex-1">
@@ -688,11 +784,10 @@ export default function CompanyAssetDetailPageContent({
                               variant={assetStatusVariant(option.value)}
                             />
                           </div>
-                          <p
-                            className="m-0 text-xs leading-snug"
-                            style={{ color: tokens.colorTextSecondary }}
-                          >
-                            {t(`hr.assetDialog.statusOptionHint.${option.value}`)}
+                          <p className="erp-users-cell-sub m-0 leading-snug">
+                            {t(
+                              `hr.assetDialog.statusOptionHint.${option.value}`,
+                            )}
                           </p>
                         </div>
                       </label>
@@ -703,10 +798,7 @@ export default function CompanyAssetDetailPageContent({
             </Form.Item>
           </Form>
 
-          <p
-            className="m-0 text-xs leading-relaxed"
-            style={{ color: tokens.colorTextTertiary }}
-          >
+          <p className="erp-users-cell-sub m-0 leading-relaxed">
             {t('hr.assetDialog.statusInUseHint')}
           </p>
         </div>
@@ -767,7 +859,6 @@ export default function CompanyAssetDetailPageContent({
               maxLength={2000}
               showCount
               placeholder={t('hr.assetPlaceholder.issueNotes')}
-              style={{ borderRadius: 0 }}
             />
           </Form.Item>
         </Form>
@@ -790,37 +881,19 @@ export default function CompanyAssetDetailPageContent({
       >
         <div className="mt-3 flex flex-col gap-4">
           {activeAssignment ? (
-            <div
-              className="rounded-none border px-3 py-3"
-              style={{
-                borderColor: tokens.colorBorder,
-                background: tokens.colorSurfaceSecondary,
-              }}
-            >
-              <p
-                className="mb-1 text-xs font-medium uppercase tracking-wide"
-                style={{ color: tokens.colorTextTertiary }}
-              >
+            <div className="rounded-xl border border-[#e8ebef] bg-[#fafbfc] px-3 py-3">
+              <p className="erp-users-stat-label mb-1">
                 {t('hr.assetLabels.assignedTo')}
               </p>
-              <p
-                className="m-0 text-sm font-semibold"
-                style={{ color: tokens.colorTextPrimary }}
-              >
+              <p className="erp-users-cell-strong m-0">
                 {formatUserName(activeAssignment.employee)}
               </p>
               {activeAssignment.employee.email ? (
-                <p
-                  className="m-0 mt-0.5 text-xs"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
+                <p className="erp-users-email m-0 mt-0.5">
                   {activeAssignment.employee.email}
                 </p>
               ) : null}
-              <p
-                className="m-0 mt-2 text-xs"
-                style={{ color: tokens.colorTextSecondary }}
-              >
+              <p className="erp-users-cell-sub m-0 mt-2">
                 {t('hr.assetLabels.assignedAt')}:{' '}
                 {formatProjectDate(activeAssignment.assignedAt)}
               </p>
@@ -833,14 +906,10 @@ export default function CompanyAssetDetailPageContent({
             requiredMark={false}
             disabled={returnMutation.isPending}
           >
-            <Form.Item
-              name="returnedTo"
-              label={t('hr.assetLabels.returnedTo')}
-            >
+            <Form.Item name="returnedTo" label={t('hr.assetLabels.returnedTo')}>
               <Input
                 maxLength={200}
                 placeholder={t('hr.assetPlaceholder.returnedTo')}
-                style={{ borderRadius: 0 }}
               />
             </Form.Item>
             <Form.Item
@@ -853,7 +922,6 @@ export default function CompanyAssetDetailPageContent({
                 maxLength={2000}
                 showCount
                 placeholder={t('hr.assetPlaceholder.returnNotes')}
-                style={{ borderRadius: 0 }}
               />
             </Form.Item>
           </Form>

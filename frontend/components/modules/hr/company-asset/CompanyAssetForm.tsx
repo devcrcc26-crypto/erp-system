@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, DatePicker, Form, Input, InputNumber, Space, Typography } from 'antd';
+import { Button, DatePicker, Form, Input, InputNumber, Space, Typography } from 'antd';
 import type { InputNumberProps } from 'antd';
 import { Image as ImageIcon, Paperclip, X } from 'lucide-react';
 import dayjs from 'dayjs';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -676,11 +677,10 @@ export default function CompanyAssetForm({
       }
     >
       {formError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={formError}
+        <ErpNotice
+          tone="error"
           className="mb-4"
+          title={formError}
           closable
           onClose={() => setFormError(null)}
         />

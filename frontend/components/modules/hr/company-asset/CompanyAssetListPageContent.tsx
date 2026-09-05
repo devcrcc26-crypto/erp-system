@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
+  Grid,
+  Input,
   Select,
-  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -14,112 +14,169 @@ import {
   ClockCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   ToolOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
-import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
-import { ApiRequestError } from '@/lib/api/errors';
 import type {
   AssetStatus,
   CompanyAssetListItem,
 } from '@/lib/api/company-asset.types';
-import { useCompanyAssets } from '@/lib/query/company-asset';
-import { tokens } from '@/lib/theme/tokens';
+import type { PaginationMeta } from '@/lib/api/types';
+import { useCompanyAssetsAll } from '@/lib/query/company-asset';
 import {
-  ASSET_STATUS_OPTIONS,
   assetStatusVariant,
   formatAssetStatus,
 } from '@/lib/utils/company-asset-display';
+import {
+  filterCompanyAssets,
+  type CompanyAssetStatusMode,
+} from '@/lib/utils/company-asset-list-filter';
 import {
   getNetValueColor,
   resolveAssetDepreciation,
 } from '@/lib/utils/asset-depreciation-display';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
+
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
+
+function CompanyAssetStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
 
 /**
- * Company asset register list with filters, stats, and assignee column.
+ * Company asset register — Users chrome (stat bar, filter row, soft table).
  */
 export default function CompanyAssetListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<AssetStatus | undefined>();
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [statusMode, setStatusMode] =
+    useState<CompanyAssetStatusMode>('all');
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
 
-  const countsBaseParams = useMemo(
-    () => ({
-      search: search.trim() || undefined,
-      type: typeFilter,
-    }),
-    [search, typeFilter],
-  );
+  const listQuery = useCompanyAssetsAll({}, true);
+  const allRows = listQuery.data ?? [];
 
-  const listParams = useMemo(
-    () => ({
-      ...params,
-      ...countsBaseParams,
-      status: statusFilter,
-    }),
-    [params, countsBaseParams, statusFilter],
-  );
-
-  const listQuery = useCompanyAssets(listParams, true);
-  const totalCountQuery = useCompanyAssets(
-    { page: 1, limit: 1, ...countsBaseParams },
-    true,
-  );
-  const availableCountQuery = useCompanyAssets(
-    { page: 1, limit: 1, status: 'AVAILABLE', ...countsBaseParams },
-    true,
-  );
-  const inUseCountQuery = useCompanyAssets(
-    { page: 1, limit: 1, status: 'IN_USE', ...countsBaseParams },
-    true,
-  );
-  const repairingCountQuery = useCompanyAssets(
-    { page: 1, limit: 1, status: 'REPAIRING', ...countsBaseParams },
-    true,
-  );
-
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-  const totalCount = meta?.total ?? rows.length;
-
-  const statusCounts = {
-    all: totalCountQuery.data?.meta?.total ?? totalCount,
-    available: availableCountQuery.data?.meta?.total ?? 0,
-    inUse: inUseCountQuery.data?.meta?.total ?? 0,
-    repairing: repairingCountQuery.data?.meta?.total ?? 0,
-  };
+  const statusCounts = useMemo(() => {
+    return {
+      all: allRows.length,
+      available: allRows.filter((row) => row.status === 'AVAILABLE').length,
+      inUse: allRows.filter((row) => row.status === 'IN_USE').length,
+      repairing: allRows.filter((row) => row.status === 'REPAIRING').length,
+    };
+  }, [allRows]);
 
   const typeOptions = useMemo(() => {
     const types = new Set<string>();
-    for (const row of rows) {
+    for (const row of allRows) {
       if (row.type) {
         types.add(row.type);
       }
     }
-    if (typeFilter) {
-      types.add(typeFilter);
-    }
     return [...types].sort().map((type) => ({ value: type, label: type }));
-  }, [rows, typeFilter]);
+  }, [allRows]);
+
+  const filtered = useMemo(
+    () =>
+      filterCompanyAssets(allRows, {
+        search: appliedSearch,
+        statusMode,
+        type: typeFilter,
+      }),
+    [allRows, appliedSearch, statusMode, typeFilter],
+  );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const pageTitle = t('pages.hr.companyAsset.listTitle');
   const pageDescription = t('pages.hr.companyAsset.listDescription');
+
+  function handleResetFilters(): void {
+    setSearch('');
+    setAppliedSearch('');
+    setStatusMode('all');
+    setTypeFilter(undefined);
+    resetPage();
+  }
+
+  function handleStatusMode(mode: CompanyAssetStatusMode): void {
+    setStatusMode(mode);
+    resetPage();
+  }
+
+  const hasFilters =
+    Boolean(appliedSearch.trim()) ||
+    statusMode !== 'all' ||
+    Boolean(typeFilter);
 
   const columns: ColumnsType<CompanyAssetListItem> = useMemo(
     () => [
@@ -128,13 +185,27 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         dataIndex: 'serialNumber',
         key: 'serialNumber',
         width: 140,
+        responsive: ['md'],
         render: (value: string) => (
-          <span
-            className="font-[family-name:var(--font-mono)] text-xs font-medium"
-            style={{ color: tokens.colorPrimary }}
-          >
-            {value}
-          </span>
+          <span className="erp-users-id-chip">{value}</span>
+        ),
+      },
+      {
+        title: t('hr.assetLabels.model'),
+        dataIndex: 'model',
+        key: 'model',
+        width: isNarrow ? undefined : 180,
+        ellipsis: true,
+        render: (value: string, row: CompanyAssetListItem) => (
+          <div className="min-w-0">
+            <p className="erp-users-cell-strong m-0 truncate">
+              {row.brand} {value}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
+              {isNarrow ? row.serialNumber : row.type}
+              {isNarrow ? ` · ${row.type}` : ''}
+            </p>
+          </div>
         ),
       },
       {
@@ -142,61 +213,23 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         dataIndex: 'assetCode',
         key: 'assetCode',
         width: 120,
-        responsive: ['md'],
+        responsive: ['lg'],
         render: (value: string | null | undefined) =>
           value ? (
-            <span className="font-[family-name:var(--font-mono)] text-xs">
-              {value}
-            </span>
+            <span className="erp-users-role-tag">{value}</span>
           ) : (
-            <span style={{ color: tokens.colorTextTertiary }}>—</span>
+            <span className="erp-users-cell-sub">—</span>
           ),
-      },
-      {
-        title: t('hr.assetLabels.brand'),
-        dataIndex: 'brand',
-        key: 'brand',
-        width: 120,
-        responsive: ['md'],
-      },
-      {
-        title: t('hr.assetLabels.model'),
-        dataIndex: 'model',
-        key: 'model',
-        width: 160,
-        ellipsis: true,
-        render: (value: string, row) => (
-          <div className="min-w-0">
-            <p
-              className="m-0 truncate text-sm font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {value}
-            </p>
-            <p
-              className="m-0 truncate text-xs md:hidden"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {row.brand}
-            </p>
-          </div>
-        ),
       },
       {
         title: t('hr.assetLabels.type'),
         dataIndex: 'type',
         key: 'type',
         width: 120,
-        responsive: ['lg'],
-      },
-      {
-        title: t('hr.assetLabels.assetCategory'),
-        dataIndex: 'assetCategory',
-        key: 'assetCategory',
-        width: 160,
-        ellipsis: true,
-        responsive: ['xl'],
-        render: (value: string | null | undefined) => value || '—',
+        responsive: ['md'],
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">{value}</span>
+        ),
       },
       {
         title: t('hr.assetLabels.netValue'),
@@ -207,11 +240,11 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         render: (_: unknown, row: CompanyAssetListItem) => {
           const depreciation = resolveAssetDepreciation(row);
           if (depreciation.netValue == null) {
-            return <span style={{ color: tokens.colorTextTertiary }}>—</span>;
+            return <span className="erp-users-cell-sub">—</span>;
           }
           return (
             <span
-              className="text-sm font-medium"
+              className="erp-users-cell-strong tabular-nums"
               style={{
                 color: getNetValueColor(
                   depreciation.netValue,
@@ -230,31 +263,27 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         key: 'year',
         width: 80,
         align: 'center',
-        responsive: ['lg'],
+        responsive: ['xl'],
+        render: (value: number) => (
+          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+        ),
       },
       {
         title: t('hr.assetLabels.assignedTo'),
         key: 'assignedTo',
         width: 180,
+        responsive: ['sm'],
         render: (_: unknown, row: CompanyAssetListItem) => {
           if (!row.assignedTo) {
-            return (
-              <span style={{ color: tokens.colorTextTertiary }}>—</span>
-            );
+            return <span className="erp-users-cell-sub">—</span>;
           }
           return (
-            <div className="min-w-0 py-0.5">
-              <p
-                className="m-0 text-sm font-medium"
-                style={{ color: tokens.colorTextPrimary }}
-              >
+            <div className="min-w-0">
+              <p className="erp-users-cell-strong m-0">
                 {formatUserName(row.assignedTo)}
               </p>
               {row.assignedTo.email ? (
-                <p
-                  className="m-0 truncate text-xs"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
+                <p className="erp-users-email m-0 mt-0.5">
                   {row.assignedTo.email}
                 </p>
               ) : null}
@@ -266,7 +295,7 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         title: t('hr.assetLabels.status'),
         dataIndex: 'status',
         key: 'status',
-        width: 130,
+        width: isNarrow ? 100 : 130,
         render: (value: AssetStatus) => (
           <StatusBadge
             label={formatAssetStatus(value, t)}
@@ -275,182 +304,163 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
         ),
       },
     ],
-    [t],
+    [isNarrow, t],
   );
-
-  function handleResetFilters(): void {
-    setSearch('');
-    setStatusFilter(undefined);
-    setTypeFilter(undefined);
-    resetPage();
-  }
-
-  const hasFilters =
-    Boolean(search.trim()) ||
-    statusFilter !== undefined ||
-    typeFilter !== undefined;
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-company-asset-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
+    <div className="erp-pro-list-page erp-users-page erp-company-asset-page">
       {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={
-            listQuery.error instanceof ApiRequestError
-              ? listQuery.error.message
-              : t('hr.assetMessages.failedToLoad')
-          }
+        <ErpNotice
+          tone="error"
+          className="mb-4"
+          title={getFriendlyApiErrorMessage(
+            listQuery.error,
+            t('hr.assetMessages.failedToLoad'),
+            t,
+          )}
         />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
-          label={t('pages.approvals.stats.total')}
+      <div className="erp-users-stat-bar">
+        <CompanyAssetStat
+          label={t('pages.hr.companyAsset.stats.total')}
           value={statusCounts.all}
-          color="teal"
+          accent="teal"
           icon={<ToolOutlined />}
+          active={statusMode === 'all'}
+          onClick={() => handleStatusMode('all')}
         />
-        <StatCard
-          label={t('hr.assetStatus.AVAILABLE')}
+        <CompanyAssetStat
+          label={t('pages.hr.companyAsset.stats.available')}
           value={statusCounts.available}
-          color="blue"
+          accent="green"
           icon={<CheckCircleOutlined />}
+          active={statusMode === 'AVAILABLE'}
+          onClick={() => handleStatusMode('AVAILABLE')}
         />
-        <StatCard
-          label={t('hr.assetStatus.IN_USE')}
+        <CompanyAssetStat
+          label={t('pages.hr.companyAsset.stats.inUse')}
           value={statusCounts.inUse}
-          color="amber"
+          accent="amber"
           icon={<ClockCircleOutlined />}
+          active={statusMode === 'IN_USE'}
+          onClick={() => handleStatusMode('IN_USE')}
         />
-        <StatCard
-          label={t('hr.assetStatus.REPAIRING')}
+        <CompanyAssetStat
+          label={t('pages.hr.companyAsset.stats.repairing')}
           value={statusCounts.repairing}
-          color="red"
+          accent="red"
           icon={<WarningOutlined />}
+          active={statusMode === 'REPAIRING'}
+          onClick={() => handleStatusMode('REPAIRING')}
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <ListSearchInput
-            committedValue={search}
-            onCommit={(value) => {
-              setSearch(value);
-              resetPage();
-            }}
-            placeholder={t('hr.assetPlaceholder.search')}
-            className="w-full min-w-0 sm:w-72"
-          />
-          <Select
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/hr/company-asset/new')}
+              aria-label={t('hr.assetButtons.newAsset')}
+            >
+              {isNarrow ? undefined : t('hr.assetButtons.newAsset')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
-            placeholder={t('hr.assetPlaceholder.filterStatus')}
-            options={ASSET_STATUS_OPTIONS.map((option) => ({
-              value: option.value,
-              label: formatAssetStatus(option.value, t),
-            }))}
-            value={statusFilter}
-            onChange={(value: AssetStatus | undefined) => {
-              setStatusFilter(value);
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.hr.companyAsset.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              setAppliedSearch(value.trim());
               resetPage();
             }}
-            className="w-full min-w-0 sm:min-w-[160px] sm:w-auto"
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           <Select
             allowClear
             showSearch
             optionFilterProp="label"
             placeholder={t('hr.assetPlaceholder.filterType')}
+            className="erp-users-filter-select"
             value={typeFilter}
             onChange={(value: string | undefined) => {
               setTypeFilter(value);
               resetPage();
             }}
             options={typeOptions}
-            className="w-full min-w-0 sm:min-w-[140px] sm:w-auto"
           />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      {listQuery.isFetching && listQuery.data ? (
-        <TableUpdatingIndicator active={listQuery.isFetching} />
-      ) : null}
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-company-asset" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span
-              className="text-xs"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {totalCount}{' '}
-              {totalCount === 1
-                ? t('pages.hr.companyAsset.assetSingular')
-                : t('pages.hr.companyAsset.assetPlural')}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/hr/company-asset/new')}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.assetButtons.newAsset')}
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
             </Button>
-          </Space>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<CompanyAssetListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            loading={listQuery.isFetching && !listQuery.isLoading}
-            scroll={false}
+            loading={listQuery.isFetching && rows.length === 0}
+            scroll={{ x: isNarrow ? 560 : isCompact ? 860 : 1100 }}
             onRow={(record) => ({
               onClick: () => router.push(`/hr/company-asset/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
-                  icon={<ToolOutlined style={{ fontSize: 24 }} />}
-                  title={t('hr.assetEmpty.noAssets')}
+                  icon={<ToolOutlined />}
+                  title={
+                    hasFilters
+                      ? t('pages.hr.companyAsset.emptyFiltered')
+                      : t('hr.assetEmpty.noAssets')
+                  }
                   description={pageDescription}
                   action={
                     hasFilters
@@ -467,14 +477,12 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
                 />
               ),
             }}
-            pagination={
-              meta
-                ? {
-                    ...bindMeta(meta),
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                  }
-                : undefined
-            }
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
+            }}
           />
         </div>
       </div>

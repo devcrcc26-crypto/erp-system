@@ -8,7 +8,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 
 /**
- * New vehicle application — same page chrome as Add Employee / Consumables.
+ * New vehicle application — title lives in MainContentHeader; page shows cancel + form.
  */
 export default function VehicleApplicationFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -25,24 +25,14 @@ export default function VehicleApplicationFormContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-vehicle-application-form-page">
-      <div className="erp-pro-card overflow-hidden">
-        <div className="erp-pro-card-toolbar erp-vehicle-application-form-actions !border-b-0">
-          <div className="min-w-0 flex-1">
-            <h2 className="erp-pro-card-toolbar-title">
-              {t('pages.hr.vehicleApplication.new')}
-            </h2>
-            <p className="m-0 mt-1 text-[13px] leading-snug text-[#6B7280]">
-              {t('pages.hr.vehicleApplication.formDescription')}
-            </p>
-          </div>
-          <Button
-            onClick={() => router.push('/approvals/new')}
-            className="shrink-0"
-          >
-            {t('hr.buttons.cancel')}
-          </Button>
-        </div>
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-vehicle-application-form-page flex flex-col gap-4">
+      <div className="flex shrink-0 items-center justify-end">
+        <Button
+          onClick={() => router.push('/hr/vehicle-applications')}
+          className="shrink-0"
+        >
+          {t('hr.buttons.cancel')}
+        </Button>
       </div>
       <VehicleApplicationForm onSuccess={handleSuccess} />
     </div>

@@ -540,8 +540,16 @@
         "ledgerStepDescription": "Optional fixed-asset ledger fields for depreciation tracking.",
         "photoStepDescription": "Optionally attach a photo of the asset for the register.",
         "reviewStepDescription": "Confirm the asset details before saving.",
+        "searchPlaceholder": "Search by serial, brand, model, or assignee",
+        "emptyFiltered": "No assets match your filters",
         "assetSingular": "asset",
-        "assetPlural": "assets"
+        "assetPlural": "assets",
+        "stats": {
+          "total": "Total",
+          "available": "Available",
+          "inUse": "In use",
+          "repairing": "Repairing"
+        }
       },
       "employeeContract": {
         "new": "New Employee Contract",

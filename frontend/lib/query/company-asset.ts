@@ -57,6 +57,54 @@ export function useCompanyAssets(
   });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the company asset register (filter locally).
+ */
+async function fetchAllCompanyAssetPages(
+  params: Omit<ListCompanyAssetsParams, 'page' | 'limit' | 'search'> = {},
+): Promise<CompanyAssetListItem[]> {
+  const first = await apiGetPaginated<CompanyAssetListItem>(
+    `${ASSETS_PATH}${toQueryString({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<CompanyAssetListItem>(
+        `${ASSETS_PATH}${toQueryString({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All company assets (all pages) for client-side filter/search. */
+export function useCompanyAssetsAll(
+  params: Omit<ListCompanyAssetsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...companyAssetKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllCompanyAssetPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useCompanyAsset(id: string, enabled = true) {
   return useQuery({
     queryKey: companyAssetKeys.detail(id),

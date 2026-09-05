@@ -540,8 +540,16 @@
         "ledgerStepDescription": "可选填写固定资产台账字段，用于折旧跟踪。",
         "photoStepDescription": "可选上传资产照片用于资产台账。",
         "reviewStepDescription": "确认资产信息后保存。",
+        "searchPlaceholder": "按序列号、品牌、型号或领用人搜索",
+        "emptyFiltered": "没有符合筛选条件的资产",
         "assetSingular": "项资产",
-        "assetPlural": "项资产"
+        "assetPlural": "项资产",
+        "stats": {
+          "total": "全部",
+          "available": "可用",
+          "inUse": "使用中",
+          "repairing": "维修中"
+        }
       },
       "employeeContract": {
         "new": "新建劳动合同",
