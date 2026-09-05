@@ -476,8 +476,16 @@
         "myListDescription": "提交并跟踪您的用车审批流程。",
         "formDescription": "请先选择出行时间以查看可用车辆，然后选择车辆并填写行程详情。",
         "scheduleStepDescription": "请选择本次出行的出发和返回日期时间。",
+        "searchPlaceholder": "按申请单号、目的地或车牌搜索",
+        "emptyFiltered": "没有符合筛选条件的用车申请",
         "applicationSingular": "条申请",
-        "applicationPlural": "条申请"
+        "applicationPlural": "条申请",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       },
       "vehicleRefueling": {
         "new": "新建车辆加油申请",

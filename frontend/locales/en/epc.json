@@ -476,8 +476,16 @@
         "myListDescription": "Submit and track your vehicle applications through the approval workflow.",
         "formDescription": "Select trip dates first to check vehicle availability, then choose a vehicle and complete the trip details.",
         "scheduleStepDescription": "Choose the departure and return date and time for this trip.",
+        "searchPlaceholder": "Search by application #, destination, or plate",
+        "emptyFiltered": "No vehicle applications match your filters",
         "applicationSingular": "application",
-        "applicationPlural": "applications"
+        "applicationPlural": "applications",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       },
       "vehicleRefueling": {
         "new": "New Vehicle Refueling",

@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Button,
   DatePicker,
+  Grid,
+  Input,
   Select,
-  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -17,72 +17,159 @@ import {
   CloseCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { StatCard } from '@/components/modules/dashboard/DashboardStats';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ListPageNavIcon from '@/components/ui/ListPageNavIcon/ListPageNavIcon';
-import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import TableUpdatingIndicator from '@/components/ui/TableUpdatingIndicator/TableUpdatingIndicator';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
-import { ApiRequestError } from '@/lib/api/errors';
-import type {
-  VehicleApplicationListItem,
-  VehicleApplicationStatus,
-} from '@/lib/api/vehicle-application.types';
-import { useVehicleApplications } from '@/lib/query/vehicle-application';
+import type { VehicleApplicationListItem } from '@/lib/api/vehicle-application.types';
+import type { PaginationMeta } from '@/lib/api/types';
+import { useVehicleApplicationsAll } from '@/lib/query/vehicle-application';
 import { useUsersDirectory } from '@/lib/query/users';
-import { tokens } from '@/lib/theme/tokens';
 import {
   formatVehicleApplicationEmployeeName,
   formatVehicleApplicationStatus,
   vehicleApplicationStatusVariant,
 } from '@/lib/utils/vehicle-application-display';
+import {
+  filterVehicleApplications,
+  statusesForVehicleApplicationMode,
+  type VehicleApplicationStatusMode,
+} from '@/lib/utils/vehicle-application-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
-const { RangePicker } = DatePicker;
+const PENDING_STATUSES = statusesForVehicleApplicationMode('pending');
+const APPROVED_STATUSES = statusesForVehicleApplicationMode('approved');
+const REJECTED_STATUSES = statusesForVehicleApplicationMode('rejected');
 
-const PENDING_STATUSES: VehicleApplicationStatus[] = [
-  'DRAFT',
-  'SUBMITTED',
-  'IN_REVIEW',
-];
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
+
+function VehicleApplicationStat({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
 
 /**
- * Company or personal vehicle application list with filters and stats.
+ * Vehicle applications list — Users chrome (stat bar, filter row, rounded table).
  */
 export default function VehicleApplicationListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<VehicleApplicationStatus[]>([]);
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [statusMode, setStatusMode] =
+    useState<VehicleApplicationStatusMode>('all');
   const [employeeId, setEmployeeId] = useState<string | undefined>();
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(
-    null,
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
+
+  const listQuery = useVehicleApplicationsAll({}, true);
+
+  const usersQuery = useUsersDirectory(
+    { page: 1, limit: 100 },
+    { enabled: canViewHr },
   );
 
-  const statusOptions = useMemo(
-    () => [
-      { value: 'DRAFT', label: t('hr.status.DRAFT') },
-      { value: 'SUBMITTED', label: t('hr.status.SUBMITTED') },
-      { value: 'IN_REVIEW', label: t('hr.status.IN_REVIEW') },
-      { value: 'APPROVED', label: t('hr.status.APPROVED') },
-      { value: 'REJECTED', label: t('hr.status.REJECTED') },
-      { value: 'RETURNED', label: t('hr.status.RETURNED') },
-      { value: 'CANCELLED', label: t('hr.status.CANCELLED') },
-    ],
-    [t],
+  const allRows = listQuery.data ?? [];
+
+  const statusCounts = useMemo(() => {
+    const pending = allRows.filter((row) =>
+      PENDING_STATUSES.includes(row.status),
+    ).length;
+    const approved = allRows.filter((row) =>
+      APPROVED_STATUSES.includes(row.status),
+    ).length;
+    const rejected = allRows.filter((row) =>
+      REJECTED_STATUSES.includes(row.status),
+    ).length;
+    return {
+      all: allRows.length,
+      pending,
+      approved,
+      rejected,
+    };
+  }, [allRows]);
+
+  const filtered = useMemo(
+    () =>
+      filterVehicleApplications(allRows, {
+        search: appliedSearch,
+        statusMode,
+        employeeId: canViewHr ? employeeId : undefined,
+        dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
+        dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
+      }),
+    [allRows, appliedSearch, statusMode, employeeId, dateRange, canViewHr],
   );
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 10;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const pageTitle = canViewHr
     ? t('pages.hr.vehicleApplication.listTitle')
@@ -91,57 +178,25 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
     ? t('pages.hr.vehicleApplication.listDescription')
     : t('pages.hr.vehicleApplication.myListDescription');
 
-  const countsBaseParams = useMemo(
-    () => ({
-      search: search.trim() || undefined,
-      employeeId: canViewHr ? employeeId : undefined,
-      dateFrom: dateRange?.[0]?.format('YYYY-MM-DD'),
-      dateTo: dateRange?.[1]?.format('YYYY-MM-DD'),
-    }),
-    [search, canViewHr, employeeId, dateRange],
-  );
+  function handleResetFilters(): void {
+    setSearch('');
+    setAppliedSearch('');
+    setStatusMode('all');
+    setEmployeeId(undefined);
+    setDateRange(null);
+    resetPage();
+  }
 
-  const listParams = useMemo(
-    () => ({
-      ...params,
-      ...countsBaseParams,
-      status: statusFilter.length > 0 ? statusFilter : undefined,
-    }),
-    [params, countsBaseParams, statusFilter],
-  );
+  function handleStatusMode(mode: VehicleApplicationStatusMode): void {
+    setStatusMode(mode);
+    resetPage();
+  }
 
-  const listQuery = useVehicleApplications(listParams, true);
-  const totalCountQuery = useVehicleApplications(
-    { page: 1, limit: 1, ...countsBaseParams },
-    true,
-  );
-  const pendingCountQuery = useVehicleApplications(
-    { page: 1, limit: 1, status: PENDING_STATUSES, ...countsBaseParams },
-    true,
-  );
-  const approvedCountQuery = useVehicleApplications(
-    { page: 1, limit: 1, status: ['APPROVED'], ...countsBaseParams },
-    true,
-  );
-  const rejectedCountQuery = useVehicleApplications(
-    { page: 1, limit: 1, status: ['REJECTED'], ...countsBaseParams },
-    true,
-  );
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: 100 },
-    { enabled: canViewHr },
-  );
-
-  const rows = listQuery.data?.data ?? [];
-  const meta = listQuery.data?.meta;
-  const totalCount = meta?.total ?? rows.length;
-
-  const statusCounts = {
-    all: totalCountQuery.data?.meta?.total ?? totalCount,
-    pending: pendingCountQuery.data?.meta?.total ?? 0,
-    approved: approvedCountQuery.data?.meta?.total ?? 0,
-    rejected: rejectedCountQuery.data?.meta?.total ?? 0,
-  };
+  const hasFilters =
+    Boolean(appliedSearch.trim()) ||
+    statusMode !== 'all' ||
+    Boolean(employeeId) ||
+    Boolean(dateRange?.[0] || dateRange?.[1]);
 
   const columns: ColumnsType<VehicleApplicationListItem> = useMemo(
     () => [
@@ -149,14 +204,10 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         title: t('hr.table.applicationNumber'),
         dataIndex: 'applicationNumber',
         key: 'applicationNumber',
-        width: 120,
+        width: 130,
+        responsive: ['md'],
         render: (value: string) => (
-          <span
-            className="font-[family-name:var(--font-mono)] text-xs font-medium"
-            style={{ color: tokens.colorPrimary }}
-          >
-            {value}
-          </span>
+          <span className="erp-users-id-chip">{value}</span>
         ),
       },
       ...(canViewHr
@@ -167,18 +218,12 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
               width: 200,
               responsive: ['md'],
               render: (_: unknown, row: VehicleApplicationListItem) => (
-                <div className="min-w-0 py-0.5">
-                  <p
-                    className="m-0 text-sm font-medium"
-                    style={{ color: tokens.colorTextPrimary }}
-                  >
+                <div className="min-w-0">
+                  <p className="erp-users-cell-strong m-0">
                     {formatVehicleApplicationEmployeeName(row.employee)}
                   </p>
                   {row.employee?.email ? (
-                    <p
-                      className="m-0 truncate text-xs"
-                      style={{ color: tokens.colorTextTertiary }}
-                    >
+                    <p className="erp-users-email m-0 mt-0.5">
                       {row.employee.email}
                     </p>
                   ) : null}
@@ -190,23 +235,19 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
       {
         title: t('hr.table.vehicle'),
         key: 'vehicle',
-        width: 160,
+        width: isNarrow ? undefined : 160,
+        ellipsis: true,
         render: (_: unknown, row: VehicleApplicationListItem) => (
           <div className="min-w-0">
-            <p
-              className="m-0 truncate text-sm font-medium"
-              style={{ color: tokens.colorTextPrimary }}
-            >
+            <p className="erp-users-cell-strong m-0 truncate">
               {row.vehicle?.plateNumber ?? '—'}
             </p>
-            {row.vehicle ? (
-              <p
-                className="m-0 truncate text-xs"
-                style={{ color: tokens.colorTextTertiary }}
-              >
-                {row.vehicle.make} {row.vehicle.model}
-              </p>
-            ) : null}
+            <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
+              {row.vehicle
+                ? `${row.vehicle.make} ${row.vehicle.model}`
+                : row.applicationNumber}
+              {isNarrow ? ` · ${row.destination}` : ''}
+            </p>
           </div>
         ),
       },
@@ -215,6 +256,10 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         dataIndex: 'destination',
         key: 'destination',
         ellipsis: true,
+        responsive: ['sm'],
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">{value}</span>
+        ),
       },
       {
         title: t('hr.table.departure'),
@@ -222,7 +267,11 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         key: 'departureDatetime',
         width: 140,
         responsive: ['md'],
-        render: (value: string) => formatProjectDate(value),
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">
+            {formatProjectDate(value)}
+          </span>
+        ),
       },
       {
         title: t('hr.labels.return'),
@@ -230,22 +279,29 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         key: 'returnDatetime',
         width: 140,
         responsive: ['lg'],
-        render: (value: string) => formatProjectDate(value),
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">
+            {formatProjectDate(value)}
+          </span>
+        ),
       },
       {
         title: t('hr.table.passengers'),
         dataIndex: 'passengerCount',
         key: 'passengerCount',
-        width: 100,
+        width: 90,
         align: 'right',
-        responsive: ['md'],
+        responsive: ['lg'],
+        render: (value: number) => (
+          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+        ),
       },
       {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
-        width: 130,
-        render: (value: VehicleApplicationStatus) => (
+        width: isNarrow ? 100 : 130,
+        render: (value: VehicleApplicationListItem['status']) => (
           <StatusBadge
             label={formatVehicleApplicationStatus(value, t)}
             variant={vehicleApplicationStatusVariant(value)}
@@ -258,109 +314,150 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
         key: 'currentTierLabel',
         width: 140,
         ellipsis: true,
-        responsive: ['lg'],
-        render: (_: string | null | undefined, row: VehicleApplicationListItem) =>
-          row.directApproved ? 'Direct approval' : (row.currentTierLabel ?? '—'),
+        responsive: ['xl'],
+        render: (_: unknown, row: VehicleApplicationListItem) => {
+          if (row.directApproved) {
+            return (
+              <span className="erp-users-role-tag">
+                {t('hr.labels.directApproval')}
+              </span>
+            );
+          }
+          return row.currentTierLabel ? (
+            <span className="erp-users-role-tag">{row.currentTierLabel}</span>
+          ) : (
+            <span className="erp-users-cell-sub">—</span>
+          );
+        },
       },
     ],
-    [canViewHr, t],
+    [canViewHr, isNarrow, t],
   );
-
-  function handleResetFilters(): void {
-    setSearch('');
-    setStatusFilter([]);
-    setEmployeeId(undefined);
-    setDateRange(null);
-    resetPage();
-  }
-
-  const hasFilters =
-    Boolean(search.trim()) ||
-    statusFilter.length > 0 ||
-    employeeId !== undefined ||
-    Boolean(dateRange?.[0] || dateRange?.[1]);
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="flex justify-center rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-vehicle-applications-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
+    <div className="erp-pro-list-page erp-users-page erp-vehicle-applications-page">
       {listQuery.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          title={
-            listQuery.error instanceof ApiRequestError
-              ? listQuery.error.message
-              : t('hr.messages.vehicleApplicationLoadFailed')
-          }
+        <ErpNotice
+          tone="error"
+          className="mb-4"
+          title={getFriendlyApiErrorMessage(
+            listQuery.error,
+            t('hr.messages.vehicleApplicationLoadFailed'),
+            t,
+          )}
         />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
-          label={t('pages.approvals.stats.total')}
+      <div className="erp-users-stat-bar">
+        <VehicleApplicationStat
+          label={t('pages.hr.vehicleApplication.stats.total')}
           value={statusCounts.all}
-          color="teal"
+          accent="teal"
           icon={<CarOutlined />}
+          active={statusMode === 'all'}
+          onClick={() => handleStatusMode('all')}
         />
-        <StatCard
-          label={t('pages.approvals.stats.pending')}
+        <VehicleApplicationStat
+          label={t('pages.hr.vehicleApplication.stats.pending')}
           value={statusCounts.pending}
-          color="amber"
+          accent="amber"
           icon={<ClockCircleOutlined />}
+          active={statusMode === 'pending'}
+          onClick={() => handleStatusMode('pending')}
         />
-        <StatCard
-          label={t('pages.approvals.stats.approved')}
+        <VehicleApplicationStat
+          label={t('pages.hr.vehicleApplication.stats.approved')}
           value={statusCounts.approved}
-          color="blue"
+          accent="green"
           icon={<CheckCircleOutlined />}
+          active={statusMode === 'approved'}
+          onClick={() => handleStatusMode('approved')}
         />
-        <StatCard
-          label={t('pages.approvals.stats.rejected')}
+        <VehicleApplicationStat
+          label={t('pages.hr.vehicleApplication.stats.rejected')}
           value={statusCounts.rejected}
-          color="red"
+          accent="red"
           icon={<CloseCircleOutlined />}
+          active={statusMode === 'rejected'}
+          onClick={() => handleStatusMode('rejected')}
         />
       </div>
 
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white px-3 py-3 sm:px-5 sm:py-4">
-        <div className="erp-filter-bar">
-          <ListSearchInput
-            committedValue={search}
-            onCommit={(value) => {
-              setSearch(value);
-              resetPage();
-            }}
-            placeholder={t('hr.placeholder.searchVehicle')}
-            className="w-full min-w-0 sm:w-72"
-          />
-          <Select
-            mode="multiple"
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
+            <span className="erp-users-count-pill">
+              {meta.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() =>
+                router.push('/approvals/new/vehicle-application')
+              }
+              aria-label={t('hr.buttons.newVehicleApplication')}
+            >
+              {isNarrow
+                ? undefined
+                : t('hr.buttons.newVehicleApplication')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
-            placeholder={t('hr.placeholder.status')}
-            options={statusOptions}
-            value={statusFilter}
-            onChange={(value: VehicleApplicationStatus[]) => {
-              setStatusFilter(value);
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.hr.vehicleApplication.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              setAppliedSearch(value.trim());
               resetPage();
             }}
-            maxTagCount="responsive"
-            className="w-full min-w-0 sm:min-w-[180px] sm:w-auto"
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
           />
+          <span className="erp-users-filter-spacer" aria-hidden />
           {canViewHr ? (
             <Select
               allowClear
               showSearch
               optionFilterProp="label"
               placeholder={t('hr.placeholder.employee')}
+              className="erp-users-filter-select"
               loading={usersQuery.isLoading}
-              className="w-full min-w-0 sm:w-48"
               options={(usersQuery.data?.data ?? []).map((user) => ({
                 value: user.id,
                 label: formatUserName(user),
@@ -372,87 +469,44 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
               }}
             />
           ) : null}
-          <RangePicker
+          <DatePicker.RangePicker
             value={dateRange}
-            className="w-full min-w-0 sm:min-w-[260px] sm:w-auto"
+            className="erp-users-filter-daterange"
             onChange={(value) => {
               setDateRange(value);
               resetPage();
             }}
-            placeholder={[t('hr.placeholder.dateFrom'), t('hr.placeholder.dateTo')]}
           />
-          <Button
-            onClick={handleResetFilters}
-            disabled={!hasFilters}
-            style={{ borderRadius: 0 }}
-          >
-            {t('common.reset')}
-          </Button>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-              style={{ borderRadius: 0 }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      {listQuery.isFetching && listQuery.data ? (
-        <TableUpdatingIndicator active={listQuery.isFetching} />
-      ) : null}
-
-      <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5 sm:py-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <ListPageNavIcon iconKey="hr-vehicle" />
-            <h3
-              className="m-0 text-sm font-semibold"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {pageTitle}
-            </h3>
-            <span className="text-xs" style={{ color: tokens.colorTextTertiary }}>
-              {totalCount}{' '}
-              {totalCount === 1
-                ? t('pages.hr.vehicleApplication.applicationSingular')
-                : t('pages.hr.vehicleApplication.applicationPlural')}
-            </span>
-          </div>
-          <Space wrap size={8}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/approvals/new/vehicle-application')}
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.buttons.newVehicleApplication')}
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
             </Button>
-          </Space>
+          ) : null}
         </div>
 
-        <div className="px-0">
+        <div className="erp-pro-table-card-body">
           <DataTable<VehicleApplicationListItem>
             rowKey="id"
-            className="erp-pro-table"
-            size="small"
+            className="erp-pro-table erp-users-table"
+            size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            loading={listQuery.isFetching && !listQuery.isLoading}
-            scroll={false}
+            loading={listQuery.isFetching && rows.length === 0}
+            scroll={{ x: isNarrow ? 520 : isCompact ? 720 : 1100 }}
             onRow={(record) => ({
               onClick: () =>
                 router.push(`/hr/vehicle-applications/${record.id}`),
-              className: 'cursor-pointer transition-colors hover:bg-[#F8F7F4]',
+              className: 'cursor-pointer',
             })}
             locale={{
               emptyText: (
                 <TableEmptyState
-                  icon={<CarOutlined style={{ fontSize: 24 }} />}
-                  title={t('hr.empty.noVehicleApplications')}
+                  icon={<CarOutlined />}
+                  title={
+                    hasFilters
+                      ? t('pages.hr.vehicleApplication.emptyFiltered')
+                      : t('hr.empty.noVehicleApplications')
+                  }
                   description={pageDescription}
                   action={
                     hasFilters
@@ -463,20 +517,20 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
                       : {
                           label: t('hr.buttons.newVehicleApplication'),
                           onClick: () =>
-                            router.push('/approvals/new/vehicle-application'),
+                            router.push(
+                              '/approvals/new/vehicle-application',
+                            ),
                         }
                   }
                 />
               ),
             }}
-            pagination={
-              meta
-                ? {
-                    ...bindMeta(meta),
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                  }
-                : undefined
-            }
+            pagination={{
+              ...bindMeta(meta),
+              pageSizeOptions: ['10', '20', '50', '100'],
+              simple: isNarrow,
+              showSizeChanger: !isNarrow,
+            }}
           />
         </div>
       </div>

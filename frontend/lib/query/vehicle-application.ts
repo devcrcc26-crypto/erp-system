@@ -45,6 +45,44 @@ function buildListQuery(params: ListVehicleApplicationsParams): string {
   return toQueryString({ ...rest, status: statusValue });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the vehicle applications list (filter locally).
+ */
+async function fetchAllVehicleApplicationPages(
+  params: Omit<
+    ListVehicleApplicationsParams,
+    'page' | 'limit' | 'search'
+  > = {},
+): Promise<VehicleApplicationListItem[]> {
+  const first = await apiGetPaginated<VehicleApplicationListItem>(
+    `${APPLICATIONS_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<VehicleApplicationListItem>(
+        `${APPLICATIONS_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
 export function useVehicleApplications(
   params: ListVehicleApplicationsParams = { page: 1, limit: 20 },
   enabled = true,
@@ -55,6 +93,22 @@ export function useVehicleApplications(
       apiGetPaginated<VehicleApplicationListItem>(
         `${APPLICATIONS_PATH}${buildListQuery(params)}`,
       ) as Promise<PaginatedResult<VehicleApplicationListItem>>,
+    enabled,
+    retry: false,
+  });
+}
+
+/** All vehicle applications (all pages) for client-side filter/search. */
+export function useVehicleApplicationsAll(
+  params: Omit<
+    ListVehicleApplicationsParams,
+    'page' | 'limit' | 'search'
+  > = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...vehicleApplicationKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllVehicleApplicationPages(params),
     enabled,
     retry: false,
   });
