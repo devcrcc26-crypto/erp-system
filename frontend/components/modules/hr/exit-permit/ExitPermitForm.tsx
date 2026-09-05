@@ -10,6 +10,7 @@ import {
   Select,
   Space,
   Table,
+  Tooltip,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -20,6 +21,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
+import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
@@ -312,8 +314,21 @@ export default function ExitPermitForm({
       title: t('hr.table.itemImage'),
       dataIndex: 'file',
       key: 'file',
-      ellipsis: true,
-      render: (value: File | undefined) => value?.name || '-',
+      width: 72,
+      render: (value: File | undefined) =>
+        value ? (
+          <Tooltip title={value.name}>
+            <span className="inline-flex">
+              <ProfileFileTypeIcon
+                name={value.name}
+                fileType={value.type}
+                size="sm"
+              />
+            </span>
+          </Tooltip>
+        ) : (
+          '—'
+        ),
     },
     {
       title: '',

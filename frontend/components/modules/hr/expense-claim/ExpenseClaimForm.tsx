@@ -12,11 +12,13 @@ import {
   Select,
   Space,
   Table,
+  Tooltip,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
@@ -365,9 +367,15 @@ export default function ExpenseClaimForm({
       responsive: ['sm'],
       render: (_: unknown, row: ClientItem) =>
         row.file ? (
-          <Typography.Text ellipsis className="text-xs">
-            {row.file.name}
-          </Typography.Text>
+          <Tooltip title={row.file.name}>
+            <span className="inline-flex">
+              <ProfileFileTypeIcon
+                name={row.file.name}
+                fileType={row.file.type}
+                size="sm"
+              />
+            </span>
+          </Tooltip>
         ) : (
           '—'
         ),

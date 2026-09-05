@@ -3,15 +3,14 @@
 import { useRef } from 'react';
 import { Button, Typography } from 'antd';
 import { Paperclip, X } from 'lucide-react';
+import ProfileFileTypeIcon, {
+  profileFileMetaLine,
+} from '@/components/modules/users/ProfileFileTypeIcon';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import {
-  formatSealFileSize,
-  resolveSealFileKind,
-} from '@/lib/utils/seal-file-display';
 import { tokens } from '@/lib/theme/tokens';
 
 /**
- * Local-file tile grid matching SealDocumentGallery (add-form selection).
+ * Local-file tile grid with file-type icons (add-form selection).
  */
 export function SealLocalFileTiles({
   files,
@@ -36,77 +35,55 @@ export function SealLocalFileTiles({
 
   return (
     <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
-      {files.map((file, index) => {
-        const meta = resolveSealFileKind(file.name, file.type);
-        const sizeLabel = formatSealFileSize(file.size);
-        return (
-          <li key={`${file.name}-${file.size}-${file.lastModified}-${index}`}>
-            <div
-              className="flex w-full items-center gap-3 rounded-none border px-3 py-3"
-              style={{
-                borderColor: tokens.colorBorder,
-                background: tokens.colorCardBg,
-              }}
-            >
-              <div
-                className="relative flex h-12 w-10 shrink-0 items-end justify-center pb-1.5"
-                aria-hidden
+      {files.map((file, index) => (
+        <li key={`${file.name}-${file.size}-${file.lastModified}-${index}`}>
+          <div
+            className="flex w-full items-center gap-3 rounded-xl border px-3 py-3"
+            style={{
+              borderColor: tokens.colorBorder,
+              background: tokens.colorCardBg,
+            }}
+          >
+            <ProfileFileTypeIcon
+              name={file.name}
+              fileType={file.type}
+              size="md"
+            />
+            <div className="min-w-0 flex-1">
+              <p
+                className="m-0 truncate text-sm font-medium"
+                style={{ color: tokens.colorTextPrimary }}
+                title={file.name}
               >
-                <div
-                  className="absolute inset-0 rounded-[2px]"
-                  style={{
-                    background: meta.soft,
-                    border: `1px solid ${meta.accent}33`,
-                  }}
-                />
-                <div
-                  className="absolute right-0 top-0 h-0 w-0 border-l-[10px] border-t-[10px] border-l-transparent"
-                  style={{ borderTopColor: meta.accent }}
-                />
-                <span
-                  className="relative z-[1] text-[9px] font-bold tracking-wide"
-                  style={{ color: meta.accent }}
-                >
-                  {meta.label}
-                </span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p
-                  className="m-0 truncate text-sm font-medium"
-                  style={{ color: tokens.colorTextPrimary }}
-                  title={file.name}
-                >
-                  {file.name}
-                </p>
-                <p
-                  className="m-0 mt-0.5 text-xs"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  {[meta.label, sizeLabel].filter(Boolean).join(' · ') ||
-                    t('hr.labels.attachment')}
-                </p>
-              </div>
-              {!readOnly && onRemove ? (
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<X size={14} />}
-                  aria-label={`${t('hr.labels.remove')} ${file.name}`}
-                  onClick={() => onRemove(index)}
-                  style={{ borderRadius: 0 }}
-                />
-              ) : null}
+                {file.name}
+              </p>
+              <p
+                className="m-0 mt-0.5 text-xs"
+                style={{ color: tokens.colorTextTertiary }}
+              >
+                {profileFileMetaLine(file.name, file.type, file.size) ||
+                  t('hr.labels.attachment')}
+              </p>
             </div>
-          </li>
-        );
-      })}
+            {!readOnly && onRemove ? (
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<X size={14} />}
+                aria-label={`${t('hr.labels.remove')} ${file.name}`}
+                onClick={() => onRemove(index)}
+              />
+            ) : null}
+          </div>
+        </li>
+      ))}
     </ul>
   );
 }
 
 /**
- * Seal add-form file picker — same tile UI as detail document gallery.
+ * Seal add-form file picker — same icon tiles as detail document gallery.
  */
 export default function SealFilePicker({
   files,
@@ -156,7 +133,7 @@ export default function SealFilePicker({
         icon={<Paperclip size={14} />}
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
-        style={{ alignSelf: 'flex-start', borderRadius: 0 }}
+        style={{ alignSelf: 'flex-start' }}
       >
         {placeholder ?? t('hr.buttons.chooseDocumentOptional')}
       </Button>

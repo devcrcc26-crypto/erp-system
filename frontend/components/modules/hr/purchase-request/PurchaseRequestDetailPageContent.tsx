@@ -252,7 +252,15 @@ export default function PurchaseRequestDetailPageContent({
         responsive: ['lg'],
         render: (_: unknown, row: PurchaseRequestItem) =>
           row.image ? (
-            <AttachmentDownloadList documents={[row.image]} />
+            <div
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <AttachmentDownloadList
+                compact
+                documents={[row.image]}
+              />
+            </div>
           ) : (
             <span className="erp-users-cell-sub text-xs">
               {t('hr.labels.noItemImage')}

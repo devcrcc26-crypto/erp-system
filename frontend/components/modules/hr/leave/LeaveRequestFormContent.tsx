@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
+import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
@@ -435,10 +436,20 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               title={t('hr.section.supportingDocuments')}
             >
               {selectedFiles.length > 0 ? (
-                <ul className="erp-leave-file-list m-0 list-none p-0">
+                <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
                   {selectedFiles.map((file) => (
-                    <li key={`${file.name}-${file.size}`} className="erp-users-id-chip">
-                      {file.name}
+                    <li
+                      key={`${file.name}-${file.size}`}
+                      className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
+                    >
+                      <ProfileFileTypeIcon
+                        name={file.name}
+                        fileType={file.type}
+                        size="sm"
+                      />
+                      <span className="min-w-0 truncate text-sm" title={file.name}>
+                        {file.name}
+                      </span>
                     </li>
                   ))}
                 </ul>

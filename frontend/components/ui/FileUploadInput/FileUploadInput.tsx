@@ -3,6 +3,9 @@
 import { Button, Typography } from 'antd';
 import { Paperclip, X } from 'lucide-react';
 import { useRef } from 'react';
+import ProfileFileTypeIcon, {
+  profileFileMetaLine,
+} from '@/components/modules/users/ProfileFileTypeIcon';
 import { tokens } from '@/lib/theme/tokens';
 
 export interface FileUploadInputProps {
@@ -18,6 +21,7 @@ export interface FileUploadInputProps {
 
 /**
  * Lightweight multi-file picker — selection only; parent owns upload.
+ * Selected files are shown with type icons (PDF, Word, image, etc.).
  */
 export default function FileUploadInput({
   files,
@@ -69,42 +73,79 @@ export default function FileUploadInput({
         {buttonLabel}
       </Button>
       {!compact && files.length > 0 ? (
-        <ul className="m-0 list-none space-y-1 p-0">
+        <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
           {files.map((file, index) => (
             <li
               key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
-              className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5"
-              style={{
-                border: `1px solid ${tokens.colorBorder}`,
-                background: tokens.colorPageBg,
-              }}
             >
-              <Typography.Text ellipsis className="min-w-0 flex-1 text-sm">
-                {file.name}
-              </Typography.Text>
-              <Button
-                type="text"
-                size="small"
-                danger
-                disabled={disabled}
-                icon={<X size={14} />}
-                aria-label={`Remove ${file.name}`}
-                onClick={() => removeAt(index)}
-              />
+              <div
+                className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5"
+                style={{
+                  border: `1px solid ${tokens.colorBorder}`,
+                  background: tokens.colorPageBg,
+                }}
+              >
+                <ProfileFileTypeIcon
+                  name={file.name}
+                  fileType={file.type}
+                  size="md"
+                />
+                <div className="min-w-0 flex-1">
+                  <Typography.Text
+                    ellipsis
+                    className="block text-sm font-medium"
+                    title={file.name}
+                  >
+                    {file.name}
+                  </Typography.Text>
+                  <Typography.Text
+                    type="secondary"
+                    className="block text-xs"
+                    style={{ fontSize: 12 }}
+                  >
+                    {profileFileMetaLine(file.name, file.type, file.size) ||
+                      'File'}
+                  </Typography.Text>
+                </div>
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  disabled={disabled}
+                  icon={<X size={14} />}
+                  aria-label={`Remove ${file.name}`}
+                  onClick={() => removeAt(index)}
+                />
+              </div>
             </li>
           ))}
         </ul>
       ) : null}
       {compact && files.length > 0 ? (
-        <Typography.Text
-          type="secondary"
-          ellipsis
-          style={{ fontSize: 12, maxWidth: 160 }}
-        >
-          {files.length === 1
-            ? files[0]?.name
-            : `${files.length} files selected`}
-        </Typography.Text>
+        <div className="flex flex-wrap items-center gap-2">
+          {files.map((file, index) => (
+            <div
+              key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
+              className="inline-flex items-center gap-1"
+              title={file.name}
+            >
+              <ProfileFileTypeIcon
+                name={file.name}
+                fileType={file.type}
+                size="sm"
+              />
+              <Button
+                type="text"
+                size="small"
+                danger
+                disabled={disabled}
+                icon={<X size={12} />}
+                aria-label={`Remove ${file.name}`}
+                onClick={() => removeAt(index)}
+              />
+            </div>
+          ))}
+        </div>
       ) : null}
     </div>
   );

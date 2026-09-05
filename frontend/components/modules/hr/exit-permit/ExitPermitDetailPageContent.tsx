@@ -12,12 +12,11 @@ import {
   Skeleton,
   Tag,
   Tooltip,
-  Typography,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { MoreOutlined, StopOutlined } from '@ant-design/icons';
-import { ArrowLeft, Inbox, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, File, Inbox, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
@@ -247,23 +246,34 @@ export default function ExitPermitDetailPageContent({
       {
         title: t('hr.table.itemImage'),
         key: 'image',
-        width: 120,
+        width: isNarrow ? 72 : 96,
         render: (_: unknown, row: ExitPermitItem) =>
           row.image ? (
-            <AttachmentDownloadList
-              documents={[
-                {
-                  id: row.image.id,
-                  name: row.image.name,
-                  fileType: row.image.fileType ?? undefined,
-                  fileSizeBytes: row.image.fileSizeBytes,
-                },
-              ]}
-            />
+            <div
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <AttachmentDownloadList
+                compact
+                documents={[
+                  {
+                    id: row.image.id,
+                    name: row.image.name,
+                    fileType: row.image.fileType ?? undefined,
+                    fileSizeBytes: row.image.fileSizeBytes,
+                  },
+                ]}
+              />
+            </div>
           ) : (
-            <Typography.Text type="secondary" className="text-xs">
-              {t('hr.labels.noItemImage')}
-            </Typography.Text>
+            <Tooltip title={t('hr.labels.noItemImage')}>
+              <span
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e8ebef] bg-[#f8f9fb] text-[#9AA4B2] opacity-70"
+                aria-label={t('hr.labels.noItemImage')}
+              >
+                <File size={16} strokeWidth={1.75} />
+              </span>
+            </Tooltip>
           ),
       },
       {
@@ -324,7 +334,7 @@ export default function ExitPermitDetailPageContent({
           ]
         : []),
     ],
-    [canEdit, t],
+    [canEdit, isNarrow, t],
   );
 
   if (detailQuery.isLoading) {

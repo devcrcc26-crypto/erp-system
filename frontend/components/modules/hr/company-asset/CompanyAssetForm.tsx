@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, DatePicker, Form, Input, InputNumber, Space, Typography } from 'antd';
 import type { InputNumberProps } from 'antd';
-import { Image as ImageIcon, Paperclip, X } from 'lucide-react';
+import { Paperclip, X } from 'lucide-react';
 import dayjs from 'dayjs';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
+import ProfileFileTypeIcon, {
+  profileFileMetaLine,
+} from '@/components/modules/users/ProfileFileTypeIcon';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { CompanyAssetDetail } from '@/lib/api/company-asset.types';
@@ -519,22 +522,17 @@ export default function CompanyAssetForm({
 
             {photoFile ? (
               <div
-                className="flex items-center gap-3 rounded-none border px-3 py-3"
+                className="flex items-center gap-3 rounded-xl border px-3 py-3"
                 style={{
                   borderColor: tokens.colorBorder,
                   background: tokens.colorCardBg,
                 }}
               >
-                <div
-                  className="flex h-12 w-12 shrink-0 items-center justify-center"
-                  style={{
-                    background: '#F5F3FF',
-                    color: '#7C3AED',
-                    border: '1px solid #7C3AED33',
-                  }}
-                >
-                  <ImageIcon size={22} strokeWidth={1.75} />
-                </div>
+                <ProfileFileTypeIcon
+                  name={photoFile.name}
+                  fileType={photoFile.type}
+                  size="md"
+                />
                 <div className="min-w-0 flex-1">
                   <p
                     className="m-0 truncate text-sm font-medium"
@@ -547,7 +545,11 @@ export default function CompanyAssetForm({
                     className="m-0 mt-0.5 text-xs"
                     style={{ color: tokens.colorTextTertiary }}
                   >
-                    IMAGE · {(photoFile.size / 1024).toFixed(1)} KB
+                    {profileFileMetaLine(
+                      photoFile.name,
+                      photoFile.type,
+                      photoFile.size,
+                    )}
                   </p>
                 </div>
                 <Button
@@ -557,7 +559,6 @@ export default function CompanyAssetForm({
                   aria-label={t('hr.labels.remove')}
                   disabled={submitting}
                   onClick={() => setPhotoFile(null)}
-                  style={{ borderRadius: 0 }}
                 />
               </div>
             ) : (
