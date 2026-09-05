@@ -355,7 +355,15 @@
         "detailsStepDescription": "填写标题、采购理由，以及可选的供应商信息。",
         "itemsStepDescription": "至少添加一条明细，包含数量、单位和单价。",
         "reviewStepDescription": "提交前请确认申请摘要与预估总额。",
-        "attachmentsStepDescription": "可选上传报价单、规格说明或其他证明文件。"
+        "attachmentsStepDescription": "可选上传报价单、规格说明或其他证明文件。",
+        "searchPlaceholder": "按申请编号、标题或员工搜索",
+        "emptyFiltered": "没有符合筛选条件的采购申请",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       },
       "materialRequisition": {
         "new": "新建材料领用",
@@ -368,7 +376,15 @@
         "detailsStepDescription": "填写标题、用途，以及可选的仓库信息。",
         "itemsStepDescription": "至少添加一条材料明细，包含数量和单位。",
         "reviewStepDescription": "提交前请确认领用摘要。",
-        "attachmentsStepDescription": "可选上传图纸、规格说明或其他证明文件。"
+        "attachmentsStepDescription": "可选上传图纸、规格说明或其他证明文件。",
+        "searchPlaceholder": "按申请编号、标题或员工搜索",
+        "emptyFiltered": "没有符合筛选条件的材料领用",
+        "stats": {
+          "total": "全部",
+          "pending": "待处理",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        }
       },
       "exitPermit": {
         "new": "新建出入证",
@@ -1990,6 +2006,8 @@
       "failedToLoadLeaveRequests": "加载请假申请失败",
       "failedToLoadOvertimeSheets": "加载加班表失败",
       "failedToLoadExpenseClaims": "加载费用报销失败",
+      "failedToLoadPurchaseRequests": "加载采购申请失败",
+      "failedToLoadMaterialRequisitions": "加载材料领用失败",
       "failedToLoadFlightApplications": "加载机票申请失败",
       "failedToLoadBusinessTrips": "加载出差申请失败",
       "businessTripSubmitted": "出差申请已提交",
@@ -2902,6 +2920,8 @@
       "year": "年份",
       "dateFrom": "开始日期",
       "dateTo": "结束日期",
+      "minAmount": "最低金额 (ETB)",
+      "maxAmount": "最高金额 (ETB)",
       "selectLeaveType": "选择假期类型",
       "selectAsset": "选择已分配资产",
       "selectVehicle": "选择车辆",

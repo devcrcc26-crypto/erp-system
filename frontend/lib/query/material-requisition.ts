@@ -50,6 +50,54 @@ function buildListQuery(params: ListMaterialRequisitionsParams): string {
   return toQueryString({ ...rest, status: statusValue });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the material requisitions list endpoint (filter locally).
+ */
+async function fetchAllMaterialRequisitionPages(
+  params: Omit<ListMaterialRequisitionsParams, 'page' | 'limit' | 'search'> = {},
+): Promise<MaterialRequisitionListItem[]> {
+  const first = await apiGetPaginated<MaterialRequisitionListItem>(
+    `${MATERIAL_REQUISITION_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<MaterialRequisitionListItem>(
+        `${MATERIAL_REQUISITION_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All material requisitions (all pages) for client-side filter/search. */
+export function useMaterialRequisitionsAll(
+  params: Omit<ListMaterialRequisitionsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...materialRequisitionKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllMaterialRequisitionPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 /** Paginated material requisitions. */
 export function useMaterialRequisitions(
   params: ListMaterialRequisitionsParams = { page: 1, limit: 20 },

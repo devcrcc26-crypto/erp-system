@@ -50,6 +50,54 @@ function buildListQuery(params: ListPurchaseRequestsParams): string {
   return toQueryString({ ...rest, status: statusValue });
 }
 
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Loads every page for the purchase requests list endpoint (filter locally).
+ */
+async function fetchAllPurchaseRequestPages(
+  params: Omit<ListPurchaseRequestsParams, 'page' | 'limit' | 'search'> = {},
+): Promise<PurchaseRequestListItem[]> {
+  const first = await apiGetPaginated<PurchaseRequestListItem>(
+    `${PURCHASE_REQUEST_PATH}${buildListQuery({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages;
+  if (pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<PurchaseRequestListItem>(
+        `${PURCHASE_REQUEST_PATH}${buildListQuery({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** All purchase requests (all pages) for client-side filter/search. */
+export function usePurchaseRequestsAll(
+  params: Omit<ListPurchaseRequestsParams, 'page' | 'limit' | 'search'> = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...purchaseRequestKeys.lists(), 'all', params] as const,
+    queryFn: () => fetchAllPurchaseRequestPages(params),
+    enabled,
+    retry: false,
+  });
+}
+
 /** Paginated purchase requests. */
 export function usePurchaseRequests(
   params: ListPurchaseRequestsParams = { page: 1, limit: 20 },

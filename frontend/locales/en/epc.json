@@ -355,7 +355,15 @@
         "detailsStepDescription": "Enter the title, justification, and optional vendor details.",
         "itemsStepDescription": "Add at least one line item with quantity, unit, and unit price.",
         "reviewStepDescription": "Confirm the request summary and estimated total before submitting.",
-        "attachmentsStepDescription": "Optionally attach quotes, specs, or other supporting documents."
+        "attachmentsStepDescription": "Optionally attach quotes, specs, or other supporting documents.",
+        "searchPlaceholder": "Search by request #, title, or employee",
+        "emptyFiltered": "No purchase requests match your filters",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       },
       "materialRequisition": {
         "new": "New Material Requisition",
@@ -368,7 +376,15 @@
         "detailsStepDescription": "Enter the title, purpose, and optional warehouse details.",
         "itemsStepDescription": "Add at least one material line item with quantity and unit.",
         "reviewStepDescription": "Confirm the requisition summary before submitting.",
-        "attachmentsStepDescription": "Optionally attach drawings, specs, or other supporting documents."
+        "attachmentsStepDescription": "Optionally attach drawings, specs, or other supporting documents.",
+        "searchPlaceholder": "Search by request #, title, or employee",
+        "emptyFiltered": "No material requisitions match your filters",
+        "stats": {
+          "total": "Total",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        }
       },
       "exitPermit": {
         "new": "New Exit Permit",
@@ -1990,6 +2006,8 @@
       "failedToLoadLeaveRequests": "Failed to load leave requests",
       "failedToLoadOvertimeSheets": "Failed to load overtime sheets",
       "failedToLoadExpenseClaims": "Failed to load expense claims",
+      "failedToLoadPurchaseRequests": "Failed to load purchase requests",
+      "failedToLoadMaterialRequisitions": "Failed to load material requisitions",
       "failedToLoadFlightApplications": "Failed to load flight applications",
       "failedToLoadBusinessTrips": "Failed to load business trips",
       "businessTripSubmitted": "Business trip submitted",
@@ -2902,6 +2920,8 @@
       "year": "Year",
       "dateFrom": "Start date",
       "dateTo": "End date",
+      "minAmount": "Min amount (ETB)",
+      "maxAmount": "Max amount (ETB)",
       "selectLeaveType": "Select leave type",
       "selectAsset": "Select assigned asset",
       "selectVehicle": "Select vehicle",

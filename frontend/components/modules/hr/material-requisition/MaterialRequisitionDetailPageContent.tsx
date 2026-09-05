@@ -4,30 +4,29 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  Empty,
+  Dropdown,
   Form,
+  Grid,
   Input,
   InputNumber,
   Modal,
   Skeleton,
-  Space,
-  Typography,
+  Tooltip,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { MoreOutlined, StopOutlined } from '@ant-design/icons';
+import { ArrowLeft, Inbox, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
-import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
-import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -48,10 +47,35 @@ import {
 } from '@/lib/utils/material-requisition-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-import { tokens } from '@/lib/theme/tokens';
+
+function DetailSection({
+  title,
+  children,
+  className = '',
+  bodyClassName = '',
+  action,
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  action?: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className={`erp-employee-section ${className}`.trim()}>
+      <div className="erp-employee-section-header flex flex-wrap items-center justify-between gap-2">
+        <h3 className="erp-employee-section-title m-0">{title}</h3>
+        {action}
+      </div>
+      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 /**
- * Material requisition detail — aligned with Vehicle Refueling / Purchase Request chrome.
+ * Material requisition detail — Users / employee profile chrome.
  */
 export default function MaterialRequisitionDetailPageContent({
   requisitionId,
@@ -61,6 +85,9 @@ export default function MaterialRequisitionDetailPageContent({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const messageApi = useAppMessage();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
+  const isNarrow = screens.sm === false;
   const currentUser = useCurrentUser();
   const detailQuery = useMaterialRequisition(requisitionId);
   const cancelMutation = useCancelMaterialRequisition(requisitionId);
@@ -73,15 +100,21 @@ export default function MaterialRequisitionDetailPageContent({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [itemForm] = Form.useForm<UpdateMaterialRequisitionItemPayload>();
 
+  useSetHeaderExtra(null);
+
   const requisition = detailQuery.data;
   const isOwner =
     Boolean(requisition) && requisition?.employeeId === currentUser.data?.id;
   const isDraftOrReturned =
     requisition?.status === 'DRAFT' || requisition?.status === 'RETURNED';
-  const canEdit = isOwner && isDraftOrReturned;
+  const canEdit = Boolean(isOwner && isDraftOrReturned);
   const canCancel =
-    isOwner &&
+    Boolean(isOwner) &&
     (requisition?.status === 'DRAFT' || requisition?.status === 'SUBMITTED');
+  const canResubmit =
+    Boolean(isOwner) &&
+    requisition?.status === 'RETURNED' &&
+    Boolean(requisition.approvalRequestId);
 
   const tiers = useMemo(
     () => (requisition?.approvalRequest?.tiers ?? []) as ApprovalTier[],
@@ -154,10 +187,100 @@ export default function MaterialRequisitionDetailPageContent({
     }
   }
 
+  const itemColumns: ColumnsType<MaterialRequisitionItem> = useMemo(
+    () => [
+      {
+        title: t('hr.table.itemName'),
+        dataIndex: 'itemName',
+        key: 'itemName',
+        ellipsis: true,
+        render: (value: string) => (
+          <span className="erp-users-cell-strong">{value}</span>
+        ),
+      },
+      {
+        title: t('hr.table.itemCode'),
+        dataIndex: 'itemCode',
+        key: 'itemCode',
+        width: 120,
+        responsive: ['md'],
+        render: (value: string | null | undefined) => (
+          <span className="erp-users-cell-sub">{value || '—'}</span>
+        ),
+      },
+      {
+        title: t('hr.table.description'),
+        dataIndex: 'description',
+        key: 'description',
+        ellipsis: true,
+        responsive: ['lg'],
+        render: (value: string | null | undefined) => (
+          <span className="erp-users-cell-sub">{value || '—'}</span>
+        ),
+      },
+      {
+        title: t('hr.table.quantity'),
+        dataIndex: 'quantity',
+        key: 'quantity',
+        width: 90,
+        align: 'right',
+        render: (value: number | string) => (
+          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+        ),
+      },
+      {
+        title: t('hr.table.unit'),
+        dataIndex: 'unit',
+        key: 'unit',
+        width: 80,
+        render: (value: string) => (
+          <span className="erp-users-cell-sub">{value}</span>
+        ),
+      },
+      ...(canEdit
+        ? [
+            {
+              title: '',
+              key: 'actions',
+              width: 80,
+              render: (_: unknown, row: MaterialRequisitionItem) => (
+                <div
+                  className="erp-table-row-actions flex items-center justify-end gap-0.5"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <Tooltip title={t('common.update')}>
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<Pencil size={14} />}
+                      onClick={() => openEditItem(row)}
+                      aria-label={t('common.update')}
+                    />
+                  </Tooltip>
+                  <Tooltip title={t('common.delete')}>
+                    <Button
+                      size="small"
+                      type="text"
+                      danger
+                      icon={<Trash2 size={14} />}
+                      onClick={() => setDeleteItemId(row.id)}
+                      aria-label={t('common.delete')}
+                    />
+                  </Tooltip>
+                </div>
+              ),
+            } satisfies ColumnsType<MaterialRequisitionItem>[number],
+          ]
+        : []),
+    ],
+    [canEdit, t],
+  );
+
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
-        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-material-requisition-detail-page">
+        <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
@@ -166,7 +289,7 @@ export default function MaterialRequisitionDetailPageContent({
 
   if (detailQuery.isError || !requisition) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
         <Alert
           type="error"
           showIcon
@@ -176,10 +299,7 @@ export default function MaterialRequisitionDetailPageContent({
               : t('hr.messages.materialRequisitionNotFound')
           }
           action={
-            <Button
-              onClick={() => router.push('/hr/material-requisition')}
-              style={{ borderRadius: 0 }}
-            >
+            <Button onClick={() => router.push('/hr/material-requisition')}>
               {t('hr.buttons.back')}
             </Button>
           }
@@ -188,265 +308,293 @@ export default function MaterialRequisitionDetailPageContent({
     );
   }
 
-  const itemColumns: ColumnsType<MaterialRequisitionItem> = [
-    {
-      title: t('hr.table.itemName'),
-      dataIndex: 'itemName',
-      key: 'itemName',
-      ellipsis: true,
-    },
-    {
-      title: t('hr.table.itemCode'),
-      dataIndex: 'itemCode',
-      key: 'itemCode',
-      width: 120,
-      render: (value: string | null | undefined) => value || '—',
-    },
-    {
-      title: t('hr.table.description'),
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-      render: (value: string | null | undefined) => value || '—',
-    },
-    {
-      title: t('hr.table.quantity'),
-      dataIndex: 'quantity',
-      key: 'quantity',
-      width: 90,
-      align: 'right',
-    },
-    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
-    ...(canEdit
-      ? [
-          {
-            title: '',
-            key: 'actions',
-            width: 90,
-            render: (_: unknown, row: MaterialRequisitionItem) => (
-              <Space size={4}>
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<Pencil size={14} />}
-                  onClick={() => openEditItem(row)}
-                  style={{ borderRadius: 0 }}
-                />
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<Trash2 size={14} />}
-                  onClick={() => setDeleteItemId(row.id)}
-                  style={{ borderRadius: 0 }}
-                />
-              </Space>
-            ),
-          } satisfies ColumnsType<MaterialRequisitionItem>[number],
-        ]
-      : []),
-  ];
+  const employeeName = formatMaterialRequisitionEmployeeName(
+    requisition.employee,
+  );
+  const backHref = '/hr/material-requisition';
+
+  const overflowMenuItems: MenuProps['items'] = [];
+  if (requisition.approvalRequestId) {
+    overflowMenuItems.push({
+      key: 'approvals',
+      label: canResubmit
+        ? t('hr.buttons.resubmit')
+        : t('hr.buttons.viewInApprovals'),
+      onClick: () =>
+        router.push(`/approvals/${requisition.approvalRequestId}`),
+    });
+  }
+  if (canCancel) {
+    overflowMenuItems.push({
+      key: 'cancel',
+      label: t('hr.buttons.cancelRequest'),
+      icon: <StopOutlined />,
+      danger: true,
+      onClick: () => setConfirmCancel(true),
+    });
+  }
+
+  const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
+  const tableScrollX = screens.lg
+    ? 900
+    : screens.md
+      ? 700
+      : screens.sm
+        ? 540
+        : 400;
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() => router.push('/hr/material-requisition')}
-          style={{ borderRadius: 0 }}
-        >
-          {t('hr.buttons.back')}
-        </Button>
-        <Space wrap size={8} className="ml-auto">
-          {canCancel ? (
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-material-requisition-detail-page">
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-employee-toolbar">
+          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
             <Button
-              danger
-              onClick={() => setConfirmCancel(true)}
-              style={{ borderRadius: 0 }}
+              type="text"
+              icon={<ArrowLeft size={16} />}
+              onClick={() => router.push(backHref)}
+              aria-label={t('hr.buttons.back')}
             >
-              {t('hr.buttons.cancelRequest')}
+              {isNarrow ? undefined : t('hr.buttons.back')}
             </Button>
-          ) : null}
-          {requisition.status === 'RETURNED' && isOwner ? (
-            <Button
-              type="primary"
-              onClick={() =>
-                router.push(`/approvals/${requisition.approvalRequestId}`)
-              }
-              style={{ borderRadius: 0 }}
-            >
-              {t('hr.buttons.resubmit')}
-            </Button>
-          ) : null}
-        </Space>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_320px]">
-        <div className="flex min-w-0 flex-col gap-3">
-          <div
-            className="overflow-hidden rounded-none"
-            style={{
-              background: tokens.colorCardBg,
-              border: `1px solid ${tokens.colorBorder}`,
-            }}
-          >
-            <div className="px-3 py-4 sm:px-5">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: tokens.colorTextTertiary }}
-                >
-                  {requisition.requestNumber}
-                </span>
-                <span style={{ color: tokens.colorBorder }}>·</span>
-                <StatusBadge
-                  label={formatMaterialRequisitionStatus(requisition.status, t)}
-                  variant={materialRequisitionStatusVariant(requisition.status)}
+          </div>
+          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            {showOverflowMenu ? (
+              <Dropdown
+                menu={{ items: overflowMenuItems }}
+                trigger={['click']}
+              >
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label={t('common.actions')}
                 />
-              </div>
-              <h2
-                className="m-0 text-lg font-semibold leading-snug"
-                style={{ color: tokens.colorTextPrimary }}
-              >
-                {requisition.title}
-              </h2>
-              <p
-                className="m-0 mt-1 text-sm"
-                style={{ color: tokens.colorTextSecondary }}
-              >
-                {formatMaterialRequisitionEmployeeName(requisition.employee)}
-                {requisition.submittedAt
-                  ? ` · ${formatProjectDate(requisition.submittedAt)}`
-                  : null}
-              </p>
-            </div>
-
-            {requisition.status === 'RETURNED' && isOwner ? (
-              <div
-                className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5"
-                style={{
-                  background: tokens.colorAmber50,
-                  borderTop: `1px solid ${tokens.colorAmber400}`,
-                }}
-              >
-                <Typography.Text style={{ color: tokens.colorAmber400 }}>
-                  {t('hr.messages.materialRequisitionReturned')}
-                </Typography.Text>
+              </Dropdown>
+            ) : (
+              <>
                 {requisition.approvalRequestId ? (
                   <Button
-                    size="small"
+                    type={canResubmit ? 'primary' : 'default'}
                     onClick={() =>
                       router.push(
                         `/approvals/${requisition.approvalRequestId}`,
                       )
                     }
-                    style={{ borderRadius: 0 }}
+                    aria-label={
+                      canResubmit
+                        ? t('hr.buttons.resubmit')
+                        : t('hr.buttons.viewInApprovals')
+                    }
                   >
-                    {t('hr.buttons.viewInApprovals')}
+                    {canResubmit
+                      ? isNarrow
+                        ? undefined
+                        : t('hr.buttons.resubmit')
+                      : isCompact
+                        ? t('nav.approvals')
+                        : t('hr.buttons.viewInApprovals')}
                   </Button>
                 ) : null}
-              </div>
-            ) : null}
+                {canCancel ? (
+                  <Button
+                    danger
+                    icon={<StopOutlined />}
+                    onClick={() => setConfirmCancel(true)}
+                    aria-label={t('hr.buttons.cancelRequest')}
+                  >
+                    {isCompact ? undefined : t('hr.buttons.cancelRequest')}
+                  </Button>
+                ) : null}
+              </>
+            )}
           </div>
+        </div>
 
-          <SummaryStrip
-            items={[
-              {
-                label: t('hr.table.items'),
-                value: String(requisition.items.length),
-              },
-              {
-                label: t('hr.table.requiredBy'),
-                value: requisition.requiredByDate
-                  ? formatProjectDate(requisition.requiredByDate)
-                  : '—',
-              },
-              {
-                label: t('hr.form.warehouseLocation'),
-                value: requisition.warehouseLocation ?? '—',
-              },
-            ]}
-          />
-
-          <SectionCard
-            title={t('hr.section.requestDetails')}
-            bodyClassName="px-3 py-4 sm:px-5"
-          >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <MetaItem label={t('hr.labels.purpose')}>
-                <p className="m-0 whitespace-pre-wrap leading-relaxed">
-                  {requisition.purpose}
-                </p>
-              </MetaItem>
-              {requisition.requiredByDate ? (
-                <MetaItem label={t('hr.form.requiredByDate')}>
-                  {formatProjectDate(requisition.requiredByDate)}
-                </MetaItem>
-              ) : null}
-              {requisition.warehouseLocation ? (
-                <MetaItem label={t('hr.form.warehouseLocation')}>
-                  {requisition.warehouseLocation}
-                </MetaItem>
-              ) : null}
+        <div className="erp-employee-hero erp-contract-hero">
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="erp-users-id-chip">
+                {requisition.requestNumber}
+              </span>
+              <StatusBadge
+                label={formatMaterialRequisitionStatus(requisition.status, t)}
+                variant={materialRequisitionStatusVariant(requisition.status)}
+              />
             </div>
-          </SectionCard>
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
+                {requisition.title}
+              </h2>
+            </div>
+            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
+              {employeeName}
+              {requisition.submittedAt
+                ? ` · ${formatProjectDate(requisition.submittedAt)}`
+                : null}
+            </p>
+          </div>
+        </div>
+      </div>
 
-          <SectionCard
-            title={t('hr.section.items')}
-            bodyClassName="px-3 py-4 sm:px-5"
-          >
-            {requisition.items.length === 0 ? (
-              <Empty description={t('hr.empty.noItems')} />
-            ) : (
+      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.items')}</p>
+            <p className="erp-employee-meta-value">
+              {requisition.items.length}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">{t('hr.table.requiredBy')}</p>
+            <p className="erp-employee-meta-value">
+              {requisition.requiredByDate
+                ? formatProjectDate(requisition.requiredByDate)
+                : '—'}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {t('hr.form.warehouseLocation')}
+            </p>
+            <p className="erp-employee-meta-value truncate">
+              {requisition.warehouseLocation ?? '—'}
+            </p>
+          </div>
+        </div>
+        <div className="erp-users-stat">
+          <div className="min-w-0">
+            <p className="erp-users-stat-label">
+              {requisition.submittedAt
+                ? t('hr.table.submittedDate')
+                : t('hr.table.createdDate')}
+            </p>
+            <p className="erp-employee-meta-value">
+              {formatProjectDate(
+                requisition.submittedAt ?? requisition.createdAt,
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {requisition.status === 'RETURNED' && isOwner ? (
+        <Alert
+          type="warning"
+          showIcon
+          title={t('hr.messages.materialRequisitionReturned')}
+          action={
+            requisition.approvalRequestId ? (
+              <Button
+                size="small"
+                onClick={() =>
+                  router.push(`/approvals/${requisition.approvalRequestId}`)
+                }
+              >
+                {t('hr.buttons.viewInApprovals')}
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : null}
+
+      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
+        <div className="erp-pro-card min-w-0 overflow-hidden">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <DetailSection title={t('hr.section.requestDetails')}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <p className="erp-users-stat-label m-0">
+                    {t('hr.labels.purpose')}
+                  </p>
+                  <p className="m-0 mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-[#1a1a1a]">
+                    {requisition.purpose}
+                  </p>
+                </div>
+                {requisition.warehouseLocation ? (
+                  <div>
+                    <p className="erp-users-stat-label m-0">
+                      {t('hr.form.warehouseLocation')}
+                    </p>
+                    <p className="erp-users-cell-strong m-0 mt-1">
+                      {requisition.warehouseLocation}
+                    </p>
+                  </div>
+                ) : null}
+                {requisition.requiredByDate ? (
+                  <div>
+                    <p className="erp-users-stat-label m-0">
+                      {t('hr.form.requiredByDate')}
+                    </p>
+                    <p className="erp-users-cell-strong m-0 mt-1">
+                      {formatProjectDate(requisition.requiredByDate)}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </DetailSection>
+
+            <DetailSection title={t('hr.section.items')} bodyClassName="!p-0">
               <DataTable<MaterialRequisitionItem>
                 rowKey="id"
-                className="erp-pro-table"
+                className="erp-pro-table erp-users-table"
                 size="small"
                 columns={itemColumns}
                 dataSource={requisition.items}
                 pagination={false}
-                scroll={false}
-                footer={() => (
-                  <div className="flex justify-end pr-2 text-sm font-medium">
-                    <span style={{ color: tokens.colorTextSecondary }}>
-                      {t('hr.form.itemCount', {
-                        count: requisition.items.length,
-                      })}
-                    </span>
-                  </div>
-                )}
+                scroll={{ x: tableScrollX }}
+                locale={{
+                  emptyText: (
+                    <TableEmptyState
+                      icon={<Inbox size={28} strokeWidth={1.5} />}
+                      title={t('hr.empty.noItems')}
+                      description={t(
+                        'pages.hr.materialRequisition.itemsStepDescription',
+                      )}
+                    />
+                  ),
+                }}
+                footer={
+                  requisition.items.length > 0
+                    ? () => (
+                        <div className="flex justify-end px-3 py-2 text-sm">
+                          <span className="erp-users-cell-sub">
+                            {t('hr.form.itemCount', {
+                              count: requisition.items.length,
+                            })}
+                          </span>
+                        </div>
+                      )
+                    : undefined
+                }
               />
-            )}
-          </SectionCard>
+            </DetailSection>
 
-          {(requisition.documents?.length ?? 0) > 0 ? (
-            <SectionCard
-              title={t('hr.section.attachments')}
-              bodyClassName="px-3 py-4 sm:px-5"
-            >
-              <AttachmentDownloadList documents={requisition.documents} />
-            </SectionCard>
-          ) : null}
+            {(requisition.documents?.length ?? 0) > 0 ? (
+              <DetailSection title={t('hr.section.attachments')}>
+                <AttachmentDownloadList documents={requisition.documents!} />
+              </DetailSection>
+            ) : null}
+          </div>
         </div>
 
-        <div className="min-w-0">
+        <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-4">
           {tiers.length === 0 ? (
-            <SectionCard
-              title={t('hr.section.approvalChain')}
-              bodyClassName="px-3 py-4 sm:px-4"
-            >
-              <Typography.Text type="secondary">
-                {t('hr.empty.noApprovalChain')}
-              </Typography.Text>
-            </SectionCard>
+            <div className="erp-pro-card">
+              <DetailSection title={t('hr.section.approvalChain')}>
+                <p className="erp-users-cell-sub m-0">
+                  {t('hr.empty.noApprovalChain')}
+                </p>
+              </DetailSection>
+            </div>
           ) : (
             <ApprovalTierTimeline
               tiers={tiers}
               currentTier={requisition.approvalRequest?.currentTier ?? 1}
             />
           )}
-        </div>
+        </aside>
       </div>
 
       <Modal
