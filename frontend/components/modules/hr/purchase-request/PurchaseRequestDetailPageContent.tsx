@@ -20,6 +20,7 @@ import type { ColumnsType } from 'antd/es/table';
 import {
   DownloadOutlined,
   EditOutlined,
+  FilePdfOutlined,
   MoreOutlined,
   StopOutlined,
   UploadOutlined,
@@ -56,7 +57,9 @@ import {
 } from '@/lib/query/purchase-request';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
-import { exportPurchaseRequestDetailItemsExcel } from '@/lib/utils/purchase-request-export-excel';import {
+import { exportPurchaseRequestDetailItemsExcel } from '@/lib/utils/purchase-request-export-excel';
+import { exportPurchaseRequestPdf } from '@/lib/utils/purchase-request-pdf';
+import {
   formatCurrencyAmount,
   formatEtbAmount,
   formatPurchaseItemDescription,
@@ -70,6 +73,7 @@ import { exportPurchaseRequestDetailItemsExcel } from '@/lib/utils/purchase-requ
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
 
 const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string }[] = [
   { value: 'ETB', label: 'ETB' },
@@ -134,6 +138,7 @@ export default function PurchaseRequestDetailPageContent({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [itemForm] = Form.useForm<
     UpdatePurchaseRequestItemPayload & {
@@ -254,6 +259,66 @@ export default function PurchaseRequestDetailPageContent({
       messageApi.error(t('pages.hr.purchaseRequest.exportError'));
     } finally {
       setExporting(false);
+    }
+  }
+
+  function handleExportPdf(): void {
+    if (!request) {
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      const preparedBy = currentUser.data
+        ? formatUserName(currentUser.data)
+        : authUser
+          ? formatUserName(authUser)
+          : '—';
+      exportPurchaseRequestPdf({
+        request,
+        companyName: authUser?.companyName ?? 'Company',
+        preparedBy,
+        t,
+        labels: {
+          title: t('pages.hr.purchaseRequest.detail'),
+          generatedAt: t('hr.table.createdDate'),
+          preparedBy: t('hr.labels.createdBy'),
+          footer: t('pages.hr.purchaseRequest.pdfFooter'),
+          overview: t('pages.hr.purchaseRequest.pdfOverview'),
+          items: t('hr.section.items'),
+          documents: t('hr.section.attachments'),
+          field: t('pages.hr.purchaseRequest.pdfField'),
+          value: t('pages.hr.purchaseRequest.pdfValue'),
+          requestNumber: t('hr.table.requestNumber'),
+          status: t('hr.table.status'),
+          employee: t('hr.table.employee'),
+          requestTitle: t('hr.form.title'),
+          justification: t('hr.form.justification'),
+          vendorName: t('hr.form.vendor'),
+          vendorContact: t('hr.form.vendorContact'),
+          requiredByDate: t('hr.form.requiredByDate'),
+          project: t('hr.table.project'),
+          itemCount: t('hr.section.items'),
+          estimatedTotal: t('hr.form.estimatedTotal'),
+          submittedAt: t('hr.table.submittedDate'),
+          createdAt: t('hr.table.createdDate'),
+          itemName: t('hr.table.itemName'),
+          description: t('hr.table.descriptionWithModelSpec'),
+          quantity: t('hr.table.quantity'),
+          unit: t('hr.table.unit'),
+          unitPrice: t('hr.table.unitPrice'),
+          currency: t('hr.form.currency'),
+          lineTotal: t('hr.table.total'),
+          lineTotalEtb: t('hr.form.etbEquivalent'),
+          none: t('pages.hr.purchaseRequest.pdfNone'),
+          page: t('pages.hr.purchaseRequest.pdfPage'),
+          of: t('pages.hr.purchaseRequest.pdfOf'),
+        },
+      });
+      messageApi.success(t('pages.hr.purchaseRequest.exportPdfSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.purchaseRequest.exportPdfError'));
+    } finally {
+      setExportingPdf(false);
     }
   }
 
@@ -461,6 +526,14 @@ export default function PurchaseRequestDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <Button
+              icon={<FilePdfOutlined />}
+              loading={exportingPdf}
+              onClick={handleExportPdf}
+              aria-label={t('pages.hr.purchaseRequest.exportPdf')}
+            >
+              {isNarrow ? undefined : t('pages.hr.purchaseRequest.exportPdf')}
+            </Button>
             {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}

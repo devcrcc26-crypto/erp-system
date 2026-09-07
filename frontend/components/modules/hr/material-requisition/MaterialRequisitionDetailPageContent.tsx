@@ -17,6 +17,7 @@ import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DownloadOutlined,
+  FilePdfOutlined,
   MoreOutlined,
   StopOutlined,
   UploadOutlined,
@@ -57,9 +58,11 @@ import {
   materialRequisitionStatusVariant,
 } from '@/lib/utils/material-requisition-display';
 import { exportMaterialRequisitionDetailItemsExcel } from '@/lib/utils/material-requisition-export-excel';
+import { exportMaterialRequisitionPdf } from '@/lib/utils/material-requisition-pdf';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { formatUserName } from '@/lib/utils/user-display';
 
 function DetailSection({
   title,
@@ -117,6 +120,7 @@ export default function MaterialRequisitionDetailPageContent({
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [itemForm] = Form.useForm<UpdateMaterialRequisitionItemPayload>();
 
@@ -228,6 +232,61 @@ export default function MaterialRequisitionDetailPageContent({
       messageApi.error(t('pages.hr.materialRequisition.exportError'));
     } finally {
       setExporting(false);
+    }
+  }
+
+  function handleExportPdf(): void {
+    if (!requisition) {
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      const preparedBy = currentUser.data
+        ? formatUserName(currentUser.data)
+        : authUser
+          ? formatUserName(authUser)
+          : '—';
+      exportMaterialRequisitionPdf({
+        requisition,
+        companyName: authUser?.companyName ?? 'Company',
+        preparedBy,
+        t,
+        labels: {
+          title: t('pages.hr.materialRequisition.detail'),
+          generatedAt: t('hr.table.createdDate'),
+          preparedBy: t('hr.labels.createdBy'),
+          footer: t('pages.hr.materialRequisition.pdfFooter'),
+          overview: t('pages.hr.materialRequisition.pdfOverview'),
+          items: t('hr.section.items'),
+          documents: t('hr.section.attachments'),
+          field: t('pages.hr.materialRequisition.pdfField'),
+          value: t('pages.hr.materialRequisition.pdfValue'),
+          requestNumber: t('hr.table.requestNumber'),
+          status: t('hr.table.status'),
+          employee: t('hr.table.employee'),
+          requestTitle: t('hr.form.title'),
+          purpose: t('hr.labels.purpose'),
+          warehouseLocation: t('hr.form.warehouseLocation'),
+          requiredByDate: t('hr.form.requiredByDate'),
+          project: t('hr.table.project'),
+          itemCount: t('hr.section.items'),
+          submittedAt: t('hr.table.submittedDate'),
+          createdAt: t('hr.table.createdDate'),
+          itemName: t('hr.table.itemName'),
+          itemCode: t('hr.table.itemCode'),
+          description: t('hr.form.description'),
+          quantity: t('hr.form.quantity'),
+          unit: t('hr.form.unit'),
+          none: t('pages.hr.materialRequisition.pdfNone'),
+          page: t('pages.hr.materialRequisition.pdfPage'),
+          of: t('pages.hr.materialRequisition.pdfOf'),
+        },
+      });
+      messageApi.success(t('pages.hr.materialRequisition.exportPdfSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.materialRequisition.exportPdfError'));
+    } finally {
+      setExportingPdf(false);
     }
   }
 
@@ -401,6 +460,16 @@ export default function MaterialRequisitionDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <Button
+              icon={<FilePdfOutlined />}
+              loading={exportingPdf}
+              onClick={handleExportPdf}
+              aria-label={t('pages.hr.materialRequisition.exportPdf')}
+            >
+              {isNarrow
+                ? undefined
+                : t('pages.hr.materialRequisition.exportPdf')}
+            </Button>
             {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}
