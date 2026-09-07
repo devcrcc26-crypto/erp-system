@@ -1,14 +1,12 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Button,
   DatePicker,
-  Dropdown,
   Grid,
   Input,
   Select,
-  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -16,13 +14,9 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  DownloadOutlined,
-  MoreOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   ShoppingOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
@@ -46,15 +40,12 @@ import {
   useConsumablesRequisitionsAll,
 } from '@/lib/query/consumables-requisition';
 import { useUsersDirectory } from '@/lib/query/users';
-import { useAuthStore } from '@/stores/auth.store';
 import {
   consumablesRequisitionStatusVariant,
   formatConsumablesRequisitionEmployeeName,
   formatConsumablesRequisitionStatus,
 } from '@/lib/utils/consumables-requisition-display';
 import {
-  exportConsumablesRequisitionItemsExcel,
-  exportConsumablesRequisitionsExcel,
 } from '@/lib/utils/consumables-requisition-export-excel';
 import {
   filterConsumablesRequisitions,
@@ -64,6 +55,8 @@ import {
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
+import { buildConsumablesRequisitionExportSheets } from '@/lib/utils/requisition-export';
 
 const PENDING_STATUSES = statusesForConsumablesRequisitionMode('pending');
 const APPROVED_STATUSES = statusesForConsumablesRequisitionMode('approved');
@@ -123,7 +116,6 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const messageApi = useAppMessage();
-  const authUser = useAuthStore((state) => state.user);
   const { params, resetPage, bindMeta } = useTablePagination(10);
   const importPreview = useConsumablesRequisitionImportPreview();
   const importCommit = useConsumablesRequisitionImport();
@@ -136,7 +128,6 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
-  const [exporting, setExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
   const listQuery = useConsumablesRequisitionsAll({}, true);
@@ -216,40 +207,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
     resetPage();
   }
 
-  const handleExportRequisitions = useCallback(async (): Promise<void> => {
-    setExporting(true);
-    try {
-      await exportConsumablesRequisitionsExcel({
-        companyName: authUser?.companyName ?? 'Company',
-        sheetName: t('pages.hr.consumables.exportSheetName'),
-        rows: filtered,
-      });
-      messageApi.success(t('pages.hr.consumables.exportSuccess'));
-    } catch {
-      messageApi.error(t('pages.hr.consumables.exportError'));
-    } finally {
-      setExporting(false);
-    }
-  }, [authUser?.companyName, filtered, messageApi, t]);
 
-  const handleExportItems = useCallback(async (): Promise<void> => {
-    setExporting(true);
-    try {
-      const details = await fetchConsumablesRequisitionDetails(
-        filtered.map((row) => row.id),
-      );
-      await exportConsumablesRequisitionItemsExcel({
-        companyName: authUser?.companyName ?? 'Company',
-        sheetName: t('pages.hr.consumables.exportItemsSheetName'),
-        requisitions: details,
-      });
-      messageApi.success(t('pages.hr.consumables.exportItemsSuccess'));
-    } catch {
-      messageApi.error(t('pages.hr.consumables.exportError'));
-    } finally {
-      setExporting(false);
-    }
-  }, [authUser?.companyName, filtered, messageApi, t]);
 
   const hasFilters =
     Boolean(appliedSearch.trim()) ||
@@ -469,95 +427,38 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {isCompact ? (
-              <>
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: 'export-requisitions',
-                        icon: <DownloadOutlined />,
-                        label: t('pages.hr.consumables.exportRequisitions'),
-                        disabled: exporting,
-                        onClick: () => void handleExportRequisitions(),
-                      },
-                      {
-                        key: 'export-items',
-                        icon: <DownloadOutlined />,
-                        label: t('pages.hr.consumables.exportItems'),
-                        disabled: exporting || filtered.length === 0,
-                        onClick: () => void handleExportItems(),
-                      },
-                      ...(canViewHr
-                        ? [
-                            {
-                              key: 'import',
-                              icon: <UploadOutlined />,
-                              label: t('common.importFromExcel'),
-                              onClick: () => setImportOpen(true),
-                            },
-                          ]
-                        : []),
-                    ],
-                  }}
-                  trigger={['click']}
-                >
-                  <Button
-                    icon={<MoreOutlined />}
-                    aria-label={t('common.actions')}
-                  />
-                </Dropdown>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => router.push('/approvals/new/consumables')}
-                  aria-label={t('hr.buttons.newConsumables')}
-                />
-              </>
-            ) : (
-              <Space.Compact>
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: 'export-requisitions',
-                        icon: <DownloadOutlined />,
-                        label: t('pages.hr.consumables.exportRequisitions'),
-                        disabled: exporting,
-                        onClick: () => void handleExportRequisitions(),
-                      },
-                      {
-                        key: 'export-items',
-                        icon: <DownloadOutlined />,
-                        label: t('pages.hr.consumables.exportItems'),
-                        disabled: exporting || filtered.length === 0,
-                        onClick: () => void handleExportItems(),
-                      },
-                    ],
-                  }}
-                  trigger={['click']}
-                >
-                  <Button icon={<DownloadOutlined />} loading={exporting}>
-                    {t('users.exportExcel')}
-                  </Button>
-                </Dropdown>
-                {canViewHr ? (
-                  <Button
-                    icon={<UploadOutlined />}
-                    onClick={() => setImportOpen(true)}
-                  >
-                    {t('common.importFromExcel')}
-                  </Button>
-                ) : null}
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => router.push('/approvals/new/consumables')}
-                >
-                  {t('hr.buttons.newConsumables')}
-                </Button>
-              </Space.Compact>
-            )}
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export-requisitions',
+                  label: t('pages.hr.consumables.exportRequisitions'),
+                  filePrefix: 'consumables-requisitions',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildConsumablesRequisitionExportSheets(filtered),
+                },
+                {
+                  key: 'export-items',
+                  label: t('pages.hr.consumables.exportItems'),
+                  filePrefix: 'consumables-requisitions-with-items',
+                  disabled: filtered.length === 0,
+                  buildSheets: async () =>
+                    buildConsumablesRequisitionExportSheets(
+                      filtered,
+                      await fetchConsumablesRequisitionDetails(
+                        filtered.map((row) => row.id),
+                      ),
+                    ),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={
+                {
+                  label: t('hr.buttons.newConsumables'),
+                  onClick: () => router.push('/approvals/new/consumables'),
+                }
+              }
+            />
           </div>
         </div>
 

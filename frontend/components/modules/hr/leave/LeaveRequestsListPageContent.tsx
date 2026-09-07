@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -9,7 +9,6 @@ import {
   Grid,
   Input,
   Select,
-  Space,
   Spin,
   Tooltip,
   type MenuProps,
@@ -20,13 +19,10 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   DeleteOutlined,
-  DownloadOutlined,
   EditOutlined,
   MoreOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UploadOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -69,12 +65,12 @@ import {
   leaveStatusVariant,
   leaveTypeVariant,
 } from '@/lib/utils/leave-display';
-import { exportLeaveRequestsExcel } from '@/lib/utils/leave-export-excel';
 import { filterLeaveRequests } from '@/lib/utils/leave-list-filter';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import { useAuthStore } from '@/stores/auth.store';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
+import { buildLeaveRequestExportSheets } from '@/lib/utils/leave-export';
 
 type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -160,8 +156,6 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   const deleteMutation = useDeleteLeaveRequest();
   const importPreview = useLeaveRequestImportPreview();
   const importCommit = useLeaveRequestImport();
-  const authUser = useAuthStore((state) => state.user);
-  const [exporting, setExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
   const [search, setSearch] = useState('');
@@ -290,21 +284,6 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     resetPage();
   }
 
-  const handleExportExcel = useCallback(async (): Promise<void> => {
-    setExporting(true);
-    try {
-      await exportLeaveRequestsExcel({
-        companyName: authUser?.companyName ?? 'Company',
-        sheetName: t('pages.hr.leave.exportSheetName'),
-        rows: filtered,
-      });
-      messageApi.success(t('pages.hr.leave.exportSuccess'));
-    } catch {
-      messageApi.error(t('pages.hr.leave.exportError'));
-    } finally {
-      setExporting(false);
-    }
-  }, [authUser?.companyName, filtered, messageApi, t]);
 
   function handleStatusMode(mode: StatusMode): void {
     setStatusMode(mode);
@@ -581,75 +560,27 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {isCompact ? (
-              <>
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: 'export',
-                        icon: <DownloadOutlined />,
-                        label: t('users.exportExcel'),
-                        disabled: exporting,
-                        onClick: () => void handleExportExcel(),
-                      },
-                      ...(canViewHr
-                        ? [
-                            {
-                              key: 'import',
-                              icon: <UploadOutlined />,
-                              label: t('common.importFromExcel'),
-                              onClick: () => setImportOpen(true),
-                            },
-                          ]
-                        : []),
-                    ],
-                  }}
-                  trigger={['click']}
-                >
-                  <Button
-                    icon={<MoreOutlined />}
-                    aria-label={t('common.actions')}
-                  />
-                </Dropdown>
-                {canCreate ? (
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => router.push('/approvals/new/leave-request')}
-                  >
-                    {t('hr.buttons.newLeaveRequest')}
-                  </Button>
-                ) : null}
-              </>
-            ) : (
-              <Space.Compact>
-                <Button
-                  icon={<DownloadOutlined />}
-                  loading={exporting}
-                  onClick={() => void handleExportExcel()}
-                >
-                  {t('users.exportExcel')}
-                </Button>
-                {canViewHr ? (
-                  <Button
-                    icon={<UploadOutlined />}
-                    onClick={() => setImportOpen(true)}
-                  >
-                    {t('common.importFromExcel')}
-                  </Button>
-                ) : null}
-                {canCreate ? (
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => router.push('/approvals/new/leave-request')}
-                  >
-                    {t('hr.buttons.newLeaveRequest')}
-                  </Button>
-                ) : null}
-              </Space.Compact>
-            )}
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export',
+                  label: undefined,
+                  filePrefix: 'leave-requests',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildLeaveRequestExportSheets(filtered),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={
+                canCreate
+                  ? {
+                      label: t('hr.buttons.newLeaveRequest'),
+                      onClick: () => router.push('/approvals/new/leave-request'),
+                    }
+                  : undefined
+              }
+            />
           </div>
         </div>
 

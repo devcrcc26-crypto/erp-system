@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -8,7 +8,6 @@ import {
   Grid,
   Input,
   Select,
-  Space,
   Spin,
   Tooltip,
   type MenuProps,
@@ -17,15 +16,12 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
-  DownloadOutlined,
   EditOutlined,
   FileTextOutlined,
   MoreOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   StopOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
@@ -60,7 +56,6 @@ import {
   formatEmployeeContractStatus,
   formatEmployeeContractType,
 } from '@/lib/utils/employee-contract-display';
-import { exportEmployeeContractsExcel } from '@/lib/utils/employee-contract-export-excel';
 import {
   filterEmployeeContracts,
   isEmployeeContractExpiringSoon,
@@ -69,7 +64,8 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import { useAuthStore } from '@/stores/auth.store';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
+import { buildEmployeeContractExportSheets } from '@/lib/utils/employee-contract-export';
 
 const STAT_ACCENT = {
   teal: { bg: '#E1F5EE', fg: '#1D9E75' },
@@ -128,8 +124,6 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
   const deleteMutation = useDeleteEmployeeContractRecord();
   const importPreview = useEmployeeContractImportPreview();
   const importCommit = useEmployeeContractImport();
-  const authUser = useAuthStore((state) => state.user);
-  const [exporting, setExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
   const [search, setSearch] = useState('');
@@ -223,21 +217,6 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     resetPage();
   }
 
-  const handleExportExcel = useCallback(async (): Promise<void> => {
-    setExporting(true);
-    try {
-      await exportEmployeeContractsExcel({
-        companyName: authUser?.companyName ?? 'Company',
-        sheetName: t('pages.hr.employeeContract.exportSheetName'),
-        rows: filtered,
-      });
-      messageApi.success(t('pages.hr.employeeContract.exportSuccess'));
-    } catch {
-      messageApi.error(t('pages.hr.employeeContract.exportError'));
-    } finally {
-      setExporting(false);
-    }
-  }, [authUser?.companyName, filtered, messageApi, t]);
 
   function handleStatusMode(mode: EmployeeContractStatusMode): void {
     setStatusMode(mode);
@@ -517,75 +496,27 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {isCompact ? (
-              <>
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: 'export',
-                        icon: <DownloadOutlined />,
-                        label: t('users.exportExcel'),
-                        disabled: exporting,
-                        onClick: () => void handleExportExcel(),
-                      },
-                      ...(canViewHr
-                        ? [
-                            {
-                              key: 'import',
-                              icon: <UploadOutlined />,
-                              label: t('common.importFromExcel'),
-                              onClick: () => setImportOpen(true),
-                            },
-                          ]
-                        : []),
-                    ],
-                  }}
-                  trigger={['click']}
-                >
-                  <Button
-                    icon={<MoreOutlined />}
-                    aria-label={t('common.actions')}
-                  />
-                </Dropdown>
-                {canViewHr ? (
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => router.push('/hr/employee-contract/new')}
-                  >
-                    {t('hr.buttons.newEmployeeContract')}
-                  </Button>
-                ) : null}
-              </>
-            ) : (
-              <Space.Compact>
-                <Button
-                  icon={<DownloadOutlined />}
-                  loading={exporting}
-                  onClick={() => void handleExportExcel()}
-                >
-                  {t('users.exportExcel')}
-                </Button>
-                {canViewHr ? (
-                  <Button
-                    icon={<UploadOutlined />}
-                    onClick={() => setImportOpen(true)}
-                  >
-                    {t('common.importFromExcel')}
-                  </Button>
-                ) : null}
-                {canViewHr ? (
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => router.push('/hr/employee-contract/new')}
-                  >
-                    {t('hr.buttons.newEmployeeContract')}
-                  </Button>
-                ) : null}
-              </Space.Compact>
-            )}
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export',
+                  label: undefined,
+                  filePrefix: 'employee-contracts',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildEmployeeContractExportSheets(filtered),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={
+                canViewHr
+                  ? {
+                      label: t('hr.buttons.newEmployeeContract'),
+                      onClick: () => router.push('/hr/employee-contract/new'),
+                    }
+                  : undefined
+              }
+            />
           </div>
         </div>
 

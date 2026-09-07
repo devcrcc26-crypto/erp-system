@@ -13,7 +13,6 @@ import {
   BankOutlined,
   CheckCircleOutlined,
   EditOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   TeamOutlined,
@@ -34,7 +33,11 @@ import {
   PER_DIEM_CATEGORY_FIELDS,
   PER_DIEM_DESTINATION_CATEGORIES,
 } from '@/lib/constants/per-diem-destination-categories';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
+import ImportModal from '@/components/modules/hr/import-export/ImportModal';
 import { useEmployeePerDiemRatesAll } from '@/lib/query/per-diem';
+import { buildEmployeePerDiemRateExportSheets } from '@/lib/utils/per-diem-export';
+import { employeePerDiemRateImportSchema } from '@/lib/utils/hr-import-configs';
 import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import {
   countActivePerDiemCategories,
@@ -119,6 +122,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
+  const [importOpen, setImportOpen] = useState(false);
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
@@ -342,6 +346,16 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page">
+      {importOpen ? (
+        <ImportModal
+          schema={employeePerDiemRateImportSchema}
+          title={t('hr.exportImport.employeePerDiemRates.title')}
+          description={t('hr.exportImport.employeePerDiemRates.description')}
+          onClose={() => setImportOpen(false)}
+          onImported={() => void listQuery.refetch()}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -405,16 +419,24 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/hr/employee-per-diem-rates/new')}
-              aria-label={t('pages.hr.employeePerDiemRates.addRates')}
-            >
-              {isNarrow
-                ? undefined
-                : t('pages.hr.employeePerDiemRates.addRates')}
-            </Button>
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'rates',
+                  label: t('hr.exportImport.employeePerDiemRates.export'),
+                  filePrefix: 'employee-per-diem-rates',
+                  disabled: filtered.length === 0,
+                  buildSheets: () =>
+                    buildEmployeePerDiemRateExportSheets(filtered),
+                },
+              ]}
+              onImport={canManagePerDiemRates ? () => setImportOpen(true) : undefined}
+              primary={{
+                label: t('pages.hr.employeePerDiemRates.addRates'),
+                onClick: () => router.push('/hr/employee-per-diem-rates/new'),
+              }}
+            />
           </div>
         </div>
 

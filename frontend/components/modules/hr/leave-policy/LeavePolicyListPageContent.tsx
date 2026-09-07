@@ -16,7 +16,6 @@ import {
   EditOutlined,
   FileTextOutlined,
   MoreOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   StopOutlined,
@@ -35,7 +34,11 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import type { LeavePolicy } from '@/lib/api/leave-policy.types';
 import type { PaginationMeta } from '@/lib/api/types';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
+import ImportModal from '@/components/modules/hr/import-export/ImportModal';
 import { useDeleteLeavePolicy, useLeavePolicyList } from '@/lib/query/leave-policy';
+import { buildLeavePolicyExportSheets } from '@/lib/utils/leave-policy-export';
+import { leavePolicyImportSchema } from '@/lib/utils/hr-import-configs';
 import {
   filterLeavePolicies,
   type LeavePolicyStatusMode,
@@ -100,6 +103,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  const [importOpen, setImportOpen] = useState(false);
   const listQuery = useLeavePolicyList(canViewHr);
   const deleteMutation = useDeleteLeavePolicy();
   const { params, resetPage, bindMeta } = useTablePagination(10);
@@ -305,6 +309,16 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-leave-policy-page">
+      {importOpen ? (
+        <ImportModal
+          schema={leavePolicyImportSchema}
+          title={t('hr.exportImport.leavePolicies.title')}
+          description={t('hr.exportImport.leavePolicies.description')}
+          onClose={() => setImportOpen(false)}
+          onImported={() => void listQuery.refetch()}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -383,14 +397,23 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push(NEW_PATH)}
-              aria-label={t('hr.leavePolicy.new')}
-            >
-              {isNarrow ? undefined : t('hr.leavePolicy.new')}
-            </Button>
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'policies',
+                  label: t('hr.exportImport.leavePolicies.export'),
+                  filePrefix: 'leave-policies',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildLeavePolicyExportSheets(filtered),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={{
+                label: t('hr.leavePolicy.new'),
+                onClick: () => router.push(NEW_PATH),
+              }}
+            />
           </div>
         </div>
 

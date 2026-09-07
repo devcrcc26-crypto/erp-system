@@ -12,7 +12,6 @@ import {
   Input,
   Popover,
   Select,
-  Space,
   Tooltip,
   type MenuProps,
 } from 'antd';
@@ -24,14 +23,11 @@ import type {
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
-  DownloadOutlined,
   EditOutlined,
   FilterOutlined,
   MoreOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UploadOutlined,
   UserDeleteOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -43,7 +39,6 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import UserImportModal from '@/components/modules/users/UserImportModal';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useAppMessage } from '@/hooks/use-app-message';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
@@ -58,7 +53,8 @@ import {
   useEngineeringDisciplineOptions,
   usePositions,
 } from '@/lib/query/org';
-import { exportUsersExcel } from '@/lib/utils/users-export-excel';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
+import { buildUsersExportSheets } from '@/lib/utils/users-export';
 import {
   filterAndSortUsers,
   paginateUsers,
@@ -69,7 +65,6 @@ import {
   userStatusLabel,
   userStatusVariant,
 } from '@/lib/utils/user-status';
-import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 
 const COLUMN_SORT_FIELD: Record<string, UsersListSortField> = {
@@ -90,43 +85,6 @@ function formatUserRoleNames(user: User): string {
   return top || '-';
 }
 
-function buildUsersExportLabels(
-  t: (key: string, vars?: Record<string, string | number>) => string,
-) {
-  return {
-    sheetName: t('users.exportSheetName'),
-    email: t('common.email'),
-    firstName: t('users.form.firstName'),
-    lastName: t('users.form.lastName'),
-    middleName: t('users.form.middleName'),
-    chineseName: t('users.form.chineseName'),
-    role: t('common.role'),
-    phone: t('users.exportTable.phone'),
-    discipline: t('common.discipline'),
-    gender: t('users.form.gender'),
-    department: t('common.department'),
-    position: t('common.position'),
-    employeeId: t('users.form.employeeId'),
-    nationality: t('users.form.nationality'),
-    employeeType: t('users.form.employeeType'),
-    dateOfBirth: t('users.form.dateOfBirth'),
-    nationalId: t('users.form.nationalId'),
-    educationLevel: t('users.form.educationLevel'),
-    fieldOfStudy: t('users.form.fieldOfStudy'),
-    experienceStartDate: t('users.form.experienceStartDate'),
-    yearsOfExperience: t('users.form.yearsOfExperience'),
-    addressCountry: t('users.form.addressCountry'),
-    addressRegion: t('users.form.addressRegion'),
-    addressCity: t('users.form.addressCity'),
-    addressSubcity: t('users.form.addressSubcity'),
-    addressWoreda: t('users.form.addressWoreda'),
-    addressHouseNumber: t('users.form.addressHouseNumber'),
-    leavePolicy: t('users.form.leavePolicy'),
-    emergencyContacts: t('users.sectionEmergencyContact'),
-    status: t('common.status'),
-    lastLogin: t('users.exportTable.lastLogin'),
-  };
-}
 
 function isPendingActivation(user: User): boolean {
   return Boolean(user.isActive && user.email && !user.emailVerifiedAt);
@@ -247,15 +205,11 @@ function UserStatusIndicator({
 
 export default function UsersPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
-  const messageApi = useAppMessage();
   const router = useRouter();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
-  const authUser = useAuthStore((state) => state.user);
   const { params, bindMeta, resetPage } = useTablePagination(10);
-  const [exportingUsers, setExportingUsers] = useState(false);
-  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -400,40 +354,6 @@ export default function UsersPageContent(): React.ReactNode {
     [filteredUsers, params.page, params.limit],
   );
 
-  const companyName = authUser?.companyName ?? 'Company';
-
-  const handleExportExcel = useCallback(async (): Promise<void> => {
-    setExportingUsers(true);
-    try {
-      const generatedAt = new Date().toISOString();
-
-      await exportUsersExcel({
-        companyName,
-        generatedAt,
-        labels: buildUsersExportLabels(t),
-        users: allUsers,
-        formatUserRoles: formatUserRoleNames,
-        statusLabel: (user) => userStatusLabel(user, t),
-      });
-      messageApi.success(t('users.exportSuccess'));
-    } catch {
-      messageApi.error(t('users.exportError'));
-    } finally {
-      setExportingUsers(false);
-    }
-  }, [allUsers, companyName, messageApi, t]);
-
-  function handleResetFilters(): void {
-    setSearch('');
-    setAppliedSearch('');
-    setDisciplineFilter(undefined);
-    setDepartmentFilter(undefined);
-    setPositionFilter(undefined);
-    setStatusFilter(undefined);
-    setEmployeeTypeFilter(undefined);
-    setNationalityFilter(undefined);
-    resetPage();
-  }
 
   const moreFilterCount = useMemo(() => {
     let count = 0;
@@ -655,65 +575,27 @@ export default function UsersPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {isCompact ? (
-              <>
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: 'export',
-                        icon: <DownloadOutlined />,
-                        label: t('users.exportExcel'),
-                        disabled: exportingUsers,
-                        onClick: () => void handleExportExcel(),
-                      },
-                      {
-                        key: 'import',
-                        icon: <UploadOutlined />,
-                        label: t('common.importFromExcel'),
-                        onClick: () => setImportOpen(true),
-                      },
-                    ],
-                  }}
-                  trigger={['click']}
-                >
-                  <Button
-                    icon={<MoreOutlined />}
-                    aria-label={t('users.moreActions')}
-                  />
-                </Dropdown>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => router.push('/users/new')}
-                >
-                  {isNarrow ? t('users.addEmployeeShort') : t('users.addEmployee')}
-                </Button>
-              </>
-            ) : (
-              <Space.Compact>
-                <Button
-                  icon={<DownloadOutlined />}
-                  loading={exportingUsers}
-                  onClick={() => void handleExportExcel()}
-                >
-                  {t('users.exportExcel')}
-                </Button>
-                <Button
-                  icon={<UploadOutlined />}
-                  onClick={() => setImportOpen(true)}
-                >
-                  {t('common.importFromExcel')}
-                </Button>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => router.push('/users/new')}
-                >
-                  {t('users.addEmployee')}
-                </Button>
-              </Space.Compact>
-            )}
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export',
+                  filePrefix: 'users',
+                  disabled: filteredUsers.length === 0,
+                  buildSheets: () =>
+                    buildUsersExportSheets(
+                      filteredUsers,
+                      formatUserRoleNames,
+                      (user) => userStatusLabel(user, t),
+                    ),
+                },
+              ]}
+              onImport={() => setImportOpen(true)}
+              primary={{
+                label: t('users.addEmployee'),
+                onClick: () => router.push('/users/new'),
+              }}
+            />
           </div>
         </div>
 
