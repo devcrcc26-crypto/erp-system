@@ -8,11 +8,13 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { memoryStorage } from 'multer';
@@ -29,10 +31,13 @@ import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
+import { BusinessTripImportPreviewResponseDto } from '../../application/dtos/business-trip-import.dtos';
 import {
   ListBusinessTripsDto,
   SubmitBusinessTripDto,
 } from '../../application/dtos/business-trip.dtos';
+import { BusinessTripImportService } from '../../application/services/business-trip-import.service';
 import { BusinessTripService } from '../../application/services/business-trip.service';
 
 /**
@@ -120,7 +125,17 @@ async function parseBusinessTripSubmitDto(
 )
 @Controller('hr/business-trips')
 export class BusinessTripController {
-  constructor(private readonly businessTripService: BusinessTripService) {}
+  constructor(
+    private readonly businessTripService: BusinessTripService,
+    private readonly businessTripImportService: BusinessTripImportService,
+  ) {}
+
+  private importCtx(user: AuthenticatedUser): {
+    companyId: string;
+    userId: string;
+  } {
+    return { companyId: user.companyId, userId: user.userId };
+  }
 
   @Get('selectable-passengers')
   @DelegatePermissionCheck()
@@ -237,6 +252,83 @@ export class BusinessTripController {
     @Query() query: ListBusinessTripsDto,
   ): Promise<unknown> {
     return this.businessTripService.listTrips(query, companyId, user.userId);
+  }
+
+  @Get(':id/passengers/import/template')
+  @ApiOperation({
+    summary: 'Download passenger import template for one business trip',
+  })
+  async downloadTripImportTemplate(): Promise<StreamableFile> {
+    const buffer = await this.businessTripImportService.buildTripTemplate();
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition:
+        'attachment; filename="business-trip-passengers-import-template.xlsx"',
+    });
+  }
+
+  @Post(':id/passengers/import/preview')
+  @ApiOperation({
+    summary: 'Validate passenger import for one business trip without writing',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  previewTripImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<BusinessTripImportPreviewResponseDto> {
+    return this.businessTripImportService.previewTripImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
+  }
+
+  @Post(':id/passengers/import')
+  @ApiOperation({
+    summary: 'Import passengers into one DRAFT business trip',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  commitTripImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ImportCommitResponseDto> {
+    return this.businessTripImportService.commitTripImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
   }
 
   @Get(':id')

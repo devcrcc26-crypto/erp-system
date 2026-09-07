@@ -337,6 +337,14 @@
         "reviewStepDescription": "Confirm the trip summary before submitting for approval.",
         "searchPlaceholder": "Search by trip # or destination",
         "emptyFiltered": "No business trips match your filters",
+        "exportSheetName": "Business Trips",
+        "exportPassengersSheetName": "Business Trip Passengers",
+        "exportTripPassengersSheetName": "Passengers",
+        "exportSuccess": "Business trips Excel downloaded.",
+        "exportPassengersSuccess": "Business trip passengers Excel downloaded.",
+        "exportError": "Failed to export business trips Excel.",
+        "exportTrips": "Export trips",
+        "exportPassengers": "Export passengers",
         "stats": {
           "total": "Total",
           "pending": "Pending",
@@ -1894,6 +1902,26 @@
         "created": "{{count}} passenger created.",
         "createdPlural": "{{count}} passengers created.",
         "summary": "{{created}} passengers imported into this application"
+      },
+      "businessTrips": {
+        "title": "Import business trip passengers",
+        "description": "Upload a spreadsheet to add passengers to employee DRAFT business trips. Trips are created by submitter + route when needed. Tickets are not imported. Trips are not auto-submitted.",
+        "requiredColumns": "Required: submitterEmail or submitterId, tripType, originCountry, originCity, destinationCountry, destinationCity, departureDate, purpose, ticketClass, passengerEmail or passengerId. Optional: returnDate, host*, costs, accommodation*, perDiemRequired, notes, passportNumber, visaRequired, visaStatus.",
+        "importRows": "Import {{count}} passenger",
+        "importRowsPlural": "Import {{count}} passengers",
+        "created": "{{count}} passenger created.",
+        "createdPlural": "{{count}} passengers created.",
+        "summary": "{{created}} passengers imported"
+      },
+      "businessTripPassengers": {
+        "title": "Import passengers",
+        "description": "Upload a spreadsheet to add passengers to this DRAFT business trip. Tickets are attached in the UI after approval.",
+        "requiredColumns": "Required: passengerEmail or passengerId. Optional: passportNumber, visaRequired, visaStatus.",
+        "importRows": "Import {{count}} passenger",
+        "importRowsPlural": "Import {{count}} passengers",
+        "created": "{{count}} passenger created.",
+        "createdPlural": "{{count}} passengers created.",
+        "summary": "{{created}} passengers imported into this trip"
       }
     },
     "assetStatus": {

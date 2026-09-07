@@ -337,6 +337,14 @@
         "reviewStepDescription": "提交审批前请确认出差摘要。",
         "searchPlaceholder": "按出差单号或目的地搜索",
         "emptyFiltered": "没有符合筛选条件的出差申请",
+        "exportSheetName": "第三国出差",
+        "exportPassengersSheetName": "出差乘客",
+        "exportTripPassengersSheetName": "乘客",
+        "exportSuccess": "出差申请 Excel 已下载。",
+        "exportPassengersSuccess": "出差乘客 Excel 已下载。",
+        "exportError": "导出出差申请 Excel 失败。",
+        "exportTrips": "导出申请",
+        "exportPassengers": "导出乘客",
         "stats": {
           "total": "全部",
           "pending": "待处理",
@@ -1888,6 +1896,26 @@
       "flightPassengers": {
         "title": "导入乘客",
         "description": "上传表格向本草稿机票申请添加乘客。批准后请在界面上传机票。",
+        "requiredColumns": "必填：passengerEmail 或 passengerId。可选：passportNumber、visaRequired、visaStatus。",
+        "importRows": "导入 {{count}} 位乘客",
+        "importRowsPlural": "导入 {{count}} 位乘客",
+        "created": "已创建 {{count}} 位乘客。",
+        "createdPlural": "已创建 {{count}} 位乘客。",
+        "summary": "已向本单导入 {{created}} 位乘客"
+      },
+      "businessTrips": {
+        "title": "从 Excel 导入出差乘客",
+        "description": "上传表格为员工草稿出差申请添加乘客。按提交人 + 行程归入或创建草稿申请。不会导入机票。不会自动提交审批。",
+        "requiredColumns": "必填：submitterEmail 或 submitterId、tripType、originCountry、originCity、destinationCountry、destinationCity、departureDate、purpose、ticketClass、passengerEmail 或 passengerId。可选：returnDate、接待方、费用、住宿相关、perDiemRequired、notes、passportNumber、visaRequired、visaStatus。",
+        "importRows": "导入 {{count}} 位乘客",
+        "importRowsPlural": "导入 {{count}} 位乘客",
+        "created": "已创建 {{count}} 位乘客。",
+        "createdPlural": "已创建 {{count}} 位乘客。",
+        "summary": "已导入 {{created}} 位乘客"
+      },
+      "businessTripPassengers": {
+        "title": "导入乘客",
+        "description": "上传表格向本草稿出差申请添加乘客。批准后请在界面上传机票。",
         "requiredColumns": "必填：passengerEmail 或 passengerId。可选：passportNumber、visaRequired、visaStatus。",
         "importRows": "导入 {{count}} 位乘客",
         "importRowsPlural": "导入 {{count}} 位乘客",

@@ -2,12 +2,17 @@
 
 import { useMemo, useState } from 'react';
 import { Alert, Button, Grid, Skeleton, Space } from 'antd';
-import { StopOutlined } from '@ant-design/icons';
+import {
+  DownloadOutlined,
+  StopOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import BusinessTripCurrentStepBanner from '@/components/modules/hr/business-trip/BusinessTripCurrentStepBanner';
 import BusinessTripTicketAssignmentPanel from '@/components/modules/hr/business-trip/BusinessTripTicketAssignmentPanel';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -23,10 +28,14 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type { BusinessTripPassenger } from '@/lib/api/business-trip.types';
 import {
+  downloadBusinessTripPassengersImportTemplate,
   useBusinessTrip,
+  useBusinessTripPassengersImport,
+  useBusinessTripPassengersImportPreview,
   useCancelBusinessTrip,
 } from '@/lib/query/business-trip';
 import { useCurrentUser } from '@/lib/query/profile';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   businessTripStatusVariant,
   formatBusinessTripStatus,
@@ -37,6 +46,7 @@ import {
   formatVisaStatus,
   tripTypeVariant,
 } from '@/lib/utils/business-trip-display';
+import { exportBusinessTripDetailPassengersExcel } from '@/lib/utils/business-trip-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
@@ -97,7 +107,12 @@ export default function BusinessTripDetailPageContent({
 
   const detailQuery = useBusinessTrip(tripId);
   const cancelMutation = useCancelBusinessTrip(tripId);
+  const importPreview = useBusinessTripPassengersImportPreview(tripId);
+  const importCommit = useBusinessTripPassengersImport(tripId);
+  const authUser = useAuthStore((state) => state.user);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   useSetHeaderExtra(null);
 
@@ -114,10 +129,34 @@ export default function BusinessTripDetailPageContent({
     trip?.submittedBy === currentUser.data?.id &&
     (trip?.status === 'DRAFT' || trip?.status === 'SUBMITTED');
 
+  const canEditPassengers =
+    trip?.status === 'DRAFT' &&
+    Boolean(currentUser.data?.id) &&
+    (trip.submittedBy === currentUser.data?.id || canViewHr);
+
   const showTicketPanel =
     trip?.status === 'APPROVED' ||
     Boolean(trip?.combinedTicketDocumentId) ||
     (trip?.passengers.some((p) => p.ticketDocumentId) ?? false);
+
+  async function handleExportPassengers(): Promise<void> {
+    if (!trip) {
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportBusinessTripDetailPassengersExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.businessTrip.exportTripPassengersSheetName'),
+        trip,
+      });
+      messageApi.success(t('pages.hr.businessTrip.exportPassengersSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.businessTrip.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleCancel(): Promise<void> {
     try {
@@ -196,6 +235,22 @@ export default function BusinessTripDetailPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-business-trip-detail-page">
+      {importOpen ? (
+        <HrImportModal
+          entity="businessTripPassengers"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void detailQuery.refetch();
+          }}
+          downloadTemplate={() =>
+            downloadBusinessTripPassengersImportTemplate(tripId)
+          }
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -454,13 +509,32 @@ export default function BusinessTripDetailPageContent({
               title={t('hr.section.passengerDetails')}
               bodyClassName="!p-0"
               action={
-                <span className="erp-users-cell-sub text-xs">
-                  {[
-                    `${trip.passengerCount}`,
-                    `${visaRequiredCount} ${t('hr.form.visaRequired').toLowerCase()}`,
-                    `${ticketedCount}/${trip.passengers.length} ${t('hr.table.ticket').toLowerCase()}`,
-                  ].join(' · ')}
-                </span>
+                <Space.Compact>
+                  <Button
+                    size="small"
+                    icon={<DownloadOutlined />}
+                    loading={exporting}
+                    onClick={() => void handleExportPassengers()}
+                  >
+                    {t('pages.hr.businessTrip.exportPassengers')}
+                  </Button>
+                  {canEditPassengers ? (
+                    <Button
+                      size="small"
+                      icon={<UploadOutlined />}
+                      onClick={() => setImportOpen(true)}
+                    >
+                      {t('common.importFromExcel')}
+                    </Button>
+                  ) : null}
+                  <span className="erp-users-cell-sub flex items-center px-2 text-xs">
+                    {[
+                      `${trip.passengerCount}`,
+                      `${visaRequiredCount} ${t('hr.form.visaRequired').toLowerCase()}`,
+                      `${ticketedCount}/${trip.passengers.length} ${t('hr.table.ticket').toLowerCase()}`,
+                    ].join(' · ')}
+                  </span>
+                </Space.Compact>
               }
             >
               <ul className="m-0 list-none divide-y divide-[#eef1f4] p-0">

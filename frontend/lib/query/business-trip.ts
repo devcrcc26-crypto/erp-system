@@ -12,6 +12,7 @@ import {
   apiPatch,
   apiPost,
   apiPostForm,
+  downloadApiFile,
 } from '@/lib/api/client';
 import type {
   BusinessTripDetail,
@@ -20,7 +21,11 @@ import type {
   ListBusinessTripsParams,
   SubmitBusinessTripPayload,
 } from '@/lib/api/business-trip.types';
-import type { PaginationMeta } from '@/lib/api/types';
+import type {
+  HrImportCommitResult,
+  HrImportPreviewResult,
+  PaginationMeta,
+} from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
@@ -390,4 +395,124 @@ export function useRemoveBusinessTripPassengerTicket(id: string) {
       void queryClient.setQueryData(businessTripKeys.detail(id), updated);
     },
   });
+}
+
+/**
+ * Loads business trip details in batches (for list passenger export).
+ */
+export async function fetchBusinessTripDetails(
+  tripIds: string[],
+): Promise<BusinessTripDetail[]> {
+  const results: BusinessTripDetail[] = [];
+  const batchSize = 8;
+  for (let index = 0; index < tripIds.length; index += batchSize) {
+    const batch = tripIds.slice(index, index + batchSize);
+    const pages = await Promise.all(
+      batch.map((id) =>
+        apiGet<BusinessTripDetail>(`${BUSINESS_TRIP_PATH}/${id}`),
+      ),
+    );
+    results.push(...pages);
+  }
+  return results;
+}
+
+/**
+ * Preview company-wide business trip Excel import.
+ */
+export function useBusinessTripImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${BUSINESS_TRIP_PATH}/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit company-wide business trip Excel import.
+ */
+export function useBusinessTripImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${BUSINESS_TRIP_PATH}/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: businessTripKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: businessTripKeys.details(),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the company-wide business trip import template.
+ */
+export async function downloadBusinessTripImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${BUSINESS_TRIP_PATH}/import/template`,
+    'business-trip-import-template.xlsx',
+  );
+}
+
+/**
+ * Preview trip-scoped passenger Excel import.
+ */
+export function useBusinessTripPassengersImportPreview(tripId: string) {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${BUSINESS_TRIP_PATH}/${tripId}/passengers/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit trip-scoped passenger Excel import.
+ */
+export function useBusinessTripPassengersImport(tripId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${BUSINESS_TRIP_PATH}/${tripId}/passengers/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: businessTripKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: businessTripKeys.detail(tripId),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the trip-scoped passengers import template.
+ */
+export async function downloadBusinessTripPassengersImportTemplate(
+  tripId: string,
+): Promise<void> {
+  await downloadApiFile(
+    `${BUSINESS_TRIP_PATH}/${tripId}/passengers/import/template`,
+    'business-trip-passengers-import-template.xlsx',
+  );
 }

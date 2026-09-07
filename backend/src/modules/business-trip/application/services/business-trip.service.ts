@@ -41,6 +41,8 @@ import type {
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
+  BusinessTripPassengerDto,
+  CreateBusinessTripDraftDto,
   ListBusinessTripsDto,
   SubmitBusinessTripDto,
 } from '../dtos/business-trip.dtos';
@@ -680,6 +682,176 @@ export class BusinessTripService
   }
 
   /**
+   * Finds a DRAFT trip matching submitter + trip identity, or creates one.
+   * HR (hr.view) may create drafts on behalf of another submitter.
+   */
+  async findOrCreateDraftTrip(
+    submitterId: string,
+    dto: CreateBusinessTripDraftDto,
+    companyId: string,
+    actorUserId: string,
+    forceCreate = false,
+  ): Promise<{ id: string }> {
+    await this.assertCanManageTrip(submitterId, companyId, actorUserId);
+
+    const departureDate = this.parseFlexibleDate(dto.departureDate);
+    const returnDate = dto.returnDate
+      ? this.parseFlexibleDate(dto.returnDate)
+      : null;
+
+    this.assertTripDates(dto.tripType, departureDate, returnDate);
+    this.assertKmRange(dto.kmAtDeparture, dto.kmAtReturn);
+
+    const purpose = dto.purpose.trim();
+    const originCountry = dto.originCountry.trim();
+    const originCity = dto.originCity.trim();
+    const destinationCountry = dto.destinationCountry.trim();
+    const destinationCity = dto.destinationCity.trim();
+
+    if (!forceCreate) {
+      const departureEnd = new Date(departureDate);
+      departureEnd.setUTCDate(departureEnd.getUTCDate() + 1);
+
+      const existing = await this.prisma.businessTrip.findFirst({
+        where: activeOnly({
+          companyId,
+          submittedBy: submitterId,
+          status: BusinessTripStatus.DRAFT,
+          tripType: dto.tripType,
+          originCity: { equals: originCity, mode: 'insensitive' as const },
+          destinationCountry: {
+            equals: destinationCountry,
+            mode: 'insensitive' as const,
+          },
+          destinationCity: {
+            equals: destinationCity,
+            mode: 'insensitive' as const,
+          },
+          purpose: { equals: purpose, mode: 'insensitive' as const },
+          departureDate: { gte: departureDate, lt: departureEnd },
+        }),
+        select: { id: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+
+    const kmAtDeparture =
+      dto.kmAtDeparture != null
+        ? new Prisma.Decimal(dto.kmAtDeparture)
+        : null;
+    const kmAtReturn =
+      dto.kmAtReturn != null ? new Prisma.Decimal(dto.kmAtReturn) : null;
+
+    const tripNumber = await this.nextTripNumber();
+    const trip = await this.prisma.businessTrip.create({
+      data: {
+        id: randomUUID(),
+        companyId,
+        tripNumber,
+        submittedBy: submitterId,
+        tripType: dto.tripType,
+        originCountry,
+        originCity,
+        destinationCountry,
+        destinationCity,
+        departureDate,
+        returnDate,
+        kmAtDeparture,
+        kmAtReturn,
+        purpose,
+        hostOrganization: dto.hostOrganization?.trim() || null,
+        hostContact: dto.hostContact?.trim() || null,
+        expectedOutcomes: dto.expectedOutcomes?.trim() || null,
+        itinerary: dto.itinerary?.trim() || null,
+        ticketClass: dto.ticketClass,
+        estimatedFlightCost:
+          dto.estimatedFlightCost != null
+            ? new Prisma.Decimal(dto.estimatedFlightCost)
+            : null,
+        estimatedAccommodationCost:
+          dto.estimatedAccommodationCost != null
+            ? new Prisma.Decimal(dto.estimatedAccommodationCost)
+            : null,
+        estimatedPerDiem:
+          dto.estimatedPerDiem != null
+            ? new Prisma.Decimal(dto.estimatedPerDiem)
+            : null,
+        estimatedOtherCost:
+          dto.estimatedOtherCost != null
+            ? new Prisma.Decimal(dto.estimatedOtherCost)
+            : null,
+        accommodationRequired: dto.accommodationRequired ?? true,
+        accommodationDetails: dto.accommodationDetails?.trim() || null,
+        perDiemRequired: dto.perDiemRequired ?? true,
+        notes: dto.notes?.trim() || null,
+        status: BusinessTripStatus.DRAFT,
+        createdBy: actorUserId,
+        updatedBy: actorUserId,
+      },
+      select: { id: true },
+    });
+    return trip;
+  }
+
+  /**
+   * Adds a passenger to a DRAFT business trip (submitter or HR).
+   */
+  async addPassenger(
+    tripId: string,
+    dto: BusinessTripPassengerDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const trip = await this.assertDraftOwner(tripId, companyId, userId);
+
+    const selectablePassengers =
+      await this.hrApprovalChain.getSelectablePassengers(
+        trip.submittedBy,
+        companyId,
+      );
+    const selectableSet = new Set(selectablePassengers.map((p) => p.id));
+    if (!selectableSet.has(dto.employeeId)) {
+      throw new BadRequestException(
+        `Passenger not in selectable set: ${dto.employeeId}`,
+      );
+    }
+
+    const existing = await this.prisma.businessTripPassenger.findFirst({
+      where: {
+        tripId,
+        employeeId: dto.employeeId,
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        'This employee is already a passenger on the trip',
+      );
+    }
+
+    await this.prisma.businessTripPassenger.create({
+      data: {
+        id: randomUUID(),
+        tripId,
+        employeeId: dto.employeeId,
+        passportNumber: dto.passportNumber?.trim() || null,
+        visaRequired: dto.visaRequired ?? true,
+        visaStatus: dto.visaStatus ?? null,
+      },
+    });
+
+    await this.prisma.businessTrip.update({
+      where: { id: tripId },
+      data: { updatedBy: userId },
+    });
+
+    return this.getTrip(tripId, companyId, userId);
+  }
+
+  /**
    * Cancels a DRAFT or SUBMITTED business trip. Only the submitter may cancel.
    */
   async cancelTrip(
@@ -1215,6 +1387,105 @@ export class BusinessTripService
   }
 
   // ??? Private helpers ??????????????????????????????????????????????????????
+
+  /**
+   * Throws ForbiddenException unless caller is the submitter or has hr.view.
+   */
+  private async assertCanManageTrip(
+    submitterId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    if (submitterId === userId) {
+      return;
+    }
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this business trip',
+      );
+    }
+  }
+
+  /**
+   * Ensures the trip exists, is DRAFT, and the caller may edit it.
+   */
+  private async assertDraftOwner(
+    tripId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<{ id: string; submittedBy: string }> {
+    const trip = await this.prisma.businessTrip.findFirst({
+      where: activeOnly({ id: tripId, companyId }),
+      select: {
+        id: true,
+        submittedBy: true,
+        status: true,
+      },
+    });
+    if (!trip) {
+      throw new NotFoundException('Business trip not found');
+    }
+    await this.assertCanManageTrip(trip.submittedBy, companyId, userId);
+    if (trip.status !== BusinessTripStatus.DRAFT) {
+      throw new BadRequestException('Only draft business trips can be edited');
+    }
+    return trip;
+  }
+
+  /**
+   * Validates trip type vs return date ordering.
+   */
+  private assertTripDates(
+    tripType: FlightTripType,
+    departureDate: Date,
+    returnDate: Date | null,
+  ): void {
+    if (tripType === FlightTripType.ROUND_TRIP) {
+      if (!returnDate) {
+        throw new BadRequestException('ROUND_TRIP requires returnDate');
+      }
+      if (returnDate.getTime() < departureDate.getTime()) {
+        throw new BadRequestException(
+          'returnDate must be on or after departureDate',
+        );
+      }
+    }
+  }
+
+  /**
+   * Validates optional odometer readings.
+   */
+  private assertKmRange(
+    kmAtDeparture?: number,
+    kmAtReturn?: number,
+  ): void {
+    if (
+      kmAtDeparture != null &&
+      kmAtReturn != null &&
+      kmAtReturn < kmAtDeparture
+    ) {
+      throw new BadRequestException(
+        'kmAtReturn must be greater than or equal to kmAtDeparture',
+      );
+    }
+  }
+
+  /**
+   * Parses YYYY-MM-DD or ISO datetime into a Date.
+   */
+  private parseFlexibleDate(value: string): Date {
+    const trimmed = value.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return this.parseDateOnly(trimmed);
+    }
+    return this.parseDateTime(trimmed);
+  }
 
   /**
    * Throws ForbiddenException if the caller may not read this trip.

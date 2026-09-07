@@ -1,13 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   DatePicker,
+  Dropdown,
   Grid,
   Input,
   Select,
+  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -15,18 +17,23 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DownloadOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   SendOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { Globe } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessBusinessTrip,
   useCanCreateBusinessTrip,
@@ -40,8 +47,15 @@ import type {
   BusinessTripStatus,
 } from '@/lib/api/business-trip.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useBusinessTripsAll } from '@/lib/query/business-trip';
+import {
+  downloadBusinessTripImportTemplate,
+  fetchBusinessTripDetails,
+  useBusinessTripImport,
+  useBusinessTripImportPreview,
+  useBusinessTripsAll,
+} from '@/lib/query/business-trip';
 import { useUsersDirectory } from '@/lib/query/users';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   businessTripStatusVariant,
   formatBusinessTripStatus,
@@ -50,6 +64,10 @@ import {
   getCurrentStepLabel,
   tripTypeVariant,
 } from '@/lib/utils/business-trip-display';
+import {
+  exportBusinessTripsExcel,
+  exportBusinessTripPassengersExcel,
+} from '@/lib/utils/business-trip-export-excel';
 import {
   filterBusinessTrips,
   statusesForBusinessTripMode,
@@ -115,6 +133,7 @@ function BusinessTripStat({
 export default function BusinessTripsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
@@ -122,6 +141,9 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   const canAccess = useCanAccessBusinessTrip();
   const canViewHr = useCanViewHr();
   const canCreate = useCanCreateBusinessTrip();
+  const authUser = useAuthStore((state) => state.user);
+  const importPreview = useBusinessTripImportPreview();
+  const importCommit = useBusinessTripImport();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [listTab, setListTab] = useState<ListTab>('ALL');
@@ -133,6 +155,8 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const needsTicketTab = listTab === 'NEEDS_TICKET' && canViewHr;
 
@@ -338,6 +362,44 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
     resetPage();
   }
 
+  const handleExportTrips = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      await exportBusinessTripsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.businessTrip.exportSheetName'),
+        rows: filtered,
+      });
+      messageApi.success(t('pages.hr.businessTrip.exportSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.businessTrip.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
+
+  const handleExportPassengers = useCallback(async (): Promise<void> => {
+    if (filtered.length === 0) {
+      return;
+    }
+    setExporting(true);
+    try {
+      const details = await fetchBusinessTripDetails(
+        filtered.map((row) => row.id),
+      );
+      await exportBusinessTripPassengersExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.businessTrip.exportPassengersSheetName'),
+        trips: details,
+      });
+      messageApi.success(t('pages.hr.businessTrip.exportPassengersSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.businessTrip.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
+
   const hasFilters =
     Boolean(appliedSearch.trim()) ||
     statusMode !== 'all' ||
@@ -375,6 +437,20 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
     <div
       className={`erp-pro-list-page erp-users-page erp-business-trips-page${canViewHr ? ' erp-business-trips-page--hr' : ''}`}
     >
+      {importOpen ? (
+        <HrImportModal
+          entity="businessTrips"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void listQuery.refetch();
+          }}
+          downloadTemplate={downloadBusinessTripImportTemplate}
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -450,16 +526,100 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {canCreate ? (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => router.push('/approvals/new/business-trip')}
-                aria-label={t('hr.buttons.newBusinessTrip')}
-              >
-                {isNarrow ? undefined : t('hr.buttons.newBusinessTrip')}
-              </Button>
-            ) : null}
+            {isCompact ? (
+              <>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-trips',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.businessTrip.exportTrips'),
+                        disabled: exporting,
+                        onClick: () => void handleExportTrips(),
+                      },
+                      {
+                        key: 'export-passengers',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.businessTrip.exportPassengers'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportPassengers(),
+                      },
+                      ...(canViewHr
+                        ? [
+                            {
+                              key: 'import',
+                              icon: <UploadOutlined />,
+                              label: t('common.importFromExcel'),
+                              onClick: () => setImportOpen(true),
+                            },
+                          ]
+                        : []),
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+                {canCreate ? (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => router.push('/approvals/new/business-trip')}
+                    aria-label={t('hr.buttons.newBusinessTrip')}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <Space.Compact>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-trips',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.businessTrip.exportTrips'),
+                        disabled: exporting,
+                        onClick: () => void handleExportTrips(),
+                      },
+                      {
+                        key: 'export-passengers',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.businessTrip.exportPassengers'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportPassengers(),
+                      },
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button icon={<DownloadOutlined />} loading={exporting}>
+                    {t('users.exportExcel')}
+                  </Button>
+                </Dropdown>
+                {canViewHr ? (
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setImportOpen(true)}
+                  >
+                    {t('common.importFromExcel')}
+                  </Button>
+                ) : null}
+                {canCreate ? (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => router.push('/approvals/new/business-trip')}
+                    aria-label={t('hr.buttons.newBusinessTrip')}
+                  >
+                    {isNarrow ? undefined : t('hr.buttons.newBusinessTrip')}
+                  </Button>
+                ) : null}
+              </Space.Compact>
+            )}
           </div>
         </div>
 
