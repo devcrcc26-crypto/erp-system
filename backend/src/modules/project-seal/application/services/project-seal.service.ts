@@ -196,6 +196,56 @@ implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
         return this.getProjectSeal(id, companyId, userId);
     }
 
+    /**
+     * Creates a DRAFT project seal request for an employee without touching the
+     * approval workflow. Used by the Excel importer.
+     */
+    async createDraftFromImport(
+        employeeId: string,
+        dto: SubmitProjectSealRequestDto,
+        companyId: string,
+        actorUserId: string,
+    ): Promise<{ id: string; requestNumber: string }> {
+        if (employeeId !== actorUserId) {
+            const canFileOnBehalf =
+                await this.hrApprovalChain.isHrOrFullAccessActor(
+                    actorUserId,
+                    companyId,
+                );
+            if (!canFileOnBehalf) {
+                throw new ForbiddenException(
+                    'Only HR or a full-access role can import project seal requests for another employee',
+                );
+            }
+        }
+
+        const employee = await this.prisma.user.findFirst({
+            where: activeOnly({ id: employeeId, companyId }),
+            select: { id: true },
+        });
+        if (!employee) {
+            throw new NotFoundException('Employee not found');
+        }
+
+        return this.prisma.projectSeal.create({
+            data: {
+                id: randomUUID(),
+                companyId,
+                requestNumber: await this.nextRequestNumber(),
+                employeeId,
+                fileName: dto.fileName.trim(),
+                description: dto.description.trim(),
+                ...this.sealExtraFieldsFromDto(dto),
+                urgency: dto.urgency,
+                dateNeeded: this.parseDateOnly(dto.dateNeeded),
+                status: SealStatus.DRAFT,
+                createdBy: actorUserId,
+                updatedBy: actorUserId,
+            },
+            select: { id: true, requestNumber: true },
+        });
+    }
+
     async getProjectSeal(id: string, companyId: string, userId: string): Promise<unknown> {
         const projectSeal = await this.prisma.projectSeal.findFirst({
             where: activeOnly({ id, companyId }),
