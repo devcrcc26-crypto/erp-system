@@ -18,6 +18,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
@@ -45,6 +46,10 @@ import {
 } from '@/lib/utils/vehicle-application-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import ImportModal from '@/components/modules/hr/import-export/ImportModal';
+import { vehicleApplicationImportSchema } from '@/lib/utils/hr-import-configs';
+import { buildVehicleApplicationExportSheets } from '@/lib/utils/vehicle-application-export';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 const PENDING_STATUSES = statusesForVehicleApplicationMode('pending');
@@ -115,6 +120,7 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
     [Dayjs | null, Dayjs | null] | null
   >(null);
 
+  const [importOpen, setImportOpen] = useState(false);
   const listQuery = useVehicleApplicationsAll({}, true);
 
   const usersQuery = useUsersDirectory(
@@ -347,6 +353,16 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-vehicle-applications-page">
+      {importOpen ? (
+        <ImportModal
+          schema={vehicleApplicationImportSchema}
+          title={t('hr.exportImport.vehicleApplications.title')}
+          description={t('hr.exportImport.vehicleApplications.description')}
+          onClose={() => setImportOpen(false)}
+          onImported={() => void listQuery.refetch()}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -412,6 +428,28 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            <ExportExcelButton
+              compact={isNarrow}
+              actions={[
+                {
+                  key: 'applications',
+                  label: t('hr.exportImport.vehicleApplications.export'),
+                  filePrefix: 'vehicle-applications',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildVehicleApplicationExportSheets(filtered),
+                },
+              ]}
+            />
+            {canViewHr ? (
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportOpen(true)}
+                aria-label={t('hr.exportImport.importFromExcel')}
+              >
+                {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
+              </Button>
+            ) : null}
+
             <Button
               type="primary"
               icon={<PlusOutlined />}

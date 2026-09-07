@@ -235,6 +235,101 @@ export class VehicleApplicationService
     return this.getApplication(id, companyId, userId);
   }
 
+  /**
+   * Creates a DRAFT vehicle application for an employee without touching the
+   * approval workflow. Used by the Excel importer; drafts are submitted later
+   * from the UI like any other draft.
+   */
+  async createDraftFromImport(
+    employeeId: string,
+    dto: SubmitVehicleApplicationDto,
+    companyId: string,
+    actorUserId: string,
+  ): Promise<{ id: string; applicationNumber: string }> {
+    const departure = new Date(dto.departureDatetime);
+    const returnDt = new Date(dto.returnDatetime);
+    if (returnDt <= departure) {
+      throw new BadRequestException(
+        'Return date/time must be after departure date/time',
+      );
+    }
+
+    if (employeeId !== actorUserId) {
+      const canFileOnBehalf = await this.hrApprovalChain.isHrOrFullAccessActor(
+        actorUserId,
+        companyId,
+      );
+      if (!canFileOnBehalf) {
+        throw new ForbiddenException(
+          'Only HR or a full-access role can import vehicle applications for another employee',
+        );
+      }
+    }
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const vehicle = await this.prisma.companyVehicle.findFirst({
+      where: activeOnly({ id: dto.vehicleId, companyId }),
+      select: { id: true, assignedDriverId: true },
+    });
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    const driverId =
+      dto.driveType === DriveType.COMPANY_DRIVER
+        ? dto.driverId || vehicle.assignedDriverId || null
+        : null;
+    if (dto.driveType === DriveType.COMPANY_DRIVER && !driverId) {
+      throw new BadRequestException(
+        'A driver is required when the drive type is Company Driver',
+      );
+    }
+
+    if (dto.projectId) {
+      const project = await this.prisma.project.findFirst({
+        where: activeOnly({ id: dto.projectId, companyId }),
+        select: { id: true },
+      });
+      if (!project) {
+        throw new NotFoundException('Project not found');
+      }
+    }
+
+    const applicationNumber = await this.nextApplicationNumber();
+    const created = await this.prisma.vehicleApplication.create({
+      data: {
+        id: randomUUID(),
+        companyId,
+        applicationNumber,
+        employeeId,
+        vehicleId: dto.vehicleId,
+        driveType: dto.driveType,
+        driverId,
+        departureDatetime: departure,
+        returnDatetime: returnDt,
+        destination: dto.destination.trim(),
+        purpose: dto.purpose.trim(),
+        passengerCount: dto.passengerCount ?? 1,
+        passengerNames: dto.passengerNames?.trim() || null,
+        projectId: dto.projectId || null,
+        notes: dto.notes?.trim() || null,
+        status: VehicleApplicationStatus.DRAFT,
+        createdBy: actorUserId,
+        updatedBy: actorUserId,
+      },
+      select: { id: true, applicationNumber: true },
+    });
+
+    return created;
+  }
+
   /** Fetches a single vehicle application with vehicle and approval tiers. */
   async getApplication(
     id: string,

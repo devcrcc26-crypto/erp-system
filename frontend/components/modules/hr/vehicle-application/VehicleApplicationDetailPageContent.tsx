@@ -26,6 +26,9 @@ import {
   useReleaseVehicleApplication,
   useVehicleApplication,
 } from '@/lib/query/vehicle-application';
+import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
+import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
+import { exportVehicleApplicationPdf } from '@/lib/utils/vehicle-application-export';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   formatDriveType,
@@ -77,6 +80,7 @@ export default function VehicleApplicationDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
+  const pdfContext = useHrPdfContext();
   const currentUser = useCurrentUser();
   const detailQuery = useVehicleApplication(applicationId);
   const cancelMutation = useCancelVehicleApplication(applicationId);
@@ -198,6 +202,19 @@ export default function VehicleApplicationDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
+  /** Renders this record with the shared HR document layout. */
+  function handleExportPdf(): void {
+    if (!application) {
+      return;
+    }
+
+      exportVehicleApplicationPdf({
+        application,
+        companyName: pdfContext.companyName,
+        preparedBy: pdfContext.preparedBy,
+      });
+  }
+
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-vehicle-application-detail-page">
       <div className="erp-pro-card">
@@ -213,6 +230,10 @@ export default function VehicleApplicationDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <ExportPdfButton
+              compact={isNarrow}
+              buildPdf={() => handleExportPdf()}
+            />
             {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}
