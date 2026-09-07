@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -8,6 +8,7 @@ import {
   Grid,
   Input,
   Select,
+  Space,
   Spin,
   Tooltip,
   type MenuProps,
@@ -18,14 +19,17 @@ import {
   CloseCircleOutlined,
   DeleteOutlined,
   DollarOutlined,
+  DownloadOutlined,
   EditOutlined,
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -38,11 +42,16 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { ExpenseClaimListItem } from '@/lib/api/expense-claim.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import {
+  downloadExpenseClaimImportTemplate,
+  fetchExpenseClaimDetails,
   useDeleteExpenseClaim,
+  useExpenseClaimImport,
+  useExpenseClaimImportPreview,
   useExpenseClaimsAll,
 } from '@/lib/query/expense-claim';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useUsersDirectory } from '@/lib/query/users';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   expenseClaimStatusVariant,
   formatEtbAmount,
@@ -54,6 +63,10 @@ import {
   statusesForExpenseClaimMode,
   type ExpenseClaimStatusMode,
 } from '@/lib/utils/expense-claim-list-filter';
+import {
+  exportExpenseClaimItemsExcel,
+  exportExpenseClaimsExcel,
+} from '@/lib/utils/expense-claim-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
@@ -123,7 +136,10 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const canManage = canViewHr;
   const currentUser = useCurrentUser();
   const currentUserId = currentUser.data?.id;
+  const authUser = useAuthStore((state) => state.user);
   const deleteMutation = useDeleteExpenseClaim();
+  const importPreview = useExpenseClaimImportPreview();
+  const importCommit = useExpenseClaimImport();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
@@ -132,6 +148,8 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
   const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [deletingClaim, setDeletingClaim] =
     useState<ExpenseClaimListItem | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const listQuery = useExpenseClaimsAll({}, true);
 
@@ -206,6 +224,41 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
     setStatusMode(mode);
     resetPage();
   }
+
+  const handleExportClaims = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      await exportExpenseClaimsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.expenseClaim.exportSheetName'),
+        rows: filtered,
+      });
+      messageApi.success(t('pages.hr.expenseClaim.exportSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.expenseClaim.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
+
+  const handleExportItems = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      const details = await fetchExpenseClaimDetails(
+        filtered.map((row) => row.id),
+      );
+      await exportExpenseClaimItemsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.expenseClaim.exportItemsSheetName'),
+        claims: details,
+      });
+      messageApi.success(t('pages.hr.expenseClaim.exportItemsSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.expenseClaim.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
 
   const hasFilters =
     Boolean(appliedSearch.trim()) ||
@@ -403,6 +456,20 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
         onCancel={() => setDeletingClaim(null)}
       />
 
+      {importOpen ? (
+        <HrImportModal
+          entity="expenseClaims"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void listQuery.refetch();
+          }}
+          downloadTemplate={downloadExpenseClaimImportTemplate}
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -468,14 +535,96 @@ export default function ExpenseClaimsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/approvals/new/expense-claim')}
-              aria-label={t('hr.buttons.newExpenseClaim')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.newExpenseClaim')}
-            </Button>
+            {isCompact ? (
+              <>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-claims',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.expenseClaim.exportClaims'),
+                        disabled: exporting,
+                        onClick: () => void handleExportClaims(),
+                      },
+                      {
+                        key: 'export-items',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.expenseClaim.exportItems'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportItems(),
+                      },
+                      ...(canViewHr
+                        ? [
+                            {
+                              key: 'import',
+                              icon: <UploadOutlined />,
+                              label: t('common.importFromExcel'),
+                              onClick: () => setImportOpen(true),
+                            },
+                          ]
+                        : []),
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => router.push('/approvals/new/expense-claim')}
+                  aria-label={t('hr.buttons.newExpenseClaim')}
+                />
+              </>
+            ) : (
+              <Space.Compact>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-claims',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.expenseClaim.exportClaims'),
+                        disabled: exporting,
+                        onClick: () => void handleExportClaims(),
+                      },
+                      {
+                        key: 'export-items',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.expenseClaim.exportItems'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportItems(),
+                      },
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button icon={<DownloadOutlined />} loading={exporting}>
+                    {t('users.exportExcel')}
+                  </Button>
+                </Dropdown>
+                {canViewHr ? (
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setImportOpen(true)}
+                  >
+                    {t('common.importFromExcel')}
+                  </Button>
+                ) : null}
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => router.push('/approvals/new/expense-claim')}
+                  aria-label={t('hr.buttons.newExpenseClaim')}
+                >
+                  {t('hr.buttons.newExpenseClaim')}
+                </Button>
+              </Space.Compact>
+            )}
           </div>
         </div>
 

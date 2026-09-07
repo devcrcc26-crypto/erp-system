@@ -350,6 +350,14 @@
         "claimCount": "{{count}} 条报销",
         "claimCountOne": "1 条报销",
         "emptyFiltered": "没有符合筛选条件的报销记录",
+        "exportSheetName": "费用报销",
+        "exportItemsSheetName": "费用报销明细",
+        "exportClaimItemsSheetName": "报销明细",
+        "exportSuccess": "费用报销 Excel 已下载。",
+        "exportItemsSuccess": "费用报销明细 Excel 已下载。",
+        "exportError": "导出费用报销 Excel 失败。",
+        "exportClaims": "导出报销单",
+        "exportItems": "导出明细",
         "stats": {
           "total": "全部",
           "pending": "待处理",
@@ -1828,6 +1836,26 @@
         "created": "已创建 {{count}} 条加班明细。",
         "createdPlural": "已创建 {{count}} 条加班明细。",
         "summary": "已向本表导入 {{created}} 条明细"
+      },
+      "expenseClaims": {
+        "title": "从 Excel 导入费用报销明细",
+        "description": "上传表格为员工草稿报销单添加明细。按员工 + 标题归入或创建草稿报销单。不会导入收据，提交前请在界面上传。不会自动提交审批。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、title、category、description、expenseDate、amount、currency。可选：claimDescription。",
+        "importRows": "导入 {{count}} 条明细",
+        "importRowsPlural": "导入 {{count}} 条明细",
+        "created": "已创建 {{count}} 条费用明细。",
+        "createdPlural": "已创建 {{count}} 条费用明细。",
+        "summary": "已导入 {{created}} 条费用明细"
+      },
+      "expenseClaimItems": {
+        "title": "导入本单费用明细",
+        "description": "上传表格向本草稿报销单添加明细。提交前请在界面上传收据。",
+        "requiredColumns": "必填：category、description、expenseDate、amount、currency。",
+        "importRows": "导入 {{count}} 条明细",
+        "importRowsPlural": "导入 {{count}} 条明细",
+        "created": "已创建 {{count}} 条费用明细。",
+        "createdPlural": "已创建 {{count}} 条费用明细。",
+        "summary": "已向本单导入 {{created}} 条明细"
       }
     },
     "assetStatus": {

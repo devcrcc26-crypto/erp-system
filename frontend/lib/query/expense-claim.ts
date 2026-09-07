@@ -13,6 +13,7 @@ import {
   apiPatchForm,
   apiPost,
   apiPostForm,
+  downloadApiFile,
 } from '@/lib/api/client';
 import type {
   AddExpenseClaimItemPayload,
@@ -23,7 +24,11 @@ import type {
   UpdateExpenseClaimPayload,
   UpdateExpenseClaimItemPayload,
 } from '@/lib/api/expense-claim.types';
-import type { PaginationMeta } from '@/lib/api/types';
+import type {
+  HrImportCommitResult,
+  HrImportPreviewResult,
+  PaginationMeta,
+} from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
@@ -261,4 +266,124 @@ export function useCancelExpenseClaim(claimId: string) {
       void queryClient.setQueryData(expenseClaimKeys.detail(claimId), updated);
     },
   });
+}
+
+/**
+ * Loads claim details in batches (for list item export).
+ */
+export async function fetchExpenseClaimDetails(
+  claimIds: string[],
+): Promise<ExpenseClaimDetail[]> {
+  const results: ExpenseClaimDetail[] = [];
+  const batchSize = 8;
+  for (let index = 0; index < claimIds.length; index += batchSize) {
+    const batch = claimIds.slice(index, index + batchSize);
+    const pages = await Promise.all(
+      batch.map((id) =>
+        apiGet<ExpenseClaimDetail>(`${EXPENSE_CLAIM_PATH}/${id}`),
+      ),
+    );
+    results.push(...pages);
+  }
+  return results;
+}
+
+/**
+ * Preview company-wide expense claim Excel import.
+ */
+export function useExpenseClaimImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${EXPENSE_CLAIM_PATH}/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit company-wide expense claim Excel import.
+ */
+export function useExpenseClaimImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${EXPENSE_CLAIM_PATH}/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: expenseClaimKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: expenseClaimKeys.details(),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the company-wide expense claim import template.
+ */
+export async function downloadExpenseClaimImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${EXPENSE_CLAIM_PATH}/import/template`,
+    'expense-claim-import-template.xlsx',
+  );
+}
+
+/**
+ * Preview claim-scoped expense item Excel import.
+ */
+export function useExpenseClaimItemsImportPreview(claimId: string) {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${EXPENSE_CLAIM_PATH}/${claimId}/items/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit claim-scoped expense item Excel import.
+ */
+export function useExpenseClaimItemsImport(claimId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${EXPENSE_CLAIM_PATH}/${claimId}/items/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: expenseClaimKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: expenseClaimKeys.detail(claimId),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the claim-scoped expense items import template.
+ */
+export async function downloadExpenseClaimItemsImportTemplate(
+  claimId: string,
+): Promise<void> {
+  await downloadApiFile(
+    `${EXPENSE_CLAIM_PATH}/${claimId}/items/import/template`,
+    'expense-claim-items-import-template.xlsx',
+  );
 }

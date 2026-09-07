@@ -112,7 +112,9 @@ export type HrImportEntityKey =
   | 'contracts'
   | 'leaveRequests'
   | 'overtimeSheets'
-  | 'overtimeEntries';
+  | 'overtimeEntries'
+  | 'expenseClaims'
+  | 'expenseClaimItems';
 
 /**
  * Shared Excel import modal for HR modules (upload → preview → commit).

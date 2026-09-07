@@ -118,25 +118,73 @@ export class ExpenseClaimService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    const created = await this.findOrCreateDraftClaim(
+      userId,
+      dto.title,
+      dto.description,
+      companyId,
+      userId,
+      true,
+    );
+    return this.getClaim(created.id, companyId, userId);
+  }
+
+  /**
+   * Finds a DRAFT claim for employee+title or creates one (HR may act on behalf).
+   */
+  async findOrCreateDraftClaim(
+    employeeId: string,
+    title: string,
+    claimDescription: string | undefined,
+    companyId: string,
+    actorUserId: string,
+    forceCreate = false,
+  ): Promise<{ id: string }> {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      throw new BadRequestException('title is required');
+    }
+
+    if (employeeId !== actorUserId) {
+      await this.assertCanManageClaim(employeeId, companyId, actorUserId);
+    }
+
+    if (!forceCreate) {
+      const existing = await this.prisma.expenseClaim.findFirst({
+        where: activeOnly({
+          companyId,
+          employeeId,
+          status: ExpenseClaimStatus.DRAFT,
+          title: { equals: trimmedTitle, mode: 'insensitive' },
+        }),
+        select: { id: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+
     const claimNumber = await this.nextClaimNumber();
     const claim = await this.prisma.expenseClaim.create({
       data: {
         id: randomUUID(),
         companyId,
         claimNumber,
-        employeeId: userId,
-        title: dto.title.trim(),
-        description: dto.description?.trim() || null,
+        employeeId,
+        title: trimmedTitle,
+        description: claimDescription?.trim() || null,
         status: ExpenseClaimStatus.DRAFT,
-        createdBy: userId,
-        updatedBy: userId,
+        createdBy: actorUserId,
+        updatedBy: actorUserId,
       },
+      select: { id: true },
     });
-    return this.getClaim(claim.id, companyId, userId);
+    return claim;
   }
 
   /**
-   * Adds a line item (with optional receipt file) to a DRAFT claim owned by the caller.
+   * Adds a line item (with optional receipt file) to a DRAFT claim.
    */
   async addItem(
     claimId: string,
@@ -674,14 +722,18 @@ export class ExpenseClaimService
   ): Promise<{ id: string; claimNumber: string; attachmentFolderId: string | null }> {
     const claim = await this.prisma.expenseClaim.findFirst({
       where: activeOnly({ id: claimId, companyId }),
-      select: { id: true, claimNumber: true, employeeId: true, status: true, attachmentFolderId: true },
+      select: {
+        id: true,
+        claimNumber: true,
+        employeeId: true,
+        status: true,
+        attachmentFolderId: true,
+      },
     });
     if (!claim) {
       throw new NotFoundException('Expense claim not found');
     }
-    if (claim.employeeId !== userId) {
-      throw new ForbiddenException('Only the claim owner can edit this claim');
-    }
+    await this.assertCanManageClaim(claim.employeeId, companyId, userId);
     if (claim.status !== ExpenseClaimStatus.DRAFT) {
       throw new BadRequestException('Only draft claims can be edited');
     }

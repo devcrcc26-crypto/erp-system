@@ -350,6 +350,14 @@
         "claimCount": "{{count}} claims",
         "claimCountOne": "1 claim",
         "emptyFiltered": "No expense claims match your filters",
+        "exportSheetName": "Expense Claims",
+        "exportItemsSheetName": "Expense Claim Items",
+        "exportClaimItemsSheetName": "Claim Items",
+        "exportSuccess": "Expense claims Excel downloaded.",
+        "exportItemsSuccess": "Expense claim items Excel downloaded.",
+        "exportError": "Failed to export expense claims Excel.",
+        "exportClaims": "Export claims",
+        "exportItems": "Export items",
         "stats": {
           "total": "Total",
           "pending": "Pending",
@@ -1828,6 +1836,26 @@
         "created": "{{count}} overtime entry created.",
         "createdPlural": "{{count}} overtime entries created.",
         "summary": "{{created}} entries imported into this sheet"
+      },
+      "expenseClaims": {
+        "title": "Import expense claim items",
+        "description": "Upload a spreadsheet to add line items to employee DRAFT claims. Claims are created by employee + title when needed. Receipts are not imported — upload them before submit. Claims are not auto-submitted.",
+        "requiredColumns": "Required: employeeEmail or employeeId, title, category, description, expenseDate, amount, currency. Optional: claimDescription.",
+        "importRows": "Import {{count}} item",
+        "importRowsPlural": "Import {{count}} items",
+        "created": "{{count}} expense item created.",
+        "createdPlural": "{{count}} expense items created.",
+        "summary": "{{created}} expense items imported"
+      },
+      "expenseClaimItems": {
+        "title": "Import claim items",
+        "description": "Upload a spreadsheet to add line items to this DRAFT expense claim. Receipts must be uploaded in the UI before submit.",
+        "requiredColumns": "Required: category, description, expenseDate, amount, currency.",
+        "importRows": "Import {{count}} item",
+        "importRowsPlural": "Import {{count}} items",
+        "created": "{{count}} expense item created.",
+        "createdPlural": "{{count}} expense items created.",
+        "summary": "{{created}} items imported into this claim"
       }
     },
     "assetStatus": {

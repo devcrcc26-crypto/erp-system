@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -29,6 +30,8 @@ import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
+import { ExpenseClaimImportPreviewResponseDto } from '../../application/dtos/expense-claim-import.dtos';
 import {
   AddExpenseClaimItemDto,
   CreateExpenseClaimDto,
@@ -36,6 +39,7 @@ import {
   UpdateExpenseClaimDto,
   UpdateExpenseClaimItemDto,
 } from '../../application/dtos/expense-claim.dtos';
+import { ExpenseClaimImportService } from '../../application/services/expense-claim-import.service';
 import { ExpenseClaimService } from '../../application/services/expense-claim.service';
 
 async function parseDto<T extends object>(
@@ -69,7 +73,17 @@ async function parseDto<T extends object>(
 )
 @Controller('hr/expense-claims')
 export class ExpenseClaimController {
-  constructor(private readonly expenseClaimService: ExpenseClaimService) {}
+  constructor(
+    private readonly expenseClaimService: ExpenseClaimService,
+    private readonly expenseClaimImportService: ExpenseClaimImportService,
+  ) {}
+
+  private importCtx(user: AuthenticatedUser): {
+    companyId: string;
+    userId: string;
+  } {
+    return { companyId: user.companyId, userId: user.userId };
+  }
 
   @Post()
   @DelegatePermissionCheck()
@@ -93,6 +107,83 @@ export class ExpenseClaimController {
     @Query() query: ListExpenseClaimsDto,
   ): Promise<unknown> {
     return this.expenseClaimService.listClaims(query, companyId, user.userId);
+  }
+
+  @Get(':id/items/import/template')
+  @ApiOperation({
+    summary: 'Download item import template for one expense claim',
+  })
+  async downloadClaimImportTemplate(): Promise<StreamableFile> {
+    const buffer = await this.expenseClaimImportService.buildClaimTemplate();
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition:
+        'attachment; filename="expense-claim-items-import-template.xlsx"',
+    });
+  }
+
+  @Post(':id/items/import/preview')
+  @ApiOperation({
+    summary: 'Validate item import for one expense claim without writing',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  previewClaimImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ExpenseClaimImportPreviewResponseDto> {
+    return this.expenseClaimImportService.previewClaimImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
+  }
+
+  @Post(':id/items/import')
+  @ApiOperation({
+    summary: 'Import expense line items into one DRAFT claim',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  commitClaimImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ImportCommitResponseDto> {
+    return this.expenseClaimImportService.commitClaimImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
   }
 
   @Get(':id')

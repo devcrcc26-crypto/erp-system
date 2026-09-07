@@ -14,16 +14,19 @@ import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DeleteOutlined,
+  DownloadOutlined,
   EditOutlined,
   MoreOutlined,
   PlusOutlined,
   SendOutlined,
   StopOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { ArrowLeft, Download, File, Receipt } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import ExpenseClaimItemModal from '@/components/modules/hr/expense-claim/ExpenseClaimItemModal';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -41,13 +44,17 @@ import type {
 } from '@/lib/api/expense-claim.types';
 import { useApprovalRequest } from '@/lib/query/approvals';
 import {
+  downloadExpenseClaimItemsImportTemplate,
   useCancelExpenseClaim,
   useDeleteExpenseClaim,
   useDeleteExpenseClaimItem,
   useExpenseClaim,
+  useExpenseClaimItemsImport,
+  useExpenseClaimItemsImportPreview,
   useSubmitExpenseClaim,
 } from '@/lib/query/expense-claim';
 import { useCurrentUser } from '@/lib/query/profile';
+import { useAuthStore } from '@/stores/auth.store';
 import { downloadDocument } from '@/lib/utils/document-download';
 import {
   expenseClaimStatusVariant,
@@ -56,6 +63,7 @@ import {
   formatExpenseClaimEmployeeName,
   formatExpenseClaimStatus,
 } from '@/lib/utils/expense-claim-display';
+import { exportExpenseClaimDetailItemsExcel } from '@/lib/utils/expense-claim-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
@@ -101,11 +109,14 @@ export default function ExpenseClaimDetailPageContent({
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
+  const authUser = useAuthStore((state) => state.user);
   const detailQuery = useExpenseClaim(claimId);
   const submitMutation = useSubmitExpenseClaim(claimId);
   const cancelMutation = useCancelExpenseClaim(claimId);
   const deleteClaimMutation = useDeleteExpenseClaim();
   const deleteItemMutation = useDeleteExpenseClaimItem(claimId);
+  const itemsImportPreview = useExpenseClaimItemsImportPreview(claimId);
+  const itemsImportCommit = useExpenseClaimItemsImport(claimId);
 
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ExpenseClaimItem | null>(null);
@@ -113,6 +124,8 @@ export default function ExpenseClaimDetailPageContent({
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDeleteClaim, setConfirmDeleteClaim] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   useSetHeaderExtra(null);
 
@@ -144,7 +157,7 @@ export default function ExpenseClaimDetailPageContent({
     Boolean(claim) &&
     (claim?.status === 'DRAFT' || claim?.status === 'RETURNED') &&
     (canManage || isOwner);
-  const canEditItems = Boolean(isOwner && isDraft);
+  const canEditItems = Boolean((isOwner || canViewHr) && isDraft);
   const canCancel =
     Boolean(isOwner) &&
     (claim?.status === 'DRAFT' || claim?.status === 'SUBMITTED');
@@ -153,7 +166,7 @@ export default function ExpenseClaimDetailPageContent({
     [claim?.items],
   );
   const canSubmit =
-    canEditItems &&
+    Boolean(isOwner && isDraft) &&
     (claim?.items.length ?? 0) > 0 &&
     missingReceiptCount === 0;
 
@@ -191,6 +204,25 @@ export default function ExpenseClaimDetailPageContent({
   function openAddItem(): void {
     setEditingItem(null);
     setItemModalOpen(true);
+  }
+
+  async function handleExportItems(): Promise<void> {
+    if (!claim) {
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportExpenseClaimDetailItemsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.expenseClaim.exportClaimItemsSheetName'),
+        claim,
+      });
+      messageApi.success(t('pages.hr.expenseClaim.exportItemsSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.expenseClaim.exportError'));
+    } finally {
+      setExporting(false);
+    }
   }
 
   function openEditItem(item: ExpenseClaimItem): void {
@@ -682,16 +714,35 @@ export default function ExpenseClaimDetailPageContent({
               title={t('hr.section.items')}
               bodyClassName="!p-0"
               action={
-                canEditItems ? (
+                <Space.Compact>
                   <Button
-                    type="primary"
                     size="small"
-                    icon={<PlusOutlined />}
-                    onClick={openAddItem}
+                    icon={<DownloadOutlined />}
+                    loading={exporting}
+                    onClick={() => void handleExportItems()}
                   >
-                    {t('hr.buttons.addItem')}
+                    {t('pages.hr.expenseClaim.exportItems')}
                   </Button>
-                ) : undefined
+                  {canEditItems ? (
+                    <>
+                      <Button
+                        size="small"
+                        icon={<UploadOutlined />}
+                        onClick={() => setImportOpen(true)}
+                      >
+                        {t('common.importFromExcel')}
+                      </Button>
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={openAddItem}
+                      >
+                        {t('hr.buttons.addItem')}
+                      </Button>
+                    </>
+                  ) : null}
+                </Space.Compact>
               }
             >
               <DataTable<ExpenseClaimItem>
@@ -802,6 +853,22 @@ export default function ExpenseClaimDetailPageContent({
         onConfirm={() => void handleDeleteItem()}
         onCancel={() => setDeleteItemId(null)}
       />
+
+      {importOpen ? (
+        <HrImportModal
+          entity="expenseClaimItems"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void detailQuery.refetch();
+          }}
+          downloadTemplate={() =>
+            downloadExpenseClaimItemsImportTemplate(claimId)
+          }
+          previewMutation={itemsImportPreview}
+          commitMutation={itemsImportCommit}
+        />
+      ) : null}
     </div>
   );
 }
