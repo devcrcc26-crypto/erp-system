@@ -16,10 +16,8 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   InboxOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
@@ -36,7 +34,7 @@ import type {
   ExitPermitListItem,
 } from '@/lib/api/exit-permit.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import ImportModal from '@/components/modules/hr/import-export/ImportModal';
 import {
   fetchExitPermitDetails,
@@ -409,9 +407,9 @@ export default function ExitPermitListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <ExportExcelButton
-              compact={isNarrow}
-              actions={[
+            <HrListActions
+              compact={isCompact}
+              exports={[
                 {
                   key: 'permits',
                   label: t('hr.exportImport.exitPermits.export'),
@@ -433,24 +431,12 @@ export default function ExitPermitListPageContent(): React.ReactNode {
                     ),
                 },
               ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={{
+                label: t('hr.buttons.newExitPermit'),
+                onClick: () => router.push(NEW_PATH),
+              }}
             />
-            {canViewHr ? (
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportOpen(true)}
-                aria-label={t('hr.exportImport.importFromExcel')}
-              >
-                {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
-              </Button>
-            ) : null}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push(NEW_PATH)}
-              aria-label={t('hr.buttons.newExitPermit')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.newExitPermit')}
-            </Button>
           </div>
         </div>
 

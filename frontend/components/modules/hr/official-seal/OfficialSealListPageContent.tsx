@@ -15,10 +15,8 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   InboxOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
@@ -47,7 +45,7 @@ import {
 } from '@/lib/utils/official-seal-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import ImportModal from '@/components/modules/hr/import-export/ImportModal';
 import { buildSealExportSheets } from '@/lib/utils/seal-export';
 import { officialSealImportSchema } from '@/lib/utils/hr-import-configs';
@@ -385,9 +383,9 @@ export default function OfficialSealListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <ExportExcelButton
-              compact={isNarrow}
-              actions={[
+            <HrListActions
+              compact={isCompact}
+              exports={[
                 {
                   key: 'seals',
                   label: t('hr.exportImport.officialSeals.export'),
@@ -396,24 +394,12 @@ export default function OfficialSealListPageContent(): React.ReactNode {
                   buildSheets: () => buildSealExportSheets('official', filtered),
                 },
               ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={{
+                label: t('hr.buttons.newOfficialSeal'),
+                onClick: () => router.push(NEW_PATH),
+              }}
             />
-            {canViewHr ? (
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportOpen(true)}
-                aria-label={t('hr.exportImport.importFromExcel')}
-              >
-                {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
-              </Button>
-            ) : null}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push(NEW_PATH)}
-              aria-label={t('hr.buttons.newOfficialSeal')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.newOfficialSeal')}
-            </Button>
           </div>
         </div>
 

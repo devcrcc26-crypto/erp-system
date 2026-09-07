@@ -12,10 +12,8 @@ import {
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UploadOutlined,
   ToolOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
@@ -47,7 +45,7 @@ import {
 } from '@/lib/utils/asset-depreciation-display';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import ImportModal from '@/components/modules/hr/import-export/ImportModal';
 import { buildCompanyAssetExportSheets } from '@/lib/utils/company-asset-export';
 import { companyAssetImportSchema } from '@/lib/utils/hr-import-configs';
@@ -401,9 +399,9 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <ExportExcelButton
-              compact={isNarrow}
-              actions={[
+            <HrListActions
+              compact={isCompact}
+              exports={[
                 {
                   key: 'assets',
                   label: t('hr.exportImport.companyAssets.export'),
@@ -412,22 +410,12 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
                   buildSheets: () => buildCompanyAssetExportSheets(filtered),
                 },
               ]}
+              onImport={() => setImportOpen(true)}
+              primary={{
+                label: t('hr.assetButtons.newAsset'),
+                onClick: () => router.push('/hr/company-asset/new'),
+              }}
             />
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => setImportOpen(true)}
-              aria-label={t('hr.exportImport.importFromExcel')}
-            >
-              {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/hr/company-asset/new')}
-              aria-label={t('hr.assetButtons.newAsset')}
-            >
-              {isNarrow ? undefined : t('hr.assetButtons.newAsset')}
-            </Button>
           </div>
         </div>
 

@@ -13,10 +13,8 @@ import {
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UploadOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -45,7 +43,7 @@ import {
 } from '@/lib/utils/inspection-repair-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import ImportModal from '@/components/modules/hr/import-export/ImportModal';
 import { buildInspectionRepairExportSheets } from '@/lib/utils/inspection-repair-export';
 import { inspectionRepairImportSchema } from '@/lib/utils/hr-import-configs';
@@ -384,9 +382,9 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <ExportExcelButton
-              compact={isNarrow}
-              actions={[
+            <HrListActions
+              compact={isCompact}
+              exports={[
                 {
                   key: 'requests',
                   label: t('hr.exportImport.inspectionRepairs.export'),
@@ -395,26 +393,12 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
                   buildSheets: () => buildInspectionRepairExportSheets(filtered),
                 },
               ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={{
+                label: t('hr.buttons.newInspectionRepair'),
+                onClick: () => router.push('/approvals/new/inspection-repair'),
+              }}
             />
-            {canViewHr ? (
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportOpen(true)}
-                aria-label={t('hr.exportImport.importFromExcel')}
-              >
-                {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
-              </Button>
-            ) : null}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() =>
-                router.push('/approvals/new/inspection-repair')
-              }
-              aria-label={t('hr.buttons.newInspectionRepair')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.newInspectionRepair')}
-            </Button>
           </div>
         </div>
 

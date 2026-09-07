@@ -46,3 +46,4 @@ backend/prisma/migrations/**/migration_lock.toml
 backend/src/generated/
 backend/.env.test
 backend/.env.example
+backend/src/modules/hr-shared/application/import-export/IMPORT_EXPORT.md

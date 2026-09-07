@@ -15,10 +15,8 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
@@ -46,7 +44,7 @@ import {
 } from '@/lib/utils/vehicle-application-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import ImportModal from '@/components/modules/hr/import-export/ImportModal';
 import { vehicleApplicationImportSchema } from '@/lib/utils/hr-import-configs';
 import { buildVehicleApplicationExportSheets } from '@/lib/utils/vehicle-application-export';
@@ -428,9 +426,9 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <ExportExcelButton
-              compact={isNarrow}
-              actions={[
+            <HrListActions
+              compact={isCompact}
+              exports={[
                 {
                   key: 'applications',
                   label: t('hr.exportImport.vehicleApplications.export'),
@@ -439,29 +437,12 @@ export default function VehicleApplicationListPageContent(): React.ReactNode {
                   buildSheets: () => buildVehicleApplicationExportSheets(filtered),
                 },
               ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={{
+                label: t('hr.buttons.newVehicleApplication'),
+                onClick: () => router.push('/approvals/new/vehicle-application'),
+              }}
             />
-            {canViewHr ? (
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportOpen(true)}
-                aria-label={t('hr.exportImport.importFromExcel')}
-              >
-                {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
-              </Button>
-            ) : null}
-
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() =>
-                router.push('/approvals/new/vehicle-application')
-              }
-              aria-label={t('hr.buttons.newVehicleApplication')}
-            >
-              {isNarrow
-                ? undefined
-                : t('hr.buttons.newVehicleApplication')}
-            </Button>
           </div>
         </div>
 

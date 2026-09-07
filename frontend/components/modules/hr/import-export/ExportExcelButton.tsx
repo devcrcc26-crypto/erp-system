@@ -1,35 +1,20 @@
 'use client';
 
-import { useCallback, useState } from 'react';
 import { Button, Dropdown } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import type { ItemType } from 'antd/es/menu/interface';
-import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import type { HrExportSheet } from '@/lib/utils/hr-export-excel';
 import {
-  buildHrExportFileName,
-  downloadHrExcelWorkbook,
-} from '@/lib/utils/hr-export-excel';
-import { useAuthStore } from '@/stores/auth.store';
+  useHrExcelExport,
+  type HrExcelExportAction,
+} from '@/components/modules/hr/import-export/use-hr-excel-export';
 
-/** One entry in the export dropdown, or the single export when alone. */
-export interface HrExcelExportAction {
-  key: string;
-  /** Button/menu label. Defaults to the shared "Export Excel" wording. */
-  label?: string;
-  /** File name prefix; the company and date are appended. */
-  filePrefix: string;
-  /**
-   * Builds the workbook contents from whatever is currently on screen. Called
-   * at click time so the export always reflects the active filters.
-   */
-  buildSheets: () => HrExportSheet[] | Promise<HrExportSheet[]>;
-  disabled?: boolean;
-}
+export type { HrExcelExportAction };
 
 /**
- * Shared Excel export button for HR list pages.
+ * Standalone Excel export button for HR pages whose toolbar has no primary
+ * action to group with. Pages with a "New …" button should use
+ * `HrListActions`, which lays export, import and that button out together.
  *
  * The caller passes actions that build their sheets from the already-filtered
  * rows, so the file matches exactly what the list is showing. With more than
@@ -46,31 +31,7 @@ export default function ExportExcelButton({
   className?: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const messageApi = useAppMessage();
-  const companyName = useAuthStore((state) => state.user?.companyName);
-  const [exporting, setExporting] = useState(false);
-
-  const runExport = useCallback(
-    async (action: HrExcelExportAction): Promise<void> => {
-      setExporting(true);
-      try {
-        const sheets = await action.buildSheets();
-        await downloadHrExcelWorkbook({
-          fileName: buildHrExportFileName(
-            action.filePrefix,
-            companyName ?? 'CRCC International Consulting',
-          ),
-          sheets,
-        });
-        messageApi.success(t('hr.exportImport.exportSuccess'));
-      } catch {
-        messageApi.error(t('hr.exportImport.exportError'));
-      } finally {
-        setExporting(false);
-      }
-    },
-    [companyName, messageApi, t],
-  );
+  const { exporting, runExport } = useHrExcelExport();
 
   const defaultLabel = t('hr.exportImport.exportExcel');
 
