@@ -24,9 +24,12 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
+import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
+import { exportCompanyAssetPdf } from '@/lib/utils/company-asset-export';
 import type {
   AssetStatus,
   CompanyAssetAssignmentListItem,
@@ -105,6 +108,7 @@ export default function CompanyAssetDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
+  const pdfContext = useHrPdfContext();
   const detailQuery = useCompanyAsset(assetId);
   const statusMutation = useUpdateCompanyAssetStatus(assetId);
   const deleteMutation = useDeleteCompanyAsset();
@@ -405,6 +409,19 @@ export default function CompanyAssetDetailPageContent({
 
   const showOverflowMenu = isNarrow;
 
+  /** Renders this asset with the shared HR document layout. */
+  function handleExportPdf(): void {
+    if (!asset) {
+      return;
+    }
+
+    exportCompanyAssetPdf({
+      asset,
+      companyName: pdfContext.companyName,
+      preparedBy: pdfContext.preparedBy,
+    });
+  }
+
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page">
       <div className="erp-pro-card">
@@ -420,6 +437,10 @@ export default function CompanyAssetDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <ExportPdfButton
+              compact={isNarrow}
+              buildPdf={() => handleExportPdf()}
+            />
             {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}

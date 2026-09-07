@@ -291,3 +291,21 @@ export function useCancelExitPermit(permitId: string) {
     },
   });
 }
+
+/**
+ * Loads exit permit details in batches, for the list export's items sheet.
+ */
+export async function fetchExitPermitDetails(
+  permitIds: string[],
+): Promise<ExitPermitDetail[]> {
+  const results: ExitPermitDetail[] = [];
+  const batchSize = 8;
+  for (let index = 0; index < permitIds.length; index += batchSize) {
+    const batch = permitIds.slice(index, index + batchSize);
+    const pages = await Promise.all(
+      batch.map((id) => apiGet<ExitPermitDetail>(`${EXIT_PERMIT_PATH}/${id}`)),
+    );
+    results.push(...pages);
+  }
+  return results;
+}

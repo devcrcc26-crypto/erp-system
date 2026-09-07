@@ -15,6 +15,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
   ToolOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
@@ -46,6 +47,10 @@ import {
 } from '@/lib/utils/asset-depreciation-display';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import ImportModal from '@/components/modules/hr/import-export/ImportModal';
+import { buildCompanyAssetExportSheets } from '@/lib/utils/company-asset-export';
+import { companyAssetImportSchema } from '@/lib/utils/hr-import-configs';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 const STAT_ACCENT = {
@@ -107,6 +112,8 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
   const [statusMode, setStatusMode] =
     useState<CompanyAssetStatusMode>('all');
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
+
+  const [importOpen, setImportOpen] = useState(false);
 
   const listQuery = useCompanyAssetsAll({}, true);
   const allRows = listQuery.data ?? [];
@@ -319,6 +326,16 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-company-asset-page">
+      {importOpen ? (
+        <ImportModal
+          schema={companyAssetImportSchema}
+          title={t('hr.exportImport.companyAssets.title')}
+          description={t('hr.exportImport.companyAssets.description')}
+          onClose={() => setImportOpen(false)}
+          onImported={() => void listQuery.refetch()}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -384,6 +401,25 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            <ExportExcelButton
+              compact={isNarrow}
+              actions={[
+                {
+                  key: 'assets',
+                  label: t('hr.exportImport.companyAssets.export'),
+                  filePrefix: 'company-assets',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildCompanyAssetExportSheets(filtered),
+                },
+              ]}
+            />
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setImportOpen(true)}
+              aria-label={t('hr.exportImport.importFromExcel')}
+            >
+              {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
+            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
