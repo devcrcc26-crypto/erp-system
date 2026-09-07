@@ -8,21 +8,29 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { memoryStorage } from 'multer';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
 import {
   AddConsumablesRequisitionItemDto,
   CreateConsumablesRequisitionDto,
@@ -30,6 +38,8 @@ import {
   UpdateConsumablesRequisitionDto,
   UpdateConsumablesRequisitionItemDto,
 } from '../../application/dtos/consumables-requisition.dtos';
+import { ConsumablesRequisitionImportPreviewResponseDto } from '../../application/dtos/consumables-requisition-import.dtos';
+import { ConsumablesRequisitionImportService } from '../../application/services/consumables-requisition-import.service';
 import { ConsumablesRequisitionService } from '../../application/services/consumables-requisition.service';
 
 async function parseDto<T extends object>(
@@ -65,7 +75,15 @@ async function parseDto<T extends object>(
 export class ConsumablesRequisitionController {
   constructor(
     private readonly consumablesRequisitionService: ConsumablesRequisitionService,
+    private readonly consumablesRequisitionImportService: ConsumablesRequisitionImportService,
   ) {}
+
+  private importCtx(user: AuthenticatedUser): {
+    companyId: string;
+    userId: string;
+  } {
+    return { companyId: user.companyId, userId: user.userId };
+  }
 
   @Post()
   @DelegatePermissionCheck()
@@ -99,6 +117,86 @@ export class ConsumablesRequisitionController {
       query,
       companyId,
       user.userId,
+    );
+  }
+
+  @Get(':id/items/import/template')
+  @ApiOperation({
+    summary: 'Download item import template for one consumables requisition',
+  })
+  async downloadRequisitionImportTemplate(): Promise<StreamableFile> {
+    const buffer =
+      await this.consumablesRequisitionImportService.buildRequisitionTemplate();
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition:
+        'attachment; filename="consumables-requisition-items-import-template.xlsx"',
+    });
+  }
+
+  @Post(':id/items/import/preview')
+  @ApiOperation({
+    summary:
+      'Validate item import for one consumables requisition without writing',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  previewRequisitionImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ConsumablesRequisitionImportPreviewResponseDto> {
+    return this.consumablesRequisitionImportService.previewRequisitionImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
+  }
+
+  @Post(':id/items/import')
+  @ApiOperation({
+    summary:
+      'Import consumables line items into one DRAFT or RETURNED requisition',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  commitRequisitionImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ImportCommitResponseDto> {
+    return this.consumablesRequisitionImportService.commitRequisitionImport(
+      id,
+      this.importCtx(user),
+      file,
     );
   }
 

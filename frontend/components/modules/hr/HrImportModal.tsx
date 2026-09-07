@@ -123,7 +123,9 @@ export type HrImportEntityKey =
   | 'purchaseRequests'
   | 'purchaseRequestItems'
   | 'materialRequisitions'
-  | 'materialRequisitionItems';
+  | 'materialRequisitionItems'
+  | 'consumablesRequisitions'
+  | 'consumablesRequisitionItems';
 
 /**
  * Shared Excel import modal for HR modules (upload → preview → commit).

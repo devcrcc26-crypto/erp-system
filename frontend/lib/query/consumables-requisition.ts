@@ -11,6 +11,8 @@ import {
   apiGetPaginated,
   apiPatch,
   apiPost,
+  apiPostForm,
+  downloadApiFile,
 } from '@/lib/api/client';
 import type {
   AddConsumablesRequisitionItemPayload,
@@ -21,7 +23,11 @@ import type {
   UpdateConsumablesRequisitionItemPayload,
   UpdateConsumablesRequisitionPayload,
 } from '@/lib/api/consumables-requisition.types';
-import type { PaginationMeta } from '@/lib/api/types';
+import type {
+  HrImportCommitResult,
+  HrImportPreviewResult,
+  PaginationMeta,
+} from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
@@ -267,4 +273,130 @@ export function useCancelConsumablesRequisition(requisitionId: string) {
       );
     },
   });
+}
+
+/**
+ * Loads consumables requisition details in batches (for list item export).
+ */
+export async function fetchConsumablesRequisitionDetails(
+  requisitionIds: string[],
+): Promise<ConsumablesRequisitionDetail[]> {
+  const results: ConsumablesRequisitionDetail[] = [];
+  const batchSize = 8;
+  for (let index = 0; index < requisitionIds.length; index += batchSize) {
+    const batch = requisitionIds.slice(index, index + batchSize);
+    const pages = await Promise.all(
+      batch.map((id) =>
+        apiGet<ConsumablesRequisitionDetail>(`${CONSUMABLES_PATH}/${id}`),
+      ),
+    );
+    results.push(...pages);
+  }
+  return results;
+}
+
+/**
+ * Preview company-wide consumables requisition Excel import.
+ */
+export function useConsumablesRequisitionImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${CONSUMABLES_PATH}/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit company-wide consumables requisition Excel import.
+ */
+export function useConsumablesRequisitionImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${CONSUMABLES_PATH}/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: consumablesRequisitionKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: consumablesRequisitionKeys.details(),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the company-wide consumables requisition import template.
+ */
+export async function downloadConsumablesRequisitionImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${CONSUMABLES_PATH}/import/template`,
+    'consumables-requisition-import-template.xlsx',
+  );
+}
+
+/**
+ * Preview requisition-scoped item Excel import.
+ */
+export function useConsumablesRequisitionItemsImportPreview(
+  requisitionId: string,
+) {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${CONSUMABLES_PATH}/${requisitionId}/items/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit requisition-scoped item Excel import.
+ */
+export function useConsumablesRequisitionItemsImport(requisitionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${CONSUMABLES_PATH}/${requisitionId}/items/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: consumablesRequisitionKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: consumablesRequisitionKeys.detail(requisitionId),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the requisition-scoped items import template.
+ */
+export async function downloadConsumablesRequisitionItemsImportTemplate(
+  requisitionId: string,
+): Promise<void> {
+  await downloadApiFile(
+    `${CONSUMABLES_PATH}/${requisitionId}/items/import/template`,
+    'consumables-requisition-items-import-template.xlsx',
+  );
 }

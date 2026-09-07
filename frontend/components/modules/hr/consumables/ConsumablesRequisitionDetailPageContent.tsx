@@ -10,21 +10,30 @@ import {
   InputNumber,
   Modal,
   Skeleton,
+  Space,
   Tag,
   Tooltip,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { MoreOutlined, StopOutlined } from '@ant-design/icons';
+import {
+  DownloadOutlined,
+  FilePdfOutlined,
+  MoreOutlined,
+  StopOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { ArrowLeft, Pencil, ShoppingBag, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
@@ -34,21 +43,27 @@ import type {
 } from '@/lib/api/consumables-requisition.types';
 import { CONSUMABLES_MAX_ITEMS } from '@/lib/api/consumables-requisition.types';
 import {
+  downloadConsumablesRequisitionItemsImportTemplate,
   useCancelConsumablesRequisition,
   useConsumablesRequisition,
+  useConsumablesRequisitionItemsImport,
+  useConsumablesRequisitionItemsImportPreview,
   useDeleteConsumablesRequisitionItem,
   useUpdateConsumablesRequisitionItem,
 } from '@/lib/query/consumables-requisition';
 import { useCurrentUser } from '@/lib/query/profile';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   consumablesRequisitionStatusVariant,
   formatConsumablesRequisitionEmployeeName,
   formatConsumablesRequisitionStatus,
 } from '@/lib/utils/consumables-requisition-display';
+import { exportConsumablesRequisitionDetailItemsExcel } from '@/lib/utils/consumables-requisition-export-excel';
+import { exportConsumablesRequisitionPdf } from '@/lib/utils/consumables-requisition-pdf';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
-
+import { formatUserName } from '@/lib/utils/user-display';
 function DetailSection({
   title,
   children,
@@ -89,18 +104,27 @@ export default function ConsumablesRequisitionDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
+  const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
+  const authUser = useAuthStore((state) => state.user);
   const detailQuery = useConsumablesRequisition(requisitionId);
   const cancelMutation = useCancelConsumablesRequisition(requisitionId);
   const deleteItemMutation =
     useDeleteConsumablesRequisitionItem(requisitionId);
   const updateItemMutation =
     useUpdateConsumablesRequisitionItem(requisitionId);
+  const itemsImportPreview =
+    useConsumablesRequisitionItemsImportPreview(requisitionId);
+  const itemsImportCommit =
+    useConsumablesRequisitionItemsImport(requisitionId);
 
   const [editingItem, setEditingItem] =
     useState<ConsumablesRequisitionItem | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [itemForm] = Form.useForm<UpdateConsumablesRequisitionItemPayload>();
 
   useSetHeaderExtra(null);
@@ -110,7 +134,7 @@ export default function ConsumablesRequisitionDetailPageContent({
     Boolean(requisition) && requisition?.employeeId === currentUser.data?.id;
   const isDraftOrReturned =
     requisition?.status === 'DRAFT' || requisition?.status === 'RETURNED';
-  const canEdit = Boolean(isOwner && isDraftOrReturned);
+  const canEdit = Boolean((isOwner || canViewHr) && isDraftOrReturned);
   const canCancel =
     Boolean(isOwner) &&
     (requisition?.status === 'DRAFT' || requisition?.status === 'SUBMITTED');
@@ -191,6 +215,81 @@ export default function ConsumablesRequisitionDetailPageContent({
         messageApi,
         t,
       );
+    }
+  }
+
+  async function handleExportItems(): Promise<void> {
+    if (!requisition) {
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportConsumablesRequisitionDetailItemsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.consumables.exportRequisitionItemsSheetName'),
+        requisition,
+      });
+      messageApi.success(t('pages.hr.consumables.exportItemsSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.consumables.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function handleExportPdf(): void {
+    if (!requisition) {
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      const preparedBy = currentUser.data
+        ? formatUserName(currentUser.data)
+        : authUser
+          ? formatUserName(authUser)
+          : '—';
+      exportConsumablesRequisitionPdf({
+        requisition,
+        companyName: authUser?.companyName ?? 'Company',
+        preparedBy,
+        t,
+        labels: {
+          title: t('pages.hr.consumables.detail'),
+          generatedAt: t('hr.table.createdDate'),
+          preparedBy: t('hr.labels.createdBy'),
+          footer: t('pages.hr.consumables.pdfFooter'),
+          overview: t('pages.hr.consumables.pdfOverview'),
+          items: t('hr.section.items'),
+          field: t('pages.hr.consumables.pdfField'),
+          value: t('pages.hr.consumables.pdfValue'),
+          requestNumber: t('hr.table.requestNumber'),
+          status: t('hr.table.status'),
+          employee: t('hr.table.employee'),
+          requestTitle: t('hr.form.title'),
+          purpose: t('hr.labels.purpose'),
+          department: t('hr.table.department'),
+          requiredByDate: t('hr.form.requiredByDate'),
+          itemCount: t('hr.section.items'),
+          submittedAt: t('hr.table.submittedDate'),
+          createdAt: t('hr.table.createdDate'),
+          itemName: t('hr.table.itemName'),
+          itemCode: t('hr.table.itemCode'),
+          modelSpec: t('hr.form.modelSpec'),
+          description: t('hr.table.description'),
+          quantity: t('hr.table.quantity'),
+          unit: t('hr.table.unit'),
+          unitPrice: t('hr.table.unitPrice'),
+          budgetAmount: t('hr.form.budgetAmount'),
+          none: t('pages.hr.consumables.pdfNone'),
+          page: t('pages.hr.consumables.pdfPage'),
+          of: t('pages.hr.consumables.pdfOf'),
+        },
+      });
+      messageApi.success(t('pages.hr.consumables.exportPdfSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.consumables.exportPdfError'));
+    } finally {
+      setExportingPdf(false);
     }
   }
 
@@ -364,6 +463,14 @@ export default function ConsumablesRequisitionDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <Button
+              icon={<FilePdfOutlined />}
+              loading={exportingPdf}
+              onClick={handleExportPdf}
+              aria-label={t('pages.hr.consumables.exportPdf')}
+            >
+              {isNarrow ? undefined : t('pages.hr.consumables.exportPdf')}
+            </Button>
             {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}
@@ -545,7 +652,31 @@ export default function ConsumablesRequisitionDetailPageContent({
               </div>
             </DetailSection>
 
-            <DetailSection title={t('hr.section.items')} bodyClassName="!p-0">
+            <DetailSection
+              title={t('hr.section.items')}
+              bodyClassName="!p-0"
+              action={
+                <Space.Compact>
+                  <Button
+                    size="small"
+                    icon={<DownloadOutlined />}
+                    loading={exporting}
+                    onClick={() => void handleExportItems()}
+                  >
+                    {t('pages.hr.consumables.exportItems')}
+                  </Button>
+                  {canEdit ? (
+                    <Button
+                      size="small"
+                      icon={<UploadOutlined />}
+                      onClick={() => setImportOpen(true)}
+                    >
+                      {t('common.importFromExcel')}
+                    </Button>
+                  ) : null}
+                </Space.Compact>
+              }
+            >
               <DataTable<ConsumablesRequisitionItem>
                 rowKey="id"
                 className="erp-pro-table erp-users-table"
@@ -710,6 +841,22 @@ export default function ConsumablesRequisitionDetailPageContent({
         }}
         onCancel={() => setConfirmCancel(false)}
       />
+
+      {importOpen ? (
+        <HrImportModal
+          entity="consumablesRequisitionItems"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void detailQuery.refetch();
+          }}
+          downloadTemplate={() =>
+            downloadConsumablesRequisitionItemsImportTemplate(requisitionId)
+          }
+          previewMutation={itemsImportPreview}
+          commitMutation={itemsImportCommit}
+        />
+      ) : null}
     </div>
   );
 }

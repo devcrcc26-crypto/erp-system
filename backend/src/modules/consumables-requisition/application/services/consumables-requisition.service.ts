@@ -93,28 +93,74 @@ export class ConsumablesRequisitionService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const requestNumber = await this.nextRequestNumber();
+    const created = await this.findOrCreateDraftRequisition(
+      userId,
+      dto,
+      companyId,
+      userId,
+      true,
+    );
+    return this.getRequisition(created.id, companyId, userId);
+  }
 
+  /**
+   * Finds a DRAFT requisition for employee+title or creates one (HR may act on behalf).
+   */
+  async findOrCreateDraftRequisition(
+    employeeId: string,
+    dto: CreateConsumablesRequisitionDto,
+    companyId: string,
+    actorUserId: string,
+    forceCreate = false,
+  ): Promise<{ id: string }> {
+    const trimmedTitle = dto.title.trim();
+    const trimmedPurpose = dto.purpose.trim();
+    if (!trimmedTitle) {
+      throw new BadRequestException('title is required');
+    }
+    if (!trimmedPurpose) {
+      throw new BadRequestException('purpose is required');
+    }
+
+    await this.assertCanManageRequisition(employeeId, companyId, actorUserId);
+
+    if (!forceCreate) {
+      const existing = await this.prisma.consumablesRequisition.findFirst({
+        where: activeOnly({
+          companyId,
+          employeeId,
+          status: ConsumablesRequisitionStatus.DRAFT,
+          title: { equals: trimmedTitle, mode: 'insensitive' as const },
+        }),
+        select: { id: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+
+    const requestNumber = await this.nextRequestNumber();
     const requisition = await this.prisma.consumablesRequisition.create({
       data: {
         id: randomUUID(),
         companyId,
         requestNumber,
-        employeeId: userId,
-        title: dto.title.trim(),
-        purpose: dto.purpose.trim(),
+        employeeId,
+        title: trimmedTitle,
+        purpose: trimmedPurpose,
         requiredByDate: dto.requiredByDate
           ? this.parseDateOnly(dto.requiredByDate)
           : null,
         department: dto.department?.trim() || null,
         declarationConfirmed: dto.declarationConfirmed ?? false,
         status: ConsumablesRequisitionStatus.DRAFT,
-        createdBy: userId,
-        updatedBy: userId,
+        createdBy: actorUserId,
+        updatedBy: actorUserId,
       },
+      select: { id: true },
     });
-
-    return this.getRequisition(requisition.id, companyId, userId);
+    return requisition;
   }
 
   /**
@@ -613,6 +659,27 @@ export class ConsumablesRequisitionService
 
   // ─── Private helpers ──────────────────────────────────────────────────────
 
+  private async assertCanManageRequisition(
+    employeeId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    if (employeeId === userId) {
+      return;
+    }
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this consumables requisition',
+      );
+    }
+  }
+
   private async assertEditableOwner(
     requisitionId: string,
     companyId: string,
@@ -625,11 +692,11 @@ export class ConsumablesRequisitionService
     if (!requisition) {
       throw new NotFoundException('Consumables requisition not found');
     }
-    if (requisition.employeeId !== userId) {
-      throw new ForbiddenException(
-        'Only the request owner can edit this consumables requisition',
-      );
-    }
+    await this.assertCanManageRequisition(
+      requisition.employeeId,
+      companyId,
+      userId,
+    );
     if (
       requisition.status !== ConsumablesRequisitionStatus.DRAFT &&
       requisition.status !== ConsumablesRequisitionStatus.RETURNED
