@@ -10,7 +10,9 @@ import {
   apiGetPaginated,
   apiPatch,
   apiPost,
+  apiPostForm,
   apiPut,
+  downloadApiFile,
 } from '@/lib/api/client';
 import type {
   EmployeePerDiemActiveCategory,
@@ -23,7 +25,11 @@ import type {
   SubmitPerDiemRequestPayload,
   UpsertEmployeePerDiemRatePayload,
 } from '@/lib/api/per-diem.types';
-import type { PaginationMeta } from '@/lib/api/types';
+import type {
+  HrImportCommitResult,
+  HrImportPreviewResult,
+  PaginationMeta,
+} from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
@@ -293,4 +299,51 @@ export function useCancelPerDiemRequest(id: string) {
       void queryClient.setQueryData(perDiemKeys.detail(id), updated);
     },
   });
+}
+
+/**
+ * Preview per diem request Excel import without writing.
+ */
+export function usePerDiemRequestImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${REQUESTS_PATH}/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit per diem request Excel import (submits on behalf of employees).
+ */
+export function usePerDiemRequestImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${REQUESTS_PATH}/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+    },
+  });
+}
+
+/**
+ * Downloads the per diem request import template.
+ */
+export async function downloadPerDiemRequestImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${REQUESTS_PATH}/import/template`,
+    'per-diem-import-template.xlsx',
+  );
 }

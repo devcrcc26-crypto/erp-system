@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Button, Grid, Skeleton, Space } from 'antd';
 import {
   DownloadOutlined,
+  FilePdfOutlined,
   StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
@@ -47,6 +48,7 @@ import {
   tripTypeVariant,
 } from '@/lib/utils/business-trip-display';
 import { exportBusinessTripDetailPassengersExcel } from '@/lib/utils/business-trip-export-excel';
+import { exportBusinessTripPdf } from '@/lib/utils/business-trip-pdf';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
@@ -112,6 +114,7 @@ export default function BusinessTripDetailPageContent({
   const authUser = useAuthStore((state) => state.user);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
   useSetHeaderExtra(null);
@@ -155,6 +158,82 @@ export default function BusinessTripDetailPageContent({
       messageApi.error(t('pages.hr.businessTrip.exportError'));
     } finally {
       setExporting(false);
+    }
+  }
+
+  function handleExportPdf(): void {
+    if (!trip) {
+      return;
+    }
+    setExportingPdf(true);
+    try {
+      const preparedBy = currentUser.data
+        ? formatUserName(currentUser.data)
+        : authUser
+          ? formatUserName(authUser)
+          : '—';
+      exportBusinessTripPdf({
+        trip,
+        companyName: authUser?.companyName ?? 'Company',
+        preparedBy,
+        t,
+        labels: {
+          title: t('pages.hr.businessTrip.detail'),
+          generatedAt: t('hr.table.createdDate'),
+          preparedBy: t('hr.labels.createdBy'),
+          footer: t('pages.hr.businessTrip.pdfFooter'),
+          tripOverview: t('pages.hr.businessTrip.pdfOverview'),
+          travelDetails: t('hr.labels.travelDetails'),
+          purposeHost: t('hr.labels.purposeHost'),
+          budgetEstimate: t('hr.labels.budgetEstimate'),
+          stayAllowances: t('hr.labels.stayAllowances'),
+          passengers: t('hr.section.passengerDetails'),
+          documents: t('hr.section.attachments'),
+          field: t('pages.hr.businessTrip.pdfField'),
+          value: t('pages.hr.businessTrip.pdfValue'),
+          tripNumber: t('hr.table.tripNumber'),
+          status: t('hr.table.status'),
+          submittedBy: t('hr.table.submittedBy'),
+          tripType: t('hr.labels.tripType'),
+          international: t('hr.labels.international'),
+          origin: t('hr.form.origin'),
+          destination: t('hr.form.destination'),
+          departure: t('hr.labels.departure'),
+          return: t('hr.labels.return'),
+          ticketClass: t('hr.labels.ticketClass'),
+          purpose: t('hr.labels.purpose'),
+          hostOrganization: t('hr.form.hostOrganization'),
+          hostContact: t('hr.form.hostContact'),
+          expectedOutcomes: t('hr.labels.expectedOutcomes'),
+          itinerary: t('hr.labels.itinerary'),
+          notes: t('hr.labels.notes'),
+          estimatedFlight: t('hr.labels.estimatedFlight'),
+          estimatedAccommodation: t('hr.labels.estimatedAccommodation'),
+          estimatedPerDiem: t('hr.labels.estimatedPerDiem'),
+          estimatedOther: t('hr.labels.estimatedOther'),
+          estimatedTotal: t('hr.labels.estimatedTotal'),
+          accommodation: t('hr.labels.accommodation'),
+          accommodationDetails: t('hr.form.accommodationDetails'),
+          perDiem: t('hr.labels.perDiem'),
+          required: t('hr.labels.required'),
+          notRequired: t('hr.labels.notRequired'),
+          kmAtDeparture: t('hr.form.kmAtDeparture'),
+          kmAtReturn: t('hr.form.kmAtReturn'),
+          passengerName: t('hr.table.employee'),
+          passengerEmail: t('users.form.email'),
+          passport: t('hr.labels.passport'),
+          visaRequired: t('hr.form.visaRequired'),
+          visaStatus: t('hr.form.visaStatus'),
+          none: t('pages.hr.businessTrip.pdfNone'),
+          page: t('pages.hr.businessTrip.pdfPage'),
+          of: t('pages.hr.businessTrip.pdfOf'),
+        },
+      });
+      messageApi.success(t('pages.hr.businessTrip.exportPdfSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.businessTrip.exportPdfError'));
+    } finally {
+      setExportingPdf(false);
     }
   }
 
@@ -264,6 +343,14 @@ export default function BusinessTripDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <Button
+              icon={<FilePdfOutlined />}
+              loading={exportingPdf}
+              onClick={handleExportPdf}
+              aria-label={t('pages.hr.businessTrip.exportPdf')}
+            >
+              {isNarrow ? undefined : t('pages.hr.businessTrip.exportPdf')}
+            </Button>
             {trip.approvalRequestId ? (
               <Button
                 onClick={() =>

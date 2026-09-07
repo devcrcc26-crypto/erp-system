@@ -345,6 +345,16 @@
         "exportError": "导出出差申请 Excel 失败。",
         "exportTrips": "导出申请",
         "exportPassengers": "导出乘客",
+        "exportPdf": "导出 PDF",
+        "exportPdfSuccess": "出差申请 PDF 已下载。",
+        "exportPdfError": "导出出差申请 PDF 失败。",
+        "pdfFooter": "Construction ERP",
+        "pdfField": "字段",
+        "pdfValue": "值",
+        "pdfPage": "第",
+        "pdfOf": "/",
+        "pdfNone": "无",
+        "pdfOverview": "出差概览",
         "stats": {
           "total": "全部",
           "pending": "待处理",
@@ -498,6 +508,9 @@
         "emptyFiltered": "没有符合筛选条件的差旅补贴申请",
         "requestSingular": "条申请",
         "requestPlural": "条申请",
+        "exportSuccess": "差旅补贴申请 Excel 已下载。",
+        "exportError": "无法生成 Excel 文件，请重试。",
+        "exportSheetName": "差旅补贴申请",
         "stats": {
           "total": "全部",
           "pending": "待处理",
@@ -1922,6 +1935,16 @@
         "created": "已创建 {{count}} 位乘客。",
         "createdPlural": "已创建 {{count}} 位乘客。",
         "summary": "已向本单导入 {{created}} 位乘客"
+      },
+      "perDiemRequests": {
+        "title": "导入差旅补贴申请",
+        "description": "上传表格代员工提交差旅补贴申请。有效行将进入审批流程。金额按每位员工有效的目的地类别日标准自动计算。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、destinationCategory、destination、startDate、endDate。可选：notes、linkedFlightId、linkedBusinessTripId。",
+        "importRows": "导入 {{count}} 条申请",
+        "importRowsPlural": "导入 {{count}} 条申请",
+        "created": "已创建 {{count}} 条差旅补贴申请。",
+        "createdPlural": "已创建 {{count}} 条差旅补贴申请。",
+        "summary": "已导入 {{created}} 条差旅补贴申请"
       }
     },
     "assetStatus": {

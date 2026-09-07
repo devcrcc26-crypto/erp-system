@@ -1,13 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   DatePicker,
+  Dropdown,
   Grid,
   Input,
   Select,
+  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -15,17 +17,22 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DownloadOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { Wallet } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -35,7 +42,12 @@ import type {
   PerDiemStatus,
 } from '@/lib/api/per-diem.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { usePerDiemRequestsAll } from '@/lib/query/per-diem';
+import {
+  downloadPerDiemRequestImportTemplate,
+  usePerDiemRequestImport,
+  usePerDiemRequestImportPreview,
+  usePerDiemRequestsAll,
+} from '@/lib/query/per-diem';
 import { useUsersDirectory } from '@/lib/query/users';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import {
@@ -43,6 +55,7 @@ import {
   formatPerDiemStatus,
   perDiemStatusVariant,
 } from '@/lib/utils/per-diem-display';
+import { exportPerDiemRequestsExcel } from '@/lib/utils/per-diem-export-excel';
 import {
   filterPerDiemRequests,
   statusesForPerDiemMode,
@@ -50,6 +63,7 @@ import {
 } from '@/lib/utils/per-diem-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import { useAuthStore } from '@/stores/auth.store';
 
 const PENDING_STATUSES = statusesForPerDiemMode('pending');
 const APPROVED_STATUSES = statusesForPerDiemMode('approved');
@@ -108,7 +122,11 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  const messageApi = useAppMessage();
+  const authUser = useAuthStore((state) => state.user);
   const { params, resetPage, bindMeta } = useTablePagination(10);
+  const importPreview = usePerDiemRequestImportPreview();
+  const importCommit = usePerDiemRequestImport();
 
   const [statusMode, setStatusMode] = useState<PerDiemStatusMode>('all');
   const [search, setSearch] = useState('');
@@ -117,6 +135,8 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const listQuery = usePerDiemRequestsAll(true);
 
@@ -192,7 +212,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
               title: t('hr.table.employee'),
               key: 'employee',
               width: 200,
-              responsive: ['md'],
+              responsive: ['md'] as const,
               render: (_: unknown, row: PerDiemRequestListItem) => (
                 <div className="min-w-0">
                   <p className="erp-users-cell-strong m-0">
@@ -205,7 +225,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
                   ) : null}
                 </div>
               ),
-            } satisfies ColumnsType<PerDiemRequestListItem>[number],
+            },
           ]
         : []),
       {
@@ -225,10 +245,6 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
               {canViewHr
                 ? ` · ${formatPerDiemEmployeeName(row.employee)}`
                 : ''}
-            </p>
-            <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
-              {formatProjectDate(row.startDate)} –{' '}
-              {formatProjectDate(row.endDate)}
             </p>
           </div>
         ),
@@ -283,6 +299,22 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
     [canViewHr, isNarrow, t],
   );
 
+  const handleExportExcel = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      await exportPerDiemRequestsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.perDiem.exportSheetName'),
+        rows: filtered,
+      });
+      messageApi.success(t('pages.hr.perDiem.exportSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.perDiem.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
+
   function handleStatusMode(mode: PerDiemStatusMode): void {
     setStatusMode(mode);
     resetPage();
@@ -322,6 +354,20 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-per-diem-page">
+      {importOpen ? (
+        <HrImportModal
+          entity="perDiemRequests"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void listQuery.refetch();
+          }}
+          downloadTemplate={downloadPerDiemRequestImportTemplate}
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -387,14 +433,70 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/approvals/new/per-diem')}
-              aria-label={t('hr.buttons.newPerDiem')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.newPerDiem')}
-            </Button>
+            {isCompact ? (
+              <>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export',
+                        icon: <DownloadOutlined />,
+                        label: t('users.exportExcel'),
+                        disabled: exporting,
+                        onClick: () => void handleExportExcel(),
+                      },
+                      ...(canViewHr
+                        ? [
+                            {
+                              key: 'import',
+                              icon: <UploadOutlined />,
+                              label: t('common.importFromExcel'),
+                              onClick: () => setImportOpen(true),
+                            },
+                          ]
+                        : []),
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => router.push('/approvals/new/per-diem')}
+                  aria-label={t('hr.buttons.newPerDiem')}
+                />
+              </>
+            ) : (
+              <Space.Compact>
+                <Button
+                  icon={<DownloadOutlined />}
+                  loading={exporting}
+                  onClick={() => void handleExportExcel()}
+                >
+                  {t('users.exportExcel')}
+                </Button>
+                {canViewHr ? (
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setImportOpen(true)}
+                  >
+                    {t('common.importFromExcel')}
+                  </Button>
+                ) : null}
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => router.push('/approvals/new/per-diem')}
+                >
+                  {t('hr.buttons.newPerDiem')}
+                </Button>
+              </Space.Compact>
+            )}
           </div>
         </div>
 

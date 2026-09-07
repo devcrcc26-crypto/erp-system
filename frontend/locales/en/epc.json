@@ -345,6 +345,16 @@
         "exportError": "Failed to export business trips Excel.",
         "exportTrips": "Export trips",
         "exportPassengers": "Export passengers",
+        "exportPdf": "Export PDF",
+        "exportPdfSuccess": "Business trip PDF downloaded.",
+        "exportPdfError": "Failed to export business trip PDF.",
+        "pdfFooter": "Construction ERP",
+        "pdfField": "Field",
+        "pdfValue": "Value",
+        "pdfPage": "Page",
+        "pdfOf": "of",
+        "pdfNone": "None",
+        "pdfOverview": "Trip Overview",
         "stats": {
           "total": "Total",
           "pending": "Pending",
@@ -498,6 +508,9 @@
         "emptyFiltered": "No per diem requests match your filters",
         "requestSingular": "request",
         "requestPlural": "requests",
+        "exportSuccess": "Per diem requests Excel downloaded.",
+        "exportError": "Could not generate the Excel file. Please try again.",
+        "exportSheetName": "Per Diem Requests",
         "stats": {
           "total": "Total",
           "pending": "Pending",
@@ -1922,6 +1935,16 @@
         "created": "{{count}} passenger created.",
         "createdPlural": "{{count}} passengers created.",
         "summary": "{{created}} passengers imported into this trip"
+      },
+      "perDiemRequests": {
+        "title": "Import per diem requests",
+        "description": "Upload a spreadsheet to submit per diem requests on behalf of employees. Valid rows enter the approval workflow. Rates and totals are calculated from each employee's active destination rates.",
+        "requiredColumns": "Required: employeeEmail or employeeId, destinationCategory, destination, startDate, endDate. Optional: notes, linkedFlightId, linkedBusinessTripId.",
+        "importRows": "Import {{count}} request",
+        "importRowsPlural": "Import {{count}} requests",
+        "created": "{{count}} per diem request created.",
+        "createdPlural": "{{count}} per diem requests created.",
+        "summary": "{{created}} per diem requests imported"
       }
     },
     "assetStatus": {

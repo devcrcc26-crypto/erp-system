@@ -85,12 +85,56 @@ export class PerDiemService
   }
 
   /**
-   * Submits a new per diem request, resolving rate/amount and opening the approval chain.
+   * Submits a new per diem request for the authenticated user.
    */
   async submitRequest(
     dto: SubmitPerDiemRequestDto,
     companyId: string,
     userId: string,
+  ): Promise<unknown> {
+    return this.submitForEmployee(userId, dto, companyId, userId);
+  }
+
+  /**
+   * Submits a per diem request on behalf of an employee (HR import / proxy).
+   */
+  async submitOnBehalf(
+    employeeId: string,
+    dto: SubmitPerDiemRequestDto,
+    companyId: string,
+    actorUserId: string,
+  ): Promise<unknown> {
+    const isHrViewer = await this.permissionService.hasPermission(
+      actorUserId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer && employeeId !== actorUserId) {
+      throw new ForbiddenException(
+        'You do not have permission to submit per diem on behalf of this employee',
+      );
+    }
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    return this.submitForEmployee(employeeId, dto, companyId, actorUserId);
+  }
+
+  /**
+   * Shared submit path for self-service and on-behalf flows.
+   */
+  private async submitForEmployee(
+    employeeId: string,
+    dto: SubmitPerDiemRequestDto,
+    companyId: string,
+    actorUserId: string,
   ): Promise<unknown> {
     const startDate = this.parseDateTime(dto.startDate);
     const endDate = this.parseDateTime(dto.endDate);
@@ -114,9 +158,9 @@ export class PerDiemService
     const resolvedRate =
       await this.employeePerDiemRateService.resolveRateForSubmission(
         companyId,
-        userId,
+        employeeId,
         dto.destinationCategory,
-        userId,
+        actorUserId,
       );
 
     if (dto.linkedFlightId) {
@@ -124,13 +168,13 @@ export class PerDiemService
         where: activeOnly({
           id: dto.linkedFlightId,
           companyId,
-          submittedBy: userId,
+          submittedBy: employeeId,
         }),
         select: { id: true },
       });
       if (!flight) {
         throw new BadRequestException(
-          'linkedFlightId does not reference your own flight application',
+          'linkedFlightId does not reference this employee\'s flight application',
         );
       }
     }
@@ -139,13 +183,13 @@ export class PerDiemService
         where: activeOnly({
           id: dto.linkedBusinessTripId,
           companyId,
-          submittedBy: userId,
+          submittedBy: employeeId,
         }),
         select: { id: true },
       });
       if (!trip) {
         throw new BadRequestException(
-          'linkedBusinessTripId does not reference your own business trip',
+          'linkedBusinessTripId does not reference this employee\'s business trip',
         );
       }
     }
@@ -163,7 +207,7 @@ export class PerDiemService
     const totalAmountEtb = totalAmount * exchangeRate;
 
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
-      userId,
+      employeeId,
       companyId,
       true,
     );
@@ -183,7 +227,7 @@ export class PerDiemService
         },
       },
       companyId,
-      userId,
+      employeeId,
       {
         resolvedTiers: {
           ruleName: 'Per diem org chain',
@@ -201,7 +245,7 @@ export class PerDiemService
           id: requestId,
           companyId,
           requestNumber: approval.requestNumber,
-          employeeId: userId,
+          employeeId,
           employeePerDiemRateId: resolvedRate.employeePerDiemRateId,
           destinationCategory: dto.destinationCategory,
           destination: dto.destination.trim(),
@@ -220,8 +264,8 @@ export class PerDiemService
           status: PerDiemStatus.SUBMITTED,
           approvalRequestId: approval.id,
           submittedAt: now,
-          createdBy: userId,
-          updatedBy: userId,
+          createdBy: actorUserId,
+          updatedBy: actorUserId,
         },
       });
     } catch (error: unknown) {
@@ -233,14 +277,14 @@ export class PerDiemService
         where: { id: approval.id },
         data: {
           status: ApprovalRequestStatus.CANCELLED,
-          updatedBy: userId,
+          updatedBy: actorUserId,
           completedAt: now,
         },
       });
       throw error;
     }
 
-    return this.getRequest(requestId, companyId, userId);
+    return this.getRequest(requestId, companyId, actorUserId);
   }
 
   async getRequest(
