@@ -244,7 +244,7 @@ export class CreateProjectDto {
 
   @ApiPropertyOptional({
     description:
-      'Client name — suggested presets: CCECC Ethiopia, CCECC Djibouti, CCECC Kenya; custom names allowed.',
+      'Client name - suggested presets: CCECC Ethiopia, CCECC Djibouti, CCECC Kenya; custom names allowed.',
     maxLength: PROJECT_CLIENT_MAX_LENGTH,
   })
   @IsOptional()
@@ -306,7 +306,7 @@ export class UpdateProjectDto extends PartialType(
   @ApiPropertyOptional({
     nullable: true,
     description:
-      'Client name — null clears the client. Custom names allowed beyond presets.',
+      'Client name - null clears the client. Custom names allowed beyond presets.',
     maxLength: PROJECT_CLIENT_MAX_LENGTH,
   })
   @IsOptional()
