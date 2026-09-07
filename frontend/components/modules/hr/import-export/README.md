@@ -2,7 +2,11 @@
 
 Shared building blocks used by every HR list and detail page:
 
-- `ExportExcelButton` — Excel export of the currently filtered list rows.
+- `HrListActions` — the list-page action cluster: export dropdown, import
+  button and the page's primary button, joined on wide toolbars and collapsed
+  into an overflow menu on narrow ones.
+- `ExportExcelButton` — export on its own, for pages with no primary action.
+- `useHrExcelExport` — the hook both of the above build on.
 - `ExportPdfButton` — PDF export of a single record.
 - `ImportModal` — the full import flow: template download, client-side
   validation, preview table, commit with per-row feedback.

@@ -296,3 +296,43 @@ export const leavePolicyImportSchema: HrImportModuleSchema = {
     { field: 'requiresReceipt', label: 'Requires Receipt', type: 'string' },
   ],
 };
+
+export const companyVehicleImportSchema: HrImportModuleSchema = {
+  endpoint: '/organization/vehicles',
+  templateFileName: 'company-vehicle-import-template.xlsx',
+  columns: [
+    { field: 'plateNumber', label: 'Plate Number', type: 'string', required: true, aliases: ['plate'] },
+    {
+      field: 'vehicleType',
+      label: 'Vehicle Type',
+      type: 'enum',
+      required: true,
+      enumValues: ['CAR', 'TRUCK', 'VAN', 'BUS', 'PICKUP', 'MOTORCYCLE', 'OTHER'],
+    },
+    { field: 'make', label: 'Make', type: 'string', required: true },
+    { field: 'model', label: 'Model', type: 'string', required: true },
+    {
+      field: 'year',
+      label: 'Year',
+      type: 'integer',
+      required: true,
+      min: 1900,
+      max: new Date().getFullYear() + 1,
+    },
+    {
+      field: 'fuelType',
+      label: 'Fuel Type',
+      type: 'enum',
+      enumValues: ['PETROL', 'DIESEL', 'ELECTRIC', 'HYBRID'],
+    },
+    { field: 'color', label: 'Color', type: 'string' },
+    {
+      field: 'assignedDriverEmail',
+      label: 'Assigned Driver Email',
+      type: 'email',
+      aliases: ['driverEmail'],
+    },
+    { field: 'isActive', label: 'Active', type: 'string' },
+    { field: 'notes', label: 'Notes', type: 'string' },
+  ],
+};

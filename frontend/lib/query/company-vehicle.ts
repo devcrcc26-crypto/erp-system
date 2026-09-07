@@ -188,3 +188,39 @@ export function useDeleteCompanyVehiclePhoto() {
     },
   });
 }
+
+const FETCH_PAGE_SIZE = 200;
+
+/**
+ * Loads every vehicle matching the given filters, page by page.
+ *
+ * The list page is server-paginated, so the export calls this at click time to
+ * cover the whole filtered set rather than just the page on screen.
+ */
+export async function fetchAllCompanyVehicles(
+  params: Omit<ListCompanyVehiclesParams, 'page' | 'limit'> = {},
+): Promise<CompanyVehicleListItem[]> {
+  const first = await apiGetPaginated<CompanyVehicleListItem>(
+    `${VEHICLES_PATH}${toQueryString({ ...params, page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  if (first.meta.pages <= 1) {
+    return all;
+  }
+
+  const rest = await Promise.all(
+    Array.from({ length: first.meta.pages - 1 }, (_, index) =>
+      apiGetPaginated<CompanyVehicleListItem>(
+        `${VEHICLES_PATH}${toQueryString({
+          ...params,
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}

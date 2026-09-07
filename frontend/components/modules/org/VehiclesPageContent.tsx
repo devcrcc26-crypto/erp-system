@@ -19,7 +19,6 @@ import {
   DeleteOutlined,
   EditOutlined,
   MoreOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   ToolOutlined,
@@ -54,6 +53,11 @@ import {
   initialVehicleStatusChangeSelection,
   vehicleStatusVariant,
 } from '@/lib/utils/company-vehicle-display';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
+import ImportModal from '@/components/modules/hr/import-export/ImportModal';
+import { fetchAllCompanyVehicles } from '@/lib/query/company-vehicle';
+import { buildCompanyVehicleExportSheets } from '@/lib/utils/company-vehicle-export';
+import { companyVehicleImportSchema } from '@/lib/utils/hr-import-configs';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 /**
@@ -108,6 +112,7 @@ export default function VehiclesPageContent(): React.ReactNode {
     [params, appliedSearch, statusFilter],
   );
 
+  const [importOpen, setImportOpen] = useState(false);
   const listQuery = useCompanyVehicles(listParams);
   const statsQuery = useCompanyVehicles({ page: 1, limit: 500 });
   const deleteMutation = useDeleteCompanyVehicle();
@@ -245,6 +250,16 @@ export default function VehiclesPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-org-vehicles-page">
+      {importOpen ? (
+        <ImportModal
+          schema={companyVehicleImportSchema}
+          title={t('hr.exportImport.companyVehicles.title')}
+          description={t('hr.exportImport.companyVehicles.description')}
+          onClose={() => setImportOpen(false)}
+          onImported={() => void handleRefresh()}
+        />
+      ) : null}
+
       <VehicleChangeStatusDialog
         open={Boolean(statusModalVehicle)}
         plateNumber={statusModalVehicle?.plateNumber ?? ''}
@@ -350,14 +365,29 @@ export default function VehiclesPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/organization/vehicles/new')}
-              aria-label={t('vehicles.addVehicle')}
-            >
-              {isNarrow ? undefined : t('vehicles.addVehicle')}
-            </Button>
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'vehicles',
+                  label: t('hr.exportImport.companyVehicles.export'),
+                  filePrefix: 'company-vehicles',
+                  disabled: meta.total === 0,
+                  buildSheets: async () =>
+                    buildCompanyVehicleExportSheets(
+                      await fetchAllCompanyVehicles({
+                        search: appliedSearch || undefined,
+                        status: statusFilter,
+                      }),
+                    ),
+                },
+              ]}
+              onImport={() => setImportOpen(true)}
+              primary={{
+                label: t('vehicles.addVehicle'),
+                onClick: () => router.push('/organization/vehicles/new'),
+              }}
+            />
           </div>
         </div>
 

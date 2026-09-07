@@ -1873,6 +1873,11 @@
   },
   "hr": {
     "exportImport": {
+      "companyVehicles": {
+        "title": "导入公司车辆",
+        "description": "上传表格以登记车辆。导入的车辆状态为“可用”；车牌号必须唯一。",
+        "export": "导出车辆"
+      },
       "employeePerDiemRates": {
         "title": "导入出差补助标准",
         "description": "上传表格，每位员工一行。每行会覆盖该员工的补助标准卡；留空的金额将被清除。",

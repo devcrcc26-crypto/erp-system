@@ -210,6 +210,7 @@ export default function UsersPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const { params, bindMeta, resetPage } = useTablePagination(10);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -354,6 +355,18 @@ export default function UsersPageContent(): React.ReactNode {
     [filteredUsers, params.page, params.limit],
   );
 
+
+  function handleResetFilters(): void {
+    setSearch('');
+    setAppliedSearch('');
+    setDisciplineFilter(undefined);
+    setDepartmentFilter(undefined);
+    setPositionFilter(undefined);
+    setStatusFilter(undefined);
+    setEmployeeTypeFilter(undefined);
+    setNationalityFilter(undefined);
+    resetPage();
+  }
 
   const moreFilterCount = useMemo(() => {
     let count = 0;

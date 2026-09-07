@@ -1873,6 +1873,11 @@
   },
   "hr": {
     "exportImport": {
+      "companyVehicles": {
+        "title": "Import company vehicles",
+        "description": "Upload a spreadsheet to register vehicles. Imported vehicles are created with status Available; plate numbers must be unique.",
+        "export": "Export vehicles"
+      },
       "employeePerDiemRates": {
         "title": "Import per diem rates",
         "description": "Upload a spreadsheet with one row per employee. Each row replaces that employee’s per diem rate card; blank rates are cleared.",
