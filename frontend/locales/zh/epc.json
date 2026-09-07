@@ -1873,6 +1873,16 @@
   },
   "hr": {
     "exportImport": {
+      "employeePerDiemRates": {
+        "title": "导入出差补助标准",
+        "description": "上传表格，每位员工一行。每行会覆盖该员工的补助标准卡；留空的金额将被清除。",
+        "export": "导出补助标准"
+      },
+      "leavePolicies": {
+        "title": "导入休假政策",
+        "description": "上传表格，每条假期类型规则一行。政策名称相同的行会合并为一条包含多项规则的政策。",
+        "export": "导出政策"
+      },
       "exportExcel": "导出 Excel",
       "exportPdf": "导出 PDF",
       "exportSuccess": "导出已下载。",

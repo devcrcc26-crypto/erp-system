@@ -1873,6 +1873,16 @@
   },
   "hr": {
     "exportImport": {
+      "employeePerDiemRates": {
+        "title": "Import per diem rates",
+        "description": "Upload a spreadsheet with one row per employee. Each row replaces that employee’s per diem rate card; blank rates are cleared.",
+        "export": "Export rates"
+      },
+      "leavePolicies": {
+        "title": "Import leave policies",
+        "description": "Upload a spreadsheet with one row per leave-type rule. Rows sharing a policy name become one policy with several rules.",
+        "export": "Export policies"
+      },
       "exportExcel": "Export Excel",
       "exportPdf": "Export PDF",
       "exportSuccess": "Export downloaded.",

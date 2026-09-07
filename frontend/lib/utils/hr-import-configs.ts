@@ -4,7 +4,7 @@ import type {
 } from '@/lib/utils/hr-import-schema';
 
 /**
- * Client-side import schemas for the seven HR modules.
+ * Client-side import schemas for the HR modules that support Excel import.
  *
  * These mirror the backend column schemas so the modal can pre-validate a file
  * before uploading it. When a backend schema changes, change the matching
@@ -238,4 +238,61 @@ export const projectSealImportSchema: HrImportModuleSchema = {
   endpoint: '/hr/project-seal',
   templateFileName: 'project-seal-import-template.xlsx',
   columns: SEAL_COLUMNS,
+};
+
+const RATE_CATEGORIES = [
+  { field: 'domesticRate', active: 'domesticActive', label: 'Domestic' },
+  { field: 'eastAfricaRate', active: 'eastAfricaActive', label: 'East Africa' },
+  { field: 'otherAfricaRate', active: 'otherAfricaActive', label: 'Other Africa' },
+  { field: 'middleEastRate', active: 'middleEastActive', label: 'Middle East' },
+  { field: 'asiaRate', active: 'asiaActive', label: 'Asia' },
+  { field: 'europeRate', active: 'europeActive', label: 'Europe' },
+  { field: 'americasRate', active: 'americasActive', label: 'Americas' },
+] as const;
+
+export const employeePerDiemRateImportSchema: HrImportModuleSchema = {
+  endpoint: '/hr/employee-per-diem-rates',
+  templateFileName: 'employee-per-diem-rate-import-template.xlsx',
+  columns: [
+    ...EMPLOYEE_COLUMNS,
+    ...RATE_CATEGORIES.flatMap((category) => [
+      {
+        field: category.field,
+        label: `${category.label} Rate (ETB)`,
+        type: 'number' as const,
+        min: 0,
+      },
+      {
+        field: category.active,
+        label: `${category.label} Active`,
+        type: 'string' as const,
+      },
+    ]),
+  ],
+};
+
+export const leavePolicyImportSchema: HrImportModuleSchema = {
+  endpoint: '/hr/leave-policies',
+  templateFileName: 'leave-policy-import-template.xlsx',
+  columns: [
+    { field: 'name', label: 'Policy Name', type: 'string', required: true, aliases: ['policyName'] },
+    { field: 'description', label: 'Description', type: 'string' },
+    { field: 'governedBy', label: 'Governed By', type: 'string' },
+    { field: 'isActive', label: 'Active', type: 'string' },
+    {
+      field: 'leaveType',
+      label: 'Leave Type',
+      type: 'enum',
+      required: true,
+      enumValues: ['ANNUAL', 'MATERNITY', 'SICK'],
+    },
+    { field: 'baseDays', label: 'Base Days', type: 'number', required: true, min: 0 },
+    { field: 'isProgressive', label: 'Progressive', type: 'string' },
+    { field: 'incrementDays', label: 'Increment Days', type: 'number', min: 0 },
+    { field: 'incrementEveryYears', label: 'Increment Every (Years)', type: 'integer', min: 1 },
+    { field: 'minimumServiceMonths', label: 'Minimum Service (Months)', type: 'integer', min: 0 },
+    { field: 'maxDaysCap', label: 'Max Days Cap', type: 'number', min: 0 },
+    { field: 'maxCarryForwardDays', label: 'Max Carry Forward Days', type: 'number', min: 0 },
+    { field: 'requiresReceipt', label: 'Requires Receipt', type: 'string' },
+  ],
 };
