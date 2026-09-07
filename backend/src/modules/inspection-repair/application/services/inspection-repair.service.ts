@@ -103,6 +103,66 @@ export class InspectionRepairService {
     });
   }
 
+  /**
+   * Creates a DRAFT inspection & repair request for an employee without
+   * submitting it. Used by the Excel importer.
+   */
+  async createDraftFromImport(
+    employeeId: string,
+    dto: SubmitInspectionRepairDto,
+    companyId: string,
+    actorUserId: string,
+  ): Promise<{ id: string; requestNumber: string }> {
+    if (employeeId !== actorUserId) {
+      const isHrViewer = await this.permissionService.hasPermission(
+        actorUserId,
+        companyId,
+        'hr',
+        'view',
+      );
+      if (!isHrViewer) {
+        throw new ForbiddenException(
+          'Only HR can import inspection & repair requests for another employee',
+        );
+      }
+    }
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const resolved = await this.resolveAssetDetails(dto, companyId, employeeId);
+
+    const data = {
+      id: randomUUID(),
+      companyId,
+      employeeId,
+      assetId: resolved.assetId,
+      deviceName: resolved.deviceName,
+      location: dto.location.trim(),
+      make: resolved.make,
+      model: resolved.model,
+      year: resolved.year,
+      description: dto.description.trim(),
+      solution: dto.solution?.trim() || null,
+      urgency: dto.urgency,
+      inspectionType: dto.inspectionType,
+      requestNumber: await this.nextRequestNumber(),
+      status: InspectionRepairStatus.DRAFT,
+      createdBy: actorUserId,
+      updatedBy: actorUserId,
+    } as Prisma.InspectionRepairUncheckedCreateInput;
+
+    return this.prisma.inspectionRepair.create({
+      data,
+      select: { id: true, requestNumber: true },
+    });
+  }
+
   async listRequests(
     filters: ListInspectionRepairsDto,
     companyId: string,
