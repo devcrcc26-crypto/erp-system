@@ -228,6 +228,74 @@ export class VehicleRefuelingService
     return this.getRefueling(id, companyId, userId);
   }
 
+  /**
+   * Creates a DRAFT refueling request for an employee without touching the
+   * approval workflow. Used by the Excel importer.
+   */
+  async createDraftFromImport(
+    employeeId: string,
+    dto: SubmitVehicleRefuelingDto,
+    companyId: string,
+    actorUserId: string,
+  ): Promise<{ id: string; requestNumber: string }> {
+    if (employeeId !== actorUserId) {
+      const canFileOnBehalf = await this.hrApprovalChain.isHrOrFullAccessActor(
+        actorUserId,
+        companyId,
+      );
+      if (!canFileOnBehalf) {
+        throw new ForbiddenException(
+          'Only HR or a full-access role can import refueling requests for another employee',
+        );
+      }
+    }
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const vehicle = await this.prisma.companyVehicle.findFirst({
+      where: activeOnly({ id: dto.vehicleId, companyId }),
+      select: { id: true },
+    });
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    this.assertFuelDateNotFuture(dto.fuelDate);
+
+    return this.prisma.vehicleRefueling.create({
+      data: {
+        id: randomUUID(),
+        companyId,
+        requestNumber: await this.nextRequestNumber(),
+        employeeId,
+        vehicleId: dto.vehicleId,
+        driverId: dto.driverId || null,
+        fuelDate: this.parseDateOnly(dto.fuelDate),
+        fuelType: dto.fuelType,
+        fuelStation: dto.fuelStation.trim(),
+        currentMileage: new Prisma.Decimal(dto.currentMileage),
+        requestedLitres: new Prisma.Decimal(dto.requestedLitres),
+        unitPriceEtb:
+          dto.unitPriceEtb != null ? new Prisma.Decimal(dto.unitPriceEtb) : null,
+        totalCostEtb: this.computeTotalCostEtb(
+          dto.requestedLitres,
+          dto.unitPriceEtb,
+        ),
+        notes: dto.notes?.trim() || null,
+        status: VehicleRefuelingStatus.DRAFT,
+        createdBy: actorUserId,
+        updatedBy: actorUserId,
+      },
+      select: { id: true, requestNumber: true },
+    });
+  }
+
   /** Fetches a single refueling request with vehicle and approval tiers. */
   async getRefueling(
     id: string,

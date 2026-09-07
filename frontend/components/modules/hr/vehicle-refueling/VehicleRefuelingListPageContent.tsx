@@ -17,6 +17,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -47,6 +48,10 @@ import {
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import ImportModal from '@/components/modules/hr/import-export/ImportModal';
+import { vehicleRefuelingImportSchema } from '@/lib/utils/hr-import-configs';
+import { buildVehicleRefuelingExportSheets } from '@/lib/utils/vehicle-refueling-export';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 const PENDING_STATUSES = statusesForVehicleRefuelingMode('pending');
@@ -117,6 +122,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
     [Dayjs | null, Dayjs | null] | null
   >(null);
 
+  const [importOpen, setImportOpen] = useState(false);
   const listQuery = useVehicleRefuelingsAll({}, true);
 
   const usersQuery = useUsersDirectory(
@@ -364,6 +370,16 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-vehicle-refueling-page">
+      {importOpen ? (
+        <ImportModal
+          schema={vehicleRefuelingImportSchema}
+          title={t('hr.exportImport.vehicleRefuelings.title')}
+          description={t('hr.exportImport.vehicleRefuelings.description')}
+          onClose={() => setImportOpen(false)}
+          onImported={() => void listQuery.refetch()}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -429,6 +445,28 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            <ExportExcelButton
+              compact={isNarrow}
+              actions={[
+                {
+                  key: 'refuelings',
+                  label: t('hr.exportImport.vehicleRefuelings.export'),
+                  filePrefix: 'vehicle-refueling',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildVehicleRefuelingExportSheets(filtered),
+                },
+              ]}
+            />
+            {canViewHr ? (
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportOpen(true)}
+                aria-label={t('hr.exportImport.importFromExcel')}
+              >
+                {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
+              </Button>
+            ) : null}
+
             <Button
               type="primary"
               icon={<PlusOutlined />}

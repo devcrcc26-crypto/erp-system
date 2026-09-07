@@ -27,6 +27,9 @@ import {
   useUploadRefuelingReceipt,
   useVehicleRefueling,
 } from '@/lib/query/vehicle-refueling';
+import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
+import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
+import { exportVehicleRefuelingPdf } from '@/lib/utils/vehicle-refueling-export';
 import { useCurrentUser } from '@/lib/query/profile';
 import { formatFuelType } from '@/lib/utils/company-vehicle-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -79,6 +82,7 @@ export default function VehicleRefuelingDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
+  const pdfContext = useHrPdfContext();
   const currentUser = useCurrentUser();
   const detailQuery = useVehicleRefueling(refuelingId);
   const cancelMutation = useCancelVehicleRefueling(refuelingId);
@@ -191,6 +195,19 @@ export default function VehicleRefuelingDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
+  /** Renders this record with the shared HR document layout. */
+  function handleExportPdf(): void {
+    if (!refueling) {
+      return;
+    }
+
+      exportVehicleRefuelingPdf({
+        refueling,
+        companyName: pdfContext.companyName,
+        preparedBy: pdfContext.preparedBy,
+      });
+  }
+
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-vehicle-refueling-detail-page">
       <div className="erp-pro-card">
@@ -206,6 +223,10 @@ export default function VehicleRefuelingDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <ExportPdfButton
+              compact={isNarrow}
+              buildPdf={() => handleExportPdf()}
+            />
             {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}
