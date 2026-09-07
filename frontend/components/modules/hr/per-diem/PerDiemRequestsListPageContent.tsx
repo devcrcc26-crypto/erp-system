@@ -1,15 +1,13 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   DatePicker,
-  Dropdown,
   Grid,
   Input,
   Select,
-  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -17,12 +15,8 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  DownloadOutlined,
-  MoreOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
 import { Wallet } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
@@ -55,7 +49,6 @@ import {
   formatPerDiemStatus,
   perDiemStatusVariant,
 } from '@/lib/utils/per-diem-display';
-import { exportPerDiemRequestsExcel } from '@/lib/utils/per-diem-export-excel';
 import {
   filterPerDiemRequests,
   statusesForPerDiemMode,
@@ -63,7 +56,8 @@ import {
 } from '@/lib/utils/per-diem-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-import { useAuthStore } from '@/stores/auth.store';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
+import { buildPerDiemRequestExportSheets } from '@/lib/utils/per-diem-export';
 
 const PENDING_STATUSES = statusesForPerDiemMode('pending');
 const APPROVED_STATUSES = statusesForPerDiemMode('approved');
@@ -123,7 +117,6 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const messageApi = useAppMessage();
-  const authUser = useAuthStore((state) => state.user);
   const { params, resetPage, bindMeta } = useTablePagination(10);
   const importPreview = usePerDiemRequestImportPreview();
   const importCommit = usePerDiemRequestImport();
@@ -135,7 +128,6 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
-  const [exporting, setExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
   const listQuery = usePerDiemRequestsAll(true);
@@ -299,21 +291,6 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
     [canViewHr, isNarrow, t],
   );
 
-  const handleExportExcel = useCallback(async (): Promise<void> => {
-    setExporting(true);
-    try {
-      await exportPerDiemRequestsExcel({
-        companyName: authUser?.companyName ?? 'Company',
-        sheetName: t('pages.hr.perDiem.exportSheetName'),
-        rows: filtered,
-      });
-      messageApi.success(t('pages.hr.perDiem.exportSuccess'));
-    } catch {
-      messageApi.error(t('pages.hr.perDiem.exportError'));
-    } finally {
-      setExporting(false);
-    }
-  }, [authUser?.companyName, filtered, messageApi, t]);
 
   function handleStatusMode(mode: PerDiemStatusMode): void {
     setStatusMode(mode);
@@ -433,70 +410,25 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {isCompact ? (
-              <>
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: 'export',
-                        icon: <DownloadOutlined />,
-                        label: t('users.exportExcel'),
-                        disabled: exporting,
-                        onClick: () => void handleExportExcel(),
-                      },
-                      ...(canViewHr
-                        ? [
-                            {
-                              key: 'import',
-                              icon: <UploadOutlined />,
-                              label: t('common.importFromExcel'),
-                              onClick: () => setImportOpen(true),
-                            },
-                          ]
-                        : []),
-                    ],
-                  }}
-                  trigger={['click']}
-                >
-                  <Button
-                    icon={<MoreOutlined />}
-                    aria-label={t('common.actions')}
-                  />
-                </Dropdown>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => router.push('/approvals/new/per-diem')}
-                  aria-label={t('hr.buttons.newPerDiem')}
-                />
-              </>
-            ) : (
-              <Space.Compact>
-                <Button
-                  icon={<DownloadOutlined />}
-                  loading={exporting}
-                  onClick={() => void handleExportExcel()}
-                >
-                  {t('users.exportExcel')}
-                </Button>
-                {canViewHr ? (
-                  <Button
-                    icon={<UploadOutlined />}
-                    onClick={() => setImportOpen(true)}
-                  >
-                    {t('common.importFromExcel')}
-                  </Button>
-                ) : null}
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => router.push('/approvals/new/per-diem')}
-                >
-                  {t('hr.buttons.newPerDiem')}
-                </Button>
-              </Space.Compact>
-            )}
+            <HrListActions
+              compact={isCompact}
+              exports={[
+                {
+                  key: 'export',
+                  label: undefined,
+                  filePrefix: 'per-diem-requests',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildPerDiemRequestExportSheets(filtered),
+                },
+              ]}
+              onImport={canViewHr ? () => setImportOpen(true) : undefined}
+              primary={
+                {
+                  label: t('hr.buttons.newPerDiem'),
+                  onClick: () => router.push('/approvals/new/per-diem'),
+                }
+              }
+            />
           </div>
         </div>
 
