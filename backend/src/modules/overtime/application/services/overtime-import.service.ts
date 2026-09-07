@@ -203,7 +203,7 @@ export class OvertimeImportService {
     sheetName: string;
     includeEmployee: boolean;
     includePeriod: boolean;
-    sample: ParsedImportRow & { line?: number };
+    sample: Omit<ParsedImportRow, 'line'>;
     note: string;
   }): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();

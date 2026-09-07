@@ -155,7 +155,10 @@ export class ExpenseClaimService
           companyId,
           employeeId,
           status: ExpenseClaimStatus.DRAFT,
-          title: { equals: trimmedTitle, mode: 'insensitive' },
+          title: {
+            equals: trimmedTitle,
+            mode: 'insensitive' as const,
+          },
         }),
         select: { id: true },
         orderBy: { createdAt: 'desc' },
