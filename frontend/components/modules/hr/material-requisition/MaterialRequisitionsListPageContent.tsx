@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Button,
   DatePicker,
+  Dropdown,
   Grid,
   Input,
   Select,
+  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -14,25 +16,37 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DownloadOutlined,
   InboxOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import type { MaterialRequisitionListItem } from '@/lib/api/material-requisition.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useMaterialRequisitionsAll } from '@/lib/query/material-requisition';
+import {
+  downloadMaterialRequisitionImportTemplate,
+  fetchMaterialRequisitionDetails,
+  useMaterialRequisitionImport,
+  useMaterialRequisitionImportPreview,
+  useMaterialRequisitionsAll,
+} from '@/lib/query/material-requisition';
 import { useUsersDirectory } from '@/lib/query/users';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   formatMaterialRequisitionEmployeeName,
   formatMaterialRequisitionStatus,
@@ -43,6 +57,10 @@ import {
   statusesForMaterialRequisitionMode,
   type MaterialRequisitionStatusMode,
 } from '@/lib/utils/material-requisition-list-filter';
+import {
+  exportMaterialRequisitionItemsExcel,
+  exportMaterialRequisitionsExcel,
+} from '@/lib/utils/material-requisition-export-excel';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
@@ -104,7 +122,11 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  const messageApi = useAppMessage();
+  const authUser = useAuthStore((state) => state.user);
   const { params, resetPage, bindMeta } = useTablePagination(10);
+  const importPreview = useMaterialRequisitionImportPreview();
+  const importCommit = useMaterialRequisitionImport();
 
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -114,6 +136,8 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const listQuery = useMaterialRequisitionsAll({}, true);
 
@@ -191,6 +215,41 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
     setStatusMode(mode);
     resetPage();
   }
+
+  const handleExportRequisitions = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      await exportMaterialRequisitionsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.materialRequisition.exportSheetName'),
+        rows: filtered,
+      });
+      messageApi.success(t('pages.hr.materialRequisition.exportSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.materialRequisition.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
+
+  const handleExportItems = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      const details = await fetchMaterialRequisitionDetails(
+        filtered.map((row) => row.id),
+      );
+      await exportMaterialRequisitionItemsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.materialRequisition.exportItemsSheetName'),
+        requisitions: details,
+      });
+      messageApi.success(t('pages.hr.materialRequisition.exportItemsSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.materialRequisition.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
 
   const hasFilters =
     Boolean(appliedSearch.trim()) ||
@@ -313,6 +372,20 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-material-requisitions-page">
+      {importOpen ? (
+        <HrImportModal
+          entity="materialRequisitions"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void listQuery.refetch();
+          }}
+          downloadTemplate={downloadMaterialRequisitionImportTemplate}
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -378,16 +451,103 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() =>
-                router.push('/approvals/new/material-requisition')
-              }
-              aria-label={t('hr.buttons.newMaterialRequisition')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.newMaterialRequisition')}
-            </Button>
+            {isCompact ? (
+              <>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-requisitions',
+                        icon: <DownloadOutlined />,
+                        label: t(
+                          'pages.hr.materialRequisition.exportRequisitions',
+                        ),
+                        disabled: exporting,
+                        onClick: () => void handleExportRequisitions(),
+                      },
+                      {
+                        key: 'export-items',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.materialRequisition.exportItems'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportItems(),
+                      },
+                      ...(canViewHr
+                        ? [
+                            {
+                              key: 'import',
+                              icon: <UploadOutlined />,
+                              label: t('common.importFromExcel'),
+                              onClick: () => setImportOpen(true),
+                            },
+                          ]
+                        : []),
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() =>
+                    router.push('/approvals/new/material-requisition')
+                  }
+                  aria-label={t('hr.buttons.newMaterialRequisition')}
+                />
+              </>
+            ) : (
+              <Space.Compact>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-requisitions',
+                        icon: <DownloadOutlined />,
+                        label: t(
+                          'pages.hr.materialRequisition.exportRequisitions',
+                        ),
+                        disabled: exporting,
+                        onClick: () => void handleExportRequisitions(),
+                      },
+                      {
+                        key: 'export-items',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.materialRequisition.exportItems'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportItems(),
+                      },
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button icon={<DownloadOutlined />} loading={exporting}>
+                    {t('users.exportExcel')}
+                  </Button>
+                </Dropdown>
+                {canViewHr ? (
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setImportOpen(true)}
+                  >
+                    {t('common.importFromExcel')}
+                  </Button>
+                ) : null}
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() =>
+                    router.push('/approvals/new/material-requisition')
+                  }
+                >
+                  {t('hr.buttons.newMaterialRequisition')}
+                </Button>
+              </Space.Compact>
+            )}
           </div>
         </div>
 

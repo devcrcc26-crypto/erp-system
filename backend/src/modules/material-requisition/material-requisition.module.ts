@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
+import { MaterialRequisitionImportService } from './application/services/material-requisition-import.service';
 import { MaterialRequisitionService } from './application/services/material-requisition.service';
+import { MaterialRequisitionImportController } from './presentation/controllers/material-requisition-import.controller';
 import { MaterialRequisitionController } from './presentation/controllers/material-requisition.controller';
 
 /**
@@ -10,8 +12,11 @@ import { MaterialRequisitionController } from './presentation/controllers/materi
  */
 @Module({
   imports: [ApprovalsModule, HrSharedModule],
-  controllers: [MaterialRequisitionController],
-  providers: [MaterialRequisitionService],
+  controllers: [
+    MaterialRequisitionImportController,
+    MaterialRequisitionController,
+  ],
+  providers: [MaterialRequisitionService, MaterialRequisitionImportService],
   exports: [MaterialRequisitionService],
 })
 export class MaterialRequisitionModule {}

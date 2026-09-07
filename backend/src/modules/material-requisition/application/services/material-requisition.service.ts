@@ -122,6 +122,37 @@ export class MaterialRequisitionService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    const created = await this.findOrCreateDraftRequisition(
+      userId,
+      dto,
+      companyId,
+      userId,
+      true,
+    );
+    return this.getRequisition(created.id, companyId, userId);
+  }
+
+  /**
+   * Finds a DRAFT requisition for employee+title or creates one (HR may act on behalf).
+   */
+  async findOrCreateDraftRequisition(
+    employeeId: string,
+    dto: CreateMaterialRequisitionDto,
+    companyId: string,
+    actorUserId: string,
+    forceCreate = false,
+  ): Promise<{ id: string }> {
+    const trimmedTitle = dto.title.trim();
+    const trimmedPurpose = dto.purpose.trim();
+    if (!trimmedTitle) {
+      throw new BadRequestException('title is required');
+    }
+    if (!trimmedPurpose) {
+      throw new BadRequestException('purpose is required');
+    }
+
+    await this.assertCanManageRequisition(employeeId, companyId, actorUserId);
+
     if (dto.projectId) {
       const project = await this.prisma.project.findFirst({
         where: activeOnly({ id: dto.projectId, companyId }),
@@ -132,28 +163,43 @@ export class MaterialRequisitionService
       }
     }
 
-    const requestNumber = await this.nextRequestNumber();
+    if (!forceCreate) {
+      const existing = await this.prisma.materialRequisition.findFirst({
+        where: activeOnly({
+          companyId,
+          employeeId,
+          status: MaterialRequisitionStatus.DRAFT,
+          title: { equals: trimmedTitle, mode: 'insensitive' as const },
+        }),
+        select: { id: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
 
+    const requestNumber = await this.nextRequestNumber();
     const requisition = await this.prisma.materialRequisition.create({
       data: {
         id: randomUUID(),
         companyId,
         requestNumber,
-        employeeId: userId,
-        title: dto.title.trim(),
-        purpose: dto.purpose.trim(),
+        employeeId,
+        title: trimmedTitle,
+        purpose: trimmedPurpose,
         requiredByDate: dto.requiredByDate
           ? this.parseDateOnly(dto.requiredByDate)
           : null,
         projectId: dto.projectId ?? null,
         warehouseLocation: dto.warehouseLocation?.trim() ?? null,
         status: MaterialRequisitionStatus.DRAFT,
-        createdBy: userId,
-        updatedBy: userId,
+        createdBy: actorUserId,
+        updatedBy: actorUserId,
       },
+      select: { id: true },
     });
-
-    return this.getRequisition(requisition.id, companyId, userId);
+    return requisition;
   }
 
   /**
@@ -630,6 +676,27 @@ export class MaterialRequisitionService
 
   // ─── Private helpers ──────────────────────────────────────────────────────
 
+  private async assertCanManageRequisition(
+    employeeId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    if (employeeId === userId) {
+      return;
+    }
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this material requisition',
+      );
+    }
+  }
+
   private async assertEditableOwner(
     requisitionId: string,
     companyId: string,
@@ -642,11 +709,11 @@ export class MaterialRequisitionService
     if (!requisition) {
       throw new NotFoundException('Material requisition not found');
     }
-    if (requisition.employeeId !== userId) {
-      throw new ForbiddenException(
-        'Only the request owner can edit this material requisition',
-      );
-    }
+    await this.assertCanManageRequisition(
+      requisition.employeeId,
+      companyId,
+      userId,
+    );
     if (
       requisition.status !== MaterialRequisitionStatus.DRAFT &&
       requisition.status !== MaterialRequisitionStatus.RETURNED

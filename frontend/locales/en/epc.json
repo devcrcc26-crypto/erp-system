@@ -444,6 +444,14 @@
         "attachmentsStepDescription": "Optionally attach drawings, specs, or other supporting documents.",
         "searchPlaceholder": "Search by request #, title, or employee",
         "emptyFiltered": "No material requisitions match your filters",
+        "exportSheetName": "Material Requisitions",
+        "exportItemsSheetName": "Material Requisition Items",
+        "exportRequisitionItemsSheetName": "Requisition Items",
+        "exportSuccess": "Material requisitions Excel downloaded.",
+        "exportItemsSuccess": "Material requisition items Excel downloaded.",
+        "exportError": "Failed to export material requisitions Excel.",
+        "exportRequisitions": "Export requisitions",
+        "exportItems": "Export items",
         "stats": {
           "total": "Total",
           "pending": "Pending",
@@ -1973,6 +1981,26 @@
         "created": "{{count}} purchase item created.",
         "createdPlural": "{{count}} purchase items created.",
         "summary": "{{created}} items imported into this request"
+      },
+      "materialRequisitions": {
+        "title": "Import material requisition items",
+        "description": "Upload a spreadsheet to add line items to employee DRAFT material requisitions. Requisitions are created by employee + title when needed. Requisitions are not auto-submitted.",
+        "requiredColumns": "Required: employeeEmail or employeeId, title, purpose, itemName, quantity, unit. Optional: warehouseLocation, requiredByDate, projectId, projectCode, itemCode, description.",
+        "importRows": "Import {{count}} item",
+        "importRowsPlural": "Import {{count}} items",
+        "created": "{{count}} material item created.",
+        "createdPlural": "{{count}} material items created.",
+        "summary": "{{created}} material items imported"
+      },
+      "materialRequisitionItems": {
+        "title": "Import requisition items",
+        "description": "Upload a spreadsheet to add line items to this DRAFT or RETURNED material requisition.",
+        "requiredColumns": "Required: itemName, quantity, unit. Optional: itemCode, description.",
+        "importRows": "Import {{count}} item",
+        "importRowsPlural": "Import {{count}} items",
+        "created": "{{count}} material item created.",
+        "createdPlural": "{{count}} material items created.",
+        "summary": "{{created}} items imported into this requisition"
       }
     },
     "assetStatus": {

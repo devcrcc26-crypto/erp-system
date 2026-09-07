@@ -10,14 +10,21 @@ import {
   InputNumber,
   Modal,
   Skeleton,
+  Space,
   Tooltip,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { MoreOutlined, StopOutlined } from '@ant-design/icons';
+import {
+  DownloadOutlined,
+  MoreOutlined,
+  StopOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { ArrowLeft, Inbox, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -25,6 +32,7 @@ import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
@@ -33,17 +41,22 @@ import type {
   UpdateMaterialRequisitionItemPayload,
 } from '@/lib/api/material-requisition.types';
 import {
+  downloadMaterialRequisitionItemsImportTemplate,
   useCancelMaterialRequisition,
   useDeleteMaterialRequisitionItem,
   useMaterialRequisition,
+  useMaterialRequisitionItemsImport,
+  useMaterialRequisitionItemsImportPreview,
   useUpdateMaterialRequisitionItem,
 } from '@/lib/query/material-requisition';
 import { useCurrentUser } from '@/lib/query/profile';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   formatMaterialRequisitionEmployeeName,
   formatMaterialRequisitionStatus,
   materialRequisitionStatusVariant,
 } from '@/lib/utils/material-requisition-display';
+import { exportMaterialRequisitionDetailItemsExcel } from '@/lib/utils/material-requisition-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -88,16 +101,23 @@ export default function MaterialRequisitionDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
+  const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
+  const authUser = useAuthStore((state) => state.user);
   const detailQuery = useMaterialRequisition(requisitionId);
   const cancelMutation = useCancelMaterialRequisition(requisitionId);
   const deleteItemMutation = useDeleteMaterialRequisitionItem(requisitionId);
   const updateItemMutation = useUpdateMaterialRequisitionItem(requisitionId);
+  const itemsImportPreview =
+    useMaterialRequisitionItemsImportPreview(requisitionId);
+  const itemsImportCommit = useMaterialRequisitionItemsImport(requisitionId);
 
   const [editingItem, setEditingItem] =
     useState<MaterialRequisitionItem | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [itemForm] = Form.useForm<UpdateMaterialRequisitionItemPayload>();
 
   useSetHeaderExtra(null);
@@ -107,7 +127,7 @@ export default function MaterialRequisitionDetailPageContent({
     Boolean(requisition) && requisition?.employeeId === currentUser.data?.id;
   const isDraftOrReturned =
     requisition?.status === 'DRAFT' || requisition?.status === 'RETURNED';
-  const canEdit = Boolean(isOwner && isDraftOrReturned);
+  const canEdit = Boolean((isOwner || canViewHr) && isDraftOrReturned);
   const canCancel =
     Boolean(isOwner) &&
     (requisition?.status === 'DRAFT' || requisition?.status === 'SUBMITTED');
@@ -187,6 +207,27 @@ export default function MaterialRequisitionDetailPageContent({
         messageApi,
         t,
       );
+    }
+  }
+
+  async function handleExportItems(): Promise<void> {
+    if (!requisition) {
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportMaterialRequisitionDetailItemsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t(
+          'pages.hr.materialRequisition.exportRequisitionItemsSheetName',
+        ),
+        requisition,
+      });
+      messageApi.success(t('pages.hr.materialRequisition.exportItemsSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.materialRequisition.exportError'));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -537,7 +578,31 @@ export default function MaterialRequisitionDetailPageContent({
               </div>
             </DetailSection>
 
-            <DetailSection title={t('hr.section.items')} bodyClassName="!p-0">
+            <DetailSection
+              title={t('hr.section.items')}
+              bodyClassName="!p-0"
+              action={
+                <Space.Compact>
+                  <Button
+                    size="small"
+                    icon={<DownloadOutlined />}
+                    loading={exporting}
+                    onClick={() => void handleExportItems()}
+                  >
+                    {t('pages.hr.materialRequisition.exportItems')}
+                  </Button>
+                  {canEdit ? (
+                    <Button
+                      size="small"
+                      icon={<UploadOutlined />}
+                      onClick={() => setImportOpen(true)}
+                    >
+                      {t('common.importFromExcel')}
+                    </Button>
+                  ) : null}
+                </Space.Compact>
+              }
+            >
               <DataTable<MaterialRequisitionItem>
                 rowKey="id"
                 className="erp-pro-table erp-users-table"
@@ -699,6 +764,22 @@ export default function MaterialRequisitionDetailPageContent({
         }}
         onCancel={() => setConfirmCancel(false)}
       />
+
+      {importOpen ? (
+        <HrImportModal
+          entity="materialRequisitionItems"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void detailQuery.refetch();
+          }}
+          downloadTemplate={() =>
+            downloadMaterialRequisitionItemsImportTemplate(requisitionId)
+          }
+          previewMutation={itemsImportPreview}
+          commitMutation={itemsImportCommit}
+        />
+      ) : null}
     </div>
   );
 }

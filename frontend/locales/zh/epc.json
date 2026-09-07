@@ -444,6 +444,14 @@
         "attachmentsStepDescription": "可选上传图纸、规格说明或其他证明文件。",
         "searchPlaceholder": "按申请编号、标题或员工搜索",
         "emptyFiltered": "没有符合筛选条件的材料领用",
+        "exportSheetName": "材料领用",
+        "exportItemsSheetName": "材料领用明细",
+        "exportRequisitionItemsSheetName": "领用明细",
+        "exportSuccess": "材料领用 Excel 已下载。",
+        "exportItemsSuccess": "材料领用明细 Excel 已下载。",
+        "exportError": "导出材料领用 Excel 失败。",
+        "exportRequisitions": "导出申请",
+        "exportItems": "导出明细",
         "stats": {
           "total": "全部",
           "pending": "待处理",
@@ -1972,6 +1980,26 @@
         "importRowsPlural": "导入 {{count}} 条明细",
         "created": "已创建 {{count}} 条采购明细。",
         "createdPlural": "已创建 {{count}} 条采购明细。",
+        "summary": "已向本单导入 {{created}} 条明细"
+      },
+      "materialRequisitions": {
+        "title": "导入材料领用明细",
+        "description": "上传表格为员工草稿材料领用添加明细。按员工 + 标题自动创建或复用草稿申请。不会自动提交审批。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、title、purpose、itemName、quantity、unit。可选：warehouseLocation、requiredByDate、projectId、projectCode、itemCode、description。",
+        "importRows": "导入 {{count}} 条明细",
+        "importRowsPlural": "导入 {{count}} 条明细",
+        "created": "已创建 {{count}} 条材料明细。",
+        "createdPlural": "已创建 {{count}} 条材料明细。",
+        "summary": "已导入 {{created}} 条材料明细"
+      },
+      "materialRequisitionItems": {
+        "title": "导入领用明细",
+        "description": "上传表格向本草稿或退回状态的材料领用添加明细。",
+        "requiredColumns": "必填：itemName、quantity、unit。可选：itemCode、description。",
+        "importRows": "导入 {{count}} 条明细",
+        "importRowsPlural": "导入 {{count}} 条明细",
+        "created": "已创建 {{count}} 条材料明细。",
+        "createdPlural": "已创建 {{count}} 条材料明细。",
         "summary": "已向本单导入 {{created}} 条明细"
       }
     },

@@ -8,11 +8,13 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { memoryStorage } from 'multer';
@@ -29,6 +31,8 @@ import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
+import { MaterialRequisitionImportPreviewResponseDto } from '../../application/dtos/material-requisition-import.dtos';
 import {
   AddMaterialRequisitionItemDto,
   CreateMaterialRequisitionDto,
@@ -36,6 +40,7 @@ import {
   UpdateMaterialRequisitionDto,
   UpdateMaterialRequisitionItemDto,
 } from '../../application/dtos/material-requisition.dtos';
+import { MaterialRequisitionImportService } from '../../application/services/material-requisition-import.service';
 import { MaterialRequisitionService } from '../../application/services/material-requisition.service';
 
 async function parseDto<T extends object>(
@@ -71,7 +76,15 @@ async function parseDto<T extends object>(
 export class MaterialRequisitionController {
   constructor(
     private readonly materialRequisitionService: MaterialRequisitionService,
+    private readonly materialRequisitionImportService: MaterialRequisitionImportService,
   ) {}
+
+  private importCtx(user: AuthenticatedUser): {
+    companyId: string;
+    userId: string;
+  } {
+    return { companyId: user.companyId, userId: user.userId };
+  }
 
   @Post()
   @DelegatePermissionCheck()
@@ -103,6 +116,85 @@ export class MaterialRequisitionController {
       query,
       companyId,
       user.userId,
+    );
+  }
+
+  @Get(':id/items/import/template')
+  @ApiOperation({
+    summary: 'Download item import template for one material requisition',
+  })
+  async downloadRequisitionImportTemplate(): Promise<StreamableFile> {
+    const buffer =
+      await this.materialRequisitionImportService.buildRequisitionTemplate();
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition:
+        'attachment; filename="material-requisition-items-import-template.xlsx"',
+    });
+  }
+
+  @Post(':id/items/import/preview')
+  @ApiOperation({
+    summary: 'Validate item import for one material requisition without writing',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  previewRequisitionImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<MaterialRequisitionImportPreviewResponseDto> {
+    return this.materialRequisitionImportService.previewRequisitionImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
+  }
+
+  @Post(':id/items/import')
+  @ApiOperation({
+    summary:
+      'Import material line items into one DRAFT or RETURNED requisition',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  commitRequisitionImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ImportCommitResponseDto> {
+    return this.materialRequisitionImportService.commitRequisitionImport(
+      id,
+      this.importCtx(user),
+      file,
     );
   }
 
