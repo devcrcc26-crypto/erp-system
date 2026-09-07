@@ -415,6 +415,14 @@
         "attachmentsStepDescription": "可选上传报价单、规格说明或其他证明文件。",
         "searchPlaceholder": "按申请编号、标题或员工搜索",
         "emptyFiltered": "没有符合筛选条件的采购申请",
+        "exportSheetName": "采购申请",
+        "exportItemsSheetName": "采购申请明细",
+        "exportRequestItemsSheetName": "申请明细",
+        "exportSuccess": "采购申请 Excel 已下载。",
+        "exportItemsSuccess": "采购申请明细 Excel 已下载。",
+        "exportError": "导出采购申请 Excel 失败。",
+        "exportRequests": "导出申请",
+        "exportItems": "导出明细",
         "stats": {
           "total": "全部",
           "pending": "待处理",
@@ -1945,6 +1953,26 @@
         "created": "已创建 {{count}} 条差旅补贴申请。",
         "createdPlural": "已创建 {{count}} 条差旅补贴申请。",
         "summary": "已导入 {{created}} 条差旅补贴申请"
+      },
+      "purchaseRequests": {
+        "title": "导入采购申请明细",
+        "description": "上传表格为员工草稿采购申请添加明细。按员工 + 标题自动创建或复用草稿申请。不导入商品图片，不会自动提交审批。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、title、justification、itemName、quantity、unit、unitPrice、currency。可选：vendorName、vendorContact、requiredByDate、projectId、projectCode、modelSpec、description。",
+        "importRows": "导入 {{count}} 条明细",
+        "importRowsPlural": "导入 {{count}} 条明细",
+        "created": "已创建 {{count}} 条采购明细。",
+        "createdPlural": "已创建 {{count}} 条采购明细。",
+        "summary": "已导入 {{created}} 条采购明细"
+      },
+      "purchaseRequestItems": {
+        "title": "导入申请明细",
+        "description": "上传表格向本草稿或退回状态的采购申请添加明细。商品图片请在界面上传。",
+        "requiredColumns": "必填：itemName、quantity、unit、unitPrice、currency。可选：modelSpec、description。",
+        "importRows": "导入 {{count}} 条明细",
+        "importRowsPlural": "导入 {{count}} 条明细",
+        "created": "已创建 {{count}} 条采购明细。",
+        "createdPlural": "已创建 {{count}} 条采购明细。",
+        "summary": "已向本单导入 {{created}} 条明细"
       }
     },
     "assetStatus": {

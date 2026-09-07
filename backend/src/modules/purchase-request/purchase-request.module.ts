@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
+import { PurchaseRequestImportService } from './application/services/purchase-request-import.service';
 import { PurchaseRequestService } from './application/services/purchase-request.service';
+import { PurchaseRequestImportController } from './presentation/controllers/purchase-request-import.controller';
 import { PurchaseRequestController } from './presentation/controllers/purchase-request.controller';
 
 /**
@@ -10,8 +12,8 @@ import { PurchaseRequestController } from './presentation/controllers/purchase-r
  */
 @Module({
   imports: [ApprovalsModule, HrSharedModule],
-  controllers: [PurchaseRequestController],
-  providers: [PurchaseRequestService],
+  controllers: [PurchaseRequestImportController, PurchaseRequestController],
+  providers: [PurchaseRequestService, PurchaseRequestImportService],
   exports: [PurchaseRequestService],
 })
 export class PurchaseRequestModule {}

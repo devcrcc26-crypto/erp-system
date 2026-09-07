@@ -1,13 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Button,
   DatePicker,
+  Dropdown,
   Grid,
   Input,
   InputNumber,
   Select,
+  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -15,25 +17,37 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DownloadOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   ShoppingCartOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import type { PurchaseRequestListItem } from '@/lib/api/purchase-request.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { usePurchaseRequestsAll } from '@/lib/query/purchase-request';
+import {
+  downloadPurchaseRequestImportTemplate,
+  fetchPurchaseRequestDetails,
+  usePurchaseRequestImport,
+  usePurchaseRequestImportPreview,
+  usePurchaseRequestsAll,
+} from '@/lib/query/purchase-request';
 import { useUsersDirectory } from '@/lib/query/users';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   formatEtbAmount,
   formatPurchaseRequestEmployeeName,
@@ -45,6 +59,10 @@ import {
   statusesForPurchaseRequestMode,
   type PurchaseRequestStatusMode,
 } from '@/lib/utils/purchase-request-list-filter';
+import {
+  exportPurchaseRequestItemsExcel,
+  exportPurchaseRequestsExcel,
+} from '@/lib/utils/purchase-request-export-excel';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
@@ -106,7 +124,11 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  const messageApi = useAppMessage();
+  const authUser = useAuthStore((state) => state.user);
   const { params, resetPage, bindMeta } = useTablePagination(10);
+  const importPreview = usePurchaseRequestImportPreview();
+  const importCommit = usePurchaseRequestImport();
 
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -117,7 +139,8 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
   >(null);
   const [amountMin, setAmountMin] = useState<number | undefined>();
   const [amountMax, setAmountMax] = useState<number | undefined>();
-
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const listQuery = usePurchaseRequestsAll({}, true);
 
   const usersQuery = useUsersDirectory(
@@ -207,6 +230,41 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
     setStatusMode(mode);
     resetPage();
   }
+
+  const handleExportRequests = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      await exportPurchaseRequestsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.purchaseRequest.exportSheetName'),
+        rows: filtered,
+      });
+      messageApi.success(t('pages.hr.purchaseRequest.exportSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.purchaseRequest.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
+
+  const handleExportItems = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      const details = await fetchPurchaseRequestDetails(
+        filtered.map((row) => row.id),
+      );
+      await exportPurchaseRequestItemsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.purchaseRequest.exportItemsSheetName'),
+        requests: details,
+      });
+      messageApi.success(t('pages.hr.purchaseRequest.exportItemsSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.purchaseRequest.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
 
   const hasFilters =
     Boolean(appliedSearch.trim()) ||
@@ -343,6 +401,20 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-purchase-requests-page">
+      {importOpen ? (
+        <HrImportModal
+          entity="purchaseRequests"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void listQuery.refetch();
+          }}
+          downloadTemplate={downloadPurchaseRequestImportTemplate}
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -408,14 +480,95 @@ export default function PurchaseRequestsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push('/approvals/new/purchase-request')}
-              aria-label={t('hr.buttons.newPurchaseRequest')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.newPurchaseRequest')}
-            </Button>
+            {isCompact ? (
+              <>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-requests',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.purchaseRequest.exportRequests'),
+                        disabled: exporting,
+                        onClick: () => void handleExportRequests(),
+                      },
+                      {
+                        key: 'export-items',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.purchaseRequest.exportItems'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportItems(),
+                      },
+                      ...(canViewHr
+                        ? [
+                            {
+                              key: 'import',
+                              icon: <UploadOutlined />,
+                              label: t('common.importFromExcel'),
+                              onClick: () => setImportOpen(true),
+                            },
+                          ]
+                        : []),
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => router.push('/approvals/new/purchase-request')}
+                  aria-label={t('hr.buttons.newPurchaseRequest')}
+                />
+              </>
+            ) : (
+              <Space.Compact>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-requests',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.purchaseRequest.exportRequests'),
+                        disabled: exporting,
+                        onClick: () => void handleExportRequests(),
+                      },
+                      {
+                        key: 'export-items',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.purchaseRequest.exportItems'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportItems(),
+                      },
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button icon={<DownloadOutlined />} loading={exporting}>
+                    {t('users.exportExcel')}
+                  </Button>
+                </Dropdown>
+                {canViewHr ? (
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setImportOpen(true)}
+                  >
+                    {t('common.importFromExcel')}
+                  </Button>
+                ) : null}
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => router.push('/approvals/new/purchase-request')}
+                >
+                  {t('hr.buttons.newPurchaseRequest')}
+                </Button>
+              </Space.Compact>
+            )}
           </div>
         </div>
 

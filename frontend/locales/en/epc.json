@@ -415,6 +415,14 @@
         "attachmentsStepDescription": "Optionally attach quotes, specs, or other supporting documents.",
         "searchPlaceholder": "Search by request #, title, or employee",
         "emptyFiltered": "No purchase requests match your filters",
+        "exportSheetName": "Purchase Requests",
+        "exportItemsSheetName": "Purchase Request Items",
+        "exportRequestItemsSheetName": "Request Items",
+        "exportSuccess": "Purchase requests Excel downloaded.",
+        "exportItemsSuccess": "Purchase request items Excel downloaded.",
+        "exportError": "Failed to export purchase requests Excel.",
+        "exportRequests": "Export requests",
+        "exportItems": "Export items",
         "stats": {
           "total": "Total",
           "pending": "Pending",
@@ -1945,6 +1953,26 @@
         "created": "{{count}} per diem request created.",
         "createdPlural": "{{count}} per diem requests created.",
         "summary": "{{created}} per diem requests imported"
+      },
+      "purchaseRequests": {
+        "title": "Import purchase request items",
+        "description": "Upload a spreadsheet to add line items to employee DRAFT purchase requests. Requests are created by employee + title when needed. Item images are not imported. Requests are not auto-submitted.",
+        "requiredColumns": "Required: employeeEmail or employeeId, title, justification, itemName, quantity, unit, unitPrice, currency. Optional: vendorName, vendorContact, requiredByDate, projectId, projectCode, modelSpec, description.",
+        "importRows": "Import {{count}} item",
+        "importRowsPlural": "Import {{count}} items",
+        "created": "{{count}} purchase item created.",
+        "createdPlural": "{{count}} purchase items created.",
+        "summary": "{{created}} purchase items imported"
+      },
+      "purchaseRequestItems": {
+        "title": "Import request items",
+        "description": "Upload a spreadsheet to add line items to this DRAFT or RETURNED purchase request. Item images must be uploaded in the UI.",
+        "requiredColumns": "Required: itemName, quantity, unit, unitPrice, currency. Optional: modelSpec, description.",
+        "importRows": "Import {{count}} item",
+        "importRowsPlural": "Import {{count}} items",
+        "created": "{{count}} purchase item created.",
+        "createdPlural": "{{count}} purchase items created.",
+        "summary": "{{created}} items imported into this request"
       }
     },
     "assetStatus": {

@@ -13,6 +13,7 @@ import {
   apiPatchForm,
   apiPost,
   apiPostForm,
+  downloadApiFile,
 } from '@/lib/api/client';
 import type {
   AddPurchaseRequestItemPayload,
@@ -23,7 +24,11 @@ import type {
   UpdatePurchaseRequestItemPayload,
   UpdatePurchaseRequestPayload,
 } from '@/lib/api/purchase-request.types';
-import type { PaginationMeta } from '@/lib/api/types';
+import type {
+  HrImportCommitResult,
+  HrImportPreviewResult,
+  PaginationMeta,
+} from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
@@ -298,4 +303,128 @@ export function useCancelPurchaseRequest(requestId: string) {
       );
     },
   });
+}
+
+/**
+ * Loads purchase request details in batches (for list item export).
+ */
+export async function fetchPurchaseRequestDetails(
+  requestIds: string[],
+): Promise<PurchaseRequestDetail[]> {
+  const results: PurchaseRequestDetail[] = [];
+  const batchSize = 8;
+  for (let index = 0; index < requestIds.length; index += batchSize) {
+    const batch = requestIds.slice(index, index + batchSize);
+    const pages = await Promise.all(
+      batch.map((id) =>
+        apiGet<PurchaseRequestDetail>(`${PURCHASE_REQUEST_PATH}/${id}`),
+      ),
+    );
+    results.push(...pages);
+  }
+  return results;
+}
+
+/**
+ * Preview company-wide purchase request Excel import.
+ */
+export function usePurchaseRequestImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${PURCHASE_REQUEST_PATH}/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit company-wide purchase request Excel import.
+ */
+export function usePurchaseRequestImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${PURCHASE_REQUEST_PATH}/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: purchaseRequestKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: purchaseRequestKeys.details(),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the company-wide purchase request import template.
+ */
+export async function downloadPurchaseRequestImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${PURCHASE_REQUEST_PATH}/import/template`,
+    'purchase-request-import-template.xlsx',
+  );
+}
+
+/**
+ * Preview request-scoped purchase item Excel import.
+ */
+export function usePurchaseRequestItemsImportPreview(requestId: string) {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${PURCHASE_REQUEST_PATH}/${requestId}/items/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit request-scoped purchase item Excel import.
+ */
+export function usePurchaseRequestItemsImport(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${PURCHASE_REQUEST_PATH}/${requestId}/items/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: purchaseRequestKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: purchaseRequestKeys.detail(requestId),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the request-scoped purchase items import template.
+ */
+export async function downloadPurchaseRequestItemsImportTemplate(
+  requestId: string,
+): Promise<void> {
+  await downloadApiFile(
+    `${PURCHASE_REQUEST_PATH}/${requestId}/items/import/template`,
+    'purchase-request-items-import-template.xlsx',
+  );
 }

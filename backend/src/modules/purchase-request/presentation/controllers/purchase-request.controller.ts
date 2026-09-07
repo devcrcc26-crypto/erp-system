@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UploadedFile,
   UploadedFiles,
   UseGuards,
@@ -30,6 +31,8 @@ import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
+import { PurchaseRequestImportPreviewResponseDto } from '../../application/dtos/purchase-request-import.dtos';
 import {
   AddPurchaseRequestItemDto,
   CreatePurchaseRequestDto,
@@ -37,6 +40,7 @@ import {
   UpdatePurchaseRequestDto,
   UpdatePurchaseRequestItemDto,
 } from '../../application/dtos/purchase-request.dtos';
+import { PurchaseRequestImportService } from '../../application/services/purchase-request-import.service';
 import { PurchaseRequestService } from '../../application/services/purchase-request.service';
 
 async function parseDto<T extends object>(
@@ -72,7 +76,15 @@ async function parseDto<T extends object>(
 export class PurchaseRequestController {
   constructor(
     private readonly purchaseRequestService: PurchaseRequestService,
+    private readonly purchaseRequestImportService: PurchaseRequestImportService,
   ) {}
+
+  private importCtx(user: AuthenticatedUser): {
+    companyId: string;
+    userId: string;
+  } {
+    return { companyId: user.companyId, userId: user.userId };
+  }
 
   @Post()
   @DelegatePermissionCheck()
@@ -100,6 +112,84 @@ export class PurchaseRequestController {
       query,
       companyId,
       user.userId,
+    );
+  }
+
+  @Get(':id/items/import/template')
+  @ApiOperation({
+    summary: 'Download item import template for one purchase request',
+  })
+  async downloadRequestImportTemplate(): Promise<StreamableFile> {
+    const buffer =
+      await this.purchaseRequestImportService.buildRequestTemplate();
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition:
+        'attachment; filename="purchase-request-items-import-template.xlsx"',
+    });
+  }
+
+  @Post(':id/items/import/preview')
+  @ApiOperation({
+    summary: 'Validate item import for one purchase request without writing',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  previewRequestImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<PurchaseRequestImportPreviewResponseDto> {
+    return this.purchaseRequestImportService.previewRequestImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
+  }
+
+  @Post(':id/items/import')
+  @ApiOperation({
+    summary: 'Import purchase line items into one DRAFT or RETURNED request',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  commitRequestImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ImportCommitResponseDto> {
+    return this.purchaseRequestImportService.commitRequestImport(
+      id,
+      this.importCtx(user),
+      file,
     );
   }
 

@@ -11,19 +11,23 @@ import {
   Modal,
   Select,
   Skeleton,
+  Space,
   Tag,
   Tooltip,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
+  DownloadOutlined,
   EditOutlined,
   MoreOutlined,
   StopOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { ArrowLeft, Pencil, ShoppingCart, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -32,6 +36,7 @@ import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
@@ -41,13 +46,17 @@ import type {
   UpdatePurchaseRequestItemPayload,
 } from '@/lib/api/purchase-request.types';
 import {
+  downloadPurchaseRequestItemsImportTemplate,
   useCancelPurchaseRequest,
   useDeletePurchaseRequestItem,
   usePurchaseRequest,
+  usePurchaseRequestItemsImport,
+  usePurchaseRequestItemsImportPreview,
   useUpdatePurchaseRequestItem,
 } from '@/lib/query/purchase-request';
 import { useCurrentUser } from '@/lib/query/profile';
-import {
+import { useAuthStore } from '@/stores/auth.store';
+import { exportPurchaseRequestDetailItemsExcel } from '@/lib/utils/purchase-request-export-excel';import {
   formatCurrencyAmount,
   formatEtbAmount,
   formatPurchaseItemDescription,
@@ -108,11 +117,15 @@ export default function PurchaseRequestDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
+  const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
+  const authUser = useAuthStore((state) => state.user);
   const detailQuery = usePurchaseRequest(requestId);
   const cancelMutation = useCancelPurchaseRequest(requestId);
   const deleteItemMutation = useDeletePurchaseRequestItem(requestId);
   const updateItemMutation = useUpdatePurchaseRequestItem(requestId);
+  const itemsImportPreview = usePurchaseRequestItemsImportPreview(requestId);
+  const itemsImportCommit = usePurchaseRequestItemsImport(requestId);
 
   const [editingItem, setEditingItem] = useState<PurchaseRequestItem | null>(
     null,
@@ -120,6 +133,8 @@ export default function PurchaseRequestDetailPageContent({
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [itemForm] = Form.useForm<
     UpdatePurchaseRequestItemPayload & {
       currency: SupportedCurrency;
@@ -134,7 +149,7 @@ export default function PurchaseRequestDetailPageContent({
     Boolean(request) && request?.employeeId === currentUser.data?.id;
   const isDraftOrReturned =
     request?.status === 'DRAFT' || request?.status === 'RETURNED';
-  const canEdit = Boolean(isOwner && isDraftOrReturned);
+  const canEdit = Boolean((isOwner || canViewHr) && isDraftOrReturned);
   const canCancel =
     Boolean(isOwner) &&
     (request?.status === 'DRAFT' || request?.status === 'SUBMITTED');
@@ -220,6 +235,25 @@ export default function PurchaseRequestDetailPageContent({
         messageApi,
         t,
       );
+    }
+  }
+
+  async function handleExportItems(): Promise<void> {
+    if (!request) {
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportPurchaseRequestDetailItemsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.purchaseRequest.exportRequestItemsSheetName'),
+        request,
+      });
+      messageApi.success(t('pages.hr.purchaseRequest.exportItemsSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.purchaseRequest.exportError'));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -612,6 +646,27 @@ export default function PurchaseRequestDetailPageContent({
             <DetailSection
               title={t('hr.section.items')}
               bodyClassName="!p-0"
+              action={
+                <Space.Compact>
+                  <Button
+                    size="small"
+                    icon={<DownloadOutlined />}
+                    loading={exporting}
+                    onClick={() => void handleExportItems()}
+                  >
+                    {t('pages.hr.purchaseRequest.exportItems')}
+                  </Button>
+                  {canEdit ? (
+                    <Button
+                      size="small"
+                      icon={<UploadOutlined />}
+                      onClick={() => setImportOpen(true)}
+                    >
+                      {t('common.importFromExcel')}
+                    </Button>
+                  ) : null}
+                </Space.Compact>
+              }
             >
               <DataTable<PurchaseRequestItem>
                 rowKey="id"
@@ -824,6 +879,22 @@ export default function PurchaseRequestDetailPageContent({
         }}
         onCancel={() => setConfirmCancel(false)}
       />
+
+      {importOpen ? (
+        <HrImportModal
+          entity="purchaseRequestItems"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void detailQuery.refetch();
+          }}
+          downloadTemplate={() =>
+            downloadPurchaseRequestItemsImportTemplate(requestId)
+          }
+          previewMutation={itemsImportPreview}
+          commitMutation={itemsImportCommit}
+        />
+      ) : null}
     </div>
   );
 }

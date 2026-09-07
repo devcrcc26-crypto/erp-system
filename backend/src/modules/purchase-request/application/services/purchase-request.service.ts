@@ -127,6 +127,37 @@ export class PurchaseRequestService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    const created = await this.findOrCreateDraftRequest(
+      userId,
+      dto,
+      companyId,
+      userId,
+      true,
+    );
+    return this.getRequest(created.id, companyId, userId);
+  }
+
+  /**
+   * Finds a DRAFT request for employee+title or creates one (HR may act on behalf).
+   */
+  async findOrCreateDraftRequest(
+    employeeId: string,
+    dto: CreatePurchaseRequestDto,
+    companyId: string,
+    actorUserId: string,
+    forceCreate = false,
+  ): Promise<{ id: string }> {
+    const trimmedTitle = dto.title.trim();
+    const trimmedJustification = dto.justification.trim();
+    if (!trimmedTitle) {
+      throw new BadRequestException('title is required');
+    }
+    if (!trimmedJustification) {
+      throw new BadRequestException('justification is required');
+    }
+
+    await this.assertCanManageRequest(employeeId, companyId, actorUserId);
+
     if (dto.projectId) {
       const project = await this.prisma.project.findFirst({
         where: activeOnly({ id: dto.projectId, companyId }),
@@ -137,16 +168,31 @@ export class PurchaseRequestService
       }
     }
 
-    const requestNumber = await this.nextRequestNumber();
+    if (!forceCreate) {
+      const existing = await this.prisma.purchaseRequest.findFirst({
+        where: activeOnly({
+          companyId,
+          employeeId,
+          status: PurchaseRequestStatus.DRAFT,
+          title: { equals: trimmedTitle, mode: 'insensitive' as const },
+        }),
+        select: { id: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (existing) {
+        return existing;
+      }
+    }
 
+    const requestNumber = await this.nextRequestNumber();
     const request = await this.prisma.purchaseRequest.create({
       data: {
         id: randomUUID(),
         companyId,
         requestNumber,
-        employeeId: userId,
-        title: dto.title.trim(),
-        justification: dto.justification.trim(),
+        employeeId,
+        title: trimmedTitle,
+        justification: trimmedJustification,
         vendorName: dto.vendorName?.trim() ?? null,
         vendorContact: dto.vendorContact?.trim() ?? null,
         requiredByDate: dto.requiredByDate
@@ -154,12 +200,12 @@ export class PurchaseRequestService
           : null,
         projectId: dto.projectId ?? null,
         status: PurchaseRequestStatus.DRAFT,
-        createdBy: userId,
-        updatedBy: userId,
+        createdBy: actorUserId,
+        updatedBy: actorUserId,
       },
+      select: { id: true },
     });
-
-    return this.getRequest(request.id, companyId, userId);
+    return request;
   }
 
   /**
@@ -705,6 +751,27 @@ export class PurchaseRequestService
 
   // ─── Private helpers ──────────────────────────────────────────────────────
 
+  private async assertCanManageRequest(
+    employeeId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    if (employeeId === userId) {
+      return;
+    }
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHrViewer) {
+      throw new ForbiddenException(
+        'You do not have permission to modify this purchase request',
+      );
+    }
+  }
+
   private async assertEditableOwner(
     requestId: string,
     companyId: string,
@@ -717,11 +784,7 @@ export class PurchaseRequestService
     if (!request) {
       throw new NotFoundException('Purchase request not found');
     }
-    if (request.employeeId !== userId) {
-      throw new ForbiddenException(
-        'Only the request owner can edit this purchase request',
-      );
-    }
+    await this.assertCanManageRequest(request.employeeId, companyId, userId);
     if (
       request.status !== PurchaseRequestStatus.DRAFT &&
       request.status !== PurchaseRequestStatus.RETURNED

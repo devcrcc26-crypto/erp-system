@@ -119,7 +119,9 @@ export type HrImportEntityKey =
   | 'flightPassengers'
   | 'businessTrips'
   | 'businessTripPassengers'
-  | 'perDiemRequests';
+  | 'perDiemRequests'
+  | 'purchaseRequests'
+  | 'purchaseRequestItems';
 
 /**
  * Shared Excel import modal for HR modules (upload → preview → commit).
