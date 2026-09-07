@@ -33,6 +33,9 @@ import {
   useIssueOfficialSeal,
   useOfficialSeal,
 } from '@/lib/query/official-seal';
+import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
+import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
+import { exportSealPdf } from '@/lib/utils/seal-export';
 import { useCurrentUser } from '@/lib/query/profile';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
@@ -87,6 +90,7 @@ export default function OfficialSealDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
+  const pdfContext = useHrPdfContext();
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
   const detailQuery = useOfficialSeal(sealId);
@@ -223,6 +227,20 @@ export default function OfficialSealDetailPageContent({
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
 
+  /** Renders this record with the shared HR document layout. */
+  function handleExportPdf(): void {
+    if (!seal) {
+      return;
+    }
+
+      exportSealPdf({
+        kind: 'official',
+        seal,
+        companyName: pdfContext.companyName,
+        preparedBy: pdfContext.preparedBy,
+      });
+  }
+
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-official-seal-detail-page">
       <div className="erp-pro-card">
@@ -238,6 +256,10 @@ export default function OfficialSealDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <ExportPdfButton
+              compact={isNarrow}
+              buildPdf={() => handleExportPdf()}
+            />
             {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}
