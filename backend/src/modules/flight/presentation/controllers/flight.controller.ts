@@ -8,11 +8,13 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { memoryStorage } from 'multer';
@@ -29,10 +31,13 @@ import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
+import { FlightImportPreviewResponseDto } from '../../application/dtos/flight-import.dtos';
 import {
   ListFlightApplicationsDto,
   SubmitFlightApplicationDto,
 } from '../../application/dtos/flight.dtos';
+import { FlightImportService } from '../../application/services/flight-import.service';
 import { FlightService } from '../../application/services/flight.service';
 
 /**
@@ -109,7 +114,17 @@ async function parseFlightSubmitDto(
 )
 @Controller('hr/flight-applications')
 export class FlightController {
-  constructor(private readonly flightService: FlightService) {}
+  constructor(
+    private readonly flightService: FlightService,
+    private readonly flightImportService: FlightImportService,
+  ) {}
+
+  private importCtx(user: AuthenticatedUser): {
+    companyId: string;
+    userId: string;
+  } {
+    return { companyId: user.companyId, userId: user.userId };
+  }
 
   @Get('selectable-passengers')
   @DelegatePermissionCheck()
@@ -217,6 +232,84 @@ export class FlightController {
     @Query() query: ListFlightApplicationsDto,
   ): Promise<unknown> {
     return this.flightService.listApplications(query, companyId, user.userId);
+  }
+
+  @Get(':id/passengers/import/template')
+  @ApiOperation({
+    summary: 'Download passenger import template for one flight application',
+  })
+  async downloadApplicationImportTemplate(): Promise<StreamableFile> {
+    const buffer =
+      await this.flightImportService.buildApplicationTemplate();
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition:
+        'attachment; filename="flight-passengers-import-template.xlsx"',
+    });
+  }
+
+  @Post(':id/passengers/import/preview')
+  @ApiOperation({
+    summary: 'Validate passenger import for one flight application without writing',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  previewApplicationImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<FlightImportPreviewResponseDto> {
+    return this.flightImportService.previewApplicationImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
+  }
+
+  @Post(':id/passengers/import')
+  @ApiOperation({
+    summary: 'Import passengers into one DRAFT flight application',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  commitApplicationImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ImportCommitResponseDto> {
+    return this.flightImportService.commitApplicationImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
   }
 
   @Get(':id')

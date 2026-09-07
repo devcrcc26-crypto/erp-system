@@ -294,6 +294,14 @@
         "reviewStepDescription": "Confirm the trip summary before submitting for approval.",
         "searchPlaceholder": "Search by application # or route",
         "emptyFiltered": "No flight applications match your filters",
+        "exportSheetName": "Flight Applications",
+        "exportPassengersSheetName": "Flight Passengers",
+        "exportAppPassengersSheetName": "Passengers",
+        "exportSuccess": "Flight applications Excel downloaded.",
+        "exportPassengersSuccess": "Flight passengers Excel downloaded.",
+        "exportError": "Failed to export flight applications Excel.",
+        "exportApplications": "Export applications",
+        "exportPassengers": "Export passengers",
         "stats": {
           "total": "Total",
           "pending": "Pending",
@@ -1856,6 +1864,26 @@
         "created": "{{count}} expense item created.",
         "createdPlural": "{{count}} expense items created.",
         "summary": "{{created}} items imported into this claim"
+      },
+      "flightApplications": {
+        "title": "Import flight passengers",
+        "description": "Upload a spreadsheet to add passengers to employee DRAFT flight applications. Applications are created by submitter + trip when needed. Tickets are not imported. Applications are not auto-submitted.",
+        "requiredColumns": "Required: submitterEmail or submitterId, tripType, isInternational, originCountry, originCity, destination, departureDate, purpose, ticketClass, passengerEmail or passengerId. Optional: returnDate, accommodation*, perDiemRequired, notes, passportNumber, visaRequired, visaStatus.",
+        "importRows": "Import {{count}} passenger",
+        "importRowsPlural": "Import {{count}} passengers",
+        "created": "{{count}} passenger created.",
+        "createdPlural": "{{count}} passengers created.",
+        "summary": "{{created}} passengers imported"
+      },
+      "flightPassengers": {
+        "title": "Import passengers",
+        "description": "Upload a spreadsheet to add passengers to this DRAFT flight application. Tickets are attached in the UI after approval.",
+        "requiredColumns": "Required: passengerEmail or passengerId. Optional: passportNumber, visaRequired, visaStatus.",
+        "importRows": "Import {{count}} passenger",
+        "importRowsPlural": "Import {{count}} passengers",
+        "created": "{{count}} passenger created.",
+        "createdPlural": "{{count}} passengers created.",
+        "summary": "{{created}} passengers imported into this application"
       }
     },
     "assetStatus": {

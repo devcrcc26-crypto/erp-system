@@ -2,12 +2,17 @@
 
 import { useMemo, useState } from 'react';
 import { Alert, Button, Grid, Skeleton, Space } from 'antd';
-import { StopOutlined } from '@ant-design/icons';
+import {
+  DownloadOutlined,
+  StopOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import FlightCurrentStepBanner from '@/components/modules/hr/flight/FlightCurrentStepBanner';
 import FlightTicketAssignmentPanel from '@/components/modules/hr/flight/FlightTicketAssignmentPanel';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -23,10 +28,14 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type { FlightPassenger } from '@/lib/api/flight.types';
 import {
+  downloadFlightPassengersImportTemplate,
   useCancelFlightApplication,
   useFlightApplication,
+  useFlightPassengersImport,
+  useFlightPassengersImportPreview,
 } from '@/lib/query/flight';
 import { useCurrentUser } from '@/lib/query/profile';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   flightStatusVariant,
   formatFlightStatus,
@@ -36,6 +45,7 @@ import {
   formatVisaStatus,
   tripTypeVariant,
 } from '@/lib/utils/flight-display';
+import { exportFlightApplicationPassengersExcel } from '@/lib/utils/flight-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
@@ -96,7 +106,12 @@ export default function FlightApplicationDetailPageContent({
 
   const detailQuery = useFlightApplication(applicationId);
   const cancelMutation = useCancelFlightApplication(applicationId);
+  const importPreview = useFlightPassengersImportPreview(applicationId);
+  const importCommit = useFlightPassengersImport(applicationId);
+  const authUser = useAuthStore((state) => state.user);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   useSetHeaderExtra(null);
 
@@ -113,10 +128,34 @@ export default function FlightApplicationDetailPageContent({
     application?.submittedBy === currentUser.data?.id &&
     (application?.status === 'DRAFT' || application?.status === 'SUBMITTED');
 
+  const canEditPassengers =
+    application?.status === 'DRAFT' &&
+    Boolean(currentUser.data?.id) &&
+    (application.submittedBy === currentUser.data?.id || canViewHr);
+
   const showTicketPanel =
     application?.status === 'APPROVED' ||
     Boolean(application?.combinedTicketDocumentId) ||
     (application?.passengers.some((p) => p.ticketDocumentId) ?? false);
+
+  async function handleExportPassengers(): Promise<void> {
+    if (!application) {
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportFlightApplicationPassengersExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.flight.exportAppPassengersSheetName'),
+        application,
+      });
+      messageApi.success(t('pages.hr.flight.exportPassengersSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.flight.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleCancel(): Promise<void> {
     try {
@@ -178,6 +217,22 @@ export default function FlightApplicationDetailPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-flight-detail-page">
+      {importOpen ? (
+        <HrImportModal
+          entity="flightPassengers"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void detailQuery.refetch();
+          }}
+          downloadTemplate={() =>
+            downloadFlightPassengersImportTemplate(applicationId)
+          }
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -407,13 +462,32 @@ export default function FlightApplicationDetailPageContent({
               title={t('hr.section.passengerDetails')}
               bodyClassName="!p-0"
               action={
-                <span className="erp-users-cell-sub text-xs">
-                  {[
-                    `${application.passengerCount}`,
-                    `${visaRequiredCount} ${t('hr.form.visaRequired').toLowerCase()}`,
-                    `${ticketedCount}/${application.passengers.length} ${t('hr.table.ticket').toLowerCase()}`,
-                  ].join(' · ')}
-                </span>
+                <Space.Compact>
+                  <Button
+                    size="small"
+                    icon={<DownloadOutlined />}
+                    loading={exporting}
+                    onClick={() => void handleExportPassengers()}
+                  >
+                    {t('pages.hr.flight.exportPassengers')}
+                  </Button>
+                  {canEditPassengers ? (
+                    <Button
+                      size="small"
+                      icon={<UploadOutlined />}
+                      onClick={() => setImportOpen(true)}
+                    >
+                      {t('common.importFromExcel')}
+                    </Button>
+                  ) : null}
+                  <span className="erp-users-cell-sub flex items-center px-2 text-xs">
+                    {[
+                      `${application.passengerCount}`,
+                      `${visaRequiredCount} ${t('hr.form.visaRequired').toLowerCase()}`,
+                      `${ticketedCount}/${application.passengers.length} ${t('hr.table.ticket').toLowerCase()}`,
+                    ].join(' · ')}
+                  </span>
+                </Space.Compact>
               }
             >
               <ul className="m-0 list-none divide-y divide-[#eef1f4] p-0">

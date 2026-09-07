@@ -194,6 +194,109 @@ export class SubmitFlightApplicationDto {
   passengers!: FlightPassengerDto[];
 }
 
+/**
+ * Header fields for creating a DRAFT flight application (no passengers, no submit).
+ */
+export class CreateFlightDraftDto {
+  @ApiProperty({ enum: FlightTripType })
+  @IsEnum(FlightTripType)
+  tripType!: FlightTripType;
+
+  @ApiProperty()
+  @Transform(({ value }) => toBoolean(value))
+  @IsBoolean()
+  isInternational!: boolean;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  originCountry!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  originCity!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  destination!: string;
+
+  @ApiProperty({ example: '2026-09-01' })
+  @IsDateString()
+  departureDate!: string;
+
+  @ApiPropertyOptional({ example: '2026-09-10' })
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @ValidateIf(
+    (o: CreateFlightDraftDto) => o.tripType === FlightTripType.ROUND_TRIP,
+  )
+  @IsDateString()
+  returnDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  kmAtDeparture?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  kmAtReturn?: number;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4000)
+  purpose!: string;
+
+  @ApiProperty({ enum: FlightTicketClass, default: FlightTicketClass.ECONOMY })
+  @IsEnum(FlightTicketClass)
+  ticketClass!: FlightTicketClass;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === ''
+      ? undefined
+      : toBoolean(value),
+  )
+  @IsBoolean()
+  accommodationRequired?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  @MaxLength(4000)
+  accommodationDetails?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined || value === null || value === ''
+      ? undefined
+      : toBoolean(value),
+  )
+  @IsBoolean()
+  perDiemRequired?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  @MaxLength(4000)
+  notes?: string;
+}
+
 export class ListFlightApplicationsDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()

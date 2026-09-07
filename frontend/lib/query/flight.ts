@@ -12,6 +12,7 @@ import {
   apiPatch,
   apiPost,
   apiPostForm,
+  downloadApiFile,
 } from '@/lib/api/client';
 import type {
   FlightApplicationDetail,
@@ -20,7 +21,11 @@ import type {
   ListFlightApplicationsParams,
   SubmitFlightApplicationPayload,
 } from '@/lib/api/flight.types';
-import type { PaginationMeta } from '@/lib/api/types';
+import type {
+  HrImportCommitResult,
+  HrImportPreviewResult,
+  PaginationMeta,
+} from '@/lib/api/types';
 import { approvalKeys } from '@/lib/query/approvals';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
@@ -340,4 +345,122 @@ export function useRemoveFlightPassengerTicket(id: string) {
       void queryClient.setQueryData(flightKeys.detail(id), updated);
     },
   });
+}
+
+/**
+ * Loads flight application details in batches (for list passenger export).
+ */
+export async function fetchFlightApplicationDetails(
+  applicationIds: string[],
+): Promise<FlightApplicationDetail[]> {
+  const results: FlightApplicationDetail[] = [];
+  const batchSize = 8;
+  for (let index = 0; index < applicationIds.length; index += batchSize) {
+    const batch = applicationIds.slice(index, index + batchSize);
+    const pages = await Promise.all(
+      batch.map((id) =>
+        apiGet<FlightApplicationDetail>(`${FLIGHT_PATH}/${id}`),
+      ),
+    );
+    results.push(...pages);
+  }
+  return results;
+}
+
+/**
+ * Preview company-wide flight application Excel import.
+ */
+export function useFlightApplicationImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${FLIGHT_PATH}/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit company-wide flight application Excel import.
+ */
+export function useFlightApplicationImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${FLIGHT_PATH}/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: flightKeys.details() });
+    },
+  });
+}
+
+/**
+ * Downloads the company-wide flight application import template.
+ */
+export async function downloadFlightApplicationImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${FLIGHT_PATH}/import/template`,
+    'flight-application-import-template.xlsx',
+  );
+}
+
+/**
+ * Preview application-scoped passenger Excel import.
+ */
+export function useFlightPassengersImportPreview(applicationId: string) {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${FLIGHT_PATH}/${applicationId}/passengers/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit application-scoped passenger Excel import.
+ */
+export function useFlightPassengersImport(applicationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${FLIGHT_PATH}/${applicationId}/passengers/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: flightKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: flightKeys.detail(applicationId),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the application-scoped passengers import template.
+ */
+export async function downloadFlightPassengersImportTemplate(
+  applicationId: string,
+): Promise<void> {
+  await downloadApiFile(
+    `${FLIGHT_PATH}/${applicationId}/passengers/import/template`,
+    'flight-passengers-import-template.xlsx',
+  );
 }

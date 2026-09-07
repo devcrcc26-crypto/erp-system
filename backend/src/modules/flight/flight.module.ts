@@ -1,7 +1,9 @@
 import { Global, Module } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
+import { FlightImportService } from './application/services/flight-import.service';
 import { FlightService } from './application/services/flight.service';
+import { FlightImportController } from './presentation/controllers/flight-import.controller';
 import { FlightController } from './presentation/controllers/flight.controller';
 
 /**
@@ -12,8 +14,8 @@ import { FlightController } from './presentation/controllers/flight.controller';
 @Global()
 @Module({
   imports: [ApprovalsModule, HrSharedModule],
-  controllers: [FlightController],
-  providers: [FlightService],
+  controllers: [FlightImportController, FlightController],
+  providers: [FlightService, FlightImportService],
   exports: [FlightService],
 })
 export class FlightModule {}

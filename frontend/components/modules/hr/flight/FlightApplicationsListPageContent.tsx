@@ -1,13 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   DatePicker,
+  Dropdown,
   Grid,
   Input,
   Select,
+  Space,
   Spin,
   Tooltip,
 } from 'antd';
@@ -15,18 +17,23 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DownloadOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   SendOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { Plane } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessFlight,
   useCanCreateFlight,
@@ -40,8 +47,15 @@ import type {
   FlightApplicationStatus,
 } from '@/lib/api/flight.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useFlightApplicationsAll } from '@/lib/query/flight';
+import {
+  downloadFlightApplicationImportTemplate,
+  fetchFlightApplicationDetails,
+  useFlightApplicationImport,
+  useFlightApplicationImportPreview,
+  useFlightApplicationsAll,
+} from '@/lib/query/flight';
 import { useUsersDirectory } from '@/lib/query/users';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   flightStatusVariant,
   formatFlightStatus,
@@ -50,6 +64,10 @@ import {
   getCurrentStepLabel,
   tripTypeVariant,
 } from '@/lib/utils/flight-display';
+import {
+  exportFlightApplicationsExcel,
+  exportFlightPassengersExcel,
+} from '@/lib/utils/flight-export-excel';
 import {
   filterFlightApplications,
   statusesForFlightMode,
@@ -115,6 +133,7 @@ function FlightStat({
 export default function FlightApplicationsListPageContent(): React.ReactNode {
   const router = useRouter();
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
@@ -122,6 +141,9 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   const canAccess = useCanAccessFlight();
   const canViewHr = useCanViewHr();
   const canCreate = useCanCreateFlight();
+  const authUser = useAuthStore((state) => state.user);
+  const importPreview = useFlightApplicationImportPreview();
+  const importCommit = useFlightApplicationImport();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [listTab, setListTab] = useState<ListTab>('ALL');
@@ -135,6 +157,8 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const needsTicketTab = listTab === 'NEEDS_TICKET' && canViewHr;
 
@@ -360,6 +384,44 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     resetPage();
   }
 
+  const handleExportApplications = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      await exportFlightApplicationsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.flight.exportSheetName'),
+        rows: filtered,
+      });
+      messageApi.success(t('pages.hr.flight.exportSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.flight.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
+
+  const handleExportPassengers = useCallback(async (): Promise<void> => {
+    if (filtered.length === 0) {
+      return;
+    }
+    setExporting(true);
+    try {
+      const details = await fetchFlightApplicationDetails(
+        filtered.map((row) => row.id),
+      );
+      await exportFlightPassengersExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.flight.exportPassengersSheetName'),
+        applications: details,
+      });
+      messageApi.success(t('pages.hr.flight.exportPassengersSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.flight.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
+
   const hasFilters =
     Boolean(appliedSearch.trim()) ||
     statusMode !== 'all' ||
@@ -397,6 +459,20 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
     <div
       className={`erp-pro-list-page erp-users-page erp-flight-applications-page${canViewHr ? ' erp-flight-applications-page--hr' : ''}`}
     >
+      {importOpen ? (
+        <HrImportModal
+          entity="flightApplications"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void listQuery.refetch();
+          }}
+          downloadTemplate={downloadFlightApplicationImportTemplate}
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -472,20 +548,106 @@ export default function FlightApplicationsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {canCreate ? (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() =>
-                  router.push('/approvals/new/flight-application')
-                }
-                aria-label={t('hr.buttons.newFlightApplication')}
-              >
-                {isNarrow
-                  ? undefined
-                  : t('hr.buttons.newFlightApplication')}
-              </Button>
-            ) : null}
+            {isCompact ? (
+              <>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-applications',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.flight.exportApplications'),
+                        disabled: exporting,
+                        onClick: () => void handleExportApplications(),
+                      },
+                      {
+                        key: 'export-passengers',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.flight.exportPassengers'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportPassengers(),
+                      },
+                      ...(canViewHr
+                        ? [
+                            {
+                              key: 'import',
+                              icon: <UploadOutlined />,
+                              label: t('common.importFromExcel'),
+                              onClick: () => setImportOpen(true),
+                            },
+                          ]
+                        : []),
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+                {canCreate ? (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() =>
+                      router.push('/approvals/new/flight-application')
+                    }
+                    aria-label={t('hr.buttons.newFlightApplication')}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <Space.Compact>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-applications',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.flight.exportApplications'),
+                        disabled: exporting,
+                        onClick: () => void handleExportApplications(),
+                      },
+                      {
+                        key: 'export-passengers',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.flight.exportPassengers'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportPassengers(),
+                      },
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button icon={<DownloadOutlined />} loading={exporting}>
+                    {t('users.exportExcel')}
+                  </Button>
+                </Dropdown>
+                {canViewHr ? (
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setImportOpen(true)}
+                  >
+                    {t('common.importFromExcel')}
+                  </Button>
+                ) : null}
+                {canCreate ? (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() =>
+                      router.push('/approvals/new/flight-application')
+                    }
+                    aria-label={t('hr.buttons.newFlightApplication')}
+                  >
+                    {isNarrow
+                      ? undefined
+                      : t('hr.buttons.newFlightApplication')}
+                  </Button>
+                ) : null}
+              </Space.Compact>
+            )}
           </div>
         </div>
 
