@@ -19,6 +19,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
@@ -35,7 +36,14 @@ import type {
   ExitPermitListItem,
 } from '@/lib/api/exit-permit.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useExitPermitsAll } from '@/lib/query/exit-permit';
+import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import ImportModal from '@/components/modules/hr/import-export/ImportModal';
+import {
+  fetchExitPermitDetails,
+  useExitPermitsAll,
+} from '@/lib/query/exit-permit';
+import { buildExitPermitExportSheets } from '@/lib/utils/exit-permit-export';
+import { exitPermitImportSchema } from '@/lib/utils/hr-import-configs';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
   exitPermitStatusVariant,
@@ -122,6 +130,8 @@ export default function ExitPermitListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+
+  const [importOpen, setImportOpen] = useState(false);
 
   const listQuery = useExitPermitsAll({}, true);
   const usersQuery = useUsersDirectory(
@@ -324,6 +334,16 @@ export default function ExitPermitListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-exit-permit-page">
+      {importOpen ? (
+        <ImportModal
+          schema={exitPermitImportSchema}
+          title={t('hr.exportImport.exitPermits.title')}
+          description={t('hr.exportImport.exitPermits.description')}
+          onClose={() => setImportOpen(false)}
+          onImported={() => void listQuery.refetch()}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -389,6 +409,40 @@ export default function ExitPermitListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            <ExportExcelButton
+              compact={isNarrow}
+              actions={[
+                {
+                  key: 'permits',
+                  label: t('hr.exportImport.exitPermits.export'),
+                  filePrefix: 'exit-permits',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildExitPermitExportSheets(filtered),
+                },
+                {
+                  key: 'permits-with-items',
+                  label: t('hr.exportImport.exitPermits.exportWithItems'),
+                  filePrefix: 'exit-permits-with-items',
+                  disabled: filtered.length === 0,
+                  buildSheets: async () =>
+                    buildExitPermitExportSheets(
+                      filtered,
+                      await fetchExitPermitDetails(
+                        filtered.map((row) => row.id),
+                      ),
+                    ),
+                },
+              ]}
+            />
+            {canViewHr ? (
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportOpen(true)}
+                aria-label={t('hr.exportImport.importFromExcel')}
+              >
+                {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
+              </Button>
+            ) : null}
             <Button
               type="primary"
               icon={<PlusOutlined />}

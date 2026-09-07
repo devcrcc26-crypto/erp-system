@@ -1872,6 +1872,54 @@
     "photoTooLarge": "Photo must be 5 MB or smaller."
   },
   "hr": {
+    "exportImport": {
+      "exportExcel": "Export Excel",
+      "exportPdf": "Export PDF",
+      "exportSuccess": "Export downloaded.",
+      "exportError": "Could not build the export. Please try again.",
+      "exportPdfSuccess": "PDF downloaded.",
+      "exportPdfError": "Could not build the PDF. Please try again.",
+      "importFromExcel": "Import from Excel",
+      "importRows": "Import {{count}} rows",
+      "createdDrafts": "{{count}} drafts created",
+      "requiredColumns": "Required columns: {{columns}}",
+      "vehicleApplications": {
+        "title": "Import vehicle applications",
+        "description": "Upload a spreadsheet to create DRAFT vehicle applications. Nothing is submitted or approved — review each draft and submit it from the list.",
+        "export": "Export applications"
+      },
+      "vehicleRefuelings": {
+        "title": "Import refueling requests",
+        "description": "Upload a spreadsheet to create DRAFT vehicle refueling requests with their fuel details. Nothing is submitted or approved.",
+        "export": "Export refueling requests"
+      },
+      "companyAssets": {
+        "title": "Import company assets",
+        "description": "Upload a spreadsheet to register assets. Imported assets are created with status Available; serial numbers must be unique.",
+        "export": "Export assets"
+      },
+      "inspectionRepairs": {
+        "title": "Import inspection & repair requests",
+        "description": "Upload a spreadsheet to create DRAFT inspection & repair requests. Give an asset serial number, or a device name with its make, model and year.",
+        "export": "Export requests"
+      },
+      "exitPermits": {
+        "title": "Import exit permits",
+        "description": "Upload a spreadsheet with one row per item. Rows sharing the same employee, direction, date and department become one DRAFT permit with several items.",
+        "export": "Export permits",
+        "exportWithItems": "Export permits with items"
+      },
+      "officialSeals": {
+        "title": "Import official seal requests",
+        "description": "Upload a spreadsheet to create DRAFT official seal usage requests. Attachments are not imported — add the document before submitting.",
+        "export": "Export requests"
+      },
+      "projectSeals": {
+        "title": "Import project seal requests",
+        "description": "Upload a spreadsheet to create DRAFT project seal usage requests. Attachments are not imported — add the document before submitting.",
+        "export": "Export requests"
+      }
+    },
     "import": {
       "downloadTemplate": "Download template",
       "chooseFile": "Choose .xlsx file",

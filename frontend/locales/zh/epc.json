@@ -1872,6 +1872,54 @@
     "photoTooLarge": "照片大小不能超过 5 MB。"
   },
   "hr": {
+    "exportImport": {
+      "exportExcel": "导出 Excel",
+      "exportPdf": "导出 PDF",
+      "exportSuccess": "导出已下载。",
+      "exportError": "导出生成失败，请重试。",
+      "exportPdfSuccess": "PDF 已下载。",
+      "exportPdfError": "PDF 生成失败，请重试。",
+      "importFromExcel": "从 Excel 导入",
+      "importRows": "导入 {{count}} 行",
+      "createdDrafts": "已创建 {{count}} 条草稿",
+      "requiredColumns": "必填列：{{columns}}",
+      "vehicleApplications": {
+        "title": "导入车辆申请",
+        "description": "上传表格以创建草稿状态的车辆申请。系统不会自动提交或审批——请在列表中逐条复核后提交。",
+        "export": "导出申请"
+      },
+      "vehicleRefuelings": {
+        "title": "导入加油申请",
+        "description": "上传表格以创建草稿状态的车辆加油申请及其加油明细。系统不会自动提交或审批。",
+        "export": "导出加油申请"
+      },
+      "companyAssets": {
+        "title": "导入公司资产",
+        "description": "上传表格以登记资产。导入的资产状态为“可用”；序列号必须唯一。",
+        "export": "导出资产"
+      },
+      "inspectionRepairs": {
+        "title": "导入检查与维修申请",
+        "description": "上传表格以创建草稿状态的检查与维修申请。请填写资产序列号，或填写设备名称及其品牌、型号与年份。",
+        "export": "导出申请"
+      },
+      "exitPermits": {
+        "title": "导入物资出入门证",
+        "description": "上传表格，每行一件物品。员工、方向、日期与部门相同的行会合并为一张包含多件物品的草稿门证。",
+        "export": "导出门证",
+        "exportWithItems": "导出门证（含物品明细）"
+      },
+      "officialSeals": {
+        "title": "导入公章使用申请",
+        "description": "上传表格以创建草稿状态的公章使用申请。附件不会被导入——请在提交前添加文件。",
+        "export": "导出申请"
+      },
+      "projectSeals": {
+        "title": "导入项目章使用申请",
+        "description": "上传表格以创建草稿状态的项目章使用申请。附件不会被导入——请在提交前添加文件。",
+        "export": "导出申请"
+      }
+    },
     "import": {
       "downloadTemplate": "下载模板",
       "chooseFile": "选择 .xlsx 文件",

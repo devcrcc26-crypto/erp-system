@@ -16,6 +16,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -44,6 +45,10 @@ import {
 } from '@/lib/utils/inspection-repair-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import ImportModal from '@/components/modules/hr/import-export/ImportModal';
+import { buildInspectionRepairExportSheets } from '@/lib/utils/inspection-repair-export';
+import { inspectionRepairImportSchema } from '@/lib/utils/hr-import-configs';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 const PENDING_STATUSES = statusesForInspectionRepairMode('pending');
@@ -113,6 +118,8 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+
+  const [importOpen, setImportOpen] = useState(false);
 
   const listQuery = useInspectionRepairsAll({}, true);
   const usersQuery = useUsersDirectory(
@@ -302,6 +309,16 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-inspection-repair-page">
+      {importOpen ? (
+        <ImportModal
+          schema={inspectionRepairImportSchema}
+          title={t('hr.exportImport.inspectionRepairs.title')}
+          description={t('hr.exportImport.inspectionRepairs.description')}
+          onClose={() => setImportOpen(false)}
+          onImported={() => void listQuery.refetch()}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -367,6 +384,27 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            <ExportExcelButton
+              compact={isNarrow}
+              actions={[
+                {
+                  key: 'requests',
+                  label: t('hr.exportImport.inspectionRepairs.export'),
+                  filePrefix: 'inspection-repair',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildInspectionRepairExportSheets(filtered),
+                },
+              ]}
+            />
+            {canViewHr ? (
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportOpen(true)}
+                aria-label={t('hr.exportImport.importFromExcel')}
+              >
+                {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
+              </Button>
+            ) : null}
             <Button
               type="primary"
               icon={<PlusOutlined />}

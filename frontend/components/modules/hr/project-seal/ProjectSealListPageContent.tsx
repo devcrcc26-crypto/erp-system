@@ -18,6 +18,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
@@ -49,6 +50,10 @@ import {
 } from '@/lib/utils/project-seal-list-filter';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
+import ExportExcelButton from '@/components/modules/hr/import-export/ExportExcelButton';
+import ImportModal from '@/components/modules/hr/import-export/ImportModal';
+import { buildSealExportSheets } from '@/lib/utils/seal-export';
+import { projectSealImportSchema } from '@/lib/utils/hr-import-configs';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
 const LIST_PATH = '/hr/project-seal';
@@ -120,6 +125,8 @@ export default function ProjectSealListPageContent(): React.ReactNode {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+
+  const [importOpen, setImportOpen] = useState(false);
 
   const listQuery = useProjectSealsAll({}, true);
   const usersQuery = useUsersDirectory(
@@ -306,6 +313,16 @@ export default function ProjectSealListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-project-seal-page">
+      {importOpen ? (
+        <ImportModal
+          schema={projectSealImportSchema}
+          title={t('hr.exportImport.projectSeals.title')}
+          description={t('hr.exportImport.projectSeals.description')}
+          onClose={() => setImportOpen(false)}
+          onImported={() => void listQuery.refetch()}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -371,6 +388,27 @@ export default function ProjectSealListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            <ExportExcelButton
+              compact={isNarrow}
+              actions={[
+                {
+                  key: 'seals',
+                  label: t('hr.exportImport.projectSeals.export'),
+                  filePrefix: 'project-seal-requests',
+                  disabled: filtered.length === 0,
+                  buildSheets: () => buildSealExportSheets('project', filtered),
+                },
+              ]}
+            />
+            {canViewHr ? (
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportOpen(true)}
+                aria-label={t('hr.exportImport.importFromExcel')}
+              >
+                {isNarrow ? undefined : t('hr.exportImport.importFromExcel')}
+              </Button>
+            ) : null}
             <Button
               type="primary"
               icon={<PlusOutlined />}

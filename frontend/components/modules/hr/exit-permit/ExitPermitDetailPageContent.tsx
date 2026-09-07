@@ -43,6 +43,9 @@ import {
   useSubmitExitPermit,
   useUpdateExitPermitItem,
 } from '@/lib/query/exit-permit';
+import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
+import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
+import { exportExitPermitPdf } from '@/lib/utils/exit-permit-export';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   exitPermitStatusVariant,
@@ -97,6 +100,7 @@ export default function ExitPermitDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
+  const pdfContext = useHrPdfContext();
   const currentUser = useCurrentUser();
   const canViewHr = useCanViewHr();
   const detailQuery = useExitPermit(permitId);
@@ -407,6 +411,19 @@ export default function ExitPermitDetailPageContent({
         ? 540
         : 400;
 
+  /** Renders this record with the shared HR document layout. */
+  function handleExportPdf(): void {
+    if (!permit) {
+      return;
+    }
+
+      exportExitPermitPdf({
+        permit,
+        companyName: pdfContext.companyName,
+        preparedBy: pdfContext.preparedBy,
+      });
+  }
+
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-exit-permit-detail-page">
       <div className="erp-pro-card">
@@ -422,6 +439,10 @@ export default function ExitPermitDetailPageContent({
             </Button>
           </div>
           <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+            <ExportPdfButton
+              compact={isNarrow}
+              buildPdf={() => handleExportPdf()}
+            />
             {showOverflowMenu ? (
               <Dropdown
                 menu={{ items: overflowMenuItems }}
