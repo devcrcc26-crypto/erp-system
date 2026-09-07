@@ -12,6 +12,7 @@ import {
   apiPatch,
   apiPost,
   apiPostForm,
+  downloadApiFile,
 } from '@/lib/api/client';
 import type {
   ListOvertimeSheetsParams,
@@ -19,6 +20,10 @@ import type {
   OvertimeSheetListItem,
   UpsertOvertimeEntryPayload,
 } from '@/lib/api/overtime.types';
+import type {
+  HrImportCommitResult,
+  HrImportPreviewResult,
+} from '@/lib/api/types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 import { approvalKeys } from '@/lib/query/approvals';
 
@@ -277,4 +282,120 @@ export function useCancelOvertimeSheet(sheetId: string) {
       void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
     },
   });
+}
+
+/**
+ * Loads sheet details in batches (for list entry export).
+ */
+export async function fetchOvertimeSheetDetails(
+  sheetIds: string[],
+): Promise<OvertimeSheetDetail[]> {
+  const results: OvertimeSheetDetail[] = [];
+  const batchSize = 8;
+  for (let index = 0; index < sheetIds.length; index += batchSize) {
+    const batch = sheetIds.slice(index, index + batchSize);
+    const pages = await Promise.all(
+      batch.map((id) => apiGet<OvertimeSheetDetail>(`${OVERTIME_PATH}/${id}`)),
+    );
+    results.push(...pages);
+  }
+  return results;
+}
+
+/**
+ * Preview company-wide overtime entries Excel import.
+ */
+export function useOvertimeImportPreview() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${OVERTIME_PATH}/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit company-wide overtime entries Excel import.
+ */
+export function useOvertimeImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${OVERTIME_PATH}/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      invalidateSheetLists(queryClient);
+      void queryClient.invalidateQueries({ queryKey: overtimeKeys.details() });
+    },
+  });
+}
+
+/**
+ * Downloads the company-wide overtime entries import template.
+ */
+export async function downloadOvertimeImportTemplate(): Promise<void> {
+  await downloadApiFile(
+    `${OVERTIME_PATH}/import/template`,
+    'overtime-entries-import-template.xlsx',
+  );
+}
+
+/**
+ * Preview sheet-scoped overtime entries Excel import.
+ */
+export function useOvertimeSheetImportPreview(sheetId: string) {
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportPreviewResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportPreviewResult>(
+        `${OVERTIME_PATH}/${sheetId}/entries/import/preview`,
+        formData,
+      );
+    },
+  });
+}
+
+/**
+ * Commit sheet-scoped overtime entries Excel import.
+ */
+export function useOvertimeSheetImport(sheetId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File): Promise<HrImportCommitResult> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return apiPostForm<HrImportCommitResult>(
+        `${OVERTIME_PATH}/${sheetId}/entries/import`,
+        formData,
+      );
+    },
+    onSuccess: () => {
+      invalidateSheetLists(queryClient);
+      void queryClient.invalidateQueries({
+        queryKey: overtimeKeys.detail(sheetId),
+      });
+    },
+  });
+}
+
+/**
+ * Downloads the sheet-scoped overtime entries import template.
+ */
+export async function downloadOvertimeSheetImportTemplate(
+  sheetId: string,
+): Promise<void> {
+  await downloadApiFile(
+    `${OVERTIME_PATH}/${sheetId}/entries/import/template`,
+    'overtime-sheet-entries-import-template.xlsx',
+  );
 }

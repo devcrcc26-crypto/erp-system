@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -8,6 +8,7 @@ import {
   Grid,
   Input,
   Select,
+  Space,
   Spin,
   Tooltip,
   type MenuProps,
@@ -17,14 +18,17 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   EditOutlined,
   MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -40,9 +44,17 @@ import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { OvertimeSheetListItem } from '@/lib/api/overtime.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useDeleteOvertimeSheet, useOvertimeSheetsAll } from '@/lib/query/overtime';
+import {
+  downloadOvertimeImportTemplate,
+  fetchOvertimeSheetDetails,
+  useDeleteOvertimeSheet,
+  useOvertimeImport,
+  useOvertimeImportPreview,
+  useOvertimeSheetsAll,
+} from '@/lib/query/overtime';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useUsersDirectory } from '@/lib/query/users';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   formatOvertimeEmployeeName,
   formatOvertimeHours,
@@ -55,6 +67,10 @@ import {
   statusesForOvertimeMode,
   type OvertimeStatusMode,
 } from '@/lib/utils/overtime-list-filter';
+import {
+  exportOvertimeEntriesExcel,
+  exportOvertimeSheetsExcel,
+} from '@/lib/utils/overtime-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
 
@@ -125,7 +141,10 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
   const canCreate = useCanCreateOvertime();
   const currentUser = useCurrentUser();
   const currentUserId = currentUser.data?.id;
+  const authUser = useAuthStore((state) => state.user);
   const deleteMutation = useDeleteOvertimeSheet();
+  const importPreview = useOvertimeImportPreview();
+  const importCommit = useOvertimeImport();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [search, setSearch] = useState('');
@@ -136,6 +155,8 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
   const [year, setYear] = useState<number | undefined>();
   const [deletingSheet, setDeletingSheet] =
     useState<OvertimeSheetListItem | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const monthOptions = useMemo(
     () =>
@@ -228,6 +249,41 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
     setStatusMode(mode);
     resetPage();
   }
+
+  const handleExportSheets = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      await exportOvertimeSheetsExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.overtime.exportSheetName'),
+        rows: filtered,
+      });
+      messageApi.success(t('pages.hr.overtime.exportSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.overtime.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
+
+  const handleExportEntries = useCallback(async (): Promise<void> => {
+    setExporting(true);
+    try {
+      const details = await fetchOvertimeSheetDetails(
+        filtered.map((row) => row.id),
+      );
+      await exportOvertimeEntriesExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.overtime.exportEntriesSheetName'),
+        sheets: details,
+      });
+      messageApi.success(t('pages.hr.overtime.exportEntriesSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.overtime.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [authUser?.companyName, filtered, messageApi, t]);
 
   const hasFilters =
     Boolean(appliedSearch.trim()) ||
@@ -465,6 +521,20 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         onCancel={() => setDeletingSheet(null)}
       />
 
+      {importOpen ? (
+        <HrImportModal
+          entity="overtimeSheets"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void listQuery.refetch();
+          }}
+          downloadTemplate={downloadOvertimeImportTemplate}
+          previewMutation={importPreview}
+          commitMutation={importCommit}
+        />
+      ) : null}
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -530,15 +600,100 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
-            {canCreate ? (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => router.push('/approvals/new/overtime')}
-              >
-                {t('hr.buttons.thisMonthSheet')}
-              </Button>
-            ) : null}
+            {isCompact ? (
+              <>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-sheets',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.overtime.exportSheets'),
+                        disabled: exporting,
+                        onClick: () => void handleExportSheets(),
+                      },
+                      {
+                        key: 'export-entries',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.overtime.exportEntries'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportEntries(),
+                      },
+                      ...(canViewHr
+                        ? [
+                            {
+                              key: 'import',
+                              icon: <UploadOutlined />,
+                              label: t('common.importFromExcel'),
+                              onClick: () => setImportOpen(true),
+                            },
+                          ]
+                        : []),
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button
+                    icon={<MoreOutlined />}
+                    aria-label={t('common.actions')}
+                  />
+                </Dropdown>
+                {canCreate ? (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => router.push('/approvals/new/overtime')}
+                  >
+                    {t('hr.buttons.thisMonthSheet')}
+                  </Button>
+                ) : null}
+              </>
+            ) : (
+              <Space.Compact>
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'export-sheets',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.overtime.exportSheets'),
+                        disabled: exporting,
+                        onClick: () => void handleExportSheets(),
+                      },
+                      {
+                        key: 'export-entries',
+                        icon: <DownloadOutlined />,
+                        label: t('pages.hr.overtime.exportEntries'),
+                        disabled: exporting || filtered.length === 0,
+                        onClick: () => void handleExportEntries(),
+                      },
+                    ],
+                  }}
+                  trigger={['click']}
+                >
+                  <Button icon={<DownloadOutlined />} loading={exporting}>
+                    {t('users.exportExcel')}
+                  </Button>
+                </Dropdown>
+                {canViewHr ? (
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setImportOpen(true)}
+                  >
+                    {t('common.importFromExcel')}
+                  </Button>
+                ) : null}
+                {canCreate ? (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => router.push('/approvals/new/overtime')}
+                  >
+                    {t('hr.buttons.thisMonthSheet')}
+                  </Button>
+                ) : null}
+              </Space.Compact>
+            )}
           </div>
         </div>
 

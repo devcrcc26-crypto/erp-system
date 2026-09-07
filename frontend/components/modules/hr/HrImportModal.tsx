@@ -108,7 +108,11 @@ function ImportStepTabs({
   );
 }
 
-export type HrImportEntityKey = 'contracts' | 'leaveRequests';
+export type HrImportEntityKey =
+  | 'contracts'
+  | 'leaveRequests'
+  | 'overtimeSheets'
+  | 'overtimeEntries';
 
 /**
  * Shared Excel import modal for HR modules (upload → preview → commit).

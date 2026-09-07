@@ -7,11 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import {
   ApiBearerAuth,
@@ -25,10 +27,13 @@ import { CurrentUser } from '../../../../shared/decorators/current-user.decorato
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
+import { OvertimeImportPreviewResponseDto } from '../../application/dtos/overtime-import.dtos';
 import {
   ListOvertimeSheetsDto,
   UpsertOvertimeEntryDto,
 } from '../../application/dtos/overtime.dtos';
+import { OvertimeImportService } from '../../application/services/overtime-import.service';
 import { OvertimeService } from '../../application/services/overtime.service';
 
 @ApiTags('HR Overtime')
@@ -41,7 +46,17 @@ import { OvertimeService } from '../../application/services/overtime.service';
 )
 @Controller('hr/overtime')
 export class OvertimeController {
-  constructor(private readonly overtimeService: OvertimeService) {}
+  constructor(
+    private readonly overtimeService: OvertimeService,
+    private readonly overtimeImportService: OvertimeImportService,
+  ) {}
+
+  private importCtx(user: AuthenticatedUser): {
+    companyId: string;
+    userId: string;
+  } {
+    return { companyId: user.companyId, userId: user.userId };
+  }
 
   @Get()
   @ApiOperation({
@@ -65,6 +80,83 @@ export class OvertimeController {
     @CurrentCompany() companyId: string,
   ): Promise<unknown> {
     return this.overtimeService.getCurrentSheet(companyId, user.userId);
+  }
+
+  @Get(':id/entries/import/template')
+  @ApiOperation({
+    summary: 'Download entry import template for one overtime sheet',
+  })
+  async downloadSheetImportTemplate(): Promise<StreamableFile> {
+    const buffer = await this.overtimeImportService.buildSheetTemplate();
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition:
+        'attachment; filename="overtime-sheet-entries-import-template.xlsx"',
+    });
+  }
+
+  @Post(':id/entries/import/preview')
+  @ApiOperation({
+    summary: 'Validate entry import for one overtime sheet without writing',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  previewSheetImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<OvertimeImportPreviewResponseDto> {
+    return this.overtimeImportService.previewSheetImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
+  }
+
+  @Post(':id/entries/import')
+  @ApiOperation({
+    summary: 'Import overtime entries into one DRAFT/RETURNED sheet',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  commitSheetImport(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ImportCommitResponseDto> {
+    return this.overtimeImportService.commitSheetImport(
+      id,
+      this.importCtx(user),
+      file,
+    );
   }
 
   @Get(':id')

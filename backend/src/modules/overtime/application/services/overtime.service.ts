@@ -922,8 +922,17 @@ export class OvertimeService
     if (!sheet) {
       throw new NotFoundException('Overtime sheet not found');
     }
-    if (sheet.employeeId !== userId) {
-      throw new ForbiddenException('Only the employee can edit this sheet');
+    const isOwner = sheet.employeeId === userId;
+    if (!isOwner) {
+      const isHrEditor = await this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'hr',
+        'view',
+      );
+      if (!isHrEditor) {
+        throw new ForbiddenException('Only the employee can edit this sheet');
+      }
     }
     if (!EDITABLE_STATUSES.includes(sheet.status)) {
       throw new BadRequestException(

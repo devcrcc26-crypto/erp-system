@@ -264,6 +264,14 @@
         "sheetCount": "{{count}} 张加班表",
         "sheetCountOne": "1 张加班表",
         "emptyFiltered": "没有符合筛选条件的加班表",
+        "exportSheetName": "加班表",
+        "exportEntriesSheetName": "加班明细",
+        "exportSheetEntriesSheetName": "表内明细",
+        "exportSuccess": "加班表 Excel 已下载。",
+        "exportEntriesSuccess": "加班明细 Excel 已下载。",
+        "exportError": "导出加班 Excel 失败。",
+        "exportSheets": "导出加班表",
+        "exportEntries": "导出明细",
         "stats": {
           "total": "全部",
           "pending": "待处理",
@@ -1800,6 +1808,26 @@
         "created": "已创建 {{count}} 条请假申请。",
         "createdPlural": "已创建 {{count}} 条请假申请。",
         "summary": "已导入 {{created}} 条请假申请"
+      },
+      "overtimeSheets": {
+        "title": "从 Excel 导入加班明细",
+        "description": "上传表格为员工月度加班表添加明细。有效行写入草稿或退回状态的加班表（如不存在则创建）。不会自动提交审批。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、year、month、date、startTime、endTime、taskDescription。可选：isHoliday。",
+        "importRows": "导入 {{count}} 条明细",
+        "importRowsPlural": "导入 {{count}} 条明细",
+        "created": "已创建 {{count}} 条加班明细。",
+        "createdPlural": "已创建 {{count}} 条加班明细。",
+        "summary": "已导入 {{created}} 条加班明细"
+      },
+      "overtimeEntries": {
+        "title": "导入本表加班明细",
+        "description": "上传表格向本加班表添加明细。加班表须为草稿或退回状态，日期须属于本表月份。",
+        "requiredColumns": "必填：date、startTime、endTime、taskDescription。可选：isHoliday。",
+        "importRows": "导入 {{count}} 条明细",
+        "importRowsPlural": "导入 {{count}} 条明细",
+        "created": "已创建 {{count}} 条加班明细。",
+        "createdPlural": "已创建 {{count}} 条加班明细。",
+        "summary": "已向本表导入 {{created}} 条明细"
       }
     },
     "assetStatus": {

@@ -15,14 +15,17 @@ import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DeleteOutlined,
+  DownloadOutlined,
   MoreOutlined,
   PlusOutlined,
   SendOutlined,
   StopOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import HrImportModal from '@/components/modules/hr/HrImportModal';
 import OvertimeEntryFormDrawer from '@/components/modules/hr/overtime/OvertimeEntryFormDrawer';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -39,14 +42,18 @@ import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type { OvertimeEntry } from '@/lib/api/overtime.types';
 import { useApprovalRequest } from '@/lib/query/approvals';
 import {
+  downloadOvertimeSheetImportTemplate,
   useCancelOvertimeSheet,
   useDeleteOvertimeEntry,
   useDeleteOvertimeSheet,
   useOvertimeSheet,
+  useOvertimeSheetImport,
+  useOvertimeSheetImportPreview,
   useSubmitOvertimeSheet,
   useUploadOvertimeEntryAttachments,
 } from '@/lib/query/overtime';
 import { useCurrentUser } from '@/lib/query/profile';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   formatOvertimeEmployeeName,
   formatOvertimeHours,
@@ -54,6 +61,7 @@ import {
   formatOvertimeStatus,
   overtimeStatusVariant,
 } from '@/lib/utils/overtime-display';
+import { exportOvertimeSheetEntriesExcel } from '@/lib/utils/overtime-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
@@ -98,12 +106,15 @@ export default function OvertimeSheetDetailPageContent({
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const currentUser = useCurrentUser();
+  const authUser = useAuthStore((state) => state.user);
   const detailQuery = useOvertimeSheet(sheetId);
   const deleteMutation = useDeleteOvertimeEntry(sheetId);
   const uploadAttachmentsMutation = useUploadOvertimeEntryAttachments(sheetId);
   const submitMutation = useSubmitOvertimeSheet(sheetId);
   const cancelMutation = useCancelOvertimeSheet(sheetId);
   const deleteSheetMutation = useDeleteOvertimeSheet();
+  const sheetImportPreview = useOvertimeSheetImportPreview(sheetId);
+  const sheetImportCommit = useOvertimeSheetImport(sheetId);
 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
@@ -112,6 +123,8 @@ export default function OvertimeSheetDetailPageContent({
   const [editingEntry, setEditingEntry] = useState<OvertimeEntry | null>(null);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
   const [entryFiles, setEntryFiles] = useState<Record<string, File[]>>({});
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   useSetHeaderExtra(null);
 
@@ -168,12 +181,13 @@ export default function OvertimeSheetDetailPageContent({
   ]);
 
   const canEdit =
-    isOwner && (sheet?.status === 'DRAFT' || sheet?.status === 'RETURNED');
+    (isOwner || canViewHr) &&
+    (sheet?.status === 'DRAFT' || sheet?.status === 'RETURNED');
   const canManage = canViewHr;
   const canCancel =
     isOwner &&
     (sheet?.status === 'DRAFT' || sheet?.status === 'SUBMITTED');
-  const canSubmit = canEdit && (sheet?.entries?.length ?? 0) > 0;
+  const canSubmit = isOwner && canEdit && (sheet?.entries?.length ?? 0) > 0;
 
   function closeEntryDrawer(): void {
     setEntryDrawerOpen(false);
@@ -183,6 +197,25 @@ export default function OvertimeSheetDetailPageContent({
   function openAddEntry(): void {
     setEditingEntry(null);
     setEntryDrawerOpen(true);
+  }
+
+  async function handleExportEntries(): Promise<void> {
+    if (!sheet) {
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportOvertimeSheetEntriesExcel({
+        companyName: authUser?.companyName ?? 'Company',
+        sheetName: t('pages.hr.overtime.exportSheetEntriesSheetName'),
+        sheet,
+      });
+      messageApi.success(t('pages.hr.overtime.exportEntriesSuccess'));
+    } catch {
+      messageApi.error(t('pages.hr.overtime.exportError'));
+    } finally {
+      setExporting(false);
+    }
   }
 
   function openEditEntry(entry: OvertimeEntry): void {
@@ -600,16 +633,35 @@ export default function OvertimeSheetDetailPageContent({
               title={t('hr.section.entries')}
               bodyClassName="!p-0"
               action={
-                canEdit ? (
+                <Space.Compact>
                   <Button
-                    type="primary"
                     size="small"
-                    icon={<PlusOutlined />}
-                    onClick={openAddEntry}
+                    icon={<DownloadOutlined />}
+                    loading={exporting}
+                    onClick={() => void handleExportEntries()}
                   >
-                    {t('hr.buttons.addEntry')}
+                    {t('pages.hr.overtime.exportEntries')}
                   </Button>
-                ) : undefined
+                  {canEdit ? (
+                    <>
+                      <Button
+                        size="small"
+                        icon={<UploadOutlined />}
+                        onClick={() => setImportOpen(true)}
+                      >
+                        {t('common.importFromExcel')}
+                      </Button>
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={openAddEntry}
+                      >
+                        {t('hr.buttons.addEntry')}
+                      </Button>
+                    </>
+                  ) : null}
+                </Space.Compact>
               }
             >
               <DataTable<OvertimeEntry>
@@ -752,6 +804,20 @@ export default function OvertimeSheetDetailPageContent({
         onConfirm={() => void handleDeleteEntry()}
         onCancel={() => setDeleteEntryId(null)}
       />
+
+      {importOpen ? (
+        <HrImportModal
+          entity="overtimeEntries"
+          onClose={() => setImportOpen(false)}
+          onImported={(summary) => {
+            messageApi.success(summary);
+            void detailQuery.refetch();
+          }}
+          downloadTemplate={() => downloadOvertimeSheetImportTemplate(sheetId)}
+          previewMutation={sheetImportPreview}
+          commitMutation={sheetImportCommit}
+        />
+      ) : null}
     </div>
   );
 }

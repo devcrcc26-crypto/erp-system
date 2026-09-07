@@ -264,6 +264,14 @@
         "sheetCount": "{{count}} sheets",
         "sheetCountOne": "1 sheet",
         "emptyFiltered": "No overtime sheets match your filters",
+        "exportSheetName": "Overtime Sheets",
+        "exportEntriesSheetName": "Overtime Entries",
+        "exportSheetEntriesSheetName": "Sheet Entries",
+        "exportSuccess": "Overtime sheets Excel downloaded.",
+        "exportEntriesSuccess": "Overtime entries Excel downloaded.",
+        "exportError": "Failed to export overtime Excel.",
+        "exportSheets": "Export sheets",
+        "exportEntries": "Export entries",
         "stats": {
           "total": "Total",
           "pending": "Pending",
@@ -1800,6 +1808,26 @@
         "created": "{{count}} leave request created.",
         "createdPlural": "{{count}} leave requests created.",
         "summary": "{{created}} leave requests imported"
+      },
+      "overtimeSheets": {
+        "title": "Import overtime entries",
+        "description": "Upload a spreadsheet to add overtime entries to employee monthly sheets. Valid rows are added to DRAFT or RETURNED sheets (created if needed). Sheets are not auto-submitted.",
+        "requiredColumns": "Required: employeeEmail or employeeId, year, month, date, startTime, endTime, taskDescription. Optional: isHoliday.",
+        "importRows": "Import {{count}} entry",
+        "importRowsPlural": "Import {{count}} entries",
+        "created": "{{count}} overtime entry created.",
+        "createdPlural": "{{count}} overtime entries created.",
+        "summary": "{{created}} overtime entries imported"
+      },
+      "overtimeEntries": {
+        "title": "Import sheet entries",
+        "description": "Upload a spreadsheet to add entries to this overtime sheet. The sheet must be DRAFT or RETURNED. Dates must fall in the sheet month.",
+        "requiredColumns": "Required: date, startTime, endTime, taskDescription. Optional: isHoliday.",
+        "importRows": "Import {{count}} entry",
+        "importRowsPlural": "Import {{count}} entries",
+        "created": "{{count}} overtime entry created.",
+        "createdPlural": "{{count}} overtime entries created.",
+        "summary": "{{created}} entries imported into this sheet"
       }
     },
     "assetStatus": {
