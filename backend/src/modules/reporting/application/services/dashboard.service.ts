@@ -645,6 +645,10 @@ export class DashboardService {
           employee: {
             select: { firstName: true, lastName: true, email: true },
           },
+          periods: {
+            orderBy: { startDate: 'asc' },
+            select: { startDate: true, endDate: true, days: true },
+          },
         },
       }),
       this.prisma.flightApplication.findMany({
@@ -797,16 +801,28 @@ export class DashboardService {
       leaveRequestsTrend,
       pendingByModule,
       headcountByDepartment,
-      recentLeaveRequests: recentLeaveRequests.map((request) => ({
-        id: request.id,
-        requestNumber: request.requestNumber,
-        employeeName: formatPersonName(request.employee),
-        leaveType: request.leaveType,
-        startDate: request.startDate.toISOString(),
-        endDate: request.endDate.toISOString(),
-        days: Number(request.days),
-        status: request.status,
-      })),
+      recentLeaveRequests: recentLeaveRequests.map((request) => {
+        const firstPeriod = request.periods[0];
+        const lastPeriod = request.periods[request.periods.length - 1];
+        const startDate = request.startDate ?? firstPeriod?.startDate;
+        const endDate = request.endDate ?? lastPeriod?.endDate;
+        const days =
+          request.days ??
+          request.periods.reduce(
+            (sum, period) => sum + Number(period.days),
+            0,
+          );
+        return {
+          id: request.id,
+          requestNumber: request.requestNumber,
+          employeeName: formatPersonName(request.employee),
+          leaveType: request.leaveType,
+          startDate: startDate ? startDate.toISOString() : '',
+          endDate: endDate ? endDate.toISOString() : '',
+          days: Number(days ?? 0),
+          status: request.status,
+        };
+      }),
       upcomingTravel,
       overtimeThisMonth: overtimeThisMonth.map((sheet) => ({
         employeeName: formatPersonName(sheet.employee),

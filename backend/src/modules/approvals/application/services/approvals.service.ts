@@ -1168,7 +1168,9 @@ export class ApprovalsService {
       where: activeOnly({ id: requestId, companyId }),
       include: {
         tiers: { orderBy: { tierOrder: 'asc' } },
-        leaveRequest: true,
+        leaveRequest: {
+          include: { periods: { orderBy: { startDate: 'asc' } } },
+        },
         overtimeSheet: true,
         flightApplication: true,
         businessTrip: true,
@@ -1389,13 +1391,21 @@ export class ApprovalsService {
     );
 
     if (request.leaveRequest) {
-      const year = request.leaveRequest.startDate.getUTCFullYear();
+      const startDate =
+        request.leaveRequest.startDate ??
+        request.leaveRequest.periods[0]?.startDate;
+      if (!startDate) {
+        throw new BadRequestException(
+          'Leave request is missing dates and cannot be resubmitted',
+        );
+      }
+      const year = startDate.getUTCFullYear();
       await this.leaveBalanceService.adjustBalance(
         request.leaveRequest.employeeId,
         request.leaveRequest.leaveType,
         year,
         'pending',
-        Number(request.leaveRequest.days),
+        Number(request.leaveRequest.days ?? 0),
         companyId,
       );
     }
