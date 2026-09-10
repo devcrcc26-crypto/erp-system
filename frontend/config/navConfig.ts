@@ -490,7 +490,7 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.attendance',
         href: '/hr/attendance',
         iconKey: 'hr-attendance',
-        visible: canViewHr,
+        visible: false,
         sectionKey: 'nav.sections.people',
       },
       {
@@ -498,7 +498,7 @@ export function buildIconRailNav(
         labelKey: 'nav.hr.employeeEvaluation',
         href: '/hr/employee-evaluation',
         iconKey: 'hr-employee-evaluation',
-        visible: canViewHr,
+        visible: false,
         sectionKey: 'nav.sections.people',
       },
       {
