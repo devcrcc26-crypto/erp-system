@@ -16,7 +16,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LeaveRequestStatus, LeaveType } from '@prisma/client';
-import { Transform, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 
 export class LeavePeriodInputDto {
   @ApiProperty({ example: '2026-08-01' })
@@ -28,15 +28,23 @@ export class LeavePeriodInputDto {
   endDate!: string;
 }
 
+/**
+ * Multipart forms send periods as a JSON string; JSON body sends an array.
+ * Always return LeavePeriodInputDto instances so nested whitelist validation works.
+ */
 function parsePeriods(value: unknown): unknown {
+  let parsed: unknown = value;
   if (typeof value === 'string') {
     try {
-      return JSON.parse(value) as unknown;
+      parsed = JSON.parse(value) as unknown;
     } catch {
       return value;
     }
   }
-  return value;
+  if (!Array.isArray(parsed)) {
+    return parsed;
+  }
+  return plainToInstance(LeavePeriodInputDto, parsed);
 }
 
 export class SubmitLeaveRequestDto {
@@ -98,6 +106,7 @@ export class UpdateLeaveRequestDto {
 
   @ApiPropertyOptional({ type: [LeavePeriodInputDto] })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => parsePeriods(value))
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
