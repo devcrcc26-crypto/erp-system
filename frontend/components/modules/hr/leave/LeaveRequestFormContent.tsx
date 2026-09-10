@@ -310,7 +310,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
     if (balancesQuery.isError) {
       return (
-        <p className="m-0 text-sm" style={{ color: tokens.colorError }}>
+        <p className="m-0 text-sm" style={{ color: tokens.colorRed600 }}>
           {balancesQuery.error instanceof ApiRequestError
             ? balancesQuery.error.message
             : t('hr.messages.failedToLoadLeaveBalance')}

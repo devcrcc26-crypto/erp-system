@@ -8,6 +8,7 @@ import {
   Form,
   Input,
   InputNumber,
+  Modal,
   Select,
   Switch,
   Dropdown,
@@ -25,7 +26,6 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -343,15 +343,32 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page">
-      <ConfirmDialog
-        open={duplicateOpen}
+      <Modal
         title={t('hr.publicHoliday.duplicateYear')}
-        description={t('hr.publicHoliday.duplicateYearHint')}
-        confirmLabel={t('hr.publicHoliday.duplicate')}
-        confirmLoading={duplicateMutation.isPending}
-        onConfirm={() => void handleDuplicate()}
+        open={duplicateOpen}
         onCancel={() => setDuplicateOpen(false)}
-      />
+        onOk={() => void handleDuplicate()}
+        confirmLoading={duplicateMutation.isPending}
+        okText={t('hr.publicHoliday.duplicate')}
+      >
+        <p className="erp-users-cell-sub mb-3">
+          {t('hr.publicHoliday.duplicateYearHint')}
+        </p>
+        <div className="flex flex-col gap-3">
+          <InputNumber
+            className="w-full"
+            value={fromYear}
+            onChange={(value) => setFromYear(Number(value ?? fromYear))}
+            addonBefore={t('hr.publicHoliday.fromYear')}
+          />
+          <InputNumber
+            className="w-full"
+            value={toYear}
+            onChange={(value) => setToYear(Number(value ?? toYear))}
+            addonBefore={t('hr.publicHoliday.toYear')}
+          />
+        </div>
+      </Modal>
 
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar">
@@ -450,21 +467,6 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
             ]}
           />
         </div>
-
-        {duplicateOpen ? (
-          <div className="mb-4 flex flex-wrap items-center gap-3 px-4">
-            <InputNumber
-              value={fromYear}
-              onChange={(value) => setFromYear(Number(value ?? fromYear))}
-              addonBefore={t('hr.publicHoliday.fromYear')}
-            />
-            <InputNumber
-              value={toYear}
-              onChange={(value) => setToYear(Number(value ?? toYear))}
-              addonBefore={t('hr.publicHoliday.toYear')}
-            />
-          </div>
-        ) : null}
 
         {grouped.length === 0 ? (
           <TableEmptyState

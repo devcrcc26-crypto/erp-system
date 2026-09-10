@@ -88,9 +88,12 @@ export default function LeaveRequestDetail({
       const values = await form.validateFields();
       await updateMutation.mutateAsync({
         leaveType: values.leaveType as LeaveType,
-        startDate: values.range[0].format('YYYY-MM-DD'),
-        endDate: values.range[1].format('YYYY-MM-DD'),
-        days: values.days,
+        periods: [
+          {
+            startDate: values.range[0].format('YYYY-MM-DD'),
+            endDate: values.range[1].format('YYYY-MM-DD'),
+          },
+        ],
         reason: values.reason?.trim() || undefined,
       });
       messageApi.success('Leave request updated');

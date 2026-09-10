@@ -6,7 +6,6 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api/client';
-import { toQueryString } from '@/lib/query/pm-query-utils';
 import type {
   AssignSchedulePayload,
   CreatePublicHolidayPayload,
@@ -23,6 +22,21 @@ import type {
 
 const SCHEDULE_PATH = '/hr/work-schedules';
 const HOLIDAY_PATH = '/hr/public-holidays';
+
+function holidayListQuery(params: ListPublicHolidaysParams): string {
+  const search = new URLSearchParams();
+  if (params.year !== undefined) {
+    search.set('year', String(params.year));
+  }
+  if (params.nationality) {
+    search.set('nationality', params.nationality);
+  }
+  if (params.isActive !== undefined) {
+    search.set('isActive', String(params.isActive));
+  }
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
 
 export const workScheduleKeys = {
   all: ['work-schedules'] as const,
@@ -147,7 +161,7 @@ export function usePublicHolidayList(
   return useQuery({
     queryKey: publicHolidayKeys.list(params),
     queryFn: () =>
-      apiGet<PublicHoliday[]>(`${HOLIDAY_PATH}${toQueryString(params)}`),
+      apiGet<PublicHoliday[]>(`${HOLIDAY_PATH}${holidayListQuery(params)}`),
     enabled,
     staleTime: 30_000,
   });

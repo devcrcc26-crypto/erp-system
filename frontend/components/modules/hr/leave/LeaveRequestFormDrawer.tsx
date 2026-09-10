@@ -129,9 +129,12 @@ export default function LeaveRequestFormDrawer({
     try {
       const created = await submitMutation.mutateAsync({
         leaveType: values.leaveType,
-        startDate: values.dateRange[0].format('YYYY-MM-DD'),
-        endDate: values.dateRange[1].format('YYYY-MM-DD'),
-        days: values.days,
+        periods: [
+          {
+            startDate: values.dateRange[0].format('YYYY-MM-DD'),
+            endDate: values.dateRange[1].format('YYYY-MM-DD'),
+          },
+        ],
         reason: values.reason?.trim() || undefined,
       });
       messageApi.success('Leave request submitted');

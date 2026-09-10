@@ -776,7 +776,7 @@ model User {
   assetAssignmentsUpdated         AssetAssignment[]         @relation("AssetAssignmentUpdater")
   leavePolicy                     LeavePolicy?              @relation("EmployeeLeavePolicy", fields: [leavePolicyId], references: [id])
   createdLeavePolicies            LeavePolicy[]             @relation("LeavePolicyCreator")
-  workSchedule                    WorkSchedule?             @relation("EmployeeWorkSchedule", fields: [workScheduleId], references: [id])
+  workSchedule                    WorkSchedule?             @relation("EmployeeWorkSchedule", fields: [workScheduleId], references: [id], onDelete: SetNull)
   scheduleAssignments             EmployeeScheduleAssignment[]
   profileFolder                   DocumentFolder?           @relation("UserProfileFolder", fields: [profileFolderId], references: [id])
   photoDocument                   Document?                 @relation("UserPhotoDocument", fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)

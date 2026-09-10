@@ -145,7 +145,10 @@ export interface ListLeaveRequestsParams {
 
 export interface SubmitLeaveRequestPayload {
   leaveType: LeaveType;
-  periods: Array<{ startDate: string; endDate: string }>;
+  periods?: Array<{ startDate: string; endDate: string }>;
+  startDate?: string;
+  endDate?: string;
+  days?: number;
   reason?: string;
   files?: File[];
 }
@@ -153,5 +156,8 @@ export interface SubmitLeaveRequestPayload {
 export interface UpdateLeaveRequestPayload {
   leaveType?: LeaveType;
   periods?: Array<{ startDate: string; endDate: string }>;
+  startDate?: string;
+  endDate?: string;
+  days?: number;
   reason?: string;
 }
