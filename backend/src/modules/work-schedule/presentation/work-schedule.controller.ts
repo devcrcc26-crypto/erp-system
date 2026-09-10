@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
@@ -31,14 +32,10 @@ export class WorkScheduleController {
   constructor(private readonly workScheduleService: WorkScheduleService) {}
 
   @Post('preview-days')
-  @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
-    { module: 'leave', action: 'view' },
-    { module: 'leave', action: 'create' },
-  )
+  @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Preview working-day weights for leave periods (weekends, half days, holidays)',
+      'Preview working-day weights for leave periods (weekends, half days, holidays). Any authenticated user; non-HR may only preview self.',
   })
   previewDays(
     @CurrentUser() user: AuthenticatedUser,

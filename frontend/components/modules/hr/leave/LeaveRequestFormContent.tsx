@@ -8,11 +8,11 @@ import {
   Form,
   Input,
   Select,
-  Tag,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
+import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
@@ -23,7 +23,6 @@ import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
 import type {
-  DayBreakdownItem,
   LeavePeriodInput,
   PreviewDaysResult,
 } from '@/lib/api/work-schedule.types';
@@ -38,7 +37,6 @@ import {
   resolveBalanceLeaveType,
 } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
 
 interface LeavePeriodRow {
@@ -108,30 +106,6 @@ function ReviewItem({
         {value}
       </p>
     </div>
-  );
-}
-
-function BreakdownList({
-  breakdown,
-  t,
-}: {
-  breakdown: DayBreakdownItem[];
-  t: (key: string) => string;
-}): React.ReactNode {
-  return (
-    <ul className="m-0 grid list-none grid-cols-1 gap-1 p-0 sm:grid-cols-2">
-      {breakdown.map((row) => (
-        <li key={row.date} className="flex items-center justify-between gap-2 text-sm">
-          <span>{formatProjectDate(row.date)}</span>
-          <Tag>
-            {row.type === 'holiday' && row.holidayName
-              ? row.holidayName
-              : t(`hr.dayType.${row.type}`)}
-            {row.weight > 0 ? ` · ${row.weight}` : ''}
-          </Tag>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -444,15 +418,10 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               </div>
               {preview ? (
                 <div className="mt-3 rounded-xl border border-[#e8ebef] p-3">
-                  <p className="mb-2 text-sm font-medium">
-                    {t('hr.form.runningTotal')}: {preview.totalDays}
-                  </p>
-                  <p className="erp-users-cell-sub mb-2">
-                    {t('hr.form.periodPreview')}
-                  </p>
-                  <BreakdownList
+                  <LeavePeriodBreakdownTable
                     breakdown={preview.periods.flatMap((row) => row.breakdown)}
-                    t={t}
+                    totalDays={preview.totalDays}
+                    showTotal
                   />
                 </div>
               ) : null}
@@ -537,12 +506,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               </div>
               {preview ? (
                 <div className="mt-4">
-                  <p className="mb-2 text-sm font-medium">
-                    {t('hr.form.periodPreview')}
-                  </p>
-                  <BreakdownList
+                  <LeavePeriodBreakdownTable
                     breakdown={preview.periods.flatMap((row) => row.breakdown)}
-                    t={t}
                   />
                 </div>
               ) : null}

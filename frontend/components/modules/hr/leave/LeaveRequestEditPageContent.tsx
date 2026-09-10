@@ -9,11 +9,11 @@ import {
   Input,
   Select,
   Skeleton,
-  Tag,
 } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
+import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -34,7 +34,6 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
 import { formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatProjectDate } from '@/lib/utils/project-display';
 
 interface LeavePeriodRow {
   id: string;
@@ -305,26 +304,13 @@ export default function LeaveRequestEditPageContent({
               ))}
             </div>
             {preview ? (
-              <p className="mt-2 text-sm">
-                {t('hr.form.runningTotal')}: {preview.totalDays}
-              </p>
-            ) : null}
-            {preview ? (
-              <ul className="mt-2 grid list-none grid-cols-1 gap-1 p-0 sm:grid-cols-2">
-                {preview.periods.flatMap((row) =>
-                  row.breakdown.map((day) => (
-                    <li key={day.date} className="flex justify-between text-sm">
-                      <span>{formatProjectDate(day.date)}</span>
-                      <Tag>
-                        {day.type === 'holiday' && day.holidayName
-                          ? day.holidayName
-                          : t(`hr.dayType.${day.type}`)}
-                        {day.weight > 0 ? ` · ${day.weight}` : ''}
-                      </Tag>
-                    </li>
-                  )),
-                )}
-              </ul>
+              <div className="mt-3 rounded-xl border border-[#e8ebef] p-3">
+                <LeavePeriodBreakdownTable
+                  breakdown={preview.periods.flatMap((row) => row.breakdown)}
+                  totalDays={preview.totalDays}
+                  showTotal
+                />
+              </div>
             ) : null}
           </div>
 

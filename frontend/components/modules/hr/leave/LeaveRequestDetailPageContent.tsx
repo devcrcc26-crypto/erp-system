@@ -10,6 +10,7 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -388,24 +389,7 @@ export default function LeaveRequestDetailPageContent({
                 ) : null}
                 {request.breakdown && request.breakdown.length > 0 ? (
                   <div className="md:col-span-2">
-                    <MetaItem label={t('hr.form.periodPreview')}>
-                      <ul className="m-0 grid list-none grid-cols-1 gap-1 p-0 sm:grid-cols-2">
-                        {request.breakdown.map((day) => (
-                          <li
-                            key={day.date}
-                            className="flex justify-between gap-2"
-                          >
-                            <span>{formatProjectDate(day.date)}</span>
-                            <span>
-                              {day.type === 'holiday' && day.holidayName
-                                ? day.holidayName
-                                : t(`hr.dayType.${day.type}`)}
-                              {day.weight > 0 ? ` · ${day.weight}` : ''}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </MetaItem>
+                    <LeavePeriodBreakdownTable breakdown={request.breakdown} />
                   </div>
                 ) : null}
                 {request.reason?.trim() ? (
