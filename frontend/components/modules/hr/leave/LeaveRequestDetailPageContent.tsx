@@ -371,6 +371,43 @@ export default function LeaveRequestDetailPageContent({
                 <MetaItem label={t('hr.labels.days')}>
                   <span className="font-semibold">{request.days}</span>
                 </MetaItem>
+                {request.periods && request.periods.length > 0 ? (
+                  <div className="md:col-span-2">
+                    <MetaItem label={t('hr.form.periods')}>
+                      <ul className="m-0 list-none p-0">
+                        {request.periods.map((period) => (
+                          <li key={`${period.startDate}-${period.endDate}`}>
+                            {formatProjectDate(period.startDate)} –{' '}
+                            {formatProjectDate(period.endDate)} ({period.days}{' '}
+                            {t('hr.labels.days').toLowerCase()})
+                          </li>
+                        ))}
+                      </ul>
+                    </MetaItem>
+                  </div>
+                ) : null}
+                {request.breakdown && request.breakdown.length > 0 ? (
+                  <div className="md:col-span-2">
+                    <MetaItem label={t('hr.form.periodPreview')}>
+                      <ul className="m-0 grid list-none grid-cols-1 gap-1 p-0 sm:grid-cols-2">
+                        {request.breakdown.map((day) => (
+                          <li
+                            key={day.date}
+                            className="flex justify-between gap-2"
+                          >
+                            <span>{formatProjectDate(day.date)}</span>
+                            <span>
+                              {day.type === 'holiday' && day.holidayName
+                                ? day.holidayName
+                                : t(`hr.dayType.${day.type}`)}
+                              {day.weight > 0 ? ` · ${day.weight}` : ''}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </MetaItem>
+                  </div>
+                ) : null}
                 {request.reason?.trim() ? (
                   <div className="md:col-span-2">
                     <MetaItem label={t('hr.labels.reason')}>

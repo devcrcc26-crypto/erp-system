@@ -103,6 +103,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/employee-per-diem-rates': 'pages.hr.employeePerDiemRates.listTitle',
   '/hr/leave-policy': 'pages.hr.leavePolicy.listTitle',
   '/hr/leave-policy/new': 'pages.hr.leavePolicy.new',
+  '/hr/work-schedules': 'pages.hr.workSchedules.listTitle',
+  '/hr/public-holidays': 'pages.hr.publicHolidays.listTitle',
   '/hr/company-asset': 'nav.hr.companyAssets',
   '/hr/company-asset/new': 'pages.hr.companyAsset.new',
   '/hr/asset-management': 'nav.hr.assetManagement',
@@ -225,6 +227,8 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/employee-per-diem-rates': 'pages.hr.employeePerDiemRates.listDescription',
   '/hr/leave-policy': 'pages.hr.leavePolicy.listDescription',
   '/hr/leave-policy/new': 'hr.leavePolicy.formDescription',
+  '/hr/work-schedules': 'pages.hr.workSchedules.listDescription',
+  '/hr/public-holidays': 'pages.hr.publicHolidays.listDescription',
   '/hr/company-asset': 'pages.hr.companyAsset.listDescription',
   '/hr/company-asset/new': 'pages.hr.companyAsset.formDescription',
   '/audit-logs': 'auditLogs.description',
@@ -645,6 +649,22 @@ export function buildIconRailNav(
         visible: canViewHr,
         sectionKey: 'nav.sections.setup',
       },
+      {
+        key: '/hr/work-schedules',
+        labelKey: 'nav.hr.workSchedules',
+        href: '/hr/work-schedules',
+        iconKey: 'hr-work-schedules',
+        visible: canViewHr,
+        sectionKey: 'nav.sections.setup',
+      },
+      {
+        key: '/hr/public-holidays',
+        labelKey: 'nav.hr.publicHolidays',
+        href: '/hr/public-holidays',
+        iconKey: 'hr-public-holidays',
+        visible: canViewHr,
+        sectionKey: 'nav.sections.setup',
+      },
     ],
   };
 
@@ -935,6 +955,30 @@ function resolveRouteMetaCore(
           href: '/approvals',
         },
         { label: t('pages.approvals.detail') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/work-schedules') {
+    return {
+      titleKey: 'pages.hr.workSchedules.listTitle',
+      descriptionKey: 'pages.hr.workSchedules.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.workSchedules.listTitle') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/public-holidays') {
+    return {
+      titleKey: 'pages.hr.publicHolidays.listTitle',
+      descriptionKey: 'pages.hr.publicHolidays.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.publicHolidays.listTitle') },
       ],
     };
   }

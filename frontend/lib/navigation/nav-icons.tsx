@@ -39,7 +39,9 @@ import {
   BarChart3,
   BriefcaseBusiness,
   CalendarCheck2,
+  CalendarClock,
   CalendarDays,
+  CalendarOff,
   Car,
   CircleDollarSign,
   ClipboardCheck,
@@ -142,6 +144,8 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   // HR — Lucide icons matched to module titles
   'hr-leave': lucideNavIcon(CalendarDays),
   'hr-leave-policy': lucideNavIcon(ClipboardList),
+  'hr-work-schedules': lucideNavIcon(CalendarClock),
+  'hr-public-holidays': lucideNavIcon(CalendarOff),
   'hr-overtime': lucideNavIcon(Timer),
   'hr-employee-contract': lucideNavIcon(FileSignature),
   'hr-expense': lucideNavIcon(Receipt),

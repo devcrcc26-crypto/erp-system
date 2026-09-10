@@ -47,6 +47,20 @@ export interface LeaveApprovalSummary {
   tiers?: LeaveApprovalTier[];
 }
 
+export interface LeavePeriod {
+  id?: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+}
+
+export interface LeaveDayBreakdown {
+  date: string;
+  type: 'working' | 'half' | 'weekend' | 'holiday';
+  holidayName?: string;
+  weight: number;
+}
+
 export interface LeaveRequestListItem {
   id: string;
   companyId: string;
@@ -68,14 +82,7 @@ export interface LeaveRequestListItem {
     LeaveApprovalSummary,
     'id' | 'status' | 'currentTier'
   > | null;
-}
-
-export interface LeaveAttachmentDocument {
-  id: string;
-  name: string;
-  fileType?: string;
-  fileSizeBytes?: number;
-  createdAt?: string;
+  periods?: LeavePeriod[];
 }
 
 export interface LeaveRequestDetail extends LeaveRequestListItem {
@@ -84,6 +91,15 @@ export interface LeaveRequestDetail extends LeaveRequestListItem {
   /** Balance for this leave type / year when loaded from detail. */
   balance?: LeaveBalance | null;
   documents?: LeaveAttachmentDocument[];
+  breakdown?: LeaveDayBreakdown[];
+}
+
+export interface LeaveAttachmentDocument {
+  id: string;
+  name: string;
+  fileType?: string;
+  fileSizeBytes?: number;
+  createdAt?: string;
 }
 
 export interface LeaveBalance {
@@ -129,17 +145,13 @@ export interface ListLeaveRequestsParams {
 
 export interface SubmitLeaveRequestPayload {
   leaveType: LeaveType;
-  startDate: string;
-  endDate: string;
-  days: number;
+  periods: Array<{ startDate: string; endDate: string }>;
   reason?: string;
   files?: File[];
 }
 
 export interface UpdateLeaveRequestPayload {
   leaveType?: LeaveType;
-  startDate?: string;
-  endDate?: string;
-  days?: number;
+  periods?: Array<{ startDate: string; endDate: string }>;
   reason?: string;
 }

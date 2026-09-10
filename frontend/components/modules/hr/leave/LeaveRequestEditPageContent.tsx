@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
   DatePicker,
   Form,
   Input,
-  InputNumber,
   Select,
   Skeleton,
+  Tag,
 } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -21,22 +22,43 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
+import type {
+  LeavePeriodInput,
+  PreviewDaysResult,
+} from '@/lib/api/work-schedule.types';
 import {
   useLeaveRequest,
   useUpdateLeaveRequest,
 } from '@/lib/query/leave';
 import { useCurrentUser } from '@/lib/query/profile';
-import {
-  calculateLeaveDays,
-  formatLeaveType,
-} from '@/lib/utils/leave-display';
+import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
+import { formatLeaveType } from '@/lib/utils/leave-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { formatProjectDate } from '@/lib/utils/project-display';
+
+interface LeavePeriodRow {
+  id: string;
+  range: [Dayjs, Dayjs] | null;
+}
 
 interface LeaveFormValues {
   leaveType: LeaveType;
-  dateRange: [Dayjs, Dayjs];
-  days: number;
   reason?: string;
+}
+
+function newPeriodId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function toPeriodInputs(periods: LeavePeriodRow[]): LeavePeriodInput[] {
+  return periods
+    .filter((row): row is LeavePeriodRow & { range: [Dayjs, Dayjs] } =>
+      Boolean(row.range),
+    )
+    .map((row) => ({
+      startDate: row.range[0].format('YYYY-MM-DD'),
+      endDate: row.range[1].format('YYYY-MM-DD'),
+    }));
 }
 
 /**
@@ -55,11 +77,11 @@ export default function LeaveRequestEditPageContent({
   const currentUser = useCurrentUser();
   const detailQuery = useLeaveRequest(requestId);
   const updateMutation = useUpdateLeaveRequest(requestId);
+  const previewMutation = usePreviewLeaveDays();
+  const [periods, setPeriods] = useState<LeavePeriodRow[]>([]);
+  const [preview, setPreview] = useState<PreviewDaysResult | null>(null);
 
   const request = detailQuery.data;
-  const dateRange = Form.useWatch('dateRange', form) as
-    | [Dayjs, Dayjs]
-    | undefined;
 
   const leaveTypeOptions = useMemo(
     () =>
@@ -95,34 +117,51 @@ export default function LeaveRequestEditPageContent({
     }
     form.setFieldsValue({
       leaveType: request.leaveType,
-      dateRange: [dayjs(request.startDate), dayjs(request.endDate)],
-      days: request.days,
       reason: request.reason ?? undefined,
     });
+    if (request.periods && request.periods.length > 0) {
+      setPeriods(
+        request.periods.map((period) => ({
+          id: period.id ?? newPeriodId(),
+          range: [dayjs(period.startDate), dayjs(period.endDate)],
+        })),
+      );
+    } else {
+      setPeriods([
+        {
+          id: newPeriodId(),
+          range: [dayjs(request.startDate), dayjs(request.endDate)],
+        },
+      ]);
+    }
   }, [form, request]);
 
   useEffect(() => {
-    if (!dateRange?.[0] || !dateRange?.[1]) {
+    const inputs = toPeriodInputs(periods);
+    if (inputs.length === 0 || !request) {
       return;
     }
-    const days = calculateLeaveDays(
-      dateRange[0].format('YYYY-MM-DD'),
-      dateRange[1].format('YYYY-MM-DD'),
-    );
-    if (days !== undefined) {
-      form.setFieldValue('days', days);
-    }
-  }, [dateRange, form]);
+    const handle = window.setTimeout(() => {
+      void previewMutation
+        .mutateAsync({ employeeId: request.employeeId, periods: inputs })
+        .then((result) => setPreview(result))
+        .catch(() => setPreview(null));
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [periods, request?.employeeId]);
 
   useSetHeaderExtra(null);
 
   async function handleSubmit(values: LeaveFormValues): Promise<void> {
+    const inputs = toPeriodInputs(periods);
+    if (inputs.length === 0) {
+      messageApi.error(t('hr.form.periodRequired'));
+      return;
+    }
     try {
       await updateMutation.mutateAsync({
         leaveType: values.leaveType,
-        startDate: values.dateRange[0].format('YYYY-MM-DD'),
-        endDate: values.dateRange[1].format('YYYY-MM-DD'),
-        days: values.days,
+        periods: inputs,
         reason: values.reason?.trim() || undefined,
       });
       messageApi.success(t('hr.messages.leaveRequestUpdated'));
@@ -206,55 +245,87 @@ export default function LeaveRequestEditPageContent({
         className="flex flex-col gap-4"
       >
         <FormLayout variant="pro" title={t('hr.form.leaveDetails')}>
-          <div className="erp-form-grid-2">
-            <Form.Item
-              name="leaveType"
-              label={t('hr.form.leaveType')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.selectLeaveType'),
-                },
-              ]}
-            >
-              <Select options={leaveTypeOptions} />
-            </Form.Item>
+          <Form.Item
+            name="leaveType"
+            label={t('hr.form.leaveType')}
+            rules={[
+              {
+                required: true,
+                message: t('hr.validation.selectLeaveType'),
+              },
+            ]}
+          >
+            <Select options={leaveTypeOptions} />
+          </Form.Item>
 
-            <Form.Item
-              name="dateRange"
-              label={t('hr.form.leaveDates')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.selectLeaveDates'),
-                },
-              ]}
-            >
-              <DatePicker.RangePicker className="w-full" />
-            </Form.Item>
-          </div>
-
-          <div className="erp-form-grid-2">
-            <Form.Item
-              name="days"
-              label={t('hr.form.days')}
-              extra={t('hr.form.daysHint')}
-              rules={[
-                { required: true, message: t('hr.validation.enterDays') },
-                {
-                  type: 'number',
-                  min: 0.5,
-                  message: t('hr.validation.minHalfDay'),
-                },
-              ]}
-            >
-              <InputNumber
-                className="w-full"
-                min={0.5}
-                step={0.5}
-                precision={1}
-              />
-            </Form.Item>
+          <div className="mb-4">
+            <p className="mb-2 text-sm font-medium">{t('hr.form.periods')}</p>
+            <div className="flex flex-col gap-3">
+              {periods.map((period, index) => (
+                <div key={period.id} className="flex items-start gap-2">
+                  <DatePicker.RangePicker
+                    className="w-full"
+                    value={period.range}
+                    onChange={(value) => {
+                      setPeriods((current) =>
+                        current.map((row) =>
+                          row.id === period.id
+                            ? { ...row, range: value as [Dayjs, Dayjs] | null }
+                            : row,
+                        ),
+                      );
+                    }}
+                  />
+                  {periods.length > 1 ? (
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() =>
+                        setPeriods((current) =>
+                          current.filter((row) => row.id !== period.id),
+                        )
+                      }
+                    />
+                  ) : null}
+                  {index === periods.length - 1 ? (
+                    <Button
+                      icon={<PlusOutlined />}
+                      onClick={() =>
+                        setPeriods((current) => [
+                          ...current,
+                          { id: newPeriodId(), range: null },
+                        ])
+                      }
+                    >
+                      {t('hr.form.addPeriod')}
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            {preview ? (
+              <p className="mt-2 text-sm">
+                {t('hr.form.runningTotal')}: {preview.totalDays}
+              </p>
+            ) : null}
+            {preview ? (
+              <ul className="mt-2 grid list-none grid-cols-1 gap-1 p-0 sm:grid-cols-2">
+                {preview.periods.flatMap((row) =>
+                  row.breakdown.map((day) => (
+                    <li key={day.date} className="flex justify-between text-sm">
+                      <span>{formatProjectDate(day.date)}</span>
+                      <Tag>
+                        {day.type === 'holiday' && day.holidayName
+                          ? day.holidayName
+                          : t(`hr.dayType.${day.type}`)}
+                        {day.weight > 0 ? ` · ${day.weight}` : ''}
+                      </Tag>
+                    </li>
+                  )),
+                )}
+              </ul>
+            ) : null}
           </div>
 
           <Form.Item name="reason" label={t('hr.form.reason')}>

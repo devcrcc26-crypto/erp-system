@@ -13,6 +13,7 @@ import { ArrowLeft } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
+import EmployeeWorkScheduleSection from '@/components/modules/hr/work-schedule/EmployeeWorkScheduleSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
@@ -70,11 +71,14 @@ function formatAddress(user: UserDetail): string {
   return parts.length > 0 ? parts.join(', ') : '-';
 }
 
-type ProfileTab = 'overview' | 'leave' | 'perDiem';
+type ProfileTab = 'overview' | 'leave' | 'workSchedule' | 'perDiem';
 
 function resolveProfileTab(value: string | null): ProfileTab {
   if (value === 'leave') {
     return 'leave';
+  }
+  if (value === 'workSchedule') {
+    return 'workSchedule';
   }
   if (value === 'perDiem') {
     return 'perDiem';
@@ -417,6 +421,17 @@ export default function EmployeeDetailPageContent({
             <CalendarOutlined />
             <span className="erp-employee-tab-label">{t('users.tabLeave')}</span>
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'workSchedule'}
+            onClick={() => setActiveTab('workSchedule')}
+          >
+            <CalendarOutlined />
+            <span className="erp-employee-tab-label">
+              {t('users.tabWorkSchedule')}
+            </span>
+          </button>
           {showPerDiemTab ? (
             <button
               type="button"
@@ -452,6 +467,8 @@ export default function EmployeeDetailPageContent({
                 <EmployeeOvertimeProfileSection mode="self" />
               )}
             </div>
+          ) : activeTab === 'workSchedule' ? (
+            <EmployeeWorkScheduleSection employeeId={user.id} />
           ) : activeTab === 'perDiem' ? (
             <EmployeePerDiemRatesSection
               employeeId={user.id}

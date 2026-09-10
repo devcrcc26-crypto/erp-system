@@ -269,9 +269,7 @@ export function useSubmitLeaveRequest() {
     mutationFn: (payload: SubmitLeaveRequestPayload) => {
       const formData = new FormData();
       formData.append('leaveType', payload.leaveType);
-      formData.append('startDate', payload.startDate);
-      formData.append('endDate', payload.endDate);
-      formData.append('days', String(payload.days));
+      formData.append('periods', JSON.stringify(payload.periods));
       formData.append('reason', payload.reason ?? '');
       for (const file of payload.files ?? []) {
         formData.append('files', file);
