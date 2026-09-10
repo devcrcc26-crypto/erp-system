@@ -6,6 +6,7 @@ import { appendRichDemoProjects } from './seed-demo-projects';
 import { seedComment8Walkthrough } from './seed-comment8-walkthrough';
 import { seedApprovalCategories } from './seeds/approval-categories.seed';
 import { seedLeavePolicies } from './seed-leave-policies';
+import { seedWorkSchedules } from './seed/work-schedules.seed';
 
 const prisma = new PrismaClient();
 
@@ -1954,6 +1955,12 @@ async function main(): Promise<void> {
   });
 
   await seedLeavePolicies({
+    prisma,
+    companyId: company.id,
+    actorUserId: adminUser.id,
+  });
+
+  await seedWorkSchedules({
     prisma,
     companyId: company.id,
     actorUserId: adminUser.id,

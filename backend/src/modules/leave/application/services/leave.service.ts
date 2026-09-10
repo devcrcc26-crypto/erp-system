@@ -37,7 +37,10 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
+import { formatDateOnly } from '../../../work-schedule/application/services/work-schedule.dates';
 import {
+  LeavePeriodInputDto,
   ListLeaveRequestsDto,
   SubmitLeaveRequestDto,
   UpdateLeaveRequestDto,
@@ -77,6 +80,7 @@ const LEAVE_DETAIL_INCLUDE = {
     include: { document: { select: DOCUMENT_SELECT } },
     orderBy: { createdAt: 'asc' as const },
   },
+  periods: { orderBy: { startDate: 'asc' as const } },
   approvalRequest: {
     include: {
       category: {
@@ -106,6 +110,7 @@ export class LeaveService
     private readonly hrApprovalChain: HrApprovalChainService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
+    private readonly workScheduleService: WorkScheduleService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -173,12 +178,15 @@ export class LeaveService
     actorUserId: string,
     files: UploadedFile[] = [],
   ): Promise<unknown> {
-    this.assertDateRange(dto.startDate, dto.endDate, dto.days);
-
-    const startDate = this.parseDateOnly(dto.startDate);
-    const endDate = this.parseDateOnly(dto.endDate);
+    const resolved = await this.workScheduleService.resolveLeavePeriods(
+      employeeId,
+      companyId,
+      this.resolvePeriodInputs(dto),
+    );
+    const startDate = resolved.startDate;
+    const endDate = resolved.endDate;
     const year = startDate.getUTCFullYear();
-    const days = dto.days;
+    const days = resolved.days;
 
     // Step 1 — resolve chain for the leave owner (not necessarily the actor)
     // Leave: Discipline Lead → HR Officer (no General Manager tier)
@@ -200,7 +208,7 @@ export class LeaveService
       companyId,
     );
 
-    const title = `${this.formatLeaveType(dto.leaveType)} leave — ${dto.startDate} to ${dto.endDate}`;
+    const title = `${this.formatLeaveType(dto.leaveType)} leave — ${formatDateOnly(startDate)} to ${formatDateOnly(endDate)}`;
     const now = new Date();
     const leaveId = randomUUID();
 
@@ -223,6 +231,14 @@ export class LeaveService
           completedAt: now,
           createdBy: actorUserId,
           updatedBy: actorUserId,
+          periods: {
+            create: resolved.periodRows.map((period) => ({
+              id: randomUUID(),
+              startDate: period.startDate,
+              endDate: period.endDate,
+              days: new Prisma.Decimal(period.days),
+            })),
+          },
         },
       });
 
@@ -253,9 +269,14 @@ export class LeaveService
         title,
         formData: {
           leaveType: dto.leaveType,
-          startDate: dto.startDate,
-          endDate: dto.endDate,
+          startDate: formatDateOnly(startDate),
+          endDate: formatDateOnly(endDate),
           days,
+          periods: resolved.periodRows.map((period) => ({
+            startDate: formatDateOnly(period.startDate),
+            endDate: formatDateOnly(period.endDate),
+            days: period.days,
+          })),
           reason: dto.reason ?? null,
         },
       },
@@ -288,6 +309,14 @@ export class LeaveService
               submittedAt: now,
               createdBy: actorUserId,
               updatedBy: actorUserId,
+              periods: {
+                create: resolved.periodRows.map((period) => ({
+                  id: randomUUID(),
+                  startDate: period.startDate,
+                  endDate: period.endDate,
+                  days: new Prisma.Decimal(period.days),
+                })),
+              },
             },
           });
         },
@@ -382,9 +411,9 @@ export class LeaveService
       await this.leaveBalanceService.adjustBalance(
         leave.employeeId,
         leave.leaveType,
-        leave.startDate.getUTCFullYear(),
+        leave.startDate?.getUTCFullYear() ?? new Date().getUTCFullYear(),
         'pending',
-        -Number(leave.days),
+        -Number(leave.days ?? 0),
         companyId,
       );
     }
@@ -418,36 +447,40 @@ export class LeaveService
       );
     }
 
-    const startDate = dto.startDate
-      ? this.parseDateOnly(dto.startDate)
-      : leave.startDate;
-    const endDate = dto.endDate
-      ? this.parseDateOnly(dto.endDate)
-      : leave.endDate;
-    const days = dto.days ?? Number(leave.days);
     const leaveType = dto.leaveType ?? leave.leaveType;
+    const periodInputs = this.resolvePeriodInputs(dto, leave);
+    const resolved = await this.workScheduleService.resolveLeavePeriods(
+      leave.employeeId,
+      companyId,
+      periodInputs,
+    );
 
-    if (dto.startDate || dto.endDate || dto.days != null) {
-      this.assertDateRange(
-        this.formatDateOnly(startDate),
-        this.formatDateOnly(endDate),
-        days,
-      );
-    }
-
-    await this.prisma.leaveRequest.update({
-      where: { id: leave.id },
-      data: {
-        leaveType,
-        startDate,
-        endDate,
-        days: new Prisma.Decimal(days),
-        reason:
-          dto.reason !== undefined
-            ? dto.reason.trim() || null
-            : leave.reason,
-        updatedBy: userId,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.leaveRequestPeriod.deleteMany({
+        where: { leaveRequestId: leave.id },
+      });
+      await tx.leaveRequest.update({
+        where: { id: leave.id },
+        data: {
+          leaveType,
+          startDate: resolved.startDate,
+          endDate: resolved.endDate,
+          days: new Prisma.Decimal(resolved.days),
+          reason:
+            dto.reason !== undefined
+              ? dto.reason.trim() || null
+              : leave.reason,
+          updatedBy: userId,
+          periods: {
+            create: resolved.periodRows.map((period) => ({
+              id: randomUUID(),
+              startDate: period.startDate,
+              endDate: period.endDate,
+              days: new Prisma.Decimal(period.days),
+            })),
+          },
+        },
+      });
     });
 
     return this.getRequest(id, companyId, userId);
@@ -480,8 +513,9 @@ export class LeaveService
       );
     }
 
-    const year = leave.startDate.getUTCFullYear();
-    const days = Number(leave.days);
+    const year =
+      leave.startDate?.getUTCFullYear() ?? new Date().getUTCFullYear();
+    const days = Number(leave.days ?? 0);
     const now = new Date();
 
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -596,12 +630,13 @@ export class LeaveService
     leave: {
       employeeId: string;
       leaveType: LeaveType;
-      startDate: Date;
+      startDate: Date | null;
     } & Record<string, unknown>,
     companyId: string,
   ): Promise<Record<string, unknown>> {
     const mapped = this.mapLeave(leave);
-    const year = leave.startDate.getUTCFullYear();
+    const year =
+      leave.startDate?.getUTCFullYear() ?? new Date().getUTCFullYear();
     const balances = (await this.leaveBalanceService.getBalance(
       leave.employeeId,
       year,
@@ -611,9 +646,36 @@ export class LeaveService
     const balance =
       balances.find((row) => row.leaveType === balanceLeaveType) ?? null;
 
+    const periodRows = Array.isArray(leave.periods)
+      ? (leave.periods as Array<{ startDate: Date; endDate: Date }>)
+      : [];
+    const breakdown: Array<{
+      date: string;
+      type: string;
+      holidayName?: string;
+      weight: number;
+    }> = [];
+    for (const period of periodRows) {
+      const result = await this.workScheduleService.calculateWorkingDays(
+        leave.employeeId,
+        companyId,
+        period.startDate,
+        period.endDate,
+      );
+      for (const row of result.breakdown) {
+        breakdown.push({
+          date: formatDateOnly(row.date),
+          type: row.type,
+          holidayName: row.holidayName,
+          weight: row.weight,
+        });
+      }
+    }
+
     return {
       ...mapped,
       balance,
+      breakdown,
     };
   }
 
@@ -772,8 +834,9 @@ export class LeaveService
       return;
     }
 
-    const year = leave.startDate.getUTCFullYear();
-    const days = Number(leave.days);
+    const year =
+      leave.startDate?.getUTCFullYear() ?? new Date().getUTCFullYear();
+    const days = Number(leave.days ?? 0);
     const now = new Date();
 
     let nextStatus: LeaveRequestStatus;
@@ -850,19 +913,31 @@ export class LeaveService
     return [status as LeaveRequestStatus];
   }
 
-  private assertDateRange(
-    startDate: string,
-    endDate: string,
-    days: number,
-  ): void {
-    const start = this.parseDateOnly(startDate);
-    const end = this.parseDateOnly(endDate);
-    if (end.getTime() < start.getTime()) {
-      throw new BadRequestException('endDate must be on or after startDate');
+  private resolvePeriodInputs(
+    dto: {
+      periods?: LeavePeriodInputDto[];
+      startDate?: string;
+      endDate?: string;
+    },
+    existing?: { startDate: Date | null; endDate: Date | null },
+  ): LeavePeriodInputDto[] {
+    if (dto.periods && dto.periods.length > 0) {
+      return dto.periods;
     }
-    if (days <= 0) {
-      throw new BadRequestException('days must be greater than zero');
+    if (dto.startDate && dto.endDate) {
+      return [{ startDate: dto.startDate, endDate: dto.endDate }];
     }
+    if (existing?.startDate && existing.endDate) {
+      return [
+        {
+          startDate: formatDateOnly(existing.startDate),
+          endDate: formatDateOnly(existing.endDate),
+        },
+      ];
+    }
+    throw new BadRequestException(
+      'Provide periods, or startDate and endDate',
+    );
   }
 
   private parseDateOnly(value: string): Date {
@@ -874,13 +949,6 @@ export class LeaveService
     const month = Number(match[2]);
     const day = Number(match[3]);
     return new Date(Date.UTC(year, month - 1, day));
-  }
-
-  private formatDateOnly(value: Date): string {
-    const y = value.getUTCFullYear();
-    const m = String(value.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(value.getUTCDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
   }
 
   private formatLeaveType(leaveType: LeaveType): string {
@@ -897,10 +965,20 @@ export class LeaveService
           .map((link) => link.document)
           .filter((doc): doc is Record<string, unknown> => Boolean(doc))
       : [];
+    const periods = Array.isArray(row.periods)
+      ? (row.periods as Array<Record<string, unknown>>).map((period) => ({
+          ...period,
+          days:
+            period.days instanceof Prisma.Decimal
+              ? Number(period.days)
+              : Number(period.days),
+        }))
+      : [];
     return {
       ...row,
-      days: days instanceof Prisma.Decimal ? Number(days) : Number(days),
+      days: days instanceof Prisma.Decimal ? Number(days) : Number(days ?? 0),
       documents,
+      periods,
     };
   }
 

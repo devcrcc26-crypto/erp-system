@@ -174,9 +174,9 @@ export class LeaveRequestImportService {
       try {
         const dto: SubmitLeaveRequestDto = {
           leaveType: row.leaveType,
-          startDate: row.startDate,
-          endDate: row.endDate,
-          days: row.days,
+          periods: [
+            { startDate: row.startDate, endDate: row.endDate },
+          ],
           reason: row.reason,
         };
         await this.leaveService.submitOnBehalf(

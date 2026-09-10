@@ -92,6 +92,12 @@ enum Nationality {
   CHINESE
 }
 
+enum HolidayNationality {
+  ETHIOPIAN
+  CHINESE
+  ALL
+}
+
 enum EmployeeType {
   PERMANENT
   CONTRACT
@@ -289,6 +295,9 @@ model Company {
   assetAssignments         AssetAssignment[]
   leavePolicies            LeavePolicy[]
   ExitPermits              ExitPermit[]
+  workSchedules               WorkSchedule[]
+  publicHolidays              PublicHoliday[]
+  employeeScheduleAssignments EmployeeScheduleAssignment[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -589,6 +598,7 @@ model User {
   experienceStartDate   DateTime?       @map("experience_start_date") @db.Date
   emergencyContacts     Json?           @map("emergency_contacts")
   leavePolicyId         String?         @map("leave_policy_id")
+  workScheduleId        String?         @map("work_schedule_id")
   profileFolderId       String?         @map("profile_folder_id")
   photoDocumentId       String?         @map("photo_document_id")
   passwordHash        String    @map("password_hash")
@@ -766,11 +776,14 @@ model User {
   assetAssignmentsUpdated         AssetAssignment[]         @relation("AssetAssignmentUpdater")
   leavePolicy                     LeavePolicy?              @relation("EmployeeLeavePolicy", fields: [leavePolicyId], references: [id])
   createdLeavePolicies            LeavePolicy[]             @relation("LeavePolicyCreator")
+  workSchedule                    WorkSchedule?             @relation("EmployeeWorkSchedule", fields: [workScheduleId], references: [id])
+  scheduleAssignments             EmployeeScheduleAssignment[]
   profileFolder                   DocumentFolder?           @relation("UserProfileFolder", fields: [profileFolderId], references: [id])
   photoDocument                   Document?                 @relation("UserPhotoDocument", fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([leavePolicyId], map: "idx_user_leave_policy")
+  @@index([workScheduleId], map: "idx_user_work_schedule")
   @@index([profileFolderId], map: "idx_user_profile_folder")
   @@index([photoDocumentId], map: "idx_user_photo_document")
   @@index([employeeId], map: "idx_user_employee_id")
@@ -3581,6 +3594,101 @@ model ApprovalResponseDocument {
   @@map("approval_response_document")
 }
 
+// ─── Work Schedule & Public Holidays ─────────────────────────────────────────
+
+model WorkSchedule {
+  id          String    @id @default(uuid())
+  companyId   String    @map("company_id")
+  name        String
+  description String?
+  isDefault   Boolean   @default(false) @map("is_default")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdBy   String    @map("created_by")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedBy   String    @map("updated_by")
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
+
+  company     Company                       @relation(fields: [companyId], references: [id])
+  days        WorkScheduleDay[]
+  assignments EmployeeScheduleAssignment[]
+  employees   User[]                        @relation("EmployeeWorkSchedule")
+
+  @@unique([companyId, name], map: "uq_work_schedule_company_name")
+  @@index([companyId], map: "idx_work_schedule_company_id")
+  @@index([companyId, isDefault], map: "idx_work_schedule_company_default")
+  @@index([companyId, deletedAt], map: "idx_work_schedule_company_deleted")
+  @@map("work_schedule")
+}
+
+model WorkScheduleDay {
+  id             String  @id @default(uuid())
+  scheduleId     String  @map("schedule_id")
+  dayOfWeek      Int     @map("day_of_week")
+  isWorkingDay   Boolean @default(true) @map("is_working_day")
+  isHalfDay      Boolean @default(false) @map("is_half_day")
+  morningStart   String? @map("morning_start")
+  morningEnd     String? @map("morning_end")
+  afternoonStart String? @map("afternoon_start")
+  afternoonEnd   String? @map("afternoon_end")
+  totalHours     Decimal @default(0) @map("total_hours") @db.Decimal(4, 1)
+
+  schedule WorkSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, dayOfWeek], map: "uq_work_schedule_day_schedule_dow")
+  @@index([scheduleId], map: "idx_work_schedule_day_schedule")
+  @@map("work_schedule_day")
+}
+
+model EmployeeScheduleAssignment {
+  id            String    @id @default(uuid())
+  companyId     String    @map("company_id")
+  employeeId    String    @map("employee_id")
+  scheduleId    String    @map("schedule_id")
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  createdBy     String    @map("created_by")
+
+  company  Company      @relation(fields: [companyId], references: [id])
+  employee User         @relation(fields: [employeeId], references: [id])
+  schedule WorkSchedule @relation(fields: [scheduleId], references: [id])
+
+  @@index([employeeId, effectiveFrom], map: "idx_emp_sched_assign_employee_from")
+  @@index([companyId], map: "idx_emp_sched_assign_company")
+  @@index([scheduleId], map: "idx_emp_sched_assign_schedule")
+  @@map("employee_schedule_assignment")
+}
+
+model PublicHoliday {
+  id                   String             @id @default(uuid())
+  companyId            String             @map("company_id")
+  name                 String
+  nameZh               String?            @map("name_zh")
+  date                 DateTime           @db.Date
+  isRecurring          Boolean            @default(false) @map("is_recurring")
+  appliesToNationality HolidayNationality @default(ALL) @map("applies_to_nationality")
+  isActive             Boolean            @default(true) @map("is_active")
+  notes                String?
+  notifyDaysBefore     Int                @default(2) @map("notify_days_before")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  createdBy            String            @map("created_by")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  updatedBy            String            @map("updated_by")
+  deletedAt            DateTime?          @map("deleted_at")
+  deletedBy            String?            @map("deleted_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, date, appliesToNationality], map: "uq_public_holiday_company_date_nat")
+  @@index([companyId, date], map: "idx_public_holiday_company_date")
+  @@index([companyId, isActive], map: "idx_public_holiday_company_active")
+  @@index([companyId, deletedAt], map: "idx_public_holiday_company_deleted")
+  @@map("public_holiday")
+}
+
 // ─── Leave / HR ──────────────────────────────────────────────────────────────
 
 model LeavePolicy {
@@ -3636,9 +3744,9 @@ model LeaveRequest {
   requestNumber      String             @map("request_number")
   employeeId         String             @map("employee_id")
   leaveType          LeaveType          @map("leave_type")
-  startDate          DateTime           @map("start_date") @db.Date
-  endDate            DateTime           @map("end_date") @db.Date
-  days               Decimal            @db.Decimal(4, 1)
+  startDate          DateTime?          @map("start_date") @db.Date
+  endDate            DateTime?          @map("end_date") @db.Date
+  days               Decimal?           @db.Decimal(4, 1)
   reason             String?
   status             LeaveRequestStatus @default(DRAFT)
   approvalRequestId  String?            @unique @map("approval_request_id")
@@ -3658,6 +3766,7 @@ model LeaveRequest {
   attachmentFolder DocumentFolder?       @relation(fields: [attachmentFolderId], references: [id])
   creator          User                  @relation("LeaveCreator", fields: [createdBy], references: [id])
   documents        LeaveRequestDocument[]
+  periods          LeaveRequestPeriod[]
 
   @@unique([companyId, requestNumber])
   @@index([companyId])
@@ -3666,6 +3775,20 @@ model LeaveRequest {
   @@index([startDate, endDate])
   @@index([attachmentFolderId], map: "idx_leave_request_attachment_folder")
   @@map("leave_request")
+}
+
+model LeaveRequestPeriod {
+  id             String   @id @default(uuid())
+  leaveRequestId String   @map("leave_request_id")
+  startDate      DateTime @map("start_date") @db.Date
+  endDate        DateTime @map("end_date") @db.Date
+  days           Decimal  @db.Decimal(4, 1)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  leaveRequest LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+
+  @@index([leaveRequestId], map: "idx_leave_request_period_leave")
+  @@map("leave_request_period")
 }
 
 model LeaveRequestDocument {

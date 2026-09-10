@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
 import { LeavePolicyModule } from '../leave-policy/leave-policy.module';
+import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
 import { LeaveBalanceImportService } from './application/services/leave-balance-import.service';
 import { LeaveBalanceService } from './application/services/leave-balance.service';
 import { LeaveRequestImportService } from './application/services/leave-request-import.service';
@@ -12,7 +13,12 @@ import { LeaveController } from './presentation/controllers/leave.controller';
 
 @Global()
 @Module({
-  imports: [ApprovalsModule, HrSharedModule, LeavePolicyModule],
+  imports: [
+    ApprovalsModule,
+    HrSharedModule,
+    LeavePolicyModule,
+    WorkScheduleModule,
+  ],
   controllers: [
     LeaveRequestImportController,
     LeaveBalanceImportController,

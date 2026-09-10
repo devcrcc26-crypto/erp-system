@@ -60,9 +60,13 @@ export class LeaveController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['leaveType', 'startDate', 'endDate', 'days'],
+      required: ['leaveType'],
       properties: {
         leaveType: { type: 'string' },
+        periods: {
+          type: 'string',
+          description: 'JSON array of { startDate, endDate }',
+        },
         startDate: { type: 'string', format: 'date' },
         endDate: { type: 'string', format: 'date' },
         days: { type: 'number' },

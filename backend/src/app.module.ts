@@ -16,6 +16,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { CompanySetupModule } from './modules/company-setup/company-setup.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { LeaveModule } from './modules/leave/leave.module';
+import { WorkScheduleModule } from './modules/work-schedule/work-schedule.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OvertimeModule } from './modules/overtime/overtime.module';
 import { FlightModule } from './modules/flight/flight.module';
@@ -83,6 +84,7 @@ import { ExitPermitModule } from './modules/exit-permit/exit-permit.module';
     ReportingModule,
     ProjectManagementModule,
     ApprovalsModule,
+    WorkScheduleModule,
     LeaveModule,
     OvertimeModule,
     FlightModule,

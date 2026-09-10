@@ -1,4 +1,6 @@
 import {
+  ArrayMinSize,
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -10,16 +12,13 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LeaveRequestStatus, LeaveType } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
-export class SubmitLeaveRequestDto {
-  @ApiProperty({ enum: LeaveType })
-  @IsEnum(LeaveType)
-  leaveType!: LeaveType;
-
+export class LeavePeriodInputDto {
   @ApiProperty({ example: '2026-08-01' })
   @IsDateString()
   startDate!: string;
@@ -27,13 +26,62 @@ export class SubmitLeaveRequestDto {
   @ApiProperty({ example: '2026-08-05' })
   @IsDateString()
   endDate!: string;
+}
 
-  @ApiProperty({ example: 5, description: 'Working/calendar days (supports half-days)' })
+function parsePeriods(value: unknown): unknown {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as unknown;
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
+export class SubmitLeaveRequestDto {
+  @ApiProperty({ enum: LeaveType })
+  @IsEnum(LeaveType)
+  leaveType!: LeaveType;
+
+  @ApiPropertyOptional({
+    type: [LeavePeriodInputDto],
+    description: 'One or more non-overlapping date ranges',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => parsePeriods(value))
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => LeavePeriodInputDto)
+  periods?: LeavePeriodInputDto[];
+
+  @ApiPropertyOptional({
+    example: '2026-08-01',
+    description: 'Legacy single-range start (used when periods is omitted)',
+  })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-08-05',
+    description: 'Legacy single-range end (used when periods is omitted)',
+  })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @ApiPropertyOptional({
+    example: 5,
+    description: 'Ignored — working days are calculated from the work schedule',
+  })
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0.5)
   @Max(365)
-  days!: number;
+  days?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -47,6 +95,14 @@ export class UpdateLeaveRequestDto {
   @IsOptional()
   @IsEnum(LeaveType)
   leaveType?: LeaveType;
+
+  @ApiPropertyOptional({ type: [LeavePeriodInputDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => LeavePeriodInputDto)
+  periods?: LeavePeriodInputDto[];
 
   @ApiPropertyOptional({ example: '2026-08-01' })
   @IsOptional()
