@@ -55,6 +55,7 @@ export default function WorkSchedulesPageContent(): React.ReactNode {
   return (
     <div className="erp-pro-list-page erp-users-page">
       <AssignWorkScheduleModal
+        open={Boolean(assignSchedule)}
         schedule={assignSchedule}
         onClose={() => setAssignSchedule(null)}
       />

@@ -1,63 +1,73 @@
 'use client';
 
-import { useState } from 'react';
-import { DatePicker, Input, Modal, Select } from 'antd';
+import { Button, DatePicker, Form, Input, Modal, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
+import { UserPlus } from 'lucide-react';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { WorkSchedule } from '@/lib/api/work-schedule.types';
-import { USER_DIRECTORY_PAGE_LIMIT, useUsersDirectory } from '@/lib/query/users';
 import {
   useAssignWorkSchedule,
   useEmployeeWorkSchedule,
+  useWorkScheduleList,
 } from '@/lib/query/work-schedule';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatProjectDate } from '@/lib/utils/project-display';
-import { formatUserName } from '@/lib/utils/user-display';
+
+interface AssignFormValues {
+  employeeId?: string;
+  scheduleId?: string;
+  effectiveFrom: Dayjs;
+  notes?: string;
+}
 
 /**
- * Assigns a work schedule to an employee from a given effective date.
+ * Assigns a work schedule to an employee — import-modal chrome + labeled form.
  */
 export default function AssignWorkScheduleModal({
-  schedule,
+  open,
   onClose,
+  schedule,
+  employeeId,
 }: {
-  schedule: WorkSchedule | null;
+  open: boolean;
   onClose: () => void;
+  schedule?: WorkSchedule | null;
+  employeeId?: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
-  const [employeeId, setEmployeeId] = useState<string | undefined>();
-  const [effectiveFrom, setEffectiveFrom] = useState<Dayjs | null>(dayjs());
-  const [notes, setNotes] = useState('');
+  const [form] = Form.useForm<AssignFormValues>();
+  const pickEmployee = Boolean(schedule);
+  const watchedEmployeeId = Form.useWatch('employeeId', form);
+  const resolvedEmployeeId = pickEmployee ? watchedEmployeeId : employeeId;
 
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: USER_DIRECTORY_PAGE_LIMIT },
-    { enabled: Boolean(schedule) },
-  );
   const currentQuery = useEmployeeWorkSchedule(
-    employeeId ?? '',
-    Boolean(schedule && employeeId),
+    resolvedEmployeeId ?? '',
+    open && Boolean(resolvedEmployeeId),
   );
-  const assignMutation = useAssignWorkSchedule(schedule?.id ?? '');
+  const schedulesQuery = useWorkScheduleList(open && !pickEmployee);
+  const assignMutation = useAssignWorkSchedule();
 
   function resetAndClose(): void {
-    setEmployeeId(undefined);
-    setNotes('');
-    setEffectiveFrom(dayjs());
+    form.resetFields();
     onClose();
   }
 
-  async function handleAssign(): Promise<void> {
-    if (!schedule || !employeeId || !effectiveFrom) {
+  async function handleAssign(values: AssignFormValues): Promise<void> {
+    const nextEmployeeId = pickEmployee ? values.employeeId : employeeId;
+    const nextScheduleId = pickEmployee ? schedule?.id : values.scheduleId;
+    if (!nextEmployeeId || !nextScheduleId) {
       return;
     }
     try {
       await assignMutation.mutateAsync({
-        employeeId,
-        effectiveFrom: effectiveFrom.format('YYYY-MM-DD'),
-        notes: notes.trim() || undefined,
+        scheduleId: nextScheduleId,
+        employeeId: nextEmployeeId,
+        effectiveFrom: values.effectiveFrom.format('YYYY-MM-DD'),
+        notes: values.notes?.trim() || undefined,
       });
       messageApi.success(t('hr.workSchedule.assigned'));
       resetAndClose();
@@ -66,57 +76,157 @@ export default function AssignWorkScheduleModal({
     }
   }
 
+  const currentName = currentQuery.data?.current.name;
+
   return (
     <Modal
-      title={t('hr.workSchedule.assign')}
-      open={Boolean(schedule)}
+      open={open}
+      title={null}
       onCancel={resetAndClose}
-      onOk={() => void handleAssign()}
-      confirmLoading={assignMutation.isPending}
-      okButtonProps={{ disabled: !employeeId || !effectiveFrom }}
+      footer={[
+        <Button
+          key="cancel"
+          className="erp-user-import-btn"
+          onClick={resetAndClose}
+          disabled={assignMutation.isPending}
+        >
+          {t('common.cancel')}
+        </Button>,
+        <Button
+          key="assign"
+          type="primary"
+          className="erp-user-import-btn"
+          loading={assignMutation.isPending}
+          onClick={() => form.submit()}
+        >
+          {t('hr.workSchedule.assign')}
+        </Button>,
+      ]}
+      width={480}
+      centered
+      rootClassName="erp-user-import-modal"
+      className="erp-user-import-modal"
+      classNames={{
+        content: 'erp-user-import-modal-content',
+        footer: 'erp-user-import-modal-footer',
+        body: 'erp-user-import-modal-body',
+      }}
+      styles={{
+        content: {
+          borderRadius: 14,
+          overflow: 'hidden',
+          padding: 0,
+        },
+      }}
       destroyOnHidden
+      mask={{ closable: !assignMutation.isPending }}
+      closable={!assignMutation.isPending}
+      afterOpenChange={(visible) => {
+        if (visible) {
+          form.setFieldsValue({
+            effectiveFrom: dayjs(),
+            employeeId: employeeId,
+            scheduleId: schedule?.id,
+            notes: undefined,
+          });
+        }
+      }}
     >
-      <p className="erp-users-cell-sub mb-3">{schedule?.name}</p>
-      <Select
-        showSearch
-        className="mb-3 w-full"
-        placeholder={t('hr.workSchedule.searchEmployee')}
-        value={employeeId}
-        onChange={(value: string) => setEmployeeId(value)}
-        optionFilterProp="label"
-        options={(usersQuery.data?.data ?? []).map((user) => ({
-          value: user.id,
-          label: formatUserName(user),
-        }))}
-      />
-      {currentQuery.data ? (
-        <p className="mb-3 text-sm">
-          {t('hr.workSchedule.currentSchedule')}:{' '}
-          <strong>{currentQuery.data.current.name}</strong>
-        </p>
-      ) : null}
-      <DatePicker
-        className="mb-3 w-full"
-        value={effectiveFrom}
-        onChange={(value) => setEffectiveFrom(value)}
-      />
-      <Input.TextArea
-        rows={2}
-        value={notes}
-        onChange={(event) => setNotes(event.target.value)}
-        placeholder={t('hr.workSchedule.notes')}
-      />
-      {currentQuery.data?.current ? (
-        <p className="erp-users-cell-sub mt-2 mb-0">
-          {t('hr.workSchedule.assignClosesPrevious')}
-        </p>
-      ) : null}
-      {effectiveFrom ? (
-        <p className="erp-users-cell-sub mt-1 mb-0">
-          {t('hr.labels.startDate')}:{' '}
-          {formatProjectDate(effectiveFrom.toISOString())}
-        </p>
-      ) : null}
+      <div className="erp-user-import">
+        <div className="erp-user-import-header">
+          <div className="erp-user-import-header-icon" aria-hidden>
+            <UserPlus size={22} strokeWidth={1.75} />
+          </div>
+          <div className="erp-user-import-header-copy">
+            <h3 className="erp-user-import-title">
+              {t('hr.workSchedule.assign')}
+            </h3>
+            <p className="erp-user-import-desc">
+              {schedule?.name ?? t('hr.workSchedule.assignDescription')}
+            </p>
+          </div>
+        </div>
+
+        <div className="erp-user-import-panel">
+          <Form<AssignFormValues>
+            form={form}
+            layout="vertical"
+            requiredMark={false}
+            onFinish={(values) => void handleAssign(values)}
+            disabled={assignMutation.isPending}
+          >
+            {pickEmployee ? (
+              <Form.Item
+                name="employeeId"
+                label={t('hr.workSchedule.employee')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.workSchedule.employeeRequired'),
+                  },
+                ]}
+              >
+                <UserSelect
+                  allowClear={false}
+                  placeholder={t('hr.workSchedule.searchEmployee')}
+                  className="w-full"
+                />
+              </Form.Item>
+            ) : (
+              <Form.Item
+                name="scheduleId"
+                label={t('hr.workSchedule.name')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.workSchedule.selectSchedule'),
+                  },
+                ]}
+              >
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder={t('hr.workSchedule.selectSchedule')}
+                  className="w-full"
+                  options={(schedulesQuery.data ?? [])
+                    .filter((row) => row.isActive)
+                    .map((row) => ({ value: row.id, label: row.name }))}
+                />
+              </Form.Item>
+            )}
+
+            <Form.Item
+              name="effectiveFrom"
+              label={t('hr.workSchedule.effectiveFrom')}
+              rules={[
+                {
+                  required: true,
+                  message: t('hr.workSchedule.effectiveFromRequired'),
+                },
+              ]}
+            >
+              <DatePicker className="w-full" />
+            </Form.Item>
+
+            <Form.Item name="notes" label={t('hr.workSchedule.notes')}>
+              <Input.TextArea
+                rows={3}
+                maxLength={2000}
+                showCount
+                placeholder={t('hr.workSchedule.notes')}
+              />
+            </Form.Item>
+
+            {currentName ? (
+              <ErpNotice
+                tone="info"
+                title={t('hr.workSchedule.currentSchedule')}
+                description={`${currentName}. ${t('hr.workSchedule.assignClosesPrevious')}`}
+              />
+            ) : null}
+          </Form>
+        </div>
+      </div>
     </Modal>
   );
 }

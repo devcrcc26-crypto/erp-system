@@ -157,7 +157,8 @@ export default function WorkScheduleDetailPageContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
       <AssignWorkScheduleModal
-        schedule={assignOpen ? schedule : null}
+        open={assignOpen}
+        schedule={schedule}
         onClose={() => setAssignOpen(false)}
       />
       <ConfirmDialog

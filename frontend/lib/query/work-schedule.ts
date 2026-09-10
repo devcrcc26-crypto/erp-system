@@ -131,10 +131,13 @@ export function useSetDefaultWorkSchedule() {
   });
 }
 
-export function useAssignWorkSchedule(scheduleId: string) {
+export function useAssignWorkSchedule() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: AssignSchedulePayload) =>
+    mutationFn: ({
+      scheduleId,
+      ...payload
+    }: AssignSchedulePayload & { scheduleId: string }) =>
       apiPost<unknown>(`${SCHEDULE_PATH}/${scheduleId}/assign`, payload),
     onSuccess: (_data, payload) => {
       void queryClient.invalidateQueries({ queryKey: workScheduleKeys.all });

@@ -1,24 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, DatePicker, Modal, Select, Table } from 'antd';
+import { Button, Table } from 'antd';
 import { UserAddOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
+import AssignWorkScheduleModal from '@/components/modules/hr/work-schedule/AssignWorkScheduleModal';
 import WorkScheduleWeekGrid from '@/components/modules/hr/work-schedule/WorkScheduleWeekGrid';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ScheduleAssignmentHistoryItem } from '@/lib/api/work-schedule.types';
-import {
-  useAssignWorkSchedule,
-  useEmployeeWorkSchedule,
-  useWorkScheduleList,
-} from '@/lib/query/work-schedule';
-import { notifyApiError } from '@/lib/utils/notify-api-error';
+import { useEmployeeWorkSchedule } from '@/lib/query/work-schedule';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 /**
@@ -31,34 +24,12 @@ export default function EmployeeWorkScheduleSection({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
-  const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
   const [assignOpen, setAssignOpen] = useState(false);
-  const [scheduleId, setScheduleId] = useState<string | undefined>();
-  const [effectiveFrom, setEffectiveFrom] = useState<Dayjs | null>(dayjs());
 
   const detailQuery = useEmployeeWorkSchedule(employeeId, true);
-  const schedulesQuery = useWorkScheduleList(canViewHr && assignOpen);
-  const assignMutation = useAssignWorkSchedule(scheduleId ?? '');
-
   const current = detailQuery.data?.current;
   const history = detailQuery.data?.history ?? [];
-
-  async function handleAssign(): Promise<void> {
-    if (!scheduleId || !effectiveFrom) {
-      return;
-    }
-    try {
-      await assignMutation.mutateAsync({
-        employeeId,
-        effectiveFrom: effectiveFrom.format('YYYY-MM-DD'),
-      });
-      messageApi.success(t('hr.workSchedule.assigned'));
-      setAssignOpen(false);
-    } catch (error: unknown) {
-      notifyApiError(error, t('hr.workSchedule.assignFailed'), messageApi);
-    }
-  }
 
   const historyColumns: ColumnsType<ScheduleAssignmentHistoryItem> = [
     {
@@ -83,6 +54,12 @@ export default function EmployeeWorkScheduleSection({
 
   return (
     <div className="flex flex-col gap-4">
+      <AssignWorkScheduleModal
+        open={assignOpen}
+        employeeId={employeeId}
+        onClose={() => setAssignOpen(false)}
+      />
+
       <div className="erp-employee-section">
         <div className="erp-employee-section-header">
           <h3 className="erp-employee-section-title">
@@ -150,35 +127,6 @@ export default function EmployeeWorkScheduleSection({
           />
         </div>
       </div>
-
-      <Modal
-        title={t('hr.workSchedule.assign')}
-        open={assignOpen}
-        onCancel={() => setAssignOpen(false)}
-        onOk={() => void handleAssign()}
-        confirmLoading={assignMutation.isPending}
-        okButtonProps={{ disabled: !scheduleId || !effectiveFrom }}
-      >
-        {current ? (
-          <p className="mb-3 text-sm">
-            {t('hr.workSchedule.currentSchedule')}: <strong>{current.name}</strong>
-          </p>
-        ) : null}
-        <Select
-          className="mb-3 w-full"
-          placeholder={t('hr.workSchedule.selectSchedule')}
-          value={scheduleId}
-          onChange={(value: string) => setScheduleId(value)}
-          options={(schedulesQuery.data ?? [])
-            .filter((row) => row.isActive)
-            .map((row) => ({ value: row.id, label: row.name }))}
-        />
-        <DatePicker
-          className="w-full"
-          value={effectiveFrom}
-          onChange={(value) => setEffectiveFrom(value)}
-        />
-      </Modal>
     </div>
   );
 }
