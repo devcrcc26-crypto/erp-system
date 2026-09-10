@@ -6,6 +6,8 @@ import { UserAddOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
+import WorkScheduleWeekGrid from '@/components/modules/hr/work-schedule/WorkScheduleWeekGrid';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -19,16 +21,6 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
-const DAY_KEYS = [
-  'hr.workSchedule.day0',
-  'hr.workSchedule.day1',
-  'hr.workSchedule.day2',
-  'hr.workSchedule.day3',
-  'hr.workSchedule.day4',
-  'hr.workSchedule.day5',
-  'hr.workSchedule.day6',
-] as const;
-
 /**
  * Employee profile tab: current work schedule and assignment history.
  */
@@ -38,6 +30,7 @@ export default function EmployeeWorkScheduleSection({
   employeeId: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const router = useRouter();
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
   const [assignOpen, setAssignOpen] = useState(false);
@@ -108,7 +101,19 @@ export default function EmployeeWorkScheduleSection({
           {current ? (
             <>
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="erp-users-cell-strong">{current.name}</span>
+                {canViewHr ? (
+                  <Button
+                    type="link"
+                    className="!h-auto !px-0 font-semibold"
+                    onClick={() =>
+                      router.push(`/hr/work-schedules/${current.id}`)
+                    }
+                  >
+                    {current.name}
+                  </Button>
+                ) : (
+                  <span className="erp-users-cell-strong">{current.name}</span>
+                )}
                 {current.isDefault ? (
                   <StatusBadge
                     label={t('hr.workSchedule.defaultBadge')}
@@ -116,25 +121,7 @@ export default function EmployeeWorkScheduleSection({
                   />
                 ) : null}
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {current.days.map((day) => (
-                  <div
-                    key={day.dayOfWeek}
-                    className="rounded-lg border border-[#e8ebef] px-3 py-2"
-                  >
-                    <p className="m-0 text-sm font-medium">
-                      {t(DAY_KEYS[day.dayOfWeek])}
-                    </p>
-                    <p className="erp-users-cell-sub m-0">
-                      {!day.isWorkingDay
-                        ? t('hr.workSchedule.offDay')
-                        : day.isHalfDay
-                          ? `${day.morningStart}–${day.morningEnd} (${day.totalHours}h)`
-                          : `${day.morningStart}–${day.morningEnd}, ${day.afternoonStart}–${day.afternoonEnd} (${day.totalHours}h)`}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <WorkScheduleWeekGrid days={current.days} />
             </>
           ) : (
             <p className="erp-users-cell-sub m-0">

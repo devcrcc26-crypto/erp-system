@@ -324,10 +324,16 @@
         "reviewStepDescription": "保存前请确认政策详情与假期规则。"
       },
       "workSchedules": {
+        "new": "新建工作时间表",
+        "edit": "编辑工作时间表",
+        "detail": "工作时间表",
         "listTitle": "工作时间表",
         "listDescription": "设置工作日、半天与工时，供请假、加班和考勤计算使用。"
       },
       "publicHolidays": {
+        "new": "新建公共假期",
+        "edit": "编辑公共假期",
+        "detail": "公共假期",
         "listTitle": "公共假期",
         "listDescription": "由人力资源维护的公司假期。停用的假期不参与天数计算。"
       },
@@ -2488,6 +2494,14 @@
     "workSchedule": {
       "new": "新建时间表",
       "edit": "编辑时间表",
+      "details": "时间表详情",
+      "weekPattern": "每周安排",
+      "formDescription": "设置该时间表的工作日、半天与工时。请假、加班和考勤将按此时长计算。",
+      "backToList": "返回工作时间表",
+      "loadError": "加载工作时间表失败",
+      "inactiveNotice": "该时间表已停用，不会用于新的分配。",
+      "deactivateTitle": "停用此工作时间表？",
+      "deactivateDescription": "停用后将无法用于新的分配。现有分配保持不变，直到重新分配其他时间表。",
       "name": "时间表名称",
       "nameRequired": "请输入时间表名称",
       "description": "说明",
@@ -2536,6 +2550,14 @@
     "publicHoliday": {
       "new": "新建假期",
       "edit": "编辑假期",
+      "details": "假期详情",
+      "formDescription": "添加公司假期。停用的假期不参与请假与考勤天数计算。",
+      "backToList": "返回公共假期",
+      "loadError": "加载公共假期失败",
+      "inactiveNotice": "该假期已停用，不参与天数计算。",
+      "deactivateTitle": "停用此假期？",
+      "deactivateDescription": "停用的假期将不参与请假、加班和考勤天数计算。",
+      "notes": "备注",
       "name": "名称",
       "nameZh": "中文名称",
       "nameRequired": "请输入假期名称",

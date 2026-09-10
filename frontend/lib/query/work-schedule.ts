@@ -154,6 +154,15 @@ export function usePreviewLeaveDays() {
   });
 }
 
+export function usePublicHoliday(id: string, enabled = true) {
+  return useQuery({
+    queryKey: publicHolidayKeys.detail(id),
+    queryFn: () => apiGet<PublicHoliday>(`${HOLIDAY_PATH}/${id}`),
+    enabled: Boolean(id) && enabled,
+    retry: false,
+  });
+}
+
 export function usePublicHolidayList(
   params: ListPublicHolidaysParams = {},
   enabled = true,

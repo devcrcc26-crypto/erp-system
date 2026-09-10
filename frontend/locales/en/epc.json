@@ -324,10 +324,16 @@
         "reviewStepDescription": "Confirm the policy details and leave rules before saving."
       },
       "workSchedules": {
+        "new": "New Work Schedule",
+        "edit": "Edit Work Schedule",
+        "detail": "Work Schedule",
         "listTitle": "Work Schedules",
         "listDescription": "Define working days, half days, and hours used for leave, overtime, and attendance."
       },
       "publicHolidays": {
+        "new": "New Public Holiday",
+        "edit": "Edit Public Holiday",
+        "detail": "Public Holiday",
         "listTitle": "Public Holidays",
         "listDescription": "Company holidays managed by HR. Inactive holidays are ignored by day calculations."
       },
@@ -2488,6 +2494,14 @@
     "workSchedule": {
       "new": "New schedule",
       "edit": "Edit schedule",
+      "details": "Schedule details",
+      "weekPattern": "Weekly pattern",
+      "formDescription": "Set working days, half days, and hours for this schedule. Leave, overtime, and attendance use these hours.",
+      "backToList": "Back to work schedules",
+      "loadError": "Failed to load work schedule",
+      "inactiveNotice": "This schedule is inactive and will not be used for new assignments.",
+      "deactivateTitle": "Deactivate this work schedule?",
+      "deactivateDescription": "It will no longer be available for new assignments. Existing assignments stay until you assign another schedule.",
       "name": "Schedule name",
       "nameRequired": "Enter a schedule name",
       "description": "Description",
@@ -2536,6 +2550,14 @@
     "publicHoliday": {
       "new": "New holiday",
       "edit": "Edit holiday",
+      "details": "Holiday details",
+      "formDescription": "Add a company holiday. Inactive holidays are ignored by leave and attendance calculations.",
+      "backToList": "Back to public holidays",
+      "loadError": "Failed to load public holiday",
+      "inactiveNotice": "This holiday is inactive and is ignored by day calculations.",
+      "deactivateTitle": "Deactivate this holiday?",
+      "deactivateDescription": "Inactive holidays are ignored by leave, overtime, and attendance day counts.",
+      "notes": "Notes",
       "name": "Name",
       "nameZh": "Chinese name",
       "nameRequired": "Enter a holiday name",

@@ -104,7 +104,9 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/leave-policy': 'pages.hr.leavePolicy.listTitle',
   '/hr/leave-policy/new': 'pages.hr.leavePolicy.new',
   '/hr/work-schedules': 'pages.hr.workSchedules.listTitle',
+  '/hr/work-schedules/new': 'pages.hr.workSchedules.new',
   '/hr/public-holidays': 'pages.hr.publicHolidays.listTitle',
+  '/hr/public-holidays/new': 'pages.hr.publicHolidays.new',
   '/hr/company-asset': 'nav.hr.companyAssets',
   '/hr/company-asset/new': 'pages.hr.companyAsset.new',
   '/hr/asset-management': 'nav.hr.assetManagement',
@@ -228,7 +230,9 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/leave-policy': 'pages.hr.leavePolicy.listDescription',
   '/hr/leave-policy/new': 'hr.leavePolicy.formDescription',
   '/hr/work-schedules': 'pages.hr.workSchedules.listDescription',
+  '/hr/work-schedules/new': 'hr.workSchedule.formDescription',
   '/hr/public-holidays': 'pages.hr.publicHolidays.listDescription',
+  '/hr/public-holidays/new': 'hr.publicHoliday.formDescription',
   '/hr/company-asset': 'pages.hr.companyAsset.listDescription',
   '/hr/company-asset/new': 'pages.hr.companyAsset.formDescription',
   '/audit-logs': 'auditLogs.description',
@@ -971,6 +975,55 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname === '/hr/work-schedules/new') {
+    return {
+      titleKey: 'pages.hr.workSchedules.new',
+      descriptionKey: 'hr.workSchedule.formDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('pages.hr.workSchedules.listTitle'),
+          href: '/hr/work-schedules',
+        },
+        { label: t('pages.hr.workSchedules.new') },
+      ],
+    };
+  }
+
+  if (pathname.match(/^\/hr\/work-schedules\/[^/]+\/edit$/)) {
+    const id = pathname.split('/')[3];
+    return {
+      titleKey: 'pages.hr.workSchedules.edit',
+      descriptionKey: 'hr.workSchedule.formDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('pages.hr.workSchedules.listTitle'),
+          href: '/hr/work-schedules',
+        },
+        {
+          label: t('pages.hr.workSchedules.detail'),
+          href: id ? `/hr/work-schedules/${id}` : undefined,
+        },
+        { label: t('pages.hr.workSchedules.edit') },
+      ],
+    };
+  }
+
+  if (pathname.match(/^\/hr\/work-schedules\/[^/]+$/)) {
+    return {
+      titleKey: 'pages.hr.workSchedules.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('pages.hr.workSchedules.listTitle'),
+          href: '/hr/work-schedules',
+        },
+        { label: t('pages.hr.workSchedules.detail') },
+      ],
+    };
+  }
+
   if (pathname === '/hr/public-holidays') {
     return {
       titleKey: 'pages.hr.publicHolidays.listTitle',
@@ -979,6 +1032,55 @@ function resolveRouteMetaCore(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.groups.humanResources') },
         { label: t('pages.hr.publicHolidays.listTitle') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/public-holidays/new') {
+    return {
+      titleKey: 'pages.hr.publicHolidays.new',
+      descriptionKey: 'hr.publicHoliday.formDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('pages.hr.publicHolidays.listTitle'),
+          href: '/hr/public-holidays',
+        },
+        { label: t('pages.hr.publicHolidays.new') },
+      ],
+    };
+  }
+
+  if (pathname.match(/^\/hr\/public-holidays\/[^/]+\/edit$/)) {
+    const id = pathname.split('/')[3];
+    return {
+      titleKey: 'pages.hr.publicHolidays.edit',
+      descriptionKey: 'hr.publicHoliday.formDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('pages.hr.publicHolidays.listTitle'),
+          href: '/hr/public-holidays',
+        },
+        {
+          label: t('pages.hr.publicHolidays.detail'),
+          href: id ? `/hr/public-holidays/${id}` : undefined,
+        },
+        { label: t('pages.hr.publicHolidays.edit') },
+      ],
+    };
+  }
+
+  if (pathname.match(/^\/hr\/public-holidays\/[^/]+$/)) {
+    return {
+      titleKey: 'pages.hr.publicHolidays.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('pages.hr.publicHolidays.listTitle'),
+          href: '/hr/public-holidays',
+        },
+        { label: t('pages.hr.publicHolidays.detail') },
       ],
     };
   }
