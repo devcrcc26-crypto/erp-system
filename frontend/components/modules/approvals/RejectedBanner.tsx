@@ -1,6 +1,7 @@
 'use client';
 
-import { Alert, Typography } from 'antd';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Read-only rejection banner — no actions.
@@ -10,19 +11,14 @@ export default function RejectedBanner({
 }: {
   note?: string | null;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const trimmed = note?.trim();
+
   return (
-    <Alert
-      type="error"
-      showIcon
-      style={{ marginBottom: 0 }}
-      title="This request was rejected"
-      description={
-        note?.trim() ? (
-          <Typography.Paragraph style={{ marginBottom: 0 }}>
-            {note.trim()}
-          </Typography.Paragraph>
-        ) : undefined
-      }
+    <ErpNotice
+      tone="error"
+      title={t('pages.approvals.rejectedTitle')}
+      description={trimmed || undefined}
     />
   );
 }

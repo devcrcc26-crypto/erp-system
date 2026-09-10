@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Space, Timeline, Typography } from 'antd';
+import { Alert, Button } from 'antd';
 import { CheckCircle2, Circle, Clock3 } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type {
@@ -23,29 +23,33 @@ function resolveWaitingMessage(
   status: ApprovalRequestDetail['status'],
   currentTier: ApprovalTier | undefined,
   isRequester: boolean,
+  t: (key: string, vars?: Record<string, string | number>) => string,
 ): string {
   if (status === 'APPROVED') {
-    return 'Fully approved — no further action required';
+    return t('pages.approvals.waiting.approved');
   }
   if (status === 'REJECTED') {
-    return 'Request rejected — no further action required';
+    return t('pages.approvals.waiting.rejected');
   }
   if (status === 'CANCELLED') {
-    return 'Request cancelled — no further action required';
+    return t('pages.approvals.waiting.cancelled');
   }
   if (status === 'RETURNED') {
     return isRequester
-      ? 'Returned — update and resubmit to continue'
-      : 'Returned to requester — waiting for resubmit';
+      ? t('pages.approvals.waiting.returnedRequester')
+      : t('pages.approvals.waiting.returnedOther');
   }
   if (
     currentTier &&
     (currentTier.decision === 'PENDING' ||
       currentTier.decision === 'CONDITIONALLY_APPROVED')
   ) {
-    return `Waiting on ${currentTier.label} (${formatApprovalUserName(currentTier.approver)})`;
+    return t('pages.approvals.waiting.onTier', {
+      label: currentTier.label,
+      name: formatApprovalUserName(currentTier.approver),
+    });
   }
-  return 'No active approval actions';
+  return t('pages.approvals.waiting.none');
 }
 
 export interface ApprovalDetailSidebarProps {
@@ -58,15 +62,11 @@ export interface ApprovalDetailSidebarProps {
   responses: ApprovalResponse[];
   actionsDisabled: boolean;
   resolveLoading: boolean;
-  onApprove: () => void;
-  onConditionalApprove: () => void;
-  onReturn: () => void;
-  onReject: () => void;
   onResolveCondition: (tier: ApprovalTier, index: number) => void;
 }
 
 /**
- * Approval detail sidebar — tier timeline, conditions, and approver actions.
+ * Approval detail sidebar — tier timeline, conditions, and status.
  */
 export default function ApprovalDetailSidebar({
   request,
@@ -78,10 +78,6 @@ export default function ApprovalDetailSidebar({
   responses,
   actionsDisabled,
   resolveLoading,
-  onApprove,
-  onConditionalApprove,
-  onReturn,
-  onReject,
   onResolveCondition,
 }: ApprovalDetailSidebarProps): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -90,92 +86,94 @@ export default function ApprovalDetailSidebar({
 
   return (
     <aside className="flex flex-col gap-3 lg:sticky lg:top-4">
-      <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white">
-        <div className="border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
-          <h3 className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+      <div className="erp-pro-card overflow-hidden">
+        <div className="erp-employee-section-header !rounded-none border-b border-[#eef1f4]">
+          <h3 className="erp-employee-section-title">
             {t('hr.section.approvalChain')}
           </h3>
         </div>
         <div className="px-3 py-4 sm:px-5">
           {sorted.length === 0 ? (
-            <Typography.Text type="secondary">
+            <p className="erp-users-cell-sub m-0">
               {t('hr.empty.noApprovalChain')}
-            </Typography.Text>
+            </p>
           ) : (
-            <Timeline
-              items={sorted.map((tier) => {
+            <ol className="m-0 flex list-none flex-col gap-0 p-0">
+              {sorted.map((tier, tierIndex) => {
                 const conditions = parseTierConditions(tier.conditions);
                 const isCurrent = tier.id === activeCurrent?.id;
-                return {
-                  color:
-                    tier.decision === 'APPROVED'
-                      ? 'green'
-                      : tier.decision === 'REJECTED'
-                        ? 'red'
-                        : tier.decision === 'RETURNED'
-                          ? 'orange'
-                          : isCurrent
-                            ? 'blue'
-                            : 'gray',
-                  icon:
-                    tier.decision === 'APPROVED' ? (
-                      <CheckCircle2 size={16} color={tokens.colorGreen600} />
-                    ) : tier.decision === 'PENDING' ? (
-                      <Clock3 size={16} color={tokens.colorAmber400} />
-                    ) : (
-                      <Circle size={14} color={tokens.colorGray600} />
-                    ),
-                  content: (
-                    <div style={{ paddingBottom: 8 }}>
-                      <Space wrap size={6}>
-                        <Typography.Text strong>{tier.label}</Typography.Text>
+                const isLast = tierIndex === sorted.length - 1;
+                const dotColor =
+                  tier.decision === 'APPROVED'
+                    ? tokens.colorGreen600
+                    : tier.decision === 'REJECTED'
+                      ? '#D32F2F'
+                      : tier.decision === 'RETURNED'
+                        ? tokens.colorAmber400
+                        : isCurrent
+                          ? '#F47B20'
+                          : tokens.colorGray600;
+                const Icon =
+                  tier.decision === 'APPROVED'
+                    ? CheckCircle2
+                    : tier.decision === 'PENDING' ||
+                        tier.decision === 'CONDITIONALLY_APPROVED'
+                      ? Clock3
+                      : Circle;
+
+                return (
+                  <li key={tier.id} className="relative flex gap-3">
+                    <div className="flex w-5 flex-col items-center">
+                      <span
+                        className="z-[1] mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white"
+                        aria-hidden
+                      >
+                        <Icon size={16} color={dotColor} />
+                      </span>
+                      {!isLast ? (
+                        <span
+                          className="mt-1 w-px flex-1 bg-[#e8ebef]"
+                          aria-hidden
+                        />
+                      ) : null}
+                    </div>
+                    <div className={`min-w-0 flex-1 ${isLast ? 'pb-0' : 'pb-4'}`}>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="erp-users-cell-strong text-sm">
+                          {tier.label}
+                        </span>
                         <StatusBadge
                           label={formatApprovalStatus(tier.decision, t)}
                           variant={approvalTierDecisionVariant(tier.decision)}
                         />
                         {isCurrent ? (
-                          <StatusBadge label="Current" variant="cyan" />
+                          <StatusBadge
+                            label={t('pages.approvals.currentTierBadge')}
+                            variant="cyan"
+                          />
                         ) : null}
-                      </Space>
-                      <div style={{ marginTop: 4 }}>
-                        <Typography.Text
-                          type="secondary"
-                          style={{ fontSize: 12 }}
-                        >
-                          {formatApprovalUserName(tier.approver)}
-                          {tier.resolver ? ` · ${tier.resolver}` : ''}
-                        </Typography.Text>
                       </div>
+                      <p className="erp-users-cell-sub m-0 mt-1 text-xs">
+                        {formatApprovalUserName(tier.approver)}
+                        {tier.resolver ? ` · ${tier.resolver}` : ''}
+                      </p>
                       {tier.decidedAt ? (
-                        <div>
-                          <Typography.Text
-                            type="secondary"
-                            style={{ fontSize: 12 }}
-                          >
-                            Decided {formatProjectDate(tier.decidedAt)}
-                          </Typography.Text>
-                        </div>
+                        <p className="erp-users-cell-sub m-0 mt-0.5 text-xs">
+                          {t('pages.approvals.decidedOn', {
+                            date: formatProjectDate(tier.decidedAt),
+                          })}
+                        </p>
                       ) : null}
                       {tier.comment ? (
-                        <Typography.Paragraph
-                          type="secondary"
-                          style={{
-                            marginTop: 6,
-                            marginBottom: 0,
-                            fontSize: 12,
-                          }}
-                        >
+                        <p className="erp-users-cell-sub m-0 mt-1.5 text-xs leading-relaxed">
                           {tier.comment}
-                        </Typography.Paragraph>
+                        </p>
                       ) : null}
                       {conditions.length > 0 ? (
-                        <div style={{ marginTop: 8 }}>
-                          <Typography.Text
-                            strong
-                            style={{ fontSize: 12, display: 'block' }}
-                          >
-                            Conditions
-                          </Typography.Text>
+                        <div className="mt-2 flex flex-col gap-2">
+                          <p className="erp-users-stat-label m-0">
+                            {t('pages.approvals.conditions')}
+                          </p>
                           {conditions.map((condition, index) => {
                             const conditionHasResponse = responses.some(
                               (r) =>
@@ -194,78 +192,70 @@ export default function ApprovalDetailSidebar({
                             return (
                               <div
                                 key={`${tier.id}-c-${index}`}
-                                style={{
-                                  marginTop: 6,
-                                  padding: 8,
-                                  borderRadius: 0,
-                                  background: condition.resolved
-                                    ? tokens.colorGreen50
-                                    : tokens.colorAmber50,
-                                }}
+                                className={`rounded-lg px-2.5 py-2 ${
+                                  condition.resolved
+                                    ? 'bg-[#EAF3DE]'
+                                    : 'bg-[#FAEEDA]'
+                                }`}
                               >
-                                <Space
-                                  align="start"
-                                  style={{
-                                    width: '100%',
-                                    justifyContent: 'space-between',
-                                  }}
-                                >
-                                  <Typography.Text style={{ fontSize: 12 }}>
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="m-0 text-xs leading-relaxed text-[var(--color-text-primary)]">
                                     {condition.resolved ? '✓ ' : '○ '}
                                     {condition.text}
-                                  </Typography.Text>
+                                  </p>
                                   {canResolve ? (
                                     <Button
                                       type="link"
                                       size="small"
+                                      className="!h-auto !p-0"
                                       disabled={resolveDisabled}
                                       title={
                                         resolveDisabled
-                                          ? 'Waiting for employee response'
+                                          ? t(
+                                              'pages.approvals.waitingEmployeeResponse',
+                                            )
                                           : undefined
                                       }
                                       loading={resolveLoading}
                                       onClick={() =>
                                         onResolveCondition(tier, index)
                                       }
-                                      style={{ borderRadius: 0 }}
                                     >
-                                      Resolve
+                                      {t('pages.approvals.resolve')}
                                     </Button>
                                   ) : null}
-                                </Space>
+                                </div>
                                 {!condition.resolved ? (
-                                  <Typography.Paragraph
-                                    style={{
-                                      marginTop: 4,
-                                      marginBottom: 0,
-                                      fontSize: 12,
-                                      color: conditionHasResponse
-                                        ? tokens.colorGreen600
-                                        : tokens.colorAmber400,
-                                    }}
+                                  <p
+                                    className={`m-0 mt-1 text-xs ${
+                                      conditionHasResponse
+                                        ? 'text-[#639922]'
+                                        : 'text-[#BA7517]'
+                                    }`}
                                   >
                                     {conditionHasResponse
-                                      ? '✓ Employee responded — ready to resolve'
-                                      : '⏳ Waiting for employee response'}
-                                  </Typography.Paragraph>
+                                      ? t(
+                                          'pages.approvals.employeeRespondedReady',
+                                        )
+                                      : t(
+                                          'pages.approvals.waitingEmployeeResponse',
+                                        )}
+                                  </p>
                                 ) : null}
                                 {conditionResponses.map((resp) => (
-                                  <Typography.Paragraph
+                                  <p
                                     key={resp.id}
-                                    type="secondary"
-                                    style={{
-                                      marginTop: 6,
-                                      marginBottom: 0,
-                                      fontSize: 12,
-                                    }}
+                                    className="erp-users-cell-sub m-0 mt-1.5 text-xs"
                                   >
-                                    Response:{' '}
-                                    {resp.note?.trim() || '(attachments only)'}
+                                    {t('pages.approvals.responseLabel')}:{' '}
+                                    {resp.note?.trim() ||
+                                      t('pages.approvals.attachmentsOnly')}
                                     {(resp.documents?.length ?? 0) > 0
-                                      ? ` · ${resp.documents?.length} file(s)`
+                                      ? ` · ${t('pages.approvals.fileCount', {
+                                          count: resp.documents?.length ?? 0,
+                                        })}`
                                       : ''}
-                                  </Typography.Paragraph>
+                                  </p>
                                 ))}
                               </div>
                             );
@@ -273,72 +263,18 @@ export default function ApprovalDetailSidebar({
                         </div>
                       ) : null}
                     </div>
-                  ),
-                };
+                  </li>
+                );
               })}
-            />
+            </ol>
           )}
 
           {isActiveApprover && currentTier ? (
-            <Space
-              orientation="vertical"
-              style={{ width: '100%', marginTop: 8 }}
-            >
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Actions for {currentTier.label}
-              </Typography.Text>
-              <Button
-                type="primary"
-                block
-                disabled={actionsDisabled}
-                title={
-                  actionsDisabled
-                    ? 'Resolve all conditions before approving'
-                    : undefined
-                }
-                onClick={onApprove}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.buttons.approve')}
-              </Button>
-              <Button
-                block
-                disabled={actionsDisabled}
-                onClick={onConditionalApprove}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.buttons.conditionallyApprove')}
-              </Button>
-              <Button
-                block
-                disabled={actionsDisabled}
-                onClick={onReturn}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.buttons.return')}
-              </Button>
-              <Button
-                danger
-                block
-                disabled={actionsDisabled}
-                onClick={onReject}
-                style={{ borderRadius: 0 }}
-              >
-                {t('hr.buttons.reject')}
-              </Button>
-              {actionsDisabled ? (
-                <Typography.Paragraph
-                  style={{
-                    marginBottom: 0,
-                    marginTop: 4,
-                    fontSize: 13,
-                    color: tokens.colorAmber400,
-                  }}
-                >
-                  All conditions must be resolved before taking action.
-                </Typography.Paragraph>
-              ) : null}
-            </Space>
+            actionsDisabled ? (
+              <p className="m-0 mt-4 border-t border-[#eef1f4] pt-4 text-xs text-[#BA7517]">
+                {t('pages.approvals.resolveConditionsFirst')}
+              </p>
+            ) : null
           ) : (
             <Alert
               type={
@@ -350,11 +286,12 @@ export default function ApprovalDetailSidebar({
                     : 'info'
               }
               showIcon
-              style={{ marginTop: 8 }}
+              className="mt-4"
               title={resolveWaitingMessage(
                 request.status,
                 currentTier,
                 isRequester,
+                t,
               )}
             />
           )}

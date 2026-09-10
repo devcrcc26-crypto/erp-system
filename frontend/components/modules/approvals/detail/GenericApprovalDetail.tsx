@@ -1,7 +1,10 @@
 'use client';
 
-import { Descriptions, Empty, Typography } from 'antd';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import { Empty } from 'antd';
+import {
+  MetaItem,
+  SectionCard,
+} from '@/components/modules/hr/shared/hr-page-chrome';
 import type { ApprovalRequestDetail } from '@/lib/api/approvals.types';
 import {
   formatFormDataValue,
@@ -31,30 +34,24 @@ export default function GenericApprovalDetail({
 
   return (
     <div className="flex flex-col gap-3">
-      <SectionCard
-        title={t('pages.approvals.requestDetails')}
-        bodyClassName="px-3 py-4 sm:px-5"
-      >
+      <SectionCard title={t('pages.approvals.requestDetails')}>
         {formEntries.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={t('pages.approvals.noFormData')}
           />
         ) : (
-          <Descriptions bordered size="small" column={1}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {formEntries.map((entry) => (
-              <Descriptions.Item key={entry.key} label={entry.label}>
-                {entry.value}
-              </Descriptions.Item>
+              <MetaItem key={entry.key} label={entry.label}>
+                <span className="break-words">{entry.value}</span>
+              </MetaItem>
             ))}
-          </Descriptions>
+          </div>
         )}
       </SectionCard>
 
-      <SectionCard
-        title={t('pages.approvals.comments')}
-        bodyClassName="px-3 py-4 sm:px-5"
-      >
+      <SectionCard title={t('pages.approvals.comments')}>
         {(request.comments ?? []).length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -65,19 +62,19 @@ export default function GenericApprovalDetail({
             {(request.comments ?? []).map((comment) => (
               <div
                 key={comment.id}
-                className="rounded-none border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-secondary)] p-3"
+                className="rounded-xl border border-[#e8ebef] bg-[#f8fafc] p-3"
               >
-                <div className="mb-1 flex justify-between gap-2">
-                  <Typography.Text strong>
+                <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="erp-users-cell-strong text-sm">
                     {formatApprovalUserName(comment.commenter)}
-                  </Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  </span>
+                  <span className="erp-users-cell-sub text-xs">
                     {formatProjectDate(comment.createdAt)}
-                  </Typography.Text>
+                  </span>
                 </div>
-                <Typography.Paragraph style={{ marginBottom: 0 }}>
+                <p className="m-0 text-sm leading-relaxed text-[var(--color-text-primary)]">
                   {comment.commentText}
-                </Typography.Paragraph>
+                </p>
               </div>
             ))}
           </div>

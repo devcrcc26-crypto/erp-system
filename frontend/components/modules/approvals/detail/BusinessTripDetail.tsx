@@ -38,7 +38,7 @@ function SectionCard({
   title,
   children,
   action,
-  bodyClassName = 'p-0',
+  bodyClassName = '',
 }: {
   title: string;
   children: React.ReactNode;
@@ -46,14 +46,22 @@ function SectionCard({
   bodyClassName?: string;
 }): React.ReactNode {
   return (
-    <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-          {title}
-        </h3>
-        {action}
+    <div className="erp-employee-section">
+      <div className="erp-employee-section-header">
+        <h3 className="erp-employee-section-title">{title}</h3>
+        {action ? (
+          <div className="erp-employee-section-extra">{action}</div>
+        ) : null}
       </div>
-      <div className={bodyClassName}>{children}</div>
+      <div
+        className={
+          bodyClassName.includes('p-0')
+            ? bodyClassName
+            : `erp-employee-section-body ${bodyClassName}`.trim()
+        }
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -130,16 +138,14 @@ function TripSummaryStrip({
       {items.map(({ label, value, emphasize }) => (
         <div
           key={label}
-          className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] px-4 py-3"
+          className="min-w-0 rounded-xl border border-[#e8ebef] bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)] sm:px-4"
         >
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)] mb-1">
-            {label}
-          </p>
+          <p className="erp-users-stat-label m-0 mb-1">{label}</p>
           <p
-            className={`text-sm leading-snug ${
+            className={`m-0 leading-snug ${
               emphasize
                 ? 'text-base font-bold text-[var(--color-text-primary)]'
-                : 'font-semibold text-[var(--color-text-primary)]'
+                : 'text-sm font-semibold text-[var(--color-text-primary)]'
             }`}
           >
             {value}

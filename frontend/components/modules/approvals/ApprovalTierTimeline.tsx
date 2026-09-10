@@ -1,6 +1,5 @@
 'use client';
 
-import { Space, Timeline, Typography } from 'antd';
 import { CheckCircle2, Circle, Clock3 } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
@@ -35,113 +34,116 @@ export default function ApprovalTierTimeline({
   const resolvedTitle = title ?? t('hr.section.approvalChain');
 
   return (
-    <div className="overflow-hidden rounded-none border border-[rgba(0,0,0,0.08)] bg-white lg:sticky lg:top-4">
-      <div className="border-b border-[rgba(0,0,0,0.06)] px-3 py-3 sm:px-5">
-        <h3 className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-          {resolvedTitle}
-        </h3>
+    <div className="erp-pro-card overflow-hidden lg:sticky lg:top-4">
+      <div className="erp-employee-section-header !rounded-none border-b border-[#eef1f4]">
+        <h3 className="erp-employee-section-title">{resolvedTitle}</h3>
       </div>
       <div className="px-3 py-4 sm:px-5">
         {sorted.length === 0 ? (
-          <Typography.Text type="secondary">
+          <p className="erp-users-cell-sub m-0">
             {t('hr.empty.noApprovalChain')}
-          </Typography.Text>
+          </p>
         ) : (
-          <Timeline
-            items={sorted.map((tier) => {
+          <ol className="m-0 flex list-none flex-col gap-0 p-0">
+            {sorted.map((tier, tierIndex) => {
               const conditions = parseTierConditions(tier.conditions);
               const isCurrent = tier.id === currentTier?.id;
-              return {
-                color:
-                  tier.decision === 'APPROVED'
-                    ? 'green'
-                    : tier.decision === 'REJECTED'
-                      ? 'red'
-                      : tier.decision === 'RETURNED'
-                        ? 'orange'
-                        : isCurrent
-                          ? 'blue'
-                          : 'gray',
-                icon:
-                  tier.decision === 'APPROVED' ? (
-                    <CheckCircle2 size={16} color={tokens.colorGreen600} />
-                  ) : tier.decision === 'PENDING' ? (
-                    <Clock3 size={16} color={tokens.colorAmber400} />
-                  ) : (
-                    <Circle size={14} color={tokens.colorGray600} />
-                  ),
-                content: (
-                  <div style={{ paddingBottom: 8 }}>
-                    <Space wrap size={6}>
-                      <Typography.Text strong>{tier.label}</Typography.Text>
+              const isLast = tierIndex === sorted.length - 1;
+              const dotColor =
+                tier.decision === 'APPROVED'
+                  ? tokens.colorGreen600
+                  : tier.decision === 'REJECTED'
+                    ? '#D32F2F'
+                    : tier.decision === 'RETURNED'
+                      ? tokens.colorAmber400
+                      : isCurrent
+                        ? '#F47B20'
+                        : tokens.colorGray600;
+              const Icon =
+                tier.decision === 'APPROVED'
+                  ? CheckCircle2
+                  : tier.decision === 'PENDING' ||
+                      tier.decision === 'CONDITIONALLY_APPROVED'
+                    ? Clock3
+                    : Circle;
+
+              return (
+                <li key={tier.id} className="relative flex gap-3">
+                  <div className="flex w-5 flex-col items-center">
+                    <span
+                      className="z-[1] mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white"
+                      aria-hidden
+                    >
+                      <Icon size={16} color={dotColor} />
+                    </span>
+                    {!isLast ? (
+                      <span
+                        className="mt-1 w-px flex-1 bg-[#e8ebef]"
+                        aria-hidden
+                      />
+                    ) : null}
+                  </div>
+                  <div
+                    className={`min-w-0 flex-1 ${isLast ? 'pb-0' : 'pb-4'}`}
+                  >
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="erp-users-cell-strong text-sm">
+                        {tier.label}
+                      </span>
                       <StatusBadge
                         label={formatApprovalStatus(tier.decision, t)}
                         variant={approvalTierDecisionVariant(tier.decision)}
                       />
                       {isCurrent ? (
-                        <StatusBadge label="Current" variant="cyan" />
+                        <StatusBadge
+                          label={t('pages.approvals.currentTierBadge')}
+                          variant="cyan"
+                        />
                       ) : null}
-                    </Space>
-                    <div style={{ marginTop: 4 }}>
-                      <Typography.Text
-                        type="secondary"
-                        style={{ fontSize: 12 }}
-                      >
-                        {formatApprovalUserName(tier.approver)}
-                        {tier.resolver ? ` · ${tier.resolver}` : ''}
-                      </Typography.Text>
                     </div>
+                    <p className="erp-users-cell-sub m-0 mt-1 text-xs">
+                      {formatApprovalUserName(tier.approver)}
+                      {tier.resolver ? ` · ${tier.resolver}` : ''}
+                    </p>
                     {tier.decidedAt ? (
-                      <div>
-                        <Typography.Text
-                          type="secondary"
-                          style={{ fontSize: 12 }}
-                        >
-                          Decided {formatProjectDate(tier.decidedAt)}
-                        </Typography.Text>
-                      </div>
+                      <p className="erp-users-cell-sub m-0 mt-0.5 text-xs">
+                        {t('pages.approvals.decidedOn', {
+                          date: formatProjectDate(tier.decidedAt),
+                        })}
+                      </p>
                     ) : null}
                     {tier.comment ? (
-                      <Typography.Paragraph
-                        type="secondary"
-                        style={{ marginTop: 6, marginBottom: 0, fontSize: 12 }}
-                      >
+                      <p className="erp-users-cell-sub m-0 mt-1.5 text-xs leading-relaxed">
                         {tier.comment}
-                      </Typography.Paragraph>
+                      </p>
                     ) : null}
                     {conditions.length > 0 ? (
-                      <div style={{ marginTop: 8 }}>
-                        <Typography.Text
-                          strong
-                          style={{ fontSize: 12, display: 'block' }}
-                        >
-                          Conditions
-                        </Typography.Text>
+                      <div className="mt-2 flex flex-col gap-2">
+                        <p className="erp-users-stat-label m-0">
+                          {t('pages.approvals.conditions')}
+                        </p>
                         {conditions.map((condition, index) => (
                           <div
                             key={`${tier.id}-c-${index}`}
-                            style={{
-                              marginTop: 6,
-                              padding: 8,
-                              borderRadius: 0,
-                              background: condition.resolved
-                                ? tokens.colorGreen50
-                                : tokens.colorAmber50,
-                            }}
+                            className={`rounded-lg px-2.5 py-2 ${
+                              condition.resolved
+                                ? 'bg-[#EAF3DE]'
+                                : 'bg-[#FAEEDA]'
+                            }`}
                           >
-                            <Typography.Text style={{ fontSize: 12 }}>
+                            <p className="m-0 text-xs leading-relaxed text-[var(--color-text-primary)]">
                               {condition.resolved ? '✓ ' : '○ '}
                               {condition.text}
-                            </Typography.Text>
+                            </p>
                           </div>
                         ))}
                       </div>
                     ) : null}
                   </div>
-                ),
-              };
+                </li>
+              );
             })}
-          />
+          </ol>
         )}
       </div>
     </div>

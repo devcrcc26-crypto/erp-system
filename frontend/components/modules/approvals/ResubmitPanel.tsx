@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Space, Typography, Upload } from 'antd';
+import { Button, Input, Upload } from 'antd';
 import { PaperClipOutlined, UploadOutlined } from '@ant-design/icons';
+import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ApprovalResponse } from '@/lib/api/approvals.types';
 import { useResubmitApprovalRequest } from '@/lib/query/approvals';
-import { tokens } from '@/lib/theme/tokens';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { formatApprovalUserName } from '@/lib/utils/approval-display';
@@ -21,6 +22,7 @@ export default function ResubmitPanel({
   requestId: string;
   returnNote?: string | null;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
   const resubmitMutation = useResubmitApprovalRequest(requestId);
   const [note, setNote] = useState('');
@@ -32,45 +34,43 @@ export default function ResubmitPanel({
         note: note.trim() || undefined,
         files,
       });
-      messageApi.success('Request resubmitted');
+      messageApi.success(t('pages.approvals.resubmit.success'));
       setNote('');
       setFiles([]);
     } catch (error: unknown) {
-      notifyApiError(error, 'Failed to resubmit', messageApi);
+      notifyApiError(error, t('pages.approvals.resubmit.failed'), messageApi);
     }
   }
 
   return (
-    <div
-      style={{
-        marginTop: 16,
-        padding: 16,
-        borderRadius: 8,
-        border: `1px solid ${tokens.colorPrimary}`,
-        background: tokens.colorPrimaryLight,
-      }}
-    >
-      <Typography.Title level={5} style={{ marginTop: 0 }}>
-        Resubmit
-      </Typography.Title>
-      {returnNote?.trim() ? (
-        <Typography.Paragraph style={{ marginBottom: 12 }}>
-          <Typography.Text strong>Return note: </Typography.Text>
-          {returnNote.trim()}
-        </Typography.Paragraph>
-      ) : null}
-      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
-        Note to approver (optional)
-      </Typography.Text>
-      <Input.TextArea
-        rows={3}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        maxLength={2000}
-        showCount
-        placeholder="Explain what you changed…"
-      />
-      <div style={{ marginTop: 12 }}>
+    <div className="overflow-hidden rounded-xl border border-[var(--color-primary,#F47B20)] bg-[var(--color-primary-light,#FEF0E6)]">
+      <div className="border-b border-[rgba(244,123,32,0.2)] px-4 py-3">
+        <h3 className="m-0 text-sm font-semibold text-[var(--color-text-primary)]">
+          {t('pages.approvals.resubmit.title')}
+        </h3>
+      </div>
+      <div className="flex flex-col gap-3 p-4">
+        {returnNote?.trim() ? (
+          <p className="m-0 text-sm leading-relaxed text-[var(--color-text-primary)]">
+            <span className="font-semibold">
+              {t('pages.approvals.resubmit.returnNote')}:{' '}
+            </span>
+            {returnNote.trim()}
+          </p>
+        ) : null}
+        <div>
+          <p className="erp-users-stat-label m-0 mb-1.5">
+            {t('pages.approvals.resubmit.noteLabel')}
+          </p>
+          <Input.TextArea
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={2000}
+            showCount
+            placeholder={t('pages.approvals.resubmit.notePlaceholder')}
+          />
+        </div>
         <Upload
           multiple
           beforeUpload={(file) => {
@@ -86,17 +86,20 @@ export default function ResubmitPanel({
             status: 'done' as const,
           }))}
         >
-          <Button icon={<UploadOutlined />}>Attach files</Button>
+          <Button icon={<UploadOutlined />}>
+            {t('pages.approvals.resubmit.attachFiles')}
+          </Button>
         </Upload>
+        <div>
+          <Button
+            type="primary"
+            loading={resubmitMutation.isPending}
+            onClick={() => void handleSubmit()}
+          >
+            {t('pages.approvals.resubmit.submit')}
+          </Button>
+        </div>
       </div>
-      <Button
-        type="primary"
-        style={{ marginTop: 12 }}
-        loading={resubmitMutation.isPending}
-        onClick={() => void handleSubmit()}
-      >
-        Resubmit
-      </Button>
     </div>
   );
 }
@@ -109,50 +112,44 @@ export function ResponseHistory({
 }: {
   responses: ApprovalResponse[];
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
+
   if (!responses.length) {
     return null;
   }
 
   return (
-    <div style={{ marginTop: 16 }}>
-      <Typography.Title level={5} style={{ marginTop: 0 }}>
-        Resubmission / response history
-      </Typography.Title>
-      <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+    <SectionCard title={t('pages.approvals.resubmit.historyTitle')}>
+      <div className="flex flex-col gap-3">
         {responses.map((response) => (
           <div
             key={response.id}
-            style={{
-              padding: 12,
-              borderRadius: 8,
-              border: `1px solid ${tokens.colorBorder}`,
-              background: tokens.colorCardBg,
-            }}
+            className="rounded-xl border border-[#e8ebef] bg-[#f8fafc] p-3"
           >
-            <Typography.Text strong>
+            <p className="erp-users-cell-strong m-0 text-sm">
               {response.responseType === 'RESUBMIT'
-                ? 'Resubmit'
-                : `Condition #${(response.conditionIndex ?? 0) + 1} response`}
-            </Typography.Text>
-            <div>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {formatApprovalUserName(response.responder)} ·{' '}
-                {formatDisplayDateTime(response.createdAt)}
-              </Typography.Text>
-            </div>
+                ? t('pages.approvals.resubmit.resubmitLabel')
+                : t('pages.approvals.resubmit.conditionResponse', {
+                    index: (response.conditionIndex ?? 0) + 1,
+                  })}
+            </p>
+            <p className="erp-users-cell-sub m-0 mt-1 text-xs">
+              {formatApprovalUserName(response.responder)} ·{' '}
+              {formatDisplayDateTime(response.createdAt)}
+            </p>
             {response.note?.trim() ? (
-              <Typography.Paragraph style={{ marginTop: 8, marginBottom: 0 }}>
+              <p className="m-0 mt-2 text-sm leading-relaxed text-[var(--color-text-primary)]">
                 {response.note}
-              </Typography.Paragraph>
+              </p>
             ) : null}
             {(response.documents?.length ?? 0) > 0 ? (
-              <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 18 }}>
+              <ul className="m-0 mt-2 list-none space-y-1 p-0">
                 {response.documents?.map((link) => (
                   <li key={link.id}>
-                    <Typography.Link
-                      href={`/api/documents/${link.documentId}/download-url`}
-                      onClick={(e) => {
-                        e.preventDefault();
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 border-0 bg-transparent p-0 text-sm text-[var(--color-primary,#F47B20)] hover:underline"
+                      onClick={() => {
                         void (async () => {
                           const { apiGet } = await import('@/lib/api/client');
                           const { url } = await apiGet<{ url: string }>(
@@ -162,15 +159,17 @@ export function ResponseHistory({
                         })();
                       }}
                     >
-                      <PaperClipOutlined /> {link.document?.name ?? 'Attachment'}
-                    </Typography.Link>
+                      <PaperClipOutlined />{' '}
+                      {link.document?.name ??
+                        t('pages.approvals.resubmit.attachment')}
+                    </button>
                   </li>
                 ))}
               </ul>
             ) : null}
           </div>
         ))}
-      </Space>
-    </div>
+      </div>
+    </SectionCard>
   );
 }

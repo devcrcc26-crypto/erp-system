@@ -1,7 +1,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button, Grid, Input, Skeleton, Tag } from 'antd';
+import { Button, Dropdown, Grid, Input, Skeleton, Tag } from 'antd';
+import type { MenuProps } from 'antd';
+import {
+  CheckOutlined,
+  CloseOutlined,
+  DownOutlined,
+  RollbackOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalDetailSidebar from '@/components/modules/approvals/ApprovalDetailSidebar';
@@ -314,16 +322,20 @@ export default function ApprovalDetailPageContent({
         tierId: currentTier.id,
         payload: note.trim() ? { note: note.trim() } : undefined,
       });
-      messageApi.success('Tier approved');
+      messageApi.success(t('pages.approvals.dialog.approveSuccess'));
       closeModal();
     } catch (error) {
-      notifyApiError(error, 'Failed to approve tier', messageApi);
+      notifyApiError(
+        error,
+        t('pages.approvals.dialog.approveFailed'),
+        messageApi,
+      );
     }
   }
 
   async function handleConditionalApprove(): Promise<void> {
     if (!currentTier || !conditionText.trim()) {
-      messageApi.warning('Enter a condition before continuing');
+      messageApi.warning(t('pages.approvals.dialog.conditionalRequired'));
       return;
     }
     try {
@@ -335,10 +347,14 @@ export default function ApprovalDetailPageContent({
         tierId: currentTier.id,
         payload: note.trim() ? { note: note.trim() } : undefined,
       });
-      messageApi.success('Conditionally approved');
+      messageApi.success(t('pages.approvals.dialog.conditionalSuccess'));
       closeModal();
     } catch (error) {
-      notifyApiError(error, 'Failed to conditionally approve', messageApi);
+      notifyApiError(
+        error,
+        t('pages.approvals.dialog.conditionalFailed'),
+        messageApi,
+      );
     }
   }
 
@@ -349,10 +365,14 @@ export default function ApprovalDetailPageContent({
         tierId: currentTier.id,
         payload: note.trim() ? { note: note.trim() } : undefined,
       });
-      messageApi.success('Request returned to submitter');
+      messageApi.success(t('pages.approvals.dialog.returnSuccess'));
       closeModal();
     } catch (error) {
-      notifyApiError(error, 'Failed to return request', messageApi);
+      notifyApiError(
+        error,
+        t('pages.approvals.dialog.returnFailed'),
+        messageApi,
+      );
     }
   }
 
@@ -363,10 +383,14 @@ export default function ApprovalDetailPageContent({
         tierId: currentTier.id,
         payload: note.trim() ? { note: note.trim() } : undefined,
       });
-      messageApi.success('Request rejected');
+      messageApi.success(t('pages.approvals.dialog.rejectSuccess'));
       closeModal();
     } catch (error) {
-      notifyApiError(error, 'Failed to reject request', messageApi);
+      notifyApiError(
+        error,
+        t('pages.approvals.dialog.rejectFailed'),
+        messageApi,
+      );
     }
   }
 
@@ -379,11 +403,51 @@ export default function ApprovalDetailPageContent({
         tierId: tier.id,
         index,
       });
-      messageApi.success('Condition marked resolved');
+      messageApi.success(t('pages.approvals.dialog.resolveSuccess'));
     } catch (error) {
-      notifyApiError(error, 'Failed to resolve condition', messageApi);
+      notifyApiError(
+        error,
+        t('pages.approvals.dialog.resolveFailed'),
+        messageApi,
+      );
     }
   }
+
+  const decisionMenuItems: MenuProps['items'] = useMemo(
+    () => [
+      {
+        key: 'approve',
+        icon: <CheckOutlined />,
+        label: t('hr.buttons.approve'),
+        disabled: actionsDisabled,
+        onClick: () => setActionModal('approve'),
+      },
+      {
+        key: 'conditional',
+        icon: <WarningOutlined />,
+        label: t('hr.buttons.conditionallyApprove'),
+        disabled: actionsDisabled,
+        onClick: () => setActionModal('conditional'),
+      },
+      {
+        key: 'return',
+        icon: <RollbackOutlined />,
+        label: t('hr.buttons.return'),
+        disabled: actionsDisabled,
+        onClick: () => setActionModal('return'),
+      },
+      { type: 'divider' },
+      {
+        key: 'reject',
+        icon: <CloseOutlined />,
+        label: t('hr.buttons.reject'),
+        danger: true,
+        disabled: actionsDisabled,
+        onClick: () => setActionModal('reject'),
+      },
+    ],
+    [actionsDisabled, t],
+  );
 
   if (detailQuery.isLoading && !request) {
     return (
@@ -441,37 +505,28 @@ export default function ApprovalDetailPageContent({
           </div>
           {isActiveApprover && currentTier ? (
             <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
-              <Button
-                type="primary"
+              <Dropdown
+                menu={{ items: decisionMenuItems }}
+                trigger={['click']}
                 disabled={actionsDisabled}
-                title={
-                  actionsDisabled
-                    ? 'Resolve all conditions before approving'
-                    : undefined
-                }
-                onClick={() => setActionModal('approve')}
               >
-                {t('hr.buttons.approve')}
-              </Button>
-              <Button
-                disabled={actionsDisabled}
-                onClick={() => setActionModal('conditional')}
-              >
-                {t('hr.buttons.conditionallyApprove')}
-              </Button>
-              <Button
-                disabled={actionsDisabled}
-                onClick={() => setActionModal('return')}
-              >
-                {t('hr.buttons.return')}
-              </Button>
-              <Button
-                danger
-                disabled={actionsDisabled}
-                onClick={() => setActionModal('reject')}
-              >
-                {t('hr.buttons.reject')}
-              </Button>
+                <Button
+                  type="primary"
+                  disabled={actionsDisabled}
+                  title={
+                    actionsDisabled
+                      ? t('pages.approvals.resolveConditionsFirst')
+                      : undefined
+                  }
+                >
+                  {isNarrow
+                    ? t('pages.approvals.decide')
+                    : t('pages.approvals.decideForTier', {
+                        label: currentTier.label,
+                      })}
+                  <DownOutlined />
+                </Button>
+              </Dropdown>
             </div>
           ) : null}
         </div>
@@ -486,9 +541,13 @@ export default function ApprovalDetailPageContent({
                   variant={displayStatus.variant}
                 />
               ) : null}
-              {categoryName ? <Tag className="rounded-xl">{categoryName}</Tag> : null}
+              {categoryName ? (
+                <Tag className="!m-0 rounded-lg border-[#e8ebef] bg-[#f8fafc] text-[var(--color-text-secondary)]">
+                  {categoryName}
+                </Tag>
+              ) : null}
               {resubmitCount > 0 ? (
-                <Tag color="orange" className="rounded-xl">
+                <Tag color="orange" className="!m-0 rounded-lg">
                   {t('pages.approvals.resubmittedCount', {
                     count: resubmitCount,
                   })}
@@ -511,10 +570,10 @@ export default function ApprovalDetailPageContent({
         <div className="erp-users-stat">
           <div className="min-w-0">
             <p className="erp-users-stat-label">
-              {t('pages.approvals.table.category')}
+              {t('pages.approvals.table.submittedBy')}
             </p>
             <p className="erp-employee-meta-value truncate">
-              {categoryName ?? '—'}
+              {formatApprovalUserName(request.requester)}
             </p>
           </div>
         </div>
@@ -539,41 +598,39 @@ export default function ApprovalDetailPageContent({
       </div>
 
       <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_360px]">
-        <div className="erp-pro-card min-w-0 overflow-hidden">
-          <div className="flex flex-col gap-4 p-4 sm:p-5">
-            {request.status === 'RETURNED' ? (
-              <ReturnedBanner note={returnNote} />
-            ) : null}
-            {request.status === 'REJECTED' ? (
-              <RejectedBanner note={rejectNote} />
-            ) : null}
+        <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
+          {request.status === 'RETURNED' ? (
+            <ReturnedBanner note={returnNote} />
+          ) : null}
+          {request.status === 'REJECTED' ? (
+            <RejectedBanner note={rejectNote} />
+          ) : null}
 
-            {renderTypedDetail(request)}
+          {renderTypedDetail(request)}
 
-            {isRequester && request.status === 'RETURNED' ? (
-              <ResubmitPanel requestId={request.id} returnNote={returnNote} />
-            ) : null}
+          {isRequester && request.status === 'RETURNED' ? (
+            <ResubmitPanel requestId={request.id} returnNote={returnNote} />
+          ) : null}
 
-            {isRequester &&
-            unresolvedConditions.length > 0 &&
-            (request.status === 'PENDING' ||
-              request.status === 'IN_REVIEW' ||
-              request.status === 'SUBMITTED')
-              ? unresolvedConditions.map(({ condition, index }) => (
-                  <ConditionResponsePanel
-                    key={`cond-resp-${index}`}
-                    requestId={request.id}
-                    conditionIndex={index}
-                    conditionText={condition.text}
-                    existingResponses={responses}
-                  />
-                ))
-              : null}
+          {isRequester &&
+          unresolvedConditions.length > 0 &&
+          (request.status === 'PENDING' ||
+            request.status === 'IN_REVIEW' ||
+            request.status === 'SUBMITTED')
+            ? unresolvedConditions.map(({ condition, index }) => (
+                <ConditionResponsePanel
+                  key={`cond-resp-${index}`}
+                  requestId={request.id}
+                  conditionIndex={index}
+                  conditionText={condition.text}
+                  existingResponses={responses}
+                />
+              ))
+            : null}
 
-            {responses.length > 0 ? (
-              <ResponseHistory responses={responses} />
-            ) : null}
-          </div>
+          {responses.length > 0 ? (
+            <ResponseHistory responses={responses} />
+          ) : null}
         </div>
 
         <ApprovalDetailSidebar
@@ -586,10 +643,6 @@ export default function ApprovalDetailPageContent({
           responses={responses}
           actionsDisabled={actionsDisabled}
           resolveLoading={resolveConditionMutation.isPending}
-          onApprove={() => setActionModal('approve')}
-          onConditionalApprove={() => setActionModal('conditional')}
-          onReturn={() => setActionModal('return')}
-          onReject={() => setActionModal('reject')}
           onResolveCondition={(tier, index) =>
             void handleResolveCondition(tier, index)
           }
@@ -598,70 +651,70 @@ export default function ApprovalDetailPageContent({
 
       <ConfirmDialog
         open={actionModal === 'approve'}
-        title="Approve tier"
-        description="Confirm approval of the current tier."
-        confirmLabel="Approve"
+        title={t('pages.approvals.dialog.approveTitle')}
+        description={t('pages.approvals.dialog.approveDescription')}
+        confirmLabel={t('pages.approvals.dialog.approveConfirm')}
         confirmLoading={actionLoading}
         onCancel={closeModal}
         onConfirm={() => void handleApprove()}
       >
         <Input.TextArea
           rows={3}
-          placeholder="Optional note"
+          placeholder={t('pages.approvals.dialog.notePlaceholder')}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          style={{ marginTop: 12 }}
+          className="mt-3"
         />
       </ConfirmDialog>
 
       <ConfirmDialog
         open={actionModal === 'conditional'}
-        title="Conditionally approve"
-        description="Add a condition that must be resolved before the chain advances."
-        confirmLabel="Submit"
+        title={t('pages.approvals.dialog.conditionalTitle')}
+        description={t('pages.approvals.dialog.conditionalDescription')}
+        confirmLabel={t('pages.approvals.dialog.conditionalConfirm')}
         confirmLoading={actionLoading}
         onCancel={closeModal}
         onConfirm={() => void handleConditionalApprove()}
       >
         <Input.TextArea
           rows={3}
-          placeholder="Condition text (required)"
+          placeholder={t('pages.approvals.dialog.conditionPlaceholder')}
           value={conditionText}
           onChange={(event) => setConditionText(event.target.value)}
-          style={{ marginTop: 12 }}
+          className="mt-3"
         />
         <Input.TextArea
           rows={2}
-          placeholder="Optional note"
+          placeholder={t('pages.approvals.dialog.notePlaceholder')}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          style={{ marginTop: 8 }}
+          className="mt-2"
         />
       </ConfirmDialog>
 
       <ConfirmDialog
         open={actionModal === 'return'}
-        title="Return request"
-        description="Return this request to the submitter for revision."
-        confirmLabel="Return"
+        title={t('pages.approvals.dialog.returnTitle')}
+        description={t('pages.approvals.dialog.returnDescription')}
+        confirmLabel={t('pages.approvals.dialog.returnConfirm')}
         confirmLoading={actionLoading}
         onCancel={closeModal}
         onConfirm={() => void handleReturn()}
       >
         <Input.TextArea
           rows={3}
-          placeholder="Note for submitter"
+          placeholder={t('pages.approvals.dialog.returnNotePlaceholder')}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          style={{ marginTop: 12 }}
+          className="mt-3"
         />
       </ConfirmDialog>
 
       <ConfirmDialog
         open={actionModal === 'reject'}
-        title="Reject request"
-        description="This will reject the request permanently. Confirm to continue."
-        confirmLabel="Reject"
+        title={t('pages.approvals.dialog.rejectTitle')}
+        description={t('pages.approvals.dialog.rejectDescription')}
+        confirmLabel={t('pages.approvals.dialog.rejectConfirm')}
         danger
         confirmLoading={actionLoading}
         onCancel={closeModal}
@@ -669,10 +722,10 @@ export default function ApprovalDetailPageContent({
       >
         <Input.TextArea
           rows={3}
-          placeholder="Rejection reason"
+          placeholder={t('pages.approvals.dialog.rejectNotePlaceholder')}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          style={{ marginTop: 12 }}
+          className="mt-3"
         />
       </ConfirmDialog>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
-import { Alert, Typography } from 'antd';
-import { tokens } from '@/lib/theme/tokens';
+import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Banner shown when an approval was returned for revision.
@@ -11,22 +11,17 @@ export default function ReturnedBanner({
 }: {
   note?: string | null;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const trimmed = note?.trim();
+
   return (
-    <Alert
-      type="warning"
-      showIcon
-      style={{
-        marginBottom: 0,
-        borderColor: tokens.colorPrimary,
-        background: tokens.colorPrimaryLight,
-      }}
-      title="This request was returned"
+    <ErpNotice
+      tone="warning"
+      title={t('pages.approvals.returnedTitle')}
       description={
-        <Typography.Paragraph style={{ marginBottom: 0 }}>
-          {note?.trim()
-            ? `Approver note: ${note.trim()}. Please make changes and resubmit.`
-            : 'Please make changes and resubmit.'}
-        </Typography.Paragraph>
+        trimmed
+          ? t('pages.approvals.returnedWithNote', { note: trimmed })
+          : t('pages.approvals.returnedHint')
       }
     />
   );
