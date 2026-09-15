@@ -32,6 +32,12 @@
     "disciplinesCatalog": "Disciplines",
     "menuApplication": "Application",
     "menuProject": "Project",
+    "short": {
+      "projectManagement": "Projects",
+      "humanResources": "HR",
+      "organization": "Org",
+      "auditLogs": "Audit"
+    },
     "groups": {
       "projectManagement": "Project Management",
       "humanResources": "Human Resources",
@@ -41,16 +47,16 @@
     "sections": {
       "workspace": "Workspace",
       "engineering": "Engineering",
-      "siteOps": "Site operations",
+      "siteOps": "Site Operations",
       "people": "People",
-      "timeOff": "Time & leave",
-      "travelExpenses": "Travel & expenses",
+      "timeOff": "Time & Leave",
+      "travelExpenses": "Travel & Expenses",
       "procurement": "Procurement",
-      "fleetAssets": "Fleet & assets",
+      "fleetAssets": "Fleet & Assets",
       "admin": "Administration",
       "setup": "Setup",
-      "structure": "Company structure",
-      "companyFleet": "Company fleet"
+      "structure": "Company Structure",
+      "companyFleet": "Company Fleet"
     },
     "organization": {
       "vehicles": "Company Vehicles"
@@ -1455,7 +1461,24 @@
     "brandShort": "CP",
     "brandWorkspace": "CCECC workspace",
     "searchNavigation": "Find a module",
-    "noNavResults": "No modules match your search."
+    "noNavResults": "No modules match your search.",
+    "skipToContent": "Skip to main content",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "expandShort": "Expand",
+    "closePanel": "Close {{name}}",
+    "menu": "Menu",
+    "closeMenu": "Close menu",
+    "search": "Search",
+    "searchHint": "Type a module name, for example \"leave\" or \"fuel\".",
+    "searchResultCount": "{{count}} modules found",
+    "favorites": "Favorites",
+    "pinItem": "Pin {{name}} to favorites",
+    "unpinItem": "Remove {{name}} from favorites",
+    "favoritesFull": "You can pin up to {{max}} modules",
+    "allProjects": "All projects",
+    "badgePendingApprovals": "{{count}} pending approvals",
+    "loadingNavigation": "Loading navigation"
   },
   "placeholder": {
     "comingSoon": "Coming soon",

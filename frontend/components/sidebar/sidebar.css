@@ -1,0 +1,553 @@
+/*
+ * Main sidebar theme. Every colour the sidebar uses is a variable here so the
+ * single selected state, focus ring and contrast ratios are defined once.
+ * Contrast on --sb-bg (#1C2B3A): text 12.9:1, muted 7.1:1, accent bar 7.6:1,
+ * focus ring 9.8:1.
+ */
+.sb-theme {
+  --sb-bg: #1c2b3a;
+  --sb-border: rgba(255, 255, 255, 0.1);
+  --sb-text: #e6edf3;
+  --sb-text-strong: #ffffff;
+  --sb-text-muted: #a9b8c7;
+  --sb-icon: #b4c2d0;
+  --sb-hover: rgba(255, 255, 255, 0.07);
+  --sb-active-bg: rgba(255, 255, 255, 0.13);
+  --sb-accent: #3dd6a8;
+  --sb-focus: #7fe7cc;
+  --sb-badge-bg: #c43d3c;
+  --sb-field-bg: rgba(255, 255, 255, 0.06);
+  --sb-field-border: rgba(255, 255, 255, 0.22);
+
+  background: var(--sb-bg);
+  color: var(--sb-text);
+  font-family: var(--font-sans);
+}
+
+/* One focus ring for every sidebar control (WCAG 2.4.7). */
+.sb-theme :is(a, button, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--sb-focus);
+  outline-offset: 2px;
+}
+
+.sb-theme a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sb-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.sb-divider {
+  border-top: 1px solid var(--sb-border);
+}
+
+.sb-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--sb-icon);
+}
+
+/* ── Selectable surfaces: rows (expanded) and tiles (compact) ── */
+
+.sb-selectable {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: var(--sb-text);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.sb-selectable:hover {
+  background: var(--sb-hover);
+  color: var(--sb-text-strong);
+}
+
+/* THE selected state — used by rail, panel and project items alike. */
+.sb-selectable[aria-current='page'],
+.sb-selectable[data-active='true'] {
+  background: var(--sb-active-bg);
+  color: var(--sb-text-strong);
+  font-weight: 600;
+}
+
+.sb-selectable[aria-current='page']::before,
+.sb-selectable[data-active='true']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--sb-accent);
+}
+
+.sb-selectable[aria-current='page'] .sb-icon,
+.sb-selectable[data-active='true'] .sb-icon,
+.sb-selectable:hover .sb-icon {
+  color: var(--sb-text-strong);
+}
+
+.sb-row {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+}
+
+/* Labels stay on one line; the ellipsis is only a fallback for unusually long names. */
+.sb-row-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-row-text,
+.sb-row-context {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-row-context {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--sb-text-muted);
+}
+
+.sb-row--static {
+  cursor: default;
+  color: var(--sb-text-muted);
+}
+
+.sb-row--static:hover {
+  background: transparent;
+  color: var(--sb-text-muted);
+}
+
+/* Compact tiles: identical height, icon over a single-line caption. */
+.sb-tile {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.sb-tile[aria-current='page']::before,
+.sb-tile[data-active='true']::before {
+  top: 14px;
+  bottom: 14px;
+}
+
+.sb-theme[data-mode='compact'] .sb-list {
+  gap: 4px;
+}
+
+.sb-tile .sb-icon {
+  font-size: 19px;
+  width: 20px;
+  height: 20px;
+}
+
+.sb-tile-caption {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Folder affordance: chevron that turns when the folder is open. */
+.sb-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--sb-text-muted);
+  transition: transform 150ms ease;
+}
+
+[aria-expanded='true'] > .sb-chevron {
+  transform: rotate(90deg);
+}
+
+/* Folder mark sits level with the icon on every tile. */
+.sb-tile-folder-mark {
+  position: absolute;
+  top: 19px;
+  right: 6px;
+  display: inline-flex;
+  transform: translateY(-50%);
+  color: var(--sb-text-muted);
+}
+
+.sb-selectable[aria-expanded='true'] {
+  background: var(--sb-hover);
+  color: var(--sb-text-strong);
+}
+
+/* ── Groups inside a module panel ── */
+
+.sb-group + .sb-group {
+  margin-top: 6px;
+}
+
+.sb-group-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 4px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sb-text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.sb-group-toggle:hover {
+  color: var(--sb-text-strong);
+}
+
+.sb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Inline (expanded) panel hangs under its folder row with a guide line. */
+.sb-inline-panel {
+  margin: 2px 0 6px 14px;
+  padding-left: 2px;
+  border-left: 1px solid var(--sb-border);
+}
+
+.sb-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid var(--sb-border);
+}
+
+.sb-panel-title {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--sb-text-strong);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sb-project-card {
+  margin: 4px 4px 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--sb-border);
+  border-radius: 8px;
+}
+
+.sb-project-eyebrow {
+  margin: 0;
+  color: var(--sb-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sb-project-name {
+  margin: 2px 0 6px;
+  color: var(--sb-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.sb-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  color: var(--sb-accent);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sb-back-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Small controls ── */
+
+.sb-icon-button {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--sb-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sb-text);
+  cursor: pointer;
+}
+
+.sb-icon-button:hover {
+  background: var(--sb-hover);
+  color: var(--sb-text-strong);
+}
+
+/* The star overlays the row end instead of reserving width, so labels get the full row. */
+.sb-pin {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sb-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.sb-item:hover .sb-pin,
+.sb-item:focus-within .sb-pin,
+.sb-pin[aria-pressed='true'] {
+  opacity: 1;
+}
+
+.sb-pin[aria-pressed='true'] {
+  color: var(--sb-accent);
+}
+
+.sb-pin[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.sb-pin:hover:not([aria-disabled='true']) {
+  background: var(--sb-hover);
+  color: var(--sb-text-strong);
+}
+
+@media (hover: none) {
+  .sb-pin {
+    opacity: 1;
+  }
+}
+
+.sb-item {
+  position: relative;
+}
+
+/* Make room for the star only while it is visible. */
+.sb-item:hover > .sb-row,
+.sb-item:focus-within > .sb-row,
+.sb-item[data-pinned='true'] > .sb-row {
+  padding-right: 36px;
+}
+
+.sb-badge {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--sb-badge-bg);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Anchored to the icon's top-right corner, centred on the tile. */
+.sb-badge--floating {
+  position: absolute;
+  top: 5px;
+  left: calc(50% + 3px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-shadow: 0 0 0 2px var(--sb-bg);
+}
+
+.sb-soon {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid var(--sb-field-border);
+  border-radius: 999px;
+  color: var(--sb-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sb-search-field {
+  position: relative;
+  display: block;
+}
+
+.sb-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  color: var(--sb-text-muted);
+  pointer-events: none;
+}
+
+.sb-search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 52px 0 32px;
+  border: 1px solid var(--sb-field-border);
+  border-radius: 6px;
+  background: var(--sb-field-bg);
+  color: var(--sb-text-strong);
+  font-size: 14px;
+}
+
+.sb-search-input::placeholder {
+  color: var(--sb-text-muted);
+  opacity: 1;
+}
+
+.sb-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.sb-kbd {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  padding: 1px 5px;
+  border: 1px solid var(--sb-field-border);
+  border-radius: 4px;
+  color: var(--sb-text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.sb-empty {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--sb-text-muted);
+  font-size: 13px;
+}
+
+.sb-skeleton {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  animation: sb-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes sb-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.sb-rail,
+.sb-panel {
+  transition: width 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-rail,
+  .sb-panel,
+  .sb-chevron,
+  .sb-selectable,
+  .sb-pin,
+  .sb-skeleton {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* ── Mobile drawer: same theme, visible header and close control ── */
+
+.sb-drawer .ant-drawer-section,
+.sb-drawer .ant-drawer-content {
+  background: #1c2b3a;
+}
+
+.sb-drawer .ant-drawer-header {
+  background: #1c2b3a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sb-drawer .ant-drawer-title {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sb-drawer .ant-drawer-close {
+  color: #e6edf3;
+}
+
+.sb-drawer .ant-drawer-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.sb-drawer .ant-drawer-close:focus-visible {
+  outline: 2px solid #7fe7cc;
+  outline-offset: 2px;
+}
+
+.sb-drawer .ant-drawer-body {
+  padding: 0;
+}

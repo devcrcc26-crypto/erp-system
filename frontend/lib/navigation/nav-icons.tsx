@@ -1,6 +1,6 @@
 'use client';
 
-import type { ComponentType, CSSProperties, ReactNode } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import {
   ApartmentOutlined,
   AppstoreOutlined,
@@ -52,10 +52,14 @@ import {
   Package,
   PackageMinus,
   PackageOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plane,
   Receipt,
+  Search,
   ShoppingCart,
   Stamp,
+  Star,
   Timer,
   Users,
   Wallet,
@@ -167,6 +171,12 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   'hr-equipment-and-materials-exit-permit': lucideNavIcon(PackageMinus),
   'hr-employee-evaluation': lucideNavIcon(ClipboardCheck),
   'hr-reports': lucideNavIcon(BarChart3),
+
+  // Sidebar chrome
+  favorites: lucideNavIcon(Star),
+  search: lucideNavIcon(Search),
+  'sidebar-collapse': lucideNavIcon(PanelLeftClose),
+  'sidebar-expand': lucideNavIcon(PanelLeftOpen),
 };
 
 /** Shared icon sizing for main rail and context sidebar links. */

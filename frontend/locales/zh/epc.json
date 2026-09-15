@@ -32,6 +32,12 @@
     "disciplinesCatalog": "专业",
     "menuApplication": "应用",
     "menuProject": "项目",
+    "short": {
+      "projectManagement": "项目",
+      "humanResources": "人事",
+      "organization": "组织",
+      "auditLogs": "审计"
+    },
     "groups": {
       "projectManagement": "项目管理",
       "humanResources": "人力资源",
@@ -1455,7 +1461,24 @@
     "brandShort": "C",
     "brandWorkspace": "CCECC 工作区",
     "searchNavigation": "查找模块",
-    "noNavResults": "没有匹配的模块。"
+    "noNavResults": "没有匹配的模块。",
+    "skipToContent": "跳到主要内容",
+    "collapseSidebar": "收起侧边栏",
+    "expandSidebar": "展开侧边栏",
+    "expandShort": "展开",
+    "closePanel": "关闭{{name}}",
+    "menu": "菜单",
+    "closeMenu": "关闭菜单",
+    "search": "搜索",
+    "searchHint": "输入模块名称，例如“请假”或“加油”。",
+    "searchResultCount": "找到 {{count}} 个模块",
+    "favorites": "收藏",
+    "pinItem": "将“{{name}}”加入收藏",
+    "unpinItem": "从收藏中移除“{{name}}”",
+    "favoritesFull": "最多可收藏 {{max}} 个模块",
+    "allProjects": "全部项目",
+    "badgePendingApprovals": "{{count}} 项待审批",
+    "loadingNavigation": "正在加载导航"
   },
   "placeholder": {
     "comingSoon": "即将推出",

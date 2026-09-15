@@ -1,12 +1,8 @@
-// UI polish pass - styles only, no logic changes
-
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import IconRail from '@/components/ui/shell/IconRail';
-import MobileNavDrawer from '@/components/ui/shell/MobileNavDrawer';
-import ContextSidebar from '@/components/ui/shell/ContextSidebar';
+import { useEffect, useMemo, useState } from 'react';
+import SidebarShell from '@/components/sidebar/SidebarShell';
 import MainContentHeader from '@/components/ui/shell/MainContentHeader';
 import {
   extractProjectId,
@@ -21,13 +17,16 @@ import { formatLocalizedName } from '@/lib/utils/bilingual-name';
 import { useProjectContextStore } from '@/stores/project-context.store';
 
 /**
- * Three-pane application shell: icon rail, context sidebar, and main content.
+ * Application shell: skip link, sidebar (desktop column + mobile drawer), and
+ * main content. Project workspace navigation lives inside the sidebar's
+ * Project Management folder — there is no separate project column.
  */
 export default function AppShell({
   children,
   showContextSidebar: showContextSidebarProp,
 }: {
   children: React.ReactNode;
+  /** Overrides whether the sidebar shows project workspace navigation. */
   showContextSidebar?: boolean;
 }): React.ReactNode {
   const pathname = usePathname();
@@ -74,9 +73,13 @@ export default function AppShell({
     clearProjectContext,
   ]);
 
-  useEffect(() => {
+  // Close the drawer whenever the route changes (adjust state during render,
+  // not in an effect, to avoid a cascading re-render).
+  const [drawerPathname, setDrawerPathname] = useState(pathname);
+  if (drawerPathname !== pathname) {
+    setDrawerPathname(pathname);
     setMobileNavOpen(false);
-  }, [pathname]);
+  }
 
   const loadedProject = activeProject ?? projectQuery.data ?? null;
 
@@ -84,12 +87,16 @@ export default function AppShell({
     (loadedProject ? formatLocalizedName(loadedProject) : null) ??
     (projectQuery.isLoading ? '…' : t('nav.projects'));
 
-  const projectDisplayName = loadedProject
-    ? { name: loadedProject.name, nameZh: loadedProject.nameZh }
-    : {
-        name: projectQuery.isLoading ? '…' : t('nav.projects'),
-        nameZh: null,
-      };
+  const sidebarProjectName = loadedProject?.name ?? (projectQuery.isLoading ? '…' : t('nav.projects'));
+  const sidebarProjectNameZh = loadedProject?.nameZh ?? null;
+
+  const sidebarProject = useMemo(
+    () =>
+      showContextSidebar && projectId
+        ? { id: projectId, name: sidebarProjectName, nameZh: sidebarProjectNameZh }
+        : null,
+    [showContextSidebar, projectId, sidebarProjectName, sidebarProjectNameZh],
+  );
 
   const routeMeta = resolveRouteMeta(pathname, projectName, t);
   const pageTitle = t(routeMeta.titleKey);
@@ -99,27 +106,21 @@ export default function AppShell({
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden">
-      <IconRail />
+      <a href="#main-content" className="erp-skip-link">
+        {t('shell.skipToContent')}
+      </a>
 
-      <MobileNavDrawer
-        open={mobileNavOpen}
-        onClose={() => setMobileNavOpen(false)}
-        showProjectNav={showContextSidebar && Boolean(projectId)}
-        projectId={projectId}
-        projectName={projectName}
+      <SidebarShell
+        mobileOpen={mobileNavOpen}
+        onMobileOpenChange={setMobileNavOpen}
+        project={sidebarProject}
       />
 
-      {showContextSidebar && projectId && (
-        <div className="relative z-10 hidden h-full shrink-0 lg:block">
-          <ContextSidebar
-            projectId={projectId}
-            projectName={projectDisplayName.name}
-            projectNameZh={projectDisplayName.nameZh}
-          />
-        </div>
-      )}
-
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
+      >
         <MainContentHeader
           breadcrumbs={routeMeta.breadcrumbs}
           pageTitle={pageTitle}
