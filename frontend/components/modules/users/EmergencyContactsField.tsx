@@ -4,22 +4,12 @@ import { Button, Form, Input } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { EmergencyContact } from '@/lib/api/types';
-
-function optionalEmailRule(
-  invalidMessage: string,
-): { validator: (_: unknown, value: string | undefined) => Promise<void> } {
-  return {
-    validator: async (_rule, value) => {
-      const trimmed = value?.trim() ?? '';
-      if (!trimmed) {
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-        throw new Error(invalidMessage);
-      }
-    },
-  };
-}
+import {
+  MAX_EMERGENCY_CONTACTS,
+  nameFieldRules,
+  optionalEmailRule,
+  phoneRules,
+} from '@/lib/validation/user-fields';
 
 export default function EmergencyContactsField(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -35,10 +25,12 @@ export default function EmergencyContactsField(): React.ReactNode {
             <Button
               type="primary"
               icon={<PlusOutlined />}
+              disabled={fields.length >= MAX_EMERGENCY_CONTACTS}
               onClick={() =>
                 add({
                   firstName: '',
                   lastName: '',
+                  phone: '',
                 } as EmergencyContact)
               }
               style={{ borderRadius: 8 }}
@@ -46,6 +38,13 @@ export default function EmergencyContactsField(): React.ReactNode {
               {t('users.form.addEmergencyContactRow')}
             </Button>
           </div>
+          {fields.length >= MAX_EMERGENCY_CONTACTS ? (
+            <p className="mb-2 text-xs text-slate-500">
+              {t('validation.maxEmergencyContacts', {
+                max: MAX_EMERGENCY_CONTACTS,
+              })}
+            </p>
+          ) : null}
 
           {fields.length === 0 ? (
             <div className="erp-emergency-contacts__empty">
@@ -76,12 +75,10 @@ export default function EmergencyContactsField(): React.ReactNode {
                       name={[field.name, 'firstName']}
                       label={t('users.form.emergencyContactFirstName')}
                       className="mb-0"
-                      rules={[
-                        {
-                          required: true,
-                          message: t('common.requiredFirstName'),
-                        },
-                      ]}
+                      rules={nameFieldRules(t, {
+                        required: true,
+                        requiredMessage: t('common.requiredFirstName'),
+                      })}
                     >
                       <Input />
                     </Form.Item>
@@ -89,6 +86,7 @@ export default function EmergencyContactsField(): React.ReactNode {
                       name={[field.name, 'middleName']}
                       label={t('users.form.emergencyContactMiddleName')}
                       className="mb-0"
+                      rules={nameFieldRules(t, { required: false })}
                     >
                       <Input />
                     </Form.Item>
@@ -96,12 +94,10 @@ export default function EmergencyContactsField(): React.ReactNode {
                       name={[field.name, 'lastName']}
                       label={t('users.form.emergencyContactLastName')}
                       className="mb-0"
-                      rules={[
-                        {
-                          required: true,
-                          message: t('common.requiredLastName'),
-                        },
-                      ]}
+                      rules={nameFieldRules(t, {
+                        required: true,
+                        requiredMessage: t('common.requiredLastName'),
+                      })}
                     >
                       <Input />
                     </Form.Item>
@@ -111,6 +107,7 @@ export default function EmergencyContactsField(): React.ReactNode {
                       name={[field.name, 'phone']}
                       label={t('users.form.emergencyContactPhone')}
                       className="mb-0"
+                      rules={phoneRules(t, { required: true })}
                     >
                       <Input type="tel" />
                     </Form.Item>

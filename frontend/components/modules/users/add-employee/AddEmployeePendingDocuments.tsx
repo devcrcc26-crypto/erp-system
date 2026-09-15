@@ -25,14 +25,22 @@ export default function AddEmployeePendingDocuments({
 }: AddEmployeePendingDocumentsProps): React.ReactNode {
   const { t } = useEpcTranslation();
 
-  function handleSelect(file: File): false {
+  /**
+   * Upload calls this once per selected file in the same tick, so `value`
+   * is stale for all but the first call. Add the whole batch once, on its
+   * last file, so multi-select keeps every file.
+   */
+  function handleSelect(file: File, batch: File[]): false {
+    if (file !== batch[batch.length - 1]) {
+      return false;
+    }
     onChange([
       ...value,
-      {
-        uid: `${file.name}-${file.lastModified}-${Math.random()}`,
-        file,
-        label: file.name.replace(/\.[^.]+$/, ''),
-      },
+      ...batch.map((item) => ({
+        uid: `${item.name}-${item.lastModified}-${Math.random()}`,
+        file: item,
+        label: item.name.replace(/\.[^.]+$/, ''),
+      })),
     ]);
     return false;
   }
@@ -48,7 +56,7 @@ export default function AddEmployeePendingDocuments({
   return (
     <div className="erp-profile-docs erp-profile-docs--embedded">
       <div className="erp-profile-docs-toolbar">
-        <Upload beforeUpload={handleSelect} showUploadList={false}>
+        <Upload multiple beforeUpload={handleSelect} showUploadList={false}>
           <Button icon={<PlusOutlined />}>{t('users.form.selectDocuments')}</Button>
         </Upload>
       </div>

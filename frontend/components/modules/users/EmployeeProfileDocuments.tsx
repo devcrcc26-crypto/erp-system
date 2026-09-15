@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Spin, Tooltip, Upload } from 'antd';
+import { Button, Spin, Tooltip, Upload } from 'antd';
 import {
   DeleteOutlined,
   DownloadOutlined,
-  PlusOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
 import { FilePlus2 } from 'lucide-react';
@@ -28,18 +27,12 @@ import {
 import type { UserProfileDocument } from '@/lib/api/types';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
-interface PendingUpload {
-  uid: string;
-  file: File;
-  label: string;
-}
-
 interface EmployeeProfileDocumentsProps {
   userId: string;
   canDelete?: boolean;
   /** Hide the inner title when already wrapped by a section/card header. */
   embedded?: boolean;
-  /** View-only: hides select/upload and delete controls (downloads stay). */
+  /** View-only: hides the upload and delete controls (downloads stay). */
   readOnly?: boolean;
   /**
    * `self` reads the signed-in user's own documents via /auth/me (no HR
@@ -50,56 +43,9 @@ interface EmployeeProfileDocumentsProps {
   emptyMessage?: string;
 }
 
-function PendingDocumentCard({
-  fileName,
-  fileType,
-  fileSizeBytes,
-  label,
-  onLabelChange,
-  onRemove,
-  labelPlaceholder,
-}: {
-  fileName: string;
-  fileType: string;
-  fileSizeBytes: number;
-  label: string;
-  onLabelChange: (value: string) => void;
-  onRemove: () => void;
-  labelPlaceholder: string;
-}): React.ReactNode {
-  return (
-    <article className="erp-profile-doc-card erp-profile-doc-card--pending">
-      <div className="erp-profile-doc-card-top">
-        <ProfileFileTypeIcon name={fileName} fileType={fileType} />
-        <Tooltip title={labelPlaceholder}>
-          <Button
-            type="text"
-            danger
-            size="small"
-            className="erp-profile-doc-card-action"
-            icon={<DeleteOutlined />}
-            onClick={onRemove}
-            aria-label="Remove"
-          />
-        </Tooltip>
-      </div>
-      <div className="erp-profile-doc-card-body">
-        <p className="erp-profile-doc-card-name" title={fileName}>
-          {fileName}
-        </p>
-        <p className="erp-profile-doc-card-meta">
-          {profileFileMetaLine(fileName, fileType, fileSizeBytes)}
-        </p>
-        <Input
-          size="small"
-          className="erp-profile-doc-card-label"
-          placeholder={labelPlaceholder}
-          value={label}
-          onChange={(event) => onLabelChange(event.target.value)}
-        />
-      </div>
-    </article>
-  );
+/** Label saved with an uploaded file: its name without the extension. */
+function defaultDocumentLabel(file: File): string {
+  return file.name.replace(/\.[^.]+$/, '') || file.name;
 }
 
 function SavedDocumentCard({
@@ -173,7 +119,9 @@ function SavedDocumentCard({
 }
 
 /**
- * Upload, download, and delete employee profile documents.
+ * Employee profile documents. Selecting one or more files uploads them
+ * straight away (labelled with their file names); saved files can be
+ * downloaded and, for HR, deleted.
  */
 export default function EmployeeProfileDocuments({
   userId,
@@ -191,7 +139,6 @@ export default function EmployeeProfileDocuments({
   const documentsQuery = isSelf ? myDocumentsQuery : userDocumentsQuery;
   const uploadMutation = useUploadUserDocuments();
   const deleteMutation = useDeleteUserDocument();
-  const [pending, setPending] = useState<PendingUpload[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -199,43 +146,28 @@ export default function EmployeeProfileDocuments({
   const documentPendingDelete =
     documentsQuery.data?.find((doc) => doc.id === confirmDeleteId) ?? null;
 
-  function handleSelectFiles(file: File): false {
-    setPending((current) => [
-      ...current,
-      {
-        uid: `${file.name}-${file.lastModified}-${Math.random()}`,
-        file,
-        label: file.name.replace(/\.[^.]+$/, ''),
-      },
-    ]);
-    return false;
-  }
-
-  function updateLabel(uid: string, label: string): void {
-    setPending((current) =>
-      current.map((item) => (item.uid === uid ? { ...item, label } : item)),
-    );
-  }
-
-  function removePending(uid: string): void {
-    setPending((current) => current.filter((item) => item.uid !== uid));
-  }
-
-  async function handleUpload(): Promise<void> {
-    if (pending.length === 0) {
-      return;
-    }
+  async function uploadFiles(files: File[]): Promise<void> {
     try {
       await uploadMutation.mutateAsync({
         userId,
-        files: pending.map((item) => item.file),
-        labels: pending.map((item) => item.label.trim() || item.file.name),
+        files,
+        labels: files.map(defaultDocumentLabel),
       });
-      setPending([]);
       messageApi.success(t('users.documentsUploaded'));
     } catch (error: unknown) {
       notifyApiError(error, t('users.documentsUploadError'), messageApi);
     }
+  }
+
+  /**
+   * Upload calls this once per selected file in the same tick; send the whole
+   * selection as one upload when the last file of the batch arrives.
+   */
+  function handleSelectFiles(file: File, batch: File[]): false {
+    if (file === batch[batch.length - 1]) {
+      void uploadFiles(batch);
+    }
+    return false;
   }
 
   async function handleDownload(document: UserProfileDocument): Promise<void> {
@@ -279,7 +211,6 @@ export default function EmployeeProfileDocuments({
   }
 
   const documents = documentsQuery.data ?? [];
-  const hasPending = pending.length > 0;
   const hasDocuments = documents.length > 0;
 
   return (
@@ -295,38 +226,18 @@ export default function EmployeeProfileDocuments({
 
       {readOnly ? null : (
         <div className="erp-profile-docs-toolbar">
-          <Upload beforeUpload={handleSelectFiles} showUploadList={false}>
-            <Button icon={<PlusOutlined />}>{t('users.form.selectDocuments')}</Button>
-          </Upload>
-          {hasPending ? (
-            <Button
-              type="primary"
-              icon={<UploadOutlined />}
-              loading={uploadMutation.isPending}
-              onClick={() => void handleUpload()}
-            >
+          <Upload
+            multiple
+            beforeUpload={handleSelectFiles}
+            showUploadList={false}
+            disabled={uploadMutation.isPending}
+          >
+            <Button icon={<UploadOutlined />} loading={uploadMutation.isPending}>
               {t('users.form.uploadDocuments')}
             </Button>
-          ) : null}
+          </Upload>
         </div>
       )}
-
-      {hasPending ? (
-        <div className="erp-profile-docs-grid">
-          {pending.map((item) => (
-            <PendingDocumentCard
-              key={item.uid}
-              fileName={item.file.name}
-              fileType={item.file.type}
-              fileSizeBytes={item.file.size}
-              label={item.label}
-              labelPlaceholder={t('users.form.documentLabel')}
-              onLabelChange={(value) => updateLabel(item.uid, value)}
-              onRemove={() => removePending(item.uid)}
-            />
-          ))}
-        </div>
-      ) : null}
 
       <ConfirmDialog
         open={Boolean(confirmDeleteId)}
@@ -363,7 +274,7 @@ export default function EmployeeProfileDocuments({
               />
             ))}
           </div>
-        ) : !documentsQuery.isLoading && !hasPending ? (
+        ) : !documentsQuery.isLoading ? (
           <div className="erp-profile-docs-empty">
             <div className="erp-profile-docs-empty-icon" aria-hidden>
               <FilePlus2 size={22} strokeWidth={1.6} />

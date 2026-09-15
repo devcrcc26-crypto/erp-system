@@ -1452,6 +1452,19 @@
     "no": "否",
     "download": "下载"
   },
+  "validation": {
+    "invalidName": "仅可使用字母、空格、连字符、撇号或句点",
+    "invalidChineseName": "仅可使用中文字符",
+    "invalidPhone": "请输入含 7–15 位数字的电话号码",
+    "requiredPhone": "请输入电话号码",
+    "invalidEmployeeId": "请使用 2–20 位字母、数字或连字符",
+    "invalidNationalId": "请使用 4–30 位字母、数字、空格或连字符",
+    "maxLength": "最多 {{max}} 个字符",
+    "dateNotFuture": "日期不能晚于今天",
+    "ageBetween": "年龄须在 {{min}} 至 {{max}} 岁之间",
+    "experienceBeforeBirth": "工作起始日期不能早于出生日期",
+    "maxEmergencyContacts": "最多可添加 {{max}} 位紧急联系人"
+  },
   "shell": {
     "openNavigation": "打开导航菜单",
     "mainNavigation": "主导航",

@@ -27,6 +27,12 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError, toApiRequestError } from '@/lib/api/errors';
 import type { CreateUserRequest, Role, UpdateUserRequest, UserDetail } from '@/lib/api/types';
 import {
+  chineseNameRules,
+  nameFieldRules,
+  optionalEmailRule,
+  phoneRules,
+} from '@/lib/validation/user-fields';
+import {
   useAssignRole,
   useCreateUser,
   useRevokeRole,
@@ -41,22 +47,6 @@ import {
   usePositions,
 } from '@/lib/query/org';
 import { useRoles } from '@/lib/query/roles';
-
-function optionalEmailRule(
-  invalidMessage: string,
-): { validator: (_: unknown, value: string | undefined) => Promise<void> } {
-  return {
-    validator: async (_rule, value) => {
-      const trimmed = value?.trim() ?? '';
-      if (!trimmed) {
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-        throw new Error(invalidMessage);
-      }
-    },
-  };
-}
 
 function resolvePrimaryRoleId(user: UserDetail): string | undefined {
   return (
@@ -311,17 +301,27 @@ export default function AddEmployeeForm({
                 <Form.Item
                   label={t('users.form.firstName')}
                   name="firstName"
-                  rules={[{ required: true, message: t('common.requiredFirstName') }]}
+                  rules={nameFieldRules(t, {
+                    required: true,
+                    requiredMessage: t('common.requiredFirstName'),
+                  })}
                 >
                   <Input />
                 </Form.Item>
-                <Form.Item label={t('users.form.middleName')} name="middleName">
+                <Form.Item
+                  label={t('users.form.middleName')}
+                  name="middleName"
+                  rules={nameFieldRules(t, { required: false })}
+                >
                   <Input />
                 </Form.Item>
                 <Form.Item
                   label={t('users.form.lastName')}
                   name="lastName"
-                  rules={[{ required: true, message: t('common.requiredLastName') }]}
+                  rules={nameFieldRules(t, {
+                    required: true,
+                    requiredMessage: t('common.requiredLastName'),
+                  })}
                 >
                   <Input />
                 </Form.Item>
@@ -337,7 +337,11 @@ export default function AddEmployeeForm({
                     }))}
                   />
                 </Form.Item>
-                <Form.Item label={t('users.form.chineseName')} name="chineseName">
+                <Form.Item
+                  label={t('users.form.chineseName')}
+                  name="chineseName"
+                  rules={chineseNameRules(t)}
+                >
                   <Input placeholder={t('users.form.chineseNamePlaceholder')} />
                 </Form.Item>
               </div>
@@ -359,7 +363,11 @@ export default function AddEmployeeForm({
                     disabled={isEdit}
                   />
                 </Form.Item>
-                <Form.Item label={t('users.form.phone')} name="phone">
+                <Form.Item
+                  label={t('users.form.phone')}
+                  name="phone"
+                  rules={phoneRules(t)}
+                >
                   <Input />
                 </Form.Item>
                 <Form.Item label={t('users.form.role')} name="roleId" extra={t('users.form.roleHint')}>

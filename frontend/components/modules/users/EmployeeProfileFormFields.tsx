@@ -19,6 +19,16 @@ import type {
   Nationality,
   User,
 } from '@/lib/api/types';
+import {
+  ADDRESS_MAX,
+  HOUSE_NUMBER_MAX,
+  addressFieldRules,
+  dateOfBirthRules,
+  employeeIdRules,
+  experienceStartDateRules,
+  fieldOfStudyRules,
+  nationalIdRules,
+} from '@/lib/validation/user-fields';
 
 export interface EmployeeProfileFormValues {
   employeeId?: string;
@@ -160,10 +170,18 @@ export function EmployeeProfileFormFields({
           t={t}
         >
           <div className="erp-form-grid-3">
-            <Form.Item label={t('users.form.dateOfBirth')} name="dateOfBirth">
+            <Form.Item
+              label={t('users.form.dateOfBirth')}
+              name="dateOfBirth"
+              rules={dateOfBirthRules(t)}
+            >
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item label={t('users.form.nationalId')} name="nationalId">
+            <Form.Item
+              label={t('users.form.nationalId')}
+              name="nationalId"
+              rules={nationalIdRules(t)}
+            >
               <Input />
             </Form.Item>
           </div>
@@ -178,24 +196,48 @@ export function EmployeeProfileFormFields({
           t={t}
         >
           <div className="erp-form-grid-3">
-            <Form.Item label={t('users.form.addressCountry')} name="addressCountry">
+            <Form.Item
+              label={t('users.form.addressCountry')}
+              name="addressCountry"
+              rules={addressFieldRules(t, ADDRESS_MAX)}
+            >
               <Input />
             </Form.Item>
-            <Form.Item label={t('users.form.addressRegion')} name="addressRegion">
+            <Form.Item
+              label={t('users.form.addressRegion')}
+              name="addressRegion"
+              rules={addressFieldRules(t, ADDRESS_MAX)}
+            >
               <Input />
             </Form.Item>
-            <Form.Item label={t('users.form.addressCity')} name="addressCity">
+            <Form.Item
+              label={t('users.form.addressCity')}
+              name="addressCity"
+              rules={addressFieldRules(t, ADDRESS_MAX)}
+            >
               <Input />
             </Form.Item>
           </div>
           <div className="erp-form-grid-3">
-            <Form.Item label={t('users.form.addressSubcity')} name="addressSubcity">
+            <Form.Item
+              label={t('users.form.addressSubcity')}
+              name="addressSubcity"
+              rules={addressFieldRules(t, ADDRESS_MAX)}
+            >
               <Input />
             </Form.Item>
-            <Form.Item label={t('users.form.addressWoreda')} name="addressWoreda">
+            <Form.Item
+              label={t('users.form.addressWoreda')}
+              name="addressWoreda"
+              rules={addressFieldRules(t, ADDRESS_MAX)}
+            >
               <Input />
             </Form.Item>
-            <Form.Item label={t('users.form.addressHouseNumber')} name="addressHouseNumber">
+            <Form.Item
+              label={t('users.form.addressHouseNumber')}
+              name="addressHouseNumber"
+              rules={addressFieldRules(t, HOUSE_NUMBER_MAX)}
+            >
               <Input />
             </Form.Item>
           </div>
@@ -224,6 +266,7 @@ export function EmployeeProfileFormFields({
             <Form.Item
               label={t('users.form.employeeId')}
               name="employeeId"
+              rules={employeeIdRules(t)}
               extra={
                 mode === 'create' && !employeeIdReadOnly
                   ? t('users.form.employeeIdAutoHint')
@@ -277,10 +320,19 @@ export function EmployeeProfileFormFields({
                 }))}
               />
             </Form.Item>
-            <Form.Item label={t('users.form.fieldOfStudy')} name="fieldOfStudy">
+            <Form.Item
+              label={t('users.form.fieldOfStudy')}
+              name="fieldOfStudy"
+              rules={fieldOfStudyRules(t)}
+            >
               <Input placeholder={t('users.form.fieldOfStudyPlaceholder')} />
             </Form.Item>
-            <Form.Item label={t('users.form.experienceStartDate')} name="experienceStartDate">
+            <Form.Item
+              label={t('users.form.experienceStartDate')}
+              name="experienceStartDate"
+              dependencies={['dateOfBirth']}
+              rules={experienceStartDateRules(t)}
+            >
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
           </div>

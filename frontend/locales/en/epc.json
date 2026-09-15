@@ -1452,6 +1452,19 @@
     "no": "No",
     "download": "Download"
   },
+  "validation": {
+    "invalidName": "Use letters, spaces, hyphens, apostrophes or full stops only",
+    "invalidChineseName": "Use Chinese characters only",
+    "invalidPhone": "Enter a phone number with 7–15 digits",
+    "requiredPhone": "Phone number is required",
+    "invalidEmployeeId": "Use 2–20 letters, digits or hyphens",
+    "invalidNationalId": "Use 4–30 letters, digits, spaces or hyphens",
+    "maxLength": "Must be at most {{max}} characters",
+    "dateNotFuture": "Date cannot be in the future",
+    "ageBetween": "Age must be between {{min}} and {{max}} years",
+    "experienceBeforeBirth": "Experience start date cannot be before date of birth",
+    "maxEmergencyContacts": "You can add at most {{max}} emergency contacts"
+  },
   "shell": {
     "openNavigation": "Open navigation menu",
     "mainNavigation": "Main navigation",

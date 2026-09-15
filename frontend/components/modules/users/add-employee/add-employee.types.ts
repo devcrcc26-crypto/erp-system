@@ -18,7 +18,7 @@ export interface AddEmployeeFormValues extends EmployeeProfileFormValues {
 }
 
 export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
-  ['firstName', 'lastName', 'middleName', 'gender'],
+  ['firstName', 'lastName', 'middleName', 'chineseName', 'gender', 'email', 'phone'],
   [
     'dateOfBirth',
     'nationalId',

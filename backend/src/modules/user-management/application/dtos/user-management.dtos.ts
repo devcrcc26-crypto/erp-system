@@ -1,12 +1,16 @@
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
+  IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
   MinLength,
   ValidateIf,
   ValidateNested,
@@ -19,31 +23,73 @@ import {
   Nationality,
   UserDiscipline,
 } from '@prisma/client';
+import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { IsEntityUuid } from '../../../../shared/validators/is-entity-uuid.decorator';
-import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import {
+  IsAgeBetween,
+  IsNotBeforeProperty,
+  IsNotFutureDate,
+  IsOptionalText,
+} from '../../../../shared/validators/date-rules.decorator';
+import {
+  ADDRESS_MAX,
+  CHINESE_NAME_MAX,
+  CHINESE_NAME_PATTERN,
+  EMAIL_MAX,
+  EMPLOYEE_ID_PATTERN,
+  FIELD_OF_STUDY_MAX,
+  HOUSE_NUMBER_MAX,
+  MAX_EMERGENCY_CONTACTS,
+  MAX_EMPLOYEE_AGE,
+  MIN_EMPLOYEE_AGE,
+  NATIONAL_ID_PATTERN,
+  PHONE_PATTERN,
+  USER_NAME_MAX,
+  USER_NAME_PATTERN,
+  trimString,
+} from './user-field.rules';
+
+const NAME_MESSAGE =
+  '$property may contain letters, spaces, hyphens, apostrophes and full stops only';
+const PHONE_MESSAGE = '$property must be a phone number with 7–15 digits';
 
 export class EmergencyContactDto {
   @ApiProperty()
+  @Transform(trimString)
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(USER_NAME_MAX)
+  @Matches(USER_NAME_PATTERN, { message: NAME_MESSAGE })
   firstName!: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(USER_NAME_MAX)
+  @Matches(USER_NAME_PATTERN, { message: NAME_MESSAGE })
   middleName?: string;
 
   @ApiProperty()
+  @Transform(trimString)
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(USER_NAME_MAX)
+  @Matches(USER_NAME_PATTERN, { message: NAME_MESSAGE })
   lastName!: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: 'Required — an emergency contact must be reachable' })
+  @Transform(trimString)
   @IsString()
-  phone?: string;
+  @IsNotEmpty()
+  @Matches(PHONE_PATTERN, { message: PHONE_MESSAGE })
+  phone!: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @MaxLength(EMAIL_MAX)
   @IsEmail()
   @Transform(({ value }) => {
     if (typeof value !== 'string') {
@@ -72,20 +118,35 @@ export class CreateUserDto {
     return trimmed === '' ? undefined : normalizeEmail(trimmed);
   })
   @IsOptional()
+  @MaxLength(EMAIL_MAX)
   @IsEmail()
   email?: string;
 
-  @ApiProperty()
+  @ApiProperty({ maxLength: USER_NAME_MAX })
+  @Transform(trimString)
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(USER_NAME_MAX)
+  @Matches(USER_NAME_PATTERN, { message: NAME_MESSAGE })
   firstName!: string;
 
-  @ApiProperty()
+  @ApiProperty({ maxLength: USER_NAME_MAX })
+  @Transform(trimString)
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(USER_NAME_MAX)
+  @Matches(USER_NAME_PATTERN, { message: NAME_MESSAGE })
   lastName!: string;
 
-  @ApiPropertyOptional({ description: 'Chinese full name (中文姓名)' })
+  @ApiPropertyOptional({ description: 'Chinese full name (中文姓名)', maxLength: CHINESE_NAME_MAX })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(CHINESE_NAME_MAX)
+  @Matches(CHINESE_NAME_PATTERN, {
+    message: '$property must contain Chinese characters only',
+  })
   chineseName?: string;
 
   @ApiPropertyOptional({ description: 'Omit to send an email activation invite instead' })
@@ -94,9 +155,12 @@ export class CreateUserDto {
   @MinLength(8)
   password?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '+251 911 234 567' })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @Matches(PHONE_PATTERN, { message: PHONE_MESSAGE })
   phone?: string;
 
   @ApiPropertyOptional()
@@ -151,42 +215,69 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({ example: 'EMP-0001' })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @Matches(EMPLOYEE_ID_PATTERN, {
+    message: '$property must be 2–20 letters, digits or hyphens',
+  })
   employeeId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: USER_NAME_MAX })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(USER_NAME_MAX)
+  @Matches(USER_NAME_PATTERN, { message: NAME_MESSAGE })
   middleName?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: ADDRESS_MAX })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(ADDRESS_MAX)
   addressCountry?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: ADDRESS_MAX })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(ADDRESS_MAX)
   addressRegion?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: ADDRESS_MAX })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(ADDRESS_MAX)
   addressCity?: string;
 
-  @ApiPropertyOptional({ description: 'Subcity / Zone' })
+  @ApiPropertyOptional({ description: 'Subcity / Zone', maxLength: ADDRESS_MAX })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(ADDRESS_MAX)
   addressSubcity?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: ADDRESS_MAX })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(ADDRESS_MAX)
   addressWoreda?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: HOUSE_NUMBER_MAX })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(HOUSE_NUMBER_MAX)
   addressHouseNumber?: string;
 
   @ApiPropertyOptional({ enum: Gender })
@@ -196,12 +287,20 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({ example: '1990-05-15' })
   @IsOptional()
+  @IsOptionalText()
   @IsDateString()
+  @IsNotFutureDate()
+  @IsAgeBetween(MIN_EMPLOYEE_AGE, MAX_EMPLOYEE_AGE)
   dateOfBirth?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @Matches(NATIONAL_ID_PATTERN, {
+    message: '$property must be 4–30 letters, digits, spaces or hyphens',
+  })
   nationalId?: string;
 
   @ApiPropertyOptional({ enum: Nationality })
@@ -219,19 +318,26 @@ export class CreateUserDto {
   @IsEnum(EducationLevel)
   educationLevel?: EducationLevel;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: FIELD_OF_STUDY_MAX })
   @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
   @IsString()
+  @MaxLength(FIELD_OF_STUDY_MAX)
   fieldOfStudy?: string;
 
   @ApiPropertyOptional({ example: '2015-06-01' })
   @IsOptional()
+  @IsOptionalText()
   @IsDateString()
+  @IsNotFutureDate()
+  @IsNotBeforeProperty('dateOfBirth')
   experienceStartDate?: string;
 
-  @ApiPropertyOptional({ type: [EmergencyContactDto] })
+  @ApiPropertyOptional({ type: [EmergencyContactDto], maxItems: MAX_EMERGENCY_CONTACTS })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(MAX_EMERGENCY_CONTACTS)
   @ValidateNested({ each: true })
   @Type(() => EmergencyContactDto)
   emergencyContacts?: EmergencyContactDto[];
