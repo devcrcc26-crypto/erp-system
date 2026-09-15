@@ -12,6 +12,7 @@ import {
   Input,
   Popover,
   Select,
+  Spin,
   Tooltip,
   type MenuProps,
 } from 'antd';
@@ -395,9 +396,9 @@ export default function UsersPageContent(): React.ReactNode {
 
   if (usersQuery.isLoading && !usersQuery.data) {
     return (
-      <div className="erp-pro-list-page">
-        <div className="erp-pro-card flex items-center justify-center py-16">
-          <div className="erp-page-skeleton h-8 w-8 rounded-full" />
+      <div className="erp-pro-list-page erp-users-page">
+        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+          <Spin />
         </div>
       </div>
     );
