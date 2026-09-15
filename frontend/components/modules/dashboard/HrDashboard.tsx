@@ -417,7 +417,7 @@ export default function HrDashboard({
                 subtitle={t(`${HR}.chart.leaveMix.subtitle`)}
                 icon={<CalendarOutlined />}
               >
-                <div className="grid h-[280px] grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div className="grid grid-cols-1 gap-2 sm:h-[280px] sm:grid-cols-[1fr_auto] sm:items-center">
                   <div className="relative mx-auto w-full max-w-[260px]">
                     <ResponsiveContainer width="100%" height={280}>
                       <PieChart>

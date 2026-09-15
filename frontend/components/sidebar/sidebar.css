@@ -545,6 +545,12 @@
   background: #1c2b3a;
 }
 
+/* Never wider than the phone: always leave a strip of page to tap out. */
+.sb-drawer .ant-drawer-content-wrapper,
+.sb-drawer .ant-drawer-section {
+  max-width: calc(100vw - 40px);
+}
+
 .sb-drawer .ant-drawer-header {
   background: #1c2b3a;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);

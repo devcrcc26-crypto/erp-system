@@ -260,6 +260,8 @@ export default function EmployeeOvertimeProfileSection({
         key: dataIndex,
         width: strong ? 104 : 88,
         align: 'right',
+        // Category columns hide on phones; the year summary cards show them.
+        responsive: strong ? undefined : ['md'],
         render: (value: number) => (
           <span
             className={`${strong ? 'erp-users-cell-strong' : 'erp-users-cell-sub'} tabular-nums`}

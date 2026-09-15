@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Form, Input, Select, Spin } from 'antd';
 import {
   CalendarOutlined,
@@ -107,6 +107,20 @@ export default function ProfilePageContent(): React.ReactNode {
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('account');
   const tabRefs = useRef<Partial<Record<ProfileTab, HTMLButtonElement | null>>>({});
+  const tabsMountedRef = useRef(false);
+
+  // On phones the tab bar scrolls sideways — keep the selected tab in view.
+  // Skipped on first render so the page itself does not jump on load.
+  useEffect(() => {
+    if (!tabsMountedRef.current) {
+      tabsMountedRef.current = true;
+      return;
+    }
+    tabRefs.current[activeTab]?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+    });
+  }, [activeTab]);
   const [showChangeEmail, setShowChangeEmail] = useState(false);
   const [prefsError, setPrefsError] = useState<string | null>(null);
   const [prefsSuccess, setPrefsSuccess] = useState<string | null>(null);
@@ -637,7 +651,7 @@ export default function ProfilePageContent(): React.ReactNode {
 
       <div className="erp-pro-card">
         <div
-          className="erp-profile-tabbar erp-employee-tabbar"
+          className="erp-profile-tabbar erp-employee-tabbar erp-employee-tabbar--scroll"
           role="tablist"
           aria-label={t('profile.title')}
           onKeyDown={handleTabKeyDown}

@@ -222,7 +222,7 @@ export default function PerDiemRequestForm({
 
   const estimateBlock =
     selectedRate && days > 0 ? (
-      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-[rgba(0,0,0,0.06)] pt-4">
+      <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 border-t border-[rgba(0,0,0,0.06)] pt-4 sm:grid-cols-2">
         <EstimateItem
           label={t('hr.form.totalDays')}
           value={String(days)}

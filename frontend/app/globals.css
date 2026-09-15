@@ -1953,6 +1953,15 @@ main::-webkit-scrollbar,
   }
 }
 
+/* Many-tab bars (My Profile): keep natural tab widths and scroll sideways on
+   phones instead of squeezing every label into one row. */
+@media (max-width: 767px) {
+  .erp-employee-detail-page .erp-employee-tabbar--scroll button {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+  }
+}
+
 @media (max-width: 480px) {
   .erp-employee-toolbar-actions .ant-space-compact {
     width: 100%;

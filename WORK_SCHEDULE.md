@@ -91,3 +91,60 @@ Legacy `startDate` + `endDate` on submit is still accepted and treated as one pe
 3. Call `calculateWorkingDays` or `calculateWorkingHours`
 4. Persist the numeric result your module needs (leave days, overtime eligibility, attendance expected hours)
 5. Do not copy CRCC Standard hours into application code
+
+## Overtime integration
+
+Overtime hour buckets (`regularHours`, `nightHours`, `weekendHours`, `holidayHours`) are classified by `OvertimeEntryService`, which loads the employee's active `WorkSchedule` and `PublicHoliday` calendar for the entry date.
+
+### Hour-splitting (15-minute blocks)
+
+Priority, first match wins:
+
+1. **Holiday** — `PublicHoliday` is active and `appliesToNationality` matches the employee (`ALL` for everyone; `ETHIOPIAN` / `CHINESE` only for that nationality; `nationality: null` only gets `ALL`)
+2. **Weekend** — that weekday has `WorkScheduleDay.isWorkingDay = false`
+3. **Half-day overflow** — `isHalfDay` and the block is outside morning hours (e.g. after 12:30 on CRCC Standard Saturday) → counted as **weekend**
+4. **Night** — 22:00–06:00 (hardcoded; not schedule-dependent)
+5. **Regular** — everything else
+
+Interactive save **ignores** client `isHoliday`. The calendar sets `OvertimeEntry.isHoliday`. The column is kept for historical rows; those rows are not retroactively reclassified.
+
+Live preview (no duplicated client logic):
+
+`POST /hr/overtime/preview-entry`
+
+```json
+{
+  "employeeId": "<uuid>",
+  "date": "2026-09-14",
+  "startTime": "18:00",
+  "endTime": "21:00"
+}
+```
+
+### Import `isHoliday` override
+
+Excel still accepts `isHoliday`. If it is true and the date **is** a registered holiday for that nationality, the row is accepted silently. If it is true and the date **is not** in the calendar, the row is still imported as holiday hours with status **`warning`** (yellow). If the column is absent or false, the calendar is used.
+
+### Approval `unregisteredHolidayDates`
+
+On submit (and resubmit), overtime writes `ApprovalRequest.formData.unregisteredHolidayDates: string[]` — unique `YYYY-MM-DD` values where `isHoliday` is true but the date is not in `PublicHoliday` for that employee. The approvals inbox (and sheet detail) show a warning banner when the array is non-empty. Every tier sees the same `formData`.
+
+### Calling `WorkScheduleService` from a new module
+
+1. Import `WorkScheduleModule`
+2. Inject `WorkScheduleService`
+3. For working-day counts: `calculateWorkingDays` / `resolveLeavePeriods`
+4. For a single date's holiday: `isHolidayForEmployee(companyId, nationality, date)`
+5. For expected hours: `calculateWorkingHours`
+6. For overtime buckets: inject `OvertimeEntryService.classifyEntry` — do not copy the splitter
+
+## Integration status
+
+| Module | Status | Notes |
+|--------|--------|-------|
+| Leave | ✅ Integrated | Uses `calculateWorkingDays` / `resolveLeavePeriods` |
+| Overtime | ✅ Integrated | Schedule-aware hour splitter + calendar holidays |
+| Attendance | ⏳ Not yet | `calculateWorkingHours` exists, nothing calls it |
+| Payroll | ⏳ Not yet | No link |
+| Project schedule | ➖ Not applicable | Different schedule concept (`schedule.service.ts` has a TODO) |
+| Dashboard week charts | ➖ Not applicable | ISO week-start math, not HR working days |
