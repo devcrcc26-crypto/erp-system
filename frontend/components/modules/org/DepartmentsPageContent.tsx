@@ -538,7 +538,7 @@ export default function DepartmentsPageContent(): React.ReactNode {
 
       {canViewAll ? (
         <>
-          <DepartmentPortfolioStats departments={allDepartmentsForMetrics} />
+          {/* <DepartmentPortfolioStats departments={allDepartmentsForMetrics} /> */}
 
           <div className="erp-users-stat-bar">
             <OrgListStat
