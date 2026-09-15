@@ -150,8 +150,11 @@ The rules themselves do not change.
   the single `<nav aria-label="Main navigation">`. Do not add another `<nav>` or `<aside>` label.
 - **Skip link:** `AppShell` renders "Skip to main content" as the first focusable element,
   targeting `<main id="main-content">`. Keep it first.
-- **Text size and contrast:** nothing under 12px. Group labels are 12px semibold, sentence or
-  Title Case (never all-caps) at 7:1 on the sidebar background. Keep new colours at ≥ 4.5:1
+- **Text size and contrast:** nothing under 12px. Inside a panel there are two levels:
+  group titles use `erp-sidebar-group-title` (12px / 600 / 0.04em, muted, never all-caps)
+  and module links use `erp-sidebar-module-link` (13px / 400, 500 when active). Hierarchy
+  comes from weight, tracking and colour, not a size drop. Group titles are 7:1 on the
+  sidebar background. Keep new colours at ≥ 4.5:1
   for text and ≥ 3:1 for UI parts.
 - **Badges:** use `SidebarBadge` with a full sentence (`t('shell.badgePendingApprovals',
   { count })`). The number is `aria-hidden`; the sentence is visually hidden text.

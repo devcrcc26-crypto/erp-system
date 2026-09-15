@@ -29,7 +29,23 @@
   --color-amber-50: #faeeda;
   --erp-font-scale: 1;
   --erp-font-base: 14px;
-  --font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei';
+  /*
+   * Font decision (Sep 2026): stay on the system stack — no web font.
+   * - Most staff use Windows. Segoe UI is native, ClearType-hinted and free;
+   *   Microsoft YaHei was drawn as its CJK companion (YaHei's Latin is
+   *   Segoe-based), so mixed lines like "Municipal Transportation Department
+   *   (市政交通部)" share metrics and baseline.
+   * - A Latin web font (e.g. Inter) would need Noto Sans SC alongside it for
+   *   names like 董锦霞; that is megabytes of CJK slices over office links in
+   *   Addis Ababa, plus a visible Latin/CJK style mismatch.
+   * Order matters: fallback is per character. The CJK families sit BEFORE the
+   * generic `sans-serif`, so Han glyphs always reach YaHei (Windows) or
+   * PingFang / Hiragino (macOS) instead of whatever per-script default the
+   * browser maps `sans-serif` to (which can be a Japanese face). On macOS the
+   * Latin text still resolves to -apple-system first; on Windows, Segoe UI.
+   * Keep lib/theme/tokens.ts `fontFamily` (Ant Design) in the same order.
+   */
+  --font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Noto Sans CJK SC', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
 }
 

@@ -232,15 +232,37 @@
   background: transparent;
   color: var(--sb-text-muted);
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
   line-height: 1.4;
   text-align: left;
 }
 
 .sb-group-toggle:hover {
   color: var(--sb-text-strong);
+}
+
+/*
+ * Panel typography — two text levels, hierarchy carried by weight, tracking
+ * and colour rather than a size drop:
+ *   group title  12px / 600 / 0.04em, muted   (People, Time & Leave, …)
+ *   module link  13px / 400, 500 when active   (Leave Requests, Overtime, …)
+ * Sentence/Title Case only — no all-caps below 13px. Colours come from the
+ * existing rules above; these classes set typography only. Declared after
+ * `.sb-row` and `.sb-selectable[aria-current]` so they win at equal specificity.
+ */
+.erp-sidebar-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.erp-sidebar-module-link {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.erp-sidebar-module-link[aria-current='page'] {
+  font-weight: 500;
 }
 
 .sb-list {

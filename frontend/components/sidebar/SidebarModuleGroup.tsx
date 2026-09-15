@@ -25,7 +25,7 @@ export default function SidebarModuleGroup({
     <div className="sb-group">
       <button
         type="button"
-        className="sb-group-toggle"
+        className="sb-group-toggle erp-sidebar-group-title"
         aria-expanded={!collapsed}
         aria-controls={listId}
         onClick={onToggle}

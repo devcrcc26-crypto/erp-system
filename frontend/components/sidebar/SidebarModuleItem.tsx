@@ -51,7 +51,7 @@ export default function SidebarModuleItem({
   if (link.href === null) {
     return (
       <li className="sb-item">
-        <div className="sb-row sb-row--static">
+        <div className="sb-row sb-row--static erp-sidebar-module-link">
           {icon}
           <span className="sb-row-label">{label}</span>
           <span className="sb-soon">{comingSoonLabel}</span>
@@ -66,7 +66,7 @@ export default function SidebarModuleItem({
         href={link.href}
         onClick={onNavigate}
         aria-current={active ? 'page' : undefined}
-        className="sb-selectable sb-row"
+        className="sb-selectable sb-row erp-sidebar-module-link"
         data-sidebar-result={searchResult ? '' : undefined}
       >
         {icon}
