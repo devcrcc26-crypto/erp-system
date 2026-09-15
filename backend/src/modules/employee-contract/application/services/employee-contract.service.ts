@@ -33,6 +33,39 @@ const CONTRACT_DETAIL_INCLUDE = {
     },
 } as const;
 
+/**
+ * Self-service contract view. Whitelists display fields only — pay columns
+ * (basicSalary, transportationAllowance, monthlyBonus, netSalary) are never
+ * selected, so they cannot reach the client.
+ */
+const MY_CONTRACT_SELECT = {
+    id: true,
+    contractNumber: true,
+    contractType: true,
+    status: true,
+    signedAt: true,
+    startDate: true,
+    endDate: true,
+    probationEndDate: true,
+    governedBy: true,
+} satisfies Prisma.EmployeeContractSelect;
+
+export interface MyActiveContract {
+    id: string;
+    contractNumber: string;
+    contractType: EmployeeContractType;
+    status: EmployeeContractStatus;
+    signedAt: string;
+    startDate: string;
+    endDate: string | null;
+    probationEndDate: string | null;
+    governedBy: string | null;
+}
+
+function toDateOnly(value: Date): string {
+    return value.toISOString().slice(0, 10);
+}
+
 const EXPIRING_SOON_DAYS = 90;
 
 const TERMINAL_STATUSES: EmployeeContractStatus[] = [
@@ -151,6 +184,45 @@ export class EmployeeContractService {
 
         await this.assertCanView(contract, companyId, userId);
         return contract;
+    }
+
+    /**
+     * The signed-in employee's current ACTIVE contract (any authenticated user).
+     * Returns `{ contract: null }` when there is none. Never includes pay data.
+     */
+    async getMyActiveContract(
+        companyId: string,
+        userId: string,
+    ): Promise<{ contract: MyActiveContract | null }> {
+        const contract = await this.prisma.employeeContract.findFirst({
+            where: activeOnly({
+                companyId,
+                employeeId: userId,
+                status: EmployeeContractStatus.ACTIVE,
+            }),
+            orderBy: { startDate: 'desc' },
+            select: MY_CONTRACT_SELECT,
+        });
+
+        if (!contract) {
+            return { contract: null };
+        }
+
+        return {
+            contract: {
+                id: contract.id,
+                contractNumber: contract.contractNumber,
+                contractType: contract.contractType,
+                status: contract.status,
+                signedAt: toDateOnly(contract.signedAt),
+                startDate: toDateOnly(contract.startDate),
+                endDate: contract.endDate ? toDateOnly(contract.endDate) : null,
+                probationEndDate: contract.probationEndDate
+                    ? toDateOnly(contract.probationEndDate)
+                    : null,
+                governedBy: contract.governedBy,
+            },
+        };
     }
 
     async updateContract(

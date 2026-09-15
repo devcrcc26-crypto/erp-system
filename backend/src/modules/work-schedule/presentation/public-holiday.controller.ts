@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
 import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
@@ -20,6 +21,7 @@ import {
   BulkHolidayStatusDto,
   DuplicateHolidayYearDto,
   ListPublicHolidaysDto,
+  UpcomingHolidaysDto,
 } from '../application/dtos/list-public-holidays.dto';
 import { UpdatePublicHolidayDto } from '../application/dtos/update-public-holiday.dto';
 import { PublicHolidayService } from '../application/services/public-holiday.service';
@@ -39,6 +41,24 @@ export class PublicHolidayController {
     @Query() query: ListPublicHolidaysDto,
   ): Promise<unknown[]> {
     return this.publicHolidayService.list(query, companyId);
+  }
+
+  @Get('my/upcoming')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Upcoming active holidays that apply to the current user (any authenticated user; filtered by own nationality)',
+  })
+  myUpcoming(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: UpcomingHolidaysDto,
+  ): Promise<Record<string, unknown>[]> {
+    return this.publicHolidayService.listUpcomingForEmployee(
+      user.userId,
+      companyId,
+      query.days ?? 60,
+    );
   }
 
   @Post('bulk-status')

@@ -36,6 +36,24 @@ export function formatDisplayDate(
 }
 
 /**
+ * Renders a date with the viewer's preferred pattern (e.g. MM/DD/YYYY,
+ * YYYY-MM-DD), falling back to DD/MM/YYYY. Empty values render as '—'.
+ */
+export function formatDateWithPattern(
+  value: string | Date | null | undefined,
+  pattern?: string | null,
+): string {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+  const parsed = dayjs(value);
+  if (!parsed.isValid()) {
+    return '—';
+  }
+  return parsed.format(pattern?.trim() || DISPLAY_DATE_FORMAT);
+}
+
+/**
  * Renders a date-time as DD/MM/YYYY HH:mm.
  */
 export function formatDisplayDateTime(

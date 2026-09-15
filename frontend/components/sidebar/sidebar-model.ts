@@ -81,6 +81,9 @@ export function isLinkVisible(
   link: SidebarLinkConfig,
   permissions: ReadonlySet<SidebarPermission>,
 ): boolean {
+  if (link.hidden) {
+    return false;
+  }
   if (!link.requires || link.requires.length === 0) {
     return true;
   }
@@ -155,6 +158,9 @@ function filterEntries(
       }
       continue;
     }
+    if (entry.hidden) {
+      continue;
+    }
     const folder = filterFolder(entry, permissions, projectContext);
     if (folder) {
       visible.push(folder);
@@ -172,10 +178,21 @@ export function buildSidebarModel(
   permissions: ReadonlySet<SidebarPermission>,
   projectContext: SidebarProjectContext | null = null,
 ): SidebarModel {
-  return {
-    primary: filterEntries(config.primary, permissions, projectContext),
-    utility: filterEntries(config.utility, permissions, projectContext),
-  };
+  const primary = filterEntries(config.primary, permissions, projectContext);
+  const utility = filterEntries(config.utility, permissions, projectContext);
+
+  // Limited navigation: without the gating permission, only the allowlisted
+  // top-level entries remain (e.g. Dashboard, New Request, Approvals).
+  const limited = config.limitedNavigation;
+  if (limited && !permissions.has(limited.unlessGranted)) {
+    const allowed = new Set(limited.entryIds);
+    return {
+      primary: primary.filter((entry) => allowed.has(entry.id)),
+      utility: utility.filter((entry) => allowed.has(entry.id)),
+    };
+  }
+
+  return { primary, utility };
 }
 
 /** Converts visibility-filtered project workspace groups into sidebar groups. */

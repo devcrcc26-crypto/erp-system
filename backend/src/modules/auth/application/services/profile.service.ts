@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { FolderContextType } from '@prisma/client';
+import { FolderContextType, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { EmailVerificationPurpose } from '../../../../shared/prisma/prisma-enums';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -17,6 +17,7 @@ import {
   IAuthRepository,
 } from '../../domain/repositories/auth.repository.interface';
 import {
+  ProfileEmergencyContactDto,
   ProfileResponseDto,
   UpdateProfileDto,
 } from '../dtos/profile.dto';
@@ -29,6 +30,68 @@ type SessionContext = {
   companyId: string;
   sessionId: string;
 };
+
+const PROFILE_INCLUDE = {
+  company: { select: { legalName: true } },
+  userRoles: {
+    where: { deletedAt: null },
+    include: { role: { select: { id: true, name: true } } },
+  },
+  department: { select: { name: true, nameZh: true } },
+  position: { select: { title: true, titleZh: true } },
+  branch: { select: { name: true } },
+  reportsTo: { select: { firstName: true, lastName: true, chineseName: true } },
+} satisfies Prisma.UserInclude;
+
+type ProfileUser = Prisma.UserGetPayload<{ include: typeof PROFILE_INCLUDE }>;
+
+/** Profile documents list shape (same fields as the HR employee documents list). */
+const PROFILE_DOCUMENT_SELECT = {
+  id: true,
+  name: true,
+  fileType: true,
+  fileSizeBytes: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.DocumentSelect;
+
+function toDateOnly(value: Date | null): string | null {
+  return value ? value.toISOString().slice(0, 10) : null;
+}
+
+/** Emergency contacts are stored as JSON; keep only well-formed entries. */
+function normalizeEmergencyContacts(
+  value: Prisma.JsonValue | null,
+): ProfileEmergencyContactDto[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((entry): ProfileEmergencyContactDto[] => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      return [];
+    }
+    const record = entry as Record<string, unknown>;
+    const text = (key: string): string | null => {
+      const raw = record[key];
+      return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+    };
+    const firstName = text('firstName');
+    const lastName = text('lastName');
+    if (!firstName && !lastName) {
+      return [];
+    }
+    return [
+      {
+        firstName: firstName ?? '',
+        middleName: text('middleName'),
+        lastName: lastName ?? '',
+        phone: text('phone'),
+        email: text('email'),
+        relationship: text('relationship'),
+      },
+    ];
+  });
+}
 
 @Injectable()
 export class ProfileService {
@@ -43,18 +106,13 @@ export class ProfileService {
   ) {}
 
   /**
-   * Returns the authenticated user's profile with role names.
+   * Returns the authenticated user's profile with role names and their
+   * read-only employment record (organisation, identity, address, contacts).
    */
   async getProfile(ctx: SessionContext): Promise<ProfileResponseDto> {
     const user = await this.prisma.user.findFirst({
       where: activeOnly({ id: ctx.userId, companyId: ctx.companyId }),
-      include: {
-        company: { select: { legalName: true } },
-        userRoles: {
-          where: activeOnly({}),
-          include: { role: { select: { id: true, name: true } } },
-        },
-      },
+      include: PROFILE_INCLUDE,
     });
 
     if (!user) {
@@ -62,6 +120,61 @@ export class ProfileService {
     }
 
     return this.mapProfile(user);
+  }
+
+  /**
+   * Lists the signed-in user's own profile documents (read-only).
+   * Returns an empty list when no profile folder has been created yet.
+   */
+  async listMyDocuments(ctx: SessionContext): Promise<unknown[]> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: ctx.userId, companyId: ctx.companyId }),
+      select: { profileFolderId: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (!user.profileFolderId) {
+      return [];
+    }
+    return this.prisma.document.findMany({
+      where: activeOnly({
+        companyId: ctx.companyId,
+        folderId: user.profileFolderId,
+        isCurrent: true,
+      }),
+      orderBy: { createdAt: 'desc' },
+      select: PROFILE_DOCUMENT_SELECT,
+    });
+  }
+
+  /**
+   * Presigned download URL for one of the signed-in user's own profile
+   * documents. The document must live in the user's profile folder.
+   */
+  async getMyDocumentDownloadUrl(
+    ctx: SessionContext,
+    documentId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: ctx.userId, companyId: ctx.companyId }),
+      select: { profileFolderId: true },
+    });
+    if (!user?.profileFolderId) {
+      throw new NotFoundException('Document not found');
+    }
+    const document = await this.prisma.document.findFirst({
+      where: activeOnly({
+        id: documentId,
+        companyId: ctx.companyId,
+        folderId: user.profileFolderId,
+      }),
+      select: { id: true },
+    });
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+    return this.documentService.getDownloadUrl(ctx, documentId);
   }
 
   /**
@@ -352,23 +465,11 @@ export class ProfileService {
     return { message: 'Email address updated successfully' };
   }
 
-  private mapProfile(user: {
-    id: string;
-    email: string | null;
-    pendingEmail: string | null;
-    firstName: string;
-    lastName: string;
-    chineseName: string | null;
-    phone: string | null;
-    companyId: string;
-    preferredLanguage: string | null;
-    preferredTimezone: string | null;
-    preferredDateFormat: string | null;
-    emailVerifiedAt: Date | null;
-    photoDocumentId: string | null;
-    company: { legalName: string };
-    userRoles: Array<{ role: { id: string; name: string } }>;
-  }): ProfileResponseDto {
+  private mapProfile(user: ProfileUser): ProfileResponseDto {
+    const reportsToName = user.reportsTo
+      ? `${user.reportsTo.firstName} ${user.reportsTo.lastName}`.trim()
+      : null;
+
     return {
       id: user.id,
       email: user.email ?? '',
@@ -388,6 +489,29 @@ export class ProfileService {
         id: assignment.role.id,
         name: assignment.role.name,
       })),
+      employeeId: user.employeeId,
+      middleName: user.middleName,
+      departmentName: user.department?.name ?? null,
+      departmentNameZh: user.department?.nameZh ?? null,
+      positionTitle: user.position?.title ?? null,
+      positionTitleZh: user.position?.titleZh ?? null,
+      branchName: user.branch?.name ?? null,
+      reportsToName: reportsToName || null,
+      reportsToChineseName: user.reportsTo?.chineseName ?? null,
+      employeeType: user.employeeType,
+      nationality: user.nationality,
+      dateOfBirth: toDateOnly(user.dateOfBirth),
+      gender: user.gender,
+      educationLevel: user.educationLevel,
+      fieldOfStudy: user.fieldOfStudy,
+      experienceStartDate: toDateOnly(user.experienceStartDate),
+      addressCountry: user.addressCountry,
+      addressRegion: user.addressRegion,
+      addressCity: user.addressCity,
+      addressSubcity: user.addressSubcity,
+      addressWoreda: user.addressWoreda,
+      addressHouseNumber: user.addressHouseNumber,
+      emergencyContacts: normalizeEmergencyContacts(user.emergencyContacts),
     };
   }
 }

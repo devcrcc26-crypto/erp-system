@@ -45,6 +45,19 @@ export class WorkScheduleController {
     return this.workScheduleService.previewDays(dto, companyId, user.userId);
   }
 
+  @Get('my')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      "Current user's active work schedule (assignment, else company default). Any authenticated user; null when none exists.",
+  })
+  mySchedule(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+  ): Promise<Record<string, unknown> | null> {
+    return this.workScheduleService.getMySchedule(user.userId, companyId);
+  }
+
   @Get('employees/:employeeId')
   @RequireAnyPermission(
     { module: 'hr', action: 'view' },

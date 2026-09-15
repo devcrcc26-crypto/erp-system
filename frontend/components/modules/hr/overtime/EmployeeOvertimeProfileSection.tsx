@@ -36,6 +36,13 @@ interface EmployeeOvertimeProfileSectionProps {
   mode: EmployeeOvertimeProfileMode;
   /** Required when mode is `employee`. */
   employeeId?: string;
+  /** Hide the "Start this month's overtime" button (read-only My Profile). */
+  hideCreateAction?: boolean;
+  /**
+   * Show every hour category as its own column:
+   * Sheet #, Period, Regular, Night, Weekend, Holiday, Total, Status.
+   */
+  showCategoryColumns?: boolean;
 }
 
 type YearTotals = {
@@ -142,6 +149,8 @@ function HoursTile({
 export default function EmployeeOvertimeProfileSection({
   mode,
   employeeId,
+  hideCreateAction = false,
+  showCategoryColumns = false,
 }: EmployeeOvertimeProfileSectionProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
@@ -202,27 +211,78 @@ export default function EmployeeOvertimeProfileSection({
     return allHistory.slice(start, start + historyMeta.limit);
   }, [allHistory, historyMeta.page, historyMeta.limit]);
 
-  const columns: ColumnsType<OvertimeSheetListItem> = useMemo(
-    () => [
-      {
-        title: t('hr.table.sheetNumber'),
-        dataIndex: 'sheetNumber',
-        key: 'sheetNumber',
-        width: 140,
-        render: (value: string) => (
-          <span className="erp-users-id-chip">{value}</span>
-        ),
-      },
-      {
-        title: t('hr.table.period'),
-        key: 'period',
-        width: 140,
-        render: (_: unknown, row: OvertimeSheetListItem) => (
-          <span className="erp-users-cell-strong">
-            {formatOvertimePeriod(row.month, row.year, t)}
+  const columns: ColumnsType<OvertimeSheetListItem> = useMemo(() => {
+    const sheetColumn: ColumnsType<OvertimeSheetListItem>[number] = {
+      title: t('hr.table.sheetNumber'),
+      dataIndex: 'sheetNumber',
+      key: 'sheetNumber',
+      width: 140,
+      render: (value: string) => (
+        <span className="erp-users-id-chip">{value}</span>
+      ),
+    };
+    const periodColumn: ColumnsType<OvertimeSheetListItem>[number] = {
+      title: t('hr.table.period'),
+      key: 'period',
+      width: 140,
+      render: (_: unknown, row: OvertimeSheetListItem) => (
+        <span className="erp-users-cell-strong">
+          {formatOvertimePeriod(row.month, row.year, t)}
+        </span>
+      ),
+    };
+    const statusColumn: ColumnsType<OvertimeSheetListItem>[number] = {
+      title: t('common.status'),
+      dataIndex: 'status',
+      key: 'status',
+      width: 120,
+      render: (value: OvertimeSheetStatus) => (
+        <StatusBadge
+          label={formatOvertimeStatus(value, t)}
+          variant={overtimeStatusVariant(value)}
+        />
+      ),
+    };
+
+    if (showCategoryColumns) {
+      const hoursColumn = (
+        dataIndex:
+          | 'totalRegularHours'
+          | 'totalNightHours'
+          | 'totalWeekendHours'
+          | 'totalHolidayHours'
+          | 'totalHours',
+        title: string,
+        strong = false,
+      ): ColumnsType<OvertimeSheetListItem>[number] => ({
+        title,
+        dataIndex,
+        key: dataIndex,
+        width: strong ? 104 : 88,
+        align: 'right',
+        render: (value: number) => (
+          <span
+            className={`${strong ? 'erp-users-cell-strong' : 'erp-users-cell-sub'} tabular-nums`}
+          >
+            {formatOvertimeHours(value)}
           </span>
         ),
-      },
+      });
+      return [
+        sheetColumn,
+        periodColumn,
+        hoursColumn('totalRegularHours', t('hr.overtimeCategory.regular')),
+        hoursColumn('totalNightHours', t('hr.overtimeCategory.night')),
+        hoursColumn('totalWeekendHours', t('hr.overtimeCategory.weekend')),
+        hoursColumn('totalHolidayHours', t('hr.overtimeCategory.holiday')),
+        hoursColumn('totalHours', t('hr.table.totalHours'), true),
+        statusColumn,
+      ];
+    }
+
+    return [
+      sheetColumn,
+      periodColumn,
       {
         title: t('hr.table.totalHours'),
         dataIndex: 'totalHours',
@@ -248,18 +308,7 @@ export default function EmployeeOvertimeProfileSection({
           </span>
         ),
       },
-      {
-        title: t('common.status'),
-        dataIndex: 'status',
-        key: 'status',
-        width: 120,
-        render: (value: OvertimeSheetStatus) => (
-          <StatusBadge
-            label={formatOvertimeStatus(value, t)}
-            variant={overtimeStatusVariant(value)}
-          />
-        ),
-      },
+      statusColumn,
       {
         title: t('hr.table.submittedDate'),
         dataIndex: 'submittedAt',
@@ -272,9 +321,8 @@ export default function EmployeeOvertimeProfileSection({
           </span>
         ),
       },
-    ],
-    [t],
-  );
+    ];
+  }, [t, showCategoryColumns]);
 
   function errorMessage(error: unknown): string {
     if (error instanceof ApiRequestError) {
@@ -303,7 +351,7 @@ export default function EmployeeOvertimeProfileSection({
       >
         {t('hr.overtime.viewAllHistory')}
       </Button>
-      {canCreateOvertime ? (
+      {canCreateOvertime && !hideCreateAction ? (
         <Button type="primary" size="small" onClick={handleOpenThisMonth}>
           {t('hr.buttons.thisMonthSheet')}
         </Button>

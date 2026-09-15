@@ -763,6 +763,25 @@ export class WorkScheduleService {
   }
 
   /**
+   * Active schedule for the signed-in employee (assignment, else company
+   * default) with its days. Returns null when neither exists.
+   */
+  async getMySchedule(
+    userId: string,
+    companyId: string,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const schedule = await this.getActiveSchedule(userId, companyId);
+      return this.mapSchedule(schedule, 0);
+    } catch (error: unknown) {
+      if (error instanceof NotFoundException) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Validates periods, calculates each via the schedule engine, and returns totals.
    */
   async resolveLeavePeriods(

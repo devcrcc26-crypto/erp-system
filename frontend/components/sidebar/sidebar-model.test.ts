@@ -15,10 +15,24 @@ function capabilities(overrides: Partial<Capabilities> = {}): Capabilities {
   return { ...structuredClone(EMPTY_CAPABILITIES), ...overrides };
 }
 
-function modelFor(
-  overrides: Partial<Capabilities>,
-  ready = true,
-): SidebarModel {
+function withProjects(): Pick<Capabilities, 'pm'> {
+  return {
+    pm: {
+      ...structuredClone(EMPTY_CAPABILITIES.pm),
+      projects: { ...EMPTY_CAPABILITIES.pm.projects, canView: true },
+    },
+  };
+}
+
+/** SIDEBAR_CONFIG with Project Management un-hidden, for PM behaviour tests. */
+const CONFIG_WITH_PM = {
+  ...SIDEBAR_CONFIG,
+  primary: SIDEBAR_CONFIG.primary.map((entry) =>
+    entry.id === 'pm' ? { ...entry, hidden: false } : entry,
+  ),
+};
+
+function modelFor(overrides: Partial<Capabilities>, ready = true): SidebarModel {
   const permissions = resolveSidebarPermissions({
     capabilities: capabilities(overrides),
     ready,
@@ -33,19 +47,46 @@ function folder(model: SidebarModel, id: string): SidebarFolder | undefined {
   );
 }
 
+const ids = (entries: readonly { id: string }[]): string[] =>
+  entries.map((entry) => entry.id);
+
 const identity = (key: string): string => key;
 
 describe('sidebar permissions and filtering', () => {
   it('shows only unrestricted links before capabilities load', () => {
     const model = modelFor({ canViewHr: true }, false);
-    expect(model.primary.map((entry) => entry.id)).toEqual(['dashboard']);
-    expect(model.utility).toEqual([]);
+    expect(ids(model.primary)).toEqual(['dashboard', 'new-request']);
+    expect(ids(model.utility)).toEqual(['my-profile']);
   });
 
-  it('gives an HR officer every HR group', () => {
-    const model = modelFor({ canViewHr: true, canManageUsers: true });
-    const hr = folder(model, 'hr');
-    expect(hr?.groups.map((group) => group.id)).toEqual([
+  it('shows My Profile to every signed-in user', () => {
+    expect(ids(modelFor({}).utility)).toContain('my-profile');
+    expect(ids(modelFor({ canViewHr: true }).utility)).toContain('my-profile');
+  });
+
+  it('keeps New Request as a direct link to the request picker', () => {
+    const entry = modelFor({ canViewHr: true }).primary.find(
+      (item) => item.id === 'new-request',
+    );
+    expect(entry?.kind).toBe('link');
+    expect(entry?.kind === 'link' ? entry.href : null).toBe('/approvals/new');
+  });
+
+  it('gives an HR officer the full sidebar with every HR group', () => {
+    const model = modelFor({
+      canViewHr: true,
+      canManageUsers: true,
+      canViewAuditLogs: true,
+      canManageRoles: true,
+    });
+    expect(ids(model.primary)).toEqual(['dashboard', 'new-request', 'hr', 'organization']);
+    expect(ids(model.utility)).toEqual([
+      'approvals',
+      'my-profile',
+      'audit-logs',
+      'settings',
+    ]);
+    expect(folder(model, 'hr')?.groups.map((group) => group.id)).toEqual([
       'hr-people',
       'hr-time-leave',
       'hr-travel-expenses',
@@ -53,48 +94,46 @@ describe('sidebar permissions and filtering', () => {
       'hr-fleet-assets',
       'hr-administration',
     ]);
-    expect(folder(model, 'organization')).toBeDefined();
   });
 
-  it('limits an engineer to Time & Leave', () => {
-    const model = modelFor({ canCreateLeave: true, canCreateOvertime: true });
-    const hr = folder(model, 'hr');
-    expect(hr?.groups.map((group) => group.id)).toEqual(['hr-time-leave']);
-    expect(hr?.groups[0]?.items.map((item) => item.id)).toEqual([
-      'leave-requests',
-      'overtime',
-    ]);
-    expect(folder(model, 'organization')).toBeUndefined();
+  it('limits staff without hr.view to Dashboard, New Request and Approvals', () => {
+    const model = modelFor({
+      canCreateLeave: true,
+      canCreateOvertime: true,
+      canCreateFlight: true,
+      canViewAuditLogs: true,
+      canManageRoles: true,
+      ...withProjects(),
+    });
+    expect(ids(model.primary)).toEqual(['dashboard', 'new-request']);
+    expect(ids(model.utility)).toEqual(['approvals', 'my-profile']);
+  });
+
+  it('hides Project Management for everyone, even with full project access', () => {
+    const model = modelFor({
+      canViewHr: true,
+      epc: { ...structuredClone(EMPTY_CAPABILITIES.epc), navFullAccess: true },
+      ...withProjects(),
+    });
     expect(folder(model, 'pm')).toBeUndefined();
-  });
-
-  it('gives a travelling engineer expense claims but not the HR-only flight list', () => {
-    const model = modelFor({ canCreateLeave: true, canCreateFlight: true });
-    const travel = folder(model, 'hr')?.groups.find(
-      (group) => group.id === 'hr-travel-expenses',
-    );
-    // /hr/flight-applications redirects non-HR users (hr/layout.tsx).
-    expect(travel?.items.map((item) => item.id)).toEqual(['expense-claims']);
+    // Search must not surface anything from the hidden folder.
+    const results = searchSidebar(flattenSidebarModel(model), 'nav', identity);
+    expect(results.some((result) => result.folderId === 'pm')).toBe(false);
+    expect(results.some((result) => result.link.id === 'projects')).toBe(false);
   });
 
   it('removes a folder when none of its links are visible', () => {
-    const model = modelFor({});
-    expect(folder(model, 'hr')).toBeUndefined();
-    expect(model.utility.map((entry) => entry.id)).toEqual(['approvals']);
+    const model = modelFor({ canViewHr: true });
+    expect(folder(model, 'pm')).toBeUndefined();
   });
 
   it('prepends project groups and collapses portfolio groups inside a project', () => {
     const permissions = resolveSidebarPermissions({
-      capabilities: capabilities({
-        pm: {
-          ...structuredClone(EMPTY_CAPABILITIES.pm),
-          projects: { ...EMPTY_CAPABILITIES.pm.projects, canView: true },
-        },
-      }),
+      capabilities: capabilities({ canViewHr: true, ...withProjects() }),
       ready: true,
       hasProjectAdministratorRole: false,
     });
-    const model = buildSidebarModel(SIDEBAR_CONFIG, permissions, {
+    const model = buildSidebarModel(CONFIG_WITH_PM, permissions, {
       header: { projectId: 'p1', name: 'Addis Tower', nameZh: null },
       groups: [
         {
@@ -119,7 +158,8 @@ describe('active link resolution', () => {
 
   it('matches the dashboard only on the root route', () => {
     expect(resolveActiveLink('/', links)?.link.id).toBe('dashboard');
-    expect(resolveActiveLink('/profile', links)).toBeNull();
+    expect(resolveActiveLink('/profile', links)?.link.id).toBe('my-profile');
+    expect(resolveActiveLink('/notifications', links)).toBeNull();
   });
 
   it('prefers the longest prefix and honours activePaths', () => {
@@ -129,7 +169,18 @@ describe('active link resolution', () => {
     expect(resolveActiveLink('/hr/leave-history/7', links)?.link.id).toBe(
       'leave-requests',
     );
+    expect(resolveActiveLink('/hr/leave-history/me', links)?.link.id).toBe(
+      'my-profile',
+    );
     expect(resolveActiveLink('/hr/per-diem/9', links)?.folderId).toBe('hr');
+  });
+
+  it('highlights New Request on the picker and every form, Approvals elsewhere', () => {
+    expect(resolveActiveLink('/approvals/new', links)?.link.id).toBe('new-request');
+    expect(resolveActiveLink('/approvals/new/vehicle-application', links)?.link.id).toBe(
+      'new-request',
+    );
+    expect(resolveActiveLink('/approvals/42', links)?.link.id).toBe('approvals');
   });
 });
 

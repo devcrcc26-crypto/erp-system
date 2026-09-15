@@ -34,6 +34,13 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
 - A folder panel closes when you click its folder again, press its close button, press Esc
   (docked), or navigate to a page outside it. Navigating into a folder's page opens it in
   expanded mode.
+- **New Request** (right under Dashboard) is a direct link to the request picker
+  (`/approvals/new`). It stays highlighted on every `/approvals/new/*` form. Submitted
+  requests are tracked under **Approvals**.
+- **My Profile** sits in the utility section (after Approvals) with no permission requirement,
+  so every signed-in user can reach `/profile`.
+- **Limited navigation:** users without `hr.view` see only Dashboard, New Request, Approvals
+  and My Profile. Users with `hr.view` get the full sidebar (see "How permissions control visibility").
 - **Project pages** (`/projects/:id/...`) show the project's workspace navigation inside the
   Project Management folder, above the portfolio groups (which start collapsed). There is no
   separate project column. Widest case: compact rail + docked panel = 356px.
@@ -64,6 +71,13 @@ That is all. No component changes. Checklist:
 4. If the page is not built yet, use `href: null, comingSoon: true`. It renders as
    non-interactive text with a "Coming soon" pill.
 5. Add the route's title and breadcrumb to `config/navConfig.ts` (page header, not sidebar).
+
+## Temporarily hide an entry
+
+Set `hidden: true` on a link or folder. It is removed for every user (sidebar, compact
+rail, mobile drawer and search) but stays in the config, so restoring it is a one-line
+change. **Project Management is currently hidden**, which also hides the project workspace
+nav on `/projects/:id` pages because that folder hosts it.
 
 ## Add a new group
 
@@ -97,6 +111,11 @@ has to read past.
    listed token.
 4. Anything the user cannot access is **removed**, never greyed out. Empty groups and
    folders disappear too.
+5. **Limited navigation** (`SIDEBAR_CONFIG.limitedNavigation`): a session without
+   `unlessGranted` (`hr.view`) keeps only the top-level entries listed in `entryIds`
+   (`dashboard`, `new-request`, `approvals`, `my-profile`), whatever else it could open. Change the list in
+   the config; do not special-case it in components. `buildSidebarModel` applies it, so the
+   desktop sidebar, compact rail and mobile drawer all follow it.
 
 Current mapping (edit `sidebar-permissions.ts` only):
 
@@ -104,7 +123,7 @@ Current mapping (edit `sidebar-permissions.ts` only):
 | --- | --- |
 | `hr.view` | `canViewHr` |
 | `leave.access` / `overtime.access` | `canViewHr` or the module's view/create flag |
-| `flight.access` / `businessTrip.access` | `canViewHr` or the module's view/create/manage flag |
+| `flight.access` / `businessTrip.access` | `canViewHr` (the `/hr` list pages are HR-only; employees submit via `/approvals/new`) |
 | `expenseClaims.access` | `canViewHr`, flight access, or business-trip access |
 | `perDiemRates.manage` | `canViewHr` or `canManageUsers` |
 | `procurement.access`, `fleet.access`, `administration.access` | `canViewHr` (no dedicated backend flag yet; `/hr` routes also require it) |

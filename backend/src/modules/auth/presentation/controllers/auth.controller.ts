@@ -4,6 +4,8 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -178,6 +180,36 @@ export class AuthController {
       companyId: user.companyId,
       sessionId: user.sessionId,
     });
+  }
+
+  @Get('me/documents')
+  @ApiOperation({
+    summary: 'List the current user profile documents (read-only, own folder)',
+  })
+  listMyDocuments(@CurrentUser() user: AuthenticatedUser): Promise<unknown[]> {
+    return this.profileService.listMyDocuments({
+      userId: user.userId,
+      companyId: user.companyId,
+      sessionId: user.sessionId,
+    });
+  }
+
+  @Get('me/documents/:documentId/download-url')
+  @ApiOperation({
+    summary: 'Presigned download URL for one of the current user profile documents',
+  })
+  getMyDocumentDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    return this.profileService.getMyDocumentDownloadUrl(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        sessionId: user.sessionId,
+      },
+      documentId,
+    );
   }
 
   @Patch('me')

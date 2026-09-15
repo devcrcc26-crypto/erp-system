@@ -116,6 +116,40 @@ export interface UserProfile {
   emailVerifiedAt: string | null;
   photoDocumentId?: string | null;
   roles: ProfileRole[];
+  // Read-only employment record returned by GET /auth/me (dates are YYYY-MM-DD).
+  employeeId?: string | null;
+  middleName?: string | null;
+  departmentName?: string | null;
+  departmentNameZh?: string | null;
+  positionTitle?: string | null;
+  positionTitleZh?: string | null;
+  branchName?: string | null;
+  reportsToName?: string | null;
+  reportsToChineseName?: string | null;
+  employeeType?: 'PERMANENT' | 'CONTRACT' | 'TEMPORARY' | null;
+  nationality?: 'ETHIOPIAN' | 'CHINESE' | null;
+  dateOfBirth?: string | null;
+  gender?: 'MALE' | 'FEMALE' | null;
+  educationLevel?: 'PHD' | 'MSC' | 'BSC' | 'DIPLOMA' | 'CERTIFICATE' | 'OTHER' | null;
+  fieldOfStudy?: string | null;
+  experienceStartDate?: string | null;
+  addressCountry?: string | null;
+  addressRegion?: string | null;
+  addressCity?: string | null;
+  addressSubcity?: string | null;
+  addressWoreda?: string | null;
+  addressHouseNumber?: string | null;
+  emergencyContacts?: ProfileEmergencyContact[];
+}
+
+export interface ProfileEmergencyContact {
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  phone: string | null;
+  email: string | null;
+  /** Only present when recorded — the HR form does not capture it today. */
+  relationship: string | null;
 }
 
 export interface UpdateProfileRequest {

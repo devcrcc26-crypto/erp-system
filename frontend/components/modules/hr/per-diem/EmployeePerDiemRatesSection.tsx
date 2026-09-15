@@ -166,10 +166,13 @@ export default function EmployeePerDiemRatesSection({
   employeeId,
   editable = false,
   embedded = false,
+  emptyMessage,
 }: {
   employeeId: string;
   editable?: boolean;
   embedded?: boolean;
+  /** Replaces the default "no rates" text in view-only mode. */
+  emptyMessage?: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
@@ -384,7 +387,7 @@ export default function EmployeePerDiemRatesSection({
             <Wallet size={22} strokeWidth={1.6} />
           </div>
           <p className="erp-per-diem-empty-title">
-            {t('hr.empty.employeePerDiemRates')}
+            {emptyMessage ?? t('hr.empty.employeePerDiemRates')}
           </p>
         </div>
       ) : (

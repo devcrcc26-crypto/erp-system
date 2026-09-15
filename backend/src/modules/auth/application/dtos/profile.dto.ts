@@ -9,6 +9,26 @@ export class ProfileRoleDto {
   name!: string;
 }
 
+export class ProfileEmergencyContactDto {
+  @ApiProperty()
+  firstName!: string;
+
+  @ApiProperty({ nullable: true })
+  middleName!: string | null;
+
+  @ApiProperty()
+  lastName!: string;
+
+  @ApiProperty({ nullable: true })
+  phone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  email!: string | null;
+
+  @ApiProperty({ nullable: true, description: 'Present only when recorded' })
+  relationship!: string | null;
+}
+
 export class ProfileResponseDto {
   @ApiProperty()
   id!: string;
@@ -54,6 +74,76 @@ export class ProfileResponseDto {
 
   @ApiProperty({ type: [ProfileRoleDto] })
   roles!: ProfileRoleDto[];
+
+  // Read-only employment record (My Profile). Dates are YYYY-MM-DD.
+  @ApiProperty({ nullable: true, example: 'EMP-0001' })
+  employeeId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  middleName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  departmentName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  departmentNameZh!: string | null;
+
+  @ApiProperty({ nullable: true })
+  positionTitle!: string | null;
+
+  @ApiProperty({ nullable: true })
+  positionTitleZh!: string | null;
+
+  @ApiProperty({ nullable: true })
+  branchName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  reportsToName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  reportsToChineseName!: string | null;
+
+  @ApiProperty({ nullable: true, enum: ['PERMANENT', 'CONTRACT', 'TEMPORARY'] })
+  employeeType!: string | null;
+
+  @ApiProperty({ nullable: true, enum: ['ETHIOPIAN', 'CHINESE'] })
+  nationality!: string | null;
+
+  @ApiProperty({ nullable: true, example: '1990-05-21' })
+  dateOfBirth!: string | null;
+
+  @ApiProperty({ nullable: true, enum: ['MALE', 'FEMALE'] })
+  gender!: string | null;
+
+  @ApiProperty({ nullable: true })
+  educationLevel!: string | null;
+
+  @ApiProperty({ nullable: true })
+  fieldOfStudy!: string | null;
+
+  @ApiProperty({ nullable: true, example: '2015-09-01' })
+  experienceStartDate!: string | null;
+
+  @ApiProperty({ nullable: true })
+  addressCountry!: string | null;
+
+  @ApiProperty({ nullable: true })
+  addressRegion!: string | null;
+
+  @ApiProperty({ nullable: true })
+  addressCity!: string | null;
+
+  @ApiProperty({ nullable: true })
+  addressSubcity!: string | null;
+
+  @ApiProperty({ nullable: true })
+  addressWoreda!: string | null;
+
+  @ApiProperty({ nullable: true })
+  addressHouseNumber!: string | null;
+
+  @ApiProperty({ type: [ProfileEmergencyContactDto] })
+  emergencyContacts!: ProfileEmergencyContactDto[];
 }
 
 export class UpdateProfileDto {

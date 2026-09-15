@@ -140,4 +140,17 @@ export interface ListPublicHolidaysParams {
   year?: number;
   nationality?: HolidayNationality;
   isActive?: boolean;
+  /** Only holidays occurring within this many days from today. */
+  upcoming?: number;
+}
+
+/** GET /hr/public-holidays/my/upcoming — `date` is the next occurrence. */
+export interface MyUpcomingHoliday {
+  id: string;
+  name: string;
+  nameZh: string | null;
+  date: string;
+  isRecurring: boolean;
+  appliesToNationality: HolidayNationality;
+  daysUntil: number;
 }

@@ -67,8 +67,7 @@ export function resolveSidebarPermissions(
   // Expense claims are self-service (see app/(dashboard)/hr/layout.tsx);
   // shown to anyone who travels on company business.
   grant('expenseClaims.access', hr || flight || businessTrip);
-  grant('perDiemRates.manage', hr || caps.canManageUsers);
-  // No dedicated backend flags yet — the /hr route guard requires hr.view.
+  grant('perDiemRates.manage', hr || caps.canManageUsers);  // No dedicated backend flags yet — the /hr route guard requires hr.view.
   grant('procurement.access', hr);
   grant('fleet.access', hr);
   grant('administration.access', hr);

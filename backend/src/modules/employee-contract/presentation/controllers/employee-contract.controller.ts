@@ -95,6 +95,21 @@ export class EmployeeContractController {
         );
     }
 
+    @Get('my/active')
+    @DelegatePermissionCheck()
+    @ApiOperation({
+        summary: 'My active contract without salary fields (any authenticated user)',
+    })
+    getMyActive(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+    ): Promise<unknown> {
+        return this.employeeContractService.getMyActiveContract(
+            companyId,
+            user.userId,
+        );
+    }
+
 
     @Get(':id')
     @ApiOperation({ summary: 'Get an employee contract by id' })

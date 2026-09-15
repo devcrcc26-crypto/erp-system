@@ -13,12 +13,15 @@ import type {
   MessageResponse,
   UpdateProfileRequest,
   UserProfile,
+  UserProfileDocument,
 } from '@/lib/api/types';
 
 export const profileKeys = {
   all: ['profile'] as const,
   me: (sessionId: string | null) =>
     [...profileKeys.all, 'me', sessionId] as const,
+  documents: (sessionId: string | null) =>
+    [...profileKeys.all, 'documents', sessionId] as const,
   photoUrl: (sessionId: string | null) =>
     [...profileKeys.all, 'photo-url', sessionId] as const,
 };
@@ -30,6 +33,25 @@ export function useCurrentUser() {
     queryKey: profileKeys.me(sessionId),
     queryFn: (): Promise<UserProfile> => apiGet<UserProfile>('/auth/me'),
     enabled: Boolean(accessToken && sessionId),
+  });
+}
+
+/** Download URL endpoint for one of the signed-in user's profile documents. */
+export function myProfileDocumentDownloadPath(documentId: string): string {
+  return `/auth/me/documents/${documentId}/download-url`;
+}
+
+/**
+ * The signed-in user's own profile documents (read-only, no HR permission needed).
+ */
+export function useMyProfileDocuments(enabled = true) {
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const sessionId = useAuthStore((state) => state.sessionId);
+  return useQuery({
+    queryKey: profileKeys.documents(sessionId),
+    queryFn: () => apiGet<UserProfileDocument[]>('/auth/me/documents'),
+    enabled: enabled && Boolean(accessToken && sessionId),
+    retry: false,
   });
 }
 

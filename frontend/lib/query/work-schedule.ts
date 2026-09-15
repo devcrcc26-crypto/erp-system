@@ -14,6 +14,7 @@ import type {
   ListPublicHolidaysParams,
   PreviewDaysResult,
   LeavePeriodInput,
+  MyUpcomingHoliday,
   PublicHoliday,
   UpdatePublicHolidayPayload,
   UpdateWorkSchedulePayload,
@@ -34,6 +35,9 @@ function holidayListQuery(params: ListPublicHolidaysParams): string {
   if (params.isActive !== undefined) {
     search.set('isActive', String(params.isActive));
   }
+  if (params.upcoming !== undefined) {
+    search.set('upcoming', String(params.upcoming));
+  }
   const query = search.toString();
   return query ? `?${query}` : '';
 }
@@ -46,6 +50,7 @@ export const workScheduleKeys = {
   detail: (id: string) => [...workScheduleKeys.details(), id] as const,
   employee: (employeeId: string) =>
     [...workScheduleKeys.all, 'employee', employeeId] as const,
+  mine: () => [...workScheduleKeys.all, 'mine'] as const,
   preview: (employeeId: string, periods: LeavePeriodInput[]) =>
     [...workScheduleKeys.all, 'preview', employeeId, periods] as const,
 };
@@ -57,6 +62,8 @@ export const publicHolidayKeys = {
     [...publicHolidayKeys.lists(), params] as const,
   details: () => [...publicHolidayKeys.all, 'detail'] as const,
   detail: (id: string) => [...publicHolidayKeys.details(), id] as const,
+  myUpcoming: (days: number) =>
+    [...publicHolidayKeys.all, 'my-upcoming', days] as const,
 };
 
 export function useWorkScheduleList(enabled = true) {
@@ -84,6 +91,29 @@ export function useEmployeeWorkSchedule(employeeId: string, enabled = true) {
       apiGet<EmployeeScheduleView>(`${SCHEDULE_PATH}/employees/${employeeId}`),
     enabled: Boolean(employeeId) && enabled,
     staleTime: 30_000,
+  });
+}
+
+/** The signed-in employee's active schedule (null when none is configured). */
+export function useMyWorkSchedule(enabled = true) {
+  return useQuery({
+    queryKey: workScheduleKeys.mine(),
+    queryFn: () => apiGet<WorkSchedule | null>(`${SCHEDULE_PATH}/my`),
+    enabled,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+/** Active holidays in the next `days` days that apply to the signed-in employee. */
+export function useMyUpcomingHolidays(days = 60, enabled = true) {
+  return useQuery({
+    queryKey: publicHolidayKeys.myUpcoming(days),
+    queryFn: () =>
+      apiGet<MyUpcomingHoliday[]>(`${HOLIDAY_PATH}/my/upcoming?days=${days}`),
+    enabled,
+    staleTime: 60_000,
+    retry: false,
   });
 }
 

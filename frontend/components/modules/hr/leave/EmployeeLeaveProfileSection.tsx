@@ -41,6 +41,8 @@ interface EmployeeLeaveProfileSectionProps {
   mode: EmployeeLeaveProfileMode;
   /** Required when mode is `employee`. */
   employeeId?: string;
+  /** Hide the "New Leave Request" button (read-only My Profile). */
+  hideCreateAction?: boolean;
 }
 
 const BALANCE_ACCENT: Record<string, string> = {
@@ -164,6 +166,7 @@ function BalanceTile({
 export default function EmployeeLeaveProfileSection({
   mode,
   employeeId,
+  hideCreateAction = false,
 }: EmployeeLeaveProfileSectionProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
@@ -335,9 +338,11 @@ export default function EmployeeLeaveProfileSection({
   }
 
   const historyAction = isSelf ? (
-    <Button type="primary" size="small" onClick={handleNewLeaveRequest}>
-      {t('hr.buttons.newLeaveRequest')}
-    </Button>
+    hideCreateAction ? null : (
+      <Button type="primary" size="small" onClick={handleNewLeaveRequest}>
+        {t('hr.buttons.newLeaveRequest')}
+      </Button>
+    )
   ) : canViewHr ? (
     <Button type="link" size="small" className="!px-0" onClick={handleViewAll}>
       {t('hr.leave.viewAllHistory')}

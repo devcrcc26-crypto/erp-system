@@ -64,6 +64,19 @@ export interface EmployeeContractDetail extends EmployeeContractListItem {
   } | null;
 }
 
+/** GET /hr/employee-contracts/my/active — pay fields are never returned. */
+export interface MyActiveContract {
+  id: string;
+  contractNumber: string;
+  contractType: EmployeeContractType;
+  status: EmployeeContractStatus;
+  signedAt: string;
+  startDate: string;
+  endDate: string | null;
+  probationEndDate: string | null;
+  governedBy: string | null;
+}
+
 export interface CreateEmployeeContractPayload {
   employeeId: string;
   contractType: EmployeeContractType;

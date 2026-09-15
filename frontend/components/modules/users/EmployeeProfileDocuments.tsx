@@ -21,6 +21,10 @@ import {
   useUploadUserDocuments,
   useUserDocuments,
 } from '@/lib/query/users';
+import {
+  myProfileDocumentDownloadPath,
+  useMyProfileDocuments,
+} from '@/lib/query/profile';
 import type { UserProfileDocument } from '@/lib/api/types';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
@@ -35,6 +39,15 @@ interface EmployeeProfileDocumentsProps {
   canDelete?: boolean;
   /** Hide the inner title when already wrapped by a section/card header. */
   embedded?: boolean;
+  /** View-only: hides select/upload and delete controls (downloads stay). */
+  readOnly?: boolean;
+  /**
+   * `self` reads the signed-in user's own documents via /auth/me (no HR
+   * permission needed). Defaults to `user` (HR access via /users/:id).
+   */
+  source?: 'user' | 'self';
+  /** Replaces the default empty-state text. */
+  emptyMessage?: string;
 }
 
 function PendingDocumentCard({
@@ -166,10 +179,16 @@ export default function EmployeeProfileDocuments({
   userId,
   canDelete = true,
   embedded = false,
+  readOnly = false,
+  source = 'user',
+  emptyMessage,
 }: EmployeeProfileDocumentsProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
-  const documentsQuery = useUserDocuments(userId);
+  const isSelf = source === 'self';
+  const userDocumentsQuery = useUserDocuments(userId, !isSelf);
+  const myDocumentsQuery = useMyProfileDocuments(isSelf);
+  const documentsQuery = isSelf ? myDocumentsQuery : userDocumentsQuery;
   const uploadMutation = useUploadUserDocuments();
   const deleteMutation = useDeleteUserDocument();
   const [pending, setPending] = useState<PendingUpload[]>([]);
@@ -223,7 +242,9 @@ export default function EmployeeProfileDocuments({
     setDownloadingId(document.id);
     try {
       const { url } = await apiGet<{ url: string; expiresIn: number }>(
-        `/users/${userId}/documents/${document.id}/download-url`,
+        isSelf
+          ? myProfileDocumentDownloadPath(document.id)
+          : `/users/${userId}/documents/${document.id}/download-url`,
       );
       const anchor = window.document.createElement('a');
       anchor.href = url;
@@ -272,21 +293,23 @@ export default function EmployeeProfileDocuments({
         </div>
       ) : null}
 
-      <div className="erp-profile-docs-toolbar">
-        <Upload beforeUpload={handleSelectFiles} showUploadList={false}>
-          <Button icon={<PlusOutlined />}>{t('users.form.selectDocuments')}</Button>
-        </Upload>
-        {hasPending ? (
-          <Button
-            type="primary"
-            icon={<UploadOutlined />}
-            loading={uploadMutation.isPending}
-            onClick={() => void handleUpload()}
-          >
-            {t('users.form.uploadDocuments')}
-          </Button>
-        ) : null}
-      </div>
+      {readOnly ? null : (
+        <div className="erp-profile-docs-toolbar">
+          <Upload beforeUpload={handleSelectFiles} showUploadList={false}>
+            <Button icon={<PlusOutlined />}>{t('users.form.selectDocuments')}</Button>
+          </Upload>
+          {hasPending ? (
+            <Button
+              type="primary"
+              icon={<UploadOutlined />}
+              loading={uploadMutation.isPending}
+              onClick={() => void handleUpload()}
+            >
+              {t('users.form.uploadDocuments')}
+            </Button>
+          ) : null}
+        </div>
+      )}
 
       {hasPending ? (
         <div className="erp-profile-docs-grid">
@@ -330,7 +353,7 @@ export default function EmployeeProfileDocuments({
               <SavedDocumentCard
                 key={document.id}
                 document={document}
-                canDelete={canDelete}
+                canDelete={canDelete && !readOnly}
                 isDeleting={deletingId === document.id}
                 isDownloading={downloadingId === document.id}
                 downloadLabel={t('common.download')}
@@ -345,7 +368,9 @@ export default function EmployeeProfileDocuments({
             <div className="erp-profile-docs-empty-icon" aria-hidden>
               <FilePlus2 size={22} strokeWidth={1.6} />
             </div>
-            <p className="erp-profile-docs-empty-title">{t('users.noDocuments')}</p>
+            <p className="erp-profile-docs-empty-title">
+              {emptyMessage ?? t('users.noDocuments')}
+            </p>
           </div>
         ) : null}
       </Spin>

@@ -45,6 +45,28 @@ export class ListPublicHolidaysDto {
   @Transform(({ value }: { value: unknown }) => toOptionalBoolean(value))
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: 60,
+    description:
+      'Only holidays whose next occurrence falls within this many days from today (sorted soonest first)',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(366)
+  upcoming?: number;
+}
+
+export class UpcomingHolidaysDto {
+  @ApiPropertyOptional({ example: 60, default: 60 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(366)
+  days?: number;
 }
 
 export class BulkHolidayStatusDto {

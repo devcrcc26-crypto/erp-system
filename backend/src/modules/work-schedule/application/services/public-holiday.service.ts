@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { HolidayNationality, Prisma } from '@prisma/client';
+import { HolidayNationality, Nationality, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -232,7 +232,85 @@ export class PublicHolidayService {
       where,
       orderBy: [{ date: 'asc' }, { name: 'asc' }],
     });
-    return rows.map((row) => this.mapHoliday(row));
+
+    if (query.upcoming === undefined) {
+      return rows.map((row) => this.mapHoliday(row));
+    }
+    return this.upcomingWithin(rows, query.upcoming).map(
+      ({ row, occurrence }) => ({
+        ...this.mapHoliday(row),
+        occurrenceDate: formatDateOnly(occurrence),
+      }),
+    );
+  }
+
+  /**
+   * Active holidays in the next `days` days that apply to the employee
+   * (nationality ALL, or matching the employee's own nationality).
+   * Self-service: returns only display fields, never HR notes.
+   */
+  async listUpcomingForEmployee(
+    userId: string,
+    companyId: string,
+    days: number,
+  ): Promise<Record<string, unknown>[]> {
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: userId, companyId }),
+      select: { nationality: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('User not found');
+    }
+
+    const nationalities: HolidayNationality[] = [HolidayNationality.ALL];
+    if (employee.nationality === Nationality.ETHIOPIAN) {
+      nationalities.push(HolidayNationality.ETHIOPIAN);
+    } else if (employee.nationality === Nationality.CHINESE) {
+      nationalities.push(HolidayNationality.CHINESE);
+    }
+
+    const rows = await this.prisma.publicHoliday.findMany({
+      where: activeOnly({
+        companyId,
+        isActive: true,
+        appliesToNationality: { in: nationalities },
+      }),
+      orderBy: [{ date: 'asc' }, { name: 'asc' }],
+    });
+
+    return this.upcomingWithin(rows, days).map(
+      ({ row, occurrence, daysUntil }) => ({
+        id: row.id,
+        name: row.name,
+        nameZh: row.nameZh,
+        date: formatDateOnly(occurrence),
+        isRecurring: row.isRecurring,
+        appliesToNationality: row.appliesToNationality,
+        daysUntil,
+      }),
+    );
+  }
+
+  /** Next occurrence of each holiday, kept when it is 0..days away, soonest first. */
+  private upcomingWithin(
+    rows: Prisma.PublicHolidayGetPayload<object>[],
+    days: number,
+  ): Array<{
+    row: Prisma.PublicHolidayGetPayload<object>;
+    occurrence: Date;
+    daysUntil: number;
+  }> {
+    const today = todayUtc();
+    return rows
+      .map((row) => {
+        const occurrence = this.nextOccurrence(row.date, row.isRecurring, today);
+        const daysUntil = Math.round(
+          (occurrence.getTime() - today.getTime()) / 86_400_000,
+        );
+        return { row, occurrence, daysUntil };
+      })
+      .filter(({ daysUntil }) => daysUntil >= 0 && daysUntil <= days)
+      .sort((a, b) => a.daysUntil - b.daysUntil);
   }
 
   /**

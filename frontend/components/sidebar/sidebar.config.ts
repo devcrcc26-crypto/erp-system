@@ -68,6 +68,8 @@ interface SidebarLinkBase {
   readonly badge?: SidebarBadgeSource;
   /** Extra search terms (synonyms) for "Find a module". */
   readonly keywords?: readonly string[];
+  /** Temporarily hidden from everyone (kept in config so it is easy to restore). */
+  readonly hidden?: boolean;
 }
 
 export type SidebarLinkConfig = SidebarLinkBase &
@@ -90,6 +92,8 @@ export interface SidebarFolderConfig {
   /** One-line caption for the compact rail when the label is too long. */
   readonly shortLabelKey?: string;
   readonly icon: string;
+  /** Temporarily hidden from everyone (kept in config so it is easy to restore). */
+  readonly hidden?: boolean;
   readonly groups: readonly SidebarGroupConfig[];
   /**
    * On `/projects/:id` routes, prepend the project workspace groups
@@ -100,11 +104,20 @@ export interface SidebarFolderConfig {
 
 export type SidebarEntryConfig = SidebarLinkConfig | SidebarFolderConfig;
 
+export interface SidebarLimitedNavigation {
+  /** Sessions holding this permission get the full sidebar. */
+  readonly unlessGranted: SidebarPermission;
+  /** Everyone else sees only these top-level entry ids. */
+  readonly entryIds: readonly string[];
+}
+
 export interface SidebarConfig {
   /** Top of the sidebar — dashboard and module folders. */
   readonly primary: readonly SidebarEntryConfig[];
   /** Pinned to the bottom of the sidebar, still inside the one `<nav>`. */
   readonly utility: readonly SidebarEntryConfig[];
+  /** Reduced sidebar for sessions without a given permission. */
+  readonly limitedNavigation?: SidebarLimitedNavigation;
 }
 
 /** Widths (px). Compact + docked panel stays under the 400px budget. */
@@ -124,6 +137,11 @@ export const SIDEBAR_STORAGE_KEYS = {
 const HR = ['hr.view'] as const;
 
 export const SIDEBAR_CONFIG: SidebarConfig = {
+  // Staff without hr.view get a self-service sidebar only.
+  limitedNavigation: {
+    unlessGranted: 'hr.view',
+    entryIds: ['dashboard', 'new-request', 'approvals', 'my-profile'],
+  },
   primary: [
     {
       kind: 'link',
@@ -134,8 +152,22 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
       keywords: ['home', 'overview'],
     },
     {
+      // Direct link to the request picker. Its prefix also keeps New Request
+      // highlighted on every /approvals/new/* form.
+      kind: 'link',
+      id: 'new-request',
+      labelKey: 'nav.groups.newRequest',
+      shortLabelKey: 'nav.short.newRequest',
+      icon: 'new-request',
+      href: '/approvals/new',
+      keywords: ['apply', 'submit', 'form'],
+    },
+    {
       kind: 'folder',
       id: 'pm',
+      // Hidden for now. Remove this line to bring Project Management back
+      // (it also hosts the project workspace nav on /projects/:id pages).
+      hidden: true,
       labelKey: 'nav.groups.projectManagement',
       shortLabelKey: 'nav.short.projectManagement',
       icon: 'domain-projects',
@@ -274,6 +306,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
   ],
   utility: [
     { kind: 'link', id: 'approvals', labelKey: 'nav.approvals', icon: 'approvals', href: '/approvals', requires: ['approvals.view'], badge: 'pendingApprovals', keywords: ['inbox', 'pending'] },
+    // Every signed-in user can open their own profile — no permission.
+    { kind: 'link', id: 'my-profile', labelKey: 'nav.myProfile', icon: 'my-profile', href: '/profile', activePaths: ['/hr/leave-history/me', '/hr/overtime-history/me'], keywords: ['account', 'password', 'personal', 'me'] },
     { kind: 'link', id: 'audit-logs', labelKey: 'nav.auditLogs', shortLabelKey: 'nav.short.auditLogs', icon: 'audit-logs', href: '/audit-logs', requires: ['audit.view'], keywords: ['history'] },
     { kind: 'link', id: 'settings', labelKey: 'nav.settings', icon: 'settings', href: '/settings', requires: ['settings.manage'], keywords: ['roles', 'permissions'] },
   ],

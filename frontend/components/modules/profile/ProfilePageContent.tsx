@@ -1,25 +1,39 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Alert, Button, Form, Input, Select, Spin } from 'antd';
-import { CalendarOutlined, MailOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
+import {
+  CalendarOutlined,
+  ClockCircleOutlined,
+  FileProtectOutlined,
+  FolderOpenOutlined,
+  MailOutlined,
+  ScheduleOutlined,
+  UserOutlined,
+  WalletOutlined,
+} from '@ant-design/icons';
 import { User } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
+import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
+import ProfileAccountDetails, {
+  localizedName,
+} from '@/components/modules/profile/ProfileAccountDetails';
+import ProfileContractTab from '@/components/modules/profile/ProfileContractTab';
+import ProfileWorkScheduleTab from '@/components/modules/profile/ProfileWorkScheduleTab';
 import {
-  MetaItem,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+  ProfileSection,
+  displayText,
+} from '@/components/modules/profile/profile-display';
+import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import { useCanManageEmployeePerDiemRates } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useIsMdUp } from '@/hooks/useMediaQuery';
 import { ApiRequestError } from '@/lib/api/errors';
-import { tokens } from '@/lib/theme/tokens';
 import { useResendActivation } from '@/lib/query/auth';
 import {
   useChangeEmail,
@@ -28,12 +42,6 @@ import {
   useUpdateProfile,
 } from '@/lib/query/profile';
 import type { UserProfile } from '@/lib/api/types';
-
-interface AccountFormValues {
-  firstName: string;
-  lastName: string;
-  phone?: string;
-}
 
 interface PreferencesFormValues {
   preferredLanguage: string;
@@ -47,95 +55,43 @@ interface PasswordFormValues {
   confirmPassword: string;
 }
 
-function ProfileIdentityHero({
-  profile,
-}: {
-  profile: UserProfile;
-}): React.ReactNode {
-  const { t } = useEpcTranslation();
-  const isEmailVerified = Boolean(profile.emailVerifiedAt);
-  const roleNames = profile.roles.map((role) => role.name);
+const PROFILE_TABS = [
+  'account',
+  'leave',
+  'overtime',
+  'workSchedule',
+  'documents',
+  'contract',
+  'perDiem',
+] as const;
 
+type ProfileTab = (typeof PROFILE_TABS)[number];
+
+/** One cell of the employee meta bar under the hero. */
+function MetaStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): React.ReactNode {
   return (
-    <div
-      className="overflow-hidden rounded-lg"
-      style={{
-        background: tokens.colorCardBg,
-        border: `1px solid ${tokens.colorBorder}`,
-      }}
-    >
-      <div
-        className="h-1 w-full"
-        style={{ backgroundColor: tokens.colorPrimary }}
-      />
-      <div className="px-3 py-4 sm:px-5">
-        <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
-          <EmployeeProfilePhoto
-            source="self"
-            photoDocumentId={profile.photoDocumentId}
-            firstName={profile.firstName}
-            lastName={profile.lastName}
-            canEdit
-            size={104}
-            variant="hero"
-          />
-          <div className="min-w-0 flex-1 text-center sm:text-left">
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <StatusBadge
-                label={
-                  isEmailVerified
-                    ? t('profile.emailVerified')
-                    : t('profile.emailUnverified')
-                }
-                variant={isEmailVerified ? 'success' : 'warning'}
-              />
-              {roleNames.slice(0, 4).map((name) => (
-                <StatusBadge key={name} label={name} variant="default" />
-              ))}
-              {roleNames.length > 4 ? (
-                <StatusBadge
-                  label={`+${roleNames.length - 4}`}
-                  variant="default"
-                />
-              ) : null}
-            </div>
-            <h2
-              className="m-0 text-xl font-semibold leading-snug tracking-tight"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {profile.firstName} {profile.lastName}
-            </h2>
-            {profile.chineseName ? (
-              <p
-                className="m-0 mt-1 text-sm"
-                style={{ color: tokens.colorTextSecondary }}
-              >
-                {profile.chineseName}
-              </p>
-            ) : null}
-            <p
-              className="m-0 mt-2 text-sm"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {profile.email}
-            </p>
-            <p
-              className="m-0 mt-1 text-sm"
-              style={{ color: tokens.colorTextTertiary }}
-            >
-              {profile.companyName}
-            </p>
-          </div>
-        </div>
+    <div className="erp-users-stat">
+      <div className="min-w-0">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-employee-meta-value">{value}</p>
       </div>
     </div>
   );
 }
 
+/**
+ * My Profile — the signed-in employee's record, laid out like the HR employee
+ * detail page. Only regional preferences, email, and password are editable.
+ */
 export default function ProfilePageContent(): React.ReactNode {
-  const { t } = useEpcTranslation();
-  const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
-  const [accountForm] = Form.useForm<AccountFormValues>();
+  const { t, locale } = useEpcTranslation();
+  const isMdUp = useIsMdUp();
   const [prefsForm] = Form.useForm<PreferencesFormValues>();
   const [passwordForm] = Form.useForm<PasswordFormValues>();
   const [emailForm] = Form.useForm<{ newEmail: string }>();
@@ -149,10 +105,9 @@ export default function ProfilePageContent(): React.ReactNode {
 
   const profile = profileQuery.data;
 
-  const [activeTab, setActiveTab] = useState<'account' | 'leave' | 'perDiem'>('account');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('account');
+  const tabRefs = useRef<Partial<Record<ProfileTab, HTMLButtonElement | null>>>({});
   const [showChangeEmail, setShowChangeEmail] = useState(false);
-  const [accountError, setAccountError] = useState<string | null>(null);
-  const [accountSuccess, setAccountSuccess] = useState<string | null>(null);
   const [prefsError, setPrefsError] = useState<string | null>(null);
   const [prefsSuccess, setPrefsSuccess] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -192,10 +147,22 @@ export default function ProfilePageContent(): React.ReactNode {
     [t],
   );
 
+  const TAB_META: Record<ProfileTab, { label: string; icon: React.ReactNode }> = {
+    account: { label: t('profile.tabAccount'), icon: <UserOutlined /> },
+    leave: { label: t('profile.tabLeave'), icon: <CalendarOutlined /> },
+    overtime: { label: t('profile.tabOvertime'), icon: <ClockCircleOutlined /> },
+    workSchedule: { label: t('profile.tabWorkSchedule'), icon: <ScheduleOutlined /> },
+    documents: { label: t('profile.tabDocuments'), icon: <FolderOpenOutlined /> },
+    contract: { label: t('profile.tabContract'), icon: <FileProtectOutlined /> },
+    perDiem: { label: t('profile.tabPerDiem'), icon: <WalletOutlined /> },
+  };
+
   if (profileQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page flex justify-center p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page">
+        <div className="erp-pro-card flex justify-center p-12">
+          <Spin />
+        </div>
       </div>
     );
   }
@@ -211,25 +178,39 @@ export default function ProfilePageContent(): React.ReactNode {
   }
 
   const isEmailVerified = Boolean(profile.emailVerifiedAt);
+  const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+  const department = localizedName(
+    locale,
+    profile.departmentName,
+    profile.departmentNameZh,
+  );
+  const position = localizedName(
+    locale,
+    profile.positionTitle,
+    profile.positionTitleZh,
+  );
+  const primaryRole = profile.roles[0]?.name;
 
-  async function handleAccountSubmit(values: AccountFormValues): Promise<void> {
-    setAccountError(null);
-    setAccountSuccess(null);
-
-    try {
-      await updateProfile.mutateAsync({
-        firstName: values.firstName,
-        lastName: values.lastName,
-        phone: values.phone?.trim() || undefined,
-      });
-      setAccountSuccess(t('profile.accountSaved'));
-    } catch (error) {
-      setAccountError(
-        error instanceof ApiRequestError
-          ? error.message
-          : t('profile.accountSaveError'),
-      );
+  /** WAI-ARIA tabs: arrows / Home / End move focus and select. */
+  function handleTabKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
+    const index = PROFILE_TABS.indexOf(activeTab);
+    let next: number | null = null;
+    if (event.key === 'ArrowRight') {
+      next = (index + 1) % PROFILE_TABS.length;
+    } else if (event.key === 'ArrowLeft') {
+      next = (index - 1 + PROFILE_TABS.length) % PROFILE_TABS.length;
+    } else if (event.key === 'Home') {
+      next = 0;
+    } else if (event.key === 'End') {
+      next = PROFILE_TABS.length - 1;
     }
+    if (next === null) {
+      return;
+    }
+    event.preventDefault();
+    const tab = PROFILE_TABS[next];
+    setActiveTab(tab);
+    tabRefs.current[tab]?.focus();
   }
 
   async function handlePreferencesSubmit(
@@ -319,70 +300,14 @@ export default function ProfilePageContent(): React.ReactNode {
   }
 
   const accountTab = (
-    <div className="grid gap-3 lg:grid-cols-3">
-      <div className="flex flex-col gap-3 lg:col-span-2">
-        <FormLayout
-          variant="pro"
-          dense
-          title={t('profile.personalDetails')}
-          description={t('profile.personalDetailsDescription')}
-        >
-          <Form
-            form={accountForm}
-            key={`account-${profile.id}`}
-            layout="vertical"
-            requiredMark={false}
-            initialValues={{
-              firstName: profile.firstName,
-              lastName: profile.lastName,
-              phone: profile.phone ?? '',
-            }}
-            onFinish={(values: AccountFormValues) => void handleAccountSubmit(values)}
-          >
-            <div className="grid gap-x-3 md:grid-cols-2">
-              <Form.Item
-                label={t('common.firstName')}
-                name="firstName"
-                rules={[{ required: true, message: t('common.requiredFirstName') }]}
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item
-                label={t('common.lastName')}
-                name="lastName"
-                rules={[{ required: true, message: t('common.requiredLastName') }]}
-              >
-                <Input />
-              </Form.Item>
-              <Form.Item label={t('common.phone')} name="phone" className="md:col-span-2">
-                <Input type="tel" />
-              </Form.Item>
-            </div>
+    <div className="flex flex-col gap-4">
+      <ProfileAccountDetails profile={profile} />
 
-            {accountError && (
-              <Alert type="error" showIcon title={accountError} className="!mb-3" />
-            )}
-            {accountSuccess && (
-              <Alert type="success" showIcon title={accountSuccess} className="!mb-3" />
-            )}
-
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={updateProfile.isPending}
-              style={{ borderRadius: 2 }}
-            >
-              {t('profile.saveDetails')}
-            </Button>
-          </Form>
-        </FormLayout>
-
-        <FormLayout
-          variant="pro"
-          dense
-          title={t('profile.regionalPreferences')}
-          description={t('profile.regionalPreferencesDescription')}
-        >
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ProfileSection title={t('profile.regionalPreferences')}>
+          <p className="erp-users-cell-sub m-0 mb-3">
+            {t('profile.regionalPreferencesDescription')}
+          </p>
           <Form
             form={prefsForm}
             key={`prefs-${profile.id}`}
@@ -397,7 +322,7 @@ export default function ProfilePageContent(): React.ReactNode {
               void handlePreferencesSubmit(values)
             }
           >
-            <div className="grid gap-x-3 md:grid-cols-2">
+            <div className="grid gap-x-3 sm:grid-cols-2">
               <Form.Item label={t('common.language')} name="preferredLanguage">
                 <Select options={LANGUAGE_OPTIONS} />
               </Form.Item>
@@ -407,7 +332,7 @@ export default function ProfilePageContent(): React.ReactNode {
               <Form.Item
                 label={t('common.dateFormat')}
                 name="preferredDateFormat"
-                className="md:col-span-2"
+                className="sm:col-span-2"
               >
                 <Select options={DATE_FORMAT_OPTIONS} />
               </Form.Item>
@@ -420,40 +345,22 @@ export default function ProfilePageContent(): React.ReactNode {
               <Alert type="success" showIcon title={prefsSuccess} className="!mb-3" />
             )}
 
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={updateProfile.isPending}
-              style={{ borderRadius: 2 }}
-            >
+            <Button type="primary" htmlType="submit" loading={updateProfile.isPending}>
               {t('profile.savePreferences')}
             </Button>
           </Form>
-        </FormLayout>
-      </div>
+        </ProfileSection>
 
-      <div className="flex flex-col gap-3">
-        <FormLayout
-          variant="pro"
-          dense
-          title={t('profile.emailAddress')}
-          description={t('profile.emailAddressDescription')}
-        >
+        <ProfileSection title={t('profile.emailAddress')}>
           <div className="flex flex-col gap-3">
-            <div
-              className="rounded p-3"
-              style={{
-                border: `1px solid ${tokens.colorBorder}`,
-                background: tokens.colorPageBg,
-              }}
-            >
+            <div className="erp-employee-contact-card">
               <div className="flex items-start gap-3">
-                <span style={{ color: tokens.colorTextTertiary }}>
+                <span className="erp-users-cell-sub">
                   <MailOutlined aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">
                   <MetaItem label={t('common.email')}>
-                    <span className="break-all">{profile.email}</span>
+                    <span className="break-all">{displayText(profile.email)}</span>
                   </MetaItem>
                   <div className="mt-2">
                     <StatusBadge
@@ -466,10 +373,7 @@ export default function ProfilePageContent(): React.ReactNode {
                     />
                   </div>
                   {profile.pendingEmail && (
-                    <p
-                      className="mt-2 mb-0 text-xs"
-                      style={{ color: tokens.colorTextSecondary }}
-                    >
+                    <p className="erp-users-cell-sub mt-2 mb-0">
                       {t('common.pendingConfirmation', {
                         email: profile.pendingEmail,
                       })}
@@ -481,14 +385,12 @@ export default function ProfilePageContent(): React.ReactNode {
 
             {!showChangeEmail ? (
               <Button
-                type="default"
                 block
                 onClick={() => {
                   setShowChangeEmail(true);
                   setEmailError(null);
                   setEmailSuccess(null);
                 }}
-                style={{ borderRadius: 2 }}
               >
                 {t('common.changeEmail')}
               </Button>
@@ -497,11 +399,7 @@ export default function ProfilePageContent(): React.ReactNode {
                 form={emailForm}
                 layout="vertical"
                 requiredMark={false}
-                className="rounded p-3"
-                style={{
-                  border: `1px solid ${tokens.colorBorder}`,
-                  background: tokens.colorCardBg,
-                }}
+                className="erp-employee-contact-card"
                 onFinish={(values: { newEmail: string }) =>
                   void handleEmailChangeSubmit(values)
                 }
@@ -529,7 +427,6 @@ export default function ProfilePageContent(): React.ReactNode {
                     type="primary"
                     htmlType="submit"
                     loading={changeEmail.isPending}
-                    style={{ borderRadius: 2 }}
                   >
                     {t('common.sendConfirmation')}
                   </Button>
@@ -539,7 +436,6 @@ export default function ProfilePageContent(): React.ReactNode {
                       setEmailError(null);
                       emailForm.resetFields();
                     }}
-                    style={{ borderRadius: 2 }}
                   >
                     {t('common.cancel')}
                   </Button>
@@ -547,20 +443,18 @@ export default function ProfilePageContent(): React.ReactNode {
               </Form>
             )}
           </div>
-        </FormLayout>
+        </ProfileSection>
+      </div>
 
-        <FormLayout
-          variant="pro"
-          dense
-          title={t('profile.passwordSection')}
-          description={t('profile.passwordDescription')}
+      <ProfileSection title={t('profile.passwordSection')}>
+        <p className="erp-users-cell-sub m-0 mb-3">{t('profile.passwordDescription')}</p>
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          requiredMark={false}
+          onFinish={(values: PasswordFormValues) => void handlePasswordSubmit(values)}
         >
-          <Form
-            form={passwordForm}
-            layout="vertical"
-            requiredMark={false}
-            onFinish={(values: PasswordFormValues) => void handlePasswordSubmit(values)}
-          >
+          <div className="grid gap-x-3 md:grid-cols-3">
             <Form.Item
               label={t('common.currentPassword')}
               name="currentPassword"
@@ -585,30 +479,74 @@ export default function ProfilePageContent(): React.ReactNode {
             >
               <Input.Password autoComplete="new-password" />
             </Form.Item>
+          </div>
 
-            {passwordError && (
-              <Alert type="error" showIcon title={passwordError} className="!mb-3" />
-            )}
-            {passwordSuccess && (
-              <Alert type="success" showIcon title={passwordSuccess} className="!mb-3" />
-            )}
+          {passwordError && (
+            <Alert type="error" showIcon title={passwordError} className="!mb-3" />
+          )}
+          {passwordSuccess && (
+            <Alert type="success" showIcon title={passwordSuccess} className="!mb-3" />
+          )}
 
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={changePassword.isPending}
-              style={{ borderRadius: 2 }}
-            >
-              {t('profile.changePassword')}
-            </Button>
-          </Form>
-        </FormLayout>
-      </div>
+          <Button type="primary" htmlType="submit" loading={changePassword.isPending}>
+            {t('profile.changePassword')}
+          </Button>
+        </Form>
+      </ProfileSection>
     </div>
   );
 
+  function renderTab(tab: ProfileTab, currentProfile: UserProfile): React.ReactNode {
+    switch (tab) {
+      case 'leave':
+        return <EmployeeLeaveProfileSection mode="self" hideCreateAction />;
+      case 'overtime':
+        return (
+          <EmployeeOvertimeProfileSection
+            mode="self"
+            hideCreateAction
+            showCategoryColumns
+          />
+        );
+      case 'workSchedule':
+        return (
+          <ProfileWorkScheduleTab dateFormat={currentProfile.preferredDateFormat} />
+        );
+      case 'documents':
+        return (
+          <ProfileSection
+            title={t('profile.documentsTitle')}
+            className="erp-employee-section--docs"
+          >
+            <EmployeeProfileDocuments
+              userId={currentProfile.id}
+              source="self"
+              readOnly
+              embedded
+              emptyMessage={t('profile.noDocuments')}
+            />
+          </ProfileSection>
+        );
+      case 'contract':
+        return (
+          <ProfileContractTab dateFormat={currentProfile.preferredDateFormat} />
+        );
+      case 'perDiem':
+        return (
+          <EmployeePerDiemRatesSection
+            employeeId={currentProfile.id}
+            editable={false}
+            emptyMessage={t('profile.noPerDiemRates')}
+          />
+        );
+      case 'account':
+      default:
+        return accountTab;
+    }
+  }
+
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
       {!isEmailVerified && (
         <Alert
           type="warning"
@@ -624,7 +562,6 @@ export default function ProfilePageContent(): React.ReactNode {
                 className="!mt-3"
                 loading={resendActivation.isPending}
                 onClick={() => void handleResendActivation()}
-                style={{ borderRadius: 2 }}
               >
                 {t('profile.resendActivation')}
               </Button>
@@ -634,77 +571,106 @@ export default function ProfilePageContent(): React.ReactNode {
         />
       )}
 
-      <ProfileIdentityHero profile={profile} />
-
-      <SummaryStrip
-        items={[
-          {
-            label: t('profile.companyLabel'),
-            value: profile.companyName,
-          },
-          {
-            label: t('common.email'),
-            value: profile.email,
-          },
-          {
-            label: t('common.phone'),
-            value: profile.phone?.trim() || '—',
-          },
-          {
-            label: t('common.language'),
-            value: profile.preferredLanguage
-              ? profile.preferredLanguage === 'zh'
-                ? t('profile.languageZh')
-                : t('profile.languageEn')
-              : t('common.companyDefault'),
-          },
-        ]}
-      />
-
-      <div className="erp-profile-tabbar" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'account'}
-          onClick={() => setActiveTab('account')}
-        >
-          <UserOutlined />
-          {t('profile.tabAccount')}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'leave'}
-          onClick={() => setActiveTab('leave')}
-        >
-          <CalendarOutlined />
-          {t('profile.tabLeave')}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'perDiem'}
-          onClick={() => setActiveTab('perDiem')}
-        >
-          <WalletOutlined />
-          {t('profile.tabPerDiem')}
-        </button>
-      </div>
-      {activeTab === 'leave' ? (
-        <div className="flex flex-col gap-4">
-          <EmployeeLeaveProfileSection mode="self" />
-          <EmployeeOvertimeProfileSection mode="self" />
-        </div>
-      ) : activeTab === 'perDiem' ? (
-        profile ? (
-          <EmployeePerDiemRatesSection
-            employeeId={profile.id}
-            editable={canManagePerDiemRates}
+      <div className="erp-pro-card">
+        <div className="erp-employee-hero">
+          <EmployeeProfilePhoto
+            source="self"
+            photoDocumentId={profile.photoDocumentId}
+            firstName={profile.firstName}
+            lastName={profile.lastName}
+            canEdit={false}
+            size={isMdUp ? 88 : 72}
+            variant="hero"
           />
-        ) : null
-      ) : (
-        accountTab
-      )}
+          <div className="erp-employee-hero-copy min-w-0 flex-1">
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              {profile.employeeId ? (
+                <span className="erp-users-id-chip">{profile.employeeId}</span>
+              ) : null}
+              <StatusBadge
+                label={
+                  isEmailVerified
+                    ? t('profile.emailVerified')
+                    : t('profile.emailUnverified')
+                }
+                variant={isEmailVerified ? 'success' : 'warning'}
+              />
+              {primaryRole ? (
+                <span className="erp-users-role-tag">{primaryRole}</span>
+              ) : null}
+            </div>
+            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
+              <h2 className="erp-users-name erp-employee-hero-name m-0">{fullName}</h2>
+              {profile.chineseName ? (
+                <span className="erp-users-name-alt">{profile.chineseName}</span>
+              ) : null}
+            </div>
+            <p className="erp-users-email m-0 mt-1.5">{displayText(profile.email)}</p>
+            <p className="erp-users-cell-sub m-0 mt-1">
+              {[
+                profile.positionTitle ? position : null,
+                profile.departmentName ? department : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || profile.companyName}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="erp-users-stat-bar erp-employee-meta-bar">
+        <MetaStat label={t('common.department')} value={department} />
+        <MetaStat label={t('common.position')} value={position} />
+        <MetaStat
+          label={t('users.form.reportsTo')}
+          value={displayText(profile.reportsToName)}
+        />
+        <MetaStat label={t('profile.branch')} value={displayText(profile.branchName)} />
+        <MetaStat label={t('users.form.phone')} value={displayText(profile.phone)} />
+        <MetaStat
+          label={t('users.form.employeeType')}
+          value={
+            profile.employeeType ? t(`hr.employeeType.${profile.employeeType}`) : '—'
+          }
+        />
+      </div>
+
+      <div className="erp-pro-card">
+        <div
+          className="erp-profile-tabbar erp-employee-tabbar"
+          role="tablist"
+          aria-label={t('profile.title')}
+          onKeyDown={handleTabKeyDown}
+        >
+          {PROFILE_TABS.map((tab) => (
+            <button
+              key={tab}
+              ref={(element) => {
+                tabRefs.current[tab] = element;
+              }}
+              id={`profile-tab-${tab}`}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
+              aria-controls={`profile-panel-${tab}`}
+              tabIndex={activeTab === tab ? 0 : -1}
+              onClick={() => setActiveTab(tab)}
+            >
+              {TAB_META[tab].icon}
+              <span className="erp-employee-tab-label">{TAB_META[tab].label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div
+          id={`profile-panel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`profile-tab-${activeTab}`}
+          className="erp-employee-tab-panel"
+        >
+          {renderTab(activeTab, profile)}
+        </div>
+      </div>
     </div>
   );
 }
