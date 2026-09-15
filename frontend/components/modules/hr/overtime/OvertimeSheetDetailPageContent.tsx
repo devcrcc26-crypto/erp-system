@@ -9,6 +9,7 @@ import {
   Grid,
   Skeleton,
   Space,
+  Tooltip,
   Typography,
 } from 'antd';
 import type { MenuProps } from 'antd';
@@ -60,6 +61,7 @@ import {
   formatOvertimePeriod,
   formatOvertimeStatus,
   overtimeStatusVariant,
+  unregisteredHolidayDatesFromFormData,
 } from '@/lib/utils/overtime-display';
 import { exportOvertimeSheetEntriesExcel } from '@/lib/utils/overtime-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -374,9 +376,15 @@ export default function OvertimeSheetDetailPageContent({
         key: 'holidayHours',
         width: 100,
         align: 'right' as const,
-        render: (v: number) => (
-          <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
-        ),
+        render: (v: number, row: OvertimeEntry) => {
+          const hours = (
+            <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
+          );
+          if (!row.holidayName) {
+            return hours;
+          }
+          return <Tooltip title={row.holidayName}>{hours}</Tooltip>;
+        },
       },
       {
         title: t('hr.overtimeCategory.total'),
@@ -488,6 +496,9 @@ export default function OvertimeSheetDetailPageContent({
 
   const employeeName = formatOvertimeEmployeeName(sheet.employee);
   const periodLabel = formatOvertimePeriod(sheet.month, sheet.year, t);
+  const unregisteredHolidayDates = unregisteredHolidayDatesFromFormData(
+    sheet.approvalRequest?.formData,
+  );
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page">
@@ -626,6 +637,18 @@ export default function OvertimeSheetDetailPageContent({
         </div>
       </div>
 
+      {unregisteredHolidayDates.length > 0 ? (
+        <Alert
+          type="warning"
+          showIcon
+          className="mb-4"
+          title={t('hr.overtime.unregisteredHolidayBanner', {
+            count: unregisteredHolidayDates.length,
+            dates: unregisteredHolidayDates.join(', '),
+          })}
+        />
+      ) : null}
+
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]">
         <div className="erp-pro-card min-w-0">
           <div className="erp-employee-tab-panel erp-contract-detail-body">
@@ -758,6 +781,7 @@ export default function OvertimeSheetDetailPageContent({
         sheetId={sheetId}
         sheetMonth={sheet.month}
         sheetYear={sheet.year}
+        employeeId={sheet.employeeId}
         editingEntry={editingEntry}
         onClose={closeEntryDrawer}
       />

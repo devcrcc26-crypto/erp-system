@@ -1,9 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Nationality } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
+import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
+import { parseDateOnly } from '../../../work-schedule/application/services/work-schedule.dates';
 import { UpsertOvertimeEntryDto } from '../dtos/overtime.dtos';
 import {
   OvertimeImportPreviewResponseDto,
@@ -72,6 +75,7 @@ export class OvertimeImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly overtimeService: OvertimeService,
+    private readonly workScheduleService: WorkScheduleService,
   ) {}
 
   /**
@@ -256,7 +260,7 @@ export class OvertimeImportService {
     instructions.addRow([
       'isHoliday',
       'No',
-      'true/false, yes/no, 1/0 (default false)',
+      'Optional override. true/false, yes/no, 1/0. If omitted, public holidays are applied automatically. If true and the date is not a registered public holiday for the employee, the row is imported as holiday hours with a warning.',
     ]);
     instructions.addRow(['taskDescription', 'Yes', 'Work description']);
     instructions.addRow([]);
@@ -307,7 +311,7 @@ export class OvertimeImportService {
   ): Promise<ImportCommitResponseDto> {
     const validRows = preview.rows.filter(
       (row): row is OvertimeImportRowPreviewDto & {
-        status: 'ok';
+        status: 'ok' | 'warning';
         employeeId: string;
         year: number;
         month: number;
@@ -316,7 +320,7 @@ export class OvertimeImportService {
         endTime: string;
         taskDescription: string;
       } =>
-        row.status === 'ok' &&
+        (row.status === 'ok' || row.status === 'warning') &&
         Boolean(row.employeeId) &&
         row.year != null &&
         row.month != null &&
@@ -357,6 +361,7 @@ export class OvertimeImportService {
           dto,
           ctx.companyId,
           ctx.userId,
+          { allowHolidayOverride: Boolean(dto.isHoliday) },
         );
         created += 1;
       } catch (error) {
@@ -494,7 +499,7 @@ export class OvertimeImportService {
       const preview = await this.validateRow(ctx, row, keysInFile, options);
       previewRows.push(preview);
       if (
-        preview.status === 'ok' &&
+        (preview.status === 'ok' || preview.status === 'warning') &&
         preview.employeeId &&
         preview.date &&
         preview.startTime &&
@@ -513,13 +518,16 @@ export class OvertimeImportService {
       }
     }
 
-    const valid = previewRows.filter((r) => r.status === 'ok').length;
+    const valid = previewRows.filter(
+      (r) => r.status === 'ok' || r.status === 'warning',
+    ).length;
+    const warnings = previewRows.filter((r) => r.status === 'warning').length;
     const duplicate = previewRows.filter(
       (r) => r.status === 'duplicate' || r.status === 'duplicate_in_file',
     ).length;
     const invalid = previewRows.length - valid - duplicate;
 
-    return { valid, invalid, duplicate, rows: previewRows };
+    return { valid, invalid, duplicate, warnings, rows: previewRows };
   }
 
   private async validateRow(
@@ -679,9 +687,30 @@ export class OvertimeImportService {
       }
     }
 
+    const employeeMeta = await this.loadEmployeeMeta(ctx.companyId, employeeId);
+    let status: 'ok' | 'warning' = 'ok';
+    let message: string | undefined;
+    if (isHoliday) {
+      const calendar = await this.workScheduleService.isHolidayForEmployee(
+        ctx.companyId,
+        employeeMeta.nationality,
+        parseDateOnly(dateResult.value),
+      );
+      if (!calendar.isHoliday) {
+        status = 'warning';
+        message = this.unregisteredHolidayWarning(
+          row.line,
+          employeeMeta.name,
+          dateResult.value,
+          employeeMeta.nationality,
+        );
+      }
+    }
+
     return {
       ...base,
-      status: 'ok',
+      status,
+      message,
       date: dateResult.value,
       startTime: startTimeResult.value,
       endTime: endTimeResult.value,
@@ -731,6 +760,7 @@ export class OvertimeImportService {
           email: true,
           firstName: true,
           lastName: true,
+          nationality: true,
         },
       });
       if (!user) {
@@ -756,12 +786,44 @@ export class OvertimeImportService {
         email: true,
         firstName: true,
         lastName: true,
+        nationality: true,
       },
     });
     if (!user) {
       return { ok: false, message: `Employee not found for id: ${employeeId}` };
     }
     return { ok: true, ...user };
+  }
+
+  private async loadEmployeeMeta(
+    companyId: string,
+    employeeId: string,
+  ): Promise<{ name: string; nationality: Nationality | null }> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { firstName: true, lastName: true, nationality: true },
+    });
+    const name = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || employeeId;
+    return { name, nationality: user?.nationality ?? null };
+  }
+
+  private unregisteredHolidayWarning(
+    line: number,
+    employeeName: string,
+    date: string,
+    nationality: Nationality | null,
+  ): string {
+    const nationalityLabel =
+      nationality === Nationality.ETHIOPIAN
+        ? 'Ethiopian'
+        : nationality === Nationality.CHINESE
+          ? 'Chinese'
+          : 'all';
+    return (
+      `Row ${line} — ${employeeName}, ${date}: isHoliday is marked but ${date} is not a ` +
+      `registered public holiday for ${nationalityLabel} employees. Hours have been ` +
+      `classified as holiday. Please verify before submitting.`
+    );
   }
 
   private parseYear(

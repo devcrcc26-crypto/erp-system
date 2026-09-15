@@ -36,6 +36,8 @@ function statusLabel(status: ImportRowStatus, t: TranslateFn): string {
   switch (status) {
     case 'ok':
       return t('hr.import.ready');
+    case 'warning':
+      return t('hr.import.warning');
     case 'error':
       return t('hr.import.invalid');
     case 'duplicate':
@@ -51,6 +53,8 @@ function statusVariant(status: ImportRowStatus): StatusBadgeVariant {
   switch (status) {
     case 'ok':
       return 'success';
+    case 'warning':
+      return 'warning';
     case 'error':
       return 'error';
     case 'duplicate':
@@ -233,6 +237,10 @@ export default function HrImportModal({
   }
 
   const isBusy = previewMutation.isPending || commitMutation.isPending;
+  const warningCount =
+    preview?.warnings ??
+    preview?.rows.filter((row) => row.status === 'warning').length ??
+    0;
   const validCount = preview?.valid ?? 0;
 
   const footer =
@@ -395,6 +403,16 @@ export default function HrImportModal({
                     {t('hr.import.ready')}
                   </span>
                 </div>
+                {warningCount > 0 ? (
+                  <div className="erp-user-import-stat erp-user-import-stat--warning">
+                    <span className="erp-user-import-stat-value">
+                      {warningCount}
+                    </span>
+                    <span className="erp-user-import-stat-label">
+                      {t('hr.import.warning')}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="erp-user-import-stat erp-user-import-stat--invalid">
                   <span className="erp-user-import-stat-value">
                     {preview.invalid}
@@ -421,6 +439,9 @@ export default function HrImportModal({
                   dataSource={preview.rows}
                   scroll={{ x: true, y: 280 }}
                   pagination={false}
+                  rowClassName={(row) =>
+                    row.status === 'warning' ? 'erp-import-row--warning' : ''
+                  }
                   columns={[
                     {
                       title: t('hr.import.line'),

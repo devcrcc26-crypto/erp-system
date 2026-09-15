@@ -34,6 +34,7 @@ export interface OvertimeApprovalSummary {
   currentTier?: number;
   category?: { id: string; code: string; name: string; icon?: string | null };
   tiers?: OvertimeApprovalTier[];
+  formData?: Record<string, unknown> | null;
 }
 
 export interface OvertimeAttachmentDocument {
@@ -57,6 +58,7 @@ export interface OvertimeEntry {
   holidayHours: number;
   totalHours: number;
   taskDescription: string;
+  holidayName?: string | null;
   createdAt: string;
   updatedAt: string;
   documents?: OvertimeAttachmentDocument[];
@@ -107,6 +109,24 @@ export interface UpsertOvertimeEntryPayload {
   date: string;
   startTime: string;
   endTime: string;
-  isHoliday?: boolean;
   taskDescription: string;
+}
+
+export interface PreviewOvertimeEntryPayload {
+  employeeId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface PreviewOvertimeEntryResult {
+  regularHours: number;
+  nightHours: number;
+  weekendHours: number;
+  holidayHours: number;
+  totalHours: number;
+  holidayName: string | null;
+  isWeekend: boolean;
+  isHalfDay: boolean;
+  scheduleNote: string | null;
 }

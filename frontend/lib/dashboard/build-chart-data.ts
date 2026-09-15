@@ -36,6 +36,7 @@ function endOfDay(date: Date): Date {
 }
 
 function startOfWeek(date: Date): Date {
+  // TODO: not connected to HR work schedule (ISO week start only)
   const value = startOfDay(date);
   const day = value.getDay();
   const diff = day === 0 ? -6 : 1 - day;

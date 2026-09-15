@@ -430,12 +430,15 @@ async function seedOvertimeSheets(
     });
 
     const processedEntries = sheet.entries.map((entry) => {
-      const hours = calculateOvertimeHours(
-        new Date(entry.date),
-        entry.start,
-        entry.end,
-        entry.isHoliday,
-      );
+      const date = new Date(`${entry.date}T00:00:00.000Z`);
+      const dayOfWeek = date.getUTCDay();
+      const hours = calculateOvertimeHours(date, entry.start, entry.end, {
+        isHoliday: entry.isHoliday,
+        isWorkingDay: dayOfWeek !== 0,
+        isHalfDay: dayOfWeek === 6,
+        morningStart: dayOfWeek === 6 ? '08:30' : '08:30',
+        morningEnd: dayOfWeek === 6 ? '12:30' : '12:30',
+      });
       return { ...entry, ...hours };
     });
 

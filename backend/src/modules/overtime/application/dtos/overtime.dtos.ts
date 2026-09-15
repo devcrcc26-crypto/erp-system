@@ -80,7 +80,11 @@ export class UpsertOvertimeEntryDto {
   @Matches(/^\d{2}:\d{2}$/, { message: 'endTime must be HH:mm' })
   endTime!: string;
 
-  @ApiPropertyOptional({ default: false })
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'Import-only holiday override. Ignored on interactive save — PublicHoliday is the source of truth.',
+  })
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
@@ -91,4 +95,24 @@ export class UpsertOvertimeEntryDto {
   @MinLength(1)
   @MaxLength(4000)
   taskDescription!: string;
+}
+
+export class PreviewOvertimeEntryDto {
+  @ApiProperty({ description: 'Employee whose schedule to preview against' })
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({ example: '2026-09-14' })
+  @IsDateString()
+  date!: string;
+
+  @ApiProperty({ example: '18:00', description: 'HH:mm (24h)' })
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'startTime must be HH:mm' })
+  startTime!: string;
+
+  @ApiProperty({ example: '21:00', description: 'HH:mm (24h)' })
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'endTime must be HH:mm' })
+  endTime!: string;
 }

@@ -18,6 +18,8 @@ import type {
   ListOvertimeSheetsParams,
   OvertimeSheetDetail,
   OvertimeSheetListItem,
+  PreviewOvertimeEntryPayload,
+  PreviewOvertimeEntryResult,
   UpsertOvertimeEntryPayload,
 } from '@/lib/api/overtime.types';
 import type {
@@ -300,6 +302,19 @@ export async function fetchOvertimeSheetDetails(
     results.push(...pages);
   }
   return results;
+}
+
+/**
+ * Live overtime hour preview from the work-schedule engine.
+ */
+export function usePreviewOvertimeEntry() {
+  return useMutation({
+    mutationFn: (payload: PreviewOvertimeEntryPayload) =>
+      apiPost<PreviewOvertimeEntryResult>(
+        `${OVERTIME_PATH}/preview-entry`,
+        payload,
+      ),
+  });
 }
 
 /**

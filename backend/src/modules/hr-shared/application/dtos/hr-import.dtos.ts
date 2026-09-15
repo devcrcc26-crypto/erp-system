@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export type ImportRowStatus =
   | 'ok'
+  | 'warning'
   | 'error'
   | 'duplicate'
   | 'duplicate_in_file';
@@ -15,7 +16,9 @@ export class ImportRowPreviewDto {
   })
   label!: string;
 
-  @ApiProperty({ enum: ['ok', 'error', 'duplicate', 'duplicate_in_file'] })
+  @ApiProperty({
+    enum: ['ok', 'warning', 'error', 'duplicate', 'duplicate_in_file'],
+  })
   status!: ImportRowStatus;
 
   @ApiPropertyOptional()
@@ -31,6 +34,11 @@ export class ImportPreviewResponseDto {
 
   @ApiProperty()
   duplicate!: number;
+
+  @ApiPropertyOptional({
+    description: 'Accepted rows that still need review (e.g. holiday override)',
+  })
+  warnings?: number;
 
   @ApiProperty({ type: [ImportRowPreviewDto] })
   rows!: ImportRowPreviewDto[];

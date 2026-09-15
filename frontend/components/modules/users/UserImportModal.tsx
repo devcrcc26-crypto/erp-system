@@ -42,6 +42,8 @@ function statusLabel(status: ImportRowStatus, t: TranslateFn): string {
   switch (status) {
     case 'ok':
       return t('users.import.ready');
+    case 'warning':
+      return t('hr.import.warning');
     case 'error':
       return t('users.import.invalid');
     case 'duplicate':
@@ -57,6 +59,8 @@ function statusVariant(status: ImportRowStatus): StatusBadgeVariant {
   switch (status) {
     case 'ok':
       return 'success';
+    case 'warning':
+      return 'warning';
     case 'error':
       return 'error';
     case 'duplicate':

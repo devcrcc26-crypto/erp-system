@@ -37,11 +37,16 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
+import {
+  holidayFallsOnDate,
+  parseDateOnly,
+} from '../../../work-schedule/application/services/work-schedule.dates';
 import {
   ListOvertimeSheetsDto,
   UpsertOvertimeEntryDto,
 } from '../dtos/overtime.dtos';
-import { calculateOvertimeHours } from '../utils/overtime-hours.util';
+import { OvertimeEntryService } from './overtime-entry.service';
 
 type UploadedFile = {
   originalname: string;
@@ -111,6 +116,8 @@ export class OvertimeService
     private readonly hrApprovalChain: HrApprovalChainService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
+    private readonly overtimeEntryService: OvertimeEntryService,
+    private readonly workScheduleService: WorkScheduleService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -169,7 +176,7 @@ export class OvertimeService
         return this.getSheet(existing.id, companyId, userId);
       }
       await this.assertCanViewSheet(existing, companyId, userId);
-      return this.mapSheet(existing);
+      return this.mapSheetWithHolidayNames(existing, companyId);
     }
 
     const sheetId = randomUUID();
@@ -199,7 +206,7 @@ export class OvertimeService
           include: SHEET_DETAIL_INCLUDE,
         });
         if (raced) {
-          return this.mapSheet(raced);
+          return this.mapSheetWithHolidayNames(raced, companyId);
         }
       }
       throw error;
@@ -241,7 +248,7 @@ export class OvertimeService
       throw new NotFoundException('Overtime sheet not found');
     }
     await this.assertCanViewSheet(row, companyId, userId);
-    return this.mapSheet(row);
+    return this.mapSheetWithHolidayNames(row, companyId);
   }
 
   /**
@@ -314,18 +321,20 @@ export class OvertimeService
     dto: UpsertOvertimeEntryDto,
     companyId: string,
     userId: string,
+    options?: { allowHolidayOverride?: boolean },
   ): Promise<unknown> {
     const sheet = await this.requireEditableSheet(sheetId, companyId, userId);
     const date = this.parseDateOnly(dto.date);
     this.assertEntryInSheetMonth(date, sheet.month, sheet.year);
     const startTime = this.parseTimeOfDay(dto.startTime);
     const endTime = this.parseTimeOfDay(dto.endTime);
-    const isHoliday = dto.isHoliday ?? false;
-    const hours = calculateOvertimeHours(
+    const classified = await this.overtimeEntryService.classifyEntry(
+      sheet.employeeId,
+      companyId,
       date,
       dto.startTime,
       dto.endTime,
-      isHoliday,
+      { holidayOverride: Boolean(options?.allowHolidayOverride && dto.isHoliday) },
     );
 
     await this.assertNoOverlap(
@@ -345,11 +354,11 @@ export class OvertimeService
             date,
             startTime,
             endTime,
-            isHoliday,
-            regularHours: new Prisma.Decimal(hours.regularHours),
-            nightHours: new Prisma.Decimal(hours.nightHours),
-            weekendHours: new Prisma.Decimal(hours.weekendHours),
-            holidayHours: new Prisma.Decimal(hours.holidayHours),
+            isHoliday: classified.isHoliday,
+            regularHours: new Prisma.Decimal(classified.regularHours),
+            nightHours: new Prisma.Decimal(classified.nightHours),
+            weekendHours: new Prisma.Decimal(classified.weekendHours),
+            holidayHours: new Prisma.Decimal(classified.holidayHours),
             taskDescription: dto.taskDescription.trim(),
           },
         });
@@ -388,12 +397,12 @@ export class OvertimeService
     this.assertEntryInSheetMonth(date, sheet.month, sheet.year);
     const startTime = this.parseTimeOfDay(dto.startTime);
     const endTime = this.parseTimeOfDay(dto.endTime);
-    const isHoliday = dto.isHoliday ?? false;
-    const hours = calculateOvertimeHours(
+    const classified = await this.overtimeEntryService.classifyEntry(
+      sheet.employeeId,
+      companyId,
       date,
       dto.startTime,
       dto.endTime,
-      isHoliday,
     );
 
     await this.assertNoOverlap(sheetId, date, startTime, endTime, entryId);
@@ -406,11 +415,11 @@ export class OvertimeService
             date,
             startTime,
             endTime,
-            isHoliday,
-            regularHours: new Prisma.Decimal(hours.regularHours),
-            nightHours: new Prisma.Decimal(hours.nightHours),
-            weekendHours: new Prisma.Decimal(hours.weekendHours),
-            holidayHours: new Prisma.Decimal(hours.holidayHours),
+            isHoliday: classified.isHoliday,
+            regularHours: new Prisma.Decimal(classified.regularHours),
+            nightHours: new Prisma.Decimal(classified.nightHours),
+            weekendHours: new Prisma.Decimal(classified.weekendHours),
+            holidayHours: new Prisma.Decimal(classified.holidayHours),
             taskDescription: dto.taskDescription.trim(),
           },
         });
@@ -576,20 +585,12 @@ export class OvertimeService
       );
     }
 
-    // RETURNED sheets reopen the existing approval chain instead of creating a new one
-    if (
-      sheet.status === OvertimeSheetStatus.RETURNED &&
-      sheet.approvalRequestId
-    ) {
-      await this.approvalsService.resubmitRequest(
-        sheet.approvalRequestId,
+    const unregisteredHolidayDates =
+      await this.overtimeEntryService.collectUnregisteredHolidayDates(
+        sheet.employeeId,
         companyId,
-        userId,
-        undefined,
-        [],
+        sheet.entries,
       );
-      return this.getSheet(sheetId, companyId, userId);
-    }
 
     const totalHours = sheet.entries.reduce(
       (sum, e) =>
@@ -600,6 +601,37 @@ export class OvertimeService
         Number(e.holidayHours),
       0,
     );
+
+    const overtimeFormData = {
+      sheetId: sheet.id,
+      month: sheet.month,
+      year: sheet.year,
+      totalHours: Math.round(totalHours * 100) / 100,
+      totalRegularHours: Number(sheet.totalRegularHours),
+      totalNightHours: Number(sheet.totalNightHours),
+      totalWeekendHours: Number(sheet.totalWeekendHours),
+      totalHolidayHours: Number(sheet.totalHolidayHours),
+      unregisteredHolidayDates,
+    };
+
+    // RETURNED sheets reopen the existing approval chain instead of creating a new one
+    if (
+      sheet.status === OvertimeSheetStatus.RETURNED &&
+      sheet.approvalRequestId
+    ) {
+      await this.mergeApprovalFormData(
+        sheet.approvalRequestId,
+        overtimeFormData,
+      );
+      await this.approvalsService.resubmitRequest(
+        sheet.approvalRequestId,
+        companyId,
+        userId,
+        undefined,
+        [],
+      );
+      return this.getSheet(sheetId, companyId, userId);
+    }
 
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       userId,
@@ -631,16 +663,7 @@ export class OvertimeService
       {
         categoryCode: 'OVERTIME_APPLICATION',
         title,
-        formData: {
-          sheetId: sheet.id,
-          month: sheet.month,
-          year: sheet.year,
-          totalHours: Math.round(totalHours * 100) / 100,
-          totalRegularHours: Number(sheet.totalRegularHours),
-          totalNightHours: Number(sheet.totalNightHours),
-          totalWeekendHours: Number(sheet.totalWeekendHours),
-          totalHolidayHours: Number(sheet.totalHolidayHours),
-        },
+        formData: overtimeFormData,
       },
       companyId,
       userId,
@@ -1166,5 +1189,95 @@ export class OvertimeService
       totalHours: this.decimalToNumber(row.totalHours),
       ...(entries ? { entries } : {}),
     };
+  }
+
+  /**
+   * Maps a sheet and attaches PublicHoliday names onto holiday-hour entries.
+   */
+  private async mapSheetWithHolidayNames(
+    row: Record<string, unknown>,
+    companyId: string,
+  ): Promise<Record<string, unknown>> {
+    const mapped = this.mapSheet(row);
+    const entries = mapped.entries as
+      | Array<Record<string, unknown>>
+      | undefined;
+    if (!entries || entries.length === 0) {
+      return mapped;
+    }
+
+    const employeeId = String(mapped.employeeId ?? '');
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { nationality: true },
+    });
+
+    const dates = entries
+      .map((entry) =>
+        typeof entry.date === 'string' ? parseDateOnly(entry.date) : null,
+      )
+      .filter((value): value is Date => value instanceof Date);
+
+    if (dates.length === 0) {
+      return {
+        ...mapped,
+        entries: entries.map((entry) => ({ ...entry, holidayName: null })),
+      };
+    }
+
+    const start = dates.reduce(
+      (min, date) => (date.getTime() < min.getTime() ? date : min),
+      dates[0],
+    );
+    const end = dates.reduce(
+      (max, date) => (date.getTime() > max.getTime() ? date : max),
+      dates[0],
+    );
+    const holidays = await this.workScheduleService.getHolidaysInRange(
+      companyId,
+      employee?.nationality ?? null,
+      start,
+      end,
+    );
+
+    return {
+      ...mapped,
+      entries: entries.map((entry) => {
+        const holidayHours = Number(entry.holidayHours ?? 0);
+        if (holidayHours <= 0 || typeof entry.date !== 'string') {
+          return { ...entry, holidayName: null };
+        }
+        const onDate = parseDateOnly(entry.date);
+        const holiday = holidays.find((row) =>
+          holidayFallsOnDate(row.date, row.isRecurring, onDate),
+        );
+        return { ...entry, holidayName: holiday?.name ?? null };
+      }),
+    };
+  }
+
+  /**
+   * Merges overtime formData onto an existing approval request (resubmit path).
+   */
+  private async mergeApprovalFormData(
+    approvalRequestId: string,
+    patch: Record<string, unknown>,
+  ): Promise<void> {
+    const request = await this.prisma.approvalRequest.findFirst({
+      where: { id: approvalRequestId },
+      select: { formData: true },
+    });
+    const previous =
+      request?.formData &&
+      typeof request.formData === 'object' &&
+      !Array.isArray(request.formData)
+        ? (request.formData as Record<string, unknown>)
+        : {};
+    await this.prisma.approvalRequest.update({
+      where: { id: approvalRequestId },
+      data: {
+        formData: { ...previous, ...patch } as Prisma.InputJsonValue,
+      },
+    });
   }
 }

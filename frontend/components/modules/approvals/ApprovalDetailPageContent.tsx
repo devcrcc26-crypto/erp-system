@@ -92,6 +92,7 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
         <OvertimeRequestDetail
           approvalRequestId={request.id}
           sourceId={sourceId}
+          formData={request.formData}
         />
       );
     case 'FLIGHT_APPLICATION':

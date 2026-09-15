@@ -493,14 +493,12 @@ export default function AddEmployeeForm({
                     size={88}
                   />
                 </FormLayout>
-                <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
+                <FormLayout
+                  variant="pro"
+                  title={t('users.form.profileDocuments')}
+                  description={t('users.form.documentsHelp')}
+                >
                   <EmployeeProfileDocuments userId={userId} embedded />
-                  <div className="mt-4">
-                    <AddEmployeePendingDocuments
-                      value={pendingDocuments}
-                      onChange={setPendingDocuments}
-                    />
-                  </div>
                 </FormLayout>
               </>
             ) : (
@@ -511,7 +509,11 @@ export default function AddEmployeeForm({
                     onChange={setPendingPhoto}
                   />
                 </FormLayout>
-                <FormLayout variant="pro" title={t('users.form.profileDocuments')}>
+                <FormLayout
+                  variant="pro"
+                  title={t('users.form.profileDocuments')}
+                  description={t('users.form.documentsHelp')}
+                >
                   <AddEmployeePendingDocuments
                     value={pendingDocuments}
                     onChange={setPendingDocuments}

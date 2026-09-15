@@ -331,6 +331,7 @@ export interface AssignUserRoleRequest {
 
 export type ImportRowStatus =
   | 'ok'
+  | 'warning'
   | 'error'
   | 'duplicate'
   | 'duplicate_in_file';
@@ -381,6 +382,7 @@ export interface HrImportPreviewResult {
   valid: number;
   invalid: number;
   duplicate: number;
+  warnings?: number;
   rows: HrImportRowPreview[];
 }
 

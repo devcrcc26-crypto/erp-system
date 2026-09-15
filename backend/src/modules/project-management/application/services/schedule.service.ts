@@ -90,6 +90,10 @@ const MILESTONE_STATUS_TRANSITIONS: Record<
   MISSED: [MilestoneStatus.IN_PROGRESS],
 };
 
+/**
+ * Project programme / Gantt schedule.
+ * TODO: not connected to HR work schedule
+ */
 @Injectable()
 export class ScheduleService {
   constructor(

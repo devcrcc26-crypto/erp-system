@@ -47,9 +47,8 @@ export default function AddEmployeePendingDocuments({
 
   return (
     <div className="erp-profile-docs erp-profile-docs--embedded">
-      <p className="m-0 text-sm text-slate-500">{t('users.form.documentsHelp')}</p>
       <div className="erp-profile-docs-toolbar">
-        <Upload multiple beforeUpload={handleSelect} showUploadList={false}>
+        <Upload beforeUpload={handleSelect} showUploadList={false}>
           <Button icon={<PlusOutlined />}>{t('users.form.selectDocuments')}</Button>
         </Upload>
       </div>

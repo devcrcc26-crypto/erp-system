@@ -30,5 +30,6 @@ export class OvertimeImportPreviewResponseDto
   valid!: number;
   invalid!: number;
   duplicate!: number;
+  warnings?: number;
   rows!: OvertimeImportRowPreviewDto[];
 }

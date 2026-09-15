@@ -265,12 +265,15 @@ export default function EmployeeProfileDocuments({
     <div className={`erp-profile-docs ${embedded ? 'erp-profile-docs--embedded' : ''}`.trim()}>
       {!embedded ? (
         <div className="erp-profile-docs-header">
-          <h3 className="erp-profile-docs-title">{t('users.form.profileDocuments')}</h3>
+          <div>
+            <h3 className="erp-profile-docs-title">{t('users.form.profileDocuments')}</h3>
+            <p className="m-0 mt-1 text-xs text-slate-500">{t('users.form.documentsHelp')}</p>
+          </div>
         </div>
       ) : null}
 
       <div className="erp-profile-docs-toolbar">
-        <Upload multiple beforeUpload={handleSelectFiles} showUploadList={false}>
+        <Upload beforeUpload={handleSelectFiles} showUploadList={false}>
           <Button icon={<PlusOutlined />}>{t('users.form.selectDocuments')}</Button>
         </Upload>
         {hasPending ? (
@@ -343,11 +346,6 @@ export default function EmployeeProfileDocuments({
               <FilePlus2 size={22} strokeWidth={1.6} />
             </div>
             <p className="erp-profile-docs-empty-title">{t('users.noDocuments')}</p>
-            <Upload multiple beforeUpload={handleSelectFiles} showUploadList={false}>
-              <Button type="link" icon={<PlusOutlined />}>
-                {t('users.form.selectDocuments')}
-              </Button>
-            </Upload>
           </div>
         ) : null}
       </Spin>

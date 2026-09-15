@@ -31,9 +31,11 @@ import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-
 import { OvertimeImportPreviewResponseDto } from '../../application/dtos/overtime-import.dtos';
 import {
   ListOvertimeSheetsDto,
+  PreviewOvertimeEntryDto,
   UpsertOvertimeEntryDto,
 } from '../../application/dtos/overtime.dtos';
 import { OvertimeImportService } from '../../application/services/overtime-import.service';
+import { OvertimeEntryService } from '../../application/services/overtime-entry.service';
 import { OvertimeService } from '../../application/services/overtime.service';
 
 @ApiTags('HR Overtime')
@@ -49,6 +51,7 @@ export class OvertimeController {
   constructor(
     private readonly overtimeService: OvertimeService,
     private readonly overtimeImportService: OvertimeImportService,
+    private readonly overtimeEntryService: OvertimeEntryService,
   ) {}
 
   private importCtx(user: AuthenticatedUser): {
@@ -80,6 +83,23 @@ export class OvertimeController {
     @CurrentCompany() companyId: string,
   ): Promise<unknown> {
     return this.overtimeService.getCurrentSheet(companyId, user.userId);
+  }
+
+  @Post('preview-entry')
+  @ApiOperation({
+    summary:
+      'Preview overtime hour buckets for a date/time using the employee work schedule and public holidays',
+  })
+  previewEntry(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: PreviewOvertimeEntryDto,
+  ): Promise<unknown> {
+    return this.overtimeEntryService.previewEntry(
+      dto,
+      companyId,
+      user.userId,
+    );
   }
 
   @Get(':id/entries/import/template')

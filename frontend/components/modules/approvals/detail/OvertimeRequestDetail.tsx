@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Skeleton } from 'antd';
+import { Alert, Button, Skeleton, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
 import {
@@ -21,6 +21,7 @@ import {
   formatOvertimePeriod,
   formatOvertimeStatus,
   overtimeStatusVariant,
+  unregisteredHolidayDatesFromFormData,
 } from '@/lib/utils/overtime-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -31,14 +32,19 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
  */
 export default function OvertimeRequestDetail({
   sourceId,
+  formData,
 }: {
   approvalRequestId: string;
   sourceId: string;
+  formData?: Record<string, unknown> | null;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const currentUser = useCurrentUser();
   const detailQuery = useOvertimeSheet(sourceId);
   const sheet = detailQuery.data;
+  const unregisteredHolidayDates = unregisteredHolidayDatesFromFormData(
+    formData ?? sheet?.approvalRequest?.formData,
+  );
 
   if (detailQuery.isLoading && !sheet) {
     return (
@@ -77,6 +83,19 @@ export default function OvertimeRequestDetail({
     { title: 'Start', dataIndex: 'startTime', key: 'startTime', width: 70 },
     { title: 'End', dataIndex: 'endTime', key: 'endTime', width: 70 },
     {
+      title: 'Holiday',
+      dataIndex: 'holidayHours',
+      key: 'holidayHours',
+      width: 80,
+      render: (v: number, row: OvertimeEntry) => {
+        const hours = formatOvertimeHours(v);
+        if (!row.holidayName) {
+          return hours;
+        }
+        return <Tooltip title={row.holidayName}>{hours}</Tooltip>;
+      },
+    },
+    {
       title: 'Total',
       dataIndex: 'totalHours',
       key: 'totalHours',
@@ -109,6 +128,17 @@ export default function OvertimeRequestDetail({
           type="info"
           showIcon
           title="This sheet was returned. Edit entries on the overtime sheet, then resubmit from this page."
+        />
+      ) : null}
+
+      {unregisteredHolidayDates.length > 0 ? (
+        <Alert
+          type="warning"
+          showIcon
+          title={t('hr.overtime.unregisteredHolidayBanner', {
+            count: unregisteredHolidayDates.length,
+            dates: unregisteredHolidayDates.join(', '),
+          })}
         />
       ) : null}
 

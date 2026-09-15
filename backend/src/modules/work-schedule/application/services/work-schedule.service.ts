@@ -223,6 +223,30 @@ export class WorkScheduleService {
   }
 
   /**
+   * Whether `date` is an active public holiday for this nationality.
+   * Null nationality only matches holidays with appliesToNationality = ALL.
+   */
+  async isHolidayForEmployee(
+    companyId: string,
+    nationality: Nationality | null,
+    date: Date,
+  ): Promise<{ isHoliday: boolean; holidayName: string | null }> {
+    const onDate = toUtcDateOnly(date);
+    const holidays = await this.loadActiveHolidays(companyId);
+    const match = holidays.find(
+      (holiday) =>
+        holidayAppliesToNationality(
+          holiday.appliesToNationality,
+          nationality,
+        ) && holidayFallsOnDate(holiday.date, holiday.isRecurring, onDate),
+    );
+    if (!match) {
+      return { isHoliday: false, holidayName: null };
+    }
+    return { isHoliday: true, holidayName: match.name };
+  }
+
+  /**
    * Active public holidays in range that apply to a nationality.
    * Recurring holidays match month and day across any year.
    */

@@ -3108,6 +3108,11 @@ main::-webkit-scrollbar,
   background: #fffbeb;
 }
 
+.erp-user-import-stat--warning {
+  border-color: #f3d9a8;
+  background: #fffbeb;
+}
+
 .erp-user-import-stat-value {
   font-size: calc(22px * var(--erp-font-scale));
   font-weight: 700;
@@ -3129,6 +3134,10 @@ main::-webkit-scrollbar,
   border: 1px solid #e8ebef;
   border-radius: 12px;
   background: #fff;
+}
+
+.erp-import-row--warning td {
+  background: #fffbeb !important;
 }
 
 .erp-user-import-invite {

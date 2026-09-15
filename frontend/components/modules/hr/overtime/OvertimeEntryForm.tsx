@@ -1,19 +1,16 @@
 'use client';
 
-import { Checkbox, DatePicker, Form, Input, TimePicker } from 'antd';
+import { DatePicker, Form, Input, Spin, TimePicker } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import type { PreviewOvertimeEntryResult } from '@/lib/api/overtime.types';
 import { formatOvertimeHours } from '@/lib/utils/overtime-display';
-import { calculateOvertimeHours } from '@/lib/utils/overtime-hours.util';
-
-type LiveHours = ReturnType<typeof calculateOvertimeHours>;
 
 export interface OvertimeEntryFormValues {
   date: Dayjs;
   startTime: Dayjs;
   endTime: Dayjs;
-  isHoliday: boolean;
   taskDescription: string;
 }
 
@@ -21,7 +18,8 @@ interface OvertimeEntryFormProps {
   form: FormInstance<OvertimeEntryFormValues>;
   formId?: string;
   disabledDate: (current: Dayjs | null) => boolean;
-  liveHours: LiveHours | null;
+  preview: PreviewOvertimeEntryResult | null;
+  previewLoading: boolean;
   periodLabel: string;
   onFinish?: (values: OvertimeEntryFormValues) => void | Promise<void>;
 }
@@ -49,10 +47,12 @@ function HoursPreviewChip({
   label,
   value,
   emphasize,
+  hint,
 }: {
   label: string;
   value: string;
   emphasize?: boolean;
+  hint?: string | null;
 }): React.ReactNode {
   return (
     <div
@@ -72,18 +72,24 @@ function HoursPreviewChip({
       >
         {value}
       </p>
+      {hint ? (
+        <p className="m-0 mt-0.5 text-[11px] text-[var(--color-text-secondary)]">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 /**
- * Overtime sheet entry fields with live hours preview.
+ * Overtime sheet entry fields with live hours preview from the schedule engine.
  */
 export default function OvertimeEntryForm({
   form,
   formId = 'overtime-entry-form',
   disabledDate,
-  liveHours,
+  preview,
+  previewLoading,
   periodLabel,
   onFinish,
 }: OvertimeEntryFormProps): React.ReactNode {
@@ -144,54 +150,53 @@ export default function OvertimeEntryForm({
             >
               <TimePicker className="w-full" format="HH:mm" minuteStep={15} />
             </Form.Item>
-
-            <Form.Item name="isHoliday" valuePropName="checked" className="md:col-span-2 !mb-0">
-              <Checkbox className="erp-overtime-holiday-check w-full rounded-lg border border-[#e8ebef] bg-[#fafbfc] px-3 py-3">
-                <span className="inline-flex flex-col gap-0.5 pl-1">
-                  <span className="text-[13px] font-medium text-[var(--color-text-primary)]">
-                    {t('hr.overtimeCategory.holiday')}
-                  </span>
-                  <span className="text-[12px] font-normal text-[var(--color-text-secondary)]">
-                    {t('hr.labels.overtimeHolidayHint')}
-                  </span>
-                </span>
-              </Checkbox>
-            </Form.Item>
           </div>
         </DrawerSection>
 
         <DrawerSection title={t('hr.section.hoursPreview')}>
-          {liveHours ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <HoursPreviewChip
-                label={t('hr.overtimeCategory.regular')}
-                value={formatOvertimeHours(liveHours.regularHours)}
-              />
-              <HoursPreviewChip
-                label={t('hr.overtimeCategory.night')}
-                value={formatOvertimeHours(liveHours.nightHours)}
-              />
-              <HoursPreviewChip
-                label={t('hr.overtimeCategory.weekend')}
-                value={formatOvertimeHours(liveHours.weekendHours)}
-              />
-              <HoursPreviewChip
-                label={t('hr.overtimeCategory.holiday')}
-                value={formatOvertimeHours(liveHours.holidayHours)}
-              />
-              <HoursPreviewChip
-                label={t('hr.overtimeCategory.total')}
-                value={formatOvertimeHours(
-                  Math.round(
-                    (liveHours.regularHours +
-                      liveHours.nightHours +
-                      liveHours.weekendHours +
-                      liveHours.holidayHours) *
-                      100,
-                  ) / 100,
-                )}
-                emphasize
-              />
+          {previewLoading && !preview ? (
+            <div className="flex items-center gap-2 py-2">
+              <Spin size="small" />
+              <span className="text-[13px] text-[var(--color-text-secondary)]">
+                {t('hr.labels.hoursPreviewLoading')}
+              </span>
+            </div>
+          ) : preview ? (
+            <div className="relative">
+              {previewLoading ? (
+                <div className="absolute inset-0 z-[1] flex items-center justify-center rounded-lg bg-white/60">
+                  <Spin size="small" />
+                </div>
+              ) : null}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <HoursPreviewChip
+                  label={t('hr.overtimeCategory.regular')}
+                  value={formatOvertimeHours(preview.regularHours)}
+                />
+                <HoursPreviewChip
+                  label={t('hr.overtimeCategory.night')}
+                  value={formatOvertimeHours(preview.nightHours)}
+                />
+                <HoursPreviewChip
+                  label={t('hr.overtimeCategory.weekend')}
+                  value={formatOvertimeHours(preview.weekendHours)}
+                />
+                <HoursPreviewChip
+                  label={t('hr.overtimeCategory.holiday')}
+                  value={formatOvertimeHours(preview.holidayHours)}
+                  hint={preview.holidayName}
+                />
+                <HoursPreviewChip
+                  label={t('hr.overtimeCategory.total')}
+                  value={formatOvertimeHours(preview.totalHours)}
+                  emphasize
+                />
+              </div>
+              {preview.scheduleNote ? (
+                <p className="m-0 mt-3 text-[12px] text-[var(--color-text-secondary)]">
+                  {preview.scheduleNote}
+                </p>
+              ) : null}
             </div>
           ) : (
             <p className="m-0 text-[13px] text-[var(--color-text-secondary)]">

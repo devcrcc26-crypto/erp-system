@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Drawer, Form, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import OvertimeEntryForm, {
@@ -8,17 +8,20 @@ import OvertimeEntryForm, {
 } from '@/components/modules/hr/overtime/OvertimeEntryForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import type { OvertimeEntry, UpsertOvertimeEntryPayload } from '@/lib/api/overtime.types';
+import type {
+  OvertimeEntry,
+  PreviewOvertimeEntryResult,
+  UpsertOvertimeEntryPayload,
+} from '@/lib/api/overtime.types';
 import {
   useAddOvertimeEntry,
+  usePreviewOvertimeEntry,
   useUpdateOvertimeEntry,
 } from '@/lib/query/overtime';
 import { detailDrawerStyles } from '@/lib/theme/layout';
-import {
-  calculateOvertimeHours,
-  parseOvertimeDateOnly,
-} from '@/lib/utils/overtime-hours.util';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+
+const PREVIEW_DEBOUNCE_MS = 300;
 
 /**
  * Drawer to add or edit an overtime sheet entry without shifting page layout.
@@ -28,6 +31,7 @@ export default function OvertimeEntryFormDrawer({
   sheetId,
   sheetMonth,
   sheetYear,
+  employeeId,
   editingEntry,
   onClose,
 }: {
@@ -35,6 +39,7 @@ export default function OvertimeEntryFormDrawer({
   sheetId: string;
   sheetMonth: number;
   sheetYear: number;
+  employeeId: string;
   editingEntry: OvertimeEntry | null;
   onClose: () => void;
 }): React.ReactNode {
@@ -43,7 +48,11 @@ export default function OvertimeEntryFormDrawer({
   const [form] = Form.useForm<OvertimeEntryFormValues>();
   const addMutation = useAddOvertimeEntry(sheetId);
   const updateMutation = useUpdateOvertimeEntry(sheetId);
+  const previewMutation = usePreviewOvertimeEntry();
   const saving = addMutation.isPending || updateMutation.isPending;
+  const [preview, setPreview] = useState<PreviewOvertimeEntryResult | null>(
+    null,
+  );
 
   const periodLabel = useMemo(() => {
     const monthName = t(`hr.months.${sheetMonth}`);
@@ -63,23 +72,6 @@ export default function OvertimeEntryFormDrawer({
   const watchedDate = Form.useWatch('date', form);
   const watchedStart = Form.useWatch('startTime', form);
   const watchedEnd = Form.useWatch('endTime', form);
-  const watchedHoliday = Form.useWatch('isHoliday', form);
-
-  const liveHours = useMemo(() => {
-    if (!watchedDate || !watchedStart || !watchedEnd) {
-      return null;
-    }
-    const date = parseOvertimeDateOnly(watchedDate.format('YYYY-MM-DD'));
-    if (!date) {
-      return null;
-    }
-    return calculateOvertimeHours(
-      date,
-      watchedStart.format('HH:mm'),
-      watchedEnd.format('HH:mm'),
-      Boolean(watchedHoliday),
-    );
-  }, [watchedDate, watchedStart, watchedEnd, watchedHoliday]);
 
   useEffect(() => {
     if (!open) {
@@ -90,26 +82,52 @@ export default function OvertimeEntryFormDrawer({
         date: dayjs(editingEntry.date),
         startTime: dayjs(editingEntry.startTime, 'HH:mm'),
         endTime: dayjs(editingEntry.endTime, 'HH:mm'),
-        isHoliday: editingEntry.isHoliday,
         taskDescription: editingEntry.taskDescription,
       });
     } else {
       form.resetFields();
       form.setFieldsValue({
-        isHoliday: false,
         date: dayjs(
           `${sheetYear}-${String(sheetMonth).padStart(2, '0')}-01`,
         ),
       });
+      setPreview(null);
     }
   }, [open, editingEntry, form, sheetMonth, sheetYear]);
+
+  useEffect(() => {
+    if (!open || !employeeId || !watchedDate || !watchedStart || !watchedEnd) {
+      return;
+    }
+
+    const handle = window.setTimeout(() => {
+      void previewMutation
+        .mutateAsync({
+          employeeId,
+          date: watchedDate.format('YYYY-MM-DD'),
+          startTime: watchedStart.format('HH:mm'),
+          endTime: watchedEnd.format('HH:mm'),
+        })
+        .then((result) => {
+          setPreview(result);
+        })
+        .catch(() => {
+          setPreview(null);
+        });
+    }, PREVIEW_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(handle);
+    };
+    // previewMutation identity is unstable; depend on the watched fields only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, employeeId, watchedDate, watchedStart, watchedEnd]);
 
   async function handleSubmit(values: OvertimeEntryFormValues): Promise<void> {
     const payload: UpsertOvertimeEntryPayload = {
       date: values.date.format('YYYY-MM-DD'),
       startTime: values.startTime.format('HH:mm'),
       endTime: values.endTime.format('HH:mm'),
-      isHoliday: Boolean(values.isHoliday),
       taskDescription: values.taskDescription.trim(),
     };
 
@@ -177,7 +195,8 @@ export default function OvertimeEntryFormDrawer({
       <OvertimeEntryForm
         form={form}
         disabledDate={disabledDate}
-        liveHours={liveHours}
+        preview={preview}
+        previewLoading={previewMutation.isPending}
         periodLabel={periodLabel}
         onFinish={handleSubmit}
       />

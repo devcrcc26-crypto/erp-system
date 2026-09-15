@@ -87,3 +87,16 @@ export function formatOvertimeHours(value: number | null | undefined): string {
   }
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
+
+/**
+ * Unregistered holiday dates stored on overtime approval formData.
+ */
+export function unregisteredHolidayDatesFromFormData(
+  formData: Record<string, unknown> | null | undefined,
+): string[] {
+  const raw = formData?.unregisteredHolidayDates;
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.filter((value): value is string => typeof value === 'string');
+}

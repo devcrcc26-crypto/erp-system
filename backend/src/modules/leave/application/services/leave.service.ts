@@ -96,6 +96,9 @@ const LEAVE_DETAIL_INCLUDE = {
 
 /**
  * Leave request lifecycle — owns leave data; delegates tier workflow to ApprovalsService.
+ * Leave day counts come from WorkScheduleService — the canonical source of
+ * working days, half days, weekends, and public holidays. Do not hardcode
+ * those rules in this service.
  */
 @Injectable()
 export class LeaveService
