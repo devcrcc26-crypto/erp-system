@@ -60,8 +60,10 @@ export function resolveSidebarPermissions(
   grant('hr.view', hr);
   grant('leave.access', hr || caps.canViewLeave || caps.canCreateLeave);
   grant('overtime.access', hr || caps.canViewOvertime || caps.canCreateOvertime);
-  grant('flight.access', flight);
-  grant('businessTrip.access', businessTrip);
+  // The /hr flight and business-trip LISTS are HR-only — app/(dashboard)/hr/layout.tsx
+  // redirects everyone else. Employees submit these via the /approvals/new forms.
+  grant('flight.access', hr);
+  grant('businessTrip.access', hr);
   // Expense claims are self-service (see app/(dashboard)/hr/layout.tsx);
   // shown to anyone who travels on company business.
   grant('expenseClaims.access', hr || flight || businessTrip);

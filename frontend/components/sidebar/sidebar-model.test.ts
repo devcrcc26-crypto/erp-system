@@ -68,15 +68,13 @@ describe('sidebar permissions and filtering', () => {
     expect(folder(model, 'pm')).toBeUndefined();
   });
 
-  it('adds Travel & Expenses when the engineer can apply for flights', () => {
+  it('gives a travelling engineer expense claims but not the HR-only flight list', () => {
     const model = modelFor({ canCreateLeave: true, canCreateFlight: true });
     const travel = folder(model, 'hr')?.groups.find(
       (group) => group.id === 'hr-travel-expenses',
     );
-    expect(travel?.items.map((item) => item.id)).toEqual([
-      'expense-claims',
-      'flight-applications',
-    ]);
+    // /hr/flight-applications redirects non-HR users (hr/layout.tsx).
+    expect(travel?.items.map((item) => item.id)).toEqual(['expense-claims']);
   });
 
   it('removes a folder when none of its links are visible', () => {
