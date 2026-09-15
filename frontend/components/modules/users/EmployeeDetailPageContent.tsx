@@ -584,6 +584,13 @@ export default function EmployeeDetailPageContent({
                     <MetaItem label={t('users.form.leavePolicy')}>
                       {displayValue(user.leavePolicy?.name)}
                     </MetaItem>
+                    <MetaItem label={t('users.form.workSchedule')}>
+                      {user.workSchedule
+                        ? user.workSchedule.isDefault
+                          ? `${user.workSchedule.name} (${t('hr.workSchedule.defaultBadge')})`
+                          : user.workSchedule.name
+                        : t('hr.workSchedule.noSchedule')}
+                    </MetaItem>
                   </div>
                 </DetailSection>
 

@@ -47,3 +47,5 @@ backend/src/generated/
 backend/.env.test
 backend/.env.example
 backend/src/modules/hr-shared/application/import-export/IMPORT_EXPORT.md
+
+/.WORK_SCHEDULE.md

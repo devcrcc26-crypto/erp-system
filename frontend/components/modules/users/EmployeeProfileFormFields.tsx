@@ -9,6 +9,7 @@ import EmergencyContactsField, {
 } from '@/components/modules/users/EmergencyContactsField';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useLeavePolicies } from '@/lib/query/leave-policy';
+import { useWorkScheduleList } from '@/lib/query/work-schedule';
 import type {
   CreateUserRequest,
   EducationLevel,
@@ -38,6 +39,7 @@ export interface EmployeeProfileFormValues {
   experienceStartDate?: Dayjs;
   emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
+  workScheduleId?: string;
 }
 
 export const GENDER_OPTIONS: Gender[] = ['MALE', 'FEMALE'];
@@ -104,7 +106,9 @@ export function EmployeeProfileFormFields({
 }: EmployeeProfileFormFieldsProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const leavePoliciesQuery = useLeavePolicies();
+  const workSchedulesQuery = useWorkScheduleList();
   const experienceStartDate = Form.useWatch('experienceStartDate') as Dayjs | undefined;
+  const selectedWorkScheduleId = Form.useWatch('workScheduleId') as string | undefined;
 
   const leavePolicyOptions = useMemo(
     () =>
@@ -113,6 +117,21 @@ export function EmployeeProfileFormFields({
         label: policy.name,
       })),
     [leavePoliciesQuery.data],
+  );
+
+  const workScheduleOptions = useMemo(
+    () =>
+      (workSchedulesQuery.data ?? [])
+        .filter(
+          (schedule) => schedule.isActive || schedule.id === selectedWorkScheduleId,
+        )
+        .map((schedule) => ({
+          value: schedule.id,
+          label: schedule.isDefault
+            ? `${schedule.name} (${t('hr.workSchedule.defaultBadge')})`
+            : schedule.name,
+        })),
+    [workSchedulesQuery.data, selectedWorkScheduleId, t],
   );
 
   const yearsOfExperience =
@@ -294,6 +313,24 @@ export function EmployeeProfileFormFields({
                 optionFilterProp="label"
               />
             </Form.Item>
+            <Form.Item
+              label={t('users.form.workSchedule')}
+              name="workScheduleId"
+              extra={t('users.form.workScheduleHint')}
+            >
+              <Select
+                allowClear={mode === 'create'}
+                showSearch
+                loading={workSchedulesQuery.isLoading}
+                placeholder={
+                  workScheduleOptions.length === 0
+                    ? t('users.form.noWorkSchedulesHint')
+                    : t('hr.workSchedule.selectSchedule')
+                }
+                options={workScheduleOptions}
+                optionFilterProp="label"
+              />
+            </Form.Item>
           </div>
         </SectionShell>
       ) : null}
@@ -348,6 +385,7 @@ export function buildEmployeeProfilePayload(
   | 'experienceStartDate'
   | 'emergencyContacts'
   | 'leavePolicyId'
+  | 'workScheduleId'
 > {
   return {
     employeeId: values.employeeId?.trim() || undefined,
@@ -368,6 +406,7 @@ export function buildEmployeeProfilePayload(
     experienceStartDate: formatFormDate(values.experienceStartDate),
     emergencyContacts: normalizeEmergencyContacts(values.emergencyContacts),
     leavePolicyId: values.leavePolicyId,
+    workScheduleId: values.workScheduleId,
   };
 }
 
@@ -410,6 +449,7 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
       : undefined,
     emergencyContacts: parseEmergencyContacts(user.emergencyContacts),
     leavePolicyId: user.leavePolicyId ?? undefined,
+    workScheduleId: user.workScheduleId ?? undefined,
   };
 }
 

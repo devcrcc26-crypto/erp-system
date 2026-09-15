@@ -9,6 +9,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useUser } from '@/lib/query/users';
 import { useLeavePolicies } from '@/lib/query/leave-policy';
+import { useWorkScheduleList } from '@/lib/query/work-schedule';
 import {
   useDepartments,
   useEngineeringDisciplineOptions,
@@ -117,6 +118,7 @@ export default function AddEmployeeReviewStep({
     true,
   );
   const leavePoliciesQuery = useLeavePolicies();
+  const workSchedulesQuery = useWorkScheduleList();
 
   const departmentName =
     (departmentsQuery.data?.data ?? []).find(
@@ -131,6 +133,14 @@ export default function AddEmployeeReviewStep({
   const leavePolicyName =
     (leavePoliciesQuery.data ?? []).find((p) => p.id === values.leavePolicyId)
       ?.name ?? '-';
+  const selectedWorkSchedule = (workSchedulesQuery.data ?? []).find(
+    (schedule) => schedule.id === values.workScheduleId,
+  );
+  const workScheduleName = selectedWorkSchedule
+    ? selectedWorkSchedule.isDefault
+      ? `${selectedWorkSchedule.name} (${t('hr.workSchedule.defaultBadge')})`
+      : selectedWorkSchedule.name
+    : t('hr.workSchedule.noSchedule');
 
   const fullName = [values.firstName, values.middleName, values.lastName]
     .filter(Boolean)
@@ -436,6 +446,10 @@ export default function AddEmployeeReviewStep({
             <ReviewField
               label={t('users.form.leavePolicy')}
               value={leavePolicyName}
+            />
+            <ReviewField
+              label={t('users.form.workSchedule')}
+              value={workScheduleName}
             />
           </div>
         </ReviewSection>

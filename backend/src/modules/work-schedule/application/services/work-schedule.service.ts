@@ -656,6 +656,72 @@ export class WorkScheduleService {
   }
 
   /**
+   * Applies a work schedule from the employee add/edit form.
+   * Same-day corrections update the open assignment in place.
+   */
+  async syncEmployeeSchedule(
+    employeeId: string,
+    scheduleId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const schedule = await this.findScheduleOrThrow(scheduleId, companyId);
+    if (!schedule.isActive) {
+      throw new BadRequestException('Cannot assign an inactive work schedule');
+    }
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true, workScheduleId: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const today = todayUtc();
+    const current = await this.prisma.employeeScheduleAssignment.findFirst({
+      where: {
+        companyId,
+        employeeId,
+        OR: [{ effectiveTo: null }, { effectiveTo: { gte: today } }],
+      },
+      orderBy: { effectiveFrom: 'desc' },
+    });
+
+    if (
+      current?.scheduleId === scheduleId &&
+      employee.workScheduleId === scheduleId
+    ) {
+      return;
+    }
+
+    if (current && current.effectiveFrom.getTime() === today.getTime()) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.employeeScheduleAssignment.update({
+          where: { id: current.id },
+          data: { scheduleId },
+        });
+        await tx.user.update({
+          where: { id: employeeId },
+          data: { workScheduleId: scheduleId, updatedBy: userId },
+        });
+      });
+      return;
+    }
+
+    await this.assignToEmployee(
+      scheduleId,
+      {
+        employeeId,
+        effectiveFrom: formatDateOnly(today),
+        notes: 'Assigned from employee profile',
+      },
+      companyId,
+      userId,
+    );
+  }
+
+  /**
    * Current schedule plus assignment history for an employee.
    */
   async getEmployeeSchedule(

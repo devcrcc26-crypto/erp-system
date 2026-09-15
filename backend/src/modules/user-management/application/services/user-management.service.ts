@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import { DocumentService } from '../../../documents/application/services/document.service';
 import { LeavePolicyService } from '../../../leave-policy/application/services/leave-policy.service';
+import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -48,6 +49,7 @@ export class UserManagementService {
     private readonly userProvisioningService: UserProvisioningService,
     private readonly documentService: DocumentService,
     private readonly leavePolicyService: LeavePolicyService,
+    private readonly workScheduleService: WorkScheduleService,
   ) {}
 
   async listUsers(
@@ -274,13 +276,13 @@ export class UserManagementService {
   ): Promise<unknown> {
     const existing = await this.prisma.user.findFirst({
       where: activeOnly({ id, companyId: ctx.companyId }),
-      select: { id: true, employeeId: true, leavePolicyId: true },
+      select: { id: true, employeeId: true, leavePolicyId: true, workScheduleId: true },
     });
     if (!existing) {
       throw new NotFoundException('User not found');
     }
 
-    const { password, employeeId: dtoEmployeeId, ...rest } = dto;
+    const { password, employeeId: dtoEmployeeId, workScheduleId, ...rest } = dto;
 
     if (rest.leavePolicyId) {
       await this.assertLeavePolicy(ctx.companyId, rest.leavePolicyId);
@@ -331,7 +333,24 @@ export class UserManagementService {
       );
     }
 
-    return this.mapUserResponse(updated);
+    if (workScheduleId && workScheduleId !== existing.workScheduleId) {
+      await this.workScheduleService.syncEmployeeSchedule(
+        id,
+        workScheduleId,
+        ctx.companyId,
+        ctx.userId,
+      );
+    }
+
+    const withSchedule =
+      workScheduleId && workScheduleId !== existing.workScheduleId
+        ? await this.prisma.user.findFirst({
+            where: activeOnly({ id, companyId: ctx.companyId }),
+            select: this.userSelect(),
+          })
+        : updated;
+
+    return this.mapUserResponse(withSchedule);
   }
 
   async deleteUser(ctx: AuditContext, id: string): Promise<void> {
@@ -910,6 +929,8 @@ export class UserManagementService {
       emergencyContacts: true,
       leavePolicyId: true,
       leavePolicy: { select: { id: true, name: true } },
+      workScheduleId: true,
+      workSchedule: { select: { id: true, name: true, isDefault: true } },
       profileFolderId: true,
       photoDocumentId: true,
       firstName: true,
@@ -987,6 +1008,7 @@ export class UserManagementService {
     experienceStartDate?: string;
     emergencyContacts?: CreateUserDto['emergencyContacts'];
     leavePolicyId?: string;
+    workScheduleId?: string;
   }> {
     return {
       middleName: dto.middleName,
@@ -1006,6 +1028,7 @@ export class UserManagementService {
       experienceStartDate: dto.experienceStartDate,
       emergencyContacts: dto.emergencyContacts,
       leavePolicyId: dto.leavePolicyId,
+      workScheduleId: dto.workScheduleId,
     };
   }
 
@@ -1033,6 +1056,7 @@ export class UserManagementService {
       experienceStartDate?: string;
       emergencyContacts?: CreateUserDto['emergencyContacts'];
       leavePolicyId?: string;
+      workScheduleId?: string;
     }>,
   ): Promise<void> {
     const employeeId =
@@ -1098,6 +1122,15 @@ export class UserManagementService {
         new Date().getFullYear(),
       );
     }
+
+    if (profileInput.workScheduleId) {
+      await this.workScheduleService.syncEmployeeSchedule(
+        userId,
+        profileInput.workScheduleId,
+        ctx.companyId,
+        ctx.userId,
+      );
+    }
   }
 
   private buildBasicUpdateData(
@@ -1122,6 +1155,7 @@ export class UserManagementService {
       | 'experienceStartDate'
       | 'emergencyContacts'
       | 'leavePolicyId'
+      | 'workScheduleId'
     >,
   ): Prisma.UserUncheckedUpdateInput {
     return {

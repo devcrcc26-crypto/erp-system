@@ -61,7 +61,10 @@ export class WorkScheduleController {
   }
 
   @Get()
-  @RequirePermission('hr', 'view')
+  @RequireAnyPermission(
+    { module: 'hr', action: 'view' },
+    { module: 'users', action: 'view' },
+  )
   @ApiOperation({ summary: 'List work schedules' })
   list(@CurrentCompany() companyId: string): Promise<unknown[]> {
     return this.workScheduleService.listSchedules(companyId);

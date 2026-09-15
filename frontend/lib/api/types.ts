@@ -208,6 +208,8 @@ export interface User {
   emergencyContacts?: EmergencyContact[] | null;
   leavePolicyId?: string | null;
   leavePolicy?: { id: string; name: string } | null;
+  workScheduleId?: string | null;
+  workSchedule?: { id: string; name: string; isDefault: boolean } | null;
   profileFolderId?: string | null;
   photoDocumentId?: string | null;
   firstName: string;
@@ -288,6 +290,7 @@ export interface CreateUserRequest {
   experienceStartDate?: string;
   emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
+  workScheduleId?: string;
 }
 
 export interface UpdateUserRequest {
@@ -300,6 +303,7 @@ export interface UpdateUserRequest {
   positionId?: string | null;
   reportsToUserId?: string | null;
   leavePolicyId?: string | null;
+  workScheduleId?: string | null;
   discipline?: UserDiscipline | null;
   engineeringDisciplineId?: string | null;
   preferredLanguage?: string;

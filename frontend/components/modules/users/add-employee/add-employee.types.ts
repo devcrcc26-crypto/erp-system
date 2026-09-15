@@ -41,6 +41,6 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
     'roleId',
   ],
   ['educationLevel', 'fieldOfStudy', 'experienceStartDate'],
-  ['leavePolicyId'],
+  ['leavePolicyId', 'workScheduleId'],
   [],
 ];

@@ -240,6 +240,11 @@ export class CreateUserDto {
   @IsOptional()
   @IsEntityUuid()
   leavePolicyId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEntityUuid()
+  workScheduleId?: string;
 }
 
 export class UpdateUserDto extends PartialType(
@@ -248,6 +253,7 @@ export class UpdateUserDto extends PartialType(
     'engineeringDisciplineId',
     'reportsToUserId',
     'leavePolicyId',
+    'workScheduleId',
     'departmentId',
     'positionId',
   ] as const),
@@ -281,6 +287,12 @@ export class UpdateUserDto extends PartialType(
   @ValidateIf((_, value) => value !== null)
   @IsEntityUuid()
   leavePolicyId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEntityUuid()
+  workScheduleId?: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
