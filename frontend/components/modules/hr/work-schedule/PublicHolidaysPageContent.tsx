@@ -22,6 +22,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -36,6 +37,7 @@ import type {
 import {
   useBulkHolidayStatus,
   useDeactivatePublicHoliday,
+  useDeletePublicHoliday,
   useDuplicateHolidayYear,
   usePublicHolidayList,
   useUpdatePublicHoliday,
@@ -66,6 +68,7 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<PublicHoliday | null>(null);
   const [fromYear, setFromYear] = useState(dayjs().year());
   const [toYear, setToYear] = useState(dayjs().year() + 1);
 
@@ -83,6 +86,7 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
   );
   const updateMutation = useUpdatePublicHoliday();
   const deactivateMutation = useDeactivatePublicHoliday();
+  const deleteMutation = useDeletePublicHoliday();
   const bulkMutation = useBulkHolidayStatus();
   const duplicateMutation = useDuplicateHolidayYear();
 
@@ -105,6 +109,20 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
       messageApi.success(t('hr.publicHoliday.deactivated'));
     } catch (error: unknown) {
       notifyApiError(error, t('hr.publicHoliday.saveFailed'), messageApi);
+    }
+  }
+
+  async function handleDelete(): Promise<void> {
+    if (!deleteTarget) {
+      return;
+    }
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      messageApi.success(t('hr.publicHoliday.deleted'));
+      setSelectedIds((ids) => ids.filter((id) => id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (error: unknown) {
+      notifyApiError(error, t('hr.publicHoliday.deleteFailed'), messageApi);
     }
   }
 
@@ -267,6 +285,13 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
                       label: t('hr.publicHoliday.reactivate'),
                       onClick: () => void handleReactivate(row),
                     },
+                { type: 'divider' },
+                {
+                  key: 'delete',
+                  label: t('hr.publicHoliday.delete'),
+                  danger: true,
+                  onClick: () => setDeleteTarget(row),
+                },
               ],
             }}
           >
@@ -283,6 +308,19 @@ export default function PublicHolidaysPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page">
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={t('hr.publicHoliday.deleteTitle')}
+        description={t('hr.publicHoliday.deleteDescription', {
+          name: deleteTarget?.name ?? '',
+        })}
+        confirmLabel={t('hr.publicHoliday.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
       <Modal
         title={t('hr.publicHoliday.duplicateYear')}
         open={duplicateOpen}

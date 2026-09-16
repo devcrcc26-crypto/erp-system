@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import AssignWorkScheduleModal from '@/components/modules/hr/work-schedule/AssignWorkScheduleModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -20,6 +21,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { WorkSchedule } from '@/lib/api/work-schedule.types';
 import {
   useDeactivateWorkSchedule,
+  useDeleteWorkSchedule,
   useSetDefaultWorkSchedule,
   useWorkScheduleList,
 } from '@/lib/query/work-schedule';
@@ -38,11 +40,31 @@ export default function WorkSchedulesPageContent(): React.ReactNode {
   const [assignSchedule, setAssignSchedule] = useState<WorkSchedule | null>(
     null,
   );
+  const [deleteTarget, setDeleteTarget] = useState<WorkSchedule | null>(null);
 
   const listQuery = useWorkScheduleList(canViewHr);
   const deactivateMutation = useDeactivateWorkSchedule();
+  const deleteMutation = useDeleteWorkSchedule();
   const defaultMutation = useSetDefaultWorkSchedule();
   const schedules = listQuery.data ?? [];
+
+  async function handleDelete(): Promise<void> {
+    if (!deleteTarget) {
+      return;
+    }
+    try {
+      const result = await deleteMutation.mutateAsync(deleteTarget.id);
+      messageApi.success(
+        t('hr.workSchedule.deleted', {
+          count: result.movedEmployees,
+          schedule: result.defaultScheduleName,
+        }),
+      );
+      setDeleteTarget(null);
+    } catch (error: unknown) {
+      notifyApiError(error, t('hr.workSchedule.deleteFailed'), messageApi);
+    }
+  }
 
   if (!canViewHr) {
     return (
@@ -58,6 +80,19 @@ export default function WorkSchedulesPageContent(): React.ReactNode {
         open={Boolean(assignSchedule)}
         schedule={assignSchedule}
         onClose={() => setAssignSchedule(null)}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={t('hr.workSchedule.deleteTitle')}
+        description={t('hr.workSchedule.deleteDescription', {
+          name: deleteTarget?.name ?? '',
+          count: deleteTarget?.assignedEmployeeCount ?? 0,
+        })}
+        confirmLabel={t('hr.workSchedule.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setDeleteTarget(null)}
       />
 
       <div className="erp-pro-card">
@@ -177,6 +212,16 @@ export default function WorkSchedulesPageContent(): React.ReactNode {
                                     messageApi,
                                   ),
                                 ),
+                          },
+                          { type: 'divider' },
+                          {
+                            key: 'delete',
+                            danger: true,
+                            label: schedule.isDefault
+                              ? t('hr.workSchedule.defaultCannotDelete')
+                              : t('hr.workSchedule.delete'),
+                            disabled: schedule.isDefault,
+                            onClick: () => setDeleteTarget(schedule),
                           },
                         ],
                       }}

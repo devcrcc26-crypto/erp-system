@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button, Dropdown, Grid, Skeleton } from 'antd';
 import type { MenuProps } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -17,6 +17,7 @@ import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { HolidayNationality } from '@/lib/api/work-schedule.types';
 import {
   useDeactivatePublicHoliday,
+  useDeletePublicHoliday,
   usePublicHoliday,
   useUpdatePublicHoliday,
 } from '@/lib/query/work-schedule';
@@ -74,7 +75,9 @@ export default function PublicHolidayDetailPageContent({
   const holidayQuery = usePublicHoliday(holidayId, canViewHr);
   const deactivateMutation = useDeactivatePublicHoliday();
   const updateMutation = useUpdatePublicHoliday();
+  const deleteMutation = useDeletePublicHoliday();
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const holiday = holidayQuery.data;
 
   useSetHeaderExtra(null);
@@ -86,6 +89,17 @@ export default function PublicHolidayDetailPageContent({
       setConfirmDeactivate(false);
     } catch (error: unknown) {
       notifyApiError(error, t('hr.publicHoliday.saveFailed'), messageApi);
+    }
+  }
+
+  async function handleDelete(): Promise<void> {
+    try {
+      await deleteMutation.mutateAsync(holidayId);
+      messageApi.success(t('hr.publicHoliday.deleted'));
+      setConfirmDelete(false);
+      router.push(LIST_PATH);
+    } catch (error: unknown) {
+      notifyApiError(error, t('hr.publicHoliday.deleteFailed'), messageApi);
     }
   }
 
@@ -178,6 +192,14 @@ export default function PublicHolidayDetailPageContent({
           label: t('hr.publicHoliday.reactivate'),
           onClick: () => void handleReactivate(),
         },
+    { type: 'divider' },
+    {
+      key: 'delete',
+      label: t('hr.publicHoliday.delete'),
+      icon: <Trash2 size={14} />,
+      danger: true,
+      onClick: () => setConfirmDelete(true),
+    },
   ];
 
   return (
@@ -191,6 +213,19 @@ export default function PublicHolidayDetailPageContent({
         confirmLoading={deactivateMutation.isPending}
         onConfirm={() => void handleDeactivate()}
         onCancel={() => setConfirmDeactivate(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title={t('hr.publicHoliday.deleteTitle')}
+        description={t('hr.publicHoliday.deleteDescription', {
+          name: holiday.name,
+        })}
+        confirmLabel={t('hr.publicHoliday.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setConfirmDelete(false)}
       />
 
       <div className="erp-pro-card">
@@ -236,6 +271,14 @@ export default function PublicHolidayDetailPageContent({
                     {isCompact ? undefined : t('hr.publicHoliday.reactivate')}
                   </Button>
                 )}
+                <Button
+                  danger
+                  icon={<Trash2 size={14} />}
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label={t('hr.publicHoliday.delete')}
+                >
+                  {isCompact ? undefined : t('hr.publicHoliday.delete')}
+                </Button>
               </>
             )}
           </div>

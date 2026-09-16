@@ -39,6 +39,18 @@ type ScheduleWithDays = Prisma.WorkScheduleGetPayload<{
   include: { days: true };
 }>;
 
+/** A weekday row after validation, ready to persist. */
+type NormalizedScheduleDay = {
+  dayOfWeek: number;
+  isWorkingDay: boolean;
+  isHalfDay: boolean;
+  morningStart: string | null;
+  morningEnd: string | null;
+  afternoonStart: string | null;
+  afternoonEnd: string | null;
+  totalHours: Prisma.Decimal;
+};
+
 type HolidayRow = {
   id: string;
   name: string;
@@ -437,9 +449,82 @@ export class WorkScheduleService {
       });
       return this.mapSchedule(created, 0);
     } catch (error: unknown) {
+      const revived = await this.reviveDeletedSchedule(
+        dto,
+        days,
+        companyId,
+        userId,
+        error,
+      );
+      if (revived) {
+        return revived;
+      }
       this.throwIfUniqueName(error);
       throw error;
     }
+  }
+
+  /**
+   * The company+name unique key ignores `deletedAt`, so a deleted schedule
+   * still holds its name. Re-creating that name reuses the row.
+   */
+  private async reviveDeletedSchedule(
+    dto: CreateWorkScheduleDto,
+    days: NormalizedScheduleDay[],
+    companyId: string,
+    userId: string,
+    error: unknown,
+  ): Promise<Record<string, unknown> | null> {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== 'P2002'
+    ) {
+      return null;
+    }
+
+    const deleted = await this.prisma.workSchedule.findFirst({
+      where: {
+        companyId,
+        name: dto.name.trim(),
+        deletedAt: { not: null },
+      },
+    });
+    if (!deleted) {
+      return null;
+    }
+
+    const revived = await this.prisma.$transaction(async (tx) => {
+      if (dto.isDefault) {
+        await tx.workSchedule.updateMany({
+          where: activeOnly({ companyId, isDefault: true, id: { not: deleted.id } }),
+          data: { isDefault: false, updatedBy: userId },
+        });
+      }
+
+      await tx.workScheduleDay.deleteMany({ where: { scheduleId: deleted.id } });
+      await tx.workScheduleDay.createMany({
+        data: days.map((day) => ({
+          id: randomUUID(),
+          scheduleId: deleted.id,
+          ...day,
+        })),
+      });
+
+      return tx.workSchedule.update({
+        where: { id: deleted.id },
+        data: {
+          description: dto.description?.trim() || null,
+          isDefault: dto.isDefault ?? false,
+          isActive: dto.isActive ?? true,
+          deletedAt: null,
+          deletedBy: null,
+          updatedBy: userId,
+        },
+        include: SCHEDULE_INCLUDE,
+      });
+    });
+
+    return this.mapSchedule(revived, 0);
   }
 
   /**
@@ -456,7 +541,13 @@ export class WorkScheduleService {
 
     if (dto.isActive === false && existing.isDefault) {
       throw new BadRequestException(
-        'Set another schedule as default before deactivating the company default',
+        'The default work schedule cannot be deactivated. Set another schedule as the company default first.',
+      );
+    }
+
+    if (dto.isDefault === false && existing.isDefault) {
+      throw new BadRequestException(
+        'The company default is transferred by setting another schedule as default, not by clearing this one.',
       );
     }
 
@@ -516,6 +607,111 @@ export class WorkScheduleService {
     userId: string,
   ): Promise<unknown> {
     return this.updateSchedule(id, { isActive: false }, companyId, userId);
+  }
+
+  /**
+   * Deletes a schedule (soft delete) and moves everyone on it to the company
+   * default. The default itself cannot be deleted — another schedule must be
+   * made default first, which is also how the default is transferred.
+   */
+  async removeSchedule(
+    id: string,
+    companyId: string,
+    userId: string,
+  ): Promise<{
+    movedEmployees: number;
+    defaultScheduleId: string;
+    defaultScheduleName: string;
+  }> {
+    const schedule = await this.findScheduleOrThrow(id, companyId);
+    if (schedule.isDefault) {
+      throw new BadRequestException(
+        'The default work schedule cannot be deleted. Set another schedule as the company default first.',
+      );
+    }
+
+    const fallback = await this.prisma.workSchedule.findFirst({
+      where: activeOnly({
+        companyId,
+        isDefault: true,
+        isActive: true,
+        id: { not: id },
+      }),
+    });
+    if (!fallback) {
+      throw new BadRequestException(
+        'Set a company default work schedule before deleting this one, so its employees have a schedule to fall back to.',
+      );
+    }
+
+    const today = todayUtc();
+    const openAssignments =
+      await this.prisma.employeeScheduleAssignment.findMany({
+        where: {
+          companyId,
+          scheduleId: id,
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: today } }],
+        },
+      });
+    const employeesByFk = await this.prisma.user.findMany({
+      where: { companyId, workScheduleId: id, deletedAt: null },
+      select: { id: true },
+    });
+    const employeeIds = new Set<string>([
+      ...openAssignments.map((row) => row.employeeId),
+      ...employeesByFk.map((row) => row.id),
+    ]);
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const assignment of openAssignments) {
+        const closeOn = addUtcDays(today, -1);
+        await tx.employeeScheduleAssignment.update({
+          where: { id: assignment.id },
+          data: {
+            effectiveTo:
+              closeOn.getTime() < assignment.effectiveFrom.getTime()
+                ? assignment.effectiveFrom
+                : closeOn,
+          },
+        });
+      }
+
+      for (const employeeId of employeeIds) {
+        await tx.employeeScheduleAssignment.create({
+          data: {
+            id: randomUUID(),
+            companyId,
+            employeeId,
+            scheduleId: fallback.id,
+            effectiveFrom: today,
+            notes: 'Moved to the company default; previous schedule deleted',
+            createdBy: userId,
+          },
+        });
+      }
+
+      if (employeeIds.size > 0) {
+        await tx.user.updateMany({
+          where: { companyId, workScheduleId: id },
+          data: { workScheduleId: fallback.id, updatedBy: userId },
+        });
+      }
+
+      await tx.workSchedule.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          deletedBy: userId,
+          updatedBy: userId,
+        },
+      });
+    });
+
+    return {
+      movedEmployees: employeeIds.size,
+      defaultScheduleId: fallback.id,
+      defaultScheduleName: fallback.name,
+    };
   }
 
   /**
@@ -946,18 +1142,7 @@ export class WorkScheduleService {
     );
   }
 
-  private normalizeDays(
-    days: WorkScheduleDayDto[],
-  ): Array<{
-    dayOfWeek: number;
-    isWorkingDay: boolean;
-    isHalfDay: boolean;
-    morningStart: string | null;
-    morningEnd: string | null;
-    afternoonStart: string | null;
-    afternoonEnd: string | null;
-    totalHours: Prisma.Decimal;
-  }> {
+  private normalizeDays(days: WorkScheduleDayDto[]): NormalizedScheduleDay[] {
     if (days.length !== 7) {
       throw new BadRequestException('A schedule must define all 7 days of the week');
     }

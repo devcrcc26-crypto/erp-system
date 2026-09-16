@@ -114,12 +114,15 @@ export class PublicHolidayController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Deactivate a public holiday' })
-  deactivate(
+  @ApiOperation({
+    summary:
+      'Delete a public holiday (to keep it on record instead, PATCH isActive:false)',
+  })
+  remove(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
-  ): Promise<unknown> {
-    return this.publicHolidayService.deactivate(id, companyId, user.userId);
+  ): Promise<void> {
+    return this.publicHolidayService.remove(id, companyId, user.userId);
   }
 }

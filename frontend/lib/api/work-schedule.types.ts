@@ -50,6 +50,13 @@ export interface CreateWorkSchedulePayload {
 
 export type UpdateWorkSchedulePayload = Partial<CreateWorkSchedulePayload>;
 
+/** Returned by DELETE /hr/work-schedules/:id — who was moved, and where to. */
+export interface DeleteWorkScheduleResult {
+  movedEmployees: number;
+  defaultScheduleId: string;
+  defaultScheduleName: string;
+}
+
 export interface AssignSchedulePayload {
   employeeId: string;
   effectiveFrom: string;

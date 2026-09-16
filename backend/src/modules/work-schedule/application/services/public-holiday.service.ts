@@ -59,9 +59,61 @@ export class PublicHolidayService {
       });
       return this.mapHoliday(created);
     } catch (error: unknown) {
+      const revived = await this.reviveDeleted(dto, companyId, userId, error);
+      if (revived) {
+        return revived;
+      }
       this.throwIfUnique(error);
       throw error;
     }
+  }
+
+  /**
+   * The company+date+nationality unique key ignores `deletedAt`, so a deleted
+   * holiday still occupies its slot. Re-adding the same date reuses that row
+   * instead of failing as a duplicate.
+   */
+  private async reviveDeleted(
+    dto: CreatePublicHolidayDto,
+    companyId: string,
+    userId: string,
+    error: unknown,
+  ): Promise<Record<string, unknown> | null> {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== 'P2002'
+    ) {
+      return null;
+    }
+
+    const deleted = await this.prisma.publicHoliday.findFirst({
+      where: {
+        companyId,
+        date: parseDateOnly(dto.date),
+        appliesToNationality:
+          dto.appliesToNationality ?? HolidayNationality.ALL,
+        deletedAt: { not: null },
+      },
+    });
+    if (!deleted) {
+      return null;
+    }
+
+    const revived = await this.prisma.publicHoliday.update({
+      where: { id: deleted.id },
+      data: {
+        name: dto.name.trim(),
+        nameZh: dto.nameZh?.trim() || null,
+        isRecurring: dto.isRecurring ?? false,
+        isActive: dto.isActive ?? true,
+        notes: dto.notes?.trim() || null,
+        notifyDaysBefore: dto.notifyDaysBefore ?? 2,
+        deletedAt: null,
+        deletedBy: null,
+        updatedBy: userId,
+      },
+    });
+    return this.mapHoliday(revived);
   }
 
   /**
@@ -107,7 +159,7 @@ export class PublicHolidayService {
   }
 
   /**
-   * Deactivates a holiday (does not hard-delete). Ignored by leave calculations.
+   * Deactivates a holiday (keeps the row). Ignored by leave calculations.
    */
   async deactivate(
     id: string,
@@ -115,6 +167,22 @@ export class PublicHolidayService {
     userId: string,
   ): Promise<unknown> {
     return this.update(id, { isActive: false }, companyId, userId);
+  }
+
+  /**
+   * Removes a holiday from the calendar (soft delete). Leave, overtime and
+   * attendance records already saved keep the day counts they were given.
+   */
+  async remove(id: string, companyId: string, userId: string): Promise<void> {
+    await this.findOrThrow(id, companyId);
+    await this.prisma.publicHoliday.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: userId,
+        updatedBy: userId,
+      },
+    });
   }
 
   /**

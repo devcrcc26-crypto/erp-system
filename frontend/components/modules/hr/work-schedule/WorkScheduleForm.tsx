@@ -189,6 +189,8 @@ export default function WorkScheduleForm({
   const { t } = useEpcTranslation();
   const [form] = Form.useForm<WorkScheduleFormValues>();
   const watchedDays = Form.useWatch('days', form) as DayFormValue[] | undefined;
+  /** The default is transferred by making another schedule default, never cleared here. */
+  const isDefaultSchedule = Boolean(schedule?.isDefault);
 
   const dayLabels = useMemo(
     () => [
@@ -236,15 +238,21 @@ export default function WorkScheduleForm({
             name="isDefault"
             label={t('hr.workSchedule.defaultBadge')}
             valuePropName="checked"
+            extra={isDefaultSchedule ? t('hr.workSchedule.defaultLockedHint') : undefined}
           >
-            <Switch />
+            <Switch disabled={isDefaultSchedule} />
           </Form.Item>
           <Form.Item
             name="isActive"
             label={t('common.active')}
             valuePropName="checked"
+            extra={
+              isDefaultSchedule
+                ? t('hr.workSchedule.defaultCannotDeactivate')
+                : undefined
+            }
           >
-            <Switch />
+            <Switch disabled={isDefaultSchedule} />
           </Form.Item>
         </div>
       </FormLayout>

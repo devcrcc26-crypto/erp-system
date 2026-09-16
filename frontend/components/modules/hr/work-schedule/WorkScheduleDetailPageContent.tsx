@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button, Dropdown, Grid, Skeleton, Tag } from 'antd';
 import type { MenuProps } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
-import { ArrowLeft, Pencil, Star, UserPlus } from 'lucide-react';
+import { ArrowLeft, Pencil, Star, Trash2, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AssignWorkScheduleModal from '@/components/modules/hr/work-schedule/AssignWorkScheduleModal';
 import WorkScheduleWeekGrid from '@/components/modules/hr/work-schedule/WorkScheduleWeekGrid';
@@ -18,6 +18,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import {
   useDeactivateWorkSchedule,
+  useDeleteWorkSchedule,
   useSetDefaultWorkSchedule,
   useWorkSchedule,
 } from '@/lib/query/work-schedule';
@@ -61,8 +62,10 @@ export default function WorkScheduleDetailPageContent({
   const canViewHr = useCanViewHr();
   const scheduleQuery = useWorkSchedule(scheduleId, canViewHr);
   const deactivateMutation = useDeactivateWorkSchedule();
+  const deleteMutation = useDeleteWorkSchedule();
   const defaultMutation = useSetDefaultWorkSchedule();
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const schedule = scheduleQuery.data;
 
@@ -75,6 +78,22 @@ export default function WorkScheduleDetailPageContent({
       setConfirmDeactivate(false);
     } catch (error: unknown) {
       notifyApiError(error, t('hr.workSchedule.saveFailed'), messageApi);
+    }
+  }
+
+  async function handleDelete(): Promise<void> {
+    try {
+      const result = await deleteMutation.mutateAsync(scheduleId);
+      messageApi.success(
+        t('hr.workSchedule.deleted', {
+          count: result.movedEmployees,
+          schedule: result.defaultScheduleName,
+        }),
+      );
+      setConfirmDelete(false);
+      router.push(LIST_PATH);
+    } catch (error: unknown) {
+      notifyApiError(error, t('hr.workSchedule.deleteFailed'), messageApi);
     }
   }
 
@@ -147,10 +166,23 @@ export default function WorkScheduleDetailPageContent({
     },
     {
       key: 'deactivate',
-      label: t('hr.workSchedule.deactivate'),
+      label: schedule.isDefault
+        ? t('hr.workSchedule.defaultCannotDeactivate')
+        : t('hr.workSchedule.deactivate'),
       danger: true,
       disabled: schedule.isDefault || !schedule.isActive,
       onClick: () => setConfirmDeactivate(true),
+    },
+    { type: 'divider' },
+    {
+      key: 'delete',
+      label: schedule.isDefault
+        ? t('hr.workSchedule.defaultCannotDelete')
+        : t('hr.workSchedule.delete'),
+      icon: <Trash2 size={14} />,
+      danger: true,
+      disabled: schedule.isDefault,
+      onClick: () => setConfirmDelete(true),
     },
   ];
 
@@ -170,6 +202,19 @@ export default function WorkScheduleDetailPageContent({
         confirmLoading={deactivateMutation.isPending}
         onConfirm={() => void handleDeactivate()}
         onCancel={() => setConfirmDeactivate(false)}
+      />
+      <ConfirmDialog
+        open={confirmDelete}
+        title={t('hr.workSchedule.deleteTitle')}
+        description={t('hr.workSchedule.deleteDescription', {
+          name: schedule.name,
+          count: schedule.assignedEmployeeCount,
+        })}
+        confirmLabel={t('hr.workSchedule.delete')}
+        danger
+        confirmLoading={deleteMutation.isPending}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setConfirmDelete(false)}
       />
 
       <div className="erp-pro-card">
@@ -220,9 +265,28 @@ export default function WorkScheduleDetailPageContent({
                 <Button
                   danger
                   disabled={schedule.isDefault || !schedule.isActive}
+                  title={
+                    schedule.isDefault
+                      ? t('hr.workSchedule.defaultCannotDeactivate')
+                      : undefined
+                  }
                   onClick={() => setConfirmDeactivate(true)}
                 >
                   {isCompact ? undefined : t('hr.workSchedule.deactivate')}
+                </Button>
+                <Button
+                  danger
+                  icon={<Trash2 size={14} />}
+                  disabled={schedule.isDefault}
+                  title={
+                    schedule.isDefault
+                      ? t('hr.workSchedule.defaultCannotDelete')
+                      : undefined
+                  }
+                  aria-label={t('hr.workSchedule.delete')}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  {isCompact ? undefined : t('hr.workSchedule.delete')}
                 </Button>
               </>
             )}

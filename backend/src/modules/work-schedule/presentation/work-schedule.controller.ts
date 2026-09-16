@@ -123,17 +123,20 @@ export class WorkScheduleController {
 
   @Delete(':id')
   @RequirePermission('hr', 'view')
-  @ApiOperation({ summary: 'Deactivate a work schedule' })
-  deactivate(
+  @ApiOperation({
+    summary:
+      'Delete a work schedule and move its employees to the company default (the default itself cannot be deleted; to keep a schedule on record instead, PATCH isActive:false)',
+  })
+  remove(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
-  ): Promise<unknown> {
-    return this.workScheduleService.deactivateSchedule(
-      id,
-      companyId,
-      user.userId,
-    );
+  ): Promise<{
+    movedEmployees: number;
+    defaultScheduleId: string;
+    defaultScheduleName: string;
+  }> {
+    return this.workScheduleService.removeSchedule(id, companyId, user.userId);
   }
 
   @Post(':id/set-default')

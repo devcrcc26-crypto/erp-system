@@ -10,6 +10,7 @@ import type {
   AssignSchedulePayload,
   CreatePublicHolidayPayload,
   CreateWorkSchedulePayload,
+  DeleteWorkScheduleResult,
   EmployeeScheduleView,
   ListPublicHolidaysParams,
   PreviewDaysResult,
@@ -139,11 +140,24 @@ export function useUpdateWorkSchedule(id: string) {
   });
 }
 
+/** Keeps the schedule on record; it stops being offered for new assignments. */
 export function useDeactivateWorkSchedule() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      apiDelete<WorkSchedule>(`${SCHEDULE_PATH}/${id}`),
+      apiPatch<WorkSchedule>(`${SCHEDULE_PATH}/${id}`, { isActive: false }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: workScheduleKeys.all });
+    },
+  });
+}
+
+/** Deletes the schedule; everyone on it moves to the company default. */
+export function useDeleteWorkSchedule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiDelete<DeleteWorkScheduleResult>(`${SCHEDULE_PATH}/${id}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: workScheduleKeys.all });
     },
@@ -236,11 +250,23 @@ export function useUpdatePublicHoliday() {
   });
 }
 
+/** Keeps the holiday on record; day calculations ignore it. */
 export function useDeactivatePublicHoliday() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      apiDelete<PublicHoliday>(`${HOLIDAY_PATH}/${id}`),
+      apiPatch<PublicHoliday>(`${HOLIDAY_PATH}/${id}`, { isActive: false }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: publicHolidayKeys.all });
+    },
+  });
+}
+
+/** Removes the holiday from the calendar for good. */
+export function useDeletePublicHoliday() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete<void>(`${HOLIDAY_PATH}/${id}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: publicHolidayKeys.all });
     },
