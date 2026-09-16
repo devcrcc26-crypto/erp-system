@@ -175,9 +175,10 @@ function DepartmentLeaderCard({
         >
           {department.name}
         </h2>
-        {department.nameZh ? (
-          <p className="erp-users-email m-0 mt-1">{department.nameZh}</p>
-        ) : null}
+        <p className="erp-users-email m-0 mt-1">
+          {department.code}
+          {department.nameZh ? ` · ${department.nameZh}` : ''}
+        </p>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div>
             <dt className="erp-users-stat-label">
@@ -389,9 +390,10 @@ export default function DepartmentsPageContent(): React.ReactNode {
         render: (value: string, row) => (
           <div className="min-w-0 py-0.5">
             <p className="erp-users-cell-strong m-0">{value}</p>
-            {row.nameZh ? (
-              <p className="erp-users-email m-0 mt-0.5 truncate">{row.nameZh}</p>
-            ) : null}
+            <p className="erp-users-email m-0 mt-0.5 truncate">
+              {row.code}
+              {row.nameZh ? ` · ${row.nameZh}` : ''}
+            </p>
           </div>
         ),
       },

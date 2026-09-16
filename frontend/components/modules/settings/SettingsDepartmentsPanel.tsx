@@ -19,7 +19,6 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 interface DepartmentFormValues {
   name: string;
   nameZh?: string;
-  code: string;
   leaderUserId?: string;
   isActive: boolean;
   forceAlignLeaderDepartment?: boolean;
@@ -79,7 +78,6 @@ export default function SettingsDepartmentsPanel(): React.ReactNode {
       form.setFieldsValue({
         name: record.name,
         nameZh: record.nameZh ?? undefined,
-        code: record.code,
         leaderUserId: record.leaderUserId ?? undefined,
         isActive: record.isActive,
       });
@@ -98,7 +96,6 @@ export default function SettingsDepartmentsPanel(): React.ReactNode {
     const body = {
       name: values.name.trim(),
       nameZh: values.nameZh?.trim() || undefined,
-      code: values.code.trim().toUpperCase(),
       leaderUserId: values.leaderUserId,
       isActive: values.isActive,
       forceAlignLeaderDepartment: alignConfirm || values.forceAlignLeaderDepartment,
@@ -182,10 +179,12 @@ export default function SettingsDepartmentsPanel(): React.ReactNode {
           </Form.Item>
           <Form.Item
             label="Code"
-            name="code"
-            rules={[{ required: true, message: 'Code is required' }]}
+            tooltip="Assigned automatically on save (DEPT-0001, DEPT-0002, …)"
           >
-            <Input disabled={Boolean(editing)} />
+            <Input
+              disabled
+              value={editing?.code ?? 'Assigned on save'}
+            />
           </Form.Item>
           <Form.Item
             label="Department leader"

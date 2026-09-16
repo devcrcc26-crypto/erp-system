@@ -15,21 +15,9 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 interface DepartmentFormValues {
   name: string;
   nameZh?: string;
-  code?: string;
   leaderUserId?: string;
   isActive: boolean;
   forceAlignLeaderDepartment?: boolean;
-}
-
-function deriveDepartmentCode(name: string): string {
-  const compact = name
-    .replace(/[^a-zA-Z0-9]+/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .map((part) => part.charAt(0))
-    .join('')
-    .toUpperCase();
-  return compact.slice(0, 8) || 'DEPT';
 }
 
 export default function DepartmentFormDrawer({
@@ -60,7 +48,6 @@ export default function DepartmentFormDrawer({
       form.setFieldsValue({
         name: editing.name,
         nameZh: editing.nameZh ?? undefined,
-        code: editing.code,
         leaderUserId: editing.leaderUserId ?? undefined,
         isActive: editing.isActive,
       });
@@ -84,7 +71,6 @@ export default function DepartmentFormDrawer({
     const shared = {
       name: values.name.trim(),
       nameZh: values.nameZh?.trim() || undefined,
-      code: (values.code ?? deriveDepartmentCode(values.name)).trim().toUpperCase(),
       isActive: values.isActive,
       forceAlignLeaderDepartment: forceAlign || values.forceAlignLeaderDepartment,
     };
@@ -159,15 +145,15 @@ export default function DepartmentFormDrawer({
           <Form.Item label="Name (Chinese)" name="nameZh">
             <Input />
           </Form.Item>
-          {!editing ? (
-            <Form.Item
-              label="Code"
-              name="code"
-              tooltip="Auto-generated from name if left blank"
-            >
-              <Input placeholder="Auto" />
-            </Form.Item>
-          ) : null}
+          <Form.Item
+            label="Code"
+            tooltip="Assigned automatically on save (DEPT-0001, DEPT-0002, …)"
+          >
+            <Input
+              disabled
+              value={editing?.code ?? 'Assigned on save'}
+            />
+          </Form.Item>
           <Form.Item label="Department leader" name="leaderUserId">
             <UserSelect placeholder="Select leader (optional)" />
           </Form.Item>

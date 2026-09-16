@@ -79,14 +79,12 @@ async function ensureHrDepartments(ctx: PmSeedContext): Promise<void> {
   const deptSpecs = [
     {
       id: DEPT_MTD_ID,
-      code: 'MTD',
       name: 'Municipal Transportation Department',
       nameZh: '市政交通部',
       leaderUserId: U.deptChief,
     },
     {
       id: DEPT_ADD_ID,
-      code: 'ADD',
       name: 'Architectural Design Department',
       nameZh: '建筑设计部',
       leaderUserId: U.owner,
@@ -94,23 +92,40 @@ async function ensureHrDepartments(ctx: PmSeedContext): Promise<void> {
   ] as const;
 
   for (const spec of deptSpecs) {
-    await db.department.upsert({
-      where: { companyId_code: { companyId, code: spec.code } },
-      update: {
-        name: spec.name,
-        nameZh: spec.nameZh,
-        leaderUserId: spec.leaderUserId,
-        isActive: true,
-        updatedBy: adminUserId,
-      },
-      create: {
+    const existing = await db.department.findFirst({
+      where: { id: spec.id, companyId },
+      select: { id: true },
+    });
+    if (existing) {
+      await db.department.update({
+        where: { id: spec.id },
+        data: {
+          name: spec.name,
+          nameZh: spec.nameZh,
+          leaderUserId: spec.leaderUserId,
+          isActive: true,
+          updatedBy: adminUserId,
+        },
+      });
+      continue;
+    }
+
+    await db.$executeRawUnsafe(
+      `CREATE SEQUENCE IF NOT EXISTS "department_code_seq" START WITH 1 INCREMENT BY 1`,
+    );
+    const next = await db.$queryRaw<Array<{ nextval: bigint }>>`
+      SELECT nextval('department_code_seq')
+    `;
+    const code = `DEPT-${String(Number(next[0]?.nextval ?? 1)).padStart(4, '0')}`;
+    await db.department.create({
+      data: {
         id: spec.id,
         companyId,
         divisionId: division.id,
         branchId,
         name: spec.name,
         nameZh: spec.nameZh,
-        code: spec.code,
+        code,
         isActive: true,
         leaderUserId: spec.leaderUserId,
         createdBy: adminUserId,
@@ -119,7 +134,7 @@ async function ensureHrDepartments(ctx: PmSeedContext): Promise<void> {
     });
   }
 
-  console.log('  ✓ HR departments MTD / ADD with leaders (Rania → MTD, Hassan → ADD)');
+  console.log('  ✓ HR departments with leaders (Rania → MTD, Hassan → ADD)');
 }
 
 /**

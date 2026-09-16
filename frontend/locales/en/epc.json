@@ -991,7 +991,7 @@
       "myDepartment": "My department",
       "you": "You",
       "addDepartment": "Add department",
-      "searchPlaceholder": "Search departments",
+        "searchPlaceholder": "Search departments by name or code",
       "empty": "No departments defined",
       "emptyFiltered": "No departments match your filters",
       "count": "{{count}} departments",

@@ -991,7 +991,7 @@
       "myDepartment": "我的部门",
       "you": "您",
       "addDepartment": "添加部门",
-      "searchPlaceholder": "搜索部门",
+        "searchPlaceholder": "按部门名称或编号搜索",
       "empty": "暂无部门",
       "emptyFiltered": "没有符合筛选条件的部门",
       "count": "{{count}} 个部门",

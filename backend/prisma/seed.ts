@@ -929,6 +929,54 @@ async function createPostgresSequence(sequenceName: string): Promise<void> {
   );
 }
 
+async function nextSeedDepartmentCode(): Promise<string> {
+  await createPostgresSequence('department_code_seq');
+  const result = await prisma.$queryRaw<Array<{ nextval: bigint }>>`
+    SELECT nextval('department_code_seq')
+  `;
+  const seq = Number(result[0]?.nextval ?? 1);
+  return `DEPT-${String(seq).padStart(4, '0')}`;
+}
+
+async function ensureSeedDepartment(
+  db: PrismaClient,
+  params: {
+    companyId: string;
+    divisionId: string;
+    branchId: string;
+    name: string;
+    nameZh?: string;
+    createdBy: string;
+  },
+): Promise<{ id: string }> {
+  const existing = await db.department.findFirst({
+    where: {
+      companyId: params.companyId,
+      name: params.name,
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+  if (existing) {
+    return existing;
+  }
+
+  return db.department.create({
+    data: {
+      companyId: params.companyId,
+      divisionId: params.divisionId,
+      branchId: params.branchId,
+      name: params.name,
+      nameZh: params.nameZh,
+      code: await nextSeedDepartmentCode(),
+      isActive: true,
+      createdBy: params.createdBy,
+      updatedBy: params.createdBy,
+    },
+    select: { id: true },
+  });
+}
+
 /**
  * Upserts a role permission row keyed by (roleId, permissionId).
  */
@@ -1633,21 +1681,12 @@ async function main(): Promise<void> {
     },
   });
 
-  const department = await prisma.department.upsert({
-    where: {
-      companyId_code: { companyId: company.id, code: 'IT' },
-    },
-    update: {},
-    create: {
-      companyId: company.id,
-      divisionId: division.id,
-      branchId: branch.id,
-      name: 'Information Technology',
-      code: 'IT',
-      isActive: true,
-      createdBy: SYSTEM_USER_ID,
-      updatedBy: SYSTEM_USER_ID,
-    },
+  const department = await ensureSeedDepartment(prisma, {
+    companyId: company.id,
+    divisionId: division.id,
+    branchId: branch.id,
+    name: 'Information Technology',
+    createdBy: SYSTEM_USER_ID,
   });
 
   const position = await prisma.position.upsert({

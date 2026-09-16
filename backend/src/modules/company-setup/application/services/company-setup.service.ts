@@ -207,6 +207,7 @@ export class CompanySetupService {
     ctx: AuditContext,
     query: OrgEntityListQueryDto,
   ): Promise<PaginatedResult<unknown>> {
+    await this.alignDepartmentCodes(ctx);
     return this.paginate('department', ctx.companyId, query);
   }
 
@@ -224,6 +225,7 @@ export class CompanySetupService {
       dto.branchId ?? (await this.resolveDefaultBranchId(ctx.companyId));
     await this.findOrThrow('division', divisionId, ctx.companyId);
     await this.findOrThrow('branch', branchId, ctx.companyId);
+    await this.alignDepartmentCodes(ctx);
 
     const department = await this.prisma.department.create({
       data: {
@@ -232,7 +234,7 @@ export class CompanySetupService {
         branchId,
         name: dto.name,
         nameZh: dto.nameZh,
-        code: dto.code,
+        code: await this.nextDepartmentCode(),
         isActive: dto.isActive ?? true,
         leaderUserId: dto.leaderUserId,
         createdBy: ctx.userId,
@@ -272,7 +274,6 @@ export class CompanySetupService {
         branchId: dto.branchId,
         name: dto.name,
         nameZh: dto.nameZh,
-        code: dto.code,
         isActive: dto.isActive,
         leaderUserId: dto.leaderUserId,
         updatedBy: ctx.userId,
@@ -998,6 +999,82 @@ export class CompanySetupService {
   }
 
   /**
+   * Next department code from the PostgreSQL sequence (DEPT-0001, DEPT-0002, …).
+   */
+  private async nextDepartmentCode(): Promise<string> {
+    await this.ensureDepartmentCodeSequence();
+    const result = await this.prisma.$queryRaw<Array<{ nextval: bigint }>>`
+      SELECT nextval('department_code_seq')
+    `;
+    const seq = Number(result[0]?.nextval ?? 1);
+    return `DEPT-${String(seq).padStart(4, '0')}`;
+  }
+
+  private async ensureDepartmentCodeSequence(): Promise<void> {
+    await this.prisma.$executeRawUnsafe(
+      `CREATE SEQUENCE IF NOT EXISTS "department_code_seq" START WITH 1 INCREMENT BY 1`,
+    );
+  }
+
+  /**
+   * Converts mnemonic department codes (IT, MTD, …) to DEPT-0001 style.
+   * No-ops once every row for the company already uses a DEPT-n code.
+   */
+  private async alignDepartmentCodes(ctx: AuditContext): Promise<void> {
+    const rows = await this.prisma.department.findMany({
+      where: { companyId: ctx.companyId },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: { id: true, code: true },
+    });
+    if (rows.length === 0) {
+      return;
+    }
+
+    const aligned = rows.every((row) => /^DEPT-\d+$/.test(row.code));
+    if (aligned) {
+      return;
+    }
+
+    await this.ensureDepartmentCodeSequence();
+    await this.prisma.$transaction(async (tx) => {
+      for (const row of rows) {
+        await tx.department.update({
+          where: { id: row.id },
+          data: {
+            code: `TMP-${row.id.replace(/-/g, '')}`,
+            updatedBy: ctx.userId,
+          },
+        });
+      }
+      for (const [index, row] of rows.entries()) {
+        await tx.department.update({
+          where: { id: row.id },
+          data: {
+            code: this.formatDepartmentCode(index + 1),
+            updatedBy: ctx.userId,
+          },
+        });
+      }
+    });
+
+    const maxResult = await this.prisma.$queryRaw<Array<{ max: number | bigint | null }>>`
+      SELECT COALESCE(MAX(CAST(substring(code FROM 6) AS INTEGER)), 0) AS max
+      FROM department
+      WHERE code ~ '^DEPT-[0-9]+$'
+    `;
+    const maxN = Number(maxResult[0]?.max ?? 0);
+    if (maxN <= 0) {
+      await this.prisma.$executeRaw`SELECT setval('department_code_seq', 1, false)`;
+      return;
+    }
+    await this.prisma.$executeRaw`SELECT setval('department_code_seq', ${maxN}, true)`;
+  }
+
+  private formatDepartmentCode(sequence: number): string {
+    return `DEPT-${String(sequence).padStart(4, '0')}`;
+  }
+
+  /**
    * Ensures the department leader belongs to this department.
    * When forceAlign is true, updates the user's departmentId.
    */
@@ -1124,3 +1201,5 @@ export class CompanySetupService {
     throw error;
   }
 }
+
+

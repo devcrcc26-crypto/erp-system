@@ -170,9 +170,13 @@ export class CreateDepartmentDto {
   @IsString()
   nameZh?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description:
+      'Ignored on create. Assigned automatically as DEPT-0001, DEPT-0002, …',
+  })
+  @IsOptional()
   @IsString()
-  code!: string;
+  code?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -227,7 +227,6 @@ export function useCreateDepartment() {
     mutationFn: (body: {
       name: string;
       nameZh?: string;
-      code: string;
       leaderUserId?: string;
       forceAlignLeaderDepartment?: boolean;
       isActive?: boolean;
@@ -249,7 +248,6 @@ export function useUpdateDepartment() {
       body: {
         name?: string;
         nameZh?: string;
-        code?: string;
         leaderUserId?: string | null;
         forceAlignLeaderDepartment?: boolean;
         isActive?: boolean;
