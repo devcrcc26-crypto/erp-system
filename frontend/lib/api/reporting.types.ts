@@ -108,6 +108,81 @@ export interface HrDashboardStats {
   overtimeThisMonth: HrDashboardOvertimeRow[];
 }
 
+/** Query for GET /hr/reports — omitted dates default to 1 January → today. */
+export interface HrReportParams {
+  from?: string;
+  to?: string;
+  departmentId?: string;
+}
+
+export interface HrReportNamedCount {
+  name: string;
+  count: number;
+}
+
+export interface HrReportLeaveTypeRow {
+  leaveType: string;
+  requests: number;
+  days: number;
+}
+
+export interface HrReportEmployeeLeaveRow {
+  employeeId: string;
+  employeeName: string;
+  department: string | null;
+  requests: number;
+  days: number;
+}
+
+export interface HrReportEmployeeOvertimeRow {
+  employeeId: string;
+  employeeName: string;
+  department: string | null;
+  sheets: number;
+  totalHours: number;
+}
+
+/** Period HR report from GET /hr/reports. */
+export interface HrReport {
+  generatedAt: string;
+  range: { from: string; to: string };
+  departmentId: string | null;
+  headcount: {
+    activeEmployees: number;
+    byDepartment: HrReportNamedCount[];
+    withoutDepartment: number;
+    withoutLeavePolicy: number;
+  };
+  leave: {
+    requests: number;
+    approvedRequests: number;
+    approvedDays: number;
+    byType: HrReportLeaveTypeRow[];
+    byStatus: Record<string, number>;
+    topEmployees: HrReportEmployeeLeaveRow[];
+  };
+  overtime: {
+    sheets: number;
+    approvedSheets: number;
+    approvedHours: number;
+    regularHours: number;
+    nightHours: number;
+    weekendHours: number;
+    holidayHours: number;
+    byStatus: Record<string, number>;
+    topEmployees: HrReportEmployeeOvertimeRow[];
+  };
+  travel: {
+    flights: number;
+    businessTrips: number;
+  };
+  contracts: {
+    active: number;
+    expiringInRange: number;
+    endedInRange: number;
+  };
+}
+
 /** Company-wide portfolio summary from GET /reports/portfolio-summary. */
 export interface PortfolioSummary {
   generatedAt: string;

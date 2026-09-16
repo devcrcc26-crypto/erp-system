@@ -276,6 +276,52 @@
       "comingSoonTitle": "Coming soon",
       "comingSoonDescription": "{{module}} will be available in a future update.",
       "accessDenied": "You do not have access to Human Resources.",
+      "reports": {
+        "title": "HR Reports",
+        "description": "Headcount, leave, overtime, travel and contracts for a chosen period.",
+        "allDepartments": "All departments",
+        "generated": "Generated {{date}}",
+        "loadFailed": "Failed to load the HR report.",
+        "export": "Export report",
+        "empty": "No data for this period.",
+        "kpi": {
+          "activeEmployees": "Active employees",
+          "leaveRequests": "Leave requests",
+          "approvedRequests": "{{count}} approved",
+          "approvedLeaveDays": "Approved leave days",
+          "overtimeHours": "Approved overtime hours",
+          "fromSheets": "from {{count}} sheet(s)",
+          "travel": "Trips",
+          "travelSplit": "{{flights}} flight(s), {{trips}} business trip(s)",
+          "contractsExpiring": "Contracts expiring",
+          "activeContracts": "{{count}} active",
+          "regularHours": "Regular",
+          "nightHours": "Night",
+          "weekendHours": "Weekend",
+          "holidayHours": "Holiday"
+        },
+        "sections": {
+          "headcount": "Headcount by department",
+          "headcountSubtitle": "{{count}} employee(s) without a department",
+          "leaveByType": "Leave by type",
+          "leaveByTypeSubtitle": "Requests raised in the period; days count approved leave only",
+          "leaveByEmployee": "Leave by employee",
+          "overtimeByEmployee": "Overtime by employee",
+          "topTen": "Top 10 in the period",
+          "overtimeMix": "Overtime hours by kind",
+          "overtimeMixSubtitle": "Approved sheets in the period"
+        },
+        "columns": {
+          "department": "Department",
+          "employees": "Employees",
+          "leaveType": "Leave type",
+          "requests": "Requests",
+          "approvedDays": "Approved days",
+          "employee": "Employee",
+          "sheets": "Sheets",
+          "approvedHours": "Approved hours"
+        }
+      },
       "leave": {
         "new": "New Leave Request",
         "detail": "Leave request",

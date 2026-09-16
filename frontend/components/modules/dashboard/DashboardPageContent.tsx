@@ -1,32 +1,26 @@
 'use client';
 
-import { useState } from 'react';
 import { Spin } from 'antd';
-import GmDashboard, {
-  type GmDashboardTab,
-} from '@/components/modules/dashboard/GmDashboard';
 import HrDashboard from '@/components/modules/dashboard/HrDashboard';
 import PersonalDashboard from '@/components/modules/dashboard/PersonalDashboard';
-import PmDashboard from '@/components/modules/dashboard/PmDashboard';
 import { useAuthHydrated } from '@/hooks/useAuthHydrated';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
-import { useCapabilitiesReady, usePmCapabilities } from '@/hooks/use-pm-capabilities';
+import { useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 
 /**
- * Company home dashboard — routes to the GM, HR, PM, or personal view based on
- * session capabilities. Rewritten from scratch; no legacy dashboard state kept.
+ * Company home dashboard. The PM overview is hidden for now: anyone with HR
+ * access lands on the HR overview, everyone else on the personal view.
+ * To bring the PM overview back, restore the GmDashboard tab switch and the
+ * PmDashboard branch — both components are still in this folder.
  */
 export default function DashboardPageContent(): React.ReactNode {
   const authHydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken));
   const capabilitiesReady = useCapabilitiesReady();
   const canViewHr = useCanViewHr();
-  const pm = usePmCapabilities();
-  const [tab, setTab] = useState<GmDashboardTab>('pm');
 
   const canFetch = authHydrated && isAuthenticated;
-  const canViewProjects = pm.projects.canView;
 
   if (!capabilitiesReady) {
     return (
@@ -38,20 +32,8 @@ export default function DashboardPageContent(): React.ReactNode {
     );
   }
 
-  const isGmOrAbove = canViewProjects && canViewHr;
-  const isHrOnly = canViewHr && !canViewProjects;
-  const isPmOnly = canViewProjects && !canViewHr;
-
-  if (isGmOrAbove) {
-    return <GmDashboard tab={tab} onTabChange={setTab} enabled={canFetch} />;
-  }
-
-  if (isHrOnly) {
+  if (canViewHr) {
     return <HrDashboard enabled={canFetch} />;
-  }
-
-  if (isPmOnly) {
-    return <PmDashboard enabled={canFetch} />;
   }
 
   return <PersonalDashboard enabled={canFetch} />;

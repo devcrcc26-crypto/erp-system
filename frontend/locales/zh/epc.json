@@ -276,6 +276,52 @@
       "comingSoonTitle": "即将推出",
       "comingSoonDescription": "{{module}} 将在后续版本中提供。",
       "accessDenied": "您无权访问人力资源模块。",
+      "reports": {
+        "title": "人力资源报表",
+        "description": "按所选期间统计人数、请假、加班、出差与合同。",
+        "allDepartments": "全部部门",
+        "generated": "生成于 {{date}}",
+        "loadFailed": "加载人力资源报表失败。",
+        "export": "导出报表",
+        "empty": "该期间暂无数据。",
+        "kpi": {
+          "activeEmployees": "在职员工",
+          "leaveRequests": "请假申请",
+          "approvedRequests": "已批准 {{count}} 条",
+          "approvedLeaveDays": "已批准请假天数",
+          "overtimeHours": "已批准加班工时",
+          "fromSheets": "来自 {{count}} 份加班表",
+          "travel": "出行",
+          "travelSplit": "机票 {{flights}} 次，出差 {{trips}} 次",
+          "contractsExpiring": "到期合同",
+          "activeContracts": "有效合同 {{count}} 份",
+          "regularHours": "平日",
+          "nightHours": "夜班",
+          "weekendHours": "周末",
+          "holidayHours": "假日"
+        },
+        "sections": {
+          "headcount": "各部门人数",
+          "headcountSubtitle": "{{count}} 名员工未分配部门",
+          "leaveByType": "按请假类型",
+          "leaveByTypeSubtitle": "期间内提交的申请；天数仅统计已批准的请假",
+          "leaveByEmployee": "按员工统计请假",
+          "overtimeByEmployee": "按员工统计加班",
+          "topTen": "期间内前 10 名",
+          "overtimeMix": "各类加班工时",
+          "overtimeMixSubtitle": "期间内已批准的加班表"
+        },
+        "columns": {
+          "department": "部门",
+          "employees": "人数",
+          "leaveType": "请假类型",
+          "requests": "申请数",
+          "approvedDays": "已批准天数",
+          "employee": "员工",
+          "sheets": "加班表",
+          "approvedHours": "已批准工时"
+        }
+      },
       "leave": {
         "new": "新建请假申请",
         "detail": "请假详情",

@@ -1,13 +1,20 @@
 import { Module } from '@nestjs/common';
 import { DashboardService } from './application/services/dashboard.service';
+import { HrReportService } from './application/services/hr-report.service';
 import { ReportExecutorService } from './application/services/report-executor.service';
 import { ReportingService } from './application/services/reporting.service';
 import { DashboardController } from './presentation/controllers/dashboard.controller';
+import { HrReportController } from './presentation/controllers/hr-report.controller';
 import { ReportsController } from './presentation/controllers/reports.controller';
 
 @Module({
-  controllers: [ReportsController, DashboardController],
-  providers: [ReportingService, ReportExecutorService, DashboardService],
-  exports: [ReportingService, DashboardService],
+  controllers: [ReportsController, DashboardController, HrReportController],
+  providers: [
+    ReportingService,
+    ReportExecutorService,
+    DashboardService,
+    HrReportService,
+  ],
+  exports: [ReportingService, DashboardService, HrReportService],
 })
 export class ReportingModule {}

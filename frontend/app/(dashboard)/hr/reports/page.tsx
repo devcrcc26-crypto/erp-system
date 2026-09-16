@@ -1,5 +1,5 @@
-import HrComingSoonPage from '@/components/modules/hr/HrComingSoonPage';
+import HrReportsPageContent from '@/components/modules/hr/reports/HrReportsPageContent';
 
 export default function Page(): React.ReactNode {
-  return <HrComingSoonPage titleKey="nav.hr.reports" />;
+  return <HrReportsPageContent />;
 }
