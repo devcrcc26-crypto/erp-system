@@ -169,7 +169,6 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   'hr-business-trip': lucideNavIcon(BriefcaseBusiness),
   'hr-per-diem': lucideNavIcon(Wallet),
   'hr-per-diem-rates': lucideNavIcon(CircleDollarSign),
-  'hr-asset-management': lucideNavIcon(Monitor),
   'hr-company-asset': lucideNavIcon(Monitor),
   'hr-attendance': lucideNavIcon(CalendarCheck2),
   'hr-equipment-and-materials-exit-permit': lucideNavIcon(PackageMinus),

@@ -72,7 +72,6 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/public-holidays/new': 'pages.hr.publicHolidays.new',
   '/hr/company-asset': 'nav.hr.companyAssets',
   '/hr/company-asset/new': 'pages.hr.companyAsset.new',
-  '/hr/asset-management': 'nav.hr.assetManagement',
   '/hr/attendance': 'nav.hr.attendance',
   '/hr/employee-evaluation': 'nav.hr.employeeEvaluation',
   '/hr/equipment-and-materials-exit-permit': 'pages.hr.exitPermit.listTitle',

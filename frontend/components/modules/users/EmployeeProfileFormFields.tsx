@@ -24,6 +24,8 @@ import {
   HOUSE_NUMBER_MAX,
   addressFieldRules,
   dateOfBirthRules,
+  disableExperienceDates,
+  disableFutureDates,
   employeeIdRules,
   experienceStartDateRules,
   fieldOfStudyRules,
@@ -118,6 +120,7 @@ export function EmployeeProfileFormFields({
   const leavePoliciesQuery = useLeavePolicies();
   const workSchedulesQuery = useWorkScheduleList();
   const experienceStartDate = Form.useWatch('experienceStartDate') as Dayjs | undefined;
+  const dateOfBirth = Form.useWatch('dateOfBirth') as Dayjs | undefined;
   const selectedWorkScheduleId = Form.useWatch('workScheduleId') as string | undefined;
 
   const leavePolicyOptions = useMemo(
@@ -175,7 +178,7 @@ export function EmployeeProfileFormFields({
               name="dateOfBirth"
               rules={dateOfBirthRules(t)}
             >
-              <DatePicker style={{ width: '100%' }} />
+              <DatePicker style={{ width: '100%' }} disabledDate={disableFutureDates} />
             </Form.Item>
             <Form.Item
               label={t('users.form.nationalId')}
@@ -333,7 +336,10 @@ export function EmployeeProfileFormFields({
               dependencies={['dateOfBirth']}
               rules={experienceStartDateRules(t)}
             >
-              <DatePicker style={{ width: '100%' }} />
+              <DatePicker
+                style={{ width: '100%' }}
+                disabledDate={disableExperienceDates(dateOfBirth)}
+              />
             </Form.Item>
           </div>
           {yearsOfExperience !== null ? (

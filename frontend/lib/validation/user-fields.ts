@@ -203,7 +203,7 @@ export function dateOfBirthRules(t: Translate): Rule[] {
         if (date.isAfter(today, 'day')) {
           throw new Error(t('validation.dateNotFuture'));
         }
-        const age = today.diff(date, 'year');
+        const age = today.diff(date.startOf('day'), 'year');
         if (age < MIN_EMPLOYEE_AGE || age > MAX_EMPLOYEE_AGE) {
           throw new Error(
             t('validation.ageBetween', {
@@ -215,6 +215,27 @@ export function dateOfBirthRules(t: Translate): Rule[] {
       },
     },
   ];
+}
+
+/** DatePicker guard: greys out days after today. */
+export function disableFutureDates(current: Dayjs): boolean {
+  return Boolean(current) && current.isAfter(dayjs(), 'day');
+}
+
+/** DatePicker guard for experience dates: no future days, none before the birth date. */
+export function disableExperienceDates(
+  dateOfBirth?: Dayjs | string | null,
+): (current: Dayjs) => boolean {
+  const birth = asDayjs(dateOfBirth);
+  return (current: Dayjs): boolean => {
+    if (!current) {
+      return false;
+    }
+    if (current.isAfter(dayjs(), 'day')) {
+      return true;
+    }
+    return Boolean(birth && current.isBefore(birth, 'day'));
+  };
 }
 
 export function experienceStartDateRules(t: Translate): Rule[] {

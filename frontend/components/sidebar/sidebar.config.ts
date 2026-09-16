@@ -222,7 +222,6 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           items: [
             { kind: 'link', id: 'users', labelKey: 'nav.users', icon: 'users', href: '/users', requires: ['users.manage'], keywords: ['employees', 'staff'] },
             { kind: 'link', id: 'employee-contract', labelKey: 'nav.hr.employeeContract', icon: 'hr-employee-contract', href: '/hr/employee-contract', requires: HR },
-            { kind: 'link', id: 'asset-management', labelKey: 'nav.hr.assetManagement', icon: 'hr-asset-management', href: '/hr/asset-management', requires: HR },
           ],
         },
         {
