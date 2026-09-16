@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -76,10 +77,14 @@ const USER_SELECT = {
 
 /**
  * Company work schedules, employee assignments, and working-day calculation.
- * Leave, overtime, and attendance must call this service — never hardcode weekends or holidays.
+ * Leave, overtime, and attendance must call this service — never hardcode weekends
+ * or holidays in those modules. When a company has no schedule configured, day
+ * counts temporarily use a Mon–Fri fallback so leave requests are not blocked.
  */
 @Injectable()
 export class WorkScheduleService {
+  private readonly logger = new Logger(WorkScheduleService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionService: PermissionService,
@@ -221,7 +226,11 @@ export class WorkScheduleService {
       return 0;
     }
 
-    const schedule = await this.getActiveSchedule(employeeId, companyId, onDate);
+    const schedule = await this.getActiveScheduleOrWeekdayFallback(
+      employeeId,
+      companyId,
+      onDate,
+    );
     const weekday = schedule.days.find(
       (row) => row.dayOfWeek === onDate.getUTCDay(),
     );
@@ -1099,9 +1108,73 @@ export class WorkScheduleService {
     if (cached) {
       return cached;
     }
-    const schedule = await this.getActiveSchedule(employeeId, companyId, date);
+    const schedule = await this.getActiveScheduleOrWeekdayFallback(
+      employeeId,
+      companyId,
+      date,
+    );
     cache.set(key, schedule);
     return schedule;
+  }
+
+  /**
+   * Assigned or company-default schedule, else Mon–Fri 8h so leave/overtime
+   * day counts still work when HR has not configured a schedule yet.
+   */
+  private async getActiveScheduleOrWeekdayFallback(
+    employeeId: string,
+    companyId: string,
+    date?: Date,
+  ): Promise<ScheduleWithDays> {
+    try {
+      return await this.getActiveSchedule(employeeId, companyId, date);
+    } catch (error: unknown) {
+      if (!(error instanceof NotFoundException)) {
+        throw error;
+      }
+      this.logger.warn(
+        `No work schedule for employee ${employeeId}; using weekday fallback`,
+      );
+      return this.weekdayFallbackSchedule(companyId);
+    }
+  }
+
+  /**
+   * In-memory Mon–Fri full days used only when no assignment or company default exists.
+   */
+  private weekdayFallbackSchedule(companyId: string): ScheduleWithDays {
+    const now = new Date();
+    const scheduleId = 'weekday-fallback';
+    const days = Array.from({ length: 7 }, (_, dayOfWeek) => {
+      const isWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 5;
+      return {
+        id: `${scheduleId}-${dayOfWeek}`,
+        scheduleId,
+        dayOfWeek,
+        isWorkingDay,
+        isHalfDay: false,
+        morningStart: isWorkingDay ? '08:00' : null,
+        morningEnd: isWorkingDay ? '12:00' : null,
+        afternoonStart: isWorkingDay ? '13:00' : null,
+        afternoonEnd: isWorkingDay ? '17:00' : null,
+        totalHours: new Prisma.Decimal(isWorkingDay ? 8 : 0),
+      };
+    });
+    return {
+      id: scheduleId,
+      companyId,
+      name: 'Weekday fallback',
+      description: null,
+      isDefault: false,
+      isActive: true,
+      createdAt: now,
+      createdBy: 'system',
+      updatedAt: now,
+      updatedBy: 'system',
+      deletedAt: null,
+      deletedBy: null,
+      days,
+    };
   }
 
   private async loadActiveHolidays(companyId: string): Promise<HolidayRow[]> {

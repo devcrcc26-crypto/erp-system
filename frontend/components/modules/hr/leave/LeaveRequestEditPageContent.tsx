@@ -49,10 +49,19 @@ function newPeriodId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function completeRange(
+  value: [Dayjs | null, Dayjs | null] | null,
+): [Dayjs, Dayjs] | null {
+  if (!value?.[0] || !value[1]) {
+    return null;
+  }
+  return [value[0], value[1]];
+}
+
 function toPeriodInputs(periods: LeavePeriodRow[]): LeavePeriodInput[] {
   return periods
     .filter((row): row is LeavePeriodRow & { range: [Dayjs, Dayjs] } =>
-      Boolean(row.range),
+      Boolean(row.range?.[0] && row.range[1]),
     )
     .map((row) => ({
       startDate: row.range[0].format('YYYY-MM-DD'),
@@ -79,6 +88,7 @@ export default function LeaveRequestEditPageContent({
   const previewMutation = usePreviewLeaveDays();
   const [periods, setPeriods] = useState<LeavePeriodRow[]>([]);
   const [preview, setPreview] = useState<PreviewDaysResult | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const request = detailQuery.data;
 
@@ -138,16 +148,28 @@ export default function LeaveRequestEditPageContent({
   useEffect(() => {
     const inputs = toPeriodInputs(periods);
     if (inputs.length === 0 || !request) {
+      setPreview(null);
+      setPreviewError(null);
       return;
     }
     const handle = window.setTimeout(() => {
       void previewMutation
         .mutateAsync({ employeeId: request.employeeId, periods: inputs })
-        .then((result) => setPreview(result))
-        .catch(() => setPreview(null));
+        .then((result) => {
+          setPreview(result);
+          setPreviewError(null);
+        })
+        .catch((error: unknown) => {
+          setPreview(null);
+          setPreviewError(
+            error instanceof ApiRequestError
+              ? error.message
+              : t('hr.messages.failedToPreviewLeaveDays'),
+          );
+        });
     }, 300);
     return () => window.clearTimeout(handle);
-  }, [periods, request?.employeeId]);
+  }, [periods, request?.employeeId, t]);
 
   useSetHeaderExtra(null);
 
@@ -155,6 +177,14 @@ export default function LeaveRequestEditPageContent({
     const inputs = toPeriodInputs(periods);
     if (inputs.length === 0) {
       messageApi.error(t('hr.form.periodRequired'));
+      return;
+    }
+    if (previewError) {
+      messageApi.error(previewError);
+      return;
+    }
+    if (!preview || preview.totalDays <= 0) {
+      messageApi.error(t('hr.form.periodNoWorkingDays'));
       return;
     }
     try {
@@ -269,7 +299,12 @@ export default function LeaveRequestEditPageContent({
                       setPeriods((current) =>
                         current.map((row) =>
                           row.id === period.id
-                            ? { ...row, range: value as [Dayjs, Dayjs] | null }
+                            ? {
+                                ...row,
+                                range: completeRange(
+                                  value as [Dayjs | null, Dayjs | null] | null,
+                                ),
+                              }
                             : row,
                         ),
                       );
@@ -303,7 +338,14 @@ export default function LeaveRequestEditPageContent({
                 </div>
               ))}
             </div>
-            {preview ? (
+            {previewError ? (
+              <Alert
+                type="error"
+                showIcon
+                title={previewError}
+                className="mt-3"
+              />
+            ) : preview ? (
               <div className="mt-3 rounded-xl border border-[#e8ebef] p-3">
                 <LeavePeriodBreakdownTable
                   breakdown={preview.periods.flatMap((row) => row.breakdown)}

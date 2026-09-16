@@ -73,10 +73,19 @@ function periodsOverlap(periods: LeavePeriodRow[]): boolean {
   return false;
 }
 
+function completeRange(
+  value: [Dayjs | null, Dayjs | null] | null,
+): [Dayjs, Dayjs] | null {
+  if (!value?.[0] || !value[1]) {
+    return null;
+  }
+  return [value[0], value[1]];
+}
+
 function toPeriodInputs(periods: LeavePeriodRow[]): LeavePeriodInput[] {
   return periods
     .filter((row): row is LeavePeriodRow & { range: [Dayjs, Dayjs] } =>
-      Boolean(row.range),
+      Boolean(row.range?.[0] && row.range[1]),
     )
     .map((row) => ({
       startDate: row.range[0].format('YYYY-MM-DD'),
@@ -127,6 +136,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     { id: newPeriodId(), range: null },
   ]);
   const [preview, setPreview] = useState<PreviewDaysResult | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const year = new Date().getFullYear();
   const balancesQuery = useMyLeaveBalances(year, true);
@@ -171,19 +181,35 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
   useEffect(() => {
     const inputs = toPeriodInputs(periods);
-    if (inputs.length === 0 || periodsOverlap(periods)) {
+    if (inputs.length === 0) {
       setPreview(null);
+      setPreviewError(null);
+      return;
+    }
+    if (periodsOverlap(periods)) {
+      setPreview(null);
+      setPreviewError(t('hr.form.overlapPeriods'));
       return;
     }
     const employeeId = currentUser.data?.id;
     const handle = window.setTimeout(() => {
       void previewMutation
         .mutateAsync({ employeeId, periods: inputs })
-        .then((result) => setPreview(result))
-        .catch(() => setPreview(null));
+        .then((result) => {
+          setPreview(result);
+          setPreviewError(null);
+        })
+        .catch((error: unknown) => {
+          setPreview(null);
+          setPreviewError(
+            error instanceof ApiRequestError
+              ? error.message
+              : t('hr.messages.failedToPreviewLeaveDays'),
+          );
+        });
     }, 300);
     return () => window.clearTimeout(handle);
-  }, [periods, currentUser.data?.id]);
+  }, [periods, currentUser.data?.id, t]);
 
   function captureSnapshot(): Partial<LeaveFormValues> {
     const values = form.getFieldsValue(true) as LeaveFormValues;
@@ -198,6 +224,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     setDetailsSnapshot({ leaveType: DEFAULT_LEAVE_TYPE });
     setPeriods([{ id: newPeriodId(), range: null }]);
     setPreview(null);
+    setPreviewError(null);
     setFormError(null);
   }
 
@@ -216,8 +243,12 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       setFormError(t('hr.form.overlapPeriods'));
       return false;
     }
+    if (previewError) {
+      setFormError(previewError);
+      return false;
+    }
     if (!preview || preview.totalDays <= 0) {
-      setFormError(t('hr.form.periodRequired'));
+      setFormError(t('hr.form.periodNoWorkingDays'));
       return false;
     }
     captureSnapshot();
@@ -238,8 +269,20 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       return;
     }
     const inputs = toPeriodInputs(periods);
-    if (inputs.length === 0 || periodsOverlap(periods) || !preview || preview.totalDays <= 0) {
+    if (inputs.length === 0) {
       setFormError(t('hr.form.periodRequired'));
+      return;
+    }
+    if (periodsOverlap(periods)) {
+      setFormError(t('hr.form.overlapPeriods'));
+      return;
+    }
+    if (previewError) {
+      setFormError(previewError);
+      return;
+    }
+    if (!preview || preview.totalDays <= 0) {
+      setFormError(t('hr.form.periodNoWorkingDays'));
       return;
     }
 
@@ -380,7 +423,9 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                             row.id === period.id
                               ? {
                                   ...row,
-                                  range: value as [Dayjs, Dayjs] | null,
+                                  range: completeRange(
+                                    value as [Dayjs | null, Dayjs | null] | null,
+                                  ),
                                 }
                               : row,
                           ),
@@ -416,7 +461,14 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                   </div>
                 ))}
               </div>
-              {preview ? (
+              {previewError ? (
+                <Alert
+                  type="error"
+                  showIcon
+                  title={previewError}
+                  className="mt-3"
+                />
+              ) : preview ? (
                 <div className="mt-3 rounded-xl border border-[#e8ebef] p-3">
                   <LeavePeriodBreakdownTable
                     breakdown={preview.periods.flatMap((row) => row.breakdown)}
@@ -561,6 +613,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       reviewValues,
       periods,
       preview,
+      previewError,
     ],
   );
 
