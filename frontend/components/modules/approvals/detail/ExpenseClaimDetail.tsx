@@ -59,17 +59,46 @@ export default function ExpenseClaimDetail({
       dataIndex: 'expenseDate',
       key: 'expenseDate',
       width: 110,
+      responsive: ['sm'],
       render: (v: string) => formatProjectDate(v),
     },
-    { title: 'Category', dataIndex: 'category', key: 'category', width: 140 },
-    { title: 'Description', dataIndex: 'description', key: 'description', ellipsis: true },
+    {
+      title: 'Category',
+      dataIndex: 'category',
+      key: 'category',
+      width: 140,
+      responsive: ['md'],
+    },
+    {
+      title: 'Description',
+      dataIndex: 'description',
+      key: 'description',
+      render: (value: string, row: ExpenseClaimItem) => (
+        <div className="min-w-0 break-words">
+          <span>{value || '-'}</span>
+          <p className="erp-users-cell-sub m-0 mt-0.5 sm:hidden">
+            {formatProjectDate(row.expenseDate)}
+          </p>
+          <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+            {row.category}
+          </p>
+          <p className="erp-users-cell-sub m-0 mt-0.5 tabular-nums lg:hidden">
+            {formatCurrencyAmount(row.amount, row.currency)}
+          </p>
+        </div>
+      ),
+    },
     {
       title: 'Amount',
       key: 'amount',
       width: 130,
       align: 'right',
-      render: (_: unknown, row: ExpenseClaimItem) =>
-        formatCurrencyAmount(row.amount, row.currency),
+      responsive: ['lg'],
+      render: (_: unknown, row: ExpenseClaimItem) => (
+        <span className="tabular-nums whitespace-nowrap">
+          {formatCurrencyAmount(row.amount, row.currency)}
+        </span>
+      ),
     },
     {
       title: 'ETB',
@@ -77,14 +106,22 @@ export default function ExpenseClaimDetail({
       key: 'amountEtb',
       width: 130,
       align: 'right',
-      render: (v: number) => formatEtbAmount(v),
+      render: (v: number) => (
+        <span className="tabular-nums whitespace-nowrap">
+          {formatEtbAmount(v)}
+        </span>
+      ),
     },
     {
       title: 'Receipt',
       key: 'receipt',
-      width: 100,
+      width: 96,
       render: (_: unknown, row: ExpenseClaimItem) =>
-        row.receipt ? <AttachmentDownloadList documents={[row.receipt]} /> : '-',
+        row.receipt ? (
+          <AttachmentDownloadList documents={[row.receipt]} compact />
+        ) : (
+          '-'
+        ),
     },
   ];
 
@@ -115,7 +152,7 @@ export default function ExpenseClaimDetail({
           columns={columns}
           dataSource={claim.items}
           pagination={false}
-          scroll={false}
+          scroll={{ x: 'max-content' }}
         />
       </SectionCard>
     </div>

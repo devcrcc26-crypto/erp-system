@@ -32,12 +32,6 @@ export class CreateConsumablesRequisitionDto {
   @IsDateString()
   requiredByDate?: string;
 
-  @ApiPropertyOptional({ maxLength: 200 })
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  department?: string;
-
   @ApiPropertyOptional({ default: false })
   @IsOptional()
   @IsBoolean()
@@ -63,12 +57,6 @@ export class UpdateConsumablesRequisitionDto {
   @IsOptional()
   @IsDateString()
   requiredByDate?: string;
-
-  @ApiPropertyOptional({ maxLength: 200 })
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  department?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

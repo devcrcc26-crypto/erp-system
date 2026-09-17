@@ -34,7 +34,6 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   employee_id: 'employeeId',
   title: 'title',
   purpose: 'purpose',
-  department: 'department',
   requiredbydate: 'requiredByDate',
   'required by date': 'requiredByDate',
   required_by_date: 'requiredByDate',
@@ -63,7 +62,6 @@ interface ParsedImportRow {
   employeeId: string;
   title: string;
   purpose: string;
-  department: string;
   requiredByDate: string;
   itemName: string;
   itemCode: string;
@@ -97,7 +95,6 @@ export class ConsumablesRequisitionImportService {
         employeeId: '',
         title: 'Office stationery top-up',
         purpose: 'Replenish low-value office consumables',
-        department: 'Administration',
         requiredByDate: new Date().toISOString().slice(0, 10),
         itemName: 'Ballpoint pens',
         itemCode: 'STN-PEN-01',
@@ -123,7 +120,6 @@ export class ConsumablesRequisitionImportService {
         employeeId: '',
         title: '',
         purpose: '',
-        department: '',
         requiredByDate: '',
         itemName: 'Ballpoint pens',
         itemCode: 'STN-PEN-01',
@@ -228,7 +224,6 @@ export class ConsumablesRequisitionImportService {
       columns.push(
         { header: 'title', key: 'title', width: 28 },
         { header: 'purpose', key: 'purpose', width: 36 },
-        { header: 'department', key: 'department', width: 18 },
         { header: 'requiredByDate', key: 'requiredByDate', width: 14 },
       );
     }
@@ -265,7 +260,6 @@ export class ConsumablesRequisitionImportService {
         'Requisition title — rows with the same employee+title share one DRAFT',
       ]);
       instructions.addRow(['purpose', 'Yes', 'Business purpose']);
-      instructions.addRow(['department', 'No', 'Optional department name']);
       instructions.addRow(['requiredByDate', 'No', 'YYYY-MM-DD']);
     }
     instructions.addRow(['itemName', 'Yes', 'Line item name']);
@@ -356,7 +350,6 @@ export class ConsumablesRequisitionImportService {
             const header: CreateConsumablesRequisitionDto = {
               title: row.title,
               purpose: row.purpose,
-              department: row.department,
               requiredByDate: row.requiredByDate,
             };
             const requisition =
@@ -469,7 +462,6 @@ export class ConsumablesRequisitionImportService {
         employeeId: '',
         title: '',
         purpose: '',
-        department: '',
         requiredByDate: '',
         itemName: '',
         itemCode: '',
@@ -618,7 +610,6 @@ export class ConsumablesRequisitionImportService {
       purpose = row.purpose.trim();
       base.title = title;
       base.purpose = purpose;
-      base.department = row.department.trim() || undefined;
 
       const dateResult = this.parseImportDate(
         row.requiredByDate,

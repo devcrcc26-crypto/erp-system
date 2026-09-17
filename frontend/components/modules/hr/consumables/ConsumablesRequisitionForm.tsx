@@ -9,7 +9,6 @@ import {
   Grid,
   Input,
   InputNumber,
-  Select,
   Table,
   Tooltip,
   Typography,
@@ -31,7 +30,6 @@ import type {
 } from '@/lib/api/consumables-requisition.types';
 import { CONSUMABLES_MAX_ITEMS } from '@/lib/api/consumables-requisition.types';
 import { useCreateConsumablesRequisition } from '@/lib/query/consumables-requisition';
-import { useDepartments } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -42,7 +40,6 @@ interface Step1Values {
   title?: string;
   purpose?: string;
   requiredByDate?: dayjs.Dayjs | null;
-  department?: string;
 }
 
 type ItemFormValues = Omit<
@@ -120,18 +117,6 @@ export default function ConsumablesRequisitionForm({
   const [formError, setFormError] = useState<string | null>(null);
 
   const createMutation = useCreateConsumablesRequisition();
-  const departmentsQuery = useDepartments(
-    { page: 1, limit: 100, isActive: true },
-    true,
-  );
-  const departmentOptions = useMemo(
-    () =>
-      (departmentsQuery.data?.data ?? []).map((department) => ({
-        value: department.name,
-        label: department.name,
-      })),
-    [departmentsQuery.data],
-  );
   const atMax = items.length >= CONSUMABLES_MAX_ITEMS;
 
   function resetForm(): void {
@@ -287,7 +272,6 @@ export default function ConsumablesRequisitionForm({
         requiredByDate: values.requiredByDate
           ? values.requiredByDate.format('YYYY-MM-DD')
           : undefined,
-        department: values.department?.trim() || undefined,
         declarationConfirmed: true,
       });
 
@@ -520,17 +504,6 @@ export default function ConsumablesRequisitionForm({
             </Form.Item>
 
             <div className="erp-form-grid-2">
-              <Form.Item name="department" label={t('hr.form.department')}>
-                <Select
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                  loading={departmentsQuery.isLoading}
-                  placeholder={t('hr.placeholder.selectDepartment')}
-                  options={departmentOptions}
-                />
-              </Form.Item>
-
               <Form.Item
                 name="requiredByDate"
                 label={t('hr.form.requiredByDate')}
@@ -753,10 +726,6 @@ export default function ConsumablesRequisitionForm({
                   }
                 />
                 <ReviewItem
-                  label={t('hr.form.department')}
-                  value={detailsSnapshot.department?.trim() || '—'}
-                />
-                <ReviewItem
                   label={t('hr.labels.purpose')}
                   value={detailsSnapshot.purpose?.trim() || '—'}
                 />
@@ -839,8 +808,6 @@ export default function ConsumablesRequisitionForm({
       atMax,
       detailsSnapshot,
       declarationConfirmed,
-      departmentsQuery.isLoading,
-      departmentOptions,
       totalBudget,
       tableScrollX,
       itemsEmpty,

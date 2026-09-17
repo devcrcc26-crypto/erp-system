@@ -141,6 +141,10 @@ export class ConsumablesRequisitionService
     }
 
     const requestNumber = await this.nextRequestNumber();
+    const department = await this.resolveEmployeeDepartment(
+      employeeId,
+      companyId,
+    );
     const requisition = await this.prisma.consumablesRequisition.create({
       data: {
         id: randomUUID(),
@@ -152,7 +156,7 @@ export class ConsumablesRequisitionService
         requiredByDate: dto.requiredByDate
           ? this.parseDateOnly(dto.requiredByDate)
           : null,
-        department: dto.department?.trim() || null,
+        department,
         declarationConfirmed: dto.declarationConfirmed ?? false,
         status: ConsumablesRequisitionStatus.DRAFT,
         createdBy: actorUserId,
@@ -161,6 +165,20 @@ export class ConsumablesRequisitionService
       select: { id: true },
     });
     return requisition;
+  }
+
+  /**
+   * Requester's org department name — the requisition's department is never client-supplied.
+   */
+  private async resolveEmployeeDepartment(
+    employeeId: string,
+    companyId: string,
+  ): Promise<string | null> {
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId },
+      select: { department: { select: { name: true } } },
+    });
+    return employee?.department?.name ?? null;
   }
 
   /**
@@ -185,9 +203,6 @@ export class ConsumablesRequisitionService
                 ? this.parseDateOnly(dto.requiredByDate)
                 : null,
             }
-          : {}),
-        ...(dto.department !== undefined
-          ? { department: dto.department?.trim() || null }
           : {}),
         ...(dto.declarationConfirmed !== undefined
           ? { declarationConfirmed: dto.declarationConfirmed }

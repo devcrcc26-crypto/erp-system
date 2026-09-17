@@ -67,22 +67,38 @@ export default function PurchaseRequestDetail({
       title: t('hr.table.itemName'),
       dataIndex: 'itemName',
       key: 'itemName',
-      ellipsis: true,
+      render: (value: string, row: PurchaseRequestItem) => (
+        <div className="min-w-0 break-words">
+          <span>{value || '-'}</span>
+          <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
+            {formatPurchaseItemDescription(row.description, row.modelSpec)}
+          </p>
+          <p className="erp-users-cell-sub m-0 mt-0.5 tabular-nums sm:hidden">
+            {row.quantity} {row.unit}
+          </p>
+          <p className="erp-users-cell-sub m-0 mt-0.5 tabular-nums lg:hidden">
+            {formatCurrencyAmount(row.unitPrice, row.currency)}
+          </p>
+        </div>
+      ),
     },
     {
       title: t('hr.table.descriptionWithModelSpec'),
       key: 'description',
-      ellipsis: true,
-      render: (_: unknown, row: PurchaseRequestItem) =>
-        formatPurchaseItemDescription(row.description, row.modelSpec),
+      responsive: ['md'],
+      render: (_: unknown, row: PurchaseRequestItem) => (
+        <div className="min-w-0 break-words">
+          {formatPurchaseItemDescription(row.description, row.modelSpec)}
+        </div>
+      ),
     },
     {
       title: t('hr.table.itemImage'),
       key: 'image',
-      width: 120,
+      width: 96,
       render: (_: unknown, row: PurchaseRequestItem) =>
         row.image ? (
-          <AttachmentDownloadList documents={[row.image]} />
+          <AttachmentDownloadList documents={[row.image]} compact />
         ) : (
           <Typography.Text type="secondary" className="text-xs">
             {t('hr.labels.noItemImage')}
@@ -95,15 +111,29 @@ export default function PurchaseRequestDetail({
       key: 'quantity',
       width: 70,
       align: 'right',
+      responsive: ['sm'],
+      render: (value: number | string) => (
+        <span className="tabular-nums">{value}</span>
+      ),
     },
-    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
+    {
+      title: t('hr.table.unit'),
+      dataIndex: 'unit',
+      key: 'unit',
+      width: 80,
+      responsive: ['sm'],
+    },
     {
       title: t('hr.table.unitPrice'),
       key: 'unitPrice',
       width: 130,
       align: 'right',
-      render: (_: unknown, row: PurchaseRequestItem) =>
-        formatCurrencyAmount(row.unitPrice, row.currency),
+      responsive: ['lg'],
+      render: (_: unknown, row: PurchaseRequestItem) => (
+        <span className="tabular-nums whitespace-nowrap">
+          {formatCurrencyAmount(row.unitPrice, row.currency)}
+        </span>
+      ),
     },
     {
       title: t('hr.table.total'),
@@ -111,7 +141,11 @@ export default function PurchaseRequestDetail({
       key: 'totalPriceEtb',
       width: 130,
       align: 'right',
-      render: (value: number | string) => formatEtbAmount(value),
+      render: (value: number | string) => (
+        <span className="tabular-nums whitespace-nowrap">
+          {formatEtbAmount(value)}
+        </span>
+      ),
     },
   ];
 
@@ -179,11 +213,11 @@ export default function PurchaseRequestDetail({
           columns={columns}
           dataSource={request.items}
           pagination={false}
-          scroll={false}
+          scroll={{ x: 'max-content' }}
           footer={
             request.items.length > 0
               ? () => (
-                  <div className="flex justify-end gap-4 pr-2 text-sm font-medium">
+                  <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 pr-2 text-sm font-medium">
                     <span style={{ color: tokens.colorTextSecondary }}>
                       {t('hr.form.itemCount', {
                         count: request.items.length,

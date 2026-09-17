@@ -71,7 +71,6 @@ export interface CreateConsumablesRequisitionPayload {
   title: string;
   purpose: string;
   requiredByDate?: string;
-  department?: string;
   declarationConfirmed?: boolean;
 }
 
@@ -79,7 +78,6 @@ export interface UpdateConsumablesRequisitionPayload {
   title?: string;
   purpose?: string;
   requiredByDate?: string;
-  department?: string;
   declarationConfirmed?: boolean;
 }
 

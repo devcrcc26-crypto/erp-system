@@ -17,7 +17,6 @@ export class ConsumablesRequisitionImportRowPreviewDto extends ImportRowPreviewD
   employeeEmail?: string;
   title?: string;
   purpose?: string;
-  department?: string;
   requiredByDate?: string;
   itemName?: string;
   itemCode?: string;
