@@ -59,6 +59,7 @@ import {
   parseTierConditions,
   resolveDisplayStatus,
 } from '@/lib/utils/approval-display';
+import { formatApprovalCategoryName } from '@/lib/utils/approval-category-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -487,7 +488,12 @@ export default function ApprovalDetailPageContent({
     name: formatApprovalUserName(request.requester),
     date: submittedDate,
   });
-  const categoryName = request.category?.name?.trim() || null;
+  const categoryName =
+    formatApprovalCategoryName(
+      request.categoryCode ?? request.category?.code,
+      t,
+      request.category?.name,
+    ) || null;
   const currentTierLabel = currentTier?.label?.trim() || null;
 
   return (

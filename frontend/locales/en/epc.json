@@ -155,6 +155,72 @@
       "listDescriptionAdmin": "Your actions, your submissions, and company-wide approval requests.",
       "newRequest": "New Request",
       "newDescription": "Select a category to continue.",
+      "categories": {
+        "LEAVE_REQUEST": {
+          "name": "Leave Request",
+          "description": "Employee requests for annual, sick, or unpaid leave."
+        },
+        "EXPENSE_CLAIM": {
+          "name": "Expense Claim",
+          "description": "Reimbursement claims for travel, meals, and other business expenses."
+        },
+        "PURCHASE_REQUEST": {
+          "name": "Purchase Request",
+          "description": "Internal request to purchase materials, equipment, or services."
+        },
+        "MATERIAL_REQUISITION": {
+          "name": "Material Requisition",
+          "description": "Request to issue stock materials from warehouse to a project or department."
+        },
+        "CONSUMABLES_REQUISITION": {
+          "name": "Low-Value Consumables Requisition",
+          "description": "Request for low-value office or site consumables."
+        },
+        "FLIGHT_APPLICATION": {
+          "name": "Flight Application",
+          "description": "Application for business flight bookings and travel authorisation."
+        },
+        "BUSINESS_TRIP": {
+          "name": "Third-Country Business Trip",
+          "description": "Application for international business travel requiring GM approval."
+        },
+        "VEHICLE_APPLICATION": {
+          "name": "Vehicle Application",
+          "description": "Request to use a company vehicle for official travel."
+        },
+        "OFFICIAL_SEAL_USAGE": {
+          "name": "Official Seal Usage",
+          "description": "Request to apply the company official seal to documents."
+        },
+        "PROJECT_SEAL_USAGE": {
+          "name": "Project Seal Usage",
+          "description": "Request to apply a project seal to project documents."
+        },
+        "VEHICLE_REFUELING": {
+          "name": "Office Vehicle Refueling",
+          "description": "Request to refuel an office or company vehicle."
+        },
+        "OVERTIME_APPLICATION": {
+          "name": "Overtime Application",
+          "description": "Application for overtime work outside normal working hours."
+        },
+        "INSPECTION_REPAIR": {
+          "name": "Inspection and Repair",
+          "description": "Request for equipment inspection, maintenance, or repair."
+        },
+        "BUSINESS_TRIP_THIRD_COUNTRY": {
+          "name": "Third-Country Business Trip",
+          "description": "Application for an official business trip to a third country."
+        },
+        "EXIT_PERMIT": {
+          "name": "Exit Permit",
+          "description": "Equipment and materials exit or entrance permit for site security."
+        },
+        "PER_DIEM": {
+          "name": "Per Diem Request",
+          "description": "Daily allowance request for domestic or international business travel."
+        }
+      },
       "dynamicFormDescription": "Complete the form and submit for approval.",
       "backToList": "Back to list",
       "backToCategories": "Back to categories",
@@ -899,6 +965,21 @@
       "gm": {
         "pmOverview": "PM Overview",
         "hrOverview": "HR Overview"
+      },
+      "personal": {
+        "title": "My dashboard",
+        "loadFailed": "Unable to load your dashboard.",
+        "annualLeave": "Annual leave remaining",
+        "ofEntitled": "{{remaining}} of {{entitled}} days",
+        "noBalance": "No leave balance on file",
+        "pendingLeave": "Pending leave",
+        "pendingLeaveHint": "Submitted or in review",
+        "overtimeThisMonth": "Overtime this month",
+        "hoursShort": "{{hours}}h",
+        "upcomingHolidays": "Upcoming holidays",
+        "next60Days": "Next 60 days",
+        "myLeave": "My leave requests",
+        "noLeave": "You have no leave requests yet."
       },
       "hr": {
         "title": "HR Dashboard",

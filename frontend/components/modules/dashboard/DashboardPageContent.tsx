@@ -9,10 +9,9 @@ import { useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 
 /**
- * Company home dashboard. The PM overview is hidden for now: anyone with HR
- * access lands on the HR overview, everyone else on the personal view.
- * To bring the PM overview back, restore the GmDashboard tab switch and the
- * PmDashboard branch — both components are still in this folder.
+ * Company home dashboard. The PM overview is hidden: HR users see the
+ * company HR overview; everyone else sees their own HR stats (leave,
+ * overtime, holidays). Restore GmDashboard / PmDashboard to bring PM back.
  */
 export default function DashboardPageContent(): React.ReactNode {
   const authHydrated = useAuthHydrated();

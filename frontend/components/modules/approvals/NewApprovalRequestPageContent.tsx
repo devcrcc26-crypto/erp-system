@@ -21,6 +21,10 @@ import {
   useSubmitApprovalRequest,
 } from '@/lib/query/approvals';
 import { tokens } from '@/lib/theme/tokens';
+import {
+  formatApprovalCategoryDescription,
+  formatApprovalCategoryName,
+} from '@/lib/utils/approval-category-display';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -71,8 +75,13 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
       return '';
     }
     const today = formatDisplayDate(new Date());
-    return `${selectedCategory.name} — ${today}`;
-  }, [selectedCategory]);
+    const categoryName = formatApprovalCategoryName(
+      selectedCategory.code,
+      t,
+      selectedCategory.name,
+    );
+    return `${categoryName} — ${today}`;
+  }, [selectedCategory, t]);
 
   function handleSelectCategory(category: ApprovalCategorySummary): void {
     const typedRoute = CATEGORY_ROUTES[category.code];
@@ -171,13 +180,21 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
                   className="text-sm font-semibold"
                   style={{ color: tokens.colorTextPrimary }}
                 >
-                  {category.name}
+                  {formatApprovalCategoryName(
+                    category.code,
+                    t,
+                    category.name,
+                  )}
                 </div>
                 <div
                   className="mt-1 text-xs leading-relaxed"
                   style={{ color: tokens.colorTextSecondary }}
                 >
-                  {category.description || category.code}
+                  {formatApprovalCategoryDescription(
+                    category.code,
+                    t,
+                    category.description,
+                  ) || category.code}
                 </div>
               </button>
             ))}
@@ -207,13 +224,20 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
         <div className="erp-employee-section">
           <div className="erp-employee-section-header">
             <h3 className="erp-employee-section-title m-0">
-              {selectedCategory.name}
+              {formatApprovalCategoryName(
+                selectedCategory.code,
+                t,
+                selectedCategory.name,
+              )}
             </h3>
           </div>
           <div className="erp-employee-section-body">
             <p className="erp-users-cell-sub m-0 mb-4">
-              {selectedCategory.description ||
-                t('pages.approvals.dynamicFormDescription')}
+              {formatApprovalCategoryDescription(
+                selectedCategory.code,
+                t,
+                selectedCategory.description,
+              ) || t('pages.approvals.dynamicFormDescription')}
             </p>
             <FormSchemaRenderer
               fields={fields}

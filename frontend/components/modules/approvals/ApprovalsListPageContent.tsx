@@ -49,6 +49,7 @@ import {
   formatApprovalUserName,
   resolveDisplayStatus,
 } from '@/lib/utils/approval-display';
+import { formatApprovalCategoryName } from '@/lib/utils/approval-category-display';
 import {
   filterApprovalRequests,
   statusesForApprovalMode,
@@ -229,9 +230,9 @@ export default function ApprovalsListPageContent(): React.ReactNode {
     () =>
       (categoriesQuery.data ?? []).map((category) => ({
         value: category.id,
-        label: category.name,
+        label: formatApprovalCategoryName(category.code, t, category.name),
       })),
-    [categoriesQuery.data],
+    [categoriesQuery.data, t],
   );
 
   const hasFilters =
@@ -294,7 +295,11 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         responsive: ['md'],
         render: (_: unknown, row: ApprovalRequestListItem) => (
           <span className="erp-users-cell-sub">
-            {row.category?.name ?? '—'}
+            {formatApprovalCategoryName(
+              row.category?.code ?? row.categoryCode,
+              t,
+              row.category?.name,
+            ) || '—'}
           </span>
         ),
       },

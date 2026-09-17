@@ -155,6 +155,72 @@
       "listDescriptionAdmin": "您的待办、您的申请以及全公司审批请求。",
       "newRequest": "新建申请",
       "newDescription": "请选择类别继续。",
+      "categories": {
+        "LEAVE_REQUEST": {
+          "name": "请假申请",
+          "description": "员工年假、病假或无薪假申请。"
+        },
+        "EXPENSE_CLAIM": {
+          "name": "费用报销",
+          "description": "差旅、餐饮及其他公务费用报销。"
+        },
+        "PURCHASE_REQUEST": {
+          "name": "采购申请",
+          "description": "采购材料、设备或服务的内部申请。"
+        },
+        "MATERIAL_REQUISITION": {
+          "name": "领料申请",
+          "description": "从仓库向项目或部门发放库存材料。"
+        },
+        "CONSUMABLES_REQUISITION": {
+          "name": "低值易耗品申请",
+          "description": "申请低值办公或现场耗材。"
+        },
+        "FLIGHT_APPLICATION": {
+          "name": "机票申请",
+          "description": "公务机票预订与出行审批。"
+        },
+        "BUSINESS_TRIP": {
+          "name": "第三国出差",
+          "description": "需总经理审批的国际公务出行申请。"
+        },
+        "VEHICLE_APPLICATION": {
+          "name": "用车申请",
+          "description": "申请使用公司车辆办理公务。"
+        },
+        "OFFICIAL_SEAL_USAGE": {
+          "name": "公章使用",
+          "description": "申请在文件上使用公司公章。"
+        },
+        "PROJECT_SEAL_USAGE": {
+          "name": "项目章使用",
+          "description": "申请在项目文件上使用项目章。"
+        },
+        "VEHICLE_REFUELING": {
+          "name": "办公车辆加油",
+          "description": "申请为办公或公司车辆加油。"
+        },
+        "OVERTIME_APPLICATION": {
+          "name": "加班申请",
+          "description": "正常工作时间以外的加班申请。"
+        },
+        "INSPECTION_REPAIR": {
+          "name": "检修申请",
+          "description": "设备检查、保养或维修申请。"
+        },
+        "BUSINESS_TRIP_THIRD_COUNTRY": {
+          "name": "第三国出差",
+          "description": "赴第三国公务出差申请。"
+        },
+        "EXIT_PERMIT": {
+          "name": "出入证",
+          "description": "设备物资进出场许可，用于现场安保。"
+        },
+        "PER_DIEM": {
+          "name": "差旅补贴申请",
+          "description": "国内或国际公务出行的每日津贴申请。"
+        }
+      },
       "dynamicFormDescription": "填写表单并提交审批。",
       "backToList": "返回列表",
       "backToCategories": "返回类别",
@@ -899,6 +965,21 @@
       "gm": {
         "pmOverview": "项目概览",
         "hrOverview": "人力资源概览"
+      },
+      "personal": {
+        "title": "我的仪表板",
+        "loadFailed": "无法加载您的仪表板。",
+        "annualLeave": "年假剩余",
+        "ofEntitled": "{{remaining}} / {{entitled}} 天",
+        "noBalance": "暂无假期余额",
+        "pendingLeave": "待处理请假",
+        "pendingLeaveHint": "已提交或审批中",
+        "overtimeThisMonth": "本月加班",
+        "hoursShort": "{{hours}} 小时",
+        "upcomingHolidays": "即将到来的假期",
+        "next60Days": "未来 60 天",
+        "myLeave": "我的请假申请",
+        "noLeave": "您还没有请假申请。"
       },
       "hr": {
         "title": "人力资源仪表板",
