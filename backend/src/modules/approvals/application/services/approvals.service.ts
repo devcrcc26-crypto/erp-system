@@ -374,6 +374,7 @@ export class ApprovalsService {
       vehicleRefueling: undefined,
       officialSeal: undefined,
       projectSeal: undefined,
+      exitPermit: undefined,
     };
   }
 

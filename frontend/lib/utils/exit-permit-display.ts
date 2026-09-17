@@ -5,7 +5,7 @@ import type {
   ExitPermitStatus,
   ExitPermitUserSummary,
 } from '@/lib/api/exit-permit.types';
-import { formatUserName } from '@/lib/utils/user-display';
+import { formatUserName, isUuidLike } from '@/lib/utils/user-display';
 
 type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -64,9 +64,12 @@ export function exitPermitStatusVariant(
 }
 
 export function formatExitPermitEmployeeName(
-  user?: ExitPermitUserSummary | null,
+  user?: ExitPermitUserSummary | string | null,
 ): string {
   if (!user) return '-';
+  if (typeof user === 'string') {
+    return isUuidLike(user) ? 'Unknown user' : user.trim() || '-';
+  }
   return formatUserName(user);
 }
 

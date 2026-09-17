@@ -28,6 +28,7 @@ import VehicleRefuelingDetail from '@/components/modules/approvals/detail/Vehicl
 import OfficialSealDetail from '@/components/modules/approvals/detail/OfficialSealDetail';
 import ProjectSealDetail from '@/components/modules/approvals/detail/ProjectSealDetail';
 import InspectionRepairDetail from '@/components/modules/approvals/detail/InspectionRepairDetail';
+import ExitPermitDetail from '@/components/modules/approvals/detail/ExitPermitDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
@@ -206,6 +207,16 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       }
       return (
         <InspectionRepairDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    case 'EXIT_PERMIT':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <ExitPermitDetail
           approvalRequestId={request.id}
           sourceId={sourceId}
         />
