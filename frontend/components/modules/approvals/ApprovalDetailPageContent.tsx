@@ -666,7 +666,7 @@ export default function ApprovalDetailPageContent({
         onConfirm={() => void handleApprove()}
       >
         <Input.TextArea
-          rows={3}
+          autoSize={{ minRows: 6, maxRows: 12 }}
           placeholder={t('pages.approvals.dialog.notePlaceholder')}
           value={note}
           onChange={(event) => setNote(event.target.value)}
@@ -684,14 +684,14 @@ export default function ApprovalDetailPageContent({
         onConfirm={() => void handleConditionalApprove()}
       >
         <Input.TextArea
-          rows={3}
+          autoSize={{ minRows: 4, maxRows: 8 }}
           placeholder={t('pages.approvals.dialog.conditionPlaceholder')}
           value={conditionText}
           onChange={(event) => setConditionText(event.target.value)}
           className="mt-3"
         />
         <Input.TextArea
-          rows={2}
+          autoSize={{ minRows: 5, maxRows: 10 }}
           placeholder={t('pages.approvals.dialog.notePlaceholder')}
           value={note}
           onChange={(event) => setNote(event.target.value)}
@@ -709,7 +709,7 @@ export default function ApprovalDetailPageContent({
         onConfirm={() => void handleReturn()}
       >
         <Input.TextArea
-          rows={3}
+          autoSize={{ minRows: 6, maxRows: 12 }}
           placeholder={t('pages.approvals.dialog.returnNotePlaceholder')}
           value={note}
           onChange={(event) => setNote(event.target.value)}
@@ -728,7 +728,7 @@ export default function ApprovalDetailPageContent({
         onConfirm={() => void handleReject()}
       >
         <Input.TextArea
-          rows={3}
+          autoSize={{ minRows: 6, maxRows: 12 }}
           placeholder={t('pages.approvals.dialog.rejectNotePlaceholder')}
           value={note}
           onChange={(event) => setNote(event.target.value)}

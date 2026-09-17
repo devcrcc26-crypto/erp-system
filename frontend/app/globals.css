@@ -2825,7 +2825,15 @@ main::-webkit-scrollbar,
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
   max-width: 100%;
+}
+
+.erp-confirm-dialog-copy .ant-input,
+.erp-confirm-dialog-copy .ant-input-textarea,
+.erp-confirm-dialog-copy textarea.ant-input {
+  width: 100%;
+  text-align: left;
 }
 
 .erp-confirm-dialog-title {
