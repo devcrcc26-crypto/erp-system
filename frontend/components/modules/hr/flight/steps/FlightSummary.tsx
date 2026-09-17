@@ -56,11 +56,6 @@ export default function FlightSummary({
       .filter(Boolean)
       .join(', ') || '—';
 
-  const kmDifference =
-    tripDetails.kmAtDeparture != null && tripDetails.kmAtReturn != null
-      ? String(tripDetails.kmAtReturn - tripDetails.kmAtDeparture)
-      : '—';
-
   return (
     <FormLayout
       variant="pro"
@@ -100,23 +95,6 @@ export default function FlightSummary({
               : t('hr.tripType.ONE_WAY')
           }
         />
-        <ReviewItem
-          label={t('hr.form.kmAtDeparture')}
-          value={
-            tripDetails.kmAtDeparture != null
-              ? String(tripDetails.kmAtDeparture)
-              : '—'
-          }
-        />
-        <ReviewItem
-          label={t('hr.form.kmAtReturn')}
-          value={
-            tripDetails.kmAtReturn != null
-              ? String(tripDetails.kmAtReturn)
-              : '—'
-          }
-        />
-        <ReviewItem label={t('hr.form.kmDifference')} value={kmDifference} />
         <ReviewItem
           label={t('hr.labels.ticketClass')}
           value={formatTicketClass(tripDetails.ticketClass, t)}

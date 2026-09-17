@@ -24,7 +24,9 @@ import {
 } from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { getDisabledDepartureDate } from '@/lib/utils/date-validation';
 import type { AvailableVehicle } from '@/lib/api/company-vehicle.types';
 import type {
   DriveType,
@@ -78,6 +80,8 @@ export default function VehicleApplicationForm({
   onSuccess,
 }: VehicleApplicationFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  // HR / full access may record past trips; everyone else books ahead.
+  const canBackdate = useCanViewHr();
   const onBehalf = useOnBehalf('VEHICLE_APPLICATION');
   const messageApi = useAppMessage();
   const [form] = Form.useForm<VehicleApplicationFormValues>();
@@ -98,11 +102,11 @@ export default function VehicleApplicationForm({
     | undefined;
 
   const datesReady = Boolean(
-    departureAt && returnAt && !returnAt.isBefore(departureAt),
+    departureAt && returnAt && returnAt.isAfter(departureAt),
   );
 
   const availableParams = useMemo(() => {
-    if (!departureAt || !returnAt || returnAt.isBefore(departureAt)) {
+    if (!departureAt || !returnAt || !returnAt.isAfter(departureAt)) {
       return null;
     }
     return {
@@ -189,8 +193,8 @@ export default function VehicleApplicationForm({
       );
       return false;
     }
-    if (returnAt.isBefore(departureAt)) {
-      messageApi.error(t('hr.validation.returnAfterDeparture'));
+    if (!returnAt.isAfter(departureAt)) {
+      messageApi.error(t('hr.dateRules.returnAfterDeparture'));
       return false;
     }
     form.setFieldsValue({
@@ -245,11 +249,11 @@ export default function VehicleApplicationForm({
   async function handleSubmit(): Promise<void> {
     setFormError(null);
 
-    if (!departureAt || !returnAt || returnAt.isBefore(departureAt)) {
+    if (!departureAt || !returnAt || !returnAt.isAfter(departureAt)) {
       messageApi.error(
         !departureAt || !returnAt
           ? t('hr.validation.selectDeparture')
-          : t('hr.validation.returnAfterDeparture'),
+          : t('hr.dateRules.returnAfterDeparture'),
       );
       return;
     }
@@ -341,7 +345,7 @@ export default function VehicleApplicationForm({
                     format="YYYY-MM-DD HH:mm"
                     className="w-full"
                     value={departureAt}
-                    disabledDate={(d) => d.isBefore(dayjs(), 'day')}
+                    disabledDate={getDisabledDepartureDate(canBackdate)}
                     onChange={(value) => handleDepartureChange(value)}
                   />
                 </Form.Item>
@@ -349,13 +353,13 @@ export default function VehicleApplicationForm({
                   label={t('hr.form.returnDateTime')}
                   required
                   validateStatus={
-                    departureAt && returnAt && returnAt.isBefore(departureAt)
+                    departureAt && returnAt && !returnAt.isAfter(departureAt)
                       ? 'error'
                       : undefined
                   }
                   help={
-                    departureAt && returnAt && returnAt.isBefore(departureAt)
-                      ? t('hr.validation.returnAfterDeparture')
+                    departureAt && returnAt && !returnAt.isAfter(departureAt)
+                      ? t('hr.dateRules.returnAfterDeparture')
                       : undefined
                   }
                 >

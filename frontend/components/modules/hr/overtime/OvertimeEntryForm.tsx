@@ -1,6 +1,6 @@
 'use client';
 
-import { DatePicker, Form, Input, Spin, TimePicker } from 'antd';
+import { Checkbox, DatePicker, Form, Input, Spin, TimePicker } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -11,7 +11,29 @@ export interface OvertimeEntryFormValues {
   date: Dayjs;
   startTime: Dayjs;
   endTime: Dayjs;
+  isOvernight?: boolean;
   taskDescription: string;
+}
+
+function minutesOfDay(value: Dayjs | undefined): number | null {
+  return value ? value.hour() * 60 + value.minute() : null;
+}
+
+/** True when the end time is at or before the start time (entry would cross midnight). */
+export function endsAtOrBeforeStart(
+  start: Dayjs | undefined,
+  end: Dayjs | undefined,
+): boolean {
+  const s = minutesOfDay(start);
+  const e = minutesOfDay(end);
+  return s !== null && e !== null && e <= s;
+}
+
+/** Duration in hours for an overnight entry (end on the next day). */
+function overnightHours(start: Dayjs, end: Dayjs): number {
+  const s = minutesOfDay(start) ?? 0;
+  const e = minutesOfDay(end) ?? 0;
+  return Math.round(((e + 24 * 60 - s) / 60) * 100) / 100;
 }
 
 interface OvertimeEntryFormProps {
@@ -94,6 +116,10 @@ export default function OvertimeEntryForm({
   onFinish,
 }: OvertimeEntryFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const watchedStart = Form.useWatch('startTime', form);
+  const watchedEnd = Form.useWatch('endTime', form);
+  const watchedOvernight = Form.useWatch('isOvernight', form);
+  const crossesMidnight = endsAtOrBeforeStart(watchedStart, watchedEnd);
 
   return (
     <Form<OvertimeEntryFormValues>
@@ -141,14 +167,38 @@ export default function OvertimeEntryForm({
             <Form.Item
               name="endTime"
               label={t('hr.form.endTime')}
+              dependencies={['startTime', 'isOvernight']}
               rules={[
                 {
                   required: true,
                   message: t('hr.validation.endTimeRequired'),
                 },
+                ({ getFieldValue }) => ({
+                  validator: (_rule, value: Dayjs | undefined) =>
+                    endsAtOrBeforeStart(getFieldValue('startTime'), value) &&
+                    !getFieldValue('isOvernight')
+                      ? Promise.reject(
+                          new Error(t('hr.dateRules.overnightRequired')),
+                        )
+                      : Promise.resolve(),
+                }),
               ]}
             >
               <TimePicker className="w-full" format="HH:mm" minuteStep={15} />
+            </Form.Item>
+            <Form.Item
+              name="isOvernight"
+              valuePropName="checked"
+              className="md:col-span-2 !mb-0"
+              extra={
+                watchedOvernight && crossesMidnight && watchedStart && watchedEnd
+                  ? t('hr.dateRules.overnightNote', {
+                      hours: overnightHours(watchedStart, watchedEnd),
+                    })
+                  : undefined
+              }
+            >
+              <Checkbox>{t('hr.dateRules.overnight')}</Checkbox>
             </Form.Item>
           </div>
         </DrawerSection>

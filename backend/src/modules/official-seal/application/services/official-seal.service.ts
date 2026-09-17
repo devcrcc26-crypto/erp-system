@@ -1,4 +1,5 @@
 import { PrismaService } from "@/shared/prisma/prisma.service";
+import { isDateInPast } from "@/shared/utils/date-validation.util";
 import {
   ApprovalRequestStatus,
   FolderContextType,
@@ -133,7 +134,7 @@ export class OfficialSealService
 
     const now = new Date();
     const id = randomUUID();
-    const dateNeeded = this.parseDateOnly(dto.dateNeeded);
+    const dateNeeded = this.parseDateNeeded(dto.dateNeeded);
     const extraFields = this.sealExtraFieldsFromDto(dto);
 
     if (resolvedTiers.length === 0) {
@@ -293,7 +294,7 @@ export class OfficialSealService
         description: dto.description.trim(),
         ...this.sealExtraFieldsFromDto(dto),
         urgency: dto.urgency,
-        dateNeeded: this.parseDateOnly(dto.dateNeeded),
+        dateNeeded: this.parseDateNeeded(dto.dateNeeded),
         status: SealStatus.DRAFT,
         createdBy: actorUserId,
         updatedBy: actorUserId,
@@ -646,6 +647,17 @@ export class OfficialSealService
       sealCategory: dto.sealCategory?.trim() || null,
       copyCount: dto.copyCount ?? null,
     };
+  }
+
+  /** Seals are requested for upcoming documents: today or later (company timezone). */
+  private parseDateNeeded(value: string): Date {
+    const date = this.parseDateOnly(value);
+    if (isDateInPast(date)) {
+      throw new BadRequestException(
+        'Date needed must be today or a future date',
+      );
+    }
+    return date;
   }
 
   private parseDateOnly(value: string): Date {

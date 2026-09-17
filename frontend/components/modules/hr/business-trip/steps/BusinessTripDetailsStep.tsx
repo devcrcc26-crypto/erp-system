@@ -3,8 +3,13 @@
 import { useMemo } from 'react';
 import { Col, DatePicker, Input, Radio, Row, Select } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { BusinessTripDetailsValues } from './business-trip-stepper.types';
+import {
+  getDisabledDepartureDate,
+  getDisabledReturnDate,
+} from '@/lib/utils/date-validation';
 
 /**
  * Step 1 — international trip routing details.
@@ -17,6 +22,8 @@ export default function BusinessTripDetailsStep({
   onChange: (next: BusinessTripDetailsValues) => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  // HR / full access may record trips already taken; everyone else books ahead.
+  const canBackdate = useCanViewHr();
 
   const ticketClassOptions = useMemo(
     () => [
@@ -127,7 +134,18 @@ export default function BusinessTripDetailsStep({
               showTime={{ format: 'HH:mm' }}
               format="YYYY-MM-DD HH:mm"
               value={values.departureDate}
-              onChange={(date) => patch({ departureDate: date })}
+              disabledDate={getDisabledDepartureDate(canBackdate)}
+              onChange={(date) =>
+                patch({
+                  departureDate: date,
+                  // A return that is now before the new departure is no longer valid.
+                  ...(date &&
+                  values.returnDate &&
+                  values.returnDate.isBefore(date)
+                    ? { returnDate: null }
+                    : {}),
+                })
+              }
             />
           </div>
         </Col>
@@ -143,6 +161,14 @@ export default function BusinessTripDetailsStep({
                 showTime={{ format: 'HH:mm' }}
                 format="YYYY-MM-DD HH:mm"
                 value={values.returnDate}
+                disabledDate={getDisabledReturnDate(values.departureDate)}
+                status={
+                  values.departureDate &&
+                  values.returnDate &&
+                  values.returnDate.isBefore(values.departureDate)
+                    ? 'error'
+                    : undefined
+                }
                 onChange={(date) => patch({ returnDate: date })}
               />
             </div>
@@ -150,61 +176,6 @@ export default function BusinessTripDetailsStep({
         ) : null}
       </Row>
 
-      <Row gutter={[16, 0]}>
-        <Col xs={24} sm={12}>
-          <div className="mb-4">
-            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
-              {t('hr.form.kmAtDeparture')}
-            </label>
-            <Input
-              type="number"
-              min={0}
-              value={values.kmAtDeparture ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value;
-                patch({
-                  kmAtDeparture: raw === '' ? null : Number(raw),
-                });
-              }}
-              placeholder={t('hr.placeholder.enterKmReading')}
-            />
-          </div>
-        </Col>
-        <Col xs={24} sm={12}>
-          <div className="mb-4">
-            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
-              {t('hr.form.kmAtReturn')}
-            </label>
-            <Input
-              type="number"
-              min={0}
-              value={values.kmAtReturn ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value;
-                patch({
-                  kmAtReturn: raw === '' ? null : Number(raw),
-                });
-              }}
-              placeholder={t('hr.placeholder.enterKmReading')}
-            />
-          </div>
-        </Col>
-      </Row>
-
-      {values.kmAtDeparture != null &&
-      values.kmAtReturn != null &&
-      Number.isFinite(values.kmAtDeparture) &&
-      Number.isFinite(values.kmAtReturn) ? (
-        <div className="mb-4">
-          <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
-            {t('hr.form.kmDifference')}
-          </label>
-          <Input
-            disabled
-            value={String(values.kmAtReturn - values.kmAtDeparture)}
-          />
-        </div>
-      ) : null}
 
       <div className="mb-0">
         <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">

@@ -217,8 +217,6 @@ export default function BusinessTripDetailPageContent({
           perDiem: t('hr.labels.perDiem'),
           required: t('hr.labels.required'),
           notRequired: t('hr.labels.notRequired'),
-          kmAtDeparture: t('hr.form.kmAtDeparture'),
-          kmAtReturn: t('hr.form.kmAtReturn'),
           passengerName: t('hr.table.employee'),
           passengerEmail: t('users.form.email'),
           passport: t('hr.labels.passport'),

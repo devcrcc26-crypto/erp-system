@@ -52,6 +52,7 @@ export interface OvertimeEntry {
   startTime: string;
   endTime: string;
   isHoliday: boolean;
+  isOvernight?: boolean;
   regularHours: number;
   nightHours: number;
   weekendHours: number;
@@ -109,6 +110,7 @@ export interface UpsertOvertimeEntryPayload {
   date: string;
   startTime: string;
   endTime: string;
+  isOvernight?: boolean;
   taskDescription: string;
 }
 
@@ -117,6 +119,7 @@ export interface PreviewOvertimeEntryPayload {
   date: string;
   startTime: string;
   endTime: string;
+  isOvernight?: boolean;
 }
 
 export interface PreviewOvertimeEntryResult {

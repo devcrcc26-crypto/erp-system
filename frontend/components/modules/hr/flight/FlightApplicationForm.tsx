@@ -127,6 +127,13 @@ export function FlightApplicationForm({
           ) {
             errors.push(t('hr.validation.returnDateRequired'));
           }
+          if (
+            tripDetails.tripType === 'ROUND_TRIP' &&
+            tripDetails.departureDate &&
+            tripDetails.returnDate?.isBefore(tripDetails.departureDate)
+          ) {
+            errors.push(t('hr.validation.returnAfterDeparture'));
+          }
           if (!tripDetails.purpose.trim()) {
             errors.push(t('hr.validation.purposeRequiredFlight'));
           }
@@ -219,16 +226,6 @@ export function FlightApplicationForm({
         returnDate:
           tripDetails.tripType === 'ROUND_TRIP' && tripDetails.returnDate
             ? tripDetails.returnDate.toISOString()
-            : undefined,
-        kmAtDeparture:
-          tripDetails.kmAtDeparture != null &&
-          Number.isFinite(tripDetails.kmAtDeparture)
-            ? tripDetails.kmAtDeparture
-            : undefined,
-        kmAtReturn:
-          tripDetails.kmAtReturn != null &&
-          Number.isFinite(tripDetails.kmAtReturn)
-            ? tripDetails.kmAtReturn
             : undefined,
         purpose: tripDetails.purpose.trim(),
         ticketClass: tripDetails.ticketClass,

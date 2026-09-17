@@ -33,6 +33,7 @@ import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { disableAllButToday } from '@/lib/utils/date-validation';
 import { useUserNameLookup } from '@/hooks/useUserNameLookup';
 import { apiPostForm } from '@/lib/api/client';
 import type {
@@ -397,7 +398,7 @@ export default function ExitPermitForm({
                   <DatePicker
                     className="w-full"
                     placeholder={t('hr.placeholder.selectDate')}
-                    disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                    disabledDate={disableAllButToday}
                   />
                 </Form.Item>
                 <Form.Item
@@ -655,7 +656,7 @@ export default function ExitPermitForm({
       layout="vertical"
       requiredMark={false}
       preserve
-      initialValues={{ direction: 'EXIT' }}
+      initialValues={{ direction: 'EXIT', date: dayjs() }}
       className="flex min-h-0 flex-1 flex-col"
     >
       {formError ? (

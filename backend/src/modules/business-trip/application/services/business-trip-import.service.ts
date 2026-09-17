@@ -100,12 +100,6 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   'per diem required': 'perDiemRequired',
   per_diem_required: 'perDiemRequired',
   notes: 'notes',
-  kmatdeparture: 'kmAtDeparture',
-  'km at departure': 'kmAtDeparture',
-  km_at_departure: 'kmAtDeparture',
-  kmatreturn: 'kmAtReturn',
-  'km at return': 'kmAtReturn',
-  km_at_return: 'kmAtReturn',
   passengeremail: 'passengerEmail',
   'passenger email': 'passengerEmail',
   passenger_email: 'passengerEmail',
@@ -149,8 +143,6 @@ interface ParsedImportRow {
   accommodationDetails: string;
   perDiemRequired: string;
   notes: string;
-  kmAtDeparture: string;
-  kmAtReturn: string;
   passengerEmail: string;
   passengerId: string;
   passportNumber: string;
@@ -206,8 +198,6 @@ export class BusinessTripImportService {
         accommodationDetails: '',
         perDiemRequired: 'TRUE',
         notes: '',
-        kmAtDeparture: '',
-        kmAtReturn: '',
         passengerEmail: 'passenger@company.local',
         passengerId: '',
         passportNumber: '',
@@ -251,8 +241,6 @@ export class BusinessTripImportService {
         accommodationDetails: '',
         perDiemRequired: '',
         notes: '',
-        kmAtDeparture: '',
-        kmAtReturn: '',
         passengerEmail: 'passenger@company.local',
         passengerId: '',
         passportNumber: '',
@@ -389,8 +377,6 @@ export class BusinessTripImportService {
         },
         { header: 'perDiemRequired', key: 'perDiemRequired', width: 14 },
         { header: 'notes', key: 'notes', width: 24 },
-        { header: 'kmAtDeparture', key: 'kmAtDeparture', width: 14 },
-        { header: 'kmAtReturn', key: 'kmAtReturn', width: 12 },
       );
     }
     columns.push(
@@ -471,8 +457,6 @@ export class BusinessTripImportService {
         'TRUE | FALSE (default TRUE)',
       ]);
       instructions.addRow(['notes', 'No', '']);
-      instructions.addRow(['kmAtDeparture', 'No', 'Number ≥ 0']);
-      instructions.addRow(['kmAtReturn', 'No', 'Number ≥ 0']);
     }
     instructions.addRow([
       'passengerEmail',
@@ -605,8 +589,6 @@ export class BusinessTripImportService {
               accommodationDetails: row.accommodationDetails,
               perDiemRequired: row.perDiemRequired,
               notes: row.notes,
-              kmAtDeparture: row.kmAtDeparture,
-              kmAtReturn: row.kmAtReturn,
             };
             const trip = await this.businessTripService.findOrCreateDraftTrip(
               row.submitterId,
@@ -736,8 +718,6 @@ export class BusinessTripImportService {
         accommodationDetails: '',
         perDiemRequired: '',
         notes: '',
-        kmAtDeparture: '',
-        kmAtReturn: '',
         passengerEmail: '',
         passengerId: '',
         passportNumber: '',
@@ -861,8 +841,6 @@ export class BusinessTripImportService {
     let accommodationDetails: string | undefined;
     let perDiemRequired: boolean | undefined;
     let notes: string | undefined;
-    let kmAtDeparture: number | undefined;
-    let kmAtReturn: number | undefined;
 
     if (options.mode === 'trip') {
       submitterId = options.submitterId;
@@ -1048,17 +1026,6 @@ export class BusinessTripImportService {
       }
       estimatedOtherCost = otherCost.value;
 
-      const kmDep = this.parseOptionalNumber(row.kmAtDeparture, 'kmAtDeparture');
-      if (!kmDep.ok) {
-        return { ...base, status: 'error', message: kmDep.message };
-      }
-      kmAtDeparture = kmDep.value;
-
-      const kmRet = this.parseOptionalNumber(row.kmAtReturn, 'kmAtReturn');
-      if (!kmRet.ok) {
-        return { ...base, status: 'error', message: kmRet.message };
-      }
-      kmAtReturn = kmRet.value;
 
       originCountry = row.originCountry.trim();
       originCity = row.originCity.trim();
@@ -1185,8 +1152,6 @@ export class BusinessTripImportService {
       accommodationDetails,
       perDiemRequired,
       notes,
-      kmAtDeparture,
-      kmAtReturn,
       passengerId: passenger.id,
       passportNumber,
       visaRequired,

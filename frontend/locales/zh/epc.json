@@ -3975,6 +3975,12 @@
       "openSheet": "打开工时表",
       "overtimeDescription": "选择月份；如为他人填报加班，请同时选择员工，然后打开工时表添加记录。",
       "overtimeTitle": "加班 — {{name}}"
+    },
+    "dateRules": {
+      "overnight": "跨夜（跨越午夜）",
+      "overnightRequired": "结束时间早于开始时间。如果此记录跨越午夜，请启用跨夜。",
+      "overnightNote": "此记录跨越午夜 — 共 {{hours}} 小时",
+      "returnAfterDeparture": "返回时间必须晚于出发时间"
     }
   }
 }

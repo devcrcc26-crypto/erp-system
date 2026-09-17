@@ -28,6 +28,7 @@ import {
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { disableFutureDates } from '@/lib/utils/date-validation';
 import { apiPost, apiPostForm } from '@/lib/api/client';
 import type {
   AddExpenseClaimItemPayload,
@@ -545,7 +546,11 @@ export default function ExpenseClaimForm({
                       },
                     ]}
                   >
-                    <DatePicker className="w-full" format="DD/MM/YYYY" />
+                    <DatePicker
+                      className="w-full"
+                      format="DD/MM/YYYY"
+                      disabledDate={disableFutureDates}
+                    />
                   </Form.Item>
                   <Form.Item
                     name="description"

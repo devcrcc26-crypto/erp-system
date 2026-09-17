@@ -354,6 +354,7 @@ export class OvertimeImportService {
           startTime: row.startTime,
           endTime: row.endTime,
           isHoliday: row.isHoliday ?? false,
+          isOvernight: row.endTime <= row.startTime,
           taskDescription: row.taskDescription,
         };
         await this.overtimeService.addEntry(

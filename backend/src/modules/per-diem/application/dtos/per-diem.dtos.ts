@@ -29,11 +29,18 @@ export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
   @MaxLength(200)
   destination!: string;
 
-  @ApiProperty({ example: '2026-09-01T08:00:00.000Z' })
+  @ApiProperty({
+    example: '2026-09-01',
+    description: 'First per diem day. Only the date portion (YYYY-MM-DD) is used.',
+  })
   @IsDateString()
   startDate!: string;
 
-  @ApiProperty({ example: '2026-09-05T18:00:00.000Z' })
+  @ApiProperty({
+    example: '2026-09-05',
+    description:
+      'Last per diem day (inclusive). Only the date portion (YYYY-MM-DD) is used.',
+  })
   @IsDateString()
   endDate!: string;
 

@@ -91,6 +91,15 @@ export class UpsertOvertimeEntryDto {
   @IsBoolean()
   isHoliday?: boolean;
 
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'Entry crosses midnight. Required when endTime is at or before startTime.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isOvernight?: boolean;
+
   @ApiProperty({ description: 'Task / work description' })
   @IsString()
   @MinLength(1)
@@ -116,6 +125,11 @@ export class PreviewOvertimeEntryDto {
   @IsString()
   @Matches(/^\d{2}:\d{2}$/, { message: 'endTime must be HH:mm' })
   endTime!: string;
+
+  @ApiPropertyOptional({ default: false, description: 'Entry crosses midnight' })
+  @IsOptional()
+  @IsBoolean()
+  isOvernight?: boolean;
 }
 
 /**

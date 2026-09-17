@@ -15,8 +15,6 @@ export interface BusinessTripDetailsValues {
   destinationCity: string;
   departureDate: Dayjs | null;
   returnDate: Dayjs | null;
-  kmAtDeparture?: number | null;
-  kmAtReturn?: number | null;
   ticketClass: FlightTicketClass;
 }
 

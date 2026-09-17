@@ -3975,6 +3975,12 @@
       "openSheet": "Open sheet",
       "overtimeDescription": "Choose the month, and the employee if you are filing their overtime, then open the sheet to add entries.",
       "overtimeTitle": "Overtime — {{name}}"
+    },
+    "dateRules": {
+      "overnight": "Overnight (crosses midnight)",
+      "overnightRequired": "End time is before start time. Enable overnight if this entry crosses midnight.",
+      "overnightNote": "This entry crosses midnight — {{hours}} hours total",
+      "returnAfterDeparture": "Return must be after departure"
     }
   }
 }

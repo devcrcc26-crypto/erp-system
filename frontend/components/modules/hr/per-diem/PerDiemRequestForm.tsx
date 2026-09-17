@@ -22,7 +22,7 @@ import {
   useSubmitPerDiemRequest,
 } from '@/lib/query/per-diem';
 import { tokens } from '@/lib/theme/tokens';
-import { formatDisplayDateTime } from '@/lib/utils/date-format';
+import { formatDisplayDate } from '@/lib/utils/date-format';
 import {
   formatCurrencyAmount,
   formatEtbAmount,
@@ -212,8 +212,8 @@ export default function PerDiemRequestForm({
         ...onBehalf.payload,
         destinationCategory: values.destinationCategory,
         destination: values.destination.trim(),
-        startDate: values.dateRange[0].toISOString(),
-        endDate: values.dateRange[1].toISOString(),
+        startDate: values.dateRange[0].format('YYYY-MM-DD'),
+        endDate: values.dateRange[1].format('YYYY-MM-DD'),
         linkedFlightId: kind === 'flight' ? id : undefined,
         linkedBusinessTripId: kind === 'trip' ? id : undefined,
         notes: values.notes?.trim() || undefined,
@@ -334,8 +334,8 @@ export default function PerDiemRequestForm({
             >
               <DatePicker.RangePicker
                 className="w-full"
-                showTime={{ format: 'HH:mm' }}
-                format="YYYY-MM-DD HH:mm"
+                picker="date"
+                format="YYYY-MM-DD"
               />
             </Form.Item>
 
@@ -381,7 +381,7 @@ export default function PerDiemRequestForm({
                 label={t('hr.form.startDate')}
                 value={
                   dateRange?.[0]
-                    ? formatDisplayDateTime(dateRange[0].toISOString())
+                    ? formatDisplayDate(dateRange[0].format('YYYY-MM-DD'))
                     : '—'
                 }
               />
@@ -389,7 +389,7 @@ export default function PerDiemRequestForm({
                 label={t('hr.form.endDate')}
                 value={
                   dateRange?.[1]
-                    ? formatDisplayDateTime(dateRange[1].toISOString())
+                    ? formatDisplayDate(dateRange[1].format('YYYY-MM-DD'))
                     : '—'
                 }
               />

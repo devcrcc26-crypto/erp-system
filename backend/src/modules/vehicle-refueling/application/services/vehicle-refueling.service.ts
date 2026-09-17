@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { isDateInFuture } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
@@ -739,20 +740,15 @@ export class VehicleRefuelingService
     );
   }
 
-  /** Rejects YYYY-MM-DD fuel dates after today (UTC calendar day). */
+  /** Rejects YYYY-MM-DD fuel dates after today (company calendar day, Africa/Addis_Ababa). */
   private assertFuelDateNotFuture(value: string): void {
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-    if (!match) {
+    let inFuture: boolean;
+    try {
+      inFuture = isDateInFuture(value);
+    } catch {
       throw new BadRequestException(`Invalid date: ${value}`);
     }
-    const fuelYmd = `${match[1]}-${match[2]}-${match[3]}`;
-    const today = new Date();
-    const todayYmd = [
-      today.getUTCFullYear(),
-      String(today.getUTCMonth() + 1).padStart(2, '0'),
-      String(today.getUTCDate()).padStart(2, '0'),
-    ].join('-');
-    if (fuelYmd > todayYmd) {
+    if (inFuture) {
       throw new BadRequestException('Fuel date cannot be in the future');
     }
   }

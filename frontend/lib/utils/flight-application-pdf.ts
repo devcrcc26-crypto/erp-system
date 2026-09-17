@@ -49,8 +49,6 @@ export interface FlightApplicationPdfLabels {
   perDiem: string;
   required: string;
   notRequired: string;
-  kmAtDeparture: string;
-  kmAtReturn: string;
   passengerName: string;
   passengerEmail: string;
   passport: string;
@@ -181,12 +179,6 @@ export function exportFlightApplicationPdf(
     ],
     [labels.purpose, dash(application.purpose)],
   ];
-  if (application.kmAtDeparture != null && application.kmAtDeparture !== '') {
-    travelBody.push([labels.kmAtDeparture, String(application.kmAtDeparture)]);
-  }
-  if (application.kmAtReturn != null && application.kmAtReturn !== '') {
-    travelBody.push([labels.kmAtReturn, String(application.kmAtReturn)]);
-  }
   if (application.notes?.trim()) {
     travelBody.push([labels.notes, application.notes.trim()]);
   }

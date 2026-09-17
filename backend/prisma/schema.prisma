@@ -3885,6 +3885,7 @@ model OvertimeEntry {
   startTime       DateTime @map("start_time") @db.Time(0)
   endTime         DateTime @map("end_time") @db.Time(0)
   isHoliday       Boolean  @default(false) @map("is_holiday")
+  isOvernight     Boolean  @default(false) @map("is_overnight")
   regularHours    Decimal  @default(0) @map("regular_hours") @db.Decimal(5, 2)
   nightHours      Decimal  @default(0) @map("night_hours") @db.Decimal(5, 2)
   weekendHours    Decimal  @default(0) @map("weekend_hours") @db.Decimal(5, 2)
@@ -3962,8 +3963,6 @@ model FlightApplication {
   destination              String
   departureDate            DateTime                @map("departure_date")
   returnDate               DateTime?               @map("return_date")
-  kmAtDeparture            Decimal?                @map("km_at_departure") @db.Decimal(12, 2)
-  kmAtReturn               Decimal?                @map("km_at_return") @db.Decimal(12, 2)
   purpose                  String
   ticketClass              FlightTicketClass       @default(ECONOMY) @map("ticket_class")
   accommodationRequired    Boolean                 @default(false) @map("accommodation_required")
@@ -4062,8 +4061,6 @@ model BusinessTrip {
   destinationCity            String             @map("destination_city")
   departureDate              DateTime           @map("departure_date")
   returnDate                 DateTime?          @map("return_date")
-  kmAtDeparture              Decimal?           @map("km_at_departure") @db.Decimal(12, 2)
-  kmAtReturn                 Decimal?           @map("km_at_return") @db.Decimal(12, 2)
   purpose                    String
   hostOrganization           String?            @map("host_organization")
   hostContact                String?            @map("host_contact")
@@ -5115,7 +5112,7 @@ departmentId        String?             @map("department_id")
 employeeId          String             @map("employee_id")
 requestNumber       String             @map("request_number")
 direction           ExitDirection      @default(EXIT)
-date                DateTime           @default(now())
+date                DateTime           @map("date") @db.Date
 status              ExitPermitStatus   @default(DRAFT)
 approvalRequestId   String?            @unique @map("approval_request_id")
 attachmentFolderId  String?            @map("attachment_folder_id")

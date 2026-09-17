@@ -147,6 +147,13 @@ export function BusinessTripForm({
           ) {
             errors.push(t('hr.validation.returnDateRequired'));
           }
+          if (
+            tripDetails.tripType === 'ROUND_TRIP' &&
+            tripDetails.departureDate &&
+            tripDetails.returnDate?.isBefore(tripDetails.departureDate)
+          ) {
+            errors.push(t('hr.validation.returnAfterDeparture'));
+          }
           if (errors.length > 0) {
             for (const error of errors) {
               messageApi.error(error);
@@ -249,16 +256,6 @@ export function BusinessTripForm({
         returnDate:
           tripDetails.tripType === 'ROUND_TRIP' && tripDetails.returnDate
             ? tripDetails.returnDate.toISOString()
-            : undefined,
-        kmAtDeparture:
-          tripDetails.kmAtDeparture != null &&
-          Number.isFinite(tripDetails.kmAtDeparture)
-            ? tripDetails.kmAtDeparture
-            : undefined,
-        kmAtReturn:
-          tripDetails.kmAtReturn != null &&
-          Number.isFinite(tripDetails.kmAtReturn)
-            ? tripDetails.kmAtReturn
             : undefined,
         purpose: purposeBudget.purpose.trim(),
         hostOrganization: purposeBudget.hostOrganization.trim() || undefined,

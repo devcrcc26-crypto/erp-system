@@ -59,8 +59,6 @@ export interface BusinessTripPdfLabels {
   perDiem: string;
   required: string;
   notRequired: string;
-  kmAtDeparture: string;
-  kmAtReturn: string;
   passengerName: string;
   passengerEmail: string;
   passport: string;
@@ -180,12 +178,6 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
       trip.returnDate ? formatProjectDate(trip.returnDate) : '—',
     ],
   ];
-  if (trip.kmAtDeparture != null && trip.kmAtDeparture !== '') {
-    travelBody.push([labels.kmAtDeparture, String(trip.kmAtDeparture)]);
-  }
-  if (trip.kmAtReturn != null && trip.kmAtReturn !== '') {
-    travelBody.push([labels.kmAtReturn, String(trip.kmAtReturn)]);
-  }
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },

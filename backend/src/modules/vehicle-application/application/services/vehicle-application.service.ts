@@ -18,6 +18,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { isInstantOnPastDay } from '../../../../shared/utils/date-validation.util';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -113,6 +114,7 @@ export class VehicleApplicationService
         'Return date/time must be after departure date/time',
       );
     }
+    await this.assertDepartureNotBackdated(departure, companyId, userId);
 
     const vehicle = await this.prisma.companyVehicle.findFirst({
       where: activeOnly({ id: dto.vehicleId, companyId }),
@@ -363,6 +365,33 @@ export class VehicleApplicationService
     });
 
     return created;
+  }
+
+  /**
+   * Past departure days may only be recorded by HR / full-access users.
+   * Compared in the company timezone.
+   */
+  private async assertDepartureNotBackdated(
+    departure: Date,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    if (!isInstantOnPastDay(departure)) {
+      return;
+    }
+    const canBackdate =
+      (await this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'hr',
+        'view',
+      )) ||
+      (await this.hrApprovalChain.isHrOrFullAccessActor(userId, companyId));
+    if (!canBackdate) {
+      throw new BadRequestException(
+        'Past departure dates can only be set by HR officers',
+      );
+    }
   }
 
   /** Fetches a single vehicle application with vehicle and approval tiers. */

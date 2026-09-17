@@ -33,8 +33,6 @@ export class FlightImportRowPreviewDto extends ImportRowPreviewDto {
   accommodationDetails?: string;
   perDiemRequired?: boolean;
   notes?: string;
-  kmAtDeparture?: number;
-  kmAtReturn?: number;
   passengerId?: string;
   passengerEmail?: string;
   passportNumber?: string;

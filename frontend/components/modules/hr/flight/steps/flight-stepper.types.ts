@@ -15,8 +15,6 @@ export interface FlightTripDetailsValues {
   destination: string;
   departureDate: Dayjs | null;
   returnDate: Dayjs | null;
-  kmAtDeparture?: number | null;
-  kmAtReturn?: number | null;
   purpose: string;
   ticketClass: FlightTicketClass;
 }

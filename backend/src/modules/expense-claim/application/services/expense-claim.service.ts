@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { isDateInFuture } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
@@ -216,6 +217,7 @@ export class ExpenseClaimService
     userId: string,
   ): Promise<unknown> {
     const claim = await this.assertDraftOwner(claimId, companyId, userId);
+    const expenseDate = this.parseExpenseDate(dto.expenseDate);
 
     const rate =
       dto.currency === 'ETB'
@@ -238,7 +240,7 @@ export class ExpenseClaimService
         currency: dto.currency,
         amountEtb: new Prisma.Decimal(amountEtb),
         exchangeRate: new Prisma.Decimal(rate),
-        expenseDate: this.parseDateOnly(dto.expenseDate),
+        expenseDate,
         documentId,
       },
     });
@@ -266,6 +268,9 @@ export class ExpenseClaimService
     if (!existing) {
       throw new NotFoundException('Expense claim item not found');
     }
+    const nextExpenseDate = dto.expenseDate
+      ? this.parseExpenseDate(dto.expenseDate)
+      : existing.expenseDate;
 
     const nextCurrency = dto.currency ?? existing.currency;
     const nextAmount = dto.amount ?? Number(existing.amount);
@@ -289,9 +294,7 @@ export class ExpenseClaimService
         currency: nextCurrency,
         amountEtb: new Prisma.Decimal(amountEtb),
         exchangeRate: new Prisma.Decimal(rate),
-        expenseDate: dto.expenseDate
-          ? this.parseDateOnly(dto.expenseDate)
-          : existing.expenseDate,
+        expenseDate: nextExpenseDate,
         documentId,
       },
     });
@@ -919,6 +922,15 @@ export class ExpenseClaimService
         .filter(Boolean) as ExpenseClaimStatus[];
     }
     return [status as ExpenseClaimStatus];
+  }
+
+  /** Expense dates are incurred expenses: today or earlier (company timezone). */
+  private parseExpenseDate(value: string): Date {
+    const date = this.parseDateOnly(value);
+    if (isDateInFuture(date)) {
+      throw new BadRequestException('Expense date cannot be in the future');
+    }
+    return date;
   }
 
   private parseDateOnly(value: string): Date {

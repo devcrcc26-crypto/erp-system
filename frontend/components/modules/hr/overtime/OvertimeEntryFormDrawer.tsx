@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Drawer, Form, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import OvertimeEntryForm, {
+  endsAtOrBeforeStart,
   type OvertimeEntryFormValues,
 } from '@/components/modules/hr/overtime/OvertimeEntryForm';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -22,6 +23,24 @@ import { detailDrawerStyles } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PREVIEW_DEBOUNCE_MS = 300;
+
+/**
+ * Default date for a new entry: today on the current month's sheet, the last day
+ * of a past month's sheet, otherwise the first day of the sheet's month.
+ */
+function defaultEntryDate(sheetMonth: number, sheetYear: number): Dayjs {
+  const today = dayjs().startOf('day');
+  const sheetStart = dayjs(
+    `${sheetYear}-${String(sheetMonth).padStart(2, '0')}-01`,
+  );
+  if (today.isSame(sheetStart, 'month')) {
+    return today;
+  }
+  if (sheetStart.isBefore(today, 'month')) {
+    return sheetStart.endOf('month').startOf('day');
+  }
+  return sheetStart;
+}
 
 /**
  * Drawer to add or edit an overtime sheet entry without shifting page layout.
@@ -64,7 +83,12 @@ export default function OvertimeEntryFormDrawer({
       if (!current) {
         return false;
       }
-      return current.month() + 1 !== sheetMonth || current.year() !== sheetYear;
+      // Must fall in the sheet's month, and overtime cannot be claimed for days not yet worked.
+      return (
+        current.isAfter(dayjs().endOf('day')) ||
+        current.month() + 1 !== sheetMonth ||
+        current.year() !== sheetYear
+      );
     },
     [sheetMonth, sheetYear],
   );
@@ -72,6 +96,10 @@ export default function OvertimeEntryFormDrawer({
   const watchedDate = Form.useWatch('date', form);
   const watchedStart = Form.useWatch('startTime', form);
   const watchedEnd = Form.useWatch('endTime', form);
+  const watchedOvernight = Form.useWatch('isOvernight', form);
+  // An unflagged overnight entry is invalid (the end time field shows why) — no preview.
+  const previewBlocked =
+    endsAtOrBeforeStart(watchedStart, watchedEnd) && !watchedOvernight;
 
   useEffect(() => {
     if (!open) {
@@ -82,14 +110,14 @@ export default function OvertimeEntryFormDrawer({
         date: dayjs(editingEntry.date),
         startTime: dayjs(editingEntry.startTime, 'HH:mm'),
         endTime: dayjs(editingEntry.endTime, 'HH:mm'),
+        isOvernight: editingEntry.isOvernight ?? false,
         taskDescription: editingEntry.taskDescription,
       });
     } else {
       form.resetFields();
       form.setFieldsValue({
-        date: dayjs(
-          `${sheetYear}-${String(sheetMonth).padStart(2, '0')}-01`,
-        ),
+        date: defaultEntryDate(sheetMonth, sheetYear),
+        isOvernight: false,
       });
       setPreview(null);
     }
@@ -97,6 +125,9 @@ export default function OvertimeEntryFormDrawer({
 
   useEffect(() => {
     if (!open || !employeeId || !watchedDate || !watchedStart || !watchedEnd) {
+      return;
+    }
+    if (previewBlocked) {
       return;
     }
 
@@ -107,6 +138,7 @@ export default function OvertimeEntryFormDrawer({
           date: watchedDate.format('YYYY-MM-DD'),
           startTime: watchedStart.format('HH:mm'),
           endTime: watchedEnd.format('HH:mm'),
+          isOvernight: Boolean(watchedOvernight),
         })
         .then((result) => {
           setPreview(result);
@@ -121,13 +153,16 @@ export default function OvertimeEntryFormDrawer({
     };
     // previewMutation identity is unstable; depend on the watched fields only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, employeeId, watchedDate, watchedStart, watchedEnd]);
+  }, [open, employeeId, watchedDate, watchedStart, watchedEnd, previewBlocked]);
 
   async function handleSubmit(values: OvertimeEntryFormValues): Promise<void> {
     const payload: UpsertOvertimeEntryPayload = {
       date: values.date.format('YYYY-MM-DD'),
       startTime: values.startTime.format('HH:mm'),
       endTime: values.endTime.format('HH:mm'),
+      isOvernight:
+        Boolean(values.isOvernight) &&
+        endsAtOrBeforeStart(values.startTime, values.endTime),
       taskDescription: values.taskDescription.trim(),
     };
 
@@ -195,7 +230,7 @@ export default function OvertimeEntryFormDrawer({
       <OvertimeEntryForm
         form={form}
         disabledDate={disabledDate}
-        preview={preview}
+        preview={previewBlocked ? null : preview}
         previewLoading={previewMutation.isPending}
         periodLabel={periodLabel}
         onFinish={handleSubmit}

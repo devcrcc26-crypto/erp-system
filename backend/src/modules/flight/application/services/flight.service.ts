@@ -21,6 +21,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { isInstantOnPastDay } from '../../../../shared/utils/date-validation.util';
 import {
   ALLOWED_UPLOAD_MIME_TYPES,
   STORAGE_BUCKETS,
@@ -154,6 +155,7 @@ export class FlightService
     const returnDate = dto.returnDate
       ? this.parseDateTime(dto.returnDate)
       : null;
+    await this.assertDepartureNotBackdated(departureDate, companyId, userId);
 
     if (dto.tripType === FlightTripType.ROUND_TRIP) {
       if (!returnDate) {
@@ -165,23 +167,6 @@ export class FlightService
         );
       }
     }
-
-    if (
-      dto.kmAtDeparture != null &&
-      dto.kmAtReturn != null &&
-      dto.kmAtReturn < dto.kmAtDeparture
-    ) {
-      throw new BadRequestException(
-        'kmAtReturn must be greater than or equal to kmAtDeparture',
-      );
-    }
-
-    const kmAtDeparture =
-      dto.kmAtDeparture != null
-        ? new Prisma.Decimal(dto.kmAtDeparture)
-        : null;
-    const kmAtReturn =
-      dto.kmAtReturn != null ? new Prisma.Decimal(dto.kmAtReturn) : null;
 
     const passengerIds = dto.passengers.map((p) => p.employeeId);
     const uniqueIds = new Set(passengerIds);
@@ -228,8 +213,6 @@ export class FlightService
               destination: dto.destination.trim(),
               departureDate,
               returnDate,
-              kmAtDeparture,
-              kmAtReturn,
               purpose: dto.purpose.trim(),
               ticketClass: dto.ticketClass,
               accommodationRequired: dto.accommodationRequired ?? false,
@@ -343,8 +326,6 @@ export class FlightService
               destination: dto.destination.trim(),
               departureDate,
               returnDate,
-              kmAtDeparture,
-              kmAtReturn,
               purpose: dto.purpose.trim(),
               ticketClass: dto.ticketClass,
               accommodationRequired: dto.accommodationRequired ?? false,
@@ -707,7 +688,11 @@ export class FlightService
       : null;
 
     this.assertTripDates(dto.tripType, departureDate, returnDate);
-    this.assertKmRange(dto.kmAtDeparture, dto.kmAtReturn);
+    await this.assertDepartureNotBackdated(
+      departureDate,
+      companyId,
+      actorUserId,
+    );
 
     const purpose = dto.purpose.trim();
     const originCountry = dto.originCountry.trim();
@@ -737,13 +722,6 @@ export class FlightService
       }
     }
 
-    const kmAtDeparture =
-      dto.kmAtDeparture != null
-        ? new Prisma.Decimal(dto.kmAtDeparture)
-        : null;
-    const kmAtReturn =
-      dto.kmAtReturn != null ? new Prisma.Decimal(dto.kmAtReturn) : null;
-
     const applicationNumber = await this.nextApplicationNumber();
     const app = await this.prisma.flightApplication.create({
       data: {
@@ -758,8 +736,6 @@ export class FlightService
         destination,
         departureDate,
         returnDate,
-        kmAtDeparture,
-        kmAtReturn,
         purpose,
         ticketClass: dto.ticketClass,
         accommodationRequired: dto.accommodationRequired ?? false,
@@ -1421,6 +1397,33 @@ export class FlightService
     return app;
   }
 
+/**
+   * Past departure days may only be recorded by HR / full-access users
+   * (backdated trips already taken). Compared in the company timezone.
+   */
+  private async assertDepartureNotBackdated(
+    departureDate: Date,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    if (!isInstantOnPastDay(departureDate)) {
+      return;
+    }
+    const canBackdate =
+      (await this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'hr',
+        'view',
+      )) ||
+      (await this.hrApprovalChain.isHrOrFullAccessActor(userId, companyId));
+    if (!canBackdate) {
+      throw new BadRequestException(
+        'Past departure dates can only be set by HR officers',
+      );
+    }
+  }
+
   /**
    * Validates trip type vs return date ordering.
    */
@@ -1438,24 +1441,6 @@ export class FlightService
           'returnDate must be on or after departureDate',
         );
       }
-    }
-  }
-
-  /**
-   * Validates optional odometer readings.
-   */
-  private assertKmRange(
-    kmAtDeparture?: number,
-    kmAtReturn?: number,
-  ): void {
-    if (
-      kmAtDeparture != null &&
-      kmAtReturn != null &&
-      kmAtReturn < kmAtDeparture
-    ) {
-      throw new BadRequestException(
-        'kmAtReturn must be greater than or equal to kmAtDeparture',
-      );
     }
   }
 

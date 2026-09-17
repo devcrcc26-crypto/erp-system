@@ -1,3 +1,8 @@
+import { BadRequestException } from '@nestjs/common';
+
+export const OVERNIGHT_REQUIRED_MESSAGE =
+  'End time is before start time. If this entry crosses midnight, mark it as overnight.';
+
 /**
  * Schedule-aware overtime hour splitter.
  * Priority per 15-minute block: Holiday > Weekend (non-working day) >
@@ -37,12 +42,14 @@ const WEEKDAY_NAMES = [
  * Splits a time interval into overtime buckets using the employee's day context.
  * `date` is unused for classification (context already encodes holiday/weekend)
  * but kept so callers can pair the result with a calendar day.
+ * An end time at or before the start time is only accepted when `isOvernight` is set.
  */
 export function calculateOvertimeHours(
   date: Date,
   startTime: string,
   endTime: string,
   context: OvertimeDayContext,
+  isOvernight = false,
 ): OvertimeHoursBuckets {
   void date;
   const [startH, startM] = startTime.split(':').map(Number);
@@ -52,6 +59,9 @@ export function calculateOvertimeHours(
   let endMinutes = endH * 60 + endM;
 
   if (endMinutes <= startMinutes) {
+    if (!isOvernight) {
+      throw new BadRequestException(OVERNIGHT_REQUIRED_MESSAGE);
+    }
     endMinutes += 24 * 60;
   }
 

@@ -9,6 +9,11 @@ import {
   OnModuleInit,
 } from "@nestjs/common";
 import { PrismaService } from "../../../../shared/prisma/prisma.service";
+import {
+  dateOnlyString,
+  getTodayInTimezone,
+  startOfToday,
+} from "../../../../shared/utils/date-validation.util";
 import { ApprovalDecisionRegistry } from "../../../approvals/application/services/approval-decision-registry.service";
 import { randomUUID } from "crypto";
 import { CreateExitPermitDto, CreateExitPermitItemDto, ExitPermitStatus, UpdateExitPermitDto, UpdateExitPermitItemDto, ListExitPermitsDto } from "../dtos/exit-permit.dto";
@@ -133,7 +138,8 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
           employeeId,
           departmentId: dto.departmentId ?? null,
           direction: dto.direction,
-          date: dto.date ? new Date(dto.date) : new Date(),
+          // Exit permits are issued for the current day only; any client date is ignored.
+          date: startOfToday(),
           isOnBehalf: employeeId !== userId,
           status: ExitPermitStatus.DRAFT,
           createdBy: userId,
@@ -178,6 +184,10 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
   ) {
     await this.assertEditableOwner(id, companyId, userId);
 
+    if (dto.date !== undefined && dateOnlyString(dto.date) !== getTodayInTimezone()) {
+      throw new BadRequestException("Exit permit date must be today");
+    }
+
     if (dto.departmentId) {
       const department = await this.prisma.department.findFirst({
         where: activeOnly({ id: dto.departmentId, companyId }),
@@ -198,7 +208,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
         where: { id },
         data: {
           ...(dto.direction !== undefined ? { direction: dto.direction } : {}),
-          ...(dto.date !== undefined ? { date: new Date(dto.date) } : {}),
+          ...(dto.date !== undefined ? { date: startOfToday() } : {}),
           ...(dto.departmentId !== undefined
             ? { departmentId: dto.departmentId ?? null }
             : {}),

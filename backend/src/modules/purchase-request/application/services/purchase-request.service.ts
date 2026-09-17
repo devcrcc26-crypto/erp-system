@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { isDateInPast } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
@@ -215,7 +216,7 @@ export class PurchaseRequestService
         vendorName: dto.vendorName?.trim() ?? null,
         vendorContact: dto.vendorContact?.trim() ?? null,
         requiredByDate: dto.requiredByDate
-          ? this.parseDateOnly(dto.requiredByDate)
+          ? this.parseRequiredByDate(dto.requiredByDate)
           : null,
         projectId: dto.projectId ?? null,
         status: PurchaseRequestStatus.DRAFT,
@@ -264,7 +265,7 @@ export class PurchaseRequestService
         ...(dto.requiredByDate !== undefined
           ? {
               requiredByDate: dto.requiredByDate
-                ? this.parseDateOnly(dto.requiredByDate)
+                ? this.parseRequiredByDate(dto.requiredByDate)
                 : null,
             }
           : {}),
@@ -1042,6 +1043,17 @@ export class PurchaseRequestService
         .filter(Boolean) as PurchaseRequestStatus[];
     }
     return [status as PurchaseRequestStatus];
+  }
+
+  /** Required-by dates must be today or later (company timezone). */
+  private parseRequiredByDate(value: string): Date {
+    const date = this.parseDateOnly(value);
+    if (isDateInPast(date)) {
+      throw new BadRequestException(
+        'Required by date must be today or in the future',
+      );
+    }
+    return date;
   }
 
   private parseDateOnly(value: string): Date {

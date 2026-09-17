@@ -17,6 +17,10 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import {
+  getTodayInTimezone,
+  isDateInFuture,
+} from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
@@ -219,6 +223,13 @@ export class OvertimeService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    const [todayYear, todayMonth] = getTodayInTimezone()
+      .split('-')
+      .map(Number);
+    if (dto.year * 12 + dto.month > todayYear * 12 + todayMonth) {
+      throw new BadRequestException('Cannot open a sheet for a future month');
+    }
+
     const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
       userId,
       companyId,
@@ -362,7 +373,10 @@ export class OvertimeService
       date,
       dto.startTime,
       dto.endTime,
-      { holidayOverride: Boolean(options?.allowHolidayOverride && dto.isHoliday) },
+      {
+        holidayOverride: Boolean(options?.allowHolidayOverride && dto.isHoliday),
+        isOvernight: dto.isOvernight,
+      },
     );
 
     await this.assertNoOverlap(
@@ -383,6 +397,7 @@ export class OvertimeService
             startTime,
             endTime,
             isHoliday: classified.isHoliday,
+            isOvernight: Boolean(dto.isOvernight),
             regularHours: new Prisma.Decimal(classified.regularHours),
             nightHours: new Prisma.Decimal(classified.nightHours),
             weekendHours: new Prisma.Decimal(classified.weekendHours),
@@ -431,6 +446,7 @@ export class OvertimeService
       date,
       dto.startTime,
       dto.endTime,
+      { isOvernight: dto.isOvernight },
     );
 
     await this.assertNoOverlap(sheetId, date, startTime, endTime, entryId);
@@ -444,6 +460,7 @@ export class OvertimeService
             startTime,
             endTime,
             isHoliday: classified.isHoliday,
+            isOvernight: Boolean(dto.isOvernight),
             regularHours: new Prisma.Decimal(classified.regularHours),
             nightHours: new Prisma.Decimal(classified.nightHours),
             weekendHours: new Prisma.Decimal(classified.weekendHours),
@@ -1034,6 +1051,11 @@ export class OvertimeService
     if (date.getUTCMonth() + 1 !== month || date.getUTCFullYear() !== year) {
       throw new BadRequestException(
         `Entry date must fall in sheet period ${year}-${String(month).padStart(2, '0')}`,
+      );
+    }
+    if (isDateInFuture(date)) {
+      throw new BadRequestException(
+        'Overtime cannot be recorded for future dates',
       );
     }
   }

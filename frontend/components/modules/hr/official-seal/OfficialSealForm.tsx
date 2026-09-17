@@ -16,6 +16,7 @@ import {
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { disablePastDates } from '@/lib/utils/date-validation';
 import type {
   OfficialSealDetail,
   OfficialSealUrgency,
@@ -214,7 +215,10 @@ export default function OfficialSealForm({
                     },
                   ]}
                 >
-                  <DatePicker className="w-full" />
+                  <DatePicker
+                    className="w-full"
+                    disabledDate={disablePastDates}
+                  />
                 </Form.Item>
                 <Form.Item
                   name="urgency"

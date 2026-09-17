@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { disableFutureDates } from '@/lib/utils/date-validation';
 import type {
   ExpenseClaimItem,
   SupportedCurrency,
@@ -249,7 +250,11 @@ export default function ExpenseClaimItemModal({
                 },
               ]}
             >
-              <DatePicker className="w-full" format="DD/MM/YYYY" />
+              <DatePicker
+                      className="w-full"
+                      format="DD/MM/YYYY"
+                      disabledDate={disableFutureDates}
+                    />
             </Form.Item>
           </DrawerSection>
 

@@ -49,6 +49,27 @@ describe('calculateOvertimeHours', () => {
     });
   });
 
+  it('rejects an end time at or before the start time unless flagged overnight', () => {
+    expect(() =>
+      calculateOvertimeHours(utcDate('2026-09-14'), '09:00', '08:00', WEEKDAY),
+    ).toThrow('mark it as overnight');
+    expect(() =>
+      calculateOvertimeHours(utcDate('2026-09-14'), '09:00', '09:00', WEEKDAY),
+    ).toThrow('mark it as overnight');
+  });
+
+  it('crosses midnight when flagged overnight', () => {
+    const result = calculateOvertimeHours(
+      utcDate('2026-09-14'),
+      '22:00',
+      '02:00',
+      WEEKDAY,
+      true,
+    );
+    expect(result.nightHours).toBe(4);
+    expect(result.regularHours).toBe(0);
+  });
+
   it('classifies a non-working day as weekend, including overnight', () => {
     const result = calculateOvertimeHours(
       utcDate('2026-09-13'),

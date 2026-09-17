@@ -14,6 +14,7 @@ import {
   type RowPlan,
 } from '../../../hr-shared/application/import-export/hr-module-import.service-base';
 import type { ImportColumnSchema } from '../../../hr-shared/application/import-export/import-column-schema';
+import { isDateInFuture } from '../../../../shared/utils/date-validation.util';
 import { SubmitVehicleRefuelingDto } from '../dtos/vehicle-refueling.dtos';
 import { VehicleRefuelingService } from './vehicle-refueling.service';
 
@@ -198,7 +199,8 @@ export class VehicleRefuelingImportService extends HrModuleImportServiceBase<Veh
     }
 
     const fuelDate = text('fuelDate');
-    if (new Date(`${fuelDate}T00:00:00Z`).getTime() > Date.now()) {
+    // Malformed dates are reported by submit validation.
+    if (/^\d{4}-\d{2}-\d{2}/.test(fuelDate) && isDateInFuture(fuelDate)) {
       return {
         status: 'error',
         label,

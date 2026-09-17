@@ -51,7 +51,7 @@ export class OvertimeEntryService {
     date: Date,
     startTime: string,
     endTime: string,
-    options?: { holidayOverride?: boolean },
+    options?: { holidayOverride?: boolean; isOvernight?: boolean },
   ): Promise<ClassifiedOvertimeEntry> {
     const onDate = toUtcDateOnly(date);
     const employee = await this.prisma.user.findFirst({
@@ -90,7 +90,13 @@ export class OvertimeEntryService {
       morningEnd: weekday?.morningEnd ?? null,
     };
 
-    const hours = calculateOvertimeHours(onDate, startTime, endTime, context);
+    const hours = calculateOvertimeHours(
+      onDate,
+      startTime,
+      endTime,
+      context,
+      Boolean(options?.isOvernight),
+    );
     const totalHours = roundHours(
       hours.regularHours +
         hours.nightHours +
@@ -141,6 +147,7 @@ export class OvertimeEntryService {
       date,
       dto.startTime,
       dto.endTime,
+      { isOvernight: dto.isOvernight },
     );
 
     return {

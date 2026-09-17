@@ -21,6 +21,7 @@ import {
   useOpenOvertimeSheet,
 } from '@/lib/query/overtime';
 import { useCurrentUser } from '@/lib/query/profile';
+import { disableFutureMonths } from '@/lib/utils/date-validation';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 /**
@@ -108,6 +109,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
                 <DatePicker
                   picker="month"
                   allowClear={false}
+                  disabledDate={disableFutureMonths}
                   value={month}
                   onChange={(value) => {
                     if (value) {

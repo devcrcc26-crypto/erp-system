@@ -266,6 +266,19 @@ export class InspectionRepairService {
       throw new ForbiddenException('You cannot update this request');
     }
 
+    // completedAt is an instant (not a calendar day), so it is compared to the current time.
+    if (dto.completedAt) {
+      const completedAt = new Date(dto.completedAt);
+      if (completedAt.getTime() > Date.now()) {
+        throw new BadRequestException('Completion date cannot be in the future');
+      }
+      if (request.submittedAt && completedAt < request.submittedAt) {
+        throw new BadRequestException(
+          'Completion date cannot be before the submission date',
+        );
+      }
+    }
+
     const resolved = await this.resolveAssetDetails(dto, companyId, request.employeeId);
 
     const data = {

@@ -10,6 +10,10 @@ import {
 import { ApprovalRequestStatus, PerDiemStatus, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import {
+  calendarDaysInclusive,
+  parseLocalDateOnly,
+} from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
@@ -143,23 +147,13 @@ export class PerDiemService
     companyId: string,
     actorUserId: string,
   ): Promise<unknown> {
-    const startDate = this.parseDateTime(dto.startDate);
-    const endDate = this.parseDateTime(dto.endDate);
+    // Per diem is day-based: only the calendar date portion of each value is used.
+    const startDate = this.parseDateOnly(dto.startDate);
+    const endDate = this.parseDateOnly(dto.endDate);
     if (endDate.getTime() < startDate.getTime()) {
       throw new BadRequestException('endDate must be on or after startDate');
     }
-    const startDay = Date.UTC(
-      startDate.getUTCFullYear(),
-      startDate.getUTCMonth(),
-      startDate.getUTCDate(),
-    );
-    const endDay = Date.UTC(
-      endDate.getUTCFullYear(),
-      endDate.getUTCMonth(),
-      endDate.getUTCDate(),
-    );
-    const totalDays =
-      Math.round((endDay - startDay) / 86_400_000) + 1;
+    const totalDays = calendarDaysInclusive(startDate, endDate);
     const days = totalDays;
 
     const resolvedRate =
@@ -546,24 +540,11 @@ export class PerDiemService
     return [status as PerDiemStatus];
   }
 
-  /**
-   * Parses an ISO datetime string to a Date.
-   */
-  private parseDateTime(value: string): Date {
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) {
-      throw new BadRequestException(`Invalid datetime: ${value}`);
-    }
-    return d;
-  }
-
   private parseDateOnly(value: string): Date {
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-    if (!match) {
+    try {
+      return parseLocalDateOnly(value);
+    } catch {
       throw new BadRequestException(`Invalid date: ${value}`);
     }
-    return new Date(
-      Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
-    );
   }
 }

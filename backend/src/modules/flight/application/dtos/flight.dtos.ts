@@ -119,20 +119,6 @@ export class SubmitFlightApplicationDto extends OnBehalfSubmissionDto {
   @IsDateString()
   returnDate?: string;
 
-  @ApiPropertyOptional({ description: 'Odometer reading at departure (km)' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  kmAtDeparture?: number;
-
-  @ApiPropertyOptional({ description: 'Odometer reading at return (km)' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  kmAtReturn?: number;
-
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
@@ -238,20 +224,6 @@ export class CreateFlightDraftDto {
   )
   @IsDateString()
   returnDate?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  kmAtDeparture?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  kmAtReturn?: number;
 
   @ApiProperty()
   @IsString()
