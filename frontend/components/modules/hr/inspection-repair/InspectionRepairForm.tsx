@@ -10,6 +10,10 @@ import {
 } from 'antd';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -57,6 +61,7 @@ export default function InspectionRepairForm({
   onSuccess,
 }: InspectionRepairFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('INSPECTION_REPAIR');
   const messageApi = useAppMessage();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
@@ -70,7 +75,9 @@ export default function InspectionRepairForm({
   const formValues = Form.useWatch([], form) as FormValues | undefined;
   const source = formValues?.source ?? 'assigned';
 
-  const noAssignedAssets = (assetsQuery.data?.length ?? 0) === 0;
+  // Assigned assets are the signed-in user's; on-behalf filings describe the device manually.
+  const noAssignedAssets =
+    Boolean(onBehalf.employeeId) || (assetsQuery.data?.length ?? 0) === 0;
 
   useEffect(() => {
     if (!assetsQuery.isLoading && noAssignedAssets) {
@@ -104,6 +111,7 @@ export default function InspectionRepairForm({
   }
 
   function resetForm(): void {
+    onBehalf.reset();
     form.resetFields();
     form.setFieldsValue({
       source: noAssignedAssets ? 'manual' : 'assigned',
@@ -180,6 +188,7 @@ export default function InspectionRepairForm({
     setSubmitting(true);
     try {
       const result = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
         assetId: source === 'assigned' ? values.assetId : undefined,
         deviceName:
           source === 'manual' ? values.deviceName?.trim() : undefined,
@@ -213,87 +222,90 @@ export default function InspectionRepairForm({
         title: t('hr.form.asset'),
         validate: () => validateDeviceStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.form.asset')}
-            description={t('pages.hr.inspectionRepair.deviceStepDescription')}
-          >
-            {noAssignedAssets ? (
-              <ErpNotice
-                tone="info"
-                className="mb-4"
-                title={t('hr.messages.noAssignedInspectionAssets')}
-              />
-            ) : null}
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.form.asset')}
+              description={t('pages.hr.inspectionRepair.deviceStepDescription')}
+            >
+              {noAssignedAssets ? (
+                <ErpNotice
+                  tone="info"
+                  className="mb-4"
+                  title={t('hr.messages.noAssignedInspectionAssets')}
+                />
+              ) : null}
 
-            <Form.Item name="source" label={t('hr.form.assetSource')}>
-              <Radio.Group
-                options={[
-                  {
-                    label: t('hr.form.useAssignedAsset'),
-                    value: 'assigned',
-                    disabled: noAssignedAssets,
-                  },
-                  {
-                    label: t('hr.form.enterDeviceManually'),
-                    value: 'manual',
-                  },
-                ]}
-              />
-            </Form.Item>
-
-            {source === 'assigned' ? (
-              <Form.Item
-                name="assetId"
-                label={t('hr.form.asset')}
-                rules={[
-                  { required: true, message: t('hr.validation.required') },
-                ]}
-              >
-                <Select
-                  showSearch
-                  placeholder={t('hr.placeholder.selectAsset')}
-                  loading={assetsQuery.isLoading}
-                  options={assetOptions}
-                  filterOption={(input, option) =>
-                    String(option?.label ?? '')
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
+              <Form.Item name="source" label={t('hr.form.assetSource')}>
+                <Radio.Group
+                  options={[
+                    {
+                      label: t('hr.form.useAssignedAsset'),
+                      value: 'assigned',
+                      disabled: noAssignedAssets,
+                    },
+                    {
+                      label: t('hr.form.enterDeviceManually'),
+                      value: 'manual',
+                    },
+                  ]}
                 />
               </Form.Item>
-            ) : (
-              <div className="erp-form-grid-2">
+
+              {source === 'assigned' ? (
                 <Form.Item
-                  name="deviceName"
-                  label={t('hr.form.deviceName')}
+                  name="assetId"
+                  label={t('hr.form.asset')}
                   rules={[
                     { required: true, message: t('hr.validation.required') },
                   ]}
                 >
-                  <Input
-                    maxLength={200}
-                    placeholder={t('hr.placeholder.enterDeviceName')}
+                  <Select
+                    showSearch
+                    placeholder={t('hr.placeholder.selectAsset')}
+                    loading={assetsQuery.isLoading}
+                    options={assetOptions}
+                    filterOption={(input, option) =>
+                      String(option?.label ?? '')
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
                   />
                 </Form.Item>
-                <Form.Item name="make" label={t('hr.form.make')}>
-                  <Input
-                    maxLength={120}
-                    placeholder={t('hr.placeholder.enterMake')}
-                  />
-                </Form.Item>
-                <Form.Item name="model" label={t('hr.form.model')}>
-                  <Input
-                    maxLength={120}
-                    placeholder={t('hr.placeholder.enterModel')}
-                  />
-                </Form.Item>
-                <Form.Item name="year" label={t('hr.form.year')}>
-                  <InputNumber min={1900} max={2100} className="w-full" />
-                </Form.Item>
-              </div>
-            )}
-          </FormLayout>
+              ) : (
+                <div className="erp-form-grid-2">
+                  <Form.Item
+                    name="deviceName"
+                    label={t('hr.form.deviceName')}
+                    rules={[
+                      { required: true, message: t('hr.validation.required') },
+                    ]}
+                  >
+                    <Input
+                      maxLength={200}
+                      placeholder={t('hr.placeholder.enterDeviceName')}
+                    />
+                  </Form.Item>
+                  <Form.Item name="make" label={t('hr.form.make')}>
+                    <Input
+                      maxLength={120}
+                      placeholder={t('hr.placeholder.enterMake')}
+                    />
+                  </Form.Item>
+                  <Form.Item name="model" label={t('hr.form.model')}>
+                    <Input
+                      maxLength={120}
+                      placeholder={t('hr.placeholder.enterModel')}
+                    />
+                  </Form.Item>
+                  <Form.Item name="year" label={t('hr.form.year')}>
+                    <InputNumber min={1900} max={2100} className="w-full" />
+                  </Form.Item>
+                </div>
+              )}
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -473,6 +485,7 @@ export default function InspectionRepairForm({
       },
     ],
     [
+      onBehalf,
       t,
       noAssignedAssets,
       source,

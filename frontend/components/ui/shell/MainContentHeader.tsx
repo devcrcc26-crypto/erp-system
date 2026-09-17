@@ -5,6 +5,7 @@ import Breadcrumbs from '@/components/ui/shell/Breadcrumbs';
 import HeaderActions from '@/components/ui/PageHeader/HeaderActions';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { BreadcrumbSegment } from '@/config/navConfig';
+import { useBreadcrumbLabelStore } from '@/stores/breadcrumb-label.store';
 import { useHeaderExtraStore } from '@/stores/header-extra.store';
 import { SHELL_TOP_HEADER_HEIGHT } from '@/components/ui/shell/shell-layout';
 
@@ -25,7 +26,17 @@ export default function MainContentHeader({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const headerExtra = useHeaderExtraStore((state) => state.extra);
+  const currentCrumbLabel = useBreadcrumbLabelStore(
+    (state) => state.currentLabel,
+  );
   const showBreadcrumbs = breadcrumbs.length > 0;
+  const resolvedBreadcrumbs = currentCrumbLabel
+    ? breadcrumbs.map((segment, index) =>
+        index === breadcrumbs.length - 1
+          ? { ...segment, label: currentCrumbLabel }
+          : segment,
+      )
+    : breadcrumbs;
 
   function handleMobileNavKeyDown(
     event: React.KeyboardEvent<HTMLButtonElement>,
@@ -74,7 +85,7 @@ export default function MainContentHeader({
 
       {showBreadcrumbs ? (
         <div className="erp-shell-breadcrumb-bar">
-          <Breadcrumbs segments={breadcrumbs} />
+          <Breadcrumbs segments={resolvedBreadcrumbs} />
         </div>
       ) : null}
     </header>

@@ -19,6 +19,7 @@ import {
   SubmitOfficialSealRequestDto,
 } from "../dtos/official-seal.dtos";
 import { HrApprovalChainService } from "@/modules/hr-shared/application/services/hr-approval-chain.service";
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { ApprovalsService } from "@/modules/approvals/application/services/approvals.service";
 import { ApprovalDecisionRegistry } from "@/modules/approvals/application/services/approval-decision-registry.service";
 import { PermissionService } from "@/shared/permissions/permission.service";
@@ -96,6 +97,7 @@ export class OfficialSealService
     private readonly prisma: PrismaService,
     private readonly approvalsService: ApprovalsService,
     private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly onBehalfService: OnBehalfService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     @Inject(STORAGE_SERVICE)
@@ -116,11 +118,16 @@ export class OfficialSealService
     userId: string,
     files: UploadedFile[] = [],
   ): Promise<unknown> {
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
     const requestNumber = await this.nextRequestNumber();
 
     const resolvedTiers =
       await this.hrApprovalChain.buildOfficialSealApprovalChain(
-        userId,
+        employeeId,
         companyId,
       );
 
@@ -135,7 +142,7 @@ export class OfficialSealService
           id,
           companyId,
           requestNumber,
-          employeeId: userId,
+          employeeId,
           fileName: dto.fileName,
           description: dto.description,
           ...extraFields,
@@ -154,6 +161,15 @@ export class OfficialSealService
       this.logger.log(
         `Official seal ${requestNumber} auto-approved (GM+ submitter)`,
       );
+      await this.onBehalfService.recordOnBehalfCreate({
+        moduleCode: 'OFFICIAL_SEAL_USAGE',
+        companyId,
+        actorUserId: userId,
+        employeeId,
+        recordId: id,
+        recordReference: requestNumber,
+        autoApproveTier: dto.autoApproveTier,
+      });
       return this.getOfficialSeal(id, companyId, userId);
     }
 
@@ -171,12 +187,13 @@ export class OfficialSealService
         },
       },
       companyId,
-      userId,
+      employeeId,
       {
         resolvedTiers: {
           ruleName: "Official Seal HR → GM chain",
           tiers: resolvedTiers,
         },
+        createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -186,7 +203,7 @@ export class OfficialSealService
           id,
           companyId,
           requestNumber,
-          employeeId: userId,
+          employeeId,
           fileName: dto.fileName,
           description: dto.description,
           ...extraFields,
@@ -216,6 +233,23 @@ export class OfficialSealService
       });
       throw error;
     }
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'OFFICIAL_SEAL_USAGE',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: id,
+      recordReference: requestNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'OFFICIAL_SEAL_USAGE',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: dto.autoApproveTier === true,
+    });
     return this.getOfficialSeal(id, companyId, userId);
   }
 
@@ -564,6 +598,7 @@ export class OfficialSealService
   private async assertCanView(
     officialSeal: {
       employeeId: string;
+      createdBy?: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
     companyId: string,
@@ -577,7 +612,7 @@ export class OfficialSealService
     );
     if (isHrViewer) return;
 
-    const isOwner = officialSeal.employeeId === userId;
+    const isOwner = officialSeal.employeeId === userId || officialSeal.createdBy === userId;
     const isTierApprover =
       officialSeal.approvalRequest?.tiers?.some(
         (t) => t.approverId === userId,

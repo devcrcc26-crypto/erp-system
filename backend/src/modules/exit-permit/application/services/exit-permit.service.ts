@@ -21,6 +21,7 @@ import { HrApprovalChainService } from "@/modules/hr-shared/application/services
 import { buildPaginatedResult, buildPrismaPagination } from "@/shared/utils/pagination.util";
 import { ApprovalDecisionListener, ApprovalFinalDecision } from "@/modules/approvals/application/ports/approval-decision.listener";
 import { ApprovalsService } from "@/modules/approvals/application/services/approvals.service";
+import { OnBehalfService } from "@/modules/on-behalf/on-behalf.service";
 
 const USER_SELECT = {
     id: true,
@@ -85,6 +86,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly onBehalfService: OnBehalfService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -103,7 +105,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     userId: string,
   ) {
     const employeeId = await this.resolveTargetEmployeeId(
-      dto.employeeId ?? userId,
+      dto.onBehalfOfEmployeeId ?? dto.employeeId ?? userId,
       companyId,
       userId,
     );
@@ -153,6 +155,16 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
       }
 
       return created;
+    });
+
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'EXIT_PERMIT',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: request.id,
+      recordReference: request.requestNumber,
+      autoApproveTier: dto.autoApproveTier,
     });
 
     return this.getRequest(request.id, companyId, userId);
@@ -442,6 +454,20 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
             updatedBy: userId,
         }
     });
+
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'EXIT_PERMIT',
+      companyId,
+      actorUserId: userId,
+      employeeId: request.employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: await this.onBehalfService.wasAutoApproveRequested(
+        'EXIT_PERMIT',
+        id,
+        userId,
+        companyId,
+      ),
+    });
     return this.getRequest(id, companyId, userId);
   }
 
@@ -644,7 +670,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     companyId: string,
     userId: string,
   ): Promise<boolean> {
-    if (request.employeeId === userId) {
+    if (await this.onBehalfService.canActForRecord(userId, companyId, request)) {
       return true;
     }
 
@@ -722,7 +748,7 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
 
   /**
    * Resolves the employee a permit belongs to.
-   * HR and full-access roles may assign any company employee; others may only use their own user id.
+   * On-behalf targets follow OnBehalfService rules (HR / full access, department head, discipline lead).
    */
   private async resolveTargetEmployeeId(
     employeeId: string,
@@ -730,23 +756,11 @@ export class ExitPermitService implements ApprovalDecisionListener, OnModuleInit
     userId: string,
   ): Promise<string> {
     await this.assertEmployeeInCompany(employeeId, companyId);
-
-    if (employeeId === userId) {
-      return employeeId;
-    }
-
-    const canFileOnBehalf = await this.hrApprovalChain.isHrOrFullAccessActor(
+    return this.onBehalfService.resolveTargetEmployeeId(
       userId,
       companyId,
+      employeeId,
     );
-
-    if (!canFileOnBehalf) {
-      throw new ForbiddenException(
-        "Only HR or a full-access role can create exit permits on behalf of another employee",
-      );
-    }
-
-    return employeeId;
   }
 
   private async assertEmployeeInCompany(

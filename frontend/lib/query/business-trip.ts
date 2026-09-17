@@ -14,6 +14,7 @@ import {
   apiPostForm,
   downloadApiFile,
 } from '@/lib/api/client';
+import { appendOnBehalfFields } from '@/lib/api/on-behalf.types';
 import type {
   BusinessTripDetail,
   BusinessTripListItem,
@@ -236,6 +237,7 @@ export function useSubmitBusinessTrip() {
         formData.append('notes', payload.notes);
       }
       formData.append('passengers', JSON.stringify(payload.passengers));
+      appendOnBehalfFields(formData, payload);
       for (const file of payload.files ?? []) {
         formData.append('files', file);
       }

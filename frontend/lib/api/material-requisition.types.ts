@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type MaterialRequisitionStatus =
   | 'DRAFT'
   | 'SUBMITTED'
@@ -77,7 +78,7 @@ export interface MaterialRequisitionDetail extends MaterialRequisitionListItem {
   } | null;
 }
 
-export interface CreateMaterialRequisitionPayload {
+export interface CreateMaterialRequisitionPayload extends OnBehalfPayload {
   title: string;
   purpose: string;
   requiredByDate?: string;

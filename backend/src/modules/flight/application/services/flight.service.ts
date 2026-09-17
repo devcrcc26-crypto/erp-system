@@ -39,6 +39,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
   CreateFlightDraftDto,
@@ -105,6 +106,7 @@ export class FlightService
     private readonly prisma: PrismaService,
     private readonly approvalsService: ApprovalsService,
     private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly onBehalfService: OnBehalfService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly notificationService: NotificationService,
@@ -139,6 +141,14 @@ export class FlightService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    // On-behalf: the request belongs to employeeId (submittedBy); userId stays the creator.
+    // Passengers are chosen independently — the target is not added automatically.
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+
     // --- Validation ---
     const departureDate = this.parseDateTime(dto.departureDate);
     const returnDate = dto.returnDate
@@ -193,7 +203,7 @@ export class FlightService
 
     // --- Resolve approval chain ---
     const resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
-      userId,
+      employeeId,
       companyId,
     );
 
@@ -210,7 +220,7 @@ export class FlightService
               id: appId,
               companyId,
               applicationNumber,
-              submittedBy: userId,
+              submittedBy: employeeId,
               tripType: dto.tripType,
               isInternational: dto.isInternational,
               originCountry: dto.originCountry.trim(),
@@ -272,6 +282,16 @@ export class FlightService
         dto.destination,
       );
 
+      await this.onBehalfService.recordOnBehalfCreate({
+        moduleCode: 'FLIGHT_APPLICATION',
+        companyId,
+        actorUserId: userId,
+        employeeId,
+        recordId: appId,
+        recordReference: applicationNumber,
+        autoApproveTier: dto.autoApproveTier,
+      });
+
       return this.getApplication(appId, companyId, userId);
     }
 
@@ -294,12 +314,13 @@ export class FlightService
         },
       },
       companyId,
-      userId,
+      employeeId,
       {
         resolvedTiers: {
           ruleName: 'Flight org chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -314,7 +335,7 @@ export class FlightService
               id: appId,
               companyId,
               applicationNumber: approval.requestNumber,
-              submittedBy: userId,
+              submittedBy: employeeId,
               tripType: dto.tripType,
               isInternational: dto.isInternational,
               originCountry: dto.originCountry.trim(),
@@ -373,6 +394,24 @@ export class FlightService
     if (files.length > 0) {
       await this.attachFiles(appId, companyId, userId, files);
     }
+
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'FLIGHT_APPLICATION',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: appId,
+      recordReference: approval.requestNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'FLIGHT_APPLICATION',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: dto.autoApproveTier === true,
+    });
 
     return this.getApplication(appId, companyId, userId);
   }
@@ -1437,6 +1476,7 @@ export class FlightService
   private async assertCanView(
     app: {
       submittedBy: string;
+      createdBy?: string;
       passengers: Array<{ employeeId: string }>;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
@@ -1451,7 +1491,8 @@ export class FlightService
     );
     if (isHrViewer) return;
 
-    const isSubmitter = app.submittedBy === userId;
+    const isSubmitter =
+      app.submittedBy === userId || app.createdBy === userId;
     const isPassenger = app.passengers.some((p) => p.employeeId === userId);
     const isTierApprover =
       app.approvalRequest?.tiers?.some((t) => t.approverId === userId) ?? false;

@@ -12,7 +12,8 @@ import {
   Min,
 } from 'class-validator';
 
-export class SubmitOfficialSealRequestDto {
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+export class SubmitOfficialSealRequestDto extends OnBehalfSubmissionDto {
   @ApiProperty({ maxLength: 255, description: 'Document or file name for the seal request' })
   @IsString()
   @IsNotEmpty()

@@ -19,6 +19,27 @@ export const HR_OR_FULL_ACCESS_ROLES: readonly string[] = [
   'System Administrator',
 ];
 
+/** HR request modules that support on-behalf submission (approval category codes). */
+export const HR_ON_BEHALF_MODULE_CODES = [
+  'LEAVE_REQUEST',
+  'EXPENSE_CLAIM',
+  'PURCHASE_REQUEST',
+  'MATERIAL_REQUISITION',
+  'CONSUMABLES_REQUISITION',
+  'FLIGHT_APPLICATION',
+  'BUSINESS_TRIP',
+  'PER_DIEM',
+  'VEHICLE_APPLICATION',
+  'OFFICIAL_SEAL_USAGE',
+  'PROJECT_SEAL_USAGE',
+  'VEHICLE_REFUELING',
+  'OVERTIME_APPLICATION',
+  'INSPECTION_REPAIR',
+  'EXIT_PERMIT',
+] as const;
+
+export type HrOnBehalfModuleCode = (typeof HR_ON_BEHALF_MODULE_CODES)[number];
+
 export interface ExitPermitChainOptions {
   /**
    * When true, do not skip Discipline Lead / HR Officer because the employee
@@ -198,6 +219,79 @@ export class HrApprovalChainService {
     }
 
     return this.finalizeTiers(tiers);
+  }
+
+  /**
+   * Builds (without persisting) the approval chain a module would open for `employeeId`.
+   * Value-dependent tiers (purchase > 10k ETB, overtime > 4h) assume the widest chain,
+   * so callers see every tier the employee could need. Modules with no approval
+   * workflow (inspection & repair) return an empty chain.
+   */
+  async buildChainForModule(
+    moduleCode: HrOnBehalfModuleCode,
+    employeeId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    switch (moduleCode) {
+      case 'LEAVE_REQUEST':
+        return this.buildOrgApprovalChain(employeeId, companyId, false);
+      case 'EXPENSE_CLAIM':
+      case 'PER_DIEM':
+      case 'OVERTIME_APPLICATION':
+        return this.buildOrgApprovalChain(employeeId, companyId, true);
+      case 'PURCHASE_REQUEST':
+        return this.buildPurchaseApprovalChain(
+          employeeId,
+          Number.MAX_SAFE_INTEGER,
+          companyId,
+        );
+      case 'MATERIAL_REQUISITION':
+        return this.buildMaterialRequisitionApprovalChain(employeeId, companyId);
+      case 'CONSUMABLES_REQUISITION':
+        return this.buildConsumablesApprovalChain(employeeId, companyId);
+      case 'FLIGHT_APPLICATION':
+      case 'BUSINESS_TRIP':
+        return this.buildFlightApprovalChain(employeeId, companyId);
+      case 'VEHICLE_APPLICATION':
+        return this.buildVehicleApplicationApprovalChain(employeeId, companyId);
+      case 'VEHICLE_REFUELING':
+        return this.buildVehicleRefuelingApprovalChain(employeeId, companyId);
+      case 'OFFICIAL_SEAL_USAGE':
+        return this.buildOfficialSealApprovalChain(employeeId, companyId);
+      case 'PROJECT_SEAL_USAGE':
+        return this.buildProjectSealApprovalChain(employeeId, companyId);
+      case 'EXIT_PERMIT':
+        return this.buildExitPermitApprovalChain(employeeId, companyId, {
+          submittedOnBehalf: true,
+        });
+      case 'INSPECTION_REPAIR':
+        return [];
+    }
+  }
+
+  /**
+   * First tier in the module chain for `employeeId` assigned to `userId`, or null.
+   * Chain resolution errors (e.g. no discipline lead) count as "not in chain".
+   */
+  async findUserTierInModuleChain(
+    userId: string,
+    moduleCode: HrOnBehalfModuleCode,
+    employeeId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier | null> {
+    try {
+      const tiers = await this.buildChainForModule(
+        moduleCode,
+        employeeId,
+        companyId,
+      );
+      return tiers.find((tier) => tier.approverId === userId) ?? null;
+    } catch (error: unknown) {
+      if (error instanceof BadRequestException) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   /**

@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
+import { HrSharedModule } from '../hr-shared/hr-shared.module';
 import { PublicHolidayService } from './application/services/public-holiday.service';
 import { WorkScheduleCronService } from './application/services/work-schedule-cron.service';
 import { WorkScheduleService } from './application/services/work-schedule.service';
@@ -6,6 +7,7 @@ import { PublicHolidayController } from './presentation/public-holiday.controlle
 import { WorkScheduleController } from './presentation/work-schedule.controller';
 
 @Module({
+  imports: [forwardRef(() => HrSharedModule)],
   controllers: [WorkScheduleController, PublicHolidayController],
   providers: [
     WorkScheduleService,

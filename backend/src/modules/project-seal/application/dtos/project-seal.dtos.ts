@@ -4,7 +4,8 @@ import { Type } from "class-transformer";
 import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 
-export class SubmitProjectSealRequestDto {
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+export class SubmitProjectSealRequestDto extends OnBehalfSubmissionDto {
     @ApiProperty({ maxLength: 255, description: 'Document or file name for the seal request' })
     @IsString()
     @IsNotEmpty()

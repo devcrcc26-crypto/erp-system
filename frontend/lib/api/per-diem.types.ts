@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type SupportedCurrency = 'ETB' | 'USD' | 'CNY';
 
 export type PerDiemStatus =
@@ -139,7 +140,7 @@ export interface PerDiemRequestDetail extends PerDiemRequestListItem {
   } | null;
 }
 
-export interface SubmitPerDiemRequestPayload {
+export interface SubmitPerDiemRequestPayload extends OnBehalfPayload {
   destinationCategory: string;
   destination: string;
   startDate: string;

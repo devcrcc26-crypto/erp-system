@@ -12,7 +12,8 @@ import {
 } from 'class-validator';
 import { DriveType, VehicleApplicationStatus } from '@prisma/client';
 
-export class SubmitVehicleApplicationDto {
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+export class SubmitVehicleApplicationDto extends OnBehalfSubmissionDto {
   @ApiProperty({ description: 'Company vehicle ID' })
   @IsString()
   @IsNotEmpty()

@@ -38,6 +38,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import {
   AddPurchaseRequestItemDto,
   CreatePurchaseRequestDto,
@@ -106,6 +107,7 @@ export class PurchaseRequestService
     private readonly hrApprovalChain: HrApprovalChainService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
+    private readonly onBehalfService: OnBehalfService,
     private readonly currencyService: CurrencyService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
@@ -127,13 +129,26 @@ export class PurchaseRequestService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const created = await this.findOrCreateDraftRequest(
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
       userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    const created = await this.findOrCreateDraftRequest(
+      employeeId,
       dto,
       companyId,
       userId,
       true,
     );
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'PURCHASE_REQUEST',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: created.id,
+      autoApproveTier: dto.autoApproveTier,
+    });
     return this.getRequest(created.id, companyId, userId);
   }
 
@@ -156,7 +171,11 @@ export class PurchaseRequestService
       throw new BadRequestException('justification is required');
     }
 
-    await this.assertCanManageRequest(employeeId, companyId, actorUserId);
+    await this.assertCanManageRequest(
+      { employeeId, createdBy: actorUserId },
+      companyId,
+      actorUserId,
+    );
 
     if (dto.projectId) {
       const project = await this.prisma.project.findFirst({
@@ -425,7 +444,7 @@ export class PurchaseRequestService
     if (!request) {
       throw new NotFoundException('Purchase request not found');
     }
-    if (request.employeeId !== userId) {
+    if (!(await this.onBehalfService.canActForRecord(userId, companyId, request))) {
       throw new ForbiddenException('Only the request owner can submit it');
     }
     if (request.status !== PurchaseRequestStatus.DRAFT) {
@@ -441,7 +460,7 @@ export class PurchaseRequestService
 
     const resolvedTiers =
       await this.hrApprovalChain.buildPurchaseApprovalChain(
-        userId,
+        request.employeeId,
         totalEtb,
         companyId,
       );
@@ -481,12 +500,13 @@ export class PurchaseRequestService
         },
       },
       companyId,
-      userId,
+      request.employeeId,
       {
         resolvedTiers: {
           ruleName: 'Purchase request value chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -503,6 +523,20 @@ export class PurchaseRequestService
         completedAt: null,
         updatedBy: userId,
       },
+    });
+
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'PURCHASE_REQUEST',
+      companyId,
+      actorUserId: userId,
+      employeeId: request.employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: await this.onBehalfService.wasAutoApproveRequested(
+        'PURCHASE_REQUEST',
+        id,
+        userId,
+        companyId,
+      ),
     });
 
     return this.getRequest(id, companyId, userId);
@@ -752,11 +786,11 @@ export class PurchaseRequestService
   // ─── Private helpers ──────────────────────────────────────────────────────
 
   private async assertCanManageRequest(
-    employeeId: string,
+    record: { employeeId: string; createdBy: string },
     companyId: string,
     userId: string,
   ): Promise<void> {
-    if (employeeId === userId) {
+    if (await this.onBehalfService.canActForRecord(userId, companyId, record)) {
       return;
     }
     const isHrViewer = await this.permissionService.hasPermission(
@@ -779,12 +813,12 @@ export class PurchaseRequestService
   ): Promise<void> {
     const request = await this.prisma.purchaseRequest.findFirst({
       where: activeOnly({ id: requestId, companyId }),
-      select: { id: true, employeeId: true, status: true },
+      select: { id: true, employeeId: true, createdBy: true, status: true },
     });
     if (!request) {
       throw new NotFoundException('Purchase request not found');
     }
-    await this.assertCanManageRequest(request.employeeId, companyId, userId);
+    await this.assertCanManageRequest(request, companyId, userId);
     if (
       request.status !== PurchaseRequestStatus.DRAFT &&
       request.status !== PurchaseRequestStatus.RETURNED
@@ -798,6 +832,7 @@ export class PurchaseRequestService
   private async assertCanView(
     request: {
       employeeId: string;
+      createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
     companyId: string,
@@ -811,7 +846,8 @@ export class PurchaseRequestService
     );
     if (isHrViewer) return;
 
-    const isOwner = request.employeeId === userId;
+    const isOwner =
+      request.employeeId === userId || request.createdBy === userId;
     const isTierApprover =
       request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
       false;

@@ -24,6 +24,7 @@ import {
   FlightVisaStatus,
 } from '@prisma/client';
 
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
 function toBoolean(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
@@ -83,7 +84,7 @@ export class BusinessTripPassengerDto {
  * Multipart / JSON submit body for a new business trip.
  * isInternational is always true — not accepted from the client.
  */
-export class SubmitBusinessTripDto {
+export class SubmitBusinessTripDto extends OnBehalfSubmissionDto {
   @ApiProperty({ enum: FlightTripType })
   @IsEnum(FlightTripType)
   tripType!: FlightTripType;

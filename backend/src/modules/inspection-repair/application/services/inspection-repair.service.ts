@@ -25,6 +25,7 @@ import {
   SubmitInspectionRepairDto,
   UpdateInspectionRepairDto,
 } from '../dtos/inspection-repair.dtos';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 
 const USER_SELECT = {
   id: true,
@@ -64,6 +65,7 @@ export class InspectionRepairService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionService: PermissionService,
+    private readonly onBehalfService: OnBehalfService,
   ) {}
 
   async submitRequest(
@@ -71,7 +73,12 @@ export class InspectionRepairService {
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const resolved = await this.resolveAssetDetails(dto, companyId, userId);
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    const resolved = await this.resolveAssetDetails(dto, companyId, employeeId);
     const requestNumber = await this.nextRequestNumber();
     const id = randomUUID();
     const now = new Date();
@@ -79,7 +86,7 @@ export class InspectionRepairService {
     const data = {
       id,
       companyId,
-      employeeId: userId,
+      employeeId,
       assetId: resolved.assetId,
       deviceName: resolved.deviceName,
       location: dto.location.trim(),
@@ -97,10 +104,22 @@ export class InspectionRepairService {
       updatedBy: userId,
     } as Prisma.InspectionRepairUncheckedCreateInput;
 
-    return this.prisma.inspectionRepair.create({
+    const created = await this.prisma.inspectionRepair.create({
       data,
       include: this.detailInclude(),
     });
+
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'INSPECTION_REPAIR',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: id,
+      recordReference: requestNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+
+    return created;
   }
 
   /**
@@ -194,7 +213,12 @@ export class InspectionRepairService {
       if (!request) {
         throw new NotFoundException('Inspection and repair request not found');
       }
-      await this.assertCanView(request.employeeId, companyId, userId);
+      await this.assertCanView(
+        request.employeeId,
+        companyId,
+        userId,
+        request.createdBy,
+      );
       return request;
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ForbiddenException) {
@@ -207,7 +231,12 @@ export class InspectionRepairService {
       if (!request) {
         throw new NotFoundException('Inspection and repair request not found');
       }
-      await this.assertCanView(request.employeeId as string, companyId, userId);
+      await this.assertCanView(
+        request.employeeId as string,
+        companyId,
+        userId,
+        (request as { createdBy?: string }).createdBy,
+      );
       return request;
     }
   }
@@ -406,6 +435,7 @@ export class InspectionRepairService {
     employeeId: string,
     companyId: string,
     userId: string,
+    createdBy?: string,
   ): Promise<void> {
     const isHrViewer = await this.permissionService.hasPermission(
       userId,
@@ -413,7 +443,7 @@ export class InspectionRepairService {
       'hr',
       'view',
     );
-    if (isHrViewer || employeeId === userId) {
+    if (isHrViewer || employeeId === userId || createdBy === userId) {
       return;
     }
     throw new ForbiddenException('You do not have access to this request');

@@ -35,6 +35,7 @@ import {
 } from '../../application/dtos/leave.dtos';
 import { LeaveBalanceService } from '../../application/services/leave-balance.service';
 import { LeaveService } from '../../application/services/leave.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 
 @ApiTags('HR Leave Requests')
 @ApiBearerAuth()
@@ -49,6 +50,7 @@ export class LeaveController {
   constructor(
     private readonly leaveService: LeaveService,
     private readonly leaveBalanceService: LeaveBalanceService,
+    private readonly onBehalfService: OnBehalfService,
   ) {}
 
   @Post()
@@ -122,19 +124,21 @@ export class LeaveController {
   @Get('balance')
   @DelegatePermissionCheck()
   @ApiOperation({
-    summary: 'Get my leave balances for a year (auth only — own balances)',
+    summary:
+      'Get my leave balances for a year, or an on-behalf target employee\'s (employeeId)',
   })
-  getMyBalance(
+  async getMyBalance(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: LeaveBalanceQueryDto,
   ): Promise<unknown> {
     const year = query.year ?? new Date().getFullYear();
-    return this.leaveBalanceService.getBalance(
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
       user.userId,
-      year,
       companyId,
+      query.employeeId,
     );
+    return this.leaveBalanceService.getBalance(employeeId, year, companyId);
   }
 
   @Get('balances/me')

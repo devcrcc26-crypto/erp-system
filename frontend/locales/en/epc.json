@@ -3958,6 +3958,23 @@
       "hoursPreview": "Hours preview",
       "itemDetails": "Item details",
       "amountAndCurrency": "Amount & currency"
+    },
+    "onBehalf": {
+      "title": "Submission details",
+      "description": "Filing for someone else? Choose the employee this request belongs to.",
+      "toggle": "Submit on behalf of another employee",
+      "employee": "Employee",
+      "placeholder": "Search by name or employee ID",
+      "noResults": "No matching employees",
+      "autoApprove": "Auto-approve my tier",
+      "autoApproveHint": "You are in the approval chain for this request ({{tier}}). Checking this will automatically approve your tier when submitted.",
+      "bannerTitle": "Submitting on behalf of {{name}}",
+      "bannerDescription": "This request will be recorded under their name. You will appear as the creator in the audit log.",
+      "loadFailed": "Could not load employees you can submit for",
+      "month": "Month",
+      "openSheet": "Open sheet",
+      "overtimeDescription": "Choose the month, and the employee if you are filing their overtime, then open the sheet to add entries.",
+      "overtimeTitle": "Overtime — {{name}}"
     }
   }
 }

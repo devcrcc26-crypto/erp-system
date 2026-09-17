@@ -18,7 +18,8 @@ import {
 } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 
-export class SubmitInspectionRepairDto {
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+export class SubmitInspectionRepairDto extends OnBehalfSubmissionDto {
   @ApiPropertyOptional({ description: 'Assigned company asset ID' })
   @IsOptional()
   @IsString()

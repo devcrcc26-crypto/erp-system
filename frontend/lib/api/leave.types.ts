@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type LeaveType =
   | 'ANNUAL'
   | 'SICK'
@@ -143,7 +144,7 @@ export interface ListLeaveRequestsParams {
   search?: string;
 }
 
-export interface SubmitLeaveRequestPayload {
+export interface SubmitLeaveRequestPayload extends OnBehalfPayload {
   leaveType: LeaveType;
   periods?: Array<{ startDate: string; endDate: string }>;
   startDate?: string;

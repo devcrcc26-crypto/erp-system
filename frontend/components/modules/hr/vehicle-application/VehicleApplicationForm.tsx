@@ -18,6 +18,10 @@ import {
 import dayjs from 'dayjs';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -74,6 +78,7 @@ export default function VehicleApplicationForm({
   onSuccess,
 }: VehicleApplicationFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('VEHICLE_APPLICATION');
   const messageApi = useAppMessage();
   const [form] = Form.useForm<VehicleApplicationFormValues>();
   const [submitting, setSubmitting] = useState(false);
@@ -155,6 +160,7 @@ export default function VehicleApplicationForm({
   }
 
   function resetForm(): void {
+    onBehalf.reset();
     form.resetFields();
     form.setFieldsValue({ driveType: 'COMPANY_DRIVER', passengerCount: 1 });
     setDepartureAt(null);
@@ -278,6 +284,7 @@ export default function VehicleApplicationForm({
     setSubmitting(true);
     try {
       const result = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
         vehicleId: selectedVehicle.id,
         driveType: driveTypeValue,
         driverId,
@@ -313,56 +320,59 @@ export default function VehicleApplicationForm({
         title: t('hr.form.tripSchedule'),
         validate: () => validateScheduleStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.form.tripSchedule')}
-            description={
-              datesReady && departureAt && returnAt
-                ? `${formatProjectDate(departureAt.toISOString())} → ${formatProjectDate(returnAt.toISOString())}`
-                : t('pages.hr.vehicleApplication.scheduleStepDescription')
-            }
-          >
-            <div className="erp-form-grid-2">
-              <Form.Item
-                label={t('hr.form.departureDateTime')}
-                required
-              >
-                <DatePicker
-                  showTime={{ format: 'HH:mm' }}
-                  format="YYYY-MM-DD HH:mm"
-                  className="w-full"
-                  value={departureAt}
-                  disabledDate={(d) => d.isBefore(dayjs(), 'day')}
-                  onChange={(value) => handleDepartureChange(value)}
-                />
-              </Form.Item>
-              <Form.Item
-                label={t('hr.form.returnDateTime')}
-                required
-                validateStatus={
-                  departureAt && returnAt && returnAt.isBefore(departureAt)
-                    ? 'error'
-                    : undefined
-                }
-                help={
-                  departureAt && returnAt && returnAt.isBefore(departureAt)
-                    ? t('hr.validation.returnAfterDeparture')
-                    : undefined
-                }
-              >
-                <DatePicker
-                  showTime={{ format: 'HH:mm' }}
-                  format="YYYY-MM-DD HH:mm"
-                  className="w-full"
-                  value={returnAt}
-                  disabledDate={(d) =>
-                    d.isBefore(departureAt ?? dayjs(), 'day')
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.form.tripSchedule')}
+              description={
+                datesReady && departureAt && returnAt
+                  ? `${formatProjectDate(departureAt.toISOString())} → ${formatProjectDate(returnAt.toISOString())}`
+                  : t('pages.hr.vehicleApplication.scheduleStepDescription')
+              }
+            >
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  label={t('hr.form.departureDateTime')}
+                  required
+                >
+                  <DatePicker
+                    showTime={{ format: 'HH:mm' }}
+                    format="YYYY-MM-DD HH:mm"
+                    className="w-full"
+                    value={departureAt}
+                    disabledDate={(d) => d.isBefore(dayjs(), 'day')}
+                    onChange={(value) => handleDepartureChange(value)}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label={t('hr.form.returnDateTime')}
+                  required
+                  validateStatus={
+                    departureAt && returnAt && returnAt.isBefore(departureAt)
+                      ? 'error'
+                      : undefined
                   }
-                  onChange={(value) => handleReturnChange(value)}
-                />
-              </Form.Item>
-            </div>
-          </FormLayout>
+                  help={
+                    departureAt && returnAt && returnAt.isBefore(departureAt)
+                      ? t('hr.validation.returnAfterDeparture')
+                      : undefined
+                  }
+                >
+                  <DatePicker
+                    showTime={{ format: 'HH:mm' }}
+                    format="YYYY-MM-DD HH:mm"
+                    className="w-full"
+                    value={returnAt}
+                    disabledDate={(d) =>
+                      d.isBefore(departureAt ?? dayjs(), 'day')
+                    }
+                    onChange={(value) => handleReturnChange(value)}
+                  />
+                </Form.Item>
+              </div>
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -670,6 +680,7 @@ export default function VehicleApplicationForm({
       },
     ],
     [
+      onBehalf,
       t,
       form,
       departureAt,

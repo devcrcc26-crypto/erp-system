@@ -13,6 +13,7 @@ import {
   apiPostForm,
   downloadApiFile,
 } from '@/lib/api/client';
+import { appendOnBehalfFields } from '@/lib/api/on-behalf.types';
 import type {
   LeaveBalance,
   LeaveRequestDetail,
@@ -46,6 +47,8 @@ export const leaveKeys = {
   detail: (id: string) => [...leaveKeys.details(), id] as const,
   balances: () => [...leaveKeys.all, 'balances'] as const,
   myBalances: (year: number) => [...leaveKeys.balances(), 'me', year] as const,
+  employeeBalances: (employeeId: string, year: number) =>
+    [...leaveKeys.balances(), 'employee', employeeId, year] as const,
   companyBalances: (params: ListLeaveBalancesParams) =>
     [...leaveKeys.balances(), 'company', params] as const,
 };
@@ -217,11 +220,20 @@ export function useLeaveRequest(id: string, enabled = true) {
 /**
  * Current user's leave balances for a calendar year (auth-only endpoint).
  */
-export function useMyLeaveBalances(year: number, enabled = true) {
+export function useMyLeaveBalances(
+  year: number,
+  enabled = true,
+  /** On-behalf target; omitted = the signed-in user. */
+  employeeId?: string,
+) {
   return useQuery({
-    queryKey: leaveKeys.myBalances(year),
+    queryKey: employeeId
+      ? leaveKeys.employeeBalances(employeeId, year)
+      : leaveKeys.myBalances(year),
     queryFn: () =>
-      apiGet<LeaveBalance[]>(`${LEAVE_PATH}/balance?year=${year}`),
+      apiGet<LeaveBalance[]>(
+        `${LEAVE_PATH}/balance?year=${year}${employeeId ? `&employeeId=${employeeId}` : ''}`,
+      ),
     enabled,
     retry: false,
   });
@@ -282,6 +294,7 @@ export function useSubmitLeaveRequest() {
         formData.append('days', String(payload.days));
       }
       formData.append('reason', payload.reason ?? '');
+      appendOnBehalfFields(formData, payload);
       for (const file of payload.files ?? []) {
         formData.append('files', file);
       }

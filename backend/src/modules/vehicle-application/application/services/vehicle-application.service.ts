@@ -30,6 +30,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import {
   ListVehicleApplicationsDto,
   SubmitVehicleApplicationDto,
@@ -76,6 +77,7 @@ export class VehicleApplicationService
     private readonly prisma: PrismaService,
     private readonly approvalsService: ApprovalsService,
     private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly onBehalfService: OnBehalfService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
   ) {}
@@ -98,6 +100,11 @@ export class VehicleApplicationService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
     const departure = new Date(dto.departureDatetime);
     const returnDt = new Date(dto.returnDatetime);
 
@@ -136,7 +143,7 @@ export class VehicleApplicationService
 
     const resolvedTiers =
       await this.hrApprovalChain.buildVehicleApplicationApprovalChain(
-        userId,
+        employeeId,
         companyId,
       );
 
@@ -150,7 +157,7 @@ export class VehicleApplicationService
             id,
             companyId,
             applicationNumber,
-            employeeId: userId,
+            employeeId,
             vehicleId: dto.vehicleId,
             driveType: dto.driveType,
             driverId,
@@ -180,6 +187,15 @@ export class VehicleApplicationService
       this.logger.log(
         `Vehicle application ${applicationNumber} auto-approved (HR+ submitter)`,
       );
+      await this.onBehalfService.recordOnBehalfCreate({
+        moduleCode: 'VEHICLE_APPLICATION',
+        companyId,
+        actorUserId: userId,
+        employeeId,
+        recordId: id,
+        recordReference: applicationNumber,
+        autoApproveTier: dto.autoApproveTier,
+      });
       return this.getApplication(id, companyId, userId);
     }
 
@@ -198,12 +214,13 @@ export class VehicleApplicationService
         },
       },
       companyId,
-      userId,
+      employeeId,
       {
         resolvedTiers: {
           ruleName: 'Vehicle Application HR Officer chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -212,7 +229,7 @@ export class VehicleApplicationService
         id,
         companyId,
         applicationNumber,
-        employeeId: userId,
+        employeeId,
         vehicleId: dto.vehicleId,
         driveType: dto.driveType,
         driverId,
@@ -230,6 +247,24 @@ export class VehicleApplicationService
         createdBy: userId,
         updatedBy: userId,
       },
+    });
+
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'VEHICLE_APPLICATION',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: id,
+      recordReference: applicationNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'VEHICLE_APPLICATION',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: dto.autoApproveTier === true,
     });
 
     return this.getApplication(id, companyId, userId);
@@ -676,6 +711,7 @@ export class VehicleApplicationService
   private async assertCanView(
     application: {
       employeeId: string;
+      createdBy?: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
     companyId: string,
@@ -689,7 +725,7 @@ export class VehicleApplicationService
     );
     if (isHrViewer) return;
 
-    const isOwner = application.employeeId === userId;
+    const isOwner = application.employeeId === userId || application.createdBy === userId;
     const isTierApprover =
       application.approvalRequest?.tiers?.some(
         (t) => t.approverId === userId,

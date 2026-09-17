@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 import type { AssetStatus } from './company-asset.types';
 
 export type InspectionRepairUrgency =
@@ -77,7 +78,7 @@ export interface InspectionRepairDetail extends InspectionRepairListItem {
   } | null;
 }
 
-export interface SubmitInspectionRepairPayload {
+export interface SubmitInspectionRepairPayload extends OnBehalfPayload {
   assetId?: string;
   deviceName?: string;
   location: string;

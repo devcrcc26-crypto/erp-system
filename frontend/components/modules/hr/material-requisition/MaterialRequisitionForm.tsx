@@ -17,6 +17,10 @@ import dayjs from 'dayjs';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -69,6 +73,7 @@ export default function MaterialRequisitionForm({
   onSuccess,
 }: MaterialRequisitionFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('MATERIAL_REQUISITION');
   const messageApi = useAppMessage();
   const [detailsForm] = Form.useForm<Step1Values>();
   const [itemForm] = Form.useForm<ItemFormValues>();
@@ -83,6 +88,7 @@ export default function MaterialRequisitionForm({
   const createMutation = useCreateMaterialRequisition();
 
   function resetForm(): void {
+    onBehalf.reset();
     detailsForm.resetFields();
     itemForm.resetFields();
     setItems([]);
@@ -191,6 +197,7 @@ export default function MaterialRequisitionForm({
     setSubmitting(true);
     try {
       const created = await createMutation.mutateAsync({
+        ...onBehalf.payload,
         title: values.title.trim(),
         purpose: values.purpose.trim(),
         requiredByDate: values.requiredByDate
@@ -293,69 +300,72 @@ export default function MaterialRequisitionForm({
         title: t('hr.section.requestDetails'),
         validate: () => validateDetailsStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.section.requestDetails')}
-            description={t(
-              'pages.hr.materialRequisition.detailsStepDescription',
-            )}
-          >
-            <Form.Item
-              name="title"
-              label={t('hr.form.title')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.titleRequired'),
-                },
-              ]}
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.section.requestDetails')}
+              description={t(
+                'pages.hr.materialRequisition.detailsStepDescription',
+              )}
             >
-              <Input
-                placeholder={t('hr.placeholder.enterTitle')}
-                maxLength={200}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="purpose"
-              label={t('hr.labels.purpose')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.purposeRequired'),
-                },
-              ]}
-            >
-              <Input.TextArea
-                rows={4}
-                maxLength={2000}
-                showCount
-                placeholder={t('hr.placeholder.enterPurpose')}
-              />
-            </Form.Item>
-
-            <div className="erp-form-grid-2">
               <Form.Item
-                name="requiredByDate"
-                label={t('hr.form.requiredByDate')}
-              >
-                <DatePicker
-                  className="w-full"
-                  disabledDate={(date) => date.isBefore(dayjs(), 'day')}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="warehouseLocation"
-                label={t('hr.form.warehouseLocation')}
+                name="title"
+                label={t('hr.form.title')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.titleRequired'),
+                  },
+                ]}
               >
                 <Input
-                  placeholder={t('hr.placeholder.enterWarehouseLocation')}
+                  placeholder={t('hr.placeholder.enterTitle')}
                   maxLength={200}
                 />
               </Form.Item>
-            </div>
-          </FormLayout>
+
+              <Form.Item
+                name="purpose"
+                label={t('hr.labels.purpose')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.purposeRequired'),
+                  },
+                ]}
+              >
+                <Input.TextArea
+                  rows={4}
+                  maxLength={2000}
+                  showCount
+                  placeholder={t('hr.placeholder.enterPurpose')}
+                />
+              </Form.Item>
+
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  name="requiredByDate"
+                  label={t('hr.form.requiredByDate')}
+                >
+                  <DatePicker
+                    className="w-full"
+                    disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="warehouseLocation"
+                  label={t('hr.form.warehouseLocation')}
+                >
+                  <Input
+                    placeholder={t('hr.placeholder.enterWarehouseLocation')}
+                    maxLength={200}
+                  />
+                </Form.Item>
+              </div>
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -573,6 +583,7 @@ export default function MaterialRequisitionForm({
       },
     ],
     [
+      onBehalf,
       t,
       showItemForm,
       editingKey,

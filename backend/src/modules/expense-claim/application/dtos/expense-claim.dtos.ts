@@ -15,7 +15,8 @@ import {
 } from 'class-validator';
 import { ExpenseClaimStatus, SupportedCurrency } from '@prisma/client';
 
-export class CreateExpenseClaimDto {
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+export class CreateExpenseClaimDto extends OnBehalfSubmissionDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()

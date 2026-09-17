@@ -37,6 +37,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import { formatDateOnly } from '../../../work-schedule/application/services/work-schedule.dates';
 import {
@@ -114,6 +115,7 @@ export class LeaveService
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly workScheduleService: WorkScheduleService,
+    private readonly onBehalfService: OnBehalfService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -136,8 +138,13 @@ export class LeaveService
     userId: string,
     files: UploadedFile[] = [],
   ): Promise<unknown> {
-    return this.submitLeaveForEmployee(
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
       userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    return this.submitLeaveForEmployee(
+      employeeId,
       dto,
       companyId,
       userId,
@@ -262,6 +269,16 @@ export class LeaveService
         `Leave request ${requestNumber} auto-approved (no further tiers)`,
       );
 
+      await this.onBehalfService.recordOnBehalfCreate({
+        moduleCode: 'LEAVE_REQUEST',
+        companyId,
+        actorUserId,
+        employeeId,
+        recordId: leaveId,
+        recordReference: requestNumber,
+        autoApproveTier: dto.autoApproveTier,
+      });
+
       return this.fetchLeaveDetail(leaveId, companyId);
     }
 
@@ -290,6 +307,7 @@ export class LeaveService
           ruleName: 'Leave org chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: actorUserId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -353,6 +371,24 @@ export class LeaveService
       });
       throw error;
     }
+
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'LEAVE_REQUEST',
+      companyId,
+      actorUserId,
+      employeeId,
+      recordId: leaveId,
+      recordReference: approval.requestNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'LEAVE_REQUEST',
+      companyId,
+      actorUserId,
+      employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: dto.autoApproveTier === true,
+    });
 
     return this.fetchLeaveDetail(leaveId, companyId);
   }
@@ -786,6 +822,7 @@ export class LeaveService
   private async assertCanViewLeaveRequest(
     leave: {
       employeeId: string;
+      createdBy?: string;
       approvalRequest?: {
         tiers?: Array<{ approverId: string }>;
       } | null;
@@ -803,7 +840,7 @@ export class LeaveService
       return;
     }
 
-    const isOwner = leave.employeeId === userId;
+    const isOwner = leave.employeeId === userId || leave.createdBy === userId;
     const isApprover =
       leave.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
       false;

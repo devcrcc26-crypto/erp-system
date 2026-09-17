@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type ProjectSealStatus =
   | 'DRAFT'
   | 'SUBMITTED'
@@ -82,7 +83,7 @@ export interface ProjectSealDetail extends ProjectSealListItem {
 }
 
 
-export interface SubmitProjectSealPayload {
+export interface SubmitProjectSealPayload extends OnBehalfPayload {
     fileName: string;
     description: string;
     sealCategory?: string;

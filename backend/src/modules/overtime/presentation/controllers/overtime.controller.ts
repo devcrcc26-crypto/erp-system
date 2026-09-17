@@ -31,6 +31,7 @@ import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-
 import { OvertimeImportPreviewResponseDto } from '../../application/dtos/overtime-import.dtos';
 import {
   ListOvertimeSheetsDto,
+  OpenOvertimeSheetDto,
   PreviewOvertimeEntryDto,
   UpsertOvertimeEntryDto,
 } from '../../application/dtos/overtime.dtos';
@@ -83,6 +84,19 @@ export class OvertimeController {
     @CurrentCompany() companyId: string,
   ): Promise<unknown> {
     return this.overtimeService.getCurrentSheet(companyId, user.userId);
+  }
+
+  @Post('sheets')
+  @ApiOperation({
+    summary:
+      'Open or create a month sheet for the caller, or on behalf of an eligible employee',
+  })
+  openSheet(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: OpenOvertimeSheetDto,
+  ): Promise<unknown> {
+    return this.overtimeService.openSheet(dto, companyId, user.userId);
   }
 
   @Post('preview-entry')

@@ -25,6 +25,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { EmployeePerDiemRateService } from './employee-per-diem-rate.service';
 import {
   ListPerDiemRequestsDto,
@@ -70,6 +71,7 @@ export class PerDiemService
     private readonly prisma: PrismaService,
     private readonly approvalsService: ApprovalsService,
     private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly onBehalfService: OnBehalfService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly currencyService: CurrencyService,
@@ -92,7 +94,12 @@ export class PerDiemService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    return this.submitForEmployee(userId, dto, companyId, userId);
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    return this.submitForEmployee(employeeId, dto, companyId, userId);
   }
 
   /**
@@ -233,6 +240,7 @@ export class PerDiemService
           ruleName: 'Per diem org chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: actorUserId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -283,6 +291,24 @@ export class PerDiemService
       });
       throw error;
     }
+
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'PER_DIEM',
+      companyId,
+      actorUserId,
+      employeeId,
+      recordId: requestId,
+      recordReference: approval.requestNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'PER_DIEM',
+      companyId,
+      actorUserId,
+      employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: dto.autoApproveTier === true,
+    });
 
     return this.getRequest(requestId, companyId, actorUserId);
   }
@@ -481,6 +507,7 @@ export class PerDiemService
   private async assertCanView(
     request: {
       employeeId: string;
+      createdBy?: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
     companyId: string,
@@ -494,7 +521,7 @@ export class PerDiemService
     );
     if (isHrViewer) return;
 
-    const isOwner = request.employeeId === userId;
+    const isOwner = request.employeeId === userId || request.createdBy === userId;
     const isTierApprover =
       request.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
       false;

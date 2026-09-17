@@ -39,6 +39,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
   BusinessTripPassengerDto,
@@ -105,6 +106,7 @@ export class BusinessTripService
     private readonly prisma: PrismaService,
     private readonly approvalsService: ApprovalsService,
     private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly onBehalfService: OnBehalfService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly notificationService: NotificationService,
@@ -139,6 +141,14 @@ export class BusinessTripService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    // On-behalf: the request belongs to employeeId (submittedBy); userId stays the creator.
+    // Passengers are chosen independently — the target is not added automatically.
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+
     // --- Validation ---
     const departureDate = this.parseDateTime(dto.departureDate);
     const returnDate = dto.returnDate
@@ -193,7 +203,7 @@ export class BusinessTripService
 
     // --- Resolve approval chain ---
     const resolvedTiers = await this.hrApprovalChain.buildFlightApprovalChain(
-      userId,
+      employeeId,
       companyId,
     );
 
@@ -210,7 +220,7 @@ export class BusinessTripService
               id: appId,
               companyId,
               tripNumber,
-              submittedBy: userId,
+              submittedBy: employeeId,
               tripType: dto.tripType,
               originCountry: dto.originCountry.trim(),
               originCity: dto.originCity.trim(),
@@ -280,6 +290,16 @@ export class BusinessTripService
         `${dto.destinationCity}, ${dto.destinationCountry}`,
       );
 
+      await this.onBehalfService.recordOnBehalfCreate({
+        moduleCode: 'BUSINESS_TRIP',
+        companyId,
+        actorUserId: userId,
+        employeeId,
+        recordId: appId,
+        recordReference: tripNumber,
+        autoApproveTier: dto.autoApproveTier,
+      });
+
       return this.getTrip(appId, companyId, userId);
     }
 
@@ -307,12 +327,13 @@ export class BusinessTripService
         },
       },
       companyId,
-      userId,
+      employeeId,
       {
         resolvedTiers: {
           ruleName: 'Business trip org chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -327,7 +348,7 @@ export class BusinessTripService
               id: appId,
               companyId,
               tripNumber: approval.requestNumber,
-              submittedBy: userId,
+              submittedBy: employeeId,
               tripType: dto.tripType,
               originCountry: dto.originCountry.trim(),
               originCity: dto.originCity.trim(),
@@ -394,6 +415,24 @@ export class BusinessTripService
     if (files.length > 0) {
       await this.attachFiles(appId, companyId, userId, files);
     }
+
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'BUSINESS_TRIP',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: appId,
+      recordReference: approval.requestNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'BUSINESS_TRIP',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: dto.autoApproveTier === true,
+    });
 
     return this.getTrip(appId, companyId, userId);
   }
@@ -1493,6 +1532,7 @@ export class BusinessTripService
   private async assertCanView(
     app: {
       submittedBy: string;
+      createdBy?: string;
       passengers: Array<{ employeeId: string }>;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
@@ -1507,7 +1547,8 @@ export class BusinessTripService
     );
     if (isHrViewer) return;
 
-    const isSubmitter = app.submittedBy === userId;
+    const isSubmitter =
+      app.submittedBy === userId || app.createdBy === userId;
     const isPassenger = app.passengers.some((p) => p.employeeId === userId);
     const isTierApprover =
       app.approvalRequest?.tiers?.some((t) => t.approverId === userId) ?? false;

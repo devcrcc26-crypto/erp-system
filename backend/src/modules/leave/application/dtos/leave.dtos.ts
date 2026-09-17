@@ -18,6 +18,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LeaveRequestStatus, LeaveType } from '@prisma/client';
 import { plainToInstance, Transform, Type } from 'class-transformer';
 
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
 export class LeavePeriodInputDto {
   @ApiProperty({ example: '2026-08-01' })
   @IsDateString()
@@ -47,7 +48,7 @@ function parsePeriods(value: unknown): unknown {
   return plainToInstance(LeavePeriodInputDto, parsed);
 }
 
-export class SubmitLeaveRequestDto {
+export class SubmitLeaveRequestDto extends OnBehalfSubmissionDto {
   @ApiProperty({ enum: LeaveType })
   @IsEnum(LeaveType)
   leaveType!: LeaveType;
@@ -195,6 +196,14 @@ export class LeaveBalanceQueryDto {
   @Min(2000)
   @Max(2100)
   year?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Employee to read (on-behalf filing). Defaults to the caller; requires on-behalf eligibility.',
+  })
+  @IsOptional()
+  @IsUUID()
+  employeeId?: string;
 }
 
 export class ListLeaveBalancesDto {

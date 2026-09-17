@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Put,
   Query,
   UseGuards,
@@ -19,6 +20,7 @@ import {
   UpsertEmployeePerDiemRateDto,
 } from '../../application/dtos/employee-per-diem-rate.dtos';
 import { EmployeePerDiemRateService } from '../../application/services/employee-per-diem-rate.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 
 @ApiTags('HR Employee Per Diem Rates')
 @ApiBearerAuth()
@@ -27,6 +29,7 @@ import { EmployeePerDiemRateService } from '../../application/services/employee-
 export class EmployeePerDiemRateController {
   constructor(
     private readonly employeePerDiemRateService: EmployeePerDiemRateService,
+    private readonly onBehalfService: OnBehalfService,
   ) {}
 
   @Get()
@@ -65,6 +68,28 @@ export class EmployeePerDiemRateController {
     return this.employeePerDiemRateService.getMyActiveCategories(
       companyId,
       user.userId,
+    );
+  }
+
+  @Get('employee/:employeeId/active')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Active destination categories with rates for an employee the caller may file per diem on behalf of',
+  })
+  async getActiveForEmployee(
+    @Param('employeeId', ParseUUIDPipe) employeeId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+  ): Promise<unknown> {
+    const targetId = await this.onBehalfService.resolveTargetEmployeeId(
+      user.userId,
+      companyId,
+      employeeId,
+    );
+    return this.employeePerDiemRateService.getMyActiveCategories(
+      companyId,
+      targetId,
     );
   }
 

@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 import type { FuelType } from './company-vehicle.types';
 
 export type VehicleRefuelingStatus =
@@ -77,7 +78,7 @@ export interface VehicleRefuelingDetail extends VehicleRefuelingListItem {
   } | null;
 }
 
-export interface SubmitVehicleRefuelingPayload {
+export interface SubmitVehicleRefuelingPayload extends OnBehalfPayload {
   vehicleId: string;
   driverId?: string;
   fuelDate: string;

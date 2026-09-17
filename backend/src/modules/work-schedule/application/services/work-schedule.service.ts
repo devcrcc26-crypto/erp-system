@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -21,6 +23,7 @@ import {
   WorkScheduleDayDto,
 } from '../dtos/create-work-schedule.dto';
 import { PreviewDaysDto } from '../dtos/preview-days.dto';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import {
   addUtcDays,
   computeAndValidateDayHours,
@@ -88,6 +91,8 @@ export class WorkScheduleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionService: PermissionService,
+    @Inject(forwardRef(() => OnBehalfService))
+    private readonly onBehalfService: OnBehalfService,
   ) {}
 
   /**
@@ -1054,7 +1059,14 @@ export class WorkScheduleService {
       'hr',
       'view',
     );
-    if (!isHr) {
+    const canFileOnBehalf =
+      isHr ||
+      (await this.onBehalfService.isEligibleFor(
+        actorUserId,
+        requestedId,
+        companyId,
+      ));
+    if (!canFileOnBehalf) {
       throw new BadRequestException(
         'You can only preview working days for your own schedule',
       );

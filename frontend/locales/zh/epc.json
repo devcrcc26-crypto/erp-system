@@ -3958,6 +3958,23 @@
       "hoursPreview": "工时预览",
       "itemDetails": "明细详情",
       "amountAndCurrency": "金额与币种"
+    },
+    "onBehalf": {
+      "title": "提交信息",
+      "description": "为他人提交？请选择此申请所属的员工。",
+      "toggle": "代其他员工提交",
+      "employee": "员工",
+      "placeholder": "按姓名或工号搜索",
+      "noResults": "没有匹配的员工",
+      "autoApprove": "自动审批我的环节",
+      "autoApproveHint": "您在此申请的审批链中（{{tier}}）。勾选后，提交时将自动通过您的审批环节。",
+      "bannerTitle": "正在代 {{name}} 提交",
+      "bannerDescription": "此申请将记录在该员工名下，您将在审计日志中显示为创建人。",
+      "loadFailed": "无法加载可代为提交的员工",
+      "month": "月份",
+      "openSheet": "打开工时表",
+      "overtimeDescription": "选择月份；如为他人填报加班，请同时选择员工，然后打开工时表添加记录。",
+      "overtimeTitle": "加班 — {{name}}"
     }
   }
 }

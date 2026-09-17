@@ -36,6 +36,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import {
   ListVehicleRefuelingsDto,
   SubmitVehicleRefuelingDto,
@@ -93,6 +94,7 @@ export class VehicleRefuelingService
     private readonly prisma: PrismaService,
     private readonly approvalsService: ApprovalsService,
     private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly onBehalfService: OnBehalfService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     @Inject(STORAGE_SERVICE)
@@ -116,6 +118,11 @@ export class VehicleRefuelingService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
     const vehicle = await this.prisma.companyVehicle.findFirst({
       where: activeOnly({ id: dto.vehicleId, companyId }),
     });
@@ -127,7 +134,7 @@ export class VehicleRefuelingService
 
     const resolvedTiers =
       await this.hrApprovalChain.buildVehicleRefuelingApprovalChain(
-        userId,
+        employeeId,
         companyId,
       );
 
@@ -142,7 +149,7 @@ export class VehicleRefuelingService
           id,
           companyId,
           requestNumber,
-          employeeId: userId,
+          employeeId,
           vehicleId: dto.vehicleId,
           driverId: dto.driverId || null,
           fuelDate,
@@ -169,6 +176,15 @@ export class VehicleRefuelingService
       this.logger.log(
         `Vehicle refueling ${requestNumber} auto-approved (HR+ submitter)`,
       );
+      await this.onBehalfService.recordOnBehalfCreate({
+        moduleCode: 'VEHICLE_REFUELING',
+        companyId,
+        actorUserId: userId,
+        employeeId,
+        recordId: id,
+        recordReference: requestNumber,
+        autoApproveTier: dto.autoApproveTier,
+      });
       return this.getRefueling(id, companyId, userId);
     }
 
@@ -186,12 +202,13 @@ export class VehicleRefuelingService
         },
       },
       companyId,
-      userId,
+      employeeId,
       {
         resolvedTiers: {
           ruleName: 'Vehicle Refueling HR Officer chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -200,7 +217,7 @@ export class VehicleRefuelingService
         id,
         companyId,
         requestNumber,
-        employeeId: userId,
+        employeeId,
         vehicleId: dto.vehicleId,
         driverId: dto.driverId || null,
         fuelDate,
@@ -223,6 +240,24 @@ export class VehicleRefuelingService
         createdBy: userId,
         updatedBy: userId,
       },
+    });
+
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'VEHICLE_REFUELING',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: id,
+      recordReference: requestNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'VEHICLE_REFUELING',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: dto.autoApproveTier === true,
     });
 
     return this.getRefueling(id, companyId, userId);
@@ -654,6 +689,7 @@ export class VehicleRefuelingService
   private async assertCanView(
     refueling: {
       employeeId: string;
+      createdBy?: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
     companyId: string,
@@ -667,7 +703,7 @@ export class VehicleRefuelingService
     );
     if (isHrViewer) return;
 
-    const isOwner = refueling.employeeId === userId;
+    const isOwner = refueling.employeeId === userId || refueling.createdBy === userId;
     const isTierApprover =
       refueling.approvalRequest?.tiers?.some(
         (t) => t.approverId === userId,

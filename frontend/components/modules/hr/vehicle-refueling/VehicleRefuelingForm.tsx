@@ -16,6 +16,10 @@ import {
 import dayjs from 'dayjs';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -75,6 +79,7 @@ export default function VehicleRefuelingForm({
   onSuccess,
 }: VehicleRefuelingFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('VEHICLE_REFUELING');
   const messageApi = useAppMessage();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
@@ -123,6 +128,7 @@ export default function VehicleRefuelingForm({
   }
 
   function resetForm(): void {
+    onBehalf.reset();
     form.resetFields();
     form.setFieldsValue({ fuelType: 'DIESEL' });
     setFormError(null);
@@ -163,6 +169,7 @@ export default function VehicleRefuelingForm({
     setSubmitting(true);
     try {
       const result = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
         vehicleId: values.vehicleId,
         driverId: values.driverId || undefined,
         fuelDate: values.fuelDate.format('YYYY-MM-DD'),
@@ -196,103 +203,106 @@ export default function VehicleRefuelingForm({
         title: t('hr.form.selectVehicle'),
         validate: () => validateVehicleStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.form.selectVehicle')}
-            description={t('pages.hr.vehicleRefueling.vehicleStepDescription')}
-          >
-            <Form.Item
-              name="vehicleId"
-              hidden
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.selectVehicle'),
-                },
-              ]}
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.form.selectVehicle')}
+              description={t('pages.hr.vehicleRefueling.vehicleStepDescription')}
             >
-              <Input />
-            </Form.Item>
+              <Form.Item
+                name="vehicleId"
+                hidden
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.selectVehicle'),
+                  },
+                ]}
+              >
+                <Input />
+              </Form.Item>
 
-            {vehiclesQuery.isLoading ? (
-              <div className="flex justify-center py-10">
-                <Spin />
-              </div>
-            ) : vehiclesQuery.isError ? (
-              <ErpNotice
-                tone="error"
-                title={getFriendlyApiErrorMessage(
-                  vehiclesQuery.error,
-                  t('hr.empty.noVehicles'),
-                  t,
-                )}
-              />
-            ) : vehicles.length === 0 ? (
-              <ErpNotice tone="warning" title={t('hr.empty.noVehicles')} />
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {vehicles.map((vehicle) => {
-                  const selected = selectedVehicleId === vehicle.id;
-                  return (
-                    <button
-                      key={vehicle.id}
-                      type="button"
-                      onClick={() => handleVehicleSelect(vehicle.id)}
-                      className={`erp-vehicle-pick-card w-full p-3.5 text-left transition-colors${
-                        selected ? ' erp-vehicle-pick-card--selected' : ''
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <CarOutlined
-                              style={{
-                                color: selected
-                                  ? tokens.colorPrimary
-                                  : tokens.colorTextTertiary,
-                              }}
-                            />
-                            <p className="erp-users-cell-strong m-0 truncate">
-                              {vehicle.plateNumber}
+              {vehiclesQuery.isLoading ? (
+                <div className="flex justify-center py-10">
+                  <Spin />
+                </div>
+              ) : vehiclesQuery.isError ? (
+                <ErpNotice
+                  tone="error"
+                  title={getFriendlyApiErrorMessage(
+                    vehiclesQuery.error,
+                    t('hr.empty.noVehicles'),
+                    t,
+                  )}
+                />
+              ) : vehicles.length === 0 ? (
+                <ErpNotice tone="warning" title={t('hr.empty.noVehicles')} />
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {vehicles.map((vehicle) => {
+                    const selected = selectedVehicleId === vehicle.id;
+                    return (
+                      <button
+                        key={vehicle.id}
+                        type="button"
+                        onClick={() => handleVehicleSelect(vehicle.id)}
+                        className={`erp-vehicle-pick-card w-full p-3.5 text-left transition-colors${
+                          selected ? ' erp-vehicle-pick-card--selected' : ''
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <CarOutlined
+                                style={{
+                                  color: selected
+                                    ? tokens.colorPrimary
+                                    : tokens.colorTextTertiary,
+                                }}
+                              />
+                              <p className="erp-users-cell-strong m-0 truncate">
+                                {vehicle.plateNumber}
+                              </p>
+                            </div>
+                            <p className="erp-users-cell-sub mb-0 mt-1 truncate">
+                              {vehicle.make} {vehicle.model}
                             </p>
                           </div>
-                          <p className="erp-users-cell-sub mb-0 mt-1 truncate">
-                            {vehicle.make} {vehicle.model}
-                          </p>
+                          {selected ? (
+                            <CheckCircleOutlined
+                              style={{
+                                color: tokens.colorPrimary,
+                                fontSize: 16,
+                              }}
+                            />
+                          ) : null}
                         </div>
-                        {selected ? (
-                          <CheckCircleOutlined
-                            style={{
-                              color: tokens.colorPrimary,
-                              fontSize: 16,
-                            }}
-                          />
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
-            <div className="mt-4 max-w-md">
-              <Form.Item name="driverId" label={t('hr.form.driver')}>
-                <Select
-                  showSearch
-                  allowClear
-                  optionFilterProp="label"
-                  placeholder={t('hr.placeholder.selectDriver')}
-                  loading={usersQuery.isLoading}
-                  notFoundContent={
-                    usersQuery.isLoading
-                      ? t('common.loading')
-                      : t('hr.empty.noDrivers')
-                  }
-                  options={driverOptions}
-                />
-              </Form.Item>
-            </div>
-          </FormLayout>
+              <div className="mt-4 max-w-md">
+                <Form.Item name="driverId" label={t('hr.form.driver')}>
+                  <Select
+                    showSearch
+                    allowClear
+                    optionFilterProp="label"
+                    placeholder={t('hr.placeholder.selectDriver')}
+                    loading={usersQuery.isLoading}
+                    notFoundContent={
+                      usersQuery.isLoading
+                        ? t('common.loading')
+                        : t('hr.empty.noDrivers')
+                    }
+                    options={driverOptions}
+                  />
+                </Form.Item>
+              </div>
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -471,6 +481,7 @@ export default function VehicleRefuelingForm({
       },
     ],
     [
+      onBehalf,
       t,
       form,
       vehiclesQuery.isLoading,

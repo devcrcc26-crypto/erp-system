@@ -4,6 +4,10 @@ import { useMemo, useState } from 'react';
 import { Alert, DatePicker, Form, Input, Select } from 'antd';
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -14,7 +18,7 @@ import { useBusinessTrips } from '@/lib/query/business-trip';
 import { useCurrencyRates } from '@/lib/query/currency';
 import { useFlightApplications } from '@/lib/query/flight';
 import {
-  useMyActiveEmployeePerDiemCategories,
+  useActiveEmployeePerDiemCategories,
   useSubmitPerDiemRequest,
 } from '@/lib/query/per-diem';
 import { tokens } from '@/lib/theme/tokens';
@@ -54,12 +58,13 @@ export default function PerDiemRequestForm({
   onSuccess,
 }: PerDiemRequestFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('PER_DIEM');
   const messageApi = useAppMessage();
   const [form] = Form.useForm<PerDiemFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const ratesQuery = useMyActiveEmployeePerDiemCategories(true);
+  const ratesQuery = useActiveEmployeePerDiemCategories(onBehalf.employeeId);
   const ratesFxQuery = useCurrencyRates(true);
   const flightsQuery = useFlightApplications(
     { status: 'APPROVED', limit: 50 },
@@ -97,16 +102,20 @@ export default function PerDiemRequestForm({
 
   const travelOptions = useMemo(
     () => [
-      ...(flightsQuery.data?.data ?? []).map((flight) => ({
+      ...(flightsQuery.data?.data ?? [])
+        .filter((flight) => flight.submittedBy === onBehalf.effectiveEmployeeId)
+        .map((flight) => ({
         value: `flight:${flight.id}`,
         label: `Flight ${flight.applicationNumber} — ${flight.destination}`,
       })),
-      ...(tripsQuery.data?.data ?? []).map((trip) => ({
+      ...(tripsQuery.data?.data ?? [])
+        .filter((trip) => trip.submittedBy === onBehalf.effectiveEmployeeId)
+        .map((trip) => ({
         value: `trip:${trip.id}`,
         label: `Business Trip ${trip.tripNumber} — ${trip.destinationCountry}`,
       })),
     ],
-    [flightsQuery.data?.data, tripsQuery.data?.data],
+    [flightsQuery.data?.data, tripsQuery.data?.data, onBehalf.effectiveEmployeeId],
   );
 
   const categoryOptions = useMemo(
@@ -147,6 +156,7 @@ export default function PerDiemRequestForm({
     !ratesQuery.isLoading && (ratesQuery.data?.length ?? 0) === 0;
 
   function resetForm(): void {
+    onBehalf.reset();
     form.resetFields();
     setFormError(null);
   }
@@ -199,6 +209,7 @@ export default function PerDiemRequestForm({
     setSubmitting(true);
     try {
       const created = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
         destinationCategory: values.destinationCategory,
         destination: values.destination.trim(),
         startDate: values.dateRange[0].toISOString(),
@@ -252,46 +263,49 @@ export default function PerDiemRequestForm({
         title: t('hr.form.destinationCategory'),
         validate: () => validateFields(DESTINATION_FIELDS),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.form.destinationCategory')}
-            description={t('pages.hr.perDiem.destinationStepDescription')}
-          >
-            <div className="erp-form-grid-2">
-              <Form.Item
-                name="destinationCategory"
-                label={t('hr.form.destinationCategory')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.selectDestinationCategory'),
-                  },
-                ]}
-              >
-                <Select
-                  loading={ratesQuery.isLoading}
-                  placeholder={t('hr.placeholder.selectDestinationCategory')}
-                  options={categoryOptions}
-                  disabled={noActiveRates}
-                />
-              </Form.Item>
-              <Form.Item
-                name="destination"
-                label={t('hr.form.specificDestination')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.enterDestination'),
-                  },
-                ]}
-              >
-                <Input
-                  placeholder={t('hr.placeholder.enterDestination')}
-                  maxLength={200}
-                />
-              </Form.Item>
-            </div>
-          </FormLayout>
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.form.destinationCategory')}
+              description={t('pages.hr.perDiem.destinationStepDescription')}
+            >
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  name="destinationCategory"
+                  label={t('hr.form.destinationCategory')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.selectDestinationCategory'),
+                    },
+                  ]}
+                >
+                  <Select
+                    loading={ratesQuery.isLoading}
+                    placeholder={t('hr.placeholder.selectDestinationCategory')}
+                    options={categoryOptions}
+                    disabled={noActiveRates}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="destination"
+                  label={t('hr.form.specificDestination')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.enterDestination'),
+                    },
+                  ]}
+                >
+                  <Input
+                    placeholder={t('hr.placeholder.enterDestination')}
+                    maxLength={200}
+                  />
+                </Form.Item>
+              </div>
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -419,6 +433,7 @@ export default function PerDiemRequestForm({
       },
     ],
     [
+      onBehalf,
       t,
       ratesQuery.isLoading,
       categoryOptions,

@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type ExitPermitStatus =
   | 'DRAFT'
   | 'SUBMITTED'
@@ -102,7 +103,7 @@ export interface CreateExitPermitItemPayload {
   documentId?: string;
 }
 
-export interface CreateExitPermitPayload {
+export interface CreateExitPermitPayload extends OnBehalfPayload {
   employeeId?: string;
   departmentId?: string;
   direction: ExitPermitDirection;

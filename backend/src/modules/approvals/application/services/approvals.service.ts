@@ -189,7 +189,11 @@ export class ApprovalsService {
     dto: SubmitRequestDto,
     companyId: string,
     userId: string,
-    options?: { resolvedTiers?: MatchedApprovalRule },
+    options?: {
+      resolvedTiers?: MatchedApprovalRule;
+      /** On-behalf filings: the person who filed it (defaults to `userId`). */
+      createdByUserId?: string;
+    },
   ): Promise<unknown> {
     const category = await this.prisma.approvalCategory.findFirst({
       where: activeOnly({
@@ -265,8 +269,8 @@ export class ApprovalsService {
             matchedRuleName: matched.ruleName,
             submittedAt: now,
             attachmentFolderId: dto.documentFolderId ?? null,
-            createdBy: userId,
-            updatedBy: userId,
+            createdBy: options?.createdByUserId ?? userId,
+            updatedBy: options?.createdByUserId ?? userId,
             tiers: {
               create: matched.tiers.map((tier) => ({
                 id: randomUUID(),
@@ -295,7 +299,11 @@ export class ApprovalsService {
     });
 
     const firstApproverId = matched.tiers[0]?.approverId;
-    if (firstApproverId && firstApproverId !== userId) {
+    if (
+      firstApproverId &&
+      firstApproverId !== userId &&
+      firstApproverId !== options?.createdByUserId
+    ) {
       await this.notifySafe(companyId, userId, {
         recipientId: firstApproverId,
         eventType: APPROVAL_PENDING_EVENT,
@@ -846,6 +854,91 @@ export class ApprovalsService {
     }
 
     return this.getRequest(request.id, request.companyId, userId);
+  }
+
+  /**
+   * Approves the PENDING tier assigned to `approverUserId`, even when it is not the
+   * current tier (on-behalf creators pre-approve their own tier at submission).
+   * Advances / completes the request exactly as a normal approval would.
+   * Returns null when the user has no pending tier on the request.
+   */
+  async autoApproveOwnTier(
+    requestId: string,
+    companyId: string,
+    approverUserId: string,
+    comment: string,
+  ): Promise<{ tierId: string; completed: boolean } | null> {
+    const request = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({ id: requestId, companyId }),
+      select: {
+        id: true,
+        status: true,
+        requestedBy: true,
+        requestNumber: true,
+        tiers: {
+          where: {
+            approverId: approverUserId,
+            decision: ApprovalTierDecision.PENDING,
+          },
+          orderBy: { tierOrder: 'asc' },
+          take: 1,
+          select: { id: true },
+        },
+      },
+    });
+    const tier = request?.tiers[0];
+    if (!request || !tier) {
+      return null;
+    }
+    this.assertPendingWorkflow(request.status);
+
+    const nextApprover = await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        await tx.approvalTier.update({
+          where: { id: tier.id },
+          data: {
+            decision: ApprovalTierDecision.APPROVED,
+            comment,
+            decidedAt: new Date(),
+          },
+        });
+        return this.advanceAfterTierApproval(tx, request.id, approverUserId);
+      },
+      PRISMA_TX_OPTIONS,
+    );
+
+    if (nextApprover) {
+      if (nextApprover.approverId !== approverUserId) {
+        await this.notifySafe(companyId, approverUserId, {
+          recipientId: nextApprover.approverId,
+          eventType: APPROVAL_PENDING_EVENT,
+          subject: `Approval required — ${request.requestNumber}`,
+          body: `A request is awaiting your approval at tier "${nextApprover.label}".`,
+          link: `/approvals/${request.id}`,
+          variables: {
+            requestId: request.id,
+            requestNumber: request.requestNumber,
+          },
+        });
+      }
+      return { tierId: tier.id, completed: false };
+    }
+
+    if (request.requestedBy !== approverUserId) {
+      await this.notifySafe(companyId, approverUserId, {
+        recipientId: request.requestedBy,
+        eventType: APPROVAL_APPROVED_EVENT,
+        subject: `Approved — ${request.requestNumber}`,
+        body: `Your approval request ${request.requestNumber} has been fully approved.`,
+        link: `/approvals/${request.id}`,
+        variables: {
+          requestId: request.id,
+          requestNumber: request.requestNumber,
+        },
+      });
+    }
+    await this.dispatchFinalDecision(request.id, 'APPROVED');
+    return { tierId: tier.id, completed: true };
   }
 
   /**

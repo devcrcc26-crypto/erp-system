@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type FlightTripType = 'ONE_WAY' | 'ROUND_TRIP';
 export type FlightTicketClass = 'ECONOMY' | 'BUSINESS';
 export type FlightVisaStatus = 'NOT_APPLIED' | 'APPLIED' | 'APPROVED';
@@ -105,7 +106,7 @@ export interface SubmitFlightPassengerPayload {
   visaStatus?: FlightVisaStatus;
 }
 
-export interface SubmitFlightApplicationPayload {
+export interface SubmitFlightApplicationPayload extends OnBehalfPayload {
   tripType: FlightTripType;
   isInternational: boolean;
   originCountry: string;

@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Alert } from 'antd';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import FlightAdditionalStep from '@/components/modules/hr/flight/steps/FlightAdditionalStep';
 import FlightPassengersStep from '@/components/modules/hr/flight/steps/FlightPassengersStep';
@@ -56,6 +60,7 @@ export function FlightApplicationForm({
   submitLabel,
 }: FlightApplicationFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('FLIGHT_APPLICATION');
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const passengersQuery = useSelectablePassengers();
@@ -94,10 +99,13 @@ export function FlightApplicationForm({
       {
         title: t('hr.form.tripDetails'),
         content: (
-          <FlightTripDetailsStep
-            values={tripDetails}
-            onChange={setTripDetails}
-          />
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FlightTripDetailsStep
+              values={tripDetails}
+              onChange={setTripDetails}
+            />
+          </div>
         ),
         validate: (): boolean => {
           const errors: string[] = [];
@@ -182,6 +190,7 @@ export function FlightApplicationForm({
       },
     ],
     [
+      onBehalf,
       tripDetails,
       passengers,
       additional,
@@ -200,6 +209,7 @@ export function FlightApplicationForm({
     }
     try {
       const created = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
         tripType: tripDetails.tripType,
         isInternational: tripDetails.isInternational,
         originCountry: tripDetails.originCountry.trim(),

@@ -36,6 +36,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import {
   AddMaterialRequisitionItemDto,
   CreateMaterialRequisitionDto,
@@ -102,6 +103,7 @@ export class MaterialRequisitionService
     private readonly hrApprovalChain: HrApprovalChainService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
+    private readonly onBehalfService: OnBehalfService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -122,13 +124,26 @@ export class MaterialRequisitionService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const created = await this.findOrCreateDraftRequisition(
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
       userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    const created = await this.findOrCreateDraftRequisition(
+      employeeId,
       dto,
       companyId,
       userId,
       true,
     );
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'MATERIAL_REQUISITION',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: created.id,
+      autoApproveTier: dto.autoApproveTier,
+    });
     return this.getRequisition(created.id, companyId, userId);
   }
 
@@ -151,7 +166,11 @@ export class MaterialRequisitionService
       throw new BadRequestException('purpose is required');
     }
 
-    await this.assertCanManageRequisition(employeeId, companyId, actorUserId);
+    await this.assertCanManageRequisition(
+      { employeeId, createdBy: actorUserId },
+      companyId,
+      actorUserId,
+    );
 
     if (dto.projectId) {
       const project = await this.prisma.project.findFirst({
@@ -355,7 +374,7 @@ export class MaterialRequisitionService
     if (!requisition) {
       throw new NotFoundException('Material requisition not found');
     }
-    if (requisition.employeeId !== userId) {
+    if (!(await this.onBehalfService.canActForRecord(userId, companyId, requisition))) {
       throw new ForbiddenException('Only the request owner can submit it');
     }
     if (requisition.status !== MaterialRequisitionStatus.DRAFT) {
@@ -369,7 +388,7 @@ export class MaterialRequisitionService
 
     const resolvedTiers =
       await this.hrApprovalChain.buildMaterialRequisitionApprovalChain(
-        userId,
+        requisition.employeeId,
         companyId,
       );
 
@@ -412,12 +431,13 @@ export class MaterialRequisitionService
         },
       },
       companyId,
-      userId,
+      requisition.employeeId,
       {
         resolvedTiers: {
           ruleName: 'Material requisition org chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -439,6 +459,20 @@ export class MaterialRequisitionService
         completedAt: null,
         updatedBy: userId,
       },
+    });
+
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'MATERIAL_REQUISITION',
+      companyId,
+      actorUserId: userId,
+      employeeId: requisition.employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: await this.onBehalfService.wasAutoApproveRequested(
+        'MATERIAL_REQUISITION',
+        id,
+        userId,
+        companyId,
+      ),
     });
 
     return this.getRequisition(id, companyId, userId);
@@ -677,11 +711,11 @@ export class MaterialRequisitionService
   // ─── Private helpers ──────────────────────────────────────────────────────
 
   private async assertCanManageRequisition(
-    employeeId: string,
+    record: { employeeId: string; createdBy: string },
     companyId: string,
     userId: string,
   ): Promise<void> {
-    if (employeeId === userId) {
+    if (await this.onBehalfService.canActForRecord(userId, companyId, record)) {
       return;
     }
     const isHrViewer = await this.permissionService.hasPermission(
@@ -704,16 +738,12 @@ export class MaterialRequisitionService
   ): Promise<void> {
     const requisition = await this.prisma.materialRequisition.findFirst({
       where: activeOnly({ id: requisitionId, companyId }),
-      select: { id: true, employeeId: true, status: true },
+      select: { id: true, employeeId: true, createdBy: true, status: true },
     });
     if (!requisition) {
       throw new NotFoundException('Material requisition not found');
     }
-    await this.assertCanManageRequisition(
-      requisition.employeeId,
-      companyId,
-      userId,
-    );
+    await this.assertCanManageRequisition(requisition, companyId, userId);
     if (
       requisition.status !== MaterialRequisitionStatus.DRAFT &&
       requisition.status !== MaterialRequisitionStatus.RETURNED
@@ -727,6 +757,7 @@ export class MaterialRequisitionService
   private async assertCanView(
     requisition: {
       employeeId: string;
+      createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
     companyId: string,
@@ -740,7 +771,8 @@ export class MaterialRequisitionService
     );
     if (isHrViewer) return;
 
-    const isOwner = requisition.employeeId === userId;
+    const isOwner =
+      requisition.employeeId === userId || requisition.createdBy === userId;
     const isTierApprover =
       requisition.approvalRequest?.tiers?.some(
         (t) => t.approverId === userId,

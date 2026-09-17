@@ -2,6 +2,7 @@ import { ApiPropertyOptional, ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
 enum ExitPermitStatus{
     DRAFT = 'DRAFT',
     SUBMITTED = 'SUBMITTED',
@@ -49,7 +50,7 @@ export class CreateExitPermitItemDto{
     documentId?: string;
 }
 
-export class CreateExitPermitDto{
+export class CreateExitPermitDto extends OnBehalfSubmissionDto {
     @ApiPropertyOptional({ description: 'Target employee user id. Defaults to the current user. HR may assign another employee.' })
     @IsOptional()
     @IsUUID()

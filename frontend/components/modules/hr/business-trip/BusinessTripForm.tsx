@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Alert } from 'antd';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import BusinessTripAdditionalStep from '@/components/modules/hr/business-trip/steps/BusinessTripAdditionalStep';
 import BusinessTripDetailsStep from '@/components/modules/hr/business-trip/steps/BusinessTripDetailsStep';
@@ -69,6 +73,7 @@ export function BusinessTripForm({
   submitLabel,
 }: BusinessTripFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('BUSINESS_TRIP');
   const messageApi = useAppMessage();
   const currentUser = useCurrentUser();
   const passengersQuery = useBusinessTripSelectablePassengers();
@@ -111,10 +116,13 @@ export function BusinessTripForm({
       {
         title: t('hr.form.tripDetails'),
         content: (
-          <BusinessTripDetailsStep
-            values={tripDetails}
-            onChange={setTripDetails}
-          />
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <BusinessTripDetailsStep
+              values={tripDetails}
+              onChange={setTripDetails}
+            />
+          </div>
         ),
         validate: (): boolean => {
           const errors: string[] = [];
@@ -211,6 +219,7 @@ export function BusinessTripForm({
       },
     ],
     [
+      onBehalf,
       tripDetails,
       purposeBudget,
       passengers,
@@ -230,6 +239,7 @@ export function BusinessTripForm({
     }
     try {
       const created = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
         tripType: tripDetails.tripType,
         originCountry: tripDetails.originCountry.trim(),
         originCity: tripDetails.originCity.trim(),

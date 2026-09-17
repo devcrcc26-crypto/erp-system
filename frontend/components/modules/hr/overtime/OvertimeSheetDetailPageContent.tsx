@@ -37,6 +37,7 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetBreadcrumbLabel } from '@/hooks/use-set-breadcrumb-label';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
@@ -53,6 +54,7 @@ import {
   useSubmitOvertimeSheet,
   useUploadOvertimeEntryAttachments,
 } from '@/lib/query/overtime';
+import { useOnBehalfEligibleEmployees } from '@/lib/query/on-behalf';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
 import {
@@ -151,6 +153,24 @@ export default function OvertimeSheetDetailPageContent({
     Boolean(currentUser.data?.id) &&
     sheet?.employeeId === currentUser.data?.id;
 
+  // Department heads / discipline leads (and HR) may file overtime on an employee's behalf.
+  const onBehalfEligibleQuery = useOnBehalfEligibleEmployees(
+    currentUser.data?.id,
+    currentUser.data?.companyId,
+  );
+  const isOnBehalfFiler =
+    Boolean(sheet) &&
+    (onBehalfEligibleQuery.data ?? []).some(
+      (employee) => employee.id === sheet?.employeeId,
+    );
+  const canActForSheet = isOwner || isOnBehalfFiler;
+
+  useSetBreadcrumbLabel(
+    sheet
+      ? `${formatOvertimeEmployeeName(sheet.employee)} — ${formatOvertimePeriod(sheet.month, sheet.year, t)}`
+      : null,
+  );
+
   useEffect(() => {
     if (canViewHr || detailQuery.isLoading) {
       return;
@@ -168,13 +188,17 @@ export default function OvertimeSheetDetailPageContent({
     if (
       sheet &&
       currentUser.data?.id &&
-      sheet.employeeId !== currentUser.data.id
+      sheet.employeeId !== currentUser.data.id &&
+      !onBehalfEligibleQuery.isLoading &&
+      !isOnBehalfFiler
     ) {
       router.replace('/approvals');
     }
   }, [
     canViewHr,
     currentUser.data?.id,
+    isOnBehalfFiler,
+    onBehalfEligibleQuery.isLoading,
     detailQuery.error,
     detailQuery.isError,
     detailQuery.isLoading,
@@ -183,13 +207,14 @@ export default function OvertimeSheetDetailPageContent({
   ]);
 
   const canEdit =
-    (isOwner || canViewHr) &&
+    (canActForSheet || canViewHr) &&
     (sheet?.status === 'DRAFT' || sheet?.status === 'RETURNED');
   const canManage = canViewHr;
   const canCancel =
     isOwner &&
     (sheet?.status === 'DRAFT' || sheet?.status === 'SUBMITTED');
-  const canSubmit = isOwner && canEdit && (sheet?.entries?.length ?? 0) > 0;
+  const canSubmit =
+    canActForSheet && canEdit && (sheet?.entries?.length ?? 0) > 0;
 
   function closeEntryDrawer(): void {
     setEntryDrawerOpen(false);
@@ -483,7 +508,8 @@ export default function OvertimeSheetDetailPageContent({
   if (
     !canViewHr &&
     currentUser.data?.id &&
-    sheet.employeeId !== currentUser.data.id
+    sheet.employeeId !== currentUser.data.id &&
+    !isOnBehalfFiler
   ) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">

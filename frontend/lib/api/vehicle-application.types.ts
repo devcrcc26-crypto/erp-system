@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type VehicleApplicationStatus =
   | 'DRAFT'
   | 'SUBMITTED'
@@ -81,7 +82,7 @@ export interface VehicleApplicationDetail extends VehicleApplicationListItem {
   };
 }
 
-export interface SubmitVehicleApplicationPayload {
+export interface SubmitVehicleApplicationPayload extends OnBehalfPayload {
   vehicleId: string;
   driveType: DriveType;
   driverId?: string;

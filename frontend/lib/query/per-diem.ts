@@ -46,6 +46,8 @@ export const employeePerDiemRateKeys = {
   employee: (employeeId: string) =>
     [...employeePerDiemRateKeys.all, employeeId] as const,
   myActive: () => [...employeePerDiemRateKeys.all, 'me', 'active'] as const,
+  employeeActive: (employeeId: string) =>
+    [...employeePerDiemRateKeys.all, 'employee', employeeId, 'active'] as const,
   myFull: () => [...employeePerDiemRateKeys.all, 'me', 'full'] as const,
 };
 
@@ -57,6 +59,29 @@ export const perDiemKeys = {
   details: () => [...perDiemKeys.all, 'detail'] as const,
   detail: (id: string) => [...perDiemKeys.details(), id] as const,
 };
+
+/**
+ * Active destination categories for an on-behalf target employee, or the
+ * current employee when `employeeId` is omitted (submission form).
+ */
+export function useActiveEmployeePerDiemCategories(
+  employeeId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: employeeId
+      ? employeePerDiemRateKeys.employeeActive(employeeId)
+      : employeePerDiemRateKeys.myActive(),
+    queryFn: () =>
+      apiGet<EmployeePerDiemActiveCategory[]>(
+        employeeId
+          ? `${EMPLOYEE_RATES_PATH}/employee/${employeeId}/active`
+          : `${EMPLOYEE_RATES_PATH}/me/active`,
+      ),
+    enabled,
+    retry: false,
+  });
+}
 
 /** Active destination categories for the current employee (submission form). */
 export function useMyActiveEmployeePerDiemCategories(enabled = true) {

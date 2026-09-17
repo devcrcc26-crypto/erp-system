@@ -15,7 +15,8 @@ import {
 } from 'class-validator';
 import { PurchaseRequestStatus, SupportedCurrency } from '@prisma/client';
 
-export class CreatePurchaseRequestDto {
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+export class CreatePurchaseRequestDto extends OnBehalfSubmissionDto {
   @ApiProperty({ maxLength: 200 })
   @IsString()
   @IsNotEmpty()

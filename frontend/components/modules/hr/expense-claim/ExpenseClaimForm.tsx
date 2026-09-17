@@ -21,6 +21,10 @@ import dayjs from 'dayjs';
 import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -110,6 +114,7 @@ export default function ExpenseClaimForm({
   onSuccess,
 }: ExpenseClaimFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('EXPENSE_CLAIM');
   const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isNarrow = screens.sm === false;
@@ -149,6 +154,7 @@ export default function ExpenseClaimForm({
   }
 
   function resetForm(): void {
+    onBehalf.reset();
     detailsForm.resetFields();
     itemForm.resetFields();
     setItems([]);
@@ -288,6 +294,7 @@ export default function ExpenseClaimForm({
     setSubmitting(true);
     try {
       const created = await createMutation.mutateAsync({
+        ...onBehalf.payload,
         title: values.title.trim(),
         description: values.description?.trim() || undefined,
       });
@@ -430,40 +437,43 @@ export default function ExpenseClaimForm({
         title: t('hr.section.requestDetails'),
         validate: () => validateDetailsStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.section.requestDetails')}
-            description={t('pages.hr.expenseClaim.detailsStepDescription')}
-          >
-            <Form.Item
-              name="title"
-              label={t('hr.form.title')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.titleRequired'),
-                },
-              ]}
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.section.requestDetails')}
+              description={t('pages.hr.expenseClaim.detailsStepDescription')}
             >
-              <Input
-                placeholder={t('hr.placeholder.enterTitle')}
-                maxLength={200}
-              />
-            </Form.Item>
-            <Form.Item
-              name="description"
-              label={t('hr.form.description')}
-              className="!mb-0"
-              extra={t('pages.hr.expenseClaim.descriptionHint')}
-            >
-              <Input.TextArea
-                rows={4}
-                maxLength={4000}
-                showCount
-                placeholder={t('hr.placeholder.enterExpenseClaimDescription')}
-              />
-            </Form.Item>
-          </FormLayout>
+              <Form.Item
+                name="title"
+                label={t('hr.form.title')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.titleRequired'),
+                  },
+                ]}
+              >
+                <Input
+                  placeholder={t('hr.placeholder.enterTitle')}
+                  maxLength={200}
+                />
+              </Form.Item>
+              <Form.Item
+                name="description"
+                label={t('hr.form.description')}
+                className="!mb-0"
+                extra={t('pages.hr.expenseClaim.descriptionHint')}
+              >
+                <Input.TextArea
+                  rows={4}
+                  maxLength={4000}
+                  showCount
+                  placeholder={t('hr.placeholder.enterExpenseClaimDescription')}
+                />
+              </Form.Item>
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -696,6 +706,7 @@ export default function ExpenseClaimForm({
       },
     ],
     [
+      onBehalf,
       t,
       showItemForm,
       editingKey,

@@ -19,6 +19,10 @@ import { Pencil, ShoppingBag, Trash2 } from 'lucide-react';
 import dayjs from 'dayjs';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -101,6 +105,7 @@ export default function ConsumablesRequisitionForm({
   onSuccess,
 }: ConsumablesRequisitionFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('CONSUMABLES_REQUISITION');
   const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
   const isNarrow = screens.sm === false;
@@ -120,6 +125,7 @@ export default function ConsumablesRequisitionForm({
   const atMax = items.length >= CONSUMABLES_MAX_ITEMS;
 
   function resetForm(): void {
+    onBehalf.reset();
     detailsForm.resetFields();
     itemForm.resetFields();
     setItems([]);
@@ -267,6 +273,7 @@ export default function ConsumablesRequisitionForm({
     setSubmitting(true);
     try {
       const created = await createMutation.mutateAsync({
+        ...onBehalf.payload,
         title: values.title.trim(),
         purpose: values.purpose.trim(),
         requiredByDate: values.requiredByDate
@@ -464,57 +471,60 @@ export default function ConsumablesRequisitionForm({
         title: t('hr.section.requestDetails'),
         validate: () => validateDetailsStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.section.requestDetails')}
-            description={t('pages.hr.consumables.detailsStepDescription')}
-          >
-            <Form.Item
-              name="title"
-              label={t('hr.form.title')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.titleRequired'),
-                },
-              ]}
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.section.requestDetails')}
+              description={t('pages.hr.consumables.detailsStepDescription')}
             >
-              <Input
-                placeholder={t('hr.placeholder.enterTitle')}
-                maxLength={200}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="purpose"
-              label={t('hr.labels.purpose')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.purposeRequired'),
-                },
-              ]}
-            >
-              <Input.TextArea
-                rows={3}
-                maxLength={2000}
-                showCount
-                placeholder={t('hr.placeholder.enterPurpose')}
-              />
-            </Form.Item>
-
-            <div className="erp-form-grid-2">
               <Form.Item
-                name="requiredByDate"
-                label={t('hr.form.requiredByDate')}
+                name="title"
+                label={t('hr.form.title')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.titleRequired'),
+                  },
+                ]}
               >
-                <DatePicker
-                  className="w-full"
-                  disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                <Input
+                  placeholder={t('hr.placeholder.enterTitle')}
+                  maxLength={200}
                 />
               </Form.Item>
-            </div>
-          </FormLayout>
+
+              <Form.Item
+                name="purpose"
+                label={t('hr.labels.purpose')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.purposeRequired'),
+                  },
+                ]}
+              >
+                <Input.TextArea
+                  rows={3}
+                  maxLength={2000}
+                  showCount
+                  placeholder={t('hr.placeholder.enterPurpose')}
+                />
+              </Form.Item>
+
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  name="requiredByDate"
+                  label={t('hr.form.requiredByDate')}
+                >
+                  <DatePicker
+                    className="w-full"
+                    disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                  />
+                </Form.Item>
+              </div>
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -798,6 +808,7 @@ export default function ConsumablesRequisitionForm({
       },
     ],
     [
+      onBehalf,
       t,
       showItemForm,
       editingKey,

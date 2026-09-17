@@ -25,8 +25,11 @@ import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon'
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
-import { UserSelect } from '@/components/ui';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -54,7 +57,6 @@ interface Step1Values {
   direction?: ExitPermitDirection;
   date?: Dayjs | null;
   departmentId?: string | null;
-  employeeId?: string | null;
 }
 
 type ItemFormValues = {
@@ -88,6 +90,7 @@ export default function ExitPermitForm({
   onSuccess,
 }: ExitPermitFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('EXIT_PERMIT');
   const messageApi = useAppMessage();
   const canViewHr = useCanViewHr();
   const lookupUserName = useUserNameLookup();
@@ -130,6 +133,7 @@ export default function ExitPermitForm({
   );
 
   function resetForm(): void {
+    onBehalf.reset();
     detailsForm.resetFields();
     itemForm.resetFields();
     setDetailsSnapshot({ direction: 'EXIT' });
@@ -254,10 +258,10 @@ export default function ExitPermitForm({
     setSubmitting(true);
     try {
       const created = await createMutation.mutateAsync({
+        ...onBehalf.payload,
         direction: values.direction,
         date: values.date ? values.date.format('YYYY-MM-DD') : undefined,
         departmentId: values.departmentId || undefined,
-        employeeId: canViewHr ? values.employeeId || undefined : undefined,
       });
 
       await Promise.all(
@@ -366,56 +370,51 @@ export default function ExitPermitForm({
         title: t('hr.section.requestDetails'),
         validate: () => validateDetailsStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.section.requestDetails')}
-            description={t('pages.hr.exitPermit.detailsStepDescription')}
-          >
-            <div className="erp-form-grid-2">
-              <Form.Item
-                name="direction"
-                label={t('hr.form.direction')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.directionRequired'),
-                  },
-                ]}
-              >
-                <Select
-                  options={directionOptions}
-                  placeholder={t('hr.placeholder.selectDirection')}
-                />
-              </Form.Item>
-              <Form.Item name="date" label={t('hr.form.date')}>
-                <DatePicker
-                  className="w-full"
-                  placeholder={t('hr.placeholder.selectDate')}
-                  disabledDate={(date) => date.isBefore(dayjs(), 'day')}
-                />
-              </Form.Item>
-              <Form.Item
-                name="departmentId"
-                label={t('hr.form.department')}
-              >
-                <Select
-                  allowClear
-                  showSearch={{ optionFilterProp: 'label' }}
-                  loading={departmentsQuery.isLoading}
-                  placeholder={t('hr.placeholder.selectDepartment')}
-                  options={departmentOptions}
-                />
-              </Form.Item>
-              {canViewHr ? (
-                <Form.Item name="employeeId" label={t('hr.form.employee')}>
-                  <UserSelect
-                    allowClear
-                    placeholder={t('hr.placeholder.employee')}
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.section.requestDetails')}
+              description={t('pages.hr.exitPermit.detailsStepDescription')}
+            >
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  name="direction"
+                  label={t('hr.form.direction')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.directionRequired'),
+                    },
+                  ]}
+                >
+                  <Select
+                    options={directionOptions}
+                    placeholder={t('hr.placeholder.selectDirection')}
                   />
                 </Form.Item>
-              ) : null}
-            </div>
-          </FormLayout>
+                <Form.Item name="date" label={t('hr.form.date')}>
+                  <DatePicker
+                    className="w-full"
+                    placeholder={t('hr.placeholder.selectDate')}
+                    disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="departmentId"
+                  label={t('hr.form.department')}
+                >
+                  <Select
+                    allowClear
+                    showSearch={{ optionFilterProp: 'label' }}
+                    loading={departmentsQuery.isLoading}
+                    placeholder={t('hr.placeholder.selectDepartment')}
+                    options={departmentOptions}
+                  />
+                </Form.Item>
+              </div>
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -583,16 +582,10 @@ export default function ExitPermitForm({
                   label={t('hr.form.department')}
                   value={findDepartment(detailsSnapshot.departmentId)}
                 />
-                {canViewHr ? (
-                  <ReviewItem
-                    label={t('hr.form.employee')}
-                    value={findEmployee(detailsSnapshot.employeeId)}
-                  />
-                ) : null}
-                {canViewHr && detailsSnapshot.employeeId ? (
+                {onBehalf.employeeId ? (
                   <ReviewItem
                     label={t('hr.table.onBehalf')}
-                    value={t('hr.labels.yes')}
+                    value={findEmployee(onBehalf.employeeId)}
                   />
                 ) : null}
                 <ReviewItem
@@ -637,6 +630,7 @@ export default function ExitPermitForm({
       },
     ],
     [
+      onBehalf,
       t,
       showItemForm,
       editingKey,

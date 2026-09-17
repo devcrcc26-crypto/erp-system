@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type SupportedCurrency = 'ETB' | 'USD' | 'CNY';
 
 export type ExpenseClaimStatus =
@@ -72,7 +73,7 @@ export interface ExpenseClaimDetail extends ExpenseClaimListItem {
   } | null;
 }
 
-export interface CreateExpenseClaimPayload {
+export interface CreateExpenseClaimPayload extends OnBehalfPayload {
   title: string;
   description?: string;
 }

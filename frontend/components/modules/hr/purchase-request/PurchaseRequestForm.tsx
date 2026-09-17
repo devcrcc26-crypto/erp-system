@@ -20,6 +20,10 @@ import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -89,6 +93,7 @@ export default function PurchaseRequestForm({
   onSuccess,
 }: PurchaseRequestFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('PURCHASE_REQUEST');
   const messageApi = useAppMessage();
   const [detailsForm] = Form.useForm<Step1Values>();
   const [itemForm] = Form.useForm<ItemFormValues>();
@@ -130,6 +135,7 @@ export default function PurchaseRequestForm({
   }
 
   function resetForm(): void {
+    onBehalf.reset();
     detailsForm.resetFields();
     itemForm.resetFields();
     setItems([]);
@@ -252,6 +258,7 @@ export default function PurchaseRequestForm({
     setSubmitting(true);
     try {
       const created = await createMutation.mutateAsync({
+        ...onBehalf.payload,
         title: values.title.trim(),
         justification: values.justification.trim(),
         requiredByDate: values.requiredByDate
@@ -384,76 +391,79 @@ export default function PurchaseRequestForm({
         title: t('hr.section.requestDetails'),
         validate: () => validateDetailsStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.section.requestDetails')}
-            description={t('pages.hr.purchaseRequest.detailsStepDescription')}
-          >
-              <Form.Item
-                name="title"
-                label={t('hr.form.title')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.titleRequired'),
-                  },
-                ]}
-              >
-                <Input
-                  placeholder={t('hr.placeholder.enterTitle')}
-                  maxLength={200}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="justification"
-                label={t('hr.form.justification')}
-                rules={[
-                  {
-                    required: true,
-                    message: t('hr.validation.justificationRequired'),
-                  },
-                ]}
-              >
-                <Input.TextArea
-                  rows={4}
-                  maxLength={2000}
-                  showCount
-                  placeholder={t('hr.placeholder.enterJustification')}
-                />
-              </Form.Item>
-
-              <div className="erp-form-grid-2">
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.section.requestDetails')}
+              description={t('pages.hr.purchaseRequest.detailsStepDescription')}
+            >
                 <Form.Item
-                  name="requiredByDate"
-                  label={t('hr.form.requiredByDate')}
+                  name="title"
+                  label={t('hr.form.title')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.titleRequired'),
+                    },
+                  ]}
                 >
-                  <DatePicker
-                    className="w-full"
-                    disabledDate={(date) => date.isBefore(dayjs(), 'day')}
-                  />
-                </Form.Item>
-
-                <Form.Item name="vendorName" label={t('hr.form.vendor')}>
                   <Input
-                    placeholder={t('hr.placeholder.enterVendor')}
+                    placeholder={t('hr.placeholder.enterTitle')}
                     maxLength={200}
                   />
                 </Form.Item>
 
-                {vendorName ? (
+                <Form.Item
+                  name="justification"
+                  label={t('hr.form.justification')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.justificationRequired'),
+                    },
+                  ]}
+                >
+                  <Input.TextArea
+                    rows={4}
+                    maxLength={2000}
+                    showCount
+                    placeholder={t('hr.placeholder.enterJustification')}
+                  />
+                </Form.Item>
+
+                <div className="erp-form-grid-2">
                   <Form.Item
-                    name="vendorContact"
-                    label={t('hr.form.vendorContact')}
+                    name="requiredByDate"
+                    label={t('hr.form.requiredByDate')}
                   >
+                    <DatePicker
+                      className="w-full"
+                      disabledDate={(date) => date.isBefore(dayjs(), 'day')}
+                    />
+                  </Form.Item>
+
+                  <Form.Item name="vendorName" label={t('hr.form.vendor')}>
                     <Input
-                      placeholder={t('hr.placeholder.enterVendorContact')}
+                      placeholder={t('hr.placeholder.enterVendor')}
                       maxLength={200}
                     />
                   </Form.Item>
-                ) : null}
-              </div>
-          </FormLayout>
+
+                  {vendorName ? (
+                    <Form.Item
+                      name="vendorContact"
+                      label={t('hr.form.vendorContact')}
+                    >
+                      <Input
+                        placeholder={t('hr.placeholder.enterVendorContact')}
+                        maxLength={200}
+                      />
+                    </Form.Item>
+                  ) : null}
+                </div>
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -732,6 +742,7 @@ export default function PurchaseRequestForm({
       },
     ],
     [
+      onBehalf,
       t,
       detailsForm,
       vendorName,

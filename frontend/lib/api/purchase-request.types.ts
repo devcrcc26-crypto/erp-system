@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type SupportedCurrency = 'ETB' | 'USD' | 'CNY';
 
 export type PurchaseRequestStatus =
@@ -89,7 +90,7 @@ export interface PurchaseRequestDetail extends PurchaseRequestListItem {
   } | null;
 }
 
-export interface CreatePurchaseRequestPayload {
+export interface CreatePurchaseRequestPayload extends OnBehalfPayload {
   title: string;
   justification: string;
   requiredByDate?: string;

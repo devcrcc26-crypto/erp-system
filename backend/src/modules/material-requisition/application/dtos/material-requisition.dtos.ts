@@ -14,7 +14,8 @@ import {
 } from 'class-validator';
 import { MaterialRequisitionStatus } from '@prisma/client';
 
-export class CreateMaterialRequisitionDto {
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+export class CreateMaterialRequisitionDto extends OnBehalfSubmissionDto {
   @ApiProperty({ maxLength: 200 })
   @IsString()
   @IsNotEmpty()

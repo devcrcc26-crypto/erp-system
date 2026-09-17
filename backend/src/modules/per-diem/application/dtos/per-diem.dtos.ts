@@ -11,11 +11,12 @@ import {
   Min,
 } from 'class-validator';
 
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
 function emptyToUndefined(value: unknown): unknown {
   return value === '' || value === null ? undefined : value;
 }
 
-export class SubmitPerDiemRequestDto {
+export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()

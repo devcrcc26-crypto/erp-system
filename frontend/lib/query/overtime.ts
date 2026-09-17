@@ -14,6 +14,7 @@ import {
   apiPostForm,
   downloadApiFile,
 } from '@/lib/api/client';
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 import type {
   ListOvertimeSheetsParams,
   OvertimeSheetDetail,
@@ -131,6 +132,21 @@ export function useCurrentOvertimeSheet(enabled = true) {
     queryFn: () => apiGet<OvertimeSheetDetail>(`${OVERTIME_PATH}/current`),
     enabled,
     retry: false,
+  });
+}
+
+/**
+ * Opens or creates a month sheet for the caller or, on behalf, for an eligible employee.
+ */
+export function useOpenOvertimeSheet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: OnBehalfPayload & { month: number; year: number }) =>
+      apiPost<OvertimeSheetDetail>(`${OVERTIME_PATH}/sheets`, payload),
+    onSuccess: (sheet) => {
+      invalidateSheetLists(queryClient);
+      void queryClient.setQueryData(overtimeKeys.detail(sheet.id), sheet);
+    },
   });
 }
 

@@ -9,6 +9,10 @@ import SealFilePicker, {
   SealLocalFileTiles,
 } from '@/components/modules/hr/shared/SealFilePicker';
 import SealRequestExtraFields from '@/components/modules/hr/shared/SealRequestExtraFields';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -50,6 +54,7 @@ export default function ProjectSealForm({
   onSuccess,
 }: ProjectSealFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('PROJECT_SEAL_USAGE');
   const messageApi = useAppMessage();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
@@ -78,6 +83,7 @@ export default function ProjectSealForm({
   }
 
   function resetForm(): void {
+    onBehalf.reset();
     form.resetFields();
     form.setFieldsValue({ urgency: 'MINOR' });
     setSelectedFiles([]);
@@ -116,6 +122,7 @@ export default function ProjectSealForm({
     setSubmitting(true);
     try {
       const result = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
         fileName: values.fileName.trim(),
         description: values.description.trim(),
         sealCategory: resolveSealCategory(
@@ -154,75 +161,78 @@ export default function ProjectSealForm({
         title: t('hr.section.requestDetails'),
         validate: () => validateDetailsStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            title={t('hr.section.requestDetails')}
-            description={t('pages.hr.projectSeal.detailsStepDescription')}
-          >
-            <Form.Item
-              name="fileName"
-              label={t('hr.form.fileName')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.placeholder.enterProjectSealFileName'),
-                },
-              ]}
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              title={t('hr.section.requestDetails')}
+              description={t('pages.hr.projectSeal.detailsStepDescription')}
             >
-              <Input
-                maxLength={255}
-                showCount
-                placeholder={t('hr.placeholder.enterProjectSealFileName')}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="description"
-              label={t('hr.form.description')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.placeholder.enterProjectSealDescription'),
-                },
-              ]}
-            >
-              <Input.TextArea
-                rows={4}
-                maxLength={1000}
-                showCount
-                placeholder={t('hr.placeholder.enterProjectSealDescription')}
-              />
-            </Form.Item>
-
-            <div className="erp-form-grid-2">
               <Form.Item
-                name="dateNeeded"
-                label={t('hr.labels.dateNeeded')}
+                name="fileName"
+                label={t('hr.form.fileName')}
                 rules={[
                   {
                     required: true,
-                    message: t('hr.placeholder.selectProjectSealDateNeeded'),
+                    message: t('hr.placeholder.enterProjectSealFileName'),
                   },
                 ]}
               >
-                <DatePicker className="w-full" />
+                <Input
+                  maxLength={255}
+                  showCount
+                  placeholder={t('hr.placeholder.enterProjectSealFileName')}
+                />
               </Form.Item>
+
               <Form.Item
-                name="urgency"
-                label={t('hr.labels.urgency')}
+                name="description"
+                label={t('hr.form.description')}
                 rules={[
                   {
                     required: true,
-                    message: t('hr.placeholder.selectProjectSealUrgency'),
+                    message: t('hr.placeholder.enterProjectSealDescription'),
                   },
                 ]}
               >
-                <Select options={urgencyOptions} />
+                <Input.TextArea
+                  rows={4}
+                  maxLength={1000}
+                  showCount
+                  placeholder={t('hr.placeholder.enterProjectSealDescription')}
+                />
               </Form.Item>
-            </div>
 
-            <SealRequestExtraFields form={form} />
-          </FormLayout>
+              <div className="erp-form-grid-2">
+                <Form.Item
+                  name="dateNeeded"
+                  label={t('hr.labels.dateNeeded')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.placeholder.selectProjectSealDateNeeded'),
+                    },
+                  ]}
+                >
+                  <DatePicker className="w-full" />
+                </Form.Item>
+                <Form.Item
+                  name="urgency"
+                  label={t('hr.labels.urgency')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.placeholder.selectProjectSealUrgency'),
+                    },
+                  ]}
+                >
+                  <Select options={urgencyOptions} />
+                </Form.Item>
+              </div>
+
+              <SealRequestExtraFields form={form} />
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -320,6 +330,7 @@ export default function ProjectSealForm({
       },
     ],
     [
+      onBehalf,
       t,
       urgencyOptions,
       selectedFiles,

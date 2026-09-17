@@ -15,6 +15,10 @@ import { useRouter } from 'next/navigation';
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
+import {
+  OnBehalfSection,
+  useOnBehalf,
+} from '@/components/shared/OnBehalfSelector';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -30,7 +34,6 @@ import {
   useMyLeaveBalances,
   useSubmitLeaveRequest,
 } from '@/lib/query/leave';
-import { useCurrentUser } from '@/lib/query/profile';
 import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
 import {
   formatLeaveType,
@@ -123,6 +126,7 @@ function ReviewItem({
  */
 export default function LeaveRequestFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
+  const onBehalf = useOnBehalf('LEAVE_REQUEST');
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<LeaveFormValues>();
@@ -139,10 +143,9 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   const year = new Date().getFullYear();
-  const balancesQuery = useMyLeaveBalances(year, true);
+  const balancesQuery = useMyLeaveBalances(year, true, onBehalf.employeeId);
   const submitMutation = useSubmitLeaveRequest();
   const previewMutation = usePreviewLeaveDays();
-  const currentUser = useCurrentUser();
 
   const leaveType =
     (Form.useWatch('leaveType', form) as LeaveType | undefined) ??
@@ -191,7 +194,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       setPreviewError(t('hr.form.overlapPeriods'));
       return;
     }
-    const employeeId = currentUser.data?.id;
+    const employeeId = onBehalf.effectiveEmployeeId;
     const handle = window.setTimeout(() => {
       void previewMutation
         .mutateAsync({ employeeId, periods: inputs })
@@ -209,7 +212,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         });
     }, 300);
     return () => window.clearTimeout(handle);
-  }, [periods, currentUser.data?.id, t]);
+  }, [periods, onBehalf.effectiveEmployeeId, t]);
 
   function captureSnapshot(): Partial<LeaveFormValues> {
     const values = form.getFieldsValue(true) as LeaveFormValues;
@@ -218,6 +221,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   }
 
   function resetForm(): void {
+    onBehalf.reset();
     form.resetFields();
     form.setFieldsValue({ leaveType: DEFAULT_LEAVE_TYPE });
     setSelectedFiles([]);
@@ -289,6 +293,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     setSubmitting(true);
     try {
       const created = await submitMutation.mutateAsync({
+        ...onBehalf.payload,
         leaveType: values.leaveType,
         periods: inputs,
         reason: values.reason?.trim() || undefined,
@@ -387,116 +392,119 @@ export default function LeaveRequestFormContent(): React.ReactNode {
         title: t('hr.form.leaveDetails'),
         validate: () => validateDetailsStep(),
         content: (
-          <FormLayout
-            variant="pro"
-            dense
-            title={t('hr.form.leaveDetails')}
-            description={t('pages.hr.leave.detailsStepDescription')}
-          >
-            <Form.Item
-              name="leaveType"
-              label={t('hr.form.leaveType')}
-              rules={[
-                {
-                  required: true,
-                  message: t('hr.validation.selectLeaveType'),
-                },
-              ]}
+          <div className="flex flex-col gap-4">
+            <OnBehalfSection state={onBehalf} />
+            <FormLayout
+              variant="pro"
+              dense
+              title={t('hr.form.leaveDetails')}
+              description={t('pages.hr.leave.detailsStepDescription')}
             >
-              <Select
-                options={leaveTypeOptions}
-                placeholder={t('hr.placeholder.selectLeaveType')}
-              />
-            </Form.Item>
-
-            <div className="mb-4">
-              <p className="mb-2 text-sm font-medium">{t('hr.form.periods')}</p>
-              <div className="flex flex-col gap-3">
-                {periods.map((period, index) => (
-                  <div key={period.id} className="flex items-start gap-2">
-                    <DatePicker.RangePicker
-                      className="w-full"
-                      value={period.range}
-                      onChange={(value) => {
-                        setPeriods((current) =>
-                          current.map((row) =>
-                            row.id === period.id
-                              ? {
-                                  ...row,
-                                  range: completeRange(
-                                    value as [Dayjs | null, Dayjs | null] | null,
-                                  ),
-                                }
-                              : row,
-                          ),
-                        );
-                      }}
-                    />
-                    {periods.length > 1 ? (
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        aria-label={t('hr.form.removePeriod')}
-                        onClick={() =>
-                          setPeriods((current) =>
-                            current.filter((row) => row.id !== period.id),
-                          )
-                        }
-                      />
-                    ) : null}
-                    {index === periods.length - 1 ? (
-                      <Button
-                        icon={<PlusOutlined />}
-                        onClick={() =>
-                          setPeriods((current) => [
-                            ...current,
-                            { id: newPeriodId(), range: null },
-                          ])
-                        }
-                      >
-                        {t('hr.form.addPeriod')}
-                      </Button>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-              {previewError ? (
-                <Alert
-                  type="error"
-                  showIcon
-                  title={previewError}
-                  className="mt-3"
+              <Form.Item
+                name="leaveType"
+                label={t('hr.form.leaveType')}
+                rules={[
+                  {
+                    required: true,
+                    message: t('hr.validation.selectLeaveType'),
+                  },
+                ]}
+              >
+                <Select
+                  options={leaveTypeOptions}
+                  placeholder={t('hr.placeholder.selectLeaveType')}
                 />
-              ) : preview ? (
-                <div className="mt-3 rounded-xl border border-[#e8ebef] p-3">
-                  <LeavePeriodBreakdownTable
-                    breakdown={preview.periods.flatMap((row) => row.breakdown)}
-                    totalDays={preview.totalDays}
-                    showTotal
-                  />
+              </Form.Item>
+
+              <div className="mb-4">
+                <p className="mb-2 text-sm font-medium">{t('hr.form.periods')}</p>
+                <div className="flex flex-col gap-3">
+                  {periods.map((period, index) => (
+                    <div key={period.id} className="flex items-start gap-2">
+                      <DatePicker.RangePicker
+                        className="w-full"
+                        value={period.range}
+                        onChange={(value) => {
+                          setPeriods((current) =>
+                            current.map((row) =>
+                              row.id === period.id
+                                ? {
+                                    ...row,
+                                    range: completeRange(
+                                      value as [Dayjs | null, Dayjs | null] | null,
+                                    ),
+                                  }
+                                : row,
+                            ),
+                          );
+                        }}
+                      />
+                      {periods.length > 1 ? (
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          aria-label={t('hr.form.removePeriod')}
+                          onClick={() =>
+                            setPeriods((current) =>
+                              current.filter((row) => row.id !== period.id),
+                            )
+                          }
+                        />
+                      ) : null}
+                      {index === periods.length - 1 ? (
+                        <Button
+                          icon={<PlusOutlined />}
+                          onClick={() =>
+                            setPeriods((current) => [
+                              ...current,
+                              { id: newPeriodId(), range: null },
+                            ])
+                          }
+                        >
+                          {t('hr.form.addPeriod')}
+                        </Button>
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
-              ) : null}
-            </div>
+                {previewError ? (
+                  <Alert
+                    type="error"
+                    showIcon
+                    title={previewError}
+                    className="mt-3"
+                  />
+                ) : preview ? (
+                  <div className="mt-3 rounded-xl border border-[#e8ebef] p-3">
+                    <LeavePeriodBreakdownTable
+                      breakdown={preview.periods.flatMap((row) => row.breakdown)}
+                      totalDays={preview.totalDays}
+                      showTotal
+                    />
+                  </div>
+                ) : null}
+              </div>
 
-            <div className="erp-leave-balance-panel mb-4">
-              <p className="erp-leave-balance-panel-title">
-                {leaveType
-                  ? `${formatLeaveType(leaveType, t)} - ${t('hr.section.leaveBalance')} (${year})`
-                  : `${t('hr.section.leaveBalance')} (${year})`}
-              </p>
-              {renderBalancePanel()}
-            </div>
+              <div className="erp-leave-balance-panel mb-4">
+                <p className="erp-leave-balance-panel-title">
+                  {leaveType
+                    ? `${formatLeaveType(leaveType, t)} - ${t('hr.section.leaveBalance')} (${year})`
+                    : `${t('hr.section.leaveBalance')} (${year})`}
+                </p>
+                {renderBalancePanel()}
+              </div>
 
-            <Form.Item name="reason" label={t('hr.form.reason')}>
-              <Input.TextArea
-                rows={4}
-                maxLength={4000}
-                showCount
-                placeholder={t('hr.placeholder.enterReason')}
-              />
-            </Form.Item>
-          </FormLayout>
+              <Form.Item name="reason" label={t('hr.form.reason')}>
+                <Input.TextArea
+                  rows={4}
+                  maxLength={4000}
+                  showCount
+                  placeholder={t('hr.placeholder.enterReason')}
+                />
+              </Form.Item>
+            </FormLayout>
+          </div>
         ),
       },
       {
@@ -599,6 +607,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       },
     ],
     [
+      onBehalf,
       t,
       leaveTypeOptions,
       leaveType,

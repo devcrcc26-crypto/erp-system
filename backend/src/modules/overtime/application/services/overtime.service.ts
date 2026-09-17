@@ -37,6 +37,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import {
   holidayFallsOnDate,
@@ -44,6 +45,7 @@ import {
 } from '../../../work-schedule/application/services/work-schedule.dates';
 import {
   ListOvertimeSheetsDto,
+  OpenOvertimeSheetDto,
   UpsertOvertimeEntryDto,
 } from '../dtos/overtime.dtos';
 import { OvertimeEntryService } from './overtime-entry.service';
@@ -118,6 +120,7 @@ export class OvertimeService
     private readonly permissionService: PermissionService,
     private readonly overtimeEntryService: OvertimeEntryService,
     private readonly workScheduleService: WorkScheduleService,
+    private readonly onBehalfService: OnBehalfService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -143,18 +146,10 @@ export class OvertimeService
     if (month < 1 || month > 12) {
       throw new BadRequestException('month must be between 1 and 12');
     }
-    if (employeeId !== userId) {
-      const isHrViewer = await this.permissionService.hasPermission(
-        userId,
-        companyId,
-        'hr',
-        'view',
+    if (!(await this.canActForEmployee(employeeId, companyId, userId))) {
+      throw new ForbiddenException(
+        'You can only open your own overtime sheet',
       );
-      if (!isHrViewer) {
-        throw new ForbiddenException(
-          'You can only open your own overtime sheet',
-        );
-      }
     }
 
     const existing = await this.prisma.overtimeSheet.findFirst({
@@ -213,6 +208,39 @@ export class OvertimeService
     }
 
     return this.getSheet(sheetId, companyId, userId);
+  }
+
+  /**
+   * Opens or creates a month sheet for the caller or, on behalf, for an eligible employee.
+   * The response carries the sheet id so the client can navigate to it.
+   */
+  async openSheet(
+    dto: OpenOvertimeSheetDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    const sheet = (await this.getOrCreateSheet(
+      employeeId,
+      dto.month,
+      dto.year,
+      companyId,
+      userId,
+    )) as { id: string; sheetNumber?: string };
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'OVERTIME_APPLICATION',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: sheet.id,
+      recordReference: sheet.sheetNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+    return sheet;
   }
 
   /**
@@ -571,7 +599,7 @@ export class OvertimeService
     if (!sheet) {
       throw new NotFoundException('Overtime sheet not found');
     }
-    if (sheet.employeeId !== userId) {
+    if (!(await this.canActForEmployee(sheet.employeeId, companyId, userId))) {
       throw new ForbiddenException('Only the employee can submit this sheet');
     }
     if (!EDITABLE_STATUSES.includes(sheet.status)) {
@@ -634,7 +662,7 @@ export class OvertimeService
     }
 
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
-      userId,
+      sheet.employeeId,
       companyId,
       totalHours > 4,
     );
@@ -666,12 +694,13 @@ export class OvertimeService
         formData: overtimeFormData,
       },
       companyId,
-      userId,
+      sheet.employeeId,
       {
         resolvedTiers: {
           ruleName: 'Overtime org chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -703,6 +732,20 @@ export class OvertimeService
       });
       throw error;
     }
+
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'OVERTIME_APPLICATION',
+      companyId,
+      actorUserId: userId,
+      employeeId: sheet.employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: await this.onBehalfService.wasAutoApproveRequested(
+        'OVERTIME_APPLICATION',
+        sheet.id,
+        userId,
+        companyId,
+      ),
+    });
 
     return this.getSheet(sheetId, companyId, userId);
   }
@@ -920,11 +963,38 @@ export class OvertimeService
       row.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
       false;
 
-    if (!isOwner && !isApprover) {
+    if (
+      !isOwner &&
+      !isApprover &&
+      !(await this.onBehalfService.isEligibleFor(userId, row.employeeId, companyId))
+    ) {
       throw new ForbiddenException(
         'You do not have access to this overtime sheet',
       );
     }
+  }
+
+  /**
+   * Owner, HR (hr.view), or anyone eligible to file overtime on the employee's behalf.
+   */
+  private async canActForEmployee(
+    employeeId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<boolean> {
+    if (employeeId === userId) {
+      return true;
+    }
+    const isHrViewer = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    return (
+      isHrViewer ||
+      this.onBehalfService.isEligibleFor(userId, employeeId, companyId)
+    );
   }
 
   private async requireEditableSheet(
@@ -945,17 +1015,8 @@ export class OvertimeService
     if (!sheet) {
       throw new NotFoundException('Overtime sheet not found');
     }
-    const isOwner = sheet.employeeId === userId;
-    if (!isOwner) {
-      const isHrEditor = await this.permissionService.hasPermission(
-        userId,
-        companyId,
-        'hr',
-        'view',
-      );
-      if (!isHrEditor) {
-        throw new ForbiddenException('Only the employee can edit this sheet');
-      }
+    if (!(await this.canActForEmployee(sheet.employeeId, companyId, userId))) {
+      throw new ForbiddenException('Only the employee can edit this sheet');
     }
     if (!EDITABLE_STATUSES.includes(sheet.status)) {
       throw new BadRequestException(

@@ -14,7 +14,8 @@ import {
 } from 'class-validator';
 import { ConsumablesRequisitionStatus } from '@prisma/client';
 
-export class CreateConsumablesRequisitionDto {
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+export class CreateConsumablesRequisitionDto extends OnBehalfSubmissionDto {
   @ApiProperty({ maxLength: 200 })
   @IsString()
   @IsNotEmpty()

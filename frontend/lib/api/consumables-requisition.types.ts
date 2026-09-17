@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type ConsumablesRequisitionStatus =
   | 'DRAFT'
   | 'SUBMITTED'
@@ -67,7 +68,7 @@ export interface ConsumablesRequisitionDetail
   } | null;
 }
 
-export interface CreateConsumablesRequisitionPayload {
+export interface CreateConsumablesRequisitionPayload extends OnBehalfPayload {
   title: string;
   purpose: string;
   requiredByDate?: string;

@@ -37,6 +37,7 @@ import type {
   ApprovalFinalDecision,
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import {
   AddExpenseClaimItemDto,
   CreateExpenseClaimDto,
@@ -98,6 +99,7 @@ export class ExpenseClaimService
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly currencyService: CurrencyService,
+    private readonly onBehalfService: OnBehalfService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -111,21 +113,34 @@ export class ExpenseClaimService
   }
 
   /**
-   * Creates a new DRAFT claim with no line items yet.
+   * Creates a new DRAFT claim with no line items yet (optionally on behalf of an employee).
    */
   async createDraft(
     dto: CreateExpenseClaimDto,
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const created = await this.findOrCreateDraftClaim(
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
       userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    const created = await this.findOrCreateDraftClaim(
+      employeeId,
       dto.title,
       dto.description,
       companyId,
       userId,
       true,
     );
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'EXPENSE_CLAIM',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: created.id,
+      autoApproveTier: dto.autoApproveTier,
+    });
     return this.getClaim(created.id, companyId, userId);
   }
 
@@ -146,7 +161,11 @@ export class ExpenseClaimService
     }
 
     if (employeeId !== actorUserId) {
-      await this.assertCanManageClaim(employeeId, companyId, actorUserId);
+      await this.assertCanManageClaim(
+        { employeeId, createdBy: actorUserId },
+        companyId,
+        actorUserId,
+      );
     }
 
     if (!forceCreate) {
@@ -319,7 +338,7 @@ export class ExpenseClaimService
     if (!claim) {
       throw new NotFoundException('Expense claim not found');
     }
-    if (claim.employeeId !== userId) {
+    if (!(await this.onBehalfService.canActForRecord(userId, companyId, claim))) {
       throw new ForbiddenException('Only the claim owner can submit it');
     }
     if (claim.status !== ExpenseClaimStatus.DRAFT) {
@@ -338,7 +357,7 @@ export class ExpenseClaimService
     }
 
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
-      userId,
+      claim.employeeId,
       companyId,
       true,
     );
@@ -371,12 +390,13 @@ export class ExpenseClaimService
         },
       },
       companyId,
-      userId,
+      claim.employeeId,
       {
         resolvedTiers: {
           ruleName: 'Expense claim org chain',
           tiers: resolvedTiers,
         },
+        createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
 
@@ -388,6 +408,20 @@ export class ExpenseClaimService
         submittedAt: new Date(),
         updatedBy: userId,
       },
+    });
+
+    await this.onBehalfService.applyAutoApprove({
+      moduleCode: 'EXPENSE_CLAIM',
+      companyId,
+      actorUserId: userId,
+      employeeId: claim.employeeId,
+      approvalRequestId: approval.id,
+      autoApproveTier: await this.onBehalfService.wasAutoApproveRequested(
+        'EXPENSE_CLAIM',
+        claimId,
+        userId,
+        companyId,
+      ),
     });
 
     return this.getClaim(claimId, companyId, userId);
@@ -530,7 +564,7 @@ export class ExpenseClaimService
     if (!claim) {
       throw new NotFoundException('Expense claim not found');
     }
-    await this.assertCanManageClaim(claim.employeeId, companyId, userId);
+    await this.assertCanManageClaim(claim, companyId, userId);
     if (
       claim.status !== ExpenseClaimStatus.DRAFT &&
       claim.status !== ExpenseClaimStatus.RETURNED
@@ -698,11 +732,11 @@ export class ExpenseClaimService
   // ─── Private helpers ──────────────────────────────────────────────────────
 
   private async assertCanManageClaim(
-    employeeId: string,
+    claim: { employeeId: string; createdBy: string },
     companyId: string,
     userId: string,
   ): Promise<void> {
-    if (employeeId === userId) {
+    if (await this.onBehalfService.canActForRecord(userId, companyId, claim)) {
       return;
     }
     const isHrViewer = await this.permissionService.hasPermission(
@@ -729,6 +763,7 @@ export class ExpenseClaimService
         id: true,
         claimNumber: true,
         employeeId: true,
+        createdBy: true,
         status: true,
         attachmentFolderId: true,
       },
@@ -736,7 +771,7 @@ export class ExpenseClaimService
     if (!claim) {
       throw new NotFoundException('Expense claim not found');
     }
-    await this.assertCanManageClaim(claim.employeeId, companyId, userId);
+    await this.assertCanManageClaim(claim, companyId, userId);
     if (claim.status !== ExpenseClaimStatus.DRAFT) {
       throw new BadRequestException('Only draft claims can be edited');
     }
@@ -746,6 +781,7 @@ export class ExpenseClaimService
   private async assertCanView(
     claim: {
       employeeId: string;
+      createdBy: string;
       approvalRequest?: { tiers?: Array<{ approverId: string }> } | null;
     },
     companyId: string,
@@ -759,7 +795,7 @@ export class ExpenseClaimService
     );
     if (isHrViewer) return;
 
-    const isOwner = claim.employeeId === userId;
+    const isOwner = claim.employeeId === userId || claim.createdBy === userId;
     const isTierApprover =
       claim.approvalRequest?.tiers?.some((t) => t.approverId === userId) ??
       false;

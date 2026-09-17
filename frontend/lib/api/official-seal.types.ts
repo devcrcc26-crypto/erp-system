@@ -1,3 +1,4 @@
+import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type OfficialSealStatus =
   | 'DRAFT'
   | 'SUBMITTED'
@@ -81,7 +82,7 @@ export interface OfficialSealDetail extends OfficialSealListItem {
     } | null;
 }
 
-export interface SubmitOfficialSealPayload {
+export interface SubmitOfficialSealPayload extends OnBehalfPayload {
     fileName: string;
     description: string;
     sealCategory?: string;

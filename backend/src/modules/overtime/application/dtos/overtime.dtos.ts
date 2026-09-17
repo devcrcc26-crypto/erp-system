@@ -14,6 +14,7 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OvertimeSheetStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
 
 export class ListOvertimeSheetsDto {
   @ApiPropertyOptional({ default: 1 })
@@ -115,4 +116,23 @@ export class PreviewOvertimeEntryDto {
   @IsString()
   @Matches(/^\d{2}:\d{2}$/, { message: 'endTime must be HH:mm' })
   endTime!: string;
+}
+
+/**
+ * Opens (or creates) an employee's sheet for a month — self or on behalf of an employee.
+ */
+export class OpenOvertimeSheetDto extends OnBehalfSubmissionDto {
+  @ApiProperty({ minimum: 1, maximum: 12 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month!: number;
+
+  @ApiProperty({ minimum: 2000, maximum: 2100 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  year!: number;
 }

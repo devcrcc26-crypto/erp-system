@@ -13,7 +13,8 @@ import {
 } from 'class-validator';
 import { FuelType, VehicleRefuelingStatus } from '@prisma/client';
 
-export class SubmitVehicleRefuelingDto {
+import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+export class SubmitVehicleRefuelingDto extends OnBehalfSubmissionDto {
   @ApiProperty({ description: 'Company vehicle ID' })
   @IsString()
   @IsNotEmpty()
