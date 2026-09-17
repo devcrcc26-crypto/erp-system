@@ -596,7 +596,8 @@ export class DocumentService {
         folder?.contextType === FolderContextType.PER_DIEM ||
         folder?.contextType === FolderContextType.VEHICLE_APPLICATION ||
         folder?.contextType === FolderContextType.INSPECTION_REPAIR ||
-        folder?.contextType === FolderContextType.EMPLOYEE_CONTRACT
+        folder?.contextType === FolderContextType.EMPLOYEE_CONTRACT ||
+        folder?.contextType === FolderContextType.EXIT_PERMIT
       ) {
         bucket = STORAGE_BUCKETS.HR;
       }
@@ -611,7 +612,8 @@ export class DocumentService {
       fileKey.includes('/hr/material-requisition/') ||
       fileKey.includes('/official-seal/') ||
       fileKey.includes('/project-seal/') ||
-      fileKey.includes('/vehicle-refueling/')
+      fileKey.includes('/vehicle-refueling/') ||
+      fileKey.includes('/hr/exit-permits/')
     ) {
       bucket = STORAGE_BUCKETS.HR;
     }

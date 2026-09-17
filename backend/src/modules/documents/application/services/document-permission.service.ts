@@ -975,7 +975,8 @@ export class DocumentPermissionService {
       contextType !== FolderContextType.BUSINESS_TRIP &&
       contextType !== FolderContextType.OFFICIAL_SEAL &&
       contextType !== FolderContextType.PROJECT_SEAL &&
-      contextType !== FolderContextType.VEHICLE_REFUELING
+      contextType !== FolderContextType.VEHICLE_REFUELING &&
+      contextType !== FolderContextType.EXIT_PERMIT
     ) {
       return false;
     }
@@ -1168,6 +1169,37 @@ export class DocumentPermissionService {
       }
       return (
         refueling.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
+        false
+      );
+    }
+
+    if (contextType === FolderContextType.EXIT_PERMIT) {
+      const permit = await this.prisma.exitPermit.findFirst({
+        where: activeOnly({ id: contextId, companyId }),
+        select: {
+          employeeId: true,
+          createdBy: true,
+          submittedBy: true,
+          approvalRequest: {
+            select: {
+              tiers: { select: { approverId: true } },
+            },
+          },
+        },
+      });
+      if (!permit) {
+        return false;
+      }
+      // Employee, whoever filed it (on-behalf), or an approver in its chain.
+      if (
+        permit.employeeId === userId ||
+        permit.createdBy === userId ||
+        permit.submittedBy === userId
+      ) {
+        return true;
+      }
+      return (
+        permit.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
         false
       );
     }

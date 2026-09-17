@@ -36,7 +36,8 @@ export default function ConfirmDialog({
       footer={null}
       onCancel={onCancel}
       centered
-      width={420}
+      // Dialogs with inputs (e.g. an approval note) need room to write; plain confirms stay compact.
+      width={children ? 560 : 420}
       rootClassName="erp-confirm-dialog"
       className="erp-confirm-dialog"
       classNames={{

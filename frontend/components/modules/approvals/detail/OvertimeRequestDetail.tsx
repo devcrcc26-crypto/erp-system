@@ -73,49 +73,79 @@ export default function OvertimeRequestDetail({
     Boolean(currentUser.data?.id) &&
     sheet.employeeId === currentUser.data?.id;
 
+  const hourColumn = (
+    key: 'regularHours' | 'nightHours' | 'weekendHours' | 'holidayHours',
+    title: string,
+  ): ColumnsType<OvertimeEntry>[number] => ({
+    title,
+    dataIndex: key,
+    key,
+    width: 84,
+    align: 'right',
+    responsive: ['lg'],
+    render: (v: number, row: OvertimeEntry) => {
+      const hours = (
+        <span className="tabular-nums">{formatOvertimeHours(v)}</span>
+      );
+      return key === 'holidayHours' && row.holidayName ? (
+        <Tooltip title={row.holidayName}>{hours}</Tooltip>
+      ) : (
+        hours
+      );
+    },
+  });
+
   const columns: ColumnsType<OvertimeEntry> = [
     {
-      title: 'Date',
+      title: t('hr.table.date'),
       dataIndex: 'date',
       key: 'date',
-      render: (v: string) => formatProjectDate(v),
-    },
-    { title: 'Start', dataIndex: 'startTime', key: 'startTime', width: 70 },
-    { title: 'End', dataIndex: 'endTime', key: 'endTime', width: 70 },
-    {
-      title: 'Holiday',
-      dataIndex: 'holidayHours',
-      key: 'holidayHours',
-      width: 80,
-      render: (v: number, row: OvertimeEntry) => {
-        const hours = formatOvertimeHours(v);
-        if (!row.holidayName) {
-          return hours;
-        }
-        return <Tooltip title={row.holidayName}>{hours}</Tooltip>;
-      },
+      width: 150,
+      render: (v: string, row: OvertimeEntry) => (
+        <div className="min-w-0">
+          <span className="whitespace-nowrap">{formatProjectDate(v)}</span>
+          <p className="erp-users-cell-sub m-0 mt-0.5 whitespace-nowrap tabular-nums">
+            {row.startTime} – {row.endTime}
+            {row.isOvernight ? ' (+1)' : ''}
+          </p>
+        </div>
+      ),
     },
     {
-      title: 'Total',
-      dataIndex: 'totalHours',
-      key: 'totalHours',
-      width: 70,
-      render: (v: number) => formatOvertimeHours(v),
-    },
-    {
-      title: 'Tasks',
+      title: t('hr.labels.taskDescription'),
       dataIndex: 'taskDescription',
       key: 'taskDescription',
-      ellipsis: true,
+      render: (value: string) => (
+        <div className="min-w-[180px] whitespace-pre-wrap break-words">
+          {value?.trim() || '—'}
+        </div>
+      ),
+    },
+    hourColumn('regularHours', t('hr.overtimeCategory.regular')),
+    hourColumn('nightHours', t('hr.overtimeCategory.night')),
+    hourColumn('weekendHours', t('hr.overtimeCategory.weekend')),
+    hourColumn('holidayHours', t('hr.overtimeCategory.holiday')),
+    {
+      title: t('hr.overtimeCategory.total'),
+      dataIndex: 'totalHours',
+      key: 'totalHours',
+      width: 84,
+      align: 'right',
+      render: (v: number) => (
+        <span className="erp-users-cell-strong tabular-nums whitespace-nowrap">
+          {formatOvertimeHours(v)}
+        </span>
+      ),
     },
     {
-      title: 'Attachments',
+      title: t('hr.labels.attachments'),
       key: 'attachments',
-      width: 180,
+      width: 110,
       render: (_: unknown, row: OvertimeEntry) => (
         <AttachmentDownloadList
           documents={row.documents}
-          emptyLabel="-"
+          emptyLabel="—"
+          compact
         />
       ),
     },
@@ -204,7 +234,7 @@ export default function OvertimeRequestDetail({
           className="erp-pro-table"
           size="small"
           pagination={false}
-          scroll={false}
+          scroll={{ x: 'max-content' }}
           columns={columns}
           dataSource={sheet.entries ?? []}
         />

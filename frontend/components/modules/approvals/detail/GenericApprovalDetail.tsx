@@ -13,6 +13,14 @@ import {
 } from '@/lib/utils/approval-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useUserNameLookup } from '@/hooks/useUserNameLookup';
+import { isUuidLike } from '@/lib/utils/user-display';
+
+/** formData keys that hold user ids, with the label to show instead of the raw key. */
+const USER_ID_FIELD_LABEL_KEYS: Record<string, string> = {
+  employeeId: 'hr.table.employee',
+  submittedBy: 'hr.table.submittedBy',
+};
 
 /**
  * Generic approval body — form data + comments.
@@ -23,14 +31,33 @@ export default function GenericApprovalDetail({
   request: ApprovalRequestDetail;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const lookupUserName = useUserNameLookup();
   const fieldLabels = getFormFieldLabels(request.category?.formSchema);
   const formEntries = Object.entries(request.formData ?? {})
     .filter(([key]) => !key.startsWith('_'))
-    .map(([key, value]) => ({
-      key,
-      label: fieldLabels.get(key) ?? key,
-      value: formatFormDataValue(value, t),
-    }));
+    .flatMap(([key, value]) => {
+      const userLabelKey = USER_ID_FIELD_LABEL_KEYS[key];
+      if (userLabelKey && typeof value === 'string') {
+        return [
+          {
+            key,
+            label: fieldLabels.get(key) ?? t(userLabelKey),
+            value: lookupUserName(value),
+          },
+        ];
+      }
+      // Other raw ids (e.g. departmentId) mean nothing to a reader — omit them.
+      if (typeof value === 'string' && isUuidLike(value)) {
+        return [];
+      }
+      return [
+        {
+          key,
+          label: fieldLabels.get(key) ?? key,
+          value: formatFormDataValue(value, t),
+        },
+      ];
+    });
 
   return (
     <div className="flex flex-col gap-3">
