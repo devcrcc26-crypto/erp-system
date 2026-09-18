@@ -119,6 +119,9 @@ export function DocumentPreviewActions({
             onClose={() => setViewer(null)}
             signedUrl={signedUrl.url}
             fileName={document.name}
+            fileSizeBytes={document.fileSizeBytes}
+            onDownload={() => void download()}
+            downloading={downloading}
           />
         </span>
       ) : null}
@@ -127,6 +130,7 @@ export function DocumentPreviewActions({
           open={viewer === 'image'}
           images={[{ src: imageSrc, alt: document.name }]}
           onClose={() => setViewer(null)}
+          onDownload={() => void download()}
         />
       ) : null}
     </>

@@ -13,10 +13,13 @@ import {
   type PreviewDocument,
   type PreviewGroupContextValue,
 } from './preview-context';
+import { triggerUrlDownload } from '@/lib/utils/document-download';
 import {
+  documentDownloadPath,
   documentPreviewPath,
   fetchSignedUrl,
   isSignedUrlFresh,
+  signedUrlErrorMessage,
   type SignedUrlResult,
 } from './useSignedUrl';
 
@@ -91,6 +94,17 @@ export default function DocumentPreviewGroup({
       return false;
     } finally {
       inflightRef.current.delete(doc.id);
+    }
+  }
+
+  async function download(doc: PreviewDocument): Promise<void> {
+    try {
+      const { url } = await fetchSignedUrl(
+        doc.urlPath ?? documentDownloadPath(doc.id),
+      );
+      triggerUrlDownload(url, doc.name);
+    } catch (error: unknown) {
+      messageApi.error(signedUrlErrorMessage(error));
     }
   }
 
@@ -193,6 +207,12 @@ export default function DocumentPreviewGroup({
         images={images.map((doc) => ({ src: srcFor(doc), alt: doc.name }))}
         onClose={() => setOpen(false)}
         onChange={handleChange}
+        onDownload={(index) => {
+          const doc = images[index];
+          if (doc) {
+            void download(doc);
+          }
+        }}
       />
     </PreviewGroupContext.Provider>
   );

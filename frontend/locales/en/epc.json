@@ -1584,7 +1584,16 @@
     "previewLoadError": "Unable to open this file",
     "pdfPreviewUnsupported": "Your browser can't display this PDF here.",
     "downloadToView": "Download to view",
-    "viewPhoto": "View photo"
+    "viewPhoto": "View photo",
+    "openInNewTab": "Open in new tab",
+    "closePreview": "Close preview",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "rotateLeft": "Rotate left",
+    "rotateRight": "Rotate right",
+    "flipHorizontal": "Flip horizontally",
+    "resetView": "Reset view",
+    "imageCount": "{{current}} of {{total}}"
   },
   "validation": {
     "invalidName": "Use letters, spaces, hyphens, apostrophes or full stops only",

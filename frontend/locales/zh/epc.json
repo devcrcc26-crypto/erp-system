@@ -1584,7 +1584,16 @@
     "previewLoadError": "无法打开此文件",
     "pdfPreviewUnsupported": "您的浏览器无法在此处显示该 PDF。",
     "downloadToView": "下载查看",
-    "viewPhoto": "查看照片"
+    "viewPhoto": "查看照片",
+    "openInNewTab": "在新标签页中打开",
+    "closePreview": "关闭预览",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "rotateLeft": "向左旋转",
+    "rotateRight": "向右旋转",
+    "flipHorizontal": "水平翻转",
+    "resetView": "重置视图",
+    "imageCount": "第 {{current}} / {{total}} 张"
   },
   "validation": {
     "invalidName": "仅可使用字母、空格、连字符、撇号或句点",
