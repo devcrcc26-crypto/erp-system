@@ -89,7 +89,7 @@ export function formatCurrencyAmount(
     return '-';
   }
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
-  return `${symbol}${num.toLocaleString(undefined, {
+  return `${symbol} ${num.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

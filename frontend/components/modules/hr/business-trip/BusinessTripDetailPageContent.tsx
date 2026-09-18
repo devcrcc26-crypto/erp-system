@@ -15,9 +15,16 @@ import BusinessTripCurrentStepBanner from '@/components/modules/hr/business-trip
 import BusinessTripTicketAssignmentPanel from '@/components/modules/hr/business-trip/BusinessTripTicketAssignmentPanel';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
+import {
+  TravelBudgetBreakdown,
+  TravelPassengerList,
+  TravelRequirements,
+  TravelRouteHero,
+  TravelTextBlock,
+  type PassengerTicketState,
+} from '@/components/modules/hr/shared/TravelDetailParts';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanManageBusinessTrip,
@@ -50,7 +57,6 @@ import {
 import { exportBusinessTripDetailPassengersExcel } from '@/lib/utils/business-trip-export-excel';
 import { exportBusinessTripPdf } from '@/lib/utils/business-trip-pdf';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 function DetailSection({
@@ -79,15 +85,14 @@ function DetailSection({
   );
 }
 
-function passengerHasTicket(
+function passengerTicketState(
   row: BusinessTripPassenger,
   combinedTicketDocumentId?: string | null,
-): boolean {
-  return (
-    Boolean(row.ticketDocumentId) ||
-    (row.tickets?.length ?? 0) > 0 ||
-    Boolean(combinedTicketDocumentId)
-  );
+): PassengerTicketState {
+  if (row.ticketDocumentId || (row.tickets?.length ?? 0) > 0) {
+    return 'own';
+  }
+  return combinedTicketDocumentId ? 'combined' : 'none';
 }
 
 /**
@@ -280,18 +285,8 @@ export default function BusinessTripDetailPageContent({
     );
   }
 
-  const destinationLabel = trip.destinationCity
-    ? `${trip.destinationCity}, ${trip.destinationCountry}`
-    : trip.destinationCountry;
-  const originLabel = `${trip.originCity}, ${trip.originCountry}`;
-  const routeTitle = `${originLabel} → ${destinationLabel}`;
   const submitterName = formatBusinessTripSubmitterName(trip.submitter);
   const tripTypeLabel = formatTripType(trip.tripType, t);
-
-  const visaRequiredCount = trip.passengers.filter((p) => p.visaRequired).length;
-  const ticketedCount = trip.passengers.filter((p) =>
-    passengerHasTicket(p, trip.combinedTicketDocumentId),
-  ).length;
 
   const budgetRows = [
     { label: t('hr.labels.estimatedFlight'), value: trip.estimatedFlightCost },
@@ -376,88 +371,31 @@ export default function BusinessTripDetailPageContent({
           </div>
         </div>
 
-        <div className="erp-employee-hero erp-contract-hero">
-          <div className="erp-employee-hero-copy min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <span className="erp-users-id-chip">{trip.tripNumber}</span>
-              <StatusBadge
-                label={formatBusinessTripStatus(trip.status, t)}
-                variant={businessTripStatusVariant(trip.status)}
-              />
-              <StatusBadge
-                label={tripTypeLabel}
-                variant={tripTypeVariant(trip.tripType)}
-              />
-              <span className="erp-users-role-tag">
-                {t('hr.labels.international')}
-              </span>
-            </div>
-            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
-              <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
-                {routeTitle}
-              </h2>
-            </div>
-            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
-              {submitterName}
-            </p>
-            <p className="erp-users-cell-sub m-0 mt-1">
-              {[
-                `${t('hr.labels.departure')} ${formatProjectDate(trip.departureDate)}`,
-                trip.returnDate
-                  ? `${t('hr.labels.return')} ${formatProjectDate(trip.returnDate)}`
-                  : tripTypeLabel,
-                `${trip.passengerCount} ${t('hr.labels.passengers').toLowerCase()}`,
-                formatEtb(trip.estimatedTotalCost),
-              ].join(' · ')}
-            </p>
-          </div>
-        </div>
+        <TravelRouteHero
+          referenceNumber={trip.tripNumber}
+          statusLabel={formatBusinessTripStatus(trip.status, t)}
+          statusVariant={businessTripStatusVariant(trip.status)}
+          tripTypeLabel={tripTypeLabel}
+          tripTypeVariant={tripTypeVariant(trip.tripType)}
+          isInternational
+          requesterName={submitterName}
+          origin={{ city: trip.originCity, country: trip.originCountry }}
+          destination={{
+            city: trip.destinationCity,
+            country: trip.destinationCountry,
+          }}
+          departureDate={trip.departureDate}
+          returnDate={trip.returnDate}
+          ticketClassLabel={formatTicketClass(trip.ticketClass, t)}
+          passengerCount={trip.passengerCount}
+          extraFact={{
+            label: t('hr.labels.estimatedTotal'),
+            value: formatEtb(trip.estimatedTotalCost),
+          }}
+        />
 
         <div className="border-t border-[#eef1f4]">
           <BusinessTripCurrentStepBanner trip={trip} embedded />
-        </div>
-      </div>
-
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.departure')}</p>
-            <p className="erp-employee-meta-value">
-              {formatProjectDate(trip.departureDate)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.return')}</p>
-            <p className="erp-employee-meta-value">
-              {trip.returnDate ? formatProjectDate(trip.returnDate) : '—'}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.passengers')}</p>
-            <p className="erp-employee-meta-value">{trip.passengerCount}</p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.ticketClass')}</p>
-            <p className="erp-employee-meta-value">
-              {formatTicketClass(trip.ticketClass, t)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.labels.estimatedTotal')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {formatEtb(trip.estimatedTotalCost)}
-            </p>
-          </div>
         </div>
       </div>
 
@@ -475,126 +413,59 @@ export default function BusinessTripDetailPageContent({
       <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px]">
         <div className="erp-pro-card min-w-0 overflow-hidden">
           <div className="erp-employee-tab-panel erp-contract-detail-body">
-            <DetailSection title={t('hr.labels.travelDetails')}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <MetaItem label={t('hr.form.origin')}>
-                  <span className="erp-users-cell-strong">{originLabel}</span>
-                </MetaItem>
-                <MetaItem label={t('hr.form.destination')}>
-                  <span className="erp-users-cell-strong">
-                    {destinationLabel}
-                  </span>
-                </MetaItem>
-                <MetaItem label={t('hr.labels.departure')}>
-                  {formatProjectDate(trip.departureDate)}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.return')}>
-                  {trip.returnDate
-                    ? formatProjectDate(trip.returnDate)
-                    : '—'}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.tripType')}>
-                  <StatusBadge
-                    label={tripTypeLabel}
-                    variant={tripTypeVariant(trip.tripType)}
-                  />
-                </MetaItem>
-                <MetaItem label={t('hr.labels.ticketClass')}>
-                  {formatTicketClass(trip.ticketClass, t)}
-                </MetaItem>
-                <MetaItem label={t('hr.table.submittedBy')}>
-                  {submitterName}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.accommodation')}>
-                  {trip.accommodationRequired ? (
-                    <div className="flex flex-col items-start gap-1">
-                      <span className="erp-users-role-tag">
-                        {t('hr.labels.required')}
-                      </span>
-                      {trip.accommodationDetails ? (
-                        <span className="erp-users-cell-sub">
-                          {trip.accommodationDetails}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <span className="erp-users-cell-sub">
-                      {t('hr.labels.notRequired')}
-                    </span>
-                  )}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.perDiem')}>
-                  {trip.perDiemRequired ? (
-                    <span className="erp-users-role-tag">
-                      {t('hr.labels.required')}
-                    </span>
-                  ) : (
-                    <span className="erp-users-cell-sub">
-                      {t('hr.labels.notRequired')}
-                    </span>
-                  )}
-                </MetaItem>
-                {trip.notes?.trim() ? (
-                  <div className="md:col-span-2">
-                    <MetaItem label={t('hr.labels.notes')}>
-                      <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
-                        {trip.notes}
-                      </p>
-                    </MetaItem>
-                  </div>
-                ) : null}
-              </div>
-            </DetailSection>
-
             {hasPurposeContent ? (
               <DetailSection title={t('hr.labels.purposeHost')}>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {trip.purpose ? (
-                    <div className="md:col-span-2">
-                      <MetaItem label={t('hr.labels.purpose')}>
-                        <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
-                          {trip.purpose}
-                        </p>
-                      </MetaItem>
+                <div className="flex flex-col gap-4">
+                  {trip.hostOrganization || trip.hostContact ? (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      {trip.hostOrganization ? (
+                        <MetaItem label={t('hr.labels.organization')}>
+                          <span className="erp-users-cell-strong">
+                            {trip.hostOrganization}
+                          </span>
+                        </MetaItem>
+                      ) : null}
+                      {trip.hostContact ? (
+                        <MetaItem label={t('hr.labels.contact')}>
+                          {trip.hostContact}
+                        </MetaItem>
+                      ) : null}
                     </div>
                   ) : null}
-                  {trip.hostOrganization ? (
-                    <MetaItem label={t('hr.labels.organization')}>
-                      {trip.hostOrganization}
-                    </MetaItem>
-                  ) : null}
-                  {trip.hostContact ? (
-                    <MetaItem label={t('hr.labels.contact')}>
-                      {trip.hostContact}
-                    </MetaItem>
-                  ) : null}
-                  {trip.expectedOutcomes ? (
-                    <div className="md:col-span-2">
-                      <MetaItem label={t('hr.labels.expectedOutcomes')}>
-                        <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
-                          {trip.expectedOutcomes}
-                        </p>
-                      </MetaItem>
-                    </div>
-                  ) : null}
-                  {trip.itinerary ? (
-                    <div className="md:col-span-2">
-                      <MetaItem label={t('hr.labels.itinerary')}>
-                        <p className="m-0 whitespace-pre-wrap break-words leading-relaxed">
-                          {trip.itinerary}
-                        </p>
-                      </MetaItem>
-                    </div>
-                  ) : null}
+                  <TravelTextBlock
+                    label={t('hr.labels.purpose')}
+                    text={trip.purpose}
+                  />
+                  <TravelTextBlock
+                    label={t('hr.labels.expectedOutcomes')}
+                    text={trip.expectedOutcomes}
+                  />
+                  <TravelTextBlock
+                    label={t('hr.labels.itinerary')}
+                    text={trip.itinerary}
+                  />
                 </div>
               </DetailSection>
             ) : null}
+
+            <DetailSection title={t('hr.travel.requirements')}>
+              <TravelRequirements
+                accommodationRequired={trip.accommodationRequired}
+                accommodationDetails={trip.accommodationDetails}
+                perDiemRequired={trip.perDiemRequired}
+              >
+                <TravelTextBlock
+                  label={t('hr.labels.notes')}
+                  text={trip.notes}
+                />
+              </TravelRequirements>
+            </DetailSection>
 
             <DetailSection
               title={t('hr.section.passengerDetails')}
               bodyClassName="!p-0"
               action={
-                <Space.Compact>
+                <Space size={6} wrap>
                   <Button
                     size="small"
                     icon={<DownloadOutlined />}
@@ -612,89 +483,28 @@ export default function BusinessTripDetailPageContent({
                       {t('common.importFromExcel')}
                     </Button>
                   ) : null}
-                  <span className="erp-users-cell-sub flex items-center px-2 text-xs">
-                    {[
-                      `${trip.passengerCount}`,
-                      `${visaRequiredCount} ${t('hr.form.visaRequired').toLowerCase()}`,
-                      `${ticketedCount}/${trip.passengers.length} ${t('hr.table.ticket').toLowerCase()}`,
-                    ].join(' · ')}
-                  </span>
-                </Space.Compact>
+                </Space>
               }
             >
-              <ul className="m-0 list-none divide-y divide-[#eef1f4] p-0">
-                {trip.passengers.map((row) => {
-                  const hasTicket = passengerHasTicket(
+              <TravelPassengerList
+                passengers={trip.passengers.map((row) => ({
+                  id: row.id,
+                  name: row.employee
+                    ? formatUserName(row.employee)
+                    : row.employeeId,
+                  email: row.employee?.email,
+                  passportNumber: row.passportNumber,
+                  visaRequired: row.visaRequired,
+                  visaStatus: row.visaStatus,
+                  visaStatusLabel: row.visaStatus
+                    ? formatVisaStatus(row.visaStatus, t)
+                    : null,
+                  ticket: passengerTicketState(
                     row,
                     trip.combinedTicketDocumentId,
-                  );
-                  const hasOwnTicket =
-                    Boolean(row.ticketDocumentId) ||
-                    (row.tickets?.length ?? 0) > 0;
-
-                  return (
-                    <li key={row.id} className="px-3 py-4 sm:px-4">
-                      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="erp-users-cell-strong m-0">
-                            {row.employee
-                              ? formatUserName(row.employee)
-                              : row.employeeId}
-                          </p>
-                          {row.employee?.email ? (
-                            <p className="erp-users-email m-0 mt-0.5">
-                              {row.employee.email}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {row.visaRequired ? (
-                            <span className="erp-users-role-tag">
-                              {row.visaStatus
-                                ? formatVisaStatus(row.visaStatus, t)
-                                : t('hr.form.visaRequired')}
-                            </span>
-                          ) : (
-                            <span className="erp-users-role-tag">
-                              {t('hr.labels.notRequired')}
-                            </span>
-                          )}
-                          {hasOwnTicket ? (
-                            <StatusBadge
-                              label={t('hr.table.ticket')}
-                              variant="success"
-                            />
-                          ) : hasTicket ? (
-                            <StatusBadge
-                              label={t('hr.labels.combinedTicket')}
-                              variant="info"
-                            />
-                          ) : (
-                            <StatusBadge
-                              label={t('hr.labels.noTicket')}
-                              variant="default"
-                            />
-                          )}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <MetaItem label={t('hr.labels.passport')}>
-                          {row.passportNumber ?? (
-                            <span className="erp-users-cell-sub">—</span>
-                          )}
-                        </MetaItem>
-                        <MetaItem label={t('hr.labels.visa')}>
-                          {row.visaRequired
-                            ? row.visaStatus
-                              ? formatVisaStatus(row.visaStatus, t)
-                              : t('hr.labels.required')
-                            : t('hr.labels.notRequired')}
-                        </MetaItem>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                  ),
+                }))}
+              />
             </DetailSection>
 
             {showTicketPanel ? (
@@ -719,27 +529,12 @@ export default function BusinessTripDetailPageContent({
               title={t('hr.labels.budgetEstimate')}
               bodyClassName="!p-0"
             >
-              <div className="divide-y divide-[#eef1f4]">
-                {budgetRows.map(({ label, value }) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4"
-                  >
-                    <span className="erp-users-cell-sub text-sm">{label}</span>
-                    <span className="erp-users-cell-strong tabular-nums text-sm">
-                      {formatEtb(value)}
-                    </span>
-                  </div>
-                ))}
-                <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-secondary)] px-3 py-3 sm:px-4">
-                  <span className="erp-users-cell-strong text-sm">
-                    {t('hr.labels.estimatedTotal')}
-                  </span>
-                  <span className="erp-employee-meta-value tabular-nums">
-                    {formatEtb(trip.estimatedTotalCost)}
-                  </span>
-                </div>
-              </div>
+              <TravelBudgetBreakdown
+                rows={budgetRows}
+                totalLabel={t('hr.labels.estimatedTotal')}
+                total={trip.estimatedTotalCost}
+                formatAmount={formatEtb}
+              />
             </DetailSection>
           </div>
 
