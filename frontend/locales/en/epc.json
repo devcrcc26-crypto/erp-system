@@ -901,6 +901,8 @@
         "detailsStepDescription": "Select the employee, contract type, and key dates.",
         "compensationStepDescription": "Optionally set salary, allowances, and net pay.",
         "documentsStepDescription": "Optionally attach the signed contract or other supporting documents.",
+        "removeAttachmentTitle": "Remove supporting document?",
+        "removeAttachmentDescription": "Remove \"{{name}}\" from this contract. This cannot be undone.",
         "reviewStepDescription": "Confirm contract and compensation details before saving.",
         "contractCount": "{{count}} contracts",
         "contractCountOne": "1 contract",
@@ -2212,6 +2214,22 @@
     "photoTooLarge": "Photo must be 5 MB or smaller."
   },
   "hr": {
+    "travel": {
+      "requestedBy": "Requested by {{name}}",
+      "tripLength": "Trip length",
+      "dayCount": "{{count}} days",
+      "dayCountOne": "1 day",
+      "requirements": "Trip requirements",
+      "accommodationHint": "Hotel or lodging arranged for the trip",
+      "perDiemHint": "Daily allowance paid for the trip",
+      "noVisaNeeded": "No visa needed",
+      "visaWithStatus": "Visa: {{status}}",
+      "visaCount": "{{count}} need a visa",
+      "ticketedCount": "{{done}}/{{total}} ticketed",
+      "passengerCount": "{{count}} passengers",
+      "passengerCountOne": "1 passenger",
+      "shareOfTotal": "{{percent}}% of total"
+    },
     "exportImport": {
       "companyVehicles": {
         "title": "Import company vehicles",
@@ -2980,10 +2998,12 @@
       "employeeContractUpdated": "Employee contract updated",
       "employeeContractTerminated": "Employee contract terminated",
       "employeeContractDeleted": "Employee contract deleted",
+      "employeeContractAttachmentRemoved": "Supporting document removed",
       "failedToCreateEmployeeContract": "Failed to create employee contract",
       "failedToUpdateEmployeeContract": "Failed to update employee contract",
       "failedToTerminateEmployeeContract": "Failed to terminate employee contract",
       "failedToDeleteEmployeeContract": "Failed to delete employee contract",
+      "failedToRemoveEmployeeContractAttachment": "Failed to remove supporting document",
       "cannotEditContract": "This contract cannot be edited",
       "inspectionRepairSubmitted": "Inspection and repair request submitted",
       "inspectionRepairSubmitFailed": "Failed to submit inspection and repair request",

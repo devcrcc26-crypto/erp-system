@@ -201,6 +201,50 @@ export class EmployeeContractService {
         return this.getContract(id, companyId, userId);
     }
 
+    /**
+     * Soft-deletes a supporting document that belongs to this contract's folder.
+     */
+    async removeContractAttachment(
+        id: string,
+        documentId: string,
+        companyId: string,
+        userId: string,
+    ) {
+        await this.assertCanManage(companyId, userId);
+        const contract = await this.prisma.employeeContract.findFirst({
+            where: activeOnly({ id, companyId }),
+            select: { id: true, attachmentFolderId: true },
+        });
+        if (!contract) {
+            throw new NotFoundException('Employee contract not found');
+        }
+        if (!contract.attachmentFolderId) {
+            throw new NotFoundException('Attachment not found');
+        }
+
+        const document = await this.prisma.document.findFirst({
+            where: activeOnly({
+                id: documentId,
+                companyId,
+                folderId: contract.attachmentFolderId,
+            }),
+            select: { id: true },
+        });
+        if (!document) {
+            throw new NotFoundException('Attachment not found');
+        }
+
+        await this.prisma.document.update({
+            where: { id: documentId },
+            data: {
+                deletedAt: new Date(),
+                deletedBy: userId,
+            },
+        });
+
+        return this.getContract(id, companyId, userId);
+    }
+
     async listContracts(
         filters: ListEmployeeContractsDto,
         companyId: string,

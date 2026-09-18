@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { cloneElement, useState } from 'react';
 import { Image, Spin, Tooltip } from 'antd';
 import {
   Download,
@@ -53,6 +53,27 @@ function ToolbarButton({
 }
 
 const ICON = { size: 17, strokeWidth: 1.75 } as const;
+
+/**
+ * Ant Design caps the preview at 70% height and never enlarges an image past
+ * its natural size, so phone-compressed receipts and small photos show tiny.
+ * Size the image box to the space between the close button and the toolbar
+ * and let `object-fit: contain` scale the picture up or down to fill it. The
+ * preview's own transform (zoom / drag / rotate) stays on the same element.
+ */
+function fitToViewport(node: React.ReactElement): React.ReactElement {
+  const props = node.props as { style?: React.CSSProperties };
+  return cloneElement(node, {
+    style: {
+      ...props.style,
+      width: 'min(94vw, 1600px)',
+      height: 'calc(100dvh - 160px)',
+      maxWidth: 'none',
+      maxHeight: 'none',
+      objectFit: 'contain',
+    },
+  } as Partial<unknown>);
+}
 
 /**
  * Controlled Ant Design image lightbox (zoom, rotate, arrows between images)
@@ -116,7 +137,7 @@ export default function ImageLightbox({
           countRender: () => null,
           imageRender: (originalNode, info) =>
             images[info.current ?? 0]?.src ? (
-              originalNode
+              fitToViewport(originalNode)
             ) : (
               <Spin size="large" />
             ),

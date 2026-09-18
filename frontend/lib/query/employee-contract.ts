@@ -252,6 +252,25 @@ export function useAttachEmployeeContractFiles(id: string) {
   });
 }
 
+export function useRemoveEmployeeContractAttachment(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) =>
+      apiDelete<EmployeeContractDetail>(
+        `${CONTRACT_PATH}/${id}/attachments/${documentId}`,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.myLists(),
+      });
+      void queryClient.setQueryData(employeeContractKeys.detail(id), updated);
+    },
+  });
+}
+
 export function useUpdateEmployeeContract(id: string) {
   const queryClient = useQueryClient();
   return useMutation({

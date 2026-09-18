@@ -204,5 +204,12 @@ describe('DocumentPreview', () => {
     );
     // Only the opened image was requested.
     expect(mockApiGet).toHaveBeenCalledTimes(1);
+
+    // The image fills the viewport instead of antd's 70%-height natural size.
+    const previewImg = document.querySelector<HTMLImageElement>(
+      'img[src="https://signed/documents/img-2/download-url?expiresIn=600"]',
+    )!;
+    expect(previewImg.style.objectFit).toBe('contain');
+    expect(previewImg.style.maxHeight).toBe('none');
   });
 });

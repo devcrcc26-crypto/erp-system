@@ -3,18 +3,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Button,
   DatePicker,
   Form,
   Input,
   InputNumber,
   Select,
   Space,
+  Tooltip,
   type InputNumberProps,
 } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -22,12 +26,14 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   EmployeeContractCurrency,
   EmployeeContractDetail,
+  EmployeeContractDocument,
   EmployeeContractType,
 } from '@/lib/api/employee-contract.types';
 import type { SupportedCurrency } from '@/lib/api/per-diem.types';
 import {
   useAttachEmployeeContractFiles,
   useCreateEmployeeContract,
+  useRemoveEmployeeContractAttachment,
   useUpdateEmployeeContract,
 } from '@/lib/query/employee-contract';
 import { useCurrencyRates } from '@/lib/query/currency';
@@ -207,6 +213,11 @@ export default function EmployeeContractForm({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingDocuments, setExistingDocuments] = useState<
+    EmployeeContractDocument[]
+  >(contract?.attachmentFolder?.documents ?? []);
+  const [pendingRemoveDoc, setPendingRemoveDoc] =
+    useState<EmployeeContractDocument | null>(null);
   const [detailsSnapshot, setDetailsSnapshot] =
     useState<Partial<EmployeeContractFormValues>>(defaultValues());
   const previousCurrencyRef = useRef<SupportedCurrency | null>(null);
@@ -214,6 +225,9 @@ export default function EmployeeContractForm({
   const createMutation = useCreateEmployeeContract();
   const updateMutation = useUpdateEmployeeContract(contract?.id ?? '');
   const attachMutation = useAttachEmployeeContractFiles(contract?.id ?? '');
+  const removeAttachmentMutation = useRemoveEmployeeContractAttachment(
+    contract?.id ?? '',
+  );
   const ratesQuery = useCurrencyRates(true);
 
   const contractType =
@@ -261,13 +275,35 @@ export default function EmployeeContractForm({
   useEffect(() => {
     if (!contract) {
       previousCurrencyRef.current = 'ETB';
+      setExistingDocuments([]);
       return;
     }
     const values = valuesFromContract(contract);
     form.setFieldsValue(values);
     setDetailsSnapshot(values);
     previousCurrencyRef.current = values.currency;
+    setExistingDocuments(contract.attachmentFolder?.documents ?? []);
   }, [contract, form]);
+
+  async function confirmRemoveAttachment(): Promise<void> {
+    if (!pendingRemoveDoc || !contract) {
+      return;
+    }
+    try {
+      const updated = await removeAttachmentMutation.mutateAsync(
+        pendingRemoveDoc.id,
+      );
+      setExistingDocuments(updated.attachmentFolder?.documents ?? []);
+      messageApi.success(t('hr.messages.employeeContractAttachmentRemoved'));
+      setPendingRemoveDoc(null);
+    } catch (error: unknown) {
+      notifyApiError(
+        error,
+        t('hr.messages.failedToRemoveEmployeeContractAttachment'),
+        messageApi,
+      );
+    }
+  }
 
   function captureSnapshot(): Partial<EmployeeContractFormValues> {
     const values = form.getFieldsValue(true) as EmployeeContractFormValues;
@@ -328,6 +364,11 @@ export default function EmployeeContractForm({
     }
     setSelectedFiles([]);
     setFormError(null);
+    if (mode === 'edit' && contract) {
+      setExistingDocuments(contract.attachmentFolder?.documents ?? []);
+    } else {
+      setExistingDocuments([]);
+    }
   }
 
   async function validateDetailsStep(): Promise<boolean> {
@@ -707,10 +748,9 @@ export default function EmployeeContractForm({
             title={t('hr.section.supportingDocuments')}
             description={t('pages.hr.employeeContract.documentsStepDescription')}
           >
-            {mode === 'edit' &&
-            (contract?.attachmentFolder?.documents?.length ?? 0) > 0 ? (
+            {mode === 'edit' && existingDocuments.length > 0 ? (
               <ul className="mb-4 m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
-                {contract?.attachmentFolder?.documents?.map((doc) => (
+                {existingDocuments.map((doc) => (
                   <li
                     key={doc.id}
                     className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
@@ -721,11 +761,26 @@ export default function EmployeeContractForm({
                       size="sm"
                     />
                     <span
-                      className="min-w-0 truncate text-sm"
+                      className="min-w-0 flex-1 truncate text-sm"
                       title={doc.name}
                     >
                       {doc.name}
                     </span>
+                    <Tooltip title={t('hr.buttons.removeItem')}>
+                      <Button
+                        type="text"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        disabled={submitting || removeAttachmentMutation.isPending}
+                        loading={
+                          removeAttachmentMutation.isPending &&
+                          pendingRemoveDoc?.id === doc.id
+                        }
+                        aria-label={t('hr.buttons.removeItem')}
+                        onClick={() => setPendingRemoveDoc(doc)}
+                      />
+                    </Tooltip>
                   </li>
                 ))}
               </ul>
@@ -865,11 +920,10 @@ export default function EmployeeContractForm({
               title={t('hr.section.supportingDocuments')}
             >
               {selectedFiles.length > 0 ||
-              (mode === 'edit' &&
-                (contract?.attachmentFolder?.documents?.length ?? 0) > 0) ? (
+              (mode === 'edit' && existingDocuments.length > 0) ? (
                 <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
                   {mode === 'edit'
-                    ? contract?.attachmentFolder?.documents?.map((doc) => (
+                    ? existingDocuments.map((doc) => (
                         <li
                           key={doc.id}
                           className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
@@ -920,7 +974,7 @@ export default function EmployeeContractForm({
     [
       t,
       mode,
-      contract?.attachmentFolder?.documents,
+      existingDocuments,
       typeOptions,
       requiresEndDate,
       currency,
@@ -936,10 +990,13 @@ export default function EmployeeContractForm({
       form,
       selectedFiles,
       submitting,
+      removeAttachmentMutation.isPending,
+      pendingRemoveDoc?.id,
     ],
   );
 
   return (
+    <>
     <Form<EmployeeContractFormValues>
       form={form}
       layout="vertical"
@@ -971,5 +1028,23 @@ export default function EmployeeContractForm({
         }
       />
     </Form>
+    <ConfirmDialog
+      open={pendingRemoveDoc != null}
+      title={t('pages.hr.employeeContract.removeAttachmentTitle')}
+      description={t('pages.hr.employeeContract.removeAttachmentDescription', {
+        name: pendingRemoveDoc?.name ?? '',
+      })}
+      confirmLabel={t('hr.buttons.removeItem')}
+      cancelLabel={t('common.cancel')}
+      danger
+      confirmLoading={removeAttachmentMutation.isPending}
+      onConfirm={() => void confirmRemoveAttachment()}
+      onCancel={() => {
+        if (!removeAttachmentMutation.isPending) {
+          setPendingRemoveDoc(null);
+        }
+      }}
+    />
+    </>
   );
 }

@@ -211,6 +211,28 @@ export class EmployeeContractController {
         );
     }
 
+    @Delete(':id/attachments/:documentId')
+    @DelegatePermissionCheck()
+    @RequireAnyPermission(
+        { module: 'hr', action: 'view' },
+        { module: 'employee-contract', action: 'edit' },
+        { module: 'employee-contract', action: 'create' },
+    )
+    @ApiOperation({ summary: 'Remove a supporting document from an employee contract' })
+    async removeAttachment(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Param('id') id: string,
+        @Param('documentId') documentId: string,
+    ): Promise<unknown> {
+        return this.employeeContractService.removeContractAttachment(
+            id,
+            documentId,
+            companyId,
+            user.userId,
+        );
+    }
+
     @Patch(':id')
     @DelegatePermissionCheck()
     @RequireAnyPermission(

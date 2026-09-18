@@ -901,6 +901,8 @@
         "detailsStepDescription": "选择员工、合同类型与关键日期。",
         "compensationStepDescription": "可选填写基本工资、津贴与净薪。",
         "documentsStepDescription": "可选上传已签署合同或其他证明材料。",
+        "removeAttachmentTitle": "移除证明文件？",
+        "removeAttachmentDescription": "将从本合同中移除“{{name}}”。此操作无法撤销。",
         "reviewStepDescription": "确认合同与薪酬信息后保存。",
         "contractCount": "{{count}} 份合同",
         "contractCountOne": "1 份合同",
@@ -2212,6 +2214,22 @@
     "photoTooLarge": "照片大小不能超过 5 MB。"
   },
   "hr": {
+    "travel": {
+      "requestedBy": "申请人：{{name}}",
+      "tripLength": "行程时长",
+      "dayCount": "{{count}} 天",
+      "dayCountOne": "1 天",
+      "requirements": "行程需求",
+      "accommodationHint": "为本次行程安排的酒店或住宿",
+      "perDiemHint": "本次行程的每日补贴",
+      "noVisaNeeded": "无需签证",
+      "visaWithStatus": "签证：{{status}}",
+      "visaCount": "{{count}} 人需签证",
+      "ticketedCount": "已出票 {{done}}/{{total}}",
+      "passengerCount": "{{count}} 名乘客",
+      "passengerCountOne": "1 名乘客",
+      "shareOfTotal": "占总额 {{percent}}%"
+    },
     "exportImport": {
       "companyVehicles": {
         "title": "导入公司车辆",
@@ -2980,10 +2998,12 @@
       "employeeContractUpdated": "劳动合同已更新",
       "employeeContractTerminated": "劳动合同已终止",
       "employeeContractDeleted": "劳动合同已删除",
+      "employeeContractAttachmentRemoved": "证明文件已移除",
       "failedToCreateEmployeeContract": "创建劳动合同失败",
       "failedToUpdateEmployeeContract": "更新劳动合同失败",
       "failedToTerminateEmployeeContract": "终止劳动合同失败",
       "failedToDeleteEmployeeContract": "删除劳动合同失败",
+      "failedToRemoveEmployeeContractAttachment": "移除证明文件失败",
       "cannotEditContract": "该合同无法编辑",
       "inspectionRepairSubmitted": "检修申请已提交",
       "inspectionRepairSubmitFailed": "提交检修申请失败",
