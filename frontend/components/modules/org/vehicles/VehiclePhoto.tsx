@@ -3,11 +3,12 @@
 import { useRef, useState } from 'react';
 import { Avatar, Button, Space, Spin, Tooltip, Upload } from 'antd';
 import { CameraOutlined, CarOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ImagePreviewTrigger } from '@/components/shared/preview';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useDocumentDownloadUrl } from '@/lib/query/documents';
 import {
+  useCompanyVehiclePhotoUrl,
   useDeleteCompanyVehiclePhoto,
   useUploadCompanyVehiclePhoto,
 } from '@/lib/query/company-vehicle';
@@ -45,8 +46,9 @@ export default function VehiclePhoto({
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
 
-  const photoQuery = useDocumentDownloadUrl(
-    photoDocumentId ?? '',
+  const photoQuery = useCompanyVehiclePhotoUrl(
+    vehicleId,
+    photoDocumentId,
     Boolean(photoDocumentId),
   );
   const uploadMutation = useUploadCompanyVehiclePhoto();
@@ -104,21 +106,27 @@ export default function VehiclePhoto({
 
   const avatar = (
     <Spin spinning={busy}>
-      <Avatar
-        size={size}
-        shape={variant === 'thumb' ? 'square' : 'circle'}
-        src={imageSrc}
-        icon={!imageSrc ? <CarOutlined /> : undefined}
-        style={{
-          backgroundColor: imageSrc ? undefined : tokens.colorTeal50,
-          color: imageSrc ? undefined : tokens.colorTeal400,
-          flexShrink: 0,
-          border: `1px solid ${tokens.colorBorder}`,
-          borderRadius: variant === 'thumb' ? 8 : undefined,
-        }}
+      <ImagePreviewTrigger
+        src={localPreview ? null : photoQuery.data?.url}
+        alt={plateNumber ?? t('vehicles.form.photo')}
+        className={variant === 'thumb' ? '!rounded-lg' : undefined}
       >
-        {!imageSrc && plateNumber ? plateNumber.slice(0, 2) : undefined}
-      </Avatar>
+        <Avatar
+          size={size}
+          shape={variant === 'thumb' ? 'square' : 'circle'}
+          src={imageSrc}
+          icon={!imageSrc ? <CarOutlined /> : undefined}
+          style={{
+            backgroundColor: imageSrc ? undefined : tokens.colorTeal50,
+            color: imageSrc ? undefined : tokens.colorTeal400,
+            flexShrink: 0,
+            border: `1px solid ${tokens.colorBorder}`,
+            borderRadius: variant === 'thumb' ? 8 : undefined,
+          }}
+        >
+          {!imageSrc && plateNumber ? plateNumber.slice(0, 2) : undefined}
+        </Avatar>
+      </ImagePreviewTrigger>
     </Spin>
   );
 

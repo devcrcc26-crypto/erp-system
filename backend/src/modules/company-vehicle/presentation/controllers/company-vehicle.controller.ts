@@ -176,6 +176,23 @@ export class CompanyVehicleController {
     return { success: true };
   }
 
+  @Get(':id/photo/download-url')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Presigned download URL for a vehicle photo (HR/vehicles viewers)',
+  })
+  getPhotoDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    return this.companyVehicleService.getVehiclePhotoDownloadUrl(
+      id,
+      companyId,
+      user.userId,
+    );
+  }
+
   @Post(':id/photo')
   @DelegatePermissionCheck()
   @RequireAnyPermission(

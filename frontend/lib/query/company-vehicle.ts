@@ -171,7 +171,34 @@ export function useUploadCompanyVehiclePhoto() {
         companyVehicleKeys.detail(variables.vehicleId),
         updated,
       );
+      void queryClient.invalidateQueries({
+        queryKey: [
+          ...companyVehicleKeys.detail(variables.vehicleId),
+          'photo-url',
+        ],
+      });
     },
+  });
+}
+
+export function useCompanyVehiclePhotoUrl(
+  vehicleId: string,
+  photoDocumentId: string | null | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [
+      ...companyVehicleKeys.detail(vehicleId),
+      'photo-url',
+      photoDocumentId,
+    ] as const,
+    queryFn: () =>
+      apiGet<{ url: string; expiresIn: number }>(
+        `${VEHICLES_PATH}/${vehicleId}/photo/download-url`,
+      ),
+    enabled: Boolean(vehicleId) && Boolean(photoDocumentId) && enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
   });
 }
 
@@ -185,6 +212,9 @@ export function useDeleteCompanyVehiclePhoto() {
         queryKey: companyVehicleKeys.lists(),
       });
       void queryClient.setQueryData(companyVehicleKeys.detail(vehicleId), updated);
+      void queryClient.invalidateQueries({
+        queryKey: [...companyVehicleKeys.detail(vehicleId), 'photo-url'],
+      });
     },
   });
 }

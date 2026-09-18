@@ -446,6 +446,30 @@ export class CompanyVehicleService {
     return updated;
   }
 
+  /**
+   * Presigned download URL for a vehicle photo (HR/vehicles viewers).
+   * Bypasses documents.view — photos live in a COMPANY folder.
+   */
+  async getVehiclePhotoDownloadUrl(
+    vehicleId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    const vehicle = await this.prisma.companyVehicle.findFirst({
+      where: activeOnly({ id: vehicleId, companyId }),
+      select: { id: true, photoDocumentId: true },
+    });
+
+    if (!vehicle?.photoDocumentId) {
+      throw new NotFoundException('Vehicle photo not found');
+    }
+
+    return this.documentService.getDownloadUrl(
+      { companyId, userId },
+      vehicle.photoDocumentId,
+    );
+  }
+
   /** Removes the vehicle photo link and soft-deletes the document. */
   async deleteVehiclePhoto(
     vehicleId: string,
