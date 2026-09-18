@@ -939,7 +939,8 @@ export class DocumentPermissionService {
   }
 
   /**
-   * Leave / overtime / approval / seal / employee profile attachment folders:
+   * Leave / overtime / approval / seal / purchase request / expense claim /
+   * employee profile attachment folders:
    * HR viewers, user managers, owner, or assigned approval-tier approver may
    * download without documents.view.
    */
@@ -976,7 +977,9 @@ export class DocumentPermissionService {
       contextType !== FolderContextType.OFFICIAL_SEAL &&
       contextType !== FolderContextType.PROJECT_SEAL &&
       contextType !== FolderContextType.VEHICLE_REFUELING &&
-      contextType !== FolderContextType.EXIT_PERMIT
+      contextType !== FolderContextType.EXIT_PERMIT &&
+      contextType !== FolderContextType.PURCHASE_REQUEST &&
+      contextType !== FolderContextType.EXPENSE_CLAIM
     ) {
       return false;
     }
@@ -1200,6 +1203,37 @@ export class DocumentPermissionService {
       }
       return (
         permit.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
+        false
+      );
+    }
+
+    if (
+      contextType === FolderContextType.PURCHASE_REQUEST ||
+      contextType === FolderContextType.EXPENSE_CLAIM
+    ) {
+      // Mirrors each module's assertCanView: owner, filer or tier approver.
+      const where = activeOnly({ id: contextId, companyId });
+      const select = {
+        employeeId: true,
+        createdBy: true,
+        approvalRequest: {
+          select: {
+            tiers: { select: { approverId: true } },
+          },
+        },
+      } as const;
+      const record =
+        contextType === FolderContextType.PURCHASE_REQUEST
+          ? await this.prisma.purchaseRequest.findFirst({ where, select })
+          : await this.prisma.expenseClaim.findFirst({ where, select });
+      if (!record) {
+        return false;
+      }
+      if (record.employeeId === userId || record.createdBy === userId) {
+        return true;
+      }
+      return (
+        record.approvalRequest?.tiers.some((t) => t.approverId === userId) ??
         false
       );
     }

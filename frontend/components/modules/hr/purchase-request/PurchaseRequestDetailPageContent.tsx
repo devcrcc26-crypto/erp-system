@@ -34,6 +34,7 @@ import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDo
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import HorizontalScrollHint from '@/components/ui/HorizontalScrollHint/HorizontalScrollHint';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -743,43 +744,45 @@ export default function PurchaseRequestDetailPageContent({
               }
             >
               <DocumentPreviewGroup documents={request.items.flatMap((item) => (item.image ? [item.image] : []))}>
-                <DataTable<PurchaseRequestItem>
-                  rowKey="id"
-                  className="erp-pro-table erp-users-table"
-                  size="small"
-                  columns={itemColumns}
-                  dataSource={request.items}
-                  pagination={false}
-                  scroll={{ x: tableScrollX }}
-                  locale={{
-                    emptyText: (
-                      <TableEmptyState
-                        icon={<ShoppingCart size={28} strokeWidth={1.5} />}
-                        title={t('hr.empty.noItems')}
-                        description={t(
-                          'pages.hr.purchaseRequest.itemsStepDescription',
-                        )}
-                      />
-                    ),
-                  }}
-                  footer={
-                    request.items.length > 0
-                      ? () => (
-                          <div className="flex flex-wrap justify-end gap-4 px-3 py-2 text-sm">
-                            <span className="erp-users-cell-sub">
-                              {t('hr.form.itemCount', {
-                                count: request.items.length,
-                              })}
-                            </span>
-                            <span className="erp-users-cell-strong">
-                              {t('hr.form.estimatedTotal')}:{' '}
-                              {formatEtbAmount(request.totalEstimatedEtb)}
-                            </span>
-                          </div>
-                        )
-                      : undefined
-                  }
-                />
+                <HorizontalScrollHint>
+                  <DataTable<PurchaseRequestItem>
+                    rowKey="id"
+                    className="erp-pro-table erp-users-table"
+                    size="small"
+                    columns={itemColumns}
+                    dataSource={request.items}
+                    pagination={false}
+                    scroll={{ x: tableScrollX }}
+                    locale={{
+                      emptyText: (
+                        <TableEmptyState
+                          icon={<ShoppingCart size={28} strokeWidth={1.5} />}
+                          title={t('hr.empty.noItems')}
+                          description={t(
+                            'pages.hr.purchaseRequest.itemsStepDescription',
+                          )}
+                        />
+                      ),
+                    }}
+                    footer={
+                      request.items.length > 0
+                        ? () => (
+                            <div className="flex flex-wrap justify-end gap-4 px-3 py-2 text-sm">
+                              <span className="erp-users-cell-sub">
+                                {t('hr.form.itemCount', {
+                                  count: request.items.length,
+                                })}
+                              </span>
+                              <span className="erp-users-cell-strong">
+                                {t('hr.form.estimatedTotal')}:{' '}
+                                {formatEtbAmount(request.totalEstimatedEtb)}
+                              </span>
+                            </div>
+                          )
+                        : undefined
+                    }
+                  />
+                </HorizontalScrollHint>
               </DocumentPreviewGroup>
             </DetailSection>
 

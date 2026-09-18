@@ -29,6 +29,7 @@ import HrImportModal from '@/components/modules/hr/HrImportModal';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import HorizontalScrollHint from '@/components/ui/HorizontalScrollHint/HorizontalScrollHint';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -672,39 +673,41 @@ export default function MaterialRequisitionDetailPageContent({
                 </Space.Compact>
               }
             >
-              <DataTable<MaterialRequisitionItem>
-                rowKey="id"
-                className="erp-pro-table erp-users-table"
-                size="small"
-                columns={itemColumns}
-                dataSource={requisition.items}
-                pagination={false}
-                scroll={{ x: tableScrollX }}
-                locale={{
-                  emptyText: (
-                    <TableEmptyState
-                      icon={<Inbox size={28} strokeWidth={1.5} />}
-                      title={t('hr.empty.noItems')}
-                      description={t(
-                        'pages.hr.materialRequisition.itemsStepDescription',
-                      )}
-                    />
-                  ),
-                }}
-                footer={
-                  requisition.items.length > 0
-                    ? () => (
-                        <div className="flex justify-end px-3 py-2 text-sm">
-                          <span className="erp-users-cell-sub">
-                            {t('hr.form.itemCount', {
-                              count: requisition.items.length,
-                            })}
-                          </span>
-                        </div>
-                      )
-                    : undefined
-                }
-              />
+              <HorizontalScrollHint>
+                <DataTable<MaterialRequisitionItem>
+                  rowKey="id"
+                  className="erp-pro-table erp-users-table"
+                  size="small"
+                  columns={itemColumns}
+                  dataSource={requisition.items}
+                  pagination={false}
+                  scroll={{ x: tableScrollX }}
+                  locale={{
+                    emptyText: (
+                      <TableEmptyState
+                        icon={<Inbox size={28} strokeWidth={1.5} />}
+                        title={t('hr.empty.noItems')}
+                        description={t(
+                          'pages.hr.materialRequisition.itemsStepDescription',
+                        )}
+                      />
+                    ),
+                  }}
+                  footer={
+                    requisition.items.length > 0
+                      ? () => (
+                          <div className="flex justify-end px-3 py-2 text-sm">
+                            <span className="erp-users-cell-sub">
+                              {t('hr.form.itemCount', {
+                                count: requisition.items.length,
+                              })}
+                            </span>
+                          </div>
+                        )
+                      : undefined
+                  }
+                />
+              </HorizontalScrollHint>
             </DetailSection>
 
             {(requisition.documents?.length ?? 0) > 0 ? (

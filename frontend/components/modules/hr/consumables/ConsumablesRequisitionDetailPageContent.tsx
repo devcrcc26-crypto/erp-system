@@ -29,6 +29,7 @@ import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTim
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import HorizontalScrollHint from '@/components/ui/HorizontalScrollHint/HorizontalScrollHint';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -677,46 +678,48 @@ export default function ConsumablesRequisitionDetailPageContent({
                 </Space.Compact>
               }
             >
-              <DataTable<ConsumablesRequisitionItem>
-                rowKey="id"
-                className="erp-pro-table erp-users-table"
-                size="small"
-                columns={itemColumns}
-                dataSource={requisition.items}
-                pagination={false}
-                scroll={{ x: tableScrollX }}
-                locale={{
-                  emptyText: (
-                    <TableEmptyState
-                      icon={<ShoppingBag size={28} strokeWidth={1.5} />}
-                      title={t('hr.empty.noItems')}
-                      description={t(
-                        'pages.hr.consumables.itemsStepDescription',
-                      )}
-                    />
-                  ),
-                }}
-                footer={
-                  requisition.items.length > 0
-                    ? () => (
-                        <div className="flex flex-wrap justify-end gap-3 px-3 py-2 text-sm">
-                          <span className="erp-users-cell-sub">
-                            {t('hr.form.itemCount', {
-                              count: requisition.items.length,
-                            })}
-                          </span>
-                          {requisition.items.length >= CONSUMABLES_MAX_ITEMS ? (
+              <HorizontalScrollHint>
+                <DataTable<ConsumablesRequisitionItem>
+                  rowKey="id"
+                  className="erp-pro-table erp-users-table"
+                  size="small"
+                  columns={itemColumns}
+                  dataSource={requisition.items}
+                  pagination={false}
+                  scroll={{ x: tableScrollX }}
+                  locale={{
+                    emptyText: (
+                      <TableEmptyState
+                        icon={<ShoppingBag size={28} strokeWidth={1.5} />}
+                        title={t('hr.empty.noItems')}
+                        description={t(
+                          'pages.hr.consumables.itemsStepDescription',
+                        )}
+                      />
+                    ),
+                  }}
+                  footer={
+                    requisition.items.length > 0
+                      ? () => (
+                          <div className="flex flex-wrap justify-end gap-3 px-3 py-2 text-sm">
                             <span className="erp-users-cell-sub">
-                              {t('hr.validation.consumablesMaxItems', {
-                                count: CONSUMABLES_MAX_ITEMS,
+                              {t('hr.form.itemCount', {
+                                count: requisition.items.length,
                               })}
                             </span>
-                          ) : null}
-                        </div>
-                      )
-                    : undefined
-                }
-              />
+                            {requisition.items.length >= CONSUMABLES_MAX_ITEMS ? (
+                              <span className="erp-users-cell-sub">
+                                {t('hr.validation.consumablesMaxItems', {
+                                  count: CONSUMABLES_MAX_ITEMS,
+                                })}
+                              </span>
+                            ) : null}
+                          </div>
+                        )
+                      : undefined
+                  }
+                />
+              </HorizontalScrollHint>
             </DetailSection>
           </div>
         </div>

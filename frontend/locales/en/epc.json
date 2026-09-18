@@ -1595,7 +1595,9 @@
     "rotateRight": "Rotate right",
     "flipHorizontal": "Flip horizontally",
     "resetView": "Reset view",
-    "imageCount": "{{current}} of {{total}}"
+    "imageCount": "{{current}} of {{total}}",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right to see more columns"
   },
   "validation": {
     "invalidName": "Use letters, spaces, hyphens, apostrophes or full stops only",

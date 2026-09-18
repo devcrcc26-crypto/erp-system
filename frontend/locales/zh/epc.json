@@ -1595,7 +1595,9 @@
     "rotateRight": "向右旋转",
     "flipHorizontal": "水平翻转",
     "resetView": "重置视图",
-    "imageCount": "第 {{current}} / {{total}} 张"
+    "imageCount": "第 {{current}} / {{total}} 张",
+    "scrollLeft": "向左滚动",
+    "scrollRight": "向右滚动查看更多列"
   },
   "validation": {
     "invalidName": "仅可使用字母、空格、连字符、撇号或句点",
