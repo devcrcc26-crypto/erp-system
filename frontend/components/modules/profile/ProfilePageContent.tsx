@@ -5,6 +5,7 @@ import { Alert, Button, Form, Input, Select, Spin } from 'antd';
 import {
   CalendarOutlined,
   ClockCircleOutlined,
+  DesktopOutlined,
   FileProtectOutlined,
   FolderOpenOutlined,
   MailOutlined,
@@ -23,6 +24,7 @@ import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhot
 import ProfileAccountDetails, {
   localizedName,
 } from '@/components/modules/profile/ProfileAccountDetails';
+import ProfileAssetsTab from '@/components/modules/profile/ProfileAssetsTab';
 import ProfileContractTab from '@/components/modules/profile/ProfileContractTab';
 import ProfileWorkScheduleTab from '@/components/modules/profile/ProfileWorkScheduleTab';
 import {
@@ -62,6 +64,7 @@ const PROFILE_TABS = [
   'workSchedule',
   'documents',
   'contract',
+  'assets',
   'perDiem',
 ] as const;
 
@@ -168,6 +171,10 @@ export default function ProfilePageContent(): React.ReactNode {
     workSchedule: { label: t('profile.tabWorkSchedule'), icon: <ScheduleOutlined /> },
     documents: { label: t('profile.tabDocuments'), icon: <FolderOpenOutlined /> },
     contract: { label: t('profile.tabContract'), icon: <FileProtectOutlined /> },
+    assets: {
+      label: t('profile.tabAssets'),
+      icon: <DesktopOutlined />,
+    },
     perDiem: { label: t('profile.tabPerDiem'), icon: <WalletOutlined /> },
   };
 
@@ -544,6 +551,10 @@ export default function ProfilePageContent(): React.ReactNode {
       case 'contract':
         return (
           <ProfileContractTab dateFormat={currentProfile.preferredDateFormat} />
+        );
+      case 'assets':
+        return (
+          <ProfileAssetsTab dateFormat={currentProfile.preferredDateFormat} />
         );
       case 'perDiem':
         return (

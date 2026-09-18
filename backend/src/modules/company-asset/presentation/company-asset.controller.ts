@@ -104,6 +104,19 @@ export class CompanyAssetController {
     return this.companyAssetService.getAvailableAssets(companyId);
   }
 
+  @Get("my")
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      "List assets currently assigned to the signed-in employee (any authenticated user)",
+  })
+  getMine(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+  ): Promise<unknown[]> {
+    return this.companyAssetService.getMyAssets(companyId, user.userId);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get a single asset" })
   getOne(

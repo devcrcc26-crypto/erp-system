@@ -1991,6 +1991,7 @@
     "tabWorkSchedule": "工作时间表",
     "tabDocuments": "文件",
     "tabContract": "合同",
+    "tabAssets": "资产",
     "sectionIdentity": "个人身份",
     "sectionOrganisation": "组织信息",
     "sectionEducation": "教育与工作经验",
@@ -2042,6 +2043,9 @@
     "contractOpenEnded": "无固定期限",
     "noContract": "暂无有效合同，请联系人力资源部。",
     "contractLoadError": "无法加载您的合同。",
+    "assetsTitle": "已分配的公司资产",
+    "noAssets": "当前没有分配给您的公司资产。",
+    "assetsLoadError": "无法加载您的已分配资产。",
     "noPerDiemRates": "尚未设置差旅补贴标准，请联系人力资源部。",
     "weekday": {
       "0": "星期日",

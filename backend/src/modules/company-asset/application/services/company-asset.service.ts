@@ -148,6 +148,57 @@ export class CompanyAssetService {
     return buildPaginatedResult(data, total, page, limit);
   }
 
+  /** Lists assets currently assigned to the authenticated employee. */
+  async getMyAssets(companyId: string, userId: string): Promise<unknown[]> {
+    const rows = await this.prisma.companyAsset.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        assetAssignments: {
+          some: {
+            companyId,
+            userId,
+            deletedAt: null,
+            returnedAt: null,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        assetAssignments: {
+          where: {
+            companyId,
+            userId,
+            deletedAt: null,
+            returnedAt: null,
+          },
+          take: 1,
+          orderBy: { assignedAt: 'desc' },
+          include: {
+            employee: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return rows.map((row) => {
+      const { assetAssignments, ...asset } = row;
+      const currentAssignment = assetAssignments[0];
+      return this.toAssetResponse({
+        ...asset,
+        assignedTo: currentAssignment?.employee ?? null,
+        assignedAt: currentAssignment?.assignedAt ?? null,
+      });
+    });
+  }
+
   /** Creates a new asset in the company register. */
   async createAsset(
     dto: CreateCompanyAssetDto,

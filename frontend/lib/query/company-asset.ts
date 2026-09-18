@@ -40,6 +40,7 @@ export const companyAssetKeys = {
   details: () => [...companyAssetKeys.all, 'detail'] as const,
   detail: (id: string) => [...companyAssetKeys.details(), id] as const,
   available: () => [...companyAssetKeys.all, 'available'] as const,
+  mine: () => [...companyAssetKeys.all, 'mine'] as const,
 };
 
 export function useCompanyAssets(
@@ -119,6 +120,17 @@ export function useAvailableAssets(enabled = true) {
     queryKey: companyAssetKeys.available(),
     queryFn: () => apiGet<CompanyAssetListItem[]>(`${ASSETS_PATH}/available`),
     enabled,
+    retry: false,
+  });
+}
+
+/** Assets currently assigned to the signed-in employee (profile self-service). */
+export function useMyCompanyAssets(enabled = true) {
+  return useQuery({
+    queryKey: companyAssetKeys.mine(),
+    queryFn: () => apiGet<CompanyAssetListItem[]>(`${ASSETS_PATH}/my`),
+    enabled,
+    staleTime: 60_000,
     retry: false,
   });
 }

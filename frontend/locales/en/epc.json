@@ -1991,6 +1991,7 @@
     "tabWorkSchedule": "Work Schedule",
     "tabDocuments": "Documents",
     "tabContract": "Contract",
+    "tabAssets": "Assets",
     "sectionIdentity": "Identity",
     "sectionOrganisation": "Organisation",
     "sectionEducation": "Education & Experience",
@@ -2042,6 +2043,9 @@
     "contractOpenEnded": "Open ended",
     "noContract": "No active contract on file. Contact HR.",
     "contractLoadError": "Unable to load your contract.",
+    "assetsTitle": "Assigned Company Assets",
+    "noAssets": "No company assets are currently assigned to you.",
+    "assetsLoadError": "Unable to load your assigned assets.",
     "noPerDiemRates": "No per diem rates assigned. Contact HR.",
     "weekday": {
       "0": "Sunday",
