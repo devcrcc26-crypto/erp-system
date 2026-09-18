@@ -11,7 +11,11 @@ const PAY_FIELDS = [
 describe('EmployeeContractService.getMyActiveContract', () => {
   const findFirst = jest.fn();
   const prisma = { employeeContract: { findFirst } };
-  const service = new EmployeeContractService(prisma as never, {} as never);
+  const service = new EmployeeContractService(
+    prisma as never,
+    {} as never,
+    {} as never,
+  );
 
   beforeEach(() => {
     findFirst.mockReset();
