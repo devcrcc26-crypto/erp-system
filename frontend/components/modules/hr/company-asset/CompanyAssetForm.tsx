@@ -11,6 +11,7 @@ import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import ProfileFileTypeIcon, {
   profileFileMetaLine,
 } from '@/components/modules/users/ProfileFileTypeIcon';
+import CompanyAssetPhoto from '@/components/modules/hr/company-asset/CompanyAssetPhoto';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { CompanyAssetDetail } from '@/lib/api/company-asset.types';
@@ -561,6 +562,15 @@ export default function CompanyAssetForm({
                   onClick={() => setPhotoFile(null)}
                 />
               </div>
+            ) : mode === 'edit' && asset?.id && asset.photoDocumentId ? (
+              <CompanyAssetPhoto
+                assetId={asset.id}
+                photoDocumentId={asset.photoDocumentId}
+                label={asset.serialNumber}
+                canEdit={false}
+                variant="panel"
+                size={96}
+              />
             ) : (
               <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                 {t('hr.empty.noAttachments')}

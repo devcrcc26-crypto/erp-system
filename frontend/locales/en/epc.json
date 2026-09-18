@@ -2584,7 +2584,9 @@
       "cancel": "Cancel",
       "back": "Back",
       "backToList": "Back to Assets",
-      "uploadPhoto": "Upload Photo"
+      "uploadPhoto": "Upload Photo",
+      "changePhoto": "Change Photo",
+      "removePhoto": "Remove Photo"
     },
     "assetMessages": {
       "created": "Asset created successfully",
@@ -2603,6 +2605,15 @@
       "failedToReturnAssignment": "Failed to return asset assignment",
       "failedToLoad": "Failed to load company assets",
       "photoOptionalHint": "Optional - upload a clear photo of the asset (JPG, PNG, or WEBP).",
+      "photoHelp": "JPEG, PNG, WebP, or GIF — max 5 MB.",
+      "photoInvalidType": "Photo must be JPEG, PNG, WebP, or GIF.",
+      "photoTooLarge": "Photo must be 5 MB or smaller.",
+      "photoUploaded": "Asset photo uploaded.",
+      "photoRemoved": "Asset photo removed.",
+      "photoUploadError": "Failed to upload asset photo.",
+      "photoRemoveError": "Failed to remove asset photo.",
+      "removePhotoTitle": "Remove asset photo?",
+      "removePhotoDescription": "The photo will be deleted from document storage.",
       "issueWhenAvailable": "Issue this asset to an employee when ready.",
       "cannotIssueWhileUnavailable": "Change the asset status to Available before issuing it."
     },

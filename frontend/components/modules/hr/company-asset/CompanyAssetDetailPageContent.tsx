@@ -25,6 +25,7 @@ import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
+import CompanyAssetPhoto from '@/components/modules/hr/company-asset/CompanyAssetPhoto';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
@@ -493,6 +494,14 @@ export default function CompanyAssetDetailPageContent({
         </div>
 
         <div className="erp-employee-hero erp-contract-hero">
+          <CompanyAssetPhoto
+            assetId={asset.id}
+            photoDocumentId={asset.photoDocumentId}
+            label={asset.serialNumber}
+            canEdit
+            variant="hero"
+            size={isCompact ? 72 : 88}
+          />
           <div className="erp-employee-hero-copy min-w-0 flex-1">
             <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <span className="erp-users-id-chip">{asset.serialNumber}</span>

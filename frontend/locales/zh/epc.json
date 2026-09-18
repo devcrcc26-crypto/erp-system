@@ -2584,7 +2584,9 @@
       "cancel": "取消",
       "back": "返回",
       "backToList": "返回资产列表",
-      "uploadPhoto": "上传照片"
+      "uploadPhoto": "上传照片",
+      "changePhoto": "更换照片",
+      "removePhoto": "删除照片"
     },
     "assetMessages": {
       "created": "资产创建成功",
@@ -2603,6 +2605,15 @@
       "failedToReturnAssignment": "归还资产失败",
       "failedToLoad": "加载公司资产失败",
       "photoOptionalHint": "可选 - 上传清晰的资产照片（JPG、PNG 或 WEBP）。",
+      "photoHelp": "JPEG、PNG、WebP 或 GIF，最大 5 MB。",
+      "photoInvalidType": "照片必须是 JPEG、PNG、WebP 或 GIF。",
+      "photoTooLarge": "照片不能超过 5 MB。",
+      "photoUploaded": "资产照片已上传。",
+      "photoRemoved": "资产照片已删除。",
+      "photoUploadError": "上传资产照片失败。",
+      "photoRemoveError": "删除资产照片失败。",
+      "removePhotoTitle": "删除资产照片？",
+      "removePhotoDescription": "该照片将从文档存储中删除。",
       "issueWhenAvailable": "资产可用时，可发放给员工。",
       "cannotIssueWhileUnavailable": "请先将资产状态改为可用，再进行发放。"
     },

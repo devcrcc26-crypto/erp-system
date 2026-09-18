@@ -246,6 +246,24 @@ export class CompanyAssetController {
     );
   }
 
+  @Get(":id/photo/download-url")
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      "Presigned download URL for an asset photo (HR/assets viewers or current assignee)",
+  })
+  getPhotoDownloadUrl(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param("id") id: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    return this.companyAssetService.getAssetPhotoDownloadUrl(
+      id,
+      companyId,
+      user.userId,
+    );
+  }
+
   @Post(":id/photo")
   @DelegatePermissionCheck()
   @RequireAnyPermission(
@@ -278,6 +296,25 @@ export class CompanyAssetController {
         size: file.size,
         buffer: file.buffer,
       },
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Delete(":id/photo")
+  @DelegatePermissionCheck()
+  @RequireAnyPermission(
+    { module: "assets", action: "edit" },
+    { module: "hr", action: "edit" },
+  )
+  @ApiOperation({ summary: "Remove an asset photo" })
+  removePhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param("id") id: string,
+  ): Promise<unknown> {
+    return this.companyAssetService.removeAssetPhoto(
+      id,
       companyId,
       user.userId,
     );

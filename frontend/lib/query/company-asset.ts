@@ -281,10 +281,60 @@ export function useUploadCompanyAssetPhoto() {
       void queryClient.invalidateQueries({
         queryKey: companyAssetKeys.lists(),
       });
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.mine(),
+      });
       void queryClient.setQueryData(
         companyAssetKeys.detail(variables.assetId),
         updated,
       );
+      void queryClient.invalidateQueries({
+        queryKey: [
+          ...companyAssetKeys.detail(variables.assetId),
+          'photo-url',
+        ],
+      });
+    },
+  });
+}
+
+export function useCompanyAssetPhotoUrl(
+  assetId: string,
+  photoDocumentId: string | null | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [
+      ...companyAssetKeys.detail(assetId),
+      'photo-url',
+      photoDocumentId,
+    ] as const,
+    queryFn: () =>
+      apiGet<{ url: string; expiresIn: number }>(
+        `${ASSETS_PATH}/${assetId}/photo/download-url`,
+      ),
+    enabled: Boolean(assetId) && Boolean(photoDocumentId) && enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
+export function useDeleteCompanyAssetPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assetId: string) =>
+      apiDelete<CompanyAssetDetail>(`${ASSETS_PATH}/${assetId}/photo`),
+    onSuccess: (updated, assetId) => {
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: companyAssetKeys.mine(),
+      });
+      void queryClient.setQueryData(companyAssetKeys.detail(assetId), updated);
+      void queryClient.invalidateQueries({
+        queryKey: [...companyAssetKeys.detail(assetId), 'photo-url'],
+      });
     },
   });
 }

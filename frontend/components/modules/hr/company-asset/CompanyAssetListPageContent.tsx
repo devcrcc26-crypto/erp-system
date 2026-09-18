@@ -23,6 +23,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import CompanyAssetPhoto from '@/components/modules/hr/company-asset/CompanyAssetPhoto';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import type {
@@ -185,6 +186,23 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
 
   const columns: ColumnsType<CompanyAssetListItem> = useMemo(
     () => [
+      {
+        title: t('hr.assetLabels.photo'),
+        key: 'photo',
+        width: 56,
+        render: (_: unknown, record: CompanyAssetListItem) => (
+          <div onClick={(event) => event.stopPropagation()}>
+            <CompanyAssetPhoto
+              assetId={record.id}
+              photoDocumentId={record.photoDocumentId}
+              label={record.serialNumber}
+              canEdit={false}
+              variant="thumb"
+              size={40}
+            />
+          </div>
+        ),
+      },
       {
         title: t('hr.assetLabels.serialNumber'),
         dataIndex: 'serialNumber',

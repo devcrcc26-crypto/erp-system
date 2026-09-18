@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Alert, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { Package } from 'lucide-react';
+import CompanyAssetPhoto from '@/components/modules/hr/company-asset/CompanyAssetPhoto';
 import {
   ProfileEmptyState,
   ProfileSection,
@@ -33,6 +34,21 @@ export default function ProfileAssetsTab({
 
   const columns: ColumnsType<CompanyAssetListItem> = useMemo(
     () => [
+      {
+        title: t('hr.assetLabels.photo'),
+        key: 'photo',
+        width: 56,
+        render: (_: unknown, row: CompanyAssetListItem) => (
+          <CompanyAssetPhoto
+            assetId={row.id}
+            photoDocumentId={row.photoDocumentId}
+            label={row.serialNumber}
+            canEdit={false}
+            variant="thumb"
+            size={40}
+          />
+        ),
+      },
       {
         title: t('hr.assetLabels.assetName'),
         key: 'assetName',

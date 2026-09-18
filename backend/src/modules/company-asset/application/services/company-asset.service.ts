@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { AssetStatus, CompanyAsset, Prisma } from "@prisma/client";
 import { FolderContextType } from "@prisma/client";
 import { randomUUID } from "node:crypto";
@@ -6,6 +12,7 @@ import { randomUUID } from "node:crypto";
 import { buildPaginatedResult, buildPrismaPagination, PaginatedResult } from "@/shared/utils/pagination.util";
 import { PrismaService } from "@/shared/prisma/prisma.service";
 import { activeOnly } from "@/shared/prisma/soft-delete.util";
+import { PermissionService } from "@/shared/permissions/permission.service";
 
 import {
   CreateCompanyAssetDto,
@@ -32,6 +39,7 @@ export class CompanyAssetService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly documentService: DocumentService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   /** Lists company assets with optional search/status filters. */
@@ -461,6 +469,104 @@ export class CompanyAssetService {
         updatedBy: userId,
       },
     }).then((row) => this.toAssetResponse(row));
+  }
+
+  /**
+   * Presigned download URL for an asset photo.
+   * Allowed for HR/assets viewers, or the employee currently assigned the asset.
+   */
+  async getAssetPhotoDownloadUrl(
+    assetId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<{ url: string; expiresIn: number }> {
+    const asset = await this.prisma.companyAsset.findFirst({
+      where: activeOnly({ id: assetId, companyId }),
+      select: { id: true, photoDocumentId: true },
+    });
+
+    if (!asset?.photoDocumentId) {
+      throw new NotFoundException("Asset photo not found");
+    }
+
+    await this.assertCanViewAssetPhoto(asset.id, companyId, userId);
+
+    return this.documentService.getDownloadUrl(
+      { companyId, userId },
+      asset.photoDocumentId,
+    );
+  }
+
+  /**
+   * Removes the asset photo link and soft-deletes the document.
+   */
+  async removeAssetPhoto(
+    assetId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const asset = await this.prisma.companyAsset.findFirst({
+      where: activeOnly({ id: assetId, companyId }),
+      select: { id: true, photoDocumentId: true },
+    });
+
+    if (!asset) {
+      throw new NotFoundException("Asset not found");
+    }
+
+    if (!asset.photoDocumentId) {
+      throw new NotFoundException("Asset photo not found");
+    }
+
+    const previousDocumentId = asset.photoDocumentId;
+
+    const updated = await this.prisma.companyAsset.update({
+      where: { id: assetId },
+      data: {
+        photoDocumentId: null,
+        updatedBy: userId,
+      },
+    });
+
+    await this.documentService.deleteDocument(
+      { companyId, userId },
+      previousDocumentId,
+    );
+
+    return this.toAssetResponse(updated);
+  }
+
+  /** Ensures the user may view this asset's photo (register access or assignee). */
+  private async assertCanViewAssetPhoto(
+    assetId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const [hrView, assetsView] = await Promise.all([
+      this.permissionService.hasPermission(userId, companyId, "hr", "view"),
+      this.permissionService.hasPermission(userId, companyId, "assets", "view"),
+    ]);
+
+    if (hrView || assetsView) {
+      return;
+    }
+
+    const assignment = await this.prisma.assetAssignment.findFirst({
+      where: {
+        companyId,
+        assetId,
+        userId,
+        deletedAt: null,
+        returnedAt: null,
+      },
+      select: { id: true },
+    });
+
+    if (!assignment) {
+      throw new ForbiddenException(
+        "You do not have permission to view this asset photo",
+      );
+    }
   }
 
   /** Lists asset assignments for a given asset (active only by default). */
