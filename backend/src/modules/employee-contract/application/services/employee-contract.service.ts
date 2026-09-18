@@ -1,11 +1,31 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { PrismaService } from "@/shared/prisma/prisma.service";
 import { activeOnly } from "@/shared/prisma/soft-delete.util";
 import { CreateEmployeeContractDto, ListEmployeeContractsDto, TerminateEmployeeContractDto, UpdateEmployeeContractDto } from "../dtos/employee-contract.dtos";
-import { EmployeeContractStatus, EmployeeContractType, Prisma } from "@prisma/client";
+import { EmployeeContractStatus, EmployeeContractType, FolderContextType, Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { PermissionService } from "@/shared/permissions/permission.service";
+import {
+  ALLOWED_UPLOAD_MIME_TYPES,
+  STORAGE_BUCKETS,
+  STORAGE_SERVICE,
+} from "@/shared/storage/storage.constants";
+import type { IStorageService } from "@/shared/storage/storage.interface";
 import { buildPrismaPagination, PaginatedResult, buildPaginatedResult } from "@/shared/utils/pagination.util";
+
+type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
 
 const USER_SELECT ={
     id: true,
@@ -80,12 +100,15 @@ export class EmployeeContractService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly permissionService: PermissionService,
+        @Inject(STORAGE_SERVICE)
+        private readonly storage: IStorageService,
     ){}
 
     async createContract(
         dto: CreateEmployeeContractDto,
         companyId: string,
         userId: string,
+        files: UploadedFile[] = [],
     ){
         await this.assertCanManage(companyId, userId);
         const employee = await this.prisma.user.findFirst({
@@ -146,7 +169,35 @@ export class EmployeeContractService {
             }
         })
 
+        if (files.length > 0) {
+            await this.attachFiles(id, companyId, userId, files);
+        }
+
         this.logger.log(`Created employee contract ${contractNumber}`);
+        return this.getContract(id, companyId, userId);
+    }
+
+    /**
+     * Uploads supporting documents onto an existing contract.
+     */
+    async attachContractFiles(
+        id: string,
+        companyId: string,
+        userId: string,
+        files: UploadedFile[],
+    ) {
+        await this.assertCanManage(companyId, userId);
+        const contract = await this.prisma.employeeContract.findFirst({
+            where: activeOnly({ id, companyId }),
+            select: { id: true },
+        });
+        if (!contract) {
+            throw new NotFoundException('Employee contract not found');
+        }
+        if (files.length === 0) {
+            throw new BadRequestException('At least one file is required');
+        }
+        await this.attachFiles(id, companyId, userId, files);
         return this.getContract(id, companyId, userId);
     }
 
@@ -633,6 +684,122 @@ export class EmployeeContractService {
         }
 
         return result;
+    }
+
+    /**
+     * Creates attachment folder (if needed) and uploads files to erp-hr.
+     */
+    private async attachFiles(
+        contractId: string,
+        companyId: string,
+        userId: string,
+        files: UploadedFile[],
+    ): Promise<void> {
+        const contract = await this.prisma.employeeContract.findFirst({
+            where: activeOnly({ id: contractId, companyId }),
+            select: {
+                id: true,
+                contractNumber: true,
+                attachmentFolderId: true,
+            },
+        });
+        if (!contract) {
+            throw new NotFoundException('Employee contract not found');
+        }
+
+        const folderId =
+            contract.attachmentFolderId ??
+            (await this.ensureAttachmentFolder(contract, companyId, userId));
+
+        for (const file of files) {
+            if (!file?.buffer?.length) {
+                continue;
+            }
+            if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+                throw new BadRequestException(
+                    `File type not allowed: ${file.mimetype}`,
+                );
+            }
+
+            const documentId = randomUUID();
+            const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const fileKey = `${companyId}/hr/employee-contracts/${contractId}/attachments/${safeName}`;
+
+            await this.storage.upload({
+                bucket: STORAGE_BUCKETS.HR,
+                key: fileKey,
+                body: file.buffer,
+                contentType: file.mimetype,
+                contentLength: file.size,
+            });
+
+            await this.prisma.$transaction(async (tx) => {
+                await tx.document.create({
+                    data: {
+                        id: documentId,
+                        companyId,
+                        folderId,
+                        name: file.originalname,
+                        fileKey,
+                        fileType: file.mimetype,
+                        fileSizeBytes: file.size,
+                        version: 1,
+                        isCurrent: true,
+                        createdBy: userId,
+                        updatedBy: userId,
+                    },
+                });
+                await tx.documentVersion.create({
+                    data: {
+                        documentId,
+                        uploadedBy: userId,
+                        versionNumber: 1,
+                        fileKey,
+                        fileSizeBytes: file.size,
+                    },
+                });
+            });
+        }
+    }
+
+    private async ensureAttachmentFolder(
+        contract: {
+            id: string;
+            contractNumber: string;
+            attachmentFolderId: string | null;
+        },
+        companyId: string,
+        userId: string,
+    ): Promise<string> {
+        if (contract.attachmentFolderId) {
+            return contract.attachmentFolderId;
+        }
+
+        const folderId = randomUUID();
+        await this.prisma.$transaction(async (tx) => {
+            await tx.documentFolder.create({
+                data: {
+                    id: folderId,
+                    companyId,
+                    name: `Contract ${contract.contractNumber}`,
+                    path: `/hr/employee-contracts/${contract.contractNumber}`,
+                    contextType: FolderContextType.EMPLOYEE_CONTRACT,
+                    contextId: contract.id,
+                    isSystem: false,
+                    createdBy: userId,
+                    updatedBy: userId,
+                },
+            });
+            await tx.employeeContract.update({
+                where: { id: contract.id },
+                data: {
+                    attachmentFolderId: folderId,
+                    updatedBy: userId,
+                },
+            });
+        });
+
+        return folderId;
     }
 
     private async assertCanManage(

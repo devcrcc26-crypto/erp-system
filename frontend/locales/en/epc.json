@@ -900,6 +900,7 @@
         "formDescription": "Record employment contract dates and type for an employee.",
         "detailsStepDescription": "Select the employee, contract type, and key dates.",
         "compensationStepDescription": "Optionally set salary, allowances, and net pay.",
+        "documentsStepDescription": "Optionally attach the signed contract or other supporting documents.",
         "reviewStepDescription": "Confirm contract and compensation details before saving.",
         "contractCount": "{{count}} contracts",
         "contractCountOne": "1 contract",

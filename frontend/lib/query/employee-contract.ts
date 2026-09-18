@@ -13,7 +13,6 @@ import { PaginatedResult } from "../api/types";
 import {
   apiGet,
   apiGetPaginated,
-  apiPost,
   apiPostForm,
   apiPatch,
   apiDelete,
@@ -172,8 +171,47 @@ export function useMyActiveContract(enabled = true) {
 export function useCreateEmployeeContract() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateEmployeeContractPayload) =>
-      apiPost<EmployeeContractDetail>(CONTRACT_PATH, payload),
+    mutationFn: (payload: CreateEmployeeContractPayload) => {
+      const formData = new FormData();
+      formData.append('employeeId', payload.employeeId);
+      formData.append('contractType', payload.contractType);
+      formData.append('signedAt', payload.signedAt);
+      formData.append('startDate', payload.startDate);
+      if (payload.endDate) {
+        formData.append('endDate', payload.endDate);
+      }
+      if (payload.notes) {
+        formData.append('notes', payload.notes);
+      }
+      if (payload.currency) {
+        formData.append('currency', payload.currency);
+      }
+      if (payload.basicSalary != null) {
+        formData.append('basicSalary', String(payload.basicSalary));
+      }
+      if (payload.transportationAllowance != null) {
+        formData.append(
+          'transportationAllowance',
+          String(payload.transportationAllowance),
+        );
+      }
+      if (payload.monthlyBonus != null) {
+        formData.append('monthlyBonus', String(payload.monthlyBonus));
+      }
+      if (payload.netSalary != null) {
+        formData.append('netSalary', String(payload.netSalary));
+      }
+      if (payload.probationEndDate) {
+        formData.append('probationEndDate', payload.probationEndDate);
+      }
+      if (payload.governedBy) {
+        formData.append('governedBy', payload.governedBy);
+      }
+      for (const file of payload.files ?? []) {
+        formData.append('files', file);
+      }
+      return apiPostForm<EmployeeContractDetail>(CONTRACT_PATH, formData);
+    },
     onSuccess: (created) => {
       void queryClient.invalidateQueries({
         queryKey: employeeContractKeys.lists(),
@@ -185,6 +223,31 @@ export function useCreateEmployeeContract() {
         employeeContractKeys.detail(created.id),
         created,
       );
+    },
+  });
+}
+
+export function useAttachEmployeeContractFiles(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (files: File[]) => {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('files', file);
+      }
+      return apiPostForm<EmployeeContractDetail>(
+        `${CONTRACT_PATH}/${id}/attachments`,
+        formData,
+      );
+    },
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: employeeContractKeys.myLists(),
+      });
+      void queryClient.setQueryData(employeeContractKeys.detail(id), updated);
     },
   });
 }

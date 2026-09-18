@@ -91,6 +91,7 @@ export interface CreateEmployeeContractPayload {
   netSalary?: number;
   probationEndDate?: string;
   governedBy?: string;
+  files?: File[];
 }
 
 export interface UpdateEmployeeContractPayload {

@@ -1,12 +1,32 @@
-import { BadRequestException, Controller, Body, Post,Patch, Query, Get, Param, Delete, UseGuards } from "@nestjs/common";
-import { CreateEmployeeContractDto, ListEmployeeContractsDto, TerminateEmployeeContractDto, UpdateEmployeeContractDto } from "../../application/dtos/employee-contract.dtos";
+import {
+    BadRequestException,
+    Controller,
+    Body,
+    Post,
+    Patch,
+    Query,
+    Get,
+    Param,
+    Delete,
+    UseGuards,
+    UseInterceptors,
+    UploadedFiles,
+} from "@nestjs/common";
+import { FilesInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
+import {
+    CreateEmployeeContractDto,
+    ListEmployeeContractsDto,
+    TerminateEmployeeContractDto,
+    UpdateEmployeeContractDto,
+} from "../../application/dtos/employee-contract.dtos";
 import { EmployeeContractService } from "../../application/services/employee-contract.service";
 import { CurrentUser } from "@/shared/decorators/current-user.decorator";
 import { AuthenticatedUser } from "@/shared/types/jwt-payload.type";
 import { CurrentCompany } from "@/shared/decorators/current-company.decorator";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { DelegatePermissionCheck } from "@/shared/permissions/delegate-permission-check.decorator";
 import { RequireAnyPermission } from "@/shared/permissions/require-any-permission.decorator";
 import { PermissionsGuard } from "@/shared/permissions/permissions.guard";
@@ -53,16 +73,46 @@ export class EmployeeContractController {
         { module: 'employee-contract', action: 'create' },
     )
     @ApiOperation({ summary: 'Create an employee contract (HR)' })
+    @ApiConsumes('multipart/form-data', 'application/json')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                employeeId: { type: 'string', format: 'uuid' },
+                contractType: { type: 'string' },
+                signedAt: { type: 'string', format: 'date' },
+                startDate: { type: 'string', format: 'date' },
+                endDate: { type: 'string', format: 'date' },
+                notes: { type: 'string' },
+                currency: { type: 'string' },
+                basicSalary: { type: 'number' },
+                transportationAllowance: { type: 'number' },
+                monthlyBonus: { type: 'number' },
+                netSalary: { type: 'number' },
+                probationEndDate: { type: 'string', format: 'date' },
+                governedBy: { type: 'string' },
+                files: {
+                    type: 'array',
+                    items: { type: 'string', format: 'binary' },
+                },
+            },
+        },
+    })
+    @UseInterceptors(
+        FilesInterceptor('files', 10, { storage: memoryStorage() }),
+    )
     async create(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,
         @Body() body: Record<string, unknown>,
+        @UploadedFiles() files?: Express.Multer.File[],
     ): Promise<unknown>{
         const dto = await parseDto(CreateEmployeeContractDto, body);
         return this.employeeContractService.createContract(
             dto,
             companyId,
             user.userId,
+            files ?? [],
         );
     }
 
@@ -100,7 +150,7 @@ export class EmployeeContractController {
     @ApiOperation({
         summary: 'My active contract without salary fields (any authenticated user)',
     })
-    getMyActive(
+    async myActive(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,
     ): Promise<unknown> {
@@ -110,10 +160,9 @@ export class EmployeeContractController {
         );
     }
 
-
     @Get(':id')
     @ApiOperation({ summary: 'Get an employee contract by id' })
-    getOne(
+    async getOne(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,
         @Param('id') id: string,
@@ -122,6 +171,43 @@ export class EmployeeContractController {
             id,
             companyId,
             user.userId,
+        );
+    }
+
+    @Post(':id/attachments')
+    @DelegatePermissionCheck()
+    @RequireAnyPermission(
+        { module: 'hr', action: 'view' },
+        { module: 'employee-contract', action: 'edit' },
+        { module: 'employee-contract', action: 'create' },
+    )
+    @ApiOperation({ summary: 'Attach supporting documents to an employee contract' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                files: {
+                    type: 'array',
+                    items: { type: 'string', format: 'binary' },
+                },
+            },
+        },
+    })
+    @UseInterceptors(
+        FilesInterceptor('files', 10, { storage: memoryStorage() }),
+    )
+    async attachFiles(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Param('id') id: string,
+        @UploadedFiles() files?: Express.Multer.File[],
+    ): Promise<unknown> {
+        return this.employeeContractService.attachContractFiles(
+            id,
+            companyId,
+            user.userId,
+            files ?? [],
         );
     }
 

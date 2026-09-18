@@ -32,6 +32,11 @@ function emptyToNull({ value }: { value: unknown }): unknown {
   return value === '' ? null : value;
 }
 
+/** Blank multipart fields become undefined so optional validators skip them. */
+function emptyToUndefined({ value }: { value: unknown }): unknown {
+  return value === '' || value === null ? undefined : value;
+}
+
 export class CreateEmployeeContractDto {
   @ApiProperty({ description: 'Employee user ID' })
   @IsUUID()
@@ -53,6 +58,7 @@ export class CreateEmployeeContractDto {
     example: '2027-08-17',
     description: 'Required for fixed-term, probation, and renewal contracts',
   })
+  @Transform(emptyToUndefined)
   @ValidateIf(
     (dto: CreateEmployeeContractDto) =>
       dto.contractType === EmployeeContractType.FIXED_TERM ||
@@ -64,6 +70,7 @@ export class CreateEmployeeContractDto {
   endDate?: string;
 
   @ApiPropertyOptional({ description: 'Contract notes', maxLength: 2000 })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @IsString()
   @MaxLength(2000)
@@ -73,40 +80,47 @@ export class CreateEmployeeContractDto {
     enum: SupportedCurrency,
     default: SupportedCurrency.ETB,
   })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @IsEnum(SupportedCurrency)
   currency?: SupportedCurrency;
 
   @ApiPropertyOptional({ example: 25000 })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   basicSalary?: number;
 
   @ApiPropertyOptional({ example: 3000 })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   transportationAllowance?: number;
 
   @ApiPropertyOptional({ example: 2000 })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   monthlyBonus?: number;
 
   @ApiPropertyOptional({ example: 30000 })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   netSalary?: number;
 
   @ApiPropertyOptional({ example: '2026-11-17' })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @IsDateString()
   probationEndDate?: string;
 
   @ApiPropertyOptional({ example: 'Ethiopian Labor Proclamation 1156/2019' })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @IsString()
   @MaxLength(500)

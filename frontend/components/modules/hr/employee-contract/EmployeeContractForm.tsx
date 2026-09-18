@@ -14,7 +14,9 @@ import {
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
+import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
@@ -24,6 +26,7 @@ import type {
 } from '@/lib/api/employee-contract.types';
 import type { SupportedCurrency } from '@/lib/api/per-diem.types';
 import {
+  useAttachEmployeeContractFiles,
   useCreateEmployeeContract,
   useUpdateEmployeeContract,
 } from '@/lib/query/employee-contract';
@@ -203,12 +206,14 @@ export default function EmployeeContractForm({
   const [form] = Form.useForm<EmployeeContractFormValues>();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [detailsSnapshot, setDetailsSnapshot] =
     useState<Partial<EmployeeContractFormValues>>(defaultValues());
   const previousCurrencyRef = useRef<SupportedCurrency | null>(null);
 
   const createMutation = useCreateEmployeeContract();
   const updateMutation = useUpdateEmployeeContract(contract?.id ?? '');
+  const attachMutation = useAttachEmployeeContractFiles(contract?.id ?? '');
   const ratesQuery = useCurrencyRates(true);
 
   const contractType =
@@ -321,6 +326,7 @@ export default function EmployeeContractForm({
       setDetailsSnapshot(defaultValues());
       previousCurrencyRef.current = 'ETB';
     }
+    setSelectedFiles([]);
     setFormError(null);
   }
 
@@ -366,6 +372,11 @@ export default function EmployeeContractForm({
     } catch {
       return false;
     }
+  }
+
+  async function validateDocumentsStep(): Promise<boolean> {
+    captureSnapshot();
+    return true;
   }
 
   async function handleSubmit(): Promise<void> {
@@ -426,31 +437,37 @@ export default function EmployeeContractForm({
 
     setSubmitting(true);
     try {
-      const result =
-        mode === 'edit' && contract
-          ? await updateMutation.mutateAsync({
-              contractType: values.contractType,
-              signedAt: values.signedAt.format('YYYY-MM-DD'),
-              startDate: values.startDate.format('YYYY-MM-DD'),
-              endDate: needsEndDate ? endDate ?? null : null,
-              notes: values.notes?.trim() || null,
-              ...salaryPayload,
-            })
-          : await createMutation.mutateAsync({
-              employeeId: values.employeeId,
-              contractType: values.contractType,
-              signedAt: values.signedAt.format('YYYY-MM-DD'),
-              startDate: values.startDate.format('YYYY-MM-DD'),
-              endDate,
-              notes: values.notes?.trim() || undefined,
-              currency: salaryPayload.currency,
-              basicSalary: salaryPayload.basicSalary,
-              transportationAllowance: salaryPayload.transportationAllowance,
-              monthlyBonus: salaryPayload.monthlyBonus,
-              netSalary: salaryPayload.netSalary,
-              probationEndDate: salaryPayload.probationEndDate ?? undefined,
-              governedBy: salaryPayload.governedBy ?? undefined,
-            });
+      let result: EmployeeContractDetail;
+      if (mode === 'edit' && contract) {
+        result = await updateMutation.mutateAsync({
+          contractType: values.contractType,
+          signedAt: values.signedAt.format('YYYY-MM-DD'),
+          startDate: values.startDate.format('YYYY-MM-DD'),
+          endDate: needsEndDate ? endDate ?? null : null,
+          notes: values.notes?.trim() || null,
+          ...salaryPayload,
+        });
+        if (selectedFiles.length > 0) {
+          result = await attachMutation.mutateAsync(selectedFiles);
+        }
+      } else {
+        result = await createMutation.mutateAsync({
+          employeeId: values.employeeId,
+          contractType: values.contractType,
+          signedAt: values.signedAt.format('YYYY-MM-DD'),
+          startDate: values.startDate.format('YYYY-MM-DD'),
+          endDate,
+          notes: values.notes?.trim() || undefined,
+          currency: salaryPayload.currency,
+          basicSalary: salaryPayload.basicSalary,
+          transportationAllowance: salaryPayload.transportationAllowance,
+          monthlyBonus: salaryPayload.monthlyBonus,
+          netSalary: salaryPayload.netSalary,
+          probationEndDate: salaryPayload.probationEndDate ?? undefined,
+          governedBy: salaryPayload.governedBy ?? undefined,
+          files: selectedFiles.length > 0 ? selectedFiles : undefined,
+        });
+      }
 
       messageApi.success(
         mode === 'edit'
@@ -681,6 +698,50 @@ export default function EmployeeContractForm({
         ),
       },
       {
+        title: t('hr.section.supportingDocuments'),
+        validate: () => validateDocumentsStep(),
+        content: (
+          <FormLayout
+            variant="pro"
+            dense
+            title={t('hr.section.supportingDocuments')}
+            description={t('pages.hr.employeeContract.documentsStepDescription')}
+          >
+            {mode === 'edit' &&
+            (contract?.attachmentFolder?.documents?.length ?? 0) > 0 ? (
+              <ul className="mb-4 m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
+                {contract?.attachmentFolder?.documents?.map((doc) => (
+                  <li
+                    key={doc.id}
+                    className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
+                  >
+                    <ProfileFileTypeIcon
+                      name={doc.name}
+                      fileType={doc.fileType}
+                      size="sm"
+                    />
+                    <span
+                      className="min-w-0 truncate text-sm"
+                      title={doc.name}
+                    >
+                      {doc.name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <FileUploadInput
+              files={selectedFiles}
+              onChange={setSelectedFiles}
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              multiple
+              disabled={submitting}
+              placeholder={t('hr.placeholder.chooseSupportingDocuments')}
+            />
+          </FormLayout>
+        ),
+      },
+      {
         title: t('hr.form.reviewSubmit'),
         content: (
           <div className="erp-employee-form-sections">
@@ -797,6 +858,61 @@ export default function EmployeeContractForm({
                 />
               </div>
             </FormLayout>
+
+            <FormLayout
+              variant="pro"
+              dense
+              title={t('hr.section.supportingDocuments')}
+            >
+              {selectedFiles.length > 0 ||
+              (mode === 'edit' &&
+                (contract?.attachmentFolder?.documents?.length ?? 0) > 0) ? (
+                <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
+                  {mode === 'edit'
+                    ? contract?.attachmentFolder?.documents?.map((doc) => (
+                        <li
+                          key={doc.id}
+                          className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
+                        >
+                          <ProfileFileTypeIcon
+                            name={doc.name}
+                            fileType={doc.fileType}
+                            size="sm"
+                          />
+                          <span
+                            className="min-w-0 truncate text-sm"
+                            title={doc.name}
+                          >
+                            {doc.name}
+                          </span>
+                        </li>
+                      ))
+                    : null}
+                  {selectedFiles.map((file) => (
+                    <li
+                      key={`${file.name}-${file.size}`}
+                      className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
+                    >
+                      <ProfileFileTypeIcon
+                        name={file.name}
+                        fileType={file.type}
+                        size="sm"
+                      />
+                      <span
+                        className="min-w-0 truncate text-sm"
+                        title={file.name}
+                      >
+                        {file.name}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="erp-users-cell-sub m-0">
+                  {t('hr.empty.noAttachments')}
+                </p>
+              )}
+            </FormLayout>
           </div>
         ),
       },
@@ -804,6 +920,7 @@ export default function EmployeeContractForm({
     [
       t,
       mode,
+      contract?.attachmentFolder?.documents,
       typeOptions,
       requiresEndDate,
       currency,
@@ -817,6 +934,8 @@ export default function EmployeeContractForm({
       reviewValues,
       computedNet,
       form,
+      selectedFiles,
+      submitting,
     ],
   );
 
