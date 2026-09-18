@@ -16,12 +16,13 @@ import {
 import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { MoreOutlined, StopOutlined } from '@ant-design/icons';
-import { ArrowLeft, File, Inbox, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Inbox, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
+import DocumentImageThumb from '@/components/ui/DocumentImageThumb/DocumentImageThumb';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
@@ -230,61 +231,38 @@ export default function ExitPermitDetailPageContent({
   const itemColumns: ColumnsType<ExitPermitItem> = useMemo(
     () => [
       {
-        title: t('hr.table.itemName'),
-        dataIndex: 'itemName',
-        key: 'itemName',
-        ellipsis: true,
-        render: (value: string) => (
-          <span className="erp-users-cell-strong">{value}</span>
-        ),
-      },
-      {
-        title: t('hr.table.issue'),
-        dataIndex: 'issue',
-        key: 'issue',
-        ellipsis: true,
-        render: (value: string | null | undefined) => (
-          <span className="erp-users-cell-sub">{value || '—'}</span>
-        ),
-      },
-      {
         title: t('hr.table.itemImage'),
         key: 'image',
-        width: isNarrow ? 72 : 96,
-        render: (_: unknown, row: ExitPermitItem) =>
-          row.image ? (
-            <div
-              onClick={(event) => event.stopPropagation()}
-              onKeyDown={(event) => event.stopPropagation()}
-            >
-              <AttachmentDownloadList
-                compact
-                documents={[
-                  {
-                    id: row.image.id,
-                    name: row.image.name,
-                    fileType: row.image.fileType ?? undefined,
-                    fileSizeBytes: row.image.fileSizeBytes,
-                  },
-                ]}
-              />
-            </div>
-          ) : (
-            <Tooltip title={t('hr.labels.noItemImage')}>
-              <span
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#e8ebef] bg-[#f8f9fb] text-[#9AA4B2] opacity-70"
-                aria-label={t('hr.labels.noItemImage')}
-              >
-                <File size={16} strokeWidth={1.75} />
-              </span>
-            </Tooltip>
-          ),
+        width: 56,
+        render: (_: unknown, row: ExitPermitItem) => (
+          <DocumentImageThumb
+            documentId={row.documentId ?? row.image?.id}
+            alt={row.itemName}
+            size={40}
+            emptyLabel={t('hr.labels.noItemImage')}
+          />
+        ),
+      },
+      {
+        title: t('hr.table.itemName'),
+        key: 'itemName',
+        ellipsis: true,
+        render: (_: unknown, row: ExitPermitItem) => (
+          <div className="min-w-0">
+            <p className="erp-users-cell-strong m-0 truncate">{row.itemName}</p>
+            {row.issue?.trim() ? (
+              <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
+                {row.issue}
+              </p>
+            ) : null}
+          </div>
+        ),
       },
       {
         title: t('hr.table.quantity'),
         dataIndex: 'quantity',
         key: 'quantity',
-        width: 90,
+        width: 72,
         align: 'right',
         render: (value: number | string) => (
           <span className="erp-users-cell-sub tabular-nums">
@@ -296,7 +274,8 @@ export default function ExitPermitDetailPageContent({
         title: t('hr.table.unit'),
         dataIndex: 'unit',
         key: 'unit',
-        width: 80,
+        width: 72,
+        responsive: ['sm'],
         render: (value: string | null | undefined) => (
           <span className="erp-users-cell-sub">{value || '—'}</span>
         ),
@@ -306,7 +285,8 @@ export default function ExitPermitDetailPageContent({
             {
               title: '',
               key: 'actions',
-              width: 80,
+              width: 72,
+              fixed: 'right' as const,
               render: (_: unknown, row: ExitPermitItem) => (
                 <div
                   className="erp-table-row-actions flex items-center justify-end gap-0.5"
@@ -338,7 +318,7 @@ export default function ExitPermitDetailPageContent({
           ]
         : []),
     ],
-    [canEdit, isNarrow, t],
+    [canEdit, t],
   );
 
   if (detailQuery.isLoading) {
@@ -403,13 +383,6 @@ export default function ExitPermitDetailPageContent({
   }
 
   const showOverflowMenu = isNarrow && overflowMenuItems.length > 0;
-  const tableScrollX = screens.lg
-    ? 900
-    : screens.md
-      ? 700
-      : screens.sm
-        ? 540
-        : 400;
 
   /** Renders this record with the shared HR document layout. */
   function handleExportPdf(): void {
@@ -614,7 +587,7 @@ export default function ExitPermitDetailPageContent({
                 columns={itemColumns}
                 dataSource={permit.items}
                 pagination={false}
-                scroll={{ x: tableScrollX }}
+                scroll={canEdit ? { x: 'max-content' } : false}
                 locale={{
                   emptyText: (
                     <TableEmptyState
@@ -746,6 +719,16 @@ export default function ExitPermitDetailPageContent({
                 : t('hr.hints.itemImageOptional')
             }
           >
+            {editingItem?.image && !itemImageFile ? (
+              <div className="mb-3">
+                <DocumentImageThumb
+                  documentId={editingItem.documentId ?? editingItem.image.id}
+                  alt={editingItem.itemName}
+                  size={72}
+                  emptyLabel={t('hr.labels.noItemImage')}
+                />
+              </div>
+            ) : null}
             <FileUploadInput
               files={itemImageFile ? [itemImageFile] : []}
               onChange={(nextFiles) => setItemImageFile(nextFiles[0] ?? null)}

@@ -8,7 +8,7 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import DocumentImageThumb from '@/components/ui/DocumentImageThumb/DocumentImageThumb';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ExitPermitItem } from '@/lib/api/exit-permit.types';
@@ -58,23 +58,38 @@ export default function ExitPermitDetail({
 
   const columns: ColumnsType<ExitPermitItem> = [
     {
-      title: t('hr.table.itemName'),
-      dataIndex: 'itemName',
-      key: 'itemName',
-      ellipsis: true,
+      title: t('hr.table.itemImage'),
+      key: 'image',
+      width: 56,
+      render: (_: unknown, row: ExitPermitItem) => (
+        <DocumentImageThumb
+          documentId={row.documentId ?? row.image?.id}
+          alt={row.itemName}
+          size={40}
+          emptyLabel={t('hr.labels.noItemImage')}
+        />
+      ),
     },
     {
-      title: t('hr.table.issue'),
-      dataIndex: 'issue',
-      key: 'issue',
+      title: t('hr.table.itemName'),
+      key: 'itemName',
       ellipsis: true,
-      render: (value: string | null | undefined) => value?.trim() || '—',
+      render: (_: unknown, row: ExitPermitItem) => (
+        <div className="min-w-0">
+          <p className="m-0 truncate font-medium">{row.itemName}</p>
+          {row.issue?.trim() ? (
+            <p className="m-0 mt-0.5 truncate text-xs text-[var(--ant-color-text-secondary)]">
+              {row.issue}
+            </p>
+          ) : null}
+        </div>
+      ),
     },
     {
       title: t('hr.table.quantity'),
       dataIndex: 'quantity',
       key: 'quantity',
-      width: 90,
+      width: 72,
       align: 'right',
       render: (value: number | string) => String(value),
     },
@@ -82,19 +97,8 @@ export default function ExitPermitDetail({
       title: t('hr.table.unit'),
       dataIndex: 'unit',
       key: 'unit',
-      width: 80,
+      width: 72,
       render: (value: string | null | undefined) => value?.trim() || '—',
-    },
-    {
-      title: t('hr.table.itemImage'),
-      key: 'image',
-      width: 120,
-      render: (_: unknown, row: ExitPermitItem) =>
-        row.image ? (
-          <AttachmentDownloadList documents={[row.image]} compact />
-        ) : (
-          '—'
-        ),
     },
   ];
   return (

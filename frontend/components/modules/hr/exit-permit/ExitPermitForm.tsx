@@ -10,7 +10,6 @@ import {
   Select,
   Space,
   Table,
-  Tooltip,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -21,7 +20,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
+import LocalFileImageThumb from '@/components/ui/DocumentImageThumb/LocalFileImageThumb';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
@@ -295,17 +294,31 @@ export default function ExitPermitForm({
 
   const itemColumns: ColumnsType<ClientItem> = [
     {
+      title: t('hr.table.itemImage'),
+      dataIndex: 'file',
+      key: 'file',
+      width: 56,
+      render: (value: File | undefined) => (
+        <LocalFileImageThumb
+          file={value}
+          size={40}
+          emptyLabel={t('hr.labels.noItemImage')}
+        />
+      ),
+    },
+    {
       title: t('hr.table.itemName'),
       dataIndex: 'itemName',
       key: 'itemName',
       ellipsis: true,
-    },
-    {
-      title: t('hr.form.issue'),
-      dataIndex: 'issue',
-      key: 'issue',
-      ellipsis: true,
-      render: (value: string | undefined) => value || '-',
+      render: (value: string, row: ClientItem) => (
+        <div className="min-w-0">
+          <p className="m-0 truncate font-medium">{value}</p>
+          {row.issue?.trim() ? (
+            <p className="m-0 mt-0.5 truncate text-xs opacity-70">{row.issue}</p>
+          ) : null}
+        </div>
+      ),
     },
     {
       title: t('hr.table.quantity'),
@@ -314,31 +327,12 @@ export default function ExitPermitForm({
       width: 70,
       align: 'right',
     },
-    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 80 },
-    {
-      title: t('hr.table.itemImage'),
-      dataIndex: 'file',
-      key: 'file',
-      width: 72,
-      render: (value: File | undefined) =>
-        value ? (
-          <Tooltip title={value.name}>
-            <span className="inline-flex">
-              <ProfileFileTypeIcon
-                name={value.name}
-                fileType={value.type}
-                size="sm"
-              />
-            </span>
-          </Tooltip>
-        ) : (
-          '—'
-        ),
-    },
+    { title: t('hr.table.unit'), dataIndex: 'unit', key: 'unit', width: 72 },
     {
       title: '',
       key: 'actions',
-      width: 80,
+      width: 72,
+      fixed: 'right',
       render: (_: unknown, row: ClientItem) => (
         <Space size={4}>
           <Button
@@ -532,6 +526,7 @@ export default function ExitPermitForm({
               columns={itemColumns}
               dataSource={items}
               pagination={false}
+              scroll={{ x: 'max-content' }}
               locale={{ emptyText: t('hr.empty.noItems') }}
               footer={
                 items.length > 0
