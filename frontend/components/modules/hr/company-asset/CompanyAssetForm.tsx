@@ -43,7 +43,6 @@ interface FormValues {
   originalValue?: number;
   managingDepartment?: string;
   storageLocation?: string;
-  projectCode?: string;
 }
 
 interface CompanyAssetFormProps {
@@ -75,7 +74,6 @@ function buildLedgerPayload(values: FormValues) {
     originalValue: values.originalValue ?? undefined,
     managingDepartment: values.managingDepartment?.trim() || undefined,
     storageLocation: values.storageLocation?.trim() || undefined,
-    projectCode: values.projectCode?.trim() || undefined,
   };
 }
 
@@ -99,7 +97,6 @@ function mapAssetToFormValues(asset: CompanyAssetDetail): FormValues {
       asset.originalValue != null ? Number(asset.originalValue) : undefined,
     managingDepartment: asset.managingDepartment ?? undefined,
     storageLocation: asset.storageLocation ?? undefined,
-    projectCode: asset.projectCode ?? undefined,
   };
 }
 
@@ -148,7 +145,6 @@ export default function CompanyAssetForm({
         asset.originalValue != null ? Number(asset.originalValue) : undefined,
       managingDepartment: asset.managingDepartment ?? undefined,
       storageLocation: asset.storageLocation ?? undefined,
-      projectCode: asset.projectCode ?? undefined,
     };
     form.setFieldsValue(values);
     setDetailsSnapshot(values);
@@ -467,15 +463,6 @@ export default function CompanyAssetForm({
                 <Input
                   maxLength={200}
                   placeholder={t('hr.assetPlaceholder.storageLocation')}
-                />
-              </Form.Item>
-              <Form.Item
-                name="projectCode"
-                label={t('hr.assetLabels.projectCode')}
-              >
-                <Input
-                  maxLength={100}
-                  placeholder={t('hr.assetPlaceholder.projectCode')}
                 />
               </Form.Item>
             </div>

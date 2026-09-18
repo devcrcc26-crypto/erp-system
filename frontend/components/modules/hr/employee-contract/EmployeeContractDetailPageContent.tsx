@@ -100,7 +100,10 @@ export default function EmployeeContractDetailPageContent({
   const [terminateOpen, setTerminateOpen] = useState(false);
 
   const contract = detailQuery.data;
-  const canManage = canViewHr && contract?.status === 'ACTIVE';
+  const canEdit =
+    canViewHr &&
+    (contract?.status === 'ACTIVE' || contract?.status === 'DRAFT');
+  const canTerminate = canViewHr && contract?.status === 'ACTIVE';
   const currency = contract?.currency ?? 'ETB';
 
   async function handleTerminate(): Promise<void> {
@@ -190,40 +193,44 @@ export default function EmployeeContractDetailPageContent({
               {isNarrow ? undefined : t('hr.buttons.back')}
             </Button>
           </div>
-          {canManage ? (
+          {canEdit || canTerminate ? (
             <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
-              <Button
-                icon={<StopOutlined />}
-                danger
-                onClick={() => setTerminateOpen(true)}
-                aria-label={t('hr.buttons.terminateContract')}
-              >
-                {isNarrow ? undefined : t('hr.buttons.terminateContract')}
-              </Button>
-              <Space.Compact>
+              {canTerminate ? (
                 <Button
-                  type="primary"
-                  icon={<EditOutlined />}
-                  onClick={() =>
-                    router.push(`/hr/employee-contract/${contractId}/edit`)
-                  }
-                  aria-label={t('hr.buttons.editEmployeeContract')}
-                >
-                  {isNarrow
-                    ? undefined
-                    : isCompact
-                      ? t('common.update')
-                      : t('hr.buttons.editEmployeeContract')}
-                </Button>
-                <Button
+                  icon={<StopOutlined />}
                   danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => setConfirmDelete(true)}
-                  aria-label={t('hr.buttons.delete')}
+                  onClick={() => setTerminateOpen(true)}
+                  aria-label={t('hr.buttons.terminateContract')}
                 >
-                  {isNarrow ? undefined : t('hr.buttons.delete')}
+                  {isNarrow ? undefined : t('hr.buttons.terminateContract')}
                 </Button>
-              </Space.Compact>
+              ) : null}
+              {canEdit ? (
+                <Space.Compact>
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={() =>
+                      router.push(`/hr/employee-contract/${contractId}/edit`)
+                    }
+                    aria-label={t('hr.buttons.editEmployeeContract')}
+                  >
+                    {isNarrow
+                      ? undefined
+                      : isCompact
+                        ? t('common.update')
+                        : t('hr.buttons.editEmployeeContract')}
+                  </Button>
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => setConfirmDelete(true)}
+                    aria-label={t('hr.buttons.delete')}
+                  >
+                    {isNarrow ? undefined : t('hr.buttons.delete')}
+                  </Button>
+                </Space.Compact>
+              ) : null}
             </div>
           ) : null}
         </div>

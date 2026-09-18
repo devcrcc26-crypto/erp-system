@@ -782,7 +782,6 @@ export class CompanyAssetService {
           : null,
       managingDepartment: dto.managingDepartment?.trim() || null,
       storageLocation: dto.storageLocation?.trim() || null,
-      projectCode: dto.projectCode?.trim() || null,
     };
   }
 
@@ -826,9 +825,6 @@ export class CompanyAssetService {
         : {}),
       ...(dto.storageLocation !== undefined
         ? { storageLocation: dto.storageLocation?.trim() || null }
-        : {}),
-      ...(dto.projectCode !== undefined
-        ? { projectCode: dto.projectCode?.trim() || null }
         : {}),
     };
   }

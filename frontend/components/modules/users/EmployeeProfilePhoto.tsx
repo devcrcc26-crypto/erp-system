@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { Avatar, Button, Space, Spin, Tooltip, Upload } from 'antd';
 import { CameraOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
+import { ImagePreviewTrigger } from '@/components/shared/preview';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -163,19 +164,24 @@ export default function EmployeeProfilePhoto({
 
   const avatar = (
     <Spin spinning={busy}>
-      <Avatar
-        size={size}
-        src={imageSrc}
-        icon={!imageSrc && !initials ? <UserOutlined /> : undefined}
-        style={{
-          backgroundColor: imageSrc ? undefined : tokens.colorPrimary,
-          flexShrink: 0,
-          border: `1px solid ${tokens.colorBorder}`,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-        }}
+      <ImagePreviewTrigger
+        src={localPreview ? null : imageFromQuery}
+        alt={[firstName, lastName].filter(Boolean).join(' ')}
       >
-        {initials}
-      </Avatar>
+        <Avatar
+          size={size}
+          src={imageSrc}
+          icon={!imageSrc && !initials ? <UserOutlined /> : undefined}
+          style={{
+            backgroundColor: imageSrc ? undefined : tokens.colorPrimary,
+            flexShrink: 0,
+            border: `1px solid ${tokens.colorBorder}`,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+          }}
+        >
+          {initials}
+        </Avatar>
+      </ImagePreviewTrigger>
     </Spin>
   );
 

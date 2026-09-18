@@ -1,11 +1,13 @@
 'use client';
 
-import { Empty } from 'antd';
+import { Empty, Skeleton } from 'antd';
 import {
   MetaItem,
   SectionCard,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import { DocumentPreview } from '@/components/shared/preview';
 import type { ApprovalRequestDetail } from '@/lib/api/approvals.types';
+import { useDocumentMetadata } from '@/lib/query/documents';
 import {
   formatFormDataValue,
   formatApprovalUserName,
@@ -21,6 +23,33 @@ const USER_ID_FIELD_LABEL_KEYS: Record<string, string> = {
   employeeId: 'hr.table.employee',
   submittedBy: 'hr.table.submittedBy',
 };
+
+/** File attached to an approval comment, previewable in place. */
+function CommentAttachment({
+  documentId,
+}: {
+  documentId: string;
+}): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const metadataQuery = useDocumentMetadata(documentId);
+
+  if (metadataQuery.isLoading) {
+    return <Skeleton.Input active size="small" className="mt-2" />;
+  }
+
+  return (
+    <div className="mt-2 max-w-xs">
+      <DocumentPreview
+        documentId={documentId}
+        fileName={
+          metadataQuery.data?.name ?? t('pages.approvals.resubmit.attachment')
+        }
+        fileType={metadataQuery.data?.fileType}
+        fileSizeBytes={metadataQuery.data?.fileSizeBytes}
+      />
+    </div>
+  );
+}
 
 /**
  * Generic approval body — form data + comments.
@@ -102,6 +131,9 @@ export default function GenericApprovalDetail({
                 <p className="m-0 text-sm leading-relaxed text-[var(--color-text-primary)]">
                   {comment.commentText}
                 </p>
+                {comment.attachmentId ? (
+                  <CommentAttachment documentId={comment.attachmentId} />
+                ) : null}
               </div>
             ))}
           </div>

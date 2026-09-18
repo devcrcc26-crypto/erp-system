@@ -27,6 +27,11 @@ function toBoolean(value: unknown): boolean {
   return Boolean(value);
 }
 
+/** Blank strings become null so open-ended updates can clear endDate. */
+function emptyToNull({ value }: { value: unknown }): unknown {
+  return value === '' ? null : value;
+}
+
 export class CreateEmployeeContractDto {
   @ApiProperty({ description: 'Employee user ID' })
   @IsUUID()
@@ -124,10 +129,15 @@ export class UpdateEmployeeContractDto {
   @IsDateString()
   startDate?: string;
 
-  @ApiPropertyOptional({ example: '2027-08-17', description: 'Contract end date' })
-  @IsOptional()
+  @ApiPropertyOptional({
+    example: '2027-08-17',
+    description: 'Contract end date (null clears for open-ended)',
+    nullable: true,
+  })
+  @Transform(emptyToNull)
+  @ValidateIf((_, value) => value !== null && value !== undefined)
   @IsDateString()
-  endDate?: string;
+  endDate?: string | null;
 
   @ApiPropertyOptional({ description: 'Contract notes', maxLength: 2000 })
   @IsOptional()
@@ -164,10 +174,15 @@ export class UpdateEmployeeContractDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   netSalary?: number;
 
-  @ApiPropertyOptional({ example: '2026-11-17' })
-  @IsOptional()
+  @ApiPropertyOptional({
+    example: '2026-11-17',
+    nullable: true,
+    description: 'Probation end date (null clears)',
+  })
+  @Transform(emptyToNull)
+  @ValidateIf((_, value) => value !== null && value !== undefined)
   @IsDateString()
-  probationEndDate?: string;
+  probationEndDate?: string | null;
 
   @ApiPropertyOptional({ example: 'Ethiopian Labor Proclamation 1156/2019' })
   @IsOptional()

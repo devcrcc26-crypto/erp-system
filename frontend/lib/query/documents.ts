@@ -41,6 +41,8 @@ export const documentKeys = {
     [...documentKeys.folderDocuments(), folderId, params] as const,
   downloadUrl: (documentId: string) =>
     [...documentKeys.all, 'download-url', documentId] as const,
+  detail: (documentId: string) =>
+    [...documentKeys.all, 'detail', documentId] as const,
   projectDocuments: (projectId: string) =>
     [...documentKeys.all, 'project', projectId] as const,
   projectDocumentList: (
@@ -175,6 +177,19 @@ export function useFolderDocuments(
     enabled: Boolean(folderId) && enabled,
     retry: false,
     ...options,
+  });
+}
+
+/**
+ * Core document metadata (name, MIME type, size) — no signed URL is issued.
+ */
+export function useDocumentMetadata(documentId: string, enabled = true) {
+  return useQuery({
+    queryKey: documentKeys.detail(documentId),
+    queryFn: () => apiGet<DocumentRecord>(`/documents/${documentId}`),
+    enabled: Boolean(documentId) && enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
   });
 }
 

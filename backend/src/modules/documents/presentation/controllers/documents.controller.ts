@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -24,6 +25,7 @@ import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  DocumentDownloadUrlQueryDto,
   UpdateDocumentDto,
   UploadDocumentVersionDto,
 } from '../../application/dtos/document.dtos';
@@ -61,17 +63,26 @@ export class DocumentsController {
 
   @Get(':id/download-url')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Get presigned download URL' })
+  @ApiOperation({
+    summary: 'Get presigned download URL',
+    description:
+      'Pass `expiresIn` (seconds, max 3600) for a longer-lived URL, e.g. in-browser preview.',
+  })
   async getDownloadUrl(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
+    @Query() query: DocumentDownloadUrlQueryDto,
   ): Promise<{ url: string; expiresIn: number }> {
     await this.documentPermissionService.assertCanViewDocument(
       user.userId,
       user.companyId,
       id,
     );
-    return this.documentService.getDownloadUrl(this.ctx(user), id);
+    return this.documentService.getDownloadUrl(
+      this.ctx(user),
+      id,
+      query.expiresIn,
+    );
   }
 
   @Get(':id/versions')

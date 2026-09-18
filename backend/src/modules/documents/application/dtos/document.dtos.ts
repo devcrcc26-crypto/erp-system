@@ -1,12 +1,16 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
   IsEnum,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
   ValidateIf,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
@@ -177,4 +181,23 @@ export class ProjectDocumentListQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsDateString()
   uploadedTo?: string;
+}
+
+/** Longest presigned URL lifetime a caller may request (1 hour). */
+export const MAX_DOWNLOAD_URL_EXPIRES_IN_SECONDS = 3600;
+
+export class DocumentDownloadUrlQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'Presigned URL lifetime in seconds (1-3600). Omit for the default download lifetime.',
+    minimum: 1,
+    maximum: MAX_DOWNLOAD_URL_EXPIRES_IN_SECONDS,
+    example: 600,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_DOWNLOAD_URL_EXPIRES_IN_SECONDS)
+  expiresIn?: number;
 }

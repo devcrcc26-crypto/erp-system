@@ -168,7 +168,6 @@ export const companyAssetImportSchema: HrImportModuleSchema = {
     },
     { field: 'managingDepartment', label: 'Managing Department', type: 'string' },
     { field: 'storageLocation', label: 'Storage Location', type: 'string' },
-    { field: 'projectCode', label: 'Project Code', type: 'string' },
   ],
 };
 

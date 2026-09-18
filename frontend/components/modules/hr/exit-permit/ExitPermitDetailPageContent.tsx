@@ -20,6 +20,7 @@ import { ArrowLeft, Inbox, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
+import { DocumentPreviewGroup } from '@/components/shared/preview';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import DocumentImageThumb from '@/components/ui/DocumentImageThumb/DocumentImageThumb';
@@ -44,6 +45,7 @@ import {
   useSubmitExitPermit,
   useUpdateExitPermitItem,
 } from '@/lib/query/exit-permit';
+import { exitPermitItemImages } from '@/lib/utils/exit-permit-item-images';
 import ExportPdfButton from '@/components/modules/hr/import-export/ExportPdfButton';
 import { useHrPdfContext } from '@/hooks/use-hr-pdf-context';
 import { exportExitPermitPdf } from '@/lib/utils/exit-permit-export';
@@ -238,6 +240,8 @@ export default function ExitPermitDetailPageContent({
           <DocumentImageThumb
             documentId={row.documentId ?? row.image?.id}
             alt={row.itemName}
+            fileName={row.image?.name}
+            fileType={row.image?.fileType}
             size={40}
             emptyLabel={t('hr.labels.noItemImage')}
           />
@@ -580,39 +584,43 @@ export default function ExitPermitDetailPageContent({
             </DetailSection>
 
             <DetailSection title={t('hr.section.items')} bodyClassName="!p-0">
-              <DataTable<ExitPermitItem>
-                rowKey="id"
-                className="erp-pro-table erp-users-table"
-                size="small"
-                columns={itemColumns}
-                dataSource={permit.items}
-                pagination={false}
-                scroll={canEdit ? { x: 'max-content' } : false}
-                locale={{
-                  emptyText: (
-                    <TableEmptyState
-                      icon={<Inbox size={28} strokeWidth={1.5} />}
-                      title={t('hr.empty.noItems')}
-                      description={t(
-                        'pages.hr.exitPermit.itemsStepDescription',
-                      )}
-                    />
-                  ),
-                }}
-                footer={
-                  permit.items.length > 0
-                    ? () => (
-                        <div className="flex justify-end px-3 py-2 text-sm">
-                          <span className="erp-users-cell-sub">
-                            {t('hr.form.itemCount', {
-                              count: permit.items.length,
-                            })}
-                          </span>
-                        </div>
-                      )
-                    : undefined
-                }
-              />
+              <DocumentPreviewGroup
+                documents={exitPermitItemImages(permit.items)}
+              >
+                <DataTable<ExitPermitItem>
+                  rowKey="id"
+                  className="erp-pro-table erp-users-table"
+                  size="small"
+                  columns={itemColumns}
+                  dataSource={permit.items}
+                  pagination={false}
+                  scroll={canEdit ? { x: 'max-content' } : false}
+                  locale={{
+                    emptyText: (
+                      <TableEmptyState
+                        icon={<Inbox size={28} strokeWidth={1.5} />}
+                        title={t('hr.empty.noItems')}
+                        description={t(
+                          'pages.hr.exitPermit.itemsStepDescription',
+                        )}
+                      />
+                    ),
+                  }}
+                  footer={
+                    permit.items.length > 0
+                      ? () => (
+                          <div className="flex justify-end px-3 py-2 text-sm">
+                            <span className="erp-users-cell-sub">
+                              {t('hr.form.itemCount', {
+                                count: permit.items.length,
+                              })}
+                            </span>
+                          </div>
+                        )
+                      : undefined
+                  }
+                />
+              </DocumentPreviewGroup>
             </DetailSection>
 
             {(permit.documents?.length ?? 0) > 0 ? (

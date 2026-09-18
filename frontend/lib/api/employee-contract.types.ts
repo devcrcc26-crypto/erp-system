@@ -98,14 +98,14 @@ export interface UpdateEmployeeContractPayload {
   signedAt?: string;
   startDate?: string;
   endDate?: string | null;
-  notes?: string;
+  notes?: string | null;
   currency?: EmployeeContractCurrency;
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
   netSalary?: number;
   probationEndDate?: string | null;
-  governedBy?: string;
+  governedBy?: string | null;
 }
 
 export interface TerminateEmployeeContractPayload {

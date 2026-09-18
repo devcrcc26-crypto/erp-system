@@ -685,11 +685,6 @@ export default function CompanyAssetDetailPageContent({
                   {asset.storageLocation}
                 </MetaItem>
               ) : null}
-              {asset.projectCode ? (
-                <MetaItem label={t('hr.assetLabels.projectCode')}>
-                  {asset.projectCode}
-                </MetaItem>
-              ) : null}
             </div>
           </DetailSection>
 

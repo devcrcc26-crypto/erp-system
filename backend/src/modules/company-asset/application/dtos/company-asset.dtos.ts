@@ -109,12 +109,6 @@ export class CreateCompanyAssetDto{
     @MaxLength(200)
     storageLocation?: string;
 
-    @ApiPropertyOptional({ maxLength: 100 })
-    @IsOptional()
-    @IsString()
-    @MaxLength(100)
-    projectCode?: string;
-
     @ApiPropertyOptional({ description: 'Photo document ID' })
     @IsOptional()
     @IsUUID()
@@ -226,12 +220,6 @@ export class UpdateCompanyAssetDto {
     @IsString()
     @MaxLength(200)
     storageLocation?: string;
-
-    @ApiPropertyOptional({ maxLength: 100 })
-    @IsOptional()
-    @IsString()
-    @MaxLength(100)
-    projectCode?: string;
 
     @ApiPropertyOptional({description: 'Photo Document ID'})
     @IsOptional()

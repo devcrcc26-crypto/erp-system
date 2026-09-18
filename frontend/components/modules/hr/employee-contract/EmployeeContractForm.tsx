@@ -126,25 +126,37 @@ function CurrencyInputNumber({
 function valuesFromContract(
   contract: EmployeeContractDetail,
 ): EmployeeContractFormValues {
+  const toDay = (value: string | null | undefined): dayjs.Dayjs | undefined => {
+    if (!value) {
+      return undefined;
+    }
+    const dateOnly = value.slice(0, 10);
+    return dayjs(dateOnly);
+  };
+
+  const toAmount = (
+    value: string | number | null | undefined,
+  ): number | undefined => {
+    if (value == null || value === '') {
+      return undefined;
+    }
+    const n = Number(value);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
   return {
     employeeId: contract.employeeId,
     contractType: contract.contractType,
-    signedAt: dayjs(contract.signedAt),
-    startDate: dayjs(contract.startDate),
-    endDate: contract.endDate ? dayjs(contract.endDate) : undefined,
+    signedAt: toDay(contract.signedAt) ?? dayjs(),
+    startDate: toDay(contract.startDate) ?? dayjs(),
+    endDate: toDay(contract.endDate),
     notes: contract.notes ?? undefined,
     currency: contract.currency ?? 'ETB',
-    basicSalary: contract.basicSalary ? Number(contract.basicSalary) : undefined,
-    transportationAllowance: contract.transportationAllowance
-      ? Number(contract.transportationAllowance)
-      : undefined,
-    monthlyBonus: contract.monthlyBonus
-      ? Number(contract.monthlyBonus)
-      : undefined,
-    netSalary: contract.netSalary ? Number(contract.netSalary) : undefined,
-    probationEndDate: contract.probationEndDate
-      ? dayjs(contract.probationEndDate)
-      : undefined,
+    basicSalary: toAmount(contract.basicSalary),
+    transportationAllowance: toAmount(contract.transportationAllowance),
+    monthlyBonus: toAmount(contract.monthlyBonus),
+    netSalary: toAmount(contract.netSalary),
+    probationEndDate: toDay(contract.probationEndDate),
     governedBy: contract.governedBy ?? undefined,
   };
 }
@@ -406,8 +418,10 @@ export default function EmployeeContractForm({
             values.transportationAllowance +
             values.monthlyBonus
           : undefined),
-      probationEndDate: values.probationEndDate?.format('YYYY-MM-DD'),
-      governedBy: values.governedBy?.trim() || undefined,
+      probationEndDate: values.probationEndDate
+        ? values.probationEndDate.format('YYYY-MM-DD')
+        : null,
+      governedBy: values.governedBy?.trim() || null,
     };
 
     setSubmitting(true);
@@ -418,8 +432,8 @@ export default function EmployeeContractForm({
               contractType: values.contractType,
               signedAt: values.signedAt.format('YYYY-MM-DD'),
               startDate: values.startDate.format('YYYY-MM-DD'),
-              endDate: needsEndDate ? endDate : null,
-              notes: values.notes?.trim() || undefined,
+              endDate: needsEndDate ? endDate ?? null : null,
+              notes: values.notes?.trim() || null,
               ...salaryPayload,
             })
           : await createMutation.mutateAsync({
@@ -429,7 +443,13 @@ export default function EmployeeContractForm({
               startDate: values.startDate.format('YYYY-MM-DD'),
               endDate,
               notes: values.notes?.trim() || undefined,
-              ...salaryPayload,
+              currency: salaryPayload.currency,
+              basicSalary: salaryPayload.basicSalary,
+              transportationAllowance: salaryPayload.transportationAllowance,
+              monthlyBonus: salaryPayload.monthlyBonus,
+              netSalary: salaryPayload.netSalary,
+              probationEndDate: salaryPayload.probationEndDate ?? undefined,
+              governedBy: salaryPayload.governedBy ?? undefined,
             });
 
       messageApi.success(

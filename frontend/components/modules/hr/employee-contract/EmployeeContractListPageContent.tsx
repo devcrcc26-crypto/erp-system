@@ -244,7 +244,7 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
     row: EmployeeContractListItem,
   ): MenuProps['items'] {
     const items: MenuProps['items'] = [];
-    if (row.status === 'ACTIVE') {
+    if (row.status === 'ACTIVE' || row.status === 'DRAFT') {
       items.push({
         key: 'update',
         icon: <EditOutlined />,

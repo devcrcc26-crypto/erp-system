@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Button, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import AddVehicleForm from '@/components/modules/org/vehicles/add-vehicle/AddVehicleForm';
@@ -20,18 +19,7 @@ export default function EditVehicleFormContent({
   const messageApi = useAppMessage();
   const vehicleQuery = useCompanyVehicle(vehicleId);
 
-  const headerExtra = useMemo(
-    () => (
-      <Button
-        onClick={() => router.push(`/organization/vehicles/${vehicleId}`)}
-        style={{ borderRadius: 0 }}
-      >
-        {t('common.cancel')}
-      </Button>
-    ),
-    [router, t, vehicleId],
-  );
-  useSetHeaderExtra(headerExtra);
+  useSetHeaderExtra(null);
 
   function handleSuccess(): void {
     const plate = vehicleQuery.data?.plateNumber ?? vehicleId;
@@ -44,9 +32,18 @@ export default function EditVehicleFormContent({
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col">
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        <Button
+          onClick={() => router.push(`/organization/vehicles/${vehicleId}`)}
+          className="shrink-0"
+          style={{ borderRadius: 0 }}
+        >
+          {t('common.cancel')}
+        </Button>
+      </div>
       <p
-        className="mb-4 mt-0 text-[14px] leading-relaxed"
+        className="m-0 text-[14px] leading-relaxed"
         style={{ color: tokens.colorTextSecondary, fontFamily: tokens.fontFamily }}
       >
         {vehicleQuery.data

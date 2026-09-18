@@ -1576,7 +1576,14 @@
     "required": "必填",
     "yes": "是",
     "no": "否",
-    "download": "下载"
+    "download": "下载",
+    "downloadFile": "下载 {{name}}",
+    "preview": "预览",
+    "previewFile": "预览 {{name}}",
+    "previewLoadError": "无法打开此文件",
+    "pdfPreviewUnsupported": "您的浏览器无法在此处显示该 PDF。",
+    "downloadToView": "下载查看",
+    "viewPhoto": "查看照片"
   },
   "validation": {
     "invalidName": "仅可使用字母、空格、连字符、撇号或句点",
@@ -2539,7 +2546,6 @@
       "originalValue": "本币原值",
       "managingDepartment": "管理部门",
       "storageLocation": "存放地点",
-      "projectCode": "项目编码",
       "depreciationSummary": "折旧汇总",
       "monthlyDepreciation": "月折旧额",
       "accumulatedDepreciation": "累计折旧",
@@ -2569,8 +2575,7 @@
       "specifications": "例如：HP i7 16GB",
       "assetCategory": "例如：其他固定资产-海外",
       "managingDepartment": "例如：IT 部门",
-      "storageLocation": "例如：总部仓库",
-      "projectCode": "例如：PRJ-001"
+      "storageLocation": "例如：总部仓库"
     },
     "assetButtons": {
       "newAsset": "新建资产",

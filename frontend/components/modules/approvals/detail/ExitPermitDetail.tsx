@@ -8,11 +8,13 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import { DocumentPreviewGroup } from '@/components/shared/preview';
 import DocumentImageThumb from '@/components/ui/DocumentImageThumb/DocumentImageThumb';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ExitPermitItem } from '@/lib/api/exit-permit.types';
 import { useExitPermit } from '@/lib/query/exit-permit';
+import { exitPermitItemImages } from '@/lib/utils/exit-permit-item-images';
 import {
   formatExitPermitDepartmentName,
   formatExitPermitDirection,
@@ -65,6 +67,8 @@ export default function ExitPermitDetail({
         <DocumentImageThumb
           documentId={row.documentId ?? row.image?.id}
           alt={row.itemName}
+          fileName={row.image?.name}
+          fileType={row.image?.fileType}
           size={40}
           emptyLabel={t('hr.labels.noItemImage')}
         />
@@ -160,15 +164,17 @@ export default function ExitPermitDetail({
         title={t('hr.section.items')}
         bodyClassName="px-3 py-4 sm:px-5"
       >
-        <DataTable<ExitPermitItem>
-          rowKey="id"
-          className="erp-pro-table"
-          size="small"
-          columns={columns}
-          dataSource={permit.items}
-          pagination={false}
-          scroll={false}
-        />
+        <DocumentPreviewGroup documents={exitPermitItemImages(permit.items)}>
+          <DataTable<ExitPermitItem>
+            rowKey="id"
+            className="erp-pro-table"
+            size="small"
+            columns={columns}
+            dataSource={permit.items}
+            pagination={false}
+            scroll={false}
+          />
+        </DocumentPreviewGroup>
       </SectionCard>
     </div>
   );

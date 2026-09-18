@@ -65,7 +65,7 @@ export default function EmployeeContractFormContent({
     );
   }
 
-  if (isEdit && detailQuery.data?.status !== 'ACTIVE') {
+  if (isEdit && detailQuery.data && !['ACTIVE', 'DRAFT'].includes(detailQuery.data.status)) {
     return (
       <Alert
         type="error"

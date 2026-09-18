@@ -5023,7 +5023,6 @@ model CompanyAsset {
     originalValue      Decimal?  @map("original_value") @db.Decimal(14, 2)
     managingDepartment String?   @map("managing_department")
     storageLocation    String?   @map("storage_location")
-    projectCode        String?   @map("project_code")
     createdAt     DateTime          @default(now()) @map("created_at")
     updatedAt     DateTime          @default(now()) @updatedAt @map("updated_at")
     updatedBy     String            @map("updated_by")

@@ -2,19 +2,12 @@
 
 import { useState } from 'react';
 import { Button, Spin, Tooltip, Upload } from 'antd';
-import {
-  DeleteOutlined,
-  DownloadOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
+import { DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import { FilePlus2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
-import ProfileFileTypeIcon, {
-  profileFileMetaLine,
-} from '@/components/modules/users/ProfileFileTypeIcon';
+import { DocumentPreview } from '@/components/shared/preview';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { apiGet } from '@/lib/api/client';
 import {
   useDeleteUserDocument,
   useUploadUserDocuments,
@@ -50,71 +43,45 @@ function defaultDocumentLabel(file: File): string {
 
 function SavedDocumentCard({
   document,
+  downloadPath,
   canDelete,
   isDeleting,
-  isDownloading,
-  onDownload,
   onDelete,
-  downloadLabel,
   deleteLabel,
 }: {
   document: UserProfileDocument;
+  /** Endpoint returning the document's signed URL (self or HR scope). */
+  downloadPath: string;
   canDelete: boolean;
   isDeleting: boolean;
-  isDownloading: boolean;
-  onDownload: () => void;
   onDelete: () => void;
-  downloadLabel: string;
   deleteLabel: string;
 }): React.ReactNode {
-  const dateLabel = new Date(document.createdAt).toLocaleDateString();
-
   return (
-    <article className="erp-profile-doc-card">
-      <div className="erp-profile-doc-card-top">
-        <ProfileFileTypeIcon name={document.name} fileType={document.fileType} />
-        <div className="erp-profile-doc-card-actions">
-          <Tooltip title={downloadLabel}>
+    <DocumentPreview
+      documentId={document.id}
+      fileName={document.name}
+      fileType={document.fileType}
+      fileSizeBytes={document.fileSizeBytes}
+      urlPath={downloadPath}
+      metaExtra={new Date(document.createdAt).toLocaleDateString()}
+      extraActions={
+        canDelete ? (
+          <Tooltip title={deleteLabel}>
             <Button
               type="text"
+              danger
               size="small"
               className="erp-profile-doc-card-action"
-              icon={<DownloadOutlined />}
-              loading={isDownloading}
-              onClick={onDownload}
-              aria-label={downloadLabel}
+              icon={<DeleteOutlined />}
+              loading={isDeleting}
+              onClick={onDelete}
+              aria-label={deleteLabel}
             />
           </Tooltip>
-          {canDelete ? (
-            <Tooltip title={deleteLabel}>
-              <Button
-                type="text"
-                danger
-                size="small"
-                className="erp-profile-doc-card-action"
-                icon={<DeleteOutlined />}
-                loading={isDeleting}
-                onClick={onDelete}
-                aria-label={deleteLabel}
-              />
-            </Tooltip>
-          ) : null}
-        </div>
-      </div>
-      <div className="erp-profile-doc-card-body">
-        <p className="erp-profile-doc-card-name" title={document.name}>
-          {document.name}
-        </p>
-        <p className="erp-profile-doc-card-meta">
-          {profileFileMetaLine(
-            document.name,
-            document.fileType,
-            document.fileSizeBytes,
-            dateLabel,
-          )}
-        </p>
-      </div>
-    </article>
+        ) : null
+      }
+    />
   );
 }
 
@@ -140,7 +107,6 @@ export default function EmployeeProfileDocuments({
   const uploadMutation = useUploadUserDocuments();
   const deleteMutation = useDeleteUserDocument();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const documentPendingDelete =
@@ -170,27 +136,10 @@ export default function EmployeeProfileDocuments({
     return false;
   }
 
-  async function handleDownload(document: UserProfileDocument): Promise<void> {
-    setDownloadingId(document.id);
-    try {
-      const { url } = await apiGet<{ url: string; expiresIn: number }>(
-        isSelf
-          ? myProfileDocumentDownloadPath(document.id)
-          : `/users/${userId}/documents/${document.id}/download-url`,
-      );
-      const anchor = window.document.createElement('a');
-      anchor.href = url;
-      anchor.target = '_blank';
-      anchor.rel = 'noopener noreferrer';
-      anchor.download = document.name;
-      window.document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-    } catch (error: unknown) {
-      notifyApiError(error, t('users.documentDownloadError'), messageApi);
-    } finally {
-      setDownloadingId(null);
-    }
+  function documentDownloadPath(documentId: string): string {
+    return isSelf
+      ? myProfileDocumentDownloadPath(documentId)
+      : `/users/${userId}/documents/${documentId}/download-url`;
   }
 
   async function handleConfirmDelete(): Promise<void> {
@@ -264,12 +213,10 @@ export default function EmployeeProfileDocuments({
               <SavedDocumentCard
                 key={document.id}
                 document={document}
+                downloadPath={documentDownloadPath(document.id)}
                 canDelete={canDelete && !readOnly}
                 isDeleting={deletingId === document.id}
-                isDownloading={downloadingId === document.id}
-                downloadLabel={t('common.download')}
                 deleteLabel={t('common.delete')}
-                onDownload={() => void handleDownload(document)}
                 onDelete={() => setConfirmDeleteId(document.id)}
               />
             ))}

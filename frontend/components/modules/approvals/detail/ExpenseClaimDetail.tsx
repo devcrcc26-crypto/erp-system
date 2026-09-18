@@ -7,6 +7,7 @@ import {
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import { DocumentPreviewGroup } from '@/components/shared/preview';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -145,15 +146,17 @@ export default function ExpenseClaimDetail({
       ) : null}
 
       <SectionCard title="Expense Items" bodyClassName="px-3 py-4 sm:px-5">
-        <DataTable<ExpenseClaimItem>
-          rowKey="id"
-          className="erp-pro-table"
-          size="small"
-          columns={columns}
-          dataSource={claim.items}
-          pagination={false}
-          scroll={{ x: 'max-content' }}
-        />
+        <DocumentPreviewGroup documents={claim.items.flatMap((item) => (item.receipt ? [item.receipt] : []))}>
+          <DataTable<ExpenseClaimItem>
+            rowKey="id"
+            className="erp-pro-table"
+            size="small"
+            columns={columns}
+            dataSource={claim.items}
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+          />
+        </DocumentPreviewGroup>
       </SectionCard>
     </div>
   );

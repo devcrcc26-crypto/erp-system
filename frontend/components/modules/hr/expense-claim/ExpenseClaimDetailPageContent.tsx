@@ -22,8 +22,12 @@ import {
   StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import { ArrowLeft, Download, File, Receipt } from 'lucide-react';
+import { ArrowLeft, Download, Eye, File, Receipt } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import {
+  DocumentPreviewActions,
+  DocumentPreviewGroup,
+} from '@/components/shared/preview';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import ExpenseClaimItemModal from '@/components/modules/hr/expense-claim/ExpenseClaimItemModal';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
@@ -38,10 +42,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
-import type {
-  ExpenseClaimDocumentSummary,
-  ExpenseClaimItem,
-} from '@/lib/api/expense-claim.types';
+import type { ExpenseClaimItem } from '@/lib/api/expense-claim.types';
 import { useApprovalRequest } from '@/lib/query/approvals';
 import {
   downloadExpenseClaimItemsImportTemplate,
@@ -55,7 +56,6 @@ import {
 } from '@/lib/query/expense-claim';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
-import { downloadDocument } from '@/lib/utils/document-download';
 import {
   expenseClaimStatusVariant,
   formatCurrencyAmount,
@@ -247,20 +247,6 @@ export default function ExpenseClaimDetailPageContent({
     }
   }
 
-  async function handleDownloadReceipt(
-    receipt: ExpenseClaimDocumentSummary,
-  ): Promise<void> {
-    try {
-      await downloadDocument(receipt.id, receipt.name);
-    } catch (error: unknown) {
-      const text =
-        error instanceof ApiRequestError
-          ? error.message
-          : 'Unable to download attachment';
-      messageApi.error(text);
-    }
-  }
-
   async function handleSubmit(): Promise<void> {
     try {
       await submitMutation.mutateAsync();
@@ -381,36 +367,58 @@ export default function ExpenseClaimDetailPageContent({
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
-              <Tooltip title={row.receipt.name}>
-                <span className="inline-flex shrink-0">
-                  <ProfileFileTypeIcon
-                    name={row.receipt.name}
-                    fileType={row.receipt.fileType}
-                    size="sm"
-                  />
-                </span>
-              </Tooltip>
-              {!isNarrow ? (
-                <Tooltip title={t('common.download')}>
-                  <Button
-                    type="text"
-                    size="small"
-                    className="erp-expense-receipt-download-btn"
-                    icon={<Download size={15} strokeWidth={1.75} />}
-                    aria-label={t('common.download')}
-                    onClick={() => void handleDownloadReceipt(row.receipt!)}
-                  />
-                </Tooltip>
-              ) : (
-                <Button
-                  type="text"
-                  size="small"
-                  className="erp-expense-receipt-download-btn"
-                  icon={<Download size={14} strokeWidth={1.75} />}
-                  aria-label={t('common.download')}
-                  onClick={() => void handleDownloadReceipt(row.receipt!)}
-                />
-              )}
+              <DocumentPreviewActions document={row.receipt}>
+                {(actions) => (
+                  <>
+                    <Tooltip title={row.receipt!.name}>
+                      <span className="inline-flex shrink-0">
+                        <ProfileFileTypeIcon
+                          name={row.receipt!.name}
+                          fileType={row.receipt!.fileType}
+                          size="sm"
+                        />
+                      </span>
+                    </Tooltip>
+                    {actions.canPreview ? (
+                      <Tooltip
+                        title={isNarrow ? undefined : t('common.preview')}
+                      >
+                        <Button
+                          type="text"
+                          size="small"
+                          className="erp-expense-receipt-download-btn"
+                          icon={
+                            <Eye size={isNarrow ? 14 : 15} strokeWidth={1.75} />
+                          }
+                          loading={actions.previewLoading}
+                          aria-label={t('common.previewFile', {
+                            name: row.receipt!.name,
+                          })}
+                          onClick={actions.preview}
+                        />
+                      </Tooltip>
+                    ) : null}
+                    <Tooltip
+                      title={isNarrow ? undefined : t('common.download')}
+                    >
+                      <Button
+                        type="text"
+                        size="small"
+                        className="erp-expense-receipt-download-btn"
+                        icon={
+                          <Download
+                            size={isNarrow ? 14 : 15}
+                            strokeWidth={1.75}
+                          />
+                        }
+                        loading={actions.downloading}
+                        aria-label={t('common.download')}
+                        onClick={actions.download}
+                      />
+                    </Tooltip>
+                  </>
+                )}
+              </DocumentPreviewActions>
             </div>
           ) : (
             <Tooltip title={t('hr.labels.receiptMissing')}>
@@ -745,32 +753,34 @@ export default function ExpenseClaimDetailPageContent({
                 </Space.Compact>
               }
             >
-              <DataTable<ExpenseClaimItem>
-                rowKey="id"
-                className="erp-pro-table erp-users-table"
-                size="small"
-                columns={columns}
-                dataSource={claim.items}
-                pagination={false}
-                scroll={{ x: tableScrollX }}
-                locale={{
-                  emptyText: (
-                    <TableEmptyState
-                      icon={<Receipt size={28} strokeWidth={1.5} />}
-                      title={t('hr.empty.noItems')}
-                      description={t('pages.hr.expenseClaim.itemsStepDescription')}
-                      action={
-                        canEditItems
-                          ? {
-                              label: t('hr.buttons.addItem'),
-                              onClick: openAddItem,
-                            }
-                          : undefined
-                      }
-                    />
-                  ),
-                }}
-              />
+              <DocumentPreviewGroup documents={claim.items.flatMap((item) => (item.receipt ? [item.receipt] : []))}>
+                <DataTable<ExpenseClaimItem>
+                  rowKey="id"
+                  className="erp-pro-table erp-users-table"
+                  size="small"
+                  columns={columns}
+                  dataSource={claim.items}
+                  pagination={false}
+                  scroll={{ x: tableScrollX }}
+                  locale={{
+                    emptyText: (
+                      <TableEmptyState
+                        icon={<Receipt size={28} strokeWidth={1.5} />}
+                        title={t('hr.empty.noItems')}
+                        description={t('pages.hr.expenseClaim.itemsStepDescription')}
+                        action={
+                          canEditItems
+                            ? {
+                                label: t('hr.buttons.addItem'),
+                                onClick: openAddItem,
+                              }
+                            : undefined
+                        }
+                      />
+                    ),
+                  }}
+                />
+              </DocumentPreviewGroup>
             </DetailSection>
 
             {claim.description?.trim() ? (

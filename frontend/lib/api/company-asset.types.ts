@@ -50,7 +50,6 @@ export interface CompanyAssetListItem extends CompanyAssetDepreciationFields {
   originalValue?: number | string | null;
   managingDepartment?: string | null;
   storageLocation?: string | null;
-  projectCode?: string | null;
   photoDocumentId?: string | null;
   assignedTo?: AssetUserRef | null;
   assignedAt?: string | null;
@@ -82,7 +81,6 @@ export interface CreateCompanyAssetPayload {
   originalValue?: number;
   managingDepartment?: string;
   storageLocation?: string;
-  projectCode?: string;
   photoDocumentId?: string;
 }
 
@@ -104,7 +102,6 @@ export interface UpdateCompanyAssetPayload {
   originalValue?: number;
   managingDepartment?: string;
   storageLocation?: string;
-  projectCode?: string;
   photoDocumentId?: string;
 }
 

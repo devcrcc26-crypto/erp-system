@@ -13,6 +13,7 @@ import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTim
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -425,6 +426,12 @@ export default function LeaveRequestDetailPageContent({
                     </span>
                   </MetaItem>
                 </div>
+              </DetailSection>
+            ) : null}
+
+            {(request.documents?.length ?? 0) > 0 ? (
+              <DetailSection title={t('hr.section.attachments')}>
+                <AttachmentDownloadList documents={request.documents} />
               </DetailSection>
             ) : null}
           </div>

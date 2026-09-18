@@ -34,6 +34,7 @@ import {
 } from '@ant-design/icons';
 import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
+import { ImagePreviewTrigger } from '@/components/shared/preview';
 import ThreePeopleIcon from '@/components/ThreePeopleIcon';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -97,23 +98,29 @@ function UserListAvatar({ user }: { user: User }): React.ReactNode {
     `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase();
 
   return (
-    <Avatar
-      size={40}
-      shape="square"
-      className="erp-users-avatar"
+    <ImagePreviewTrigger
       src={photoQuery.data?.url}
-      icon={!photoQuery.data?.url && !initials ? <UserOutlined /> : undefined}
-      style={{
-        backgroundColor: photoQuery.data?.url
-          ? undefined
-          : tokens.colorPrimaryLight,
-        color: tokens.colorPrimary,
-        fontSize: 13,
-        fontWeight: 600,
-      }}
+      alt={`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()}
+      className="!rounded-md"
     >
-      {initials}
-    </Avatar>
+      <Avatar
+        size={40}
+        shape="square"
+        className="erp-users-avatar"
+        src={photoQuery.data?.url}
+        icon={!photoQuery.data?.url && !initials ? <UserOutlined /> : undefined}
+        style={{
+          backgroundColor: photoQuery.data?.url
+            ? undefined
+            : tokens.colorPrimaryLight,
+          color: tokens.colorPrimary,
+          fontSize: 13,
+          fontWeight: 600,
+        }}
+      >
+        {initials}
+      </Avatar>
+    </ImagePreviewTrigger>
   );
 }
 

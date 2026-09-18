@@ -66,3 +66,19 @@ export async function downloadDocument(
   anchor.click();
   anchor.remove();
 }
+
+/**
+ * Starts a browser download for an already-resolved (presigned) URL.
+ */
+export function triggerUrlDownload(url: string, fileName?: string): void {
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener noreferrer';
+  if (fileName) {
+    anchor.download = fileName;
+  }
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}

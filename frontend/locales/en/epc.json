@@ -1576,7 +1576,14 @@
     "required": "Required",
     "yes": "Yes",
     "no": "No",
-    "download": "Download"
+    "download": "Download",
+    "downloadFile": "Download {{name}}",
+    "preview": "Preview",
+    "previewFile": "Preview {{name}}",
+    "previewLoadError": "Unable to open this file",
+    "pdfPreviewUnsupported": "Your browser can't display this PDF here.",
+    "downloadToView": "Download to view",
+    "viewPhoto": "View photo"
   },
   "validation": {
     "invalidName": "Use letters, spaces, hyphens, apostrophes or full stops only",
@@ -2539,7 +2546,6 @@
       "originalValue": "Original Value",
       "managingDepartment": "Managing Department",
       "storageLocation": "Storage Location",
-      "projectCode": "Project Code",
       "depreciationSummary": "Depreciation Summary",
       "monthlyDepreciation": "Monthly Depreciation",
       "accumulatedDepreciation": "Accumulated Depreciation",
@@ -2569,8 +2575,7 @@
       "specifications": "e.g. HP i7 16GB",
       "assetCategory": "e.g. Other Fixed Assets - Overseas",
       "managingDepartment": "e.g. IT Department",
-      "storageLocation": "e.g. Head Office Store",
-      "projectCode": "e.g. PRJ-001"
+      "storageLocation": "e.g. Head Office Store"
     },
     "assetButtons": {
       "newAsset": "New Asset",

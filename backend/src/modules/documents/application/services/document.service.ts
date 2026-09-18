@@ -37,6 +37,9 @@ import { DocumentPermissionService } from './document-permission.service';
 
 type RequestContext = { companyId: string; userId: string };
 
+/** Presigned URL lifetime used when the caller does not ask for one. */
+const DEFAULT_DOWNLOAD_URL_EXPIRES_IN_SECONDS = 900;
+
 interface UploadedFile {
   originalname: string;
   mimetype: string;
@@ -528,9 +531,14 @@ export class DocumentService {
     });
   }
 
+  /**
+   * @param expiresIn Optional URL lifetime in seconds (validated 1-3600 at the
+   * controller); omitted keeps the default download lifetime.
+   */
   async getDownloadUrl(
     ctx: RequestContext,
     id: string,
+    expiresIn?: number,
   ): Promise<{ url: string; expiresIn: number }> {
     const document = await this.prisma.document.findFirst({
       where: activeOnly({ id, companyId: ctx.companyId }),
@@ -543,6 +551,7 @@ export class DocumentService {
       document.fileKey,
       document.folderId,
       ctx.companyId,
+      expiresIn,
     );
   }
 
@@ -571,8 +580,8 @@ export class DocumentService {
     fileKey: string,
     folderId?: string,
     companyId?: string,
+    expiresIn = DEFAULT_DOWNLOAD_URL_EXPIRES_IN_SECONDS,
   ): Promise<{ url: string; expiresIn: number }> {
-    const expiresIn = 900;
     let bucket: StorageBucket = STORAGE_BUCKETS.DOCUMENTS;
 
     if (folderId && companyId) {

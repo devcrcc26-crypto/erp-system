@@ -167,13 +167,6 @@ const COMPANY_ASSET_IMPORT_SCHEMA: ImportColumnSchema = {
       example: 'Head office store',
       width: 24,
     },
-    {
-      field: 'projectCode',
-      label: 'Project Code',
-      type: 'string',
-      maxLength: 100,
-      width: 16,
-    },
   ],
 };
 
@@ -245,7 +238,6 @@ export class CompanyAssetImportService extends HrModuleImportServiceBase<CreateC
         originalValue: num('originalValue'),
         managingDepartment: text('managingDepartment') || undefined,
         storageLocation: text('storageLocation') || undefined,
-        projectCode: text('projectCode') || undefined,
       },
     };
   }

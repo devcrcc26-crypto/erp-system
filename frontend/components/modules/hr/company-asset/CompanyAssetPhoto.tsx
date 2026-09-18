@@ -7,6 +7,7 @@ import {
   DeleteOutlined,
   DesktopOutlined,
 } from '@ant-design/icons';
+import { ImagePreviewTrigger } from '@/components/shared/preview';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -109,21 +110,27 @@ export default function CompanyAssetPhoto({
 
   const avatar = (
     <Spin spinning={busy}>
-      <Avatar
-        size={size}
-        shape={variant === 'thumb' ? 'square' : 'circle'}
-        src={imageSrc}
-        icon={!imageSrc ? <DesktopOutlined /> : undefined}
-        style={{
-          backgroundColor: imageSrc ? undefined : tokens.colorTeal50,
-          color: imageSrc ? undefined : tokens.colorTeal400,
-          flexShrink: 0,
-          border: `1px solid ${tokens.colorBorder}`,
-          borderRadius: variant === 'thumb' ? 8 : undefined,
-        }}
+      <ImagePreviewTrigger
+        src={localPreview ? null : photoQuery.data?.url}
+        alt={label ?? t('hr.assetLabels.photo')}
+        className={variant === 'thumb' ? '!rounded-lg' : undefined}
       >
-        {!imageSrc && label ? label.slice(0, 2).toUpperCase() : undefined}
-      </Avatar>
+        <Avatar
+          size={size}
+          shape={variant === 'thumb' ? 'square' : 'circle'}
+          src={imageSrc}
+          icon={!imageSrc ? <DesktopOutlined /> : undefined}
+          style={{
+            backgroundColor: imageSrc ? undefined : tokens.colorTeal50,
+            color: imageSrc ? undefined : tokens.colorTeal400,
+            flexShrink: 0,
+            border: `1px solid ${tokens.colorBorder}`,
+            borderRadius: variant === 'thumb' ? 8 : undefined,
+          }}
+        >
+          {!imageSrc && label ? label.slice(0, 2).toUpperCase() : undefined}
+        </Avatar>
+      </ImagePreviewTrigger>
     </Spin>
   );
 

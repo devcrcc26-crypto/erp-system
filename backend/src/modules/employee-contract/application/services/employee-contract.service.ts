@@ -183,7 +183,9 @@ export class EmployeeContractService {
         }
 
         await this.assertCanView(contract, companyId, userId);
-        return contract;
+        return this.toContractResponse(
+          contract as unknown as Record<string, unknown>,
+        );
     }
 
     /**
@@ -265,7 +267,9 @@ export class EmployeeContractService {
                 ...(dto.signedAt !== undefined ? {signedAt} : {}),
                 ...(dto.startDate !== undefined ? {startDate} : {}),
                 ...(dto.endDate !== undefined ? {endDate} : {}),
-                ...(dto.notes !== undefined ? {notes: dto.notes?.trim() || null} : {}),
+                ...(dto.notes !== undefined
+                    ? { notes: dto.notes == null ? null : dto.notes.trim() || null }
+                    : {}),
                 ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
                 ...(dto.basicSalary !== undefined
                     ? { basicSalary: this.toDecimal(dto.basicSalary) }
@@ -287,7 +291,12 @@ export class EmployeeContractService {
                     }
                     : {}),
                 ...(dto.governedBy !== undefined
-                    ? { governedBy: dto.governedBy?.trim() || null }
+                    ? {
+                        governedBy:
+                          dto.governedBy == null
+                            ? null
+                            : dto.governedBy.trim() || null,
+                      }
                     : {}),
                 updatedBy: userId,
             }
@@ -555,7 +564,75 @@ export class EmployeeContractService {
             }),
             this.prisma.employeeContract.count({where}),
         ]);
-        return buildPaginatedResult(rows, total, page, limit);
+        return buildPaginatedResult(
+            rows.map((row) =>
+              this.toContractResponse(row as unknown as Record<string, unknown>),
+            ),
+            total,
+            page,
+            limit,
+        );
+    }
+
+    /**
+     * Serializes contract rows for the API (date-only strings, numeric pay fields).
+     */
+    private toContractResponse<T extends Record<string, unknown>>(
+        contract: T,
+    ): Record<string, unknown> {
+        const decimalFields = [
+            'basicSalary',
+            'transportationAllowance',
+            'monthlyBonus',
+            'netSalary',
+        ] as const;
+        const dateFields = [
+            'signedAt',
+            'startDate',
+            'endDate',
+            'probationEndDate',
+            'terminatedAt',
+            'lastWarnedAt',
+        ] as const;
+
+        const result: Record<string, unknown> = { ...contract };
+
+        for (const field of dateFields) {
+            const value = result[field];
+            if (value instanceof Date) {
+                result[field] = toDateOnly(value);
+            } else if (value == null) {
+                result[field] = null;
+            }
+        }
+
+        for (const field of decimalFields) {
+            const value = result[field];
+            if (value == null) {
+                result[field] = null;
+            } else if (
+                typeof value === 'object' &&
+                value !== null &&
+                'toNumber' in value &&
+                typeof (value as { toNumber: () => number }).toNumber === 'function'
+            ) {
+                result[field] = (value as { toNumber: () => number }).toNumber();
+            } else if (
+                typeof value === 'string' ||
+                typeof value === 'number'
+            ) {
+                result[field] = Number(value);
+            }
+        }
+
+        if (result.createdAt instanceof Date) {
+            result.createdAt = (result.createdAt as Date).toISOString();
+        }
+        if (result.updatedAt instanceof Date) {
+            result.updatedAt = (result.updatedAt as Date).toISOString();
+        }
+
+        return result;
     }
 
     private async assertCanManage(

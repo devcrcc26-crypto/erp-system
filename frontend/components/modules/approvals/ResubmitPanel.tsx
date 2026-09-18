@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Button, Input, Upload } from 'antd';
-import { PaperClipOutlined, UploadOutlined } from '@ant-design/icons';
+import { UploadOutlined } from '@ant-design/icons';
 import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import { DocumentPreviewGroup } from '@/components/shared/preview';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ApprovalResponse } from '@/lib/api/approvals.types';
@@ -143,29 +144,18 @@ export function ResponseHistory({
               </p>
             ) : null}
             {(response.documents?.length ?? 0) > 0 ? (
-              <ul className="m-0 mt-2 list-none space-y-1 p-0">
-                {response.documents?.map((link) => (
-                  <li key={link.id}>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 border-0 bg-transparent p-0 text-sm text-[var(--color-primary,#F47B20)] hover:underline"
-                      onClick={() => {
-                        void (async () => {
-                          const { apiGet } = await import('@/lib/api/client');
-                          const { url } = await apiGet<{ url: string }>(
-                            `/documents/${link.documentId}/download-url`,
-                          );
-                          window.open(url, '_blank', 'noopener,noreferrer');
-                        })();
-                      }}
-                    >
-                      <PaperClipOutlined />{' '}
-                      {link.document?.name ??
-                        t('pages.approvals.resubmit.attachment')}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-2">
+                <DocumentPreviewGroup
+                  documents={response.documents?.map((link) => ({
+                    id: link.documentId,
+                    name:
+                      link.document?.name ??
+                      t('pages.approvals.resubmit.attachment'),
+                    fileType: link.document?.fileType,
+                    fileSizeBytes: link.document?.fileSizeBytes,
+                  }))}
+                />
+              </div>
             ) : null}
           </div>
         ))}

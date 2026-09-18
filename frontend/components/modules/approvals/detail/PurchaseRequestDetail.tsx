@@ -7,6 +7,7 @@ import {
   SectionCard,
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
+import { DocumentPreviewGroup } from '@/components/shared/preview';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -206,34 +207,36 @@ export default function PurchaseRequestDetail({
         title={t('hr.section.items')}
         bodyClassName="px-3 py-4 sm:px-5"
       >
-        <DataTable<PurchaseRequestItem>
-          rowKey="id"
-          className="erp-pro-table"
-          size="small"
-          columns={columns}
-          dataSource={request.items}
-          pagination={false}
-          scroll={{ x: 'max-content' }}
-          footer={
-            request.items.length > 0
-              ? () => (
-                  <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 pr-2 text-sm font-medium">
-                    <span style={{ color: tokens.colorTextSecondary }}>
-                      {t('hr.form.itemCount', {
-                        count: request.items.length,
-                      })}
-                    </span>
-                    <span style={{ color: tokens.colorTextPrimary }}>
-                      {t('hr.form.estimatedTotal')}:{' '}
-                      <strong>
-                        {formatEtbAmount(request.totalEstimatedEtb)}
-                      </strong>
-                    </span>
-                  </div>
-                )
-              : undefined
-          }
-        />
+        <DocumentPreviewGroup documents={request.items.flatMap((item) => (item.image ? [item.image] : []))}>
+          <DataTable<PurchaseRequestItem>
+            rowKey="id"
+            className="erp-pro-table"
+            size="small"
+            columns={columns}
+            dataSource={request.items}
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+            footer={
+              request.items.length > 0
+                ? () => (
+                    <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 pr-2 text-sm font-medium">
+                      <span style={{ color: tokens.colorTextSecondary }}>
+                        {t('hr.form.itemCount', {
+                          count: request.items.length,
+                        })}
+                      </span>
+                      <span style={{ color: tokens.colorTextPrimary }}>
+                        {t('hr.form.estimatedTotal')}:{' '}
+                        <strong>
+                          {formatEtbAmount(request.totalEstimatedEtb)}
+                        </strong>
+                      </span>
+                    </div>
+                  )
+                : undefined
+            }
+          />
+        </DocumentPreviewGroup>
       </SectionCard>
 
       {(request.documents?.length ?? 0) > 0 ? (
