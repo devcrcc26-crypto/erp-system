@@ -6,6 +6,14 @@ import { DocumentPermissionService } from '../document-permission.service';
 describe.each([
   { contextType: FolderContextType.PURCHASE_REQUEST, model: 'purchaseRequest' },
   { contextType: FolderContextType.EXPENSE_CLAIM, model: 'expenseClaim' },
+  {
+    contextType: FolderContextType.MATERIAL_REQUISITION,
+    model: 'materialRequisition',
+  },
+  {
+    contextType: FolderContextType.CONSUMABLES_REQUISITION,
+    model: 'consumablesRequisition',
+  },
 ] as const)(
   'DocumentPermissionService — $contextType attachments',
   ({ contextType, model }) => {
@@ -32,6 +40,8 @@ describe.each([
         },
         purchaseRequest: { findFirst: jest.fn() },
         expenseClaim: { findFirst: jest.fn() },
+        materialRequisition: { findFirst: jest.fn() },
+        consumablesRequisition: { findFirst: jest.fn() },
       };
       prisma[model].findFirst = findRecord;
       service = new DocumentPermissionService(

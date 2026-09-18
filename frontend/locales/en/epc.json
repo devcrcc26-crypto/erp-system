@@ -724,6 +724,7 @@
         "itemsStepDescription": "Add consumable line items (maximum 20). Each item must be under ETB 5,000.",
         "reviewStepDescription": "Confirm the request, items, and low-value declaration before submitting.",
         "declarationStepDescription": "Confirm that all items are low-value consumables before submit.",
+        "attachmentsStepDescription": "Optionally attach quotes, packing lists, or other supporting documents.",
         "searchPlaceholder": "Search by request #, title, or employee",
         "emptyFiltered": "No consumables requisitions match your filters",
         "returnedNotice": "This requisition was returned. Edit items below, then resubmit from Approvals.",

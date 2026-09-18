@@ -10,10 +10,11 @@ import {
   Query,
   StreamableFile,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import {
@@ -299,15 +300,30 @@ export class ConsumablesRequisitionController {
   @DelegatePermissionCheck()
   @ApiOperation({
     summary:
-      'Submit a draft requisition (1-tier HR Officer, or direct APPROVED for HR+)',
+      'Submit a draft requisition (1-tier HR Officer, or direct APPROVED for HR+; optional file attachments)',
   })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files', 20, { storage: memoryStorage() }))
   submit(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
+    @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<unknown> {
     return this.consumablesRequisitionService.submitRequisition(
       id,
+      files ?? [],
       companyId,
       user.userId,
     );

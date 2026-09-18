@@ -48,9 +48,18 @@ export interface ConsumablesRequisitionListItem {
   completedAt?: string | null;
 }
 
+export interface ConsumablesRequisitionDocumentSummary {
+  id: string;
+  name: string;
+  fileType?: string;
+  fileSizeBytes?: number;
+}
+
 export interface ConsumablesRequisitionDetail
   extends ConsumablesRequisitionListItem {
   items: ConsumablesRequisitionItem[];
+  documents?: ConsumablesRequisitionDocumentSummary[];
+  attachmentFolderId?: string | null;
   approvalRequest?: {
     id: string;
     status: string;

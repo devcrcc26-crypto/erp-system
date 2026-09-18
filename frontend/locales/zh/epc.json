@@ -724,6 +724,7 @@
         "itemsStepDescription": "添加易耗品明细（最多 20 项）。每项估价须低于 ETB 5,000。",
         "reviewStepDescription": "提交前请确认申请内容、明细与低值声明。",
         "declarationStepDescription": "提交前请确认所有明细均为低值易耗品。",
+        "attachmentsStepDescription": "可选上传报价、装箱单或其他证明材料。",
         "searchPlaceholder": "按申请编号、标题或员工搜索",
         "emptyFiltered": "没有符合筛选条件的低值易耗品申请",
         "returnedNotice": "此申请已退回。请在下方编辑明细，然后从审批中心重新提交。",

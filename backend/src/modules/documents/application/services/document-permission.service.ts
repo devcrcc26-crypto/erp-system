@@ -939,8 +939,8 @@ export class DocumentPermissionService {
   }
 
   /**
-   * Leave / overtime / approval / seal / purchase request / expense claim /
-   * employee profile attachment folders:
+   * Leave / overtime / approval / seal / purchase / expense / material /
+   * consumables / employee profile attachment folders:
    * HR viewers, user managers, owner, or assigned approval-tier approver may
    * download without documents.view.
    */
@@ -979,7 +979,9 @@ export class DocumentPermissionService {
       contextType !== FolderContextType.VEHICLE_REFUELING &&
       contextType !== FolderContextType.EXIT_PERMIT &&
       contextType !== FolderContextType.PURCHASE_REQUEST &&
-      contextType !== FolderContextType.EXPENSE_CLAIM
+      contextType !== FolderContextType.EXPENSE_CLAIM &&
+      contextType !== FolderContextType.MATERIAL_REQUISITION &&
+      contextType !== FolderContextType.CONSUMABLES_REQUISITION
     ) {
       return false;
     }
@@ -1209,7 +1211,9 @@ export class DocumentPermissionService {
 
     if (
       contextType === FolderContextType.PURCHASE_REQUEST ||
-      contextType === FolderContextType.EXPENSE_CLAIM
+      contextType === FolderContextType.EXPENSE_CLAIM ||
+      contextType === FolderContextType.MATERIAL_REQUISITION ||
+      contextType === FolderContextType.CONSUMABLES_REQUISITION
     ) {
       // Mirrors each module's assertCanView: owner, filer or tier approver.
       const where = activeOnly({ id: contextId, companyId });
@@ -1225,7 +1229,17 @@ export class DocumentPermissionService {
       const record =
         contextType === FolderContextType.PURCHASE_REQUEST
           ? await this.prisma.purchaseRequest.findFirst({ where, select })
-          : await this.prisma.expenseClaim.findFirst({ where, select });
+          : contextType === FolderContextType.EXPENSE_CLAIM
+            ? await this.prisma.expenseClaim.findFirst({ where, select })
+            : contextType === FolderContextType.MATERIAL_REQUISITION
+              ? await this.prisma.materialRequisition.findFirst({
+                  where,
+                  select,
+                })
+              : await this.prisma.consumablesRequisition.findFirst({
+                  where,
+                  select,
+                });
       if (!record) {
         return false;
       }

@@ -8,6 +8,8 @@ import {
   SummaryStrip,
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { ConsumablesRequisitionItem } from '@/lib/api/consumables-requisition.types';
 import { useConsumablesRequisition } from '@/lib/query/consumables-requisition';
@@ -24,6 +26,7 @@ export default function ConsumablesRequisitionDetail({
   approvalRequestId: string;
   sourceId: string;
 }): React.ReactNode {
+  const { t } = useEpcTranslation();
   const detailQuery = useConsumablesRequisition(sourceId);
   const requisition = detailQuery.data;
 
@@ -120,6 +123,15 @@ export default function ConsumablesRequisitionDetail({
           scroll={false}
         />
       </SectionCard>
+
+      {(requisition.documents?.length ?? 0) > 0 ? (
+        <SectionCard
+          title={t('hr.section.attachments')}
+          bodyClassName="px-3 py-4 sm:px-5"
+        >
+          <AttachmentDownloadList documents={requisition.documents} />
+        </SectionCard>
+      ) : null}
     </div>
   );
 }

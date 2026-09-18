@@ -29,6 +29,7 @@ import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTim
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import HorizontalScrollHint from '@/components/ui/HorizontalScrollHint/HorizontalScrollHint';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -721,6 +722,12 @@ export default function ConsumablesRequisitionDetailPageContent({
                 />
               </HorizontalScrollHint>
             </DetailSection>
+
+            {(requisition.documents?.length ?? 0) > 0 ? (
+              <DetailSection title={t('hr.section.attachments')}>
+                <AttachmentDownloadList documents={requisition.documents!} />
+              </DetailSection>
+            ) : null}
           </div>
         </div>
 

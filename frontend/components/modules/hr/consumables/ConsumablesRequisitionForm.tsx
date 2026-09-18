@@ -19,6 +19,7 @@ import { Pencil, ShoppingBag, Trash2 } from 'lucide-react';
 import dayjs from 'dayjs';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import {
   OnBehalfSection,
   useOnBehalf,
@@ -27,7 +28,7 @@ import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { apiPost } from '@/lib/api/client';
+import { apiPost, apiPostForm } from '@/lib/api/client';
 import type {
   AddConsumablesRequisitionItemPayload,
   ConsumablesRequisitionDetail,
@@ -118,6 +119,7 @@ export default function ConsumablesRequisitionForm({
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
   const [declarationConfirmed, setDeclarationConfirmed] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -133,6 +135,7 @@ export default function ConsumablesRequisitionForm({
     setEditingKey(null);
     setShowItemForm(false);
     setDeclarationConfirmed(false);
+    setFiles([]);
     setFormError(null);
   }
 
@@ -292,8 +295,13 @@ export default function ConsumablesRequisitionForm({
         }),
       );
 
-      const finalResult = await apiPost<ConsumablesRequisitionDetail>(
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('files', file);
+      }
+      const finalResult = await apiPostForm<ConsumablesRequisitionDetail>(
         `/hr/consumables/${created.id}/submit`,
+        formData,
       );
 
       const isDirectApproved =
@@ -803,6 +811,22 @@ export default function ConsumablesRequisitionForm({
                 </span>
               </Checkbox>
             </FormLayout>
+
+            <FormLayout
+              variant="pro"
+              title={t('hr.form.supportingDocuments')}
+              description={t(
+                'pages.hr.consumables.attachmentsStepDescription',
+              )}
+            >
+              <FileUploadInput
+                files={files}
+                onChange={setFiles}
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                placeholder={t('hr.placeholder.chooseSupportingDocuments')}
+              />
+            </FormLayout>
           </div>
         ),
       },
@@ -819,6 +843,7 @@ export default function ConsumablesRequisitionForm({
       atMax,
       detailsSnapshot,
       declarationConfirmed,
+      files,
       totalBudget,
       tableScrollX,
       itemsEmpty,

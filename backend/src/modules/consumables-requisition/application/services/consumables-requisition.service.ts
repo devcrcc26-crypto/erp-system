@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -10,6 +11,7 @@ import {
 import {
   ApprovalRequestStatus,
   ConsumablesRequisitionStatus,
+  FolderContextType,
   Prisma,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -17,6 +19,12 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { isDateInPast } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
+import {
+  ALLOWED_UPLOAD_MIME_TYPES,
+  STORAGE_BUCKETS,
+  STORAGE_SERVICE,
+} from '../../../../shared/storage/storage.constants';
+import type { IStorageService } from '../../../../shared/storage/storage.interface';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -39,6 +47,13 @@ import {
   UpdateConsumablesRequisitionItemDto,
 } from '../dtos/consumables-requisition.dtos';
 
+type UploadedFile = {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
+
 const USER_SELECT = {
   id: true,
   firstName: true,
@@ -46,10 +61,22 @@ const USER_SELECT = {
   email: true,
 } as const;
 
+const DOCUMENT_SELECT = {
+  id: true,
+  name: true,
+  fileType: true,
+  fileSizeBytes: true,
+} as const;
+
 const REQUISITION_DETAIL_INCLUDE = {
   employee: { select: USER_SELECT },
   items: {
     orderBy: { createdAt: 'asc' as const },
+  },
+  attachmentFolder: {
+    include: {
+      documents: { select: DOCUMENT_SELECT },
+    },
   },
   approvalRequest: {
     include: {
@@ -78,6 +105,8 @@ export class ConsumablesRequisitionService
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
     private readonly onBehalfService: OnBehalfService,
+    @Inject(STORAGE_SERVICE)
+    private readonly storage: IStorageService,
   ) {}
 
   onModuleInit(): void {
@@ -365,6 +394,7 @@ export class ConsumablesRequisitionService
    */
   async submitRequisition(
     id: string,
+    files: UploadedFile[],
     companyId: string,
     userId: string,
   ): Promise<unknown> {
@@ -406,6 +436,15 @@ export class ConsumablesRequisitionService
     const now = new Date();
 
     if (resolvedTiers.length === 0) {
+      if (files?.length > 0) {
+        await this.uploadRequisitionFiles(
+          requisition,
+          files,
+          companyId,
+          userId,
+        );
+      }
+
       await this.prisma.consumablesRequisition.update({
         where: { id },
         data: {
@@ -442,6 +481,15 @@ export class ConsumablesRequisitionService
         createdByUserId: userId,
       },
     )) as { id: string; requestNumber: string };
+
+    if (files?.length > 0) {
+      await this.uploadRequisitionFiles(
+        requisition,
+        files,
+        companyId,
+        userId,
+      );
+    }
 
     await this.prisma.consumablesRequisition.update({
       where: { id },
@@ -495,13 +543,17 @@ export class ConsumablesRequisitionService
         t.decision === 'PENDING',
     );
 
+    const { attachmentFolder, ...rest } = requisition;
+
     return {
-      ...requisition,
+      ...rest,
       itemCount: requisition.items.length,
       currentTierLabel: pendingTier?.label ?? null,
       directApproved:
         requisition.status === ConsumablesRequisitionStatus.APPROVED &&
         !requisition.approvalRequestId,
+      documents: attachmentFolder?.documents ?? [],
+      attachmentFolderId: attachmentFolder?.id ?? requisition.attachmentFolderId,
     };
   }
 
@@ -782,6 +834,108 @@ export class ConsumablesRequisitionService
         'You do not have access to this consumables requisition',
       );
     }
+  }
+
+  private async uploadRequisitionFiles(
+    requisition: {
+      id: string;
+      requestNumber: string;
+      attachmentFolderId: string | null;
+    },
+    files: UploadedFile[],
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    const folderId =
+      requisition.attachmentFolderId ??
+      (await this.ensureAttachmentFolder(requisition, companyId, userId));
+
+    for (const file of files) {
+      if (!file?.buffer?.length) {
+        continue;
+      }
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+        throw new BadRequestException(
+          `File type not allowed: ${file.mimetype}`,
+        );
+      }
+
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileKey = `${companyId}/hr/consumables/${requisition.id}/${randomUUID()}_${safeName}`;
+
+      await this.storage.upload({
+        bucket: STORAGE_BUCKETS.HR,
+        key: fileKey,
+        body: file.buffer,
+        contentType: file.mimetype,
+        contentLength: file.size,
+      });
+
+      const documentId = randomUUID();
+      await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        await tx.document.create({
+          data: {
+            id: documentId,
+            companyId,
+            folderId,
+            name: file.originalname,
+            fileKey,
+            fileType: file.mimetype,
+            fileSizeBytes: file.size,
+            version: 1,
+            isCurrent: true,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+        await tx.documentVersion.create({
+          data: {
+            documentId,
+            uploadedBy: userId,
+            versionNumber: 1,
+            fileKey,
+            fileSizeBytes: file.size,
+          },
+        });
+      });
+    }
+  }
+
+  private async ensureAttachmentFolder(
+    requisition: {
+      id: string;
+      requestNumber: string;
+      attachmentFolderId: string | null;
+    },
+    companyId: string,
+    userId: string,
+  ): Promise<string> {
+    if (requisition.attachmentFolderId) {
+      return requisition.attachmentFolderId;
+    }
+
+    const folderId = randomUUID();
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.documentFolder.create({
+        data: {
+          id: folderId,
+          companyId,
+          name: `Consumables ${requisition.requestNumber}`,
+          path: `/hr/consumables/${requisition.requestNumber}`,
+          contextType: FolderContextType.CONSUMABLES_REQUISITION,
+          contextId: requisition.id,
+          isSystem: false,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      await tx.consumablesRequisition.update({
+        where: { id: requisition.id },
+        data: { attachmentFolderId: folderId, updatedBy: userId },
+      });
+    });
+
+    return folderId;
   }
 
   private normalizeStatuses(

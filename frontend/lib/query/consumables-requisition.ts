@@ -234,14 +234,18 @@ export function useDeleteConsumablesRequisitionItem(requisitionId: string) {
   });
 }
 
-/** Submits a draft consumables requisition for approval. */
+/** Submits a draft consumables requisition for approval (multipart with optional files). */
 export function useSubmitConsumablesRequisition(requisitionId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () =>
-      apiPost<ConsumablesRequisitionDetail>(
+    mutationFn: (files: File[] = []) => {
+      const formData = new FormData();
+      files.forEach((file) => formData.append('files', file));
+      return apiPostForm<ConsumablesRequisitionDetail>(
         `${CONSUMABLES_PATH}/${requisitionId}/submit`,
-      ),
+        formData,
+      );
+    },
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({
         queryKey: consumablesRequisitionKeys.lists(),
