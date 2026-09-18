@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  TicketAcknowledgementCard,
   TravelBudgetBreakdown,
   TravelPassengerList,
   TravelRouteHero,
@@ -96,6 +97,48 @@ describe('TravelPassengerList', () => {
     expect(screen.getByText('hr.travel.visaCount(1)')).toBeTruthy();
     expect(screen.getByText('EP123')).toBeTruthy();
     expect(screen.getByText('ST')).toBeTruthy();
+  });
+});
+
+describe('TravelRouteHero on the approval page', () => {
+  it('hides the number and status badges when they are not passed', () => {
+    render(
+      <TravelRouteHero
+        tripTypeLabel="One Way"
+        tripTypeVariant="cyan"
+        isInternational
+        requesterName="A"
+        origin={{ city: 'Addis Ababa', country: 'Ethiopia' }}
+        destination={{ country: 'Kenya' }}
+        departureDate="2026-10-01"
+        ticketClassLabel="Economy"
+        passengerCount={1}
+      />,
+    );
+    expect(document.querySelector('.erp-users-id-chip')).toBeNull();
+    expect(screen.getAllByText('One Way').length).toBeGreaterThan(0);
+  });
+});
+
+describe('TicketAcknowledgementCard', () => {
+  it('lists the available tickets and confirms receipt', async () => {
+    const onAcknowledge = vi.fn();
+    render(
+      <TicketAcknowledgementCard
+        combinedTickets={[]}
+        passengerTickets={[
+          { id: 't1', name: 'ticket.pdf', fileType: 'application/pdf' },
+        ]}
+        acknowledging={false}
+        onAcknowledge={onAcknowledge}
+      />,
+    );
+    expect(screen.getByText('hr.travel.yourTicket')).toBeTruthy();
+    expect(screen.queryByText('hr.labels.combinedTicket')).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', { name: /hr\.buttons\.acknowledgeReceipt/ }),
+    );
+    expect(onAcknowledge).toHaveBeenCalledTimes(1);
   });
 });
 

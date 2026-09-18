@@ -2231,7 +2231,11 @@
       "ticketedCount": "已出票 {{done}}/{{total}}",
       "passengerCount": "{{count}} 名乘客",
       "passengerCountOne": "1 名乘客",
-      "shareOfTotal": "占总额 {{percent}}%"
+      "shareOfTotal": "占总额 {{percent}}%",
+      "acknowledgeHint": "请先查看下方机票，然后确认已收到。",
+      "yourTicket": "您的机票",
+      "ticketAcknowledged": "已确认收到机票",
+      "acknowledgeFailed": "确认机票失败"
     },
     "exportImport": {
       "companyVehicles": {

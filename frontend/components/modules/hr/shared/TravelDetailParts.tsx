@@ -12,6 +12,8 @@ import {
   Users,
   Wallet,
 } from 'lucide-react';
+import { Button } from 'antd';
+import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge, {
   type StatusBadgeVariant,
 } from '@/components/ui/StatusBadge/StatusBadge';
@@ -122,9 +124,10 @@ function RouteFact({
 }
 
 export interface TravelRouteHeroProps {
-  referenceNumber: string;
-  statusLabel: string;
-  statusVariant: StatusBadgeVariant;
+  /** Omit where the page header already shows number / status (approvals). */
+  referenceNumber?: string;
+  statusLabel?: string;
+  statusVariant?: StatusBadgeVariant;
   tripTypeLabel: string;
   tripTypeVariant: StatusBadgeVariant;
   isInternational: boolean;
@@ -172,8 +175,12 @@ export function TravelRouteHero({
     <div className="flex flex-col gap-4 px-4 py-5 sm:px-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="erp-users-id-chip">{referenceNumber}</span>
-          <StatusBadge label={statusLabel} variant={statusVariant} />
+          {referenceNumber ? (
+            <span className="erp-users-id-chip">{referenceNumber}</span>
+          ) : null}
+          {statusLabel ? (
+            <StatusBadge label={statusLabel} variant={statusVariant} />
+          ) : null}
           <StatusBadge label={tripTypeLabel} variant={tripTypeVariant} />
           <span className="erp-users-role-tag">
             {isInternational
@@ -525,6 +532,87 @@ export function TravelPassengerList({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+// ======================= Ticket acknowledgement =====================
+
+interface TicketDocument {
+  id: string;
+  name: string;
+  fileType?: string;
+  fileSizeBytes?: number;
+}
+
+/**
+ * Shown to a passenger whose ticket is attached: preview the ticket(s),
+ * then confirm receipt.
+ */
+export function TicketAcknowledgementCard({
+  combinedTickets,
+  passengerTickets,
+  acknowledging,
+  onAcknowledge,
+}: {
+  combinedTickets: TicketDocument[];
+  passengerTickets: TicketDocument[];
+  acknowledging: boolean;
+  onAcknowledge: () => void;
+}): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const groups = [
+    { key: 'own', label: t('hr.travel.yourTicket'), documents: passengerTickets },
+    {
+      key: 'combined',
+      label: t('hr.labels.combinedTicket'),
+      documents: combinedTickets,
+    },
+  ].filter((group) => group.documents.length > 0);
+
+  return (
+    <div
+      className="overflow-hidden rounded-[14px] border"
+      style={{ borderColor: '#f3d9a8', background: tokens.colorAmber50 }}
+    >
+      <div className="flex items-start gap-3 px-4 py-4 sm:px-5">
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white"
+          style={{ color: tokens.colorAmber400 }}
+          aria-hidden
+        >
+          <Ticket size={20} strokeWidth={1.75} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="m-0 text-sm font-semibold text-slate-900">
+            {t('hr.labels.ticketReady')}
+          </p>
+          <p className="m-0 mt-0.5 text-xs text-slate-600">
+            {t('hr.travel.acknowledgeHint')}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3 border-t border-[#f3d9a8] bg-white/70 px-4 py-4 sm:px-5">
+        {groups.map((group) => (
+          <div key={group.key}>
+            <p className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+              {group.label}
+            </p>
+            <AttachmentDownloadList documents={group.documents} />
+          </div>
+        ))}
+        <div>
+          <Button
+            type="primary"
+            icon={<Check size={15} strokeWidth={2.25} />}
+            loading={acknowledging}
+            onClick={onAcknowledge}
+            className="!h-9 !rounded-lg !font-semibold"
+          >
+            {t('hr.buttons.acknowledgeReceipt')}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

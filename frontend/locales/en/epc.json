@@ -2231,7 +2231,11 @@
       "ticketedCount": "{{done}}/{{total}} ticketed",
       "passengerCount": "{{count}} passengers",
       "passengerCountOne": "1 passenger",
-      "shareOfTotal": "{{percent}}% of total"
+      "shareOfTotal": "{{percent}}% of total",
+      "acknowledgeHint": "Open your ticket below, then confirm you have received it.",
+      "yourTicket": "Your ticket",
+      "ticketAcknowledged": "Ticket acknowledged",
+      "acknowledgeFailed": "Failed to acknowledge ticket"
     },
     "exportImport": {
       "companyVehicles": {
