@@ -24,14 +24,6 @@ function withProjects(): Pick<Capabilities, 'pm'> {
   };
 }
 
-/** SIDEBAR_CONFIG with Project Management un-hidden, for PM behaviour tests. */
-const CONFIG_WITH_PM = {
-  ...SIDEBAR_CONFIG,
-  primary: SIDEBAR_CONFIG.primary.map((entry) =>
-    entry.id === 'pm' ? { ...entry, hidden: false } : entry,
-  ),
-};
-
 function modelFor(overrides: Partial<Capabilities>, ready = true): SidebarModel {
   const permissions = resolveSidebarPermissions({
     capabilities: capabilities(overrides),
@@ -39,6 +31,15 @@ function modelFor(overrides: Partial<Capabilities>, ready = true): SidebarModel 
     hasProjectAdministratorRole: false,
   });
   return buildSidebarModel(SIDEBAR_CONFIG, permissions);
+}
+
+/** System Administrator with portfolio project access (sees Project Management). */
+function systemAdminWithProjects(): Partial<Capabilities> {
+  return {
+    canViewHr: true,
+    isSystemAdministrator: true,
+    ...withProjects(),
+  };
 }
 
 function folder(model: SidebarModel, id: string): SidebarFolder | undefined {
@@ -109,17 +110,24 @@ describe('sidebar permissions and filtering', () => {
     expect(ids(model.utility)).toEqual(['approvals', 'my-profile']);
   });
 
-  it('hides Project Management for everyone, even with full project access', () => {
+  it('hides Project Management for non-admins, even with full project access', () => {
     const model = modelFor({
       canViewHr: true,
       epc: { ...structuredClone(EMPTY_CAPABILITIES.epc), navFullAccess: true },
       ...withProjects(),
     });
     expect(folder(model, 'pm')).toBeUndefined();
-    // Search must not surface anything from the hidden folder.
     const results = searchSidebar(flattenSidebarModel(model), 'nav', identity);
     expect(results.some((result) => result.folderId === 'pm')).toBe(false);
     expect(results.some((result) => result.link.id === 'projects')).toBe(false);
+  });
+
+  it('shows Project Management to System Administrator with project access', () => {
+    const model = modelFor(systemAdminWithProjects());
+    expect(ids(model.primary)).toContain('pm');
+    expect(folder(model, 'pm')?.groups.some((group) =>
+      group.items.some((item) => item.id === 'projects'),
+    )).toBe(true);
   });
 
   it('removes a folder when none of its links are visible', () => {
@@ -129,11 +137,11 @@ describe('sidebar permissions and filtering', () => {
 
   it('prepends project groups and collapses portfolio groups inside a project', () => {
     const permissions = resolveSidebarPermissions({
-      capabilities: capabilities({ canViewHr: true, ...withProjects() }),
+      capabilities: capabilities(systemAdminWithProjects()),
       ready: true,
       hasProjectAdministratorRole: false,
     });
-    const model = buildSidebarModel(CONFIG_WITH_PM, permissions, {
+    const model = buildSidebarModel(SIDEBAR_CONFIG, permissions, {
       header: { projectId: 'p1', name: 'Addis Tower', nameZh: null },
       groups: [
         {

@@ -76,8 +76,9 @@ That is all. No component changes. Checklist:
 
 Set `hidden: true` on a link or folder. It is removed for every user (sidebar, compact
 rail, mobile drawer and search) but stays in the config, so restoring it is a one-line
-change. **Project Management is currently hidden**, which also hides the project workspace
-nav on `/projects/:id` pages because that folder hosts it.
+change. **Project Management is visible to System Administrator only** (`pm.*` tokens
+are gated on `isSystemAdministrator` in `sidebar-permissions.ts`). That folder also
+hosts the project workspace nav on `/projects/:id` pages.
 
 ## Add a new group
 
@@ -131,7 +132,7 @@ Current mapping (edit `sidebar-permissions.ts` only):
 | `settings.manage` | `canManageRoles` or `canEditRoles` |
 | `audit.view` | `canViewAuditLogs` |
 | `org.*` | Same rules the Organization pages enforce |
-| `pm.*` | PM module flags + EPC design-cycle persona rules (`canViewGlobalNavKey`) |
+| `pm.*` | System Administrator **and** PM module flags + EPC design-cycle persona rules (`canViewGlobalNavKey`) |
 
 When the backend adds a finer flag (say `procurement.view` for storekeepers), change the one
 matching line in the resolver. Adding a **new** token means extending the `SidebarPermission`

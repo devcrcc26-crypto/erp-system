@@ -165,9 +165,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
     {
       kind: 'folder',
       id: 'pm',
-      // Hidden for now. Remove this line to bring Project Management back
-      // (it also hosts the project workspace nav on /projects/:id pages).
-      hidden: true,
+      // Visible only to System Administrator (pm.* tokens gated in
+      // sidebar-permissions.ts). Hosts project workspace nav on /projects/:id.
       labelKey: 'nav.groups.projectManagement',
       shortLabelKey: 'nav.short.projectManagement',
       icon: 'domain-projects',
