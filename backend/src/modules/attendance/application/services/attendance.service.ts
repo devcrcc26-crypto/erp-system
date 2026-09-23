@@ -212,11 +212,71 @@ export class AttendanceService {
     );
     const skippedReviewCount = review.length - confirmedReview.length;
 
-    const rowsToImport = [...matched, ...confirmedReview].filter(
+    const autoMatched = [...matched, ...confirmedReview].filter(
       (row): row is AttendanceMatchResult & { matchedEmployeeId: string } =>
         typeof row.matchedEmployeeId === 'string' &&
         row.matchedEmployeeId.length > 0,
     );
+
+    const takenEmployeeIds = new Set(
+      autoMatched.map((row) => row.matchedEmployeeId),
+    );
+    const manualMatches = dto.manualMatches ?? [];
+    const manualByRejectedIndex = new Map(
+      manualMatches.map((item) => [item.rejectedIndex, item.employeeId]),
+    );
+
+    for (const item of manualMatches) {
+      if (item.rejectedIndex < 0 || item.rejectedIndex >= rejected.length) {
+        throw new BadRequestException(
+          `Invalid rejected row index: ${item.rejectedIndex}`,
+        );
+      }
+      if (takenEmployeeIds.has(item.employeeId)) {
+        throw new BadRequestException(
+          'Each ERP employee can only be matched once in an import',
+        );
+      }
+      takenEmployeeIds.add(item.employeeId);
+    }
+
+    if (manualMatches.length > 0) {
+      const employees = await this.prisma.user.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          isActive: true,
+          id: { in: manualMatches.map((item) => item.employeeId) },
+        },
+        select: { id: true },
+      });
+      if (employees.length !== manualMatches.length) {
+        throw new BadRequestException(
+          'One or more selected employees were not found in this company',
+        );
+      }
+    }
+
+    const manuallyMatched: Array<
+      AttendanceMatchResult & { matchedEmployeeId: string }
+    > = [];
+    const stillRejected: AttendanceMatchResult[] = [];
+
+    rejected.forEach((row, index) => {
+      const employeeId = manualByRejectedIndex.get(index);
+      if (employeeId) {
+        manuallyMatched.push({
+          ...row,
+          matchedEmployeeId: employeeId,
+          confidence: 'NAME_HIGH',
+          score: 100,
+        });
+      } else {
+        stillRejected.push(row);
+      }
+    });
+
+    const rowsToImport = [...autoMatched, ...manuallyMatched];
 
     await this.prisma.$transaction(async (tx) => {
       if (existing && dto.overwrite) {
@@ -236,7 +296,7 @@ export class AttendanceService {
           totalRows,
           matchedRows: rowsToImport.length,
           reviewRows: confirmedReview.length,
-          rejectedRows: rejected.length,
+          rejectedRows: stillRejected.length,
           importedAt: new Date(),
         },
       });
@@ -276,8 +336,8 @@ export class AttendanceService {
       year,
       importedCount: rowsToImport.length,
       skippedReviewCount,
-      rejectedCount: rejected.length,
-      rejectedNames: rejected.map((row) => row.attendanceName),
+      rejectedCount: stillRejected.length,
+      rejectedNames: stillRejected.map((row) => row.attendanceName),
     };
   }
 

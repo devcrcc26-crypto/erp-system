@@ -127,6 +127,11 @@ export interface ConfirmAttendanceImportDto {
   previewToken: string;
   overwrite: boolean;
   confirmedReviewIndices?: number[];
+  /** Map rejected preview rows to ERP employees before import. */
+  manualMatches?: Array<{
+    rejectedIndex: number;
+    employeeId: string;
+  }>;
 }
 
 export interface MyAttendanceResponse {

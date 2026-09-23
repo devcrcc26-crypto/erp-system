@@ -10,7 +10,21 @@ import {
   IsUUID,
   Max,
   Min,
+  ValidateNested,
 } from 'class-validator';
+
+export class ManualAttendanceMatchDto {
+  @ApiProperty({
+    description: 'Zero-based index into the preview rejected array',
+  })
+  @IsInt()
+  @Min(0)
+  rejectedIndex!: number;
+
+  @ApiProperty({ description: 'ERP user id to attach this attendance row to' })
+  @IsUUID()
+  employeeId!: string;
+}
 
 export class ConfirmAttendanceImportDto {
   @ApiProperty()
@@ -27,6 +41,17 @@ export class ConfirmAttendanceImportDto {
   @IsArray()
   @IsInt({ each: true })
   confirmedReviewIndices?: number[];
+
+  @ApiPropertyOptional({
+    type: [ManualAttendanceMatchDto],
+    description:
+      'Optional HR overrides that assign rejected attendance rows to ERP employees',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ManualAttendanceMatchDto)
+  manualMatches?: ManualAttendanceMatchDto[];
 }
 
 export class ListAttendanceDto {

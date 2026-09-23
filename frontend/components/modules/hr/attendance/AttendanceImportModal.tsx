@@ -8,6 +8,7 @@ import {
   Collapse,
   Modal,
   Popconfirm,
+  Select,
   Spin,
   Steps,
   Table,
@@ -38,7 +39,9 @@ import {
   useAttendanceImportConfirm,
   useAttendanceImportPreview,
 } from '@/lib/query/attendance';
+import { useFullUsersDirectory } from '@/lib/query/users';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
+import { formatUserName } from '@/lib/utils/user-display';
 
 export interface AttendanceImportModalProps {
   open: boolean;
@@ -49,6 +52,7 @@ export interface AttendanceImportModalProps {
 type ImportStep = 0 | 1 | 2;
 
 type ReviewRow = AttendancePreviewRow & { reviewIndex: number };
+type RejectedRow = AttendancePreviewRow & { rejectedIndex: number };
 
 function matchTypeLabel(
   confidence: MatchConfidence,
@@ -75,6 +79,9 @@ export default function AttendanceImportModal({
   const { t } = useEpcTranslation();
   const previewMutation = useAttendanceImportPreview();
   const confirmMutation = useAttendanceImportConfirm();
+  const usersDirectoryQuery = useFullUsersDirectory({
+    enabled: open,
+  });
 
   const [step, setStep] = useState<ImportStep>(0);
   const [uploading, setUploading] = useState(false);
@@ -85,6 +92,10 @@ export default function AttendanceImportModal({
   const [reviewSelections, setReviewSelections] = useState<
     Record<number, boolean>
   >({});
+  /** rejectedIndex → ERP employee user id */
+  const [manualMatches, setManualMatches] = useState<Record<number, string>>(
+    {},
+  );
   const [existingBatch, setExistingBatch] =
     useState<AttendanceImportBatch | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -97,6 +108,7 @@ export default function AttendanceImportModal({
     setPreview(null);
     setImportResult(null);
     setReviewSelections({});
+    setManualMatches({});
     setExistingBatch(null);
     setErrorMessage(null);
     setRejectedExpanded(false);
@@ -131,9 +143,74 @@ export default function AttendanceImportModal({
     );
   }, [preview, reviewSelections]);
 
+  const manualMatchCount = useMemo(
+    () => Object.keys(manualMatches).length,
+    [manualMatches],
+  );
+
   const skippedReviewCount = (preview?.review.length ?? 0) - selectedReviewCount;
-  const importCount = (preview?.matched.length ?? 0) + selectedReviewCount;
-  const rejectedCount = preview?.rejected.length ?? 0;
+  const importCount =
+    (preview?.matched.length ?? 0) + selectedReviewCount + manualMatchCount;
+  const rejectedCount = (preview?.rejected.length ?? 0) - manualMatchCount;
+
+  /** Employee IDs already claimed by auto-match, included review, or another manual pick. */
+  const takenEmployeeIds = useMemo(() => {
+    const taken = new Set<string>();
+    if (!preview) {
+      return taken;
+    }
+    for (const row of preview.matched) {
+      if (row.matchedEmployeeId) {
+        taken.add(row.matchedEmployeeId);
+      }
+    }
+    preview.review.forEach((row, index) => {
+      if (reviewSelections[index] && row.matchedEmployeeId) {
+        taken.add(row.matchedEmployeeId);
+      }
+    });
+    for (const employeeId of Object.values(manualMatches)) {
+      taken.add(employeeId);
+    }
+    return taken;
+  }, [preview, reviewSelections, manualMatches]);
+
+  const unmatchedEmployeeOptions = useMemo(() => {
+    const users = usersDirectoryQuery.data ?? [];
+    return users
+      .filter((user) => !takenEmployeeIds.has(user.id))
+      .map((user) => ({
+        value: user.id,
+        label: user.employeeId
+          ? `${formatUserName(user)} (${user.employeeId})`
+          : formatUserName(user),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [usersDirectoryQuery.data, takenEmployeeIds]);
+
+  function employeeOptionsForRejectedRow(
+    rejectedIndex: number,
+  ): Array<{ value: string; label: string }> {
+    const currentId = manualMatches[rejectedIndex];
+    if (!currentId) {
+      return unmatchedEmployeeOptions;
+    }
+    const users = usersDirectoryQuery.data ?? [];
+    const current = users.find((user) => user.id === currentId);
+    if (!current) {
+      return unmatchedEmployeeOptions;
+    }
+    const currentOption = {
+      value: current.id,
+      label: current.employeeId
+        ? `${formatUserName(current)} (${current.employeeId})`
+        : formatUserName(current),
+    };
+    if (unmatchedEmployeeOptions.some((opt) => opt.value === currentId)) {
+      return unmatchedEmployeeOptions;
+    }
+    return [currentOption, ...unmatchedEmployeeOptions];
+  }
 
   async function handleFileSelected(file: File): Promise<void> {
     setErrorMessage(null);
@@ -146,6 +223,7 @@ export default function AttendanceImportModal({
         initial[index] = true;
       });
       setReviewSelections(initial);
+      setManualMatches({});
       setPreview(result);
 
       if (result.alreadyImported) {
@@ -197,10 +275,17 @@ export default function AttendanceImportModal({
       const confirmedReviewIndices = Object.entries(reviewSelections)
         .filter(([, include]) => include)
         .map(([idx]) => Number(idx));
+      const manualMatchPayload = Object.entries(manualMatches).map(
+        ([rejectedIndex, employeeId]) => ({
+          rejectedIndex: Number(rejectedIndex),
+          employeeId,
+        }),
+      );
       const result = await confirmMutation.mutateAsync({
         previewToken: preview.previewToken,
         overwrite,
         confirmedReviewIndices,
+        manualMatches: manualMatchPayload,
       });
       setImportResult(result);
       setStep(2);
@@ -219,6 +304,7 @@ export default function AttendanceImportModal({
     setStep(0);
     setPreview(null);
     setReviewSelections({});
+    setManualMatches({});
     setExistingBatch(null);
     setErrorMessage(null);
   }
@@ -306,24 +392,50 @@ export default function AttendanceImportModal({
     },
   ];
 
-  const rejectedColumns: ColumnsType<AttendancePreviewRow> = [
+  const rejectedColumns: ColumnsType<RejectedRow> = [
     {
       title: t('pages.hr.attendance.importModal.colAttendanceName'),
       dataIndex: 'attendanceName',
       key: 'attendanceName',
       ellipsis: true,
+      width: 160,
     },
     {
       title: t('pages.hr.attendance.importModal.colIdInSystem'),
       dataIndex: 'attendanceId',
       key: 'attendanceId',
-      width: 140,
+      width: 110,
       render: (value: string) => (value && value !== '-' ? value : '—'),
     },
     {
-      title: t('pages.hr.attendance.importModal.colReason'),
-      key: 'reason',
-      render: () => t('pages.hr.attendance.importModal.rejectedReason'),
+      title: t('pages.hr.attendance.importModal.colMatchTo'),
+      key: 'matchTo',
+      width: 260,
+      render: (_: unknown, row: RejectedRow) => (
+        <Select
+          allowClear
+          showSearch
+          optionFilterProp="label"
+          placeholder={t(
+            'pages.hr.attendance.importModal.rejectedMatchPlaceholder',
+          )}
+          className="w-full"
+          loading={usersDirectoryQuery.isLoading}
+          options={employeeOptionsForRejectedRow(row.rejectedIndex)}
+          value={manualMatches[row.rejectedIndex]}
+          onChange={(value: string | undefined) => {
+            setManualMatches((prev) => {
+              const next = { ...prev };
+              if (!value) {
+                delete next[row.rejectedIndex];
+              } else {
+                next[row.rejectedIndex] = value;
+              }
+              return next;
+            });
+          }}
+        />
+      ),
     },
   ];
 
@@ -331,6 +443,13 @@ export default function AttendanceImportModal({
     ...row,
     reviewIndex: index,
   }));
+
+  const rejectedRows: RejectedRow[] = (preview?.rejected ?? []).map(
+    (row, index) => ({
+      ...row,
+      rejectedIndex: index,
+    }),
+  );
 
   const collapseItems = preview
     ? [
@@ -395,21 +514,32 @@ export default function AttendanceImportModal({
                 style={{ backgroundColor: '#D32F2F' }}
                 showZero
               />
+              {manualMatchCount > 0 ? (
+                <Tag color="blue">
+                  {t('pages.hr.attendance.importModal.matchManual')}:{' '}
+                  {manualMatchCount}
+                </Tag>
+              ) : null}
             </span>
           ),
           children: (
             <div>
-              <Table<AttendancePreviewRow>
+              <Table<RejectedRow>
                 className="erp-data-table"
                 size="small"
-                rowKey={(_, index) => `rejected-${index}`}
+                rowKey={(row) => `rejected-${row.rejectedIndex}`}
                 columns={rejectedColumns}
-                dataSource={preview.rejected}
+                dataSource={rejectedRows}
                 pagination={false}
-                scroll={{ y: 220 }}
+                scroll={{ y: 280, x: 560 }}
               />
               <p className="m-0 mt-3 text-[12px] text-[#6B7280]">
                 {t('pages.hr.attendance.importModal.rejectedNote')}
+              </p>
+              <p className="m-0 mt-1 text-[12px] text-[#6B7280]">
+                {t('pages.hr.attendance.importModal.unmatchedEmployeesHint', {
+                  count: unmatchedEmployeeOptions.length,
+                })}
               </p>
             </div>
           ),
@@ -417,8 +547,19 @@ export default function AttendanceImportModal({
       ]
     : [];
 
-  const defaultActiveKeys =
-    preview && preview.review.length > 0 ? ['review'] : [];
+  const defaultActiveKeys = useMemo(() => {
+    if (!preview) {
+      return [];
+    }
+    const keys: string[] = [];
+    if (preview.review.length > 0) {
+      keys.push('review');
+    }
+    if (preview.rejected.length > 0) {
+      keys.push('rejected');
+    }
+    return keys;
+  }, [preview]);
 
   const confirmButton = (
     <Button
@@ -440,7 +581,7 @@ export default function AttendanceImportModal({
       open={open}
       onCancel={handleClose}
       title={t('pages.hr.attendance.importModal.title')}
-      width={800}
+      width={920}
       footer={null}
       mask={{ closable: false }}
       destroyOnHidden
@@ -537,6 +678,7 @@ export default function AttendanceImportModal({
           </div>
 
           <Collapse
+            key={preview.previewToken}
             size="small"
             defaultActiveKey={defaultActiveKeys}
             items={collapseItems}
