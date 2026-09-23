@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -23,12 +23,13 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import { useAttendanceRecords } from '@/lib/query/attendance';
+import { useAttendanceRecordsAll } from '@/lib/query/attendance';
 import { useUsersDirectory } from '@/lib/query/users';
+import { filterAttendanceRecords } from '@/lib/utils/attendance-list-filter';
 import { formatUserName } from '@/lib/utils/user-display';
 
 /**
- * HR attendance list — month/year/employee filters, search, stats, and Excel import.
+ * HR attendance list — load month/year from API, filter/search on the frontend.
  */
 export default function AttendanceListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -41,41 +42,28 @@ export default function AttendanceListPageContent(): React.ReactNode {
   const [month, setMonth] = useState(currentMonth);
   const [year, setYear] = useState(currentYear);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [importModalOpen, setImportModalOpen] = useState(false);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search.trim());
-      setPage(1);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [search]);
 
   const usersQuery = useUsersDirectory(
     { page: 1, limit: 200 },
     { enabled: canViewHr },
   );
 
-  const listParams = useMemo(
-    () => ({
-      month,
-      year,
-      page,
-      limit,
-      ...(canViewHr && debouncedSearch ? { search: debouncedSearch } : {}),
-      ...(canViewHr && employeeId ? { employeeId } : {}),
-    }),
-    [month, year, page, limit, canViewHr, debouncedSearch, employeeId],
+  const listQuery = useAttendanceRecordsAll({ month, year }, true);
+  const allRows = listQuery.data ?? [];
+
+  const filtered = useMemo(
+    () =>
+      filterAttendanceRecords(allRows, {
+        search: appliedSearch,
+        employeeId: canViewHr ? employeeId : undefined,
+      }),
+    [allRows, appliedSearch, employeeId, canViewHr],
   );
-
-  const listQuery = useAttendanceRecords(listParams, true);
-
-  const records = listQuery.data?.data ?? [];
-  const total = listQuery.data?.total ?? 0;
 
   const monthOptions = useMemo(
     () =>
@@ -100,11 +88,12 @@ export default function AttendanceListPageContent(): React.ReactNode {
     ? t('pages.hr.attendance.listTitle')
     : t('pages.hr.attendance.myListTitle');
 
+  const hasSearchOrEmployee =
+    Boolean(appliedSearch.trim()) || Boolean(employeeId);
   const hasFilters =
+    hasSearchOrEmployee ||
     month !== currentMonth ||
-    year !== currentYear ||
-    Boolean(debouncedSearch) ||
-    Boolean(employeeId);
+    year !== currentYear;
 
   function resetPage(): void {
     setPage(1);
@@ -114,7 +103,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
     setMonth(currentMonth);
     setYear(currentYear);
     setSearch('');
-    setDebouncedSearch('');
+    setAppliedSearch('');
     setEmployeeId(undefined);
     resetPage();
   }
@@ -135,9 +124,16 @@ export default function AttendanceListPageContent(): React.ReactNode {
     resetPage();
   }
 
-  function handlePaginationChange(nextPage: number, nextPageSize: number): void {
+  function handlePaginationChange(
+    nextPage: number,
+    nextPageSize: number,
+  ): void {
+    if (nextPageSize !== limit) {
+      setLimit(nextPageSize);
+      setPage(1);
+      return;
+    }
     setPage(nextPage);
-    setLimit(nextPageSize);
   }
 
   if (listQuery.isLoading && !listQuery.data) {
@@ -166,8 +162,8 @@ export default function AttendanceListPageContent(): React.ReactNode {
       ) : null}
 
       <AttendanceStatBar
-        records={records}
-        totalEmployees={total}
+        records={allRows}
+        totalEmployees={allRows.length}
         loading={listQuery.isFetching && !listQuery.data}
       />
 
@@ -176,7 +172,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
             <span className="erp-users-count-pill">
-              {total.toLocaleString()}
+              {filtered.length.toLocaleString()}
             </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
@@ -209,14 +205,19 @@ export default function AttendanceListPageContent(): React.ReactNode {
               placeholder={t('pages.hr.attendance.filters.search')}
               className="erp-users-search-input min-w-0"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                const value = event.target.value;
+                setSearch(value);
+                setAppliedSearch(value.trim());
+                resetPage();
+              }}
               onPressEnter={() => {
-                setDebouncedSearch(search.trim());
+                setAppliedSearch(search.trim());
                 resetPage();
               }}
               onClear={() => {
                 setSearch('');
-                setDebouncedSearch('');
+                setAppliedSearch('');
                 resetPage();
               }}
               aria-label={t('pages.hr.attendance.filters.search')}
@@ -265,19 +266,19 @@ export default function AttendanceListPageContent(): React.ReactNode {
 
         <div className="erp-pro-table-card-body">
           <AttendanceTable
-            records={records}
+            records={filtered}
             loading={listQuery.isFetching}
             pagination={{
               current: page,
               pageSize: limit,
-              total,
+              total: filtered.length,
               onChange: handlePaginationChange,
             }}
             emptyText={
               <TableEmptyState
                 icon={<CalendarOutlined />}
                 title={
-                  hasFilters && total === 0
+                  hasSearchOrEmployee && filtered.length === 0
                     ? t('pages.hr.attendance.emptyFiltered')
                     : t('pages.hr.attendance.emptyTitle', {
                         month: monthName,
@@ -285,12 +286,12 @@ export default function AttendanceListPageContent(): React.ReactNode {
                       })
                 }
                 description={
-                  hasFilters && total === 0
+                  hasSearchOrEmployee && filtered.length === 0
                     ? undefined
                     : t('pages.hr.attendance.emptyDescription')
                 }
                 action={
-                  hasFilters && total === 0
+                  hasSearchOrEmployee && filtered.length === 0
                     ? {
                         label: t('common.reset'),
                         onClick: handleResetFilters,

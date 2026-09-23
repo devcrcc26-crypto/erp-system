@@ -20,6 +20,7 @@ const AVATAR_COLORS = [
 ] as const;
 
 export interface AttendanceTableProps {
+  /** Full filtered list — table sorts then paginates locally. */
   records: AttendanceRecord[];
   loading: boolean;
   pagination: {
@@ -69,6 +70,15 @@ function formatNumber(value: number | string | null | undefined): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
 }
 
+function toNumber(value: number | string | null | undefined): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function compareText(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: 'base' });
+}
+
 /**
  * Attendance records table — Users chrome / Pro table pattern.
  */
@@ -87,6 +97,8 @@ export default function AttendanceTable({
         key: 'employee',
         width: 240,
         fixed: 'left',
+        sorter: (a, b) =>
+          compareText(formatUserName(a.employee), formatUserName(b.employee)),
         render: (_: unknown, row: AttendanceRecord) => {
           const name = formatUserName(row.employee);
           const erpId = row.employee.employeeId?.trim() || '—';
@@ -116,6 +128,11 @@ export default function AttendanceTable({
         key: 'department',
         width: 140,
         responsive: ['md'],
+        sorter: (a, b) =>
+          compareText(
+            a.employee.department?.name?.trim() ?? '',
+            b.employee.department?.name?.trim() ?? '',
+          ),
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-users-cell-sub">
             {row.employee.department?.name?.trim() || '—'}
@@ -127,6 +144,7 @@ export default function AttendanceTable({
         key: 'expectedDays',
         width: 110,
         align: 'right',
+        sorter: (a, b) => toNumber(a.expectedDays) - toNumber(b.expectedDays),
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-users-cell-sub">
             {formatNumber(row.expectedDays)}
@@ -138,6 +156,7 @@ export default function AttendanceTable({
         key: 'actualDays',
         width: 100,
         align: 'right',
+        sorter: (a, b) => toNumber(a.actualDays) - toNumber(b.actualDays),
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-users-cell-sub">
             {formatNumber(row.actualDays)}
@@ -149,6 +168,20 @@ export default function AttendanceTable({
         key: 'attendanceRate',
         width: 120,
         align: 'center',
+        sorter: (a, b) => {
+          const left = a.attendanceRate;
+          const right = b.attendanceRate;
+          if (left == null && right == null) {
+            return 0;
+          }
+          if (left == null) {
+            return 1;
+          }
+          if (right == null) {
+            return -1;
+          }
+          return left - right;
+        },
         render: (_: unknown, row: AttendanceRecord) =>
           row.attendanceRate == null ? (
             <span className="erp-users-cell-sub">—</span>
@@ -163,10 +196,13 @@ export default function AttendanceTable({
         key: 'lateCount',
         width: 90,
         align: 'right',
+        sorter: (a, b) => a.lateCount - b.lateCount,
         render: (_: unknown, row: AttendanceRecord) => (
           <span
             className="erp-users-cell-sub"
-            style={row.lateCount > 0 ? { color: '#BA7517', fontWeight: 600 } : undefined}
+            style={
+              row.lateCount > 0 ? { color: '#BA7517', fontWeight: 600 } : undefined
+            }
           >
             {row.lateCount}
           </span>
@@ -177,6 +213,7 @@ export default function AttendanceTable({
         key: 'absentDays',
         width: 110,
         align: 'right',
+        sorter: (a, b) => toNumber(a.absentDays) - toNumber(b.absentDays),
         render: (_: unknown, row: AttendanceRecord) => {
           const absent = Number(row.absentDays);
           return (
@@ -197,6 +234,7 @@ export default function AttendanceTable({
         width: 120,
         align: 'right',
         responsive: ['lg'],
+        sorter: (a, b) => a.missingClockIn - b.missingClockIn,
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-users-cell-sub">{row.missingClockIn}</span>
         ),
@@ -207,6 +245,7 @@ export default function AttendanceTable({
         width: 130,
         align: 'right',
         responsive: ['lg'],
+        sorter: (a, b) => a.missingClockOut - b.missingClockOut,
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-users-cell-sub">{row.missingClockOut}</span>
         ),
@@ -217,6 +256,7 @@ export default function AttendanceTable({
         width: 110,
         align: 'right',
         responsive: ['xl'],
+        sorter: (a, b) => toNumber(a.payableHours) - toNumber(b.payableHours),
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-users-cell-sub">
             {formatNumber(row.payableHours)}
@@ -229,6 +269,8 @@ export default function AttendanceTable({
         width: 120,
         align: 'right',
         responsive: ['xl'],
+        sorter: (a, b) =>
+          toNumber(a.overtimePaidHours) - toNumber(b.overtimePaidHours),
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-users-cell-sub">
             {formatNumber(row.overtimePaidHours)}
