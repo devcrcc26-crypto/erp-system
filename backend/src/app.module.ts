@@ -49,6 +49,7 @@ import { OfficialSealModule } from './modules/official-seal/official-seal.module
 import { ProjectSealModule } from './modules/project-seal/project-seal.module';
 import { EmployeeContractModule } from './modules/employee-contract/employee-contract.module';
 import { ExitPermitModule } from './modules/exit-permit/exit-permit.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
 
 @Module({
   imports: [
@@ -103,6 +104,7 @@ import { ExitPermitModule } from './modules/exit-permit/exit-permit.module';
     ProjectSealModule,
     EmployeeContractModule,
     ExitPermitModule,
+    AttendanceModule,
   ],
   controllers: [AppController],
   providers: [
