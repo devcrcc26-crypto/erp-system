@@ -16,6 +16,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
+import AttendanceImportModal from '@/components/modules/hr/attendance/AttendanceImportModal';
 import AttendanceStatBar from '@/components/modules/hr/attendance/AttendanceStatBar';
 import AttendanceTable from '@/components/modules/hr/attendance/AttendanceTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -25,7 +26,7 @@ import { ApiRequestError } from '@/lib/api/errors';
 import { useAttendanceRecords } from '@/lib/query/attendance';
 
 /**
- * HR attendance list — month/year filters, stats, and import placeholder.
+ * HR attendance list — month/year filters, stats, and Excel import.
  */
 export default function AttendanceListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -38,6 +39,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -174,15 +176,13 @@ export default function AttendanceListPageContent(): React.ReactNode {
               />
             </Tooltip>
             {canViewHr ? (
-              <Tooltip title={t('pages.hr.attendance.importComingSoon')}>
-                <Button
-                  type="primary"
-                  icon={<ImportOutlined />}
-                  disabled
-                >
-                  {t('pages.hr.attendance.import')}
-                </Button>
-              </Tooltip>
+              <Button
+                type="primary"
+                icon={<ImportOutlined />}
+                onClick={() => setImportModalOpen(true)}
+              >
+                {t('pages.hr.attendance.import')}
+              </Button>
             ) : null}
           </div>
         </div>
@@ -208,6 +208,17 @@ export default function AttendanceListPageContent(): React.ReactNode {
           }
         />
       </div>
+
+      {canViewHr ? (
+        <AttendanceImportModal
+          open={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          onSuccess={() => {
+            setImportModalOpen(false);
+            void listQuery.refetch();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
