@@ -7,6 +7,7 @@ export type MatchConfidence =
   | 'ID_MATCH'
   | 'NAME_HIGH'
   | 'NAME_REVIEW'
+  | 'MANUAL'
   | 'NO_MATCH';
 
 export interface AttendanceMatchResult {

@@ -58,6 +58,7 @@ function countByConfidence(
     ID_MATCH: results.filter((r) => r.confidence === 'ID_MATCH').length,
     NAME_HIGH: results.filter((r) => r.confidence === 'NAME_HIGH').length,
     NAME_REVIEW: results.filter((r) => r.confidence === 'NAME_REVIEW').length,
+    MANUAL: results.filter((r) => r.confidence === 'MANUAL').length,
     NO_MATCH: results.filter((r) => r.confidence === 'NO_MATCH').length,
   };
 }

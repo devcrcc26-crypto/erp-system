@@ -56,9 +56,19 @@ export interface AttendanceImportSummary {
   month: number;
   year: number;
   importedCount: number;
+  autoMatchedCount: number;
+  manualAssignedCount: number;
   skippedReviewCount: number;
   rejectedCount: number;
   rejectedNames: string[];
+}
+
+export interface AttendanceEmployeeSearchResult {
+  id: string;
+  firstName: string;
+  lastName: string;
+  employeeId: string | null;
+  department: { id: string; name: string } | null;
 }
 
 type CachedAttendancePreview = AttendancePreviewResult & {
@@ -170,6 +180,7 @@ export class AttendanceService {
   /**
    * Persists a cached preview as an import batch + attendance records.
    * Optionally overwrites an existing month batch (cascade deletes records).
+   * Supports manualAssignments for review overrides and rejected assignments.
    */
   async confirmImport(
     dto: ConfirmAttendanceImportDto,
@@ -206,77 +217,188 @@ export class AttendanceService {
       );
     }
 
-    const confirmedIndices = new Set(dto.confirmedReviewIndices ?? []);
-    const confirmedReview = review.filter((_, index) =>
-      confirmedIndices.has(index),
-    );
-    const skippedReviewCount = review.length - confirmedReview.length;
+    const assignments = dto.manualAssignments ?? [];
+    const reviewAssignmentByIndex = new Map<number, string>();
+    const rejectedAssignmentByIndex = new Map<number, string>();
 
-    const autoMatched = [...matched, ...confirmedReview].filter(
-      (row): row is AttendanceMatchResult & { matchedEmployeeId: string } =>
-        typeof row.matchedEmployeeId === 'string' &&
-        row.matchedEmployeeId.length > 0,
-    );
-
-    const takenEmployeeIds = new Set(
-      autoMatched.map((row) => row.matchedEmployeeId),
-    );
-    const manualMatches = dto.manualMatches ?? [];
-    const manualByRejectedIndex = new Map(
-      manualMatches.map((item) => [item.rejectedIndex, item.employeeId]),
-    );
-
-    for (const item of manualMatches) {
-      if (item.rejectedIndex < 0 || item.rejectedIndex >= rejected.length) {
-        throw new BadRequestException(
-          `Invalid rejected row index: ${item.rejectedIndex}`,
+    for (const assignment of assignments) {
+      if (assignment.bucket === 'review') {
+        if (
+          assignment.rowIndex < 0 ||
+          assignment.rowIndex >= review.length
+        ) {
+          throw new BadRequestException(
+            `Invalid review row index: ${assignment.rowIndex}`,
+          );
+        }
+        if (reviewAssignmentByIndex.has(assignment.rowIndex)) {
+          throw new BadRequestException(
+            `Duplicate manual assignment for review row ${assignment.rowIndex}`,
+          );
+        }
+        reviewAssignmentByIndex.set(assignment.rowIndex, assignment.employeeId);
+      } else {
+        if (
+          assignment.rowIndex < 0 ||
+          assignment.rowIndex >= rejected.length
+        ) {
+          throw new BadRequestException(
+            `Invalid rejected row index: ${assignment.rowIndex}`,
+          );
+        }
+        if (rejectedAssignmentByIndex.has(assignment.rowIndex)) {
+          throw new BadRequestException(
+            `Duplicate manual assignment for rejected row ${assignment.rowIndex}`,
+          );
+        }
+        rejectedAssignmentByIndex.set(
+          assignment.rowIndex,
+          assignment.employeeId,
         );
       }
-      if (takenEmployeeIds.has(item.employeeId)) {
-        throw new BadRequestException(
-          'Each ERP employee can only be matched once in an import',
-        );
-      }
-      takenEmployeeIds.add(item.employeeId);
     }
 
-    if (manualMatches.length > 0) {
+    const assignmentEmployeeIds = assignments.map((item) => item.employeeId);
+    if (new Set(assignmentEmployeeIds).size !== assignmentEmployeeIds.length) {
+      throw new BadRequestException(
+        'Each ERP employee can only be matched once in an import',
+      );
+    }
+
+    const employeeById = new Map<
+      string,
+      {
+        id: string;
+        firstName: string;
+        lastName: string;
+        employeeId: string | null;
+      }
+    >();
+
+    if (assignmentEmployeeIds.length > 0) {
       const employees = await this.prisma.user.findMany({
         where: {
           companyId,
           deletedAt: null,
           isActive: true,
-          id: { in: manualMatches.map((item) => item.employeeId) },
+          id: { in: [...new Set(assignmentEmployeeIds)] },
         },
-        select: { id: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          employeeId: true,
+        },
       });
-      if (employees.length !== manualMatches.length) {
+      if (employees.length !== new Set(assignmentEmployeeIds).size) {
         throw new BadRequestException(
           'One or more selected employees were not found in this company',
         );
       }
+      for (const employee of employees) {
+        employeeById.set(employee.id, employee);
+      }
     }
 
-    const manuallyMatched: Array<
-      AttendanceMatchResult & { matchedEmployeeId: string }
-    > = [];
-    const stillRejected: AttendanceMatchResult[] = [];
+    const confirmedIndices = new Set(dto.confirmedReviewIndices ?? []);
+    for (const rowIndex of reviewAssignmentByIndex.keys()) {
+      confirmedIndices.add(rowIndex);
+    }
 
-    rejected.forEach((row, index) => {
-      const employeeId = manualByRejectedIndex.get(index);
-      if (employeeId) {
-        manuallyMatched.push({
+    const skippedReviewCount = review.filter(
+      (_, index) => !confirmedIndices.has(index),
+    ).length;
+
+    type ImportRow = AttendanceMatchResult & { matchedEmployeeId: string };
+    const rowsToImport: ImportRow[] = [];
+    const takenEmployeeIds = new Set<string>();
+
+    const claimEmployee = (employeeId: string): void => {
+      if (takenEmployeeIds.has(employeeId)) {
+        throw new BadRequestException(
+          'Each ERP employee can only be matched once in an import',
+        );
+      }
+      takenEmployeeIds.add(employeeId);
+    };
+
+    let autoMatchedCount = 0;
+    let manualAssignedCount = 0;
+
+    for (const row of matched) {
+      if (!row.matchedEmployeeId) {
+        continue;
+      }
+      claimEmployee(row.matchedEmployeeId);
+      rowsToImport.push({
+        ...row,
+        matchedEmployeeId: row.matchedEmployeeId,
+      });
+      autoMatchedCount += 1;
+    }
+
+    for (let index = 0; index < review.length; index += 1) {
+      if (!confirmedIndices.has(index)) {
+        continue;
+      }
+      const row = review[index];
+      const overrideId = reviewAssignmentByIndex.get(index);
+      if (overrideId) {
+        const employee = employeeById.get(overrideId);
+        if (!employee) {
+          throw new BadRequestException(
+            'One or more selected employees were not found in this company',
+          );
+        }
+        claimEmployee(overrideId);
+        rowsToImport.push({
           ...row,
-          matchedEmployeeId: employeeId,
-          confidence: 'NAME_HIGH',
+          matchedEmployeeId: employee.id,
+          matchedEmployeeName: `${employee.firstName} ${employee.lastName}`,
+          matchedEmployeeErpId: employee.employeeId,
+          confidence: 'MANUAL',
           score: 100,
         });
+        manualAssignedCount += 1;
+      } else if (row.matchedEmployeeId) {
+        claimEmployee(row.matchedEmployeeId);
+        rowsToImport.push({
+          ...row,
+          matchedEmployeeId: row.matchedEmployeeId,
+        });
+        autoMatchedCount += 1;
+      }
+    }
+
+    const stillRejected: AttendanceMatchResult[] = [];
+    for (let index = 0; index < rejected.length; index += 1) {
+      const row = rejected[index];
+      const assignedId = rejectedAssignmentByIndex.get(index);
+      if (assignedId) {
+        const employee = employeeById.get(assignedId);
+        if (!employee) {
+          throw new BadRequestException(
+            'One or more selected employees were not found in this company',
+          );
+        }
+        claimEmployee(assignedId);
+        rowsToImport.push({
+          ...row,
+          matchedEmployeeId: employee.id,
+          matchedEmployeeName: `${employee.firstName} ${employee.lastName}`,
+          matchedEmployeeErpId: employee.employeeId,
+          confidence: 'MANUAL',
+          score: 100,
+        });
+        manualAssignedCount += 1;
       } else {
         stillRejected.push(row);
       }
-    });
+    }
 
-    const rowsToImport = [...autoMatched, ...manuallyMatched];
+    const confirmedReviewCount = [...confirmedIndices].filter(
+      (index) => index >= 0 && index < review.length,
+    ).length;
 
     await this.prisma.$transaction(async (tx) => {
       if (existing && dto.overwrite) {
@@ -295,7 +417,7 @@ export class AttendanceService {
           importedBy: userId,
           totalRows,
           matchedRows: rowsToImport.length,
-          reviewRows: confirmedReview.length,
+          reviewRows: confirmedReviewCount,
           rejectedRows: stillRejected.length,
           importedAt: new Date(),
         },
@@ -335,10 +457,47 @@ export class AttendanceService {
       month,
       year,
       importedCount: rowsToImport.length,
+      autoMatchedCount,
+      manualAssignedCount,
       skippedReviewCount,
       rejectedCount: stillRejected.length,
       rejectedNames: stillRejected.map((row) => row.attendanceName),
     };
+  }
+
+  /**
+   * Searches active company employees for manual attendance assignment.
+   */
+  async searchEmployees(
+    query: string,
+    companyId: string,
+  ): Promise<AttendanceEmployeeSearchResult[]> {
+    const trimmed = query?.trim() ?? '';
+    if (trimmed.length < 2) {
+      return [];
+    }
+
+    return this.prisma.user.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        isActive: true,
+        OR: [
+          { firstName: { contains: trimmed, mode: 'insensitive' } },
+          { lastName: { contains: trimmed, mode: 'insensitive' } },
+          { employeeId: { contains: trimmed, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        employeeId: true,
+        department: { select: { id: true, name: true } },
+      },
+      take: 10,
+      orderBy: { firstName: 'asc' },
+    });
   }
 
   /**

@@ -2,6 +2,7 @@ export type MatchConfidence =
   | 'ID_MATCH'
   | 'NAME_HIGH'
   | 'NAME_REVIEW'
+  | 'MANUAL'
   | 'NO_MATCH';
 
 export interface AttendanceRecord {
@@ -118,20 +119,33 @@ export interface AttendanceImportSummary {
   month: number;
   year: number;
   importedCount: number;
+  autoMatchedCount: number;
+  manualAssignedCount: number;
   skippedReviewCount: number;
   rejectedCount: number;
   rejectedNames: string[];
+}
+
+export interface ManualAssignmentDto {
+  rowIndex: number;
+  bucket: 'review' | 'rejected';
+  employeeId: string;
 }
 
 export interface ConfirmAttendanceImportDto {
   previewToken: string;
   overwrite: boolean;
   confirmedReviewIndices?: number[];
-  /** Map rejected preview rows to ERP employees before import. */
-  manualMatches?: Array<{
-    rejectedIndex: number;
-    employeeId: string;
-  }>;
+  /** Assign review overrides or rejected rows to ERP employees before import. */
+  manualAssignments?: ManualAssignmentDto[];
+}
+
+export interface AttendanceEmployeeSearchResult {
+  id: string;
+  firstName: string;
+  lastName: string;
+  employeeId: string | null;
+  department: { id: string; name: string } | null;
 }
 
 export interface MyAttendanceResponse {

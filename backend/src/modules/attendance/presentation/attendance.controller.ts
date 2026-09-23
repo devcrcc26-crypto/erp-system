@@ -30,6 +30,7 @@ import {
   ListAttendanceDto,
 } from '../application/dtos/attendance.dto';
 import {
+  AttendanceEmployeeSearchResult,
   AttendanceImportSummary,
   AttendancePreviewResult,
   AttendanceService,
@@ -91,6 +92,18 @@ export class AttendanceController {
   @ApiOperation({ summary: 'List attendance import batches for the company' })
   importHistory(@CurrentCompany() companyId: string): Promise<unknown> {
     return this.attendanceService.getImportHistory(companyId);
+  }
+
+  @Get('employees/search')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({
+    summary: 'Search active employees for manual attendance assignment',
+  })
+  searchEmployees(
+    @CurrentCompany() companyId: string,
+    @Query('q') query = '',
+  ): Promise<AttendanceEmployeeSearchResult[]> {
+    return this.attendanceService.searchEmployees(query, companyId);
   }
 
   @Get()

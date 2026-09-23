@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -13,15 +14,20 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export class ManualAttendanceMatchDto {
-  @ApiProperty({
-    description: 'Zero-based index into the preview rejected array',
-  })
+export class ManualAssignmentDto {
+  @ApiProperty({ description: 'Zero-based index into the review or rejected array' })
   @IsInt()
   @Min(0)
-  rejectedIndex!: number;
+  rowIndex!: number;
 
-  @ApiProperty({ description: 'ERP user id to attach this attendance row to' })
+  @ApiProperty({
+    description: 'Which preview bucket this row is in',
+    enum: ['review', 'rejected'],
+  })
+  @IsIn(['review', 'rejected'])
+  bucket!: 'review' | 'rejected';
+
+  @ApiProperty({ description: 'ERP user id to assign this attendance row to' })
   @IsUUID()
   employeeId!: string;
 }
@@ -43,15 +49,15 @@ export class ConfirmAttendanceImportDto {
   confirmedReviewIndices?: number[];
 
   @ApiPropertyOptional({
-    type: [ManualAttendanceMatchDto],
+    type: [ManualAssignmentDto],
     description:
-      'Optional HR overrides that assign rejected attendance rows to ERP employees',
+      'Optional HR overrides that assign review or rejected rows to ERP employees',
   })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ManualAttendanceMatchDto)
-  manualMatches?: ManualAttendanceMatchDto[];
+  @Type(() => ManualAssignmentDto)
+  manualAssignments?: ManualAssignmentDto[];
 }
 
 export class ListAttendanceDto {

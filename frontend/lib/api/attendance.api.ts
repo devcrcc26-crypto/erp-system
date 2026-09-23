@@ -1,5 +1,6 @@
 import { apiGet, apiGetPaginated, apiPost, apiPostForm } from '@/lib/api/client';
 import type {
+  AttendanceEmployeeSearchResult,
   AttendanceImportBatch,
   AttendanceImportSummary,
   AttendanceListParams,
@@ -85,5 +86,20 @@ export async function confirmAttendanceImport(
   return apiPost<AttendanceImportSummary>(
     `${ATTENDANCE_PATH}/import/confirm`,
     dto,
+  );
+}
+
+/**
+ * Search active employees for manual attendance assignment.
+ */
+export async function searchAttendanceEmployees(
+  query: string,
+): Promise<AttendanceEmployeeSearchResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) {
+    return [];
+  }
+  return apiGet<AttendanceEmployeeSearchResult[]>(
+    `${ATTENDANCE_PATH}/employees/search${toQueryString({ q: trimmed })}`,
   );
 }

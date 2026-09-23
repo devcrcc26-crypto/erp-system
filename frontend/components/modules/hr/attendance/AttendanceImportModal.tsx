@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Badge,
   Button,
@@ -26,22 +26,25 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import {
+  getAttendanceImportHistory,
+  searchAttendanceEmployees,
+} from '@/lib/api/attendance.api';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
+  AttendanceEmployeeSearchResult,
   AttendanceImportBatch,
   AttendanceImportSummary,
   AttendancePreviewResult,
   AttendancePreviewRow,
+  ManualAssignmentDto,
   MatchConfidence,
 } from '@/lib/api/attendance.types';
-import { getAttendanceImportHistory } from '@/lib/api/attendance.api';
 import {
   useAttendanceImportConfirm,
   useAttendanceImportPreview,
 } from '@/lib/query/attendance';
-import { useFullUsersDirectory } from '@/lib/query/users';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
-import { formatUserName } from '@/lib/utils/user-display';
 
 export interface AttendanceImportModalProps {
   open: boolean;
@@ -54,6 +57,26 @@ type ImportStep = 0 | 1 | 2;
 type ReviewRow = AttendancePreviewRow & { reviewIndex: number };
 type RejectedRow = AttendancePreviewRow & { rejectedIndex: number };
 
+type EditingCell =
+  | { bucket: 'review'; index: number }
+  | { bucket: 'rejected'; index: number }
+  | null;
+
+type EmployeeLabel = {
+  id: string;
+  name: string;
+  employeeId: string | null;
+};
+
+function formatEmployeeLabel(employee: {
+  firstName: string;
+  lastName: string;
+  employeeId: string | null;
+}): string {
+  const name = `${employee.firstName} ${employee.lastName}`.trim();
+  return employee.employeeId ? `${name} (${employee.employeeId})` : name;
+}
+
 function matchTypeLabel(
   confidence: MatchConfidence,
   t: (key: string) => string,
@@ -61,11 +84,20 @@ function matchTypeLabel(
   if (confidence === 'ID_MATCH') {
     return t('pages.hr.attendance.importModal.matchId');
   }
+  if (confidence === 'MANUAL') {
+    return t('pages.hr.attendance.importModal.matchManual');
+  }
   return t('pages.hr.attendance.importModal.matchName');
 }
 
 function matchTypeColor(confidence: MatchConfidence): string {
-  return confidence === 'ID_MATCH' ? 'blue' : 'green';
+  if (confidence === 'ID_MATCH') {
+    return 'blue';
+  }
+  if (confidence === 'MANUAL') {
+    return 'purple';
+  }
+  return 'green';
 }
 
 /**
@@ -79,9 +111,6 @@ export default function AttendanceImportModal({
   const { t } = useEpcTranslation();
   const previewMutation = useAttendanceImportPreview();
   const confirmMutation = useAttendanceImportConfirm();
-  const usersDirectoryQuery = useFullUsersDirectory({
-    enabled: open,
-  });
 
   const [step, setStep] = useState<ImportStep>(0);
   const [uploading, setUploading] = useState(false);
@@ -92,14 +121,28 @@ export default function AttendanceImportModal({
   const [reviewSelections, setReviewSelections] = useState<
     Record<number, boolean>
   >({});
+  /** reviewIndex → ERP employee user id */
+  const [reviewOverrides, setReviewOverrides] = useState<
+    Record<number, string>
+  >({});
   /** rejectedIndex → ERP employee user id */
-  const [manualMatches, setManualMatches] = useState<Record<number, string>>(
-    {},
-  );
+  const [rejectedAssignments, setRejectedAssignments] = useState<
+    Record<number, string>
+  >({});
+  const [employeeLabels, setEmployeeLabels] = useState<
+    Record<string, EmployeeLabel>
+  >({});
+  const [editingCell, setEditingCell] = useState<EditingCell>(null);
+  const [employeeSearchResults, setEmployeeSearchResults] = useState<
+    AttendanceEmployeeSearchResult[]
+  >([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [existingBatch, setExistingBatch] =
     useState<AttendanceImportBatch | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [rejectedExpanded, setRejectedExpanded] = useState(false);
+
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resetState = useCallback((): void => {
     setStep(0);
@@ -108,10 +151,27 @@ export default function AttendanceImportModal({
     setPreview(null);
     setImportResult(null);
     setReviewSelections({});
-    setManualMatches({});
+    setReviewOverrides({});
+    setRejectedAssignments({});
+    setEmployeeLabels({});
+    setEditingCell(null);
+    setEmployeeSearchResults([]);
+    setSearchLoading(false);
     setExistingBatch(null);
     setErrorMessage(null);
     setRejectedExpanded(false);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+      searchTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
   }, []);
 
   const handleClose = useCallback((): void => {
@@ -129,9 +189,7 @@ export default function AttendanceImportModal({
     onSuccess();
   }, [onClose, onSuccess, resetState]);
 
-  const monthName = preview
-    ? t(`hr.months.${preview.month}`)
-    : '';
+  const monthName = preview ? t(`hr.months.${preview.month}`) : '';
 
   const selectedReviewCount = useMemo(() => {
     if (!preview) {
@@ -143,17 +201,26 @@ export default function AttendanceImportModal({
     );
   }, [preview, reviewSelections]);
 
-  const manualMatchCount = useMemo(
-    () => Object.keys(manualMatches).length,
-    [manualMatches],
+  const manuallyAssignedCount = useMemo(
+    () => Object.keys(rejectedAssignments).length,
+    [rejectedAssignments],
   );
 
-  const skippedReviewCount = (preview?.review.length ?? 0) - selectedReviewCount;
-  const importCount =
-    (preview?.matched.length ?? 0) + selectedReviewCount + manualMatchCount;
-  const rejectedCount = (preview?.rejected.length ?? 0) - manualMatchCount;
+  const reviewOverrideCount = useMemo(
+    () => Object.keys(reviewOverrides).length,
+    [reviewOverrides],
+  );
 
-  /** Employee IDs already claimed by auto-match, included review, or another manual pick. */
+  const skippedReviewCount =
+    (preview?.review.length ?? 0) - selectedReviewCount;
+  const importCount =
+    (preview?.matched.length ?? 0) +
+    selectedReviewCount +
+    manuallyAssignedCount;
+  const rejectedCount =
+    (preview?.rejected.length ?? 0) - manuallyAssignedCount;
+
+  /** Employee IDs already claimed by auto-match, included review, or manual picks. */
   const takenEmployeeIds = useMemo(() => {
     const taken = new Set<string>();
     if (!preview) {
@@ -165,51 +232,114 @@ export default function AttendanceImportModal({
       }
     }
     preview.review.forEach((row, index) => {
-      if (reviewSelections[index] && row.matchedEmployeeId) {
+      if (!reviewSelections[index]) {
+        return;
+      }
+      const overrideId = reviewOverrides[index];
+      if (overrideId) {
+        taken.add(overrideId);
+      } else if (row.matchedEmployeeId) {
         taken.add(row.matchedEmployeeId);
       }
     });
-    for (const employeeId of Object.values(manualMatches)) {
+    for (const employeeId of Object.values(rejectedAssignments)) {
       taken.add(employeeId);
     }
     return taken;
-  }, [preview, reviewSelections, manualMatches]);
+  }, [preview, reviewSelections, reviewOverrides, rejectedAssignments]);
 
-  const unmatchedEmployeeOptions = useMemo(() => {
-    const users = usersDirectoryQuery.data ?? [];
-    return users
-      .filter((user) => !takenEmployeeIds.has(user.id))
-      .map((user) => ({
-        value: user.id,
-        label: user.employeeId
-          ? `${formatUserName(user)} (${user.employeeId})`
-          : formatUserName(user),
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [usersDirectoryQuery.data, takenEmployeeIds]);
+  const searchOptions = useMemo(() => {
+    return employeeSearchResults
+      .filter((employee) => {
+        if (!takenEmployeeIds.has(employee.id)) {
+          return true;
+        }
+        if (
+          editingCell?.bucket === 'review' &&
+          reviewOverrides[editingCell.index] === employee.id
+        ) {
+          return true;
+        }
+        if (
+          editingCell?.bucket === 'rejected' &&
+          rejectedAssignments[editingCell.index] === employee.id
+        ) {
+          return true;
+        }
+        return false;
+      })
+      .map((employee) => ({
+        value: employee.id,
+        label: formatEmployeeLabel(employee),
+      }));
+  }, [
+    employeeSearchResults,
+    takenEmployeeIds,
+    editingCell,
+    reviewOverrides,
+    rejectedAssignments,
+  ]);
 
-  function employeeOptionsForRejectedRow(
-    rejectedIndex: number,
-  ): Array<{ value: string; label: string }> {
-    const currentId = manualMatches[rejectedIndex];
-    if (!currentId) {
-      return unmatchedEmployeeOptions;
+  function rememberEmployeeLabel(
+    employee: AttendanceEmployeeSearchResult,
+  ): void {
+    setEmployeeLabels((prev) => ({
+      ...prev,
+      [employee.id]: {
+        id: employee.id,
+        name: `${employee.firstName} ${employee.lastName}`.trim(),
+        employeeId: employee.employeeId,
+      },
+    }));
+  }
+
+  function handleEmployeeSearch(query: string): void {
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
     }
-    const users = usersDirectoryQuery.data ?? [];
-    const current = users.find((user) => user.id === currentId);
-    if (!current) {
-      return unmatchedEmployeeOptions;
+    searchTimerRef.current = setTimeout(() => {
+      void (async () => {
+        const trimmed = query.trim();
+        if (trimmed.length < 2) {
+          setEmployeeSearchResults([]);
+          setSearchLoading(false);
+          return;
+        }
+        setSearchLoading(true);
+        try {
+          const results = await searchAttendanceEmployees(trimmed);
+          setEmployeeSearchResults(results);
+        } catch {
+          setEmployeeSearchResults([]);
+        } finally {
+          setSearchLoading(false);
+        }
+      })();
+    }, 300);
+  }
+
+  function applyReviewOverride(rowIndex: number, employeeId: string): void {
+    const employee = employeeSearchResults.find((row) => row.id === employeeId);
+    if (employee) {
+      rememberEmployeeLabel(employee);
     }
-    const currentOption = {
-      value: current.id,
-      label: current.employeeId
-        ? `${formatUserName(current)} (${current.employeeId})`
-        : formatUserName(current),
-    };
-    if (unmatchedEmployeeOptions.some((opt) => opt.value === currentId)) {
-      return unmatchedEmployeeOptions;
+    setReviewOverrides((prev) => ({ ...prev, [rowIndex]: employeeId }));
+    setReviewSelections((prev) => ({ ...prev, [rowIndex]: true }));
+    setEditingCell(null);
+    setEmployeeSearchResults([]);
+  }
+
+  function applyRejectedAssignment(
+    rowIndex: number,
+    employeeId: string,
+  ): void {
+    const employee = employeeSearchResults.find((row) => row.id === employeeId);
+    if (employee) {
+      rememberEmployeeLabel(employee);
     }
-    return [currentOption, ...unmatchedEmployeeOptions];
+    setRejectedAssignments((prev) => ({ ...prev, [rowIndex]: employeeId }));
+    setEditingCell(null);
+    setEmployeeSearchResults([]);
   }
 
   async function handleFileSelected(file: File): Promise<void> {
@@ -223,7 +353,11 @@ export default function AttendanceImportModal({
         initial[index] = true;
       });
       setReviewSelections(initial);
-      setManualMatches({});
+      setReviewOverrides({});
+      setRejectedAssignments({});
+      setEmployeeLabels({});
+      setEditingCell(null);
+      setEmployeeSearchResults([]);
       setPreview(result);
 
       if (result.alreadyImported) {
@@ -275,17 +409,25 @@ export default function AttendanceImportModal({
       const confirmedReviewIndices = Object.entries(reviewSelections)
         .filter(([, include]) => include)
         .map(([idx]) => Number(idx));
-      const manualMatchPayload = Object.entries(manualMatches).map(
-        ([rejectedIndex, employeeId]) => ({
-          rejectedIndex: Number(rejectedIndex),
+
+      const manualAssignments: ManualAssignmentDto[] = [
+        ...Object.entries(reviewOverrides).map(([idx, employeeId]) => ({
+          rowIndex: Number(idx),
+          bucket: 'review' as const,
           employeeId,
-        }),
-      );
+        })),
+        ...Object.entries(rejectedAssignments).map(([idx, employeeId]) => ({
+          rowIndex: Number(idx),
+          bucket: 'rejected' as const,
+          employeeId,
+        })),
+      ];
+
       const result = await confirmMutation.mutateAsync({
         previewToken: preview.previewToken,
         overwrite,
         confirmedReviewIndices,
-        manualMatches: manualMatchPayload,
+        manualAssignments,
       });
       setImportResult(result);
       setStep(2);
@@ -304,9 +446,44 @@ export default function AttendanceImportModal({
     setStep(0);
     setPreview(null);
     setReviewSelections({});
-    setManualMatches({});
+    setReviewOverrides({});
+    setRejectedAssignments({});
+    setEmployeeLabels({});
+    setEditingCell(null);
+    setEmployeeSearchResults([]);
     setExistingBatch(null);
     setErrorMessage(null);
+  }
+
+  function renderEmployeeSelect(
+    onSelect: (employeeId: string) => void,
+  ): React.ReactNode {
+    return (
+      <Select
+        showSearch
+        autoFocus
+        placeholder={t(
+          'pages.hr.attendance.importModal.searchEmployeePlaceholder',
+        )}
+        filterOption={false}
+        loading={searchLoading}
+        options={searchOptions}
+        style={{ width: 240 }}
+        getPopupContainer={() => document.body}
+        onSearch={handleEmployeeSearch}
+        onChange={(value: string | undefined) => {
+          if (value) {
+            onSelect(value);
+          }
+        }}
+        onBlur={() => {
+          setTimeout(() => {
+            setEditingCell(null);
+            setEmployeeSearchResults([]);
+          }, 200);
+        }}
+      />
+    );
   }
 
   const matchedColumns: ColumnsType<AttendancePreviewRow> = [
@@ -349,34 +526,57 @@ export default function AttendanceImportModal({
       dataIndex: 'attendanceName',
       key: 'attendanceName',
       ellipsis: true,
+      width: 150,
     },
     {
       title: t('pages.hr.attendance.importModal.colBestMatch'),
-      dataIndex: 'matchedEmployeeName',
-      key: 'matchedEmployeeName',
+      key: 'bestMatch',
       ellipsis: true,
-      render: (value: string | null) => value ?? '—',
+      render: (_: unknown, row: ReviewRow) => {
+        const overrideId = reviewOverrides[row.reviewIndex];
+        if (overrideId) {
+          const label = employeeLabels[overrideId];
+          return (
+            <span className="inline-flex items-center gap-1">
+              {label?.name ?? row.matchedEmployeeName ?? '—'}
+              <Tag color="purple">
+                {t('pages.hr.attendance.importModal.matchManual')}
+              </Tag>
+            </span>
+          );
+        }
+        return row.matchedEmployeeName ?? '—';
+      },
     },
     {
       title: t('pages.hr.attendance.importModal.colEmployeeId'),
-      dataIndex: 'matchedEmployeeErpId',
-      key: 'matchedEmployeeErpId',
-      width: 120,
-      render: (value: string | null) => value ?? '—',
+      key: 'employeeId',
+      width: 110,
+      render: (_: unknown, row: ReviewRow) => {
+        const overrideId = reviewOverrides[row.reviewIndex];
+        if (overrideId) {
+          return employeeLabels[overrideId]?.employeeId ?? '—';
+        }
+        return row.matchedEmployeeErpId ?? '—';
+      },
     },
     {
       title: t('pages.hr.attendance.importModal.colScore'),
       dataIndex: 'score',
       key: 'score',
-      width: 80,
+      width: 70,
       align: 'right',
-      render: (score: number | null) =>
-        score == null ? '—' : `${score}%`,
+      render: (_: unknown, row: ReviewRow) => {
+        if (reviewOverrides[row.reviewIndex]) {
+          return '—';
+        }
+        return row.score == null ? '—' : `${row.score}%`;
+      },
     },
     {
       title: t('pages.hr.attendance.importModal.colInclude'),
       key: 'include',
-      width: 90,
+      width: 80,
       align: 'center',
       render: (_: unknown, row: ReviewRow) => (
         <Checkbox
@@ -389,6 +589,33 @@ export default function AttendanceImportModal({
           }}
         />
       ),
+    },
+    {
+      title: t('pages.hr.attendance.importModal.colAssign'),
+      key: 'override',
+      width: 250,
+      render: (_: unknown, row: ReviewRow) => {
+        const isEditing =
+          editingCell?.bucket === 'review' &&
+          editingCell.index === row.reviewIndex;
+        if (isEditing) {
+          return renderEmployeeSelect((employeeId) =>
+            applyReviewOverride(row.reviewIndex, employeeId),
+          );
+        }
+        return (
+          <Button
+            type="link"
+            className="!px-0"
+            onClick={() => {
+              setEmployeeSearchResults([]);
+              setEditingCell({ bucket: 'review', index: row.reviewIndex });
+            }}
+          >
+            {t('pages.hr.attendance.importModal.changeEmployee')}
+          </Button>
+        );
+      },
     },
   ];
 
@@ -408,34 +635,76 @@ export default function AttendanceImportModal({
       render: (value: string) => (value && value !== '-' ? value : '—'),
     },
     {
-      title: t('pages.hr.attendance.importModal.colMatchTo'),
-      key: 'matchTo',
+      title: t('pages.hr.attendance.importModal.colReason'),
+      key: 'status',
       width: 260,
-      render: (_: unknown, row: RejectedRow) => (
-        <Select
-          allowClear
-          showSearch
-          optionFilterProp="label"
-          placeholder={t(
-            'pages.hr.attendance.importModal.rejectedMatchPlaceholder',
-          )}
-          className="w-full"
-          loading={usersDirectoryQuery.isLoading}
-          options={employeeOptionsForRejectedRow(row.rejectedIndex)}
-          value={manualMatches[row.rejectedIndex]}
-          onChange={(value: string | undefined) => {
-            setManualMatches((prev) => {
-              const next = { ...prev };
-              if (!value) {
-                delete next[row.rejectedIndex];
-              } else {
-                next[row.rejectedIndex] = value;
-              }
-              return next;
-            });
-          }}
-        />
-      ),
+      render: (_: unknown, row: RejectedRow) => {
+        const assignedId = rejectedAssignments[row.rejectedIndex];
+        if (assignedId) {
+          const label = employeeLabels[assignedId];
+          const name = label
+            ? `${label.name}${label.employeeId ? ` (${label.employeeId})` : ''}`
+            : assignedId;
+          return (
+            <span className="inline-flex items-center gap-1 text-[#639922]">
+              <CheckCircleOutlined />
+              {t('pages.hr.attendance.importModal.assignedTo', { name })}
+            </span>
+          );
+        }
+        return t('pages.hr.attendance.importModal.rejectedReason');
+      },
+    },
+    {
+      title: t('pages.hr.attendance.importModal.colAssign'),
+      key: 'assign',
+      width: 250,
+      render: (_: unknown, row: RejectedRow) => {
+        const isEditing =
+          editingCell?.bucket === 'rejected' &&
+          editingCell.index === row.rejectedIndex;
+        const assignedId = rejectedAssignments[row.rejectedIndex];
+
+        if (isEditing) {
+          return renderEmployeeSelect((employeeId) =>
+            applyRejectedAssignment(row.rejectedIndex, employeeId),
+          );
+        }
+
+        if (assignedId) {
+          return (
+            <Button
+              type="link"
+              className="!px-0"
+              onClick={() => {
+                setEmployeeSearchResults([]);
+                setEditingCell({
+                  bucket: 'rejected',
+                  index: row.rejectedIndex,
+                });
+              }}
+            >
+              {t('pages.hr.attendance.importModal.changeEmployee')}
+            </Button>
+          );
+        }
+
+        return (
+          <Button
+            type="link"
+            className="!px-0"
+            onClick={() => {
+              setEmployeeSearchResults([]);
+              setEditingCell({
+                bucket: 'rejected',
+                index: row.rejectedIndex,
+              });
+            }}
+          >
+            {t('pages.hr.attendance.importModal.assignEmployee')}
+          </Button>
+        );
+      },
     },
   ];
 
@@ -489,6 +758,12 @@ export default function AttendanceImportModal({
                 style={{ backgroundColor: '#BA7517' }}
                 showZero
               />
+              {reviewOverrideCount > 0 ? (
+                <Tag color="purple">
+                  {t('pages.hr.attendance.importModal.matchManual')}:{' '}
+                  {reviewOverrideCount}
+                </Tag>
+              ) : null}
             </span>
           ),
           children: (
@@ -499,7 +774,7 @@ export default function AttendanceImportModal({
               columns={reviewColumns}
               dataSource={reviewRows}
               pagination={false}
-              scroll={{ y: 260 }}
+              scroll={{ y: 260, x: 780 }}
             />
           ),
         },
@@ -514,10 +789,10 @@ export default function AttendanceImportModal({
                 style={{ backgroundColor: '#D32F2F' }}
                 showZero
               />
-              {manualMatchCount > 0 ? (
-                <Tag color="blue">
+              {manuallyAssignedCount > 0 ? (
+                <Tag color="purple">
                   {t('pages.hr.attendance.importModal.matchManual')}:{' '}
-                  {manualMatchCount}
+                  {manuallyAssignedCount}
                 </Tag>
               ) : null}
             </span>
@@ -531,15 +806,10 @@ export default function AttendanceImportModal({
                 columns={rejectedColumns}
                 dataSource={rejectedRows}
                 pagination={false}
-                scroll={{ y: 280, x: 560 }}
+                scroll={{ y: 280, x: 720 }}
               />
               <p className="m-0 mt-3 text-[12px] text-[#6B7280]">
                 {t('pages.hr.attendance.importModal.rejectedNote')}
-              </p>
-              <p className="m-0 mt-1 text-[12px] text-[#6B7280]">
-                {t('pages.hr.attendance.importModal.unmatchedEmployeesHint', {
-                  count: unmatchedEmployeeOptions.length,
-                })}
               </p>
             </div>
           ),
@@ -581,7 +851,7 @@ export default function AttendanceImportModal({
       open={open}
       onCancel={handleClose}
       title={t('pages.hr.attendance.importModal.title')}
-      width={920}
+      width={980}
       footer={null}
       mask={{ closable: false }}
       destroyOnHidden
@@ -733,8 +1003,13 @@ export default function AttendanceImportModal({
               </p>
               <div className="erp-notice-description">
                 <p>
-                  {t('pages.hr.attendance.importModal.doneImported', {
-                    count: importResult.importedCount,
+                  {t('pages.hr.attendance.importModal.doneAutoMatched', {
+                    count: importResult.autoMatchedCount,
+                  })}
+                </p>
+                <p>
+                  {t('pages.hr.attendance.importModal.doneManualAssigned', {
+                    count: importResult.manualAssignedCount,
                   })}
                 </p>
                 <p>
