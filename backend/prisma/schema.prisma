@@ -298,6 +298,8 @@ model Company {
   workSchedules               WorkSchedule[]
   publicHolidays              PublicHoliday[]
   employeeScheduleAssignments EmployeeScheduleAssignment[]
+  attendanceImportBatches  AttendanceImportBatch[]
+  attendanceRecords        AttendanceRecord[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -780,6 +782,8 @@ model User {
   scheduleAssignments             EmployeeScheduleAssignment[]
   profileFolder                   DocumentFolder?           @relation("UserProfileFolder", fields: [profileFolderId], references: [id])
   photoDocument                   Document?                 @relation("UserPhotoDocument", fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attendanceRecords               AttendanceRecord[]        @relation("AttendanceEmployee")
+  attendanceImportBatches         AttendanceImportBatch[]   @relation("AttendanceImporter")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([leavePolicyId], map: "idx_user_leave_policy")
@@ -3916,6 +3920,67 @@ model OvertimeEntryDocument {
   @@index([entryId], map: "idx_overtime_entry_document_entry")
   @@index([documentId], map: "idx_overtime_entry_document_document")
   @@map("overtime_entry_document")
+}
+
+// ─── Attendance ──────────────────────────────────────────────────────────────
+
+model AttendanceImportBatch {
+  id            String   @id @default(uuid())
+  companyId     String   @map("company_id")
+  month         Int
+  year          Int
+  fileName      String   @map("file_name")
+  importedBy    String   @map("imported_by")
+  totalRows     Int      @map("total_rows")
+  matchedRows   Int      @map("matched_rows")
+  reviewRows    Int      @map("review_rows")
+  rejectedRows  Int      @map("rejected_rows")
+  importedAt    DateTime @default(now()) @map("imported_at")
+
+  company   Company            @relation(fields: [companyId], references: [id])
+  importer  User               @relation("AttendanceImporter", fields: [importedBy], references: [id])
+  records   AttendanceRecord[]
+
+  @@unique([companyId, month, year])
+  @@index([companyId], map: "idx_attendance_import_batch_company")
+  @@index([importedBy], map: "idx_attendance_import_batch_importer")
+  @@map("attendance_import_batch")
+}
+
+model AttendanceRecord {
+  id                    String   @id @default(uuid())
+  companyId             String   @map("company_id")
+  employeeId            String   @map("employee_id")
+  importBatchId         String   @map("import_batch_id")
+  month                 Int
+  year                  Int
+  expectedDays          Decimal  @map("expected_days") @db.Decimal(4, 1)
+  actualDays            Decimal  @map("actual_days") @db.Decimal(4, 1)
+  expectedHours         Decimal  @map("expected_hours") @db.Decimal(6, 2)
+  actualHours           Decimal  @map("actual_hours") @db.Decimal(6, 2)
+  payableHours          Decimal  @map("payable_hours") @db.Decimal(6, 2)
+  overtimePaidHours     Decimal  @default(0) @map("overtime_paid_hours") @db.Decimal(6, 2)
+  overtimeTimeOffHours  Decimal  @default(0) @map("overtime_time_off_hours") @db.Decimal(6, 2)
+  lateCount             Int      @default(0) @map("late_count")
+  lateMinutes           Int      @default(0) @map("late_minutes")
+  earlyLeaveCount       Int      @default(0) @map("early_leave_count")
+  earlyLeaveMinutes     Int      @default(0) @map("early_leave_minutes")
+  missingClockIn        Int      @default(0) @map("missing_clock_in")
+  missingClockOut       Int      @default(0) @map("missing_clock_out")
+  absentDays            Decimal  @default(0) @map("absent_days") @db.Decimal(4, 1)
+  importedAt            DateTime @default(now()) @map("imported_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  company     Company               @relation(fields: [companyId], references: [id])
+  employee    User                  @relation("AttendanceEmployee", fields: [employeeId], references: [id])
+  importBatch AttendanceImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, employeeId, month, year])
+  @@index([companyId, month, year], map: "idx_attendance_record_company_period")
+  @@index([employeeId], map: "idx_attendance_record_employee")
+  @@index([importBatchId], map: "idx_attendance_record_batch")
+  @@map("attendance_record")
 }
 
 // ─── Flight Applications ─────────────────────────────────────────────────────
