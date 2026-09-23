@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Alert, Button, Grid, Skeleton, Space } from 'antd';
 import {
+  BarChartOutlined,
   CalendarOutlined,
   EditOutlined,
   UserDeleteOutlined,
@@ -15,6 +16,7 @@ import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeL
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeeWorkScheduleSection from '@/components/modules/hr/work-schedule/EmployeeWorkScheduleSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
+import EmployeeAttendanceProfileSection from '@/components/modules/profile/EmployeeAttendanceProfileSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
@@ -71,11 +73,19 @@ function formatAddress(user: UserDetail): string {
   return parts.length > 0 ? parts.join(', ') : '-';
 }
 
-type ProfileTab = 'overview' | 'leave' | 'workSchedule' | 'perDiem';
+type ProfileTab =
+  | 'overview'
+  | 'leave'
+  | 'attendance'
+  | 'workSchedule'
+  | 'perDiem';
 
 function resolveProfileTab(value: string | null): ProfileTab {
   if (value === 'leave') {
     return 'leave';
+  }
+  if (value === 'attendance') {
+    return 'attendance';
   }
   if (value === 'workSchedule') {
     return 'workSchedule';
@@ -424,6 +434,17 @@ export default function EmployeeDetailPageContent({
           <button
             type="button"
             role="tab"
+            aria-selected={activeTab === 'attendance'}
+            onClick={() => setActiveTab('attendance')}
+          >
+            <BarChartOutlined />
+            <span className="erp-employee-tab-label">
+              {t('users.tabAttendance')}
+            </span>
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={activeTab === 'workSchedule'}
             onClick={() => setActiveTab('workSchedule')}
           >
@@ -467,6 +488,11 @@ export default function EmployeeDetailPageContent({
                 <EmployeeOvertimeProfileSection mode="self" />
               )}
             </div>
+          ) : activeTab === 'attendance' ? (
+            <EmployeeAttendanceProfileSection
+              employeeId={user.id}
+              isOwnProfile={isOwnProfile}
+            />
           ) : activeTab === 'workSchedule' ? (
             <EmployeeWorkScheduleSection employeeId={user.id} />
           ) : activeTab === 'perDiem' ? (

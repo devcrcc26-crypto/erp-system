@@ -22,6 +22,8 @@ type StatAccent = keyof typeof STAT_ACCENT;
 
 export interface AttendanceStatBarProps {
   records: AttendanceRecord[];
+  /** Total matching employees from the list API (not just the current page). */
+  totalEmployees?: number;
   loading: boolean;
 }
 
@@ -71,6 +73,7 @@ function avgRateAccent(rate: number | null): StatAccent {
  */
 export default function AttendanceStatBar({
   records,
+  totalEmployees,
   loading,
 }: AttendanceStatBarProps): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -89,12 +92,12 @@ export default function AttendanceStatBar({
       0,
     );
     return {
-      employees: records.length,
+      employees: totalEmployees ?? records.length,
       avgRate,
       totalLate,
       totalAbsent,
     };
-  }, [records]);
+  }, [records, totalEmployees]);
 
   if (loading) {
     return (

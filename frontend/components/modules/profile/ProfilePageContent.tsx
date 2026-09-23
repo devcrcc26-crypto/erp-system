@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Form, Input, Select, Spin } from 'antd';
 import {
+  BarChartOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
   DesktopOutlined,
@@ -21,6 +22,7 @@ import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/Emp
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
+import EmployeeAttendanceProfileSection from '@/components/modules/profile/EmployeeAttendanceProfileSection';
 import ProfileAccountDetails, {
   localizedName,
 } from '@/components/modules/profile/ProfileAccountDetails';
@@ -61,6 +63,7 @@ const PROFILE_TABS = [
   'account',
   'leave',
   'overtime',
+  'attendance',
   'workSchedule',
   'documents',
   'contract',
@@ -168,6 +171,10 @@ export default function ProfilePageContent(): React.ReactNode {
     account: { label: t('profile.tabAccount'), icon: <UserOutlined /> },
     leave: { label: t('profile.tabLeave'), icon: <CalendarOutlined /> },
     overtime: { label: t('profile.tabOvertime'), icon: <ClockCircleOutlined /> },
+    attendance: {
+      label: t('profile.tabAttendance'),
+      icon: <BarChartOutlined />,
+    },
     workSchedule: { label: t('profile.tabWorkSchedule'), icon: <ScheduleOutlined /> },
     documents: { label: t('profile.tabDocuments'), icon: <FolderOpenOutlined /> },
     contract: { label: t('profile.tabContract'), icon: <FileProtectOutlined /> },
@@ -527,6 +534,13 @@ export default function ProfilePageContent(): React.ReactNode {
             mode="self"
             hideCreateAction
             showCategoryColumns
+          />
+        );
+      case 'attendance':
+        return (
+          <EmployeeAttendanceProfileSection
+            employeeId={currentProfile.id}
+            isOwnProfile
           />
         );
       case 'workSchedule':

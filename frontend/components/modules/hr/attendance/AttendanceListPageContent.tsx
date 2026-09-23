@@ -24,19 +24,25 @@ import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useAttendanceRecords } from '@/lib/query/attendance';
+import { useUsersDirectory } from '@/lib/query/users';
+import { formatUserName } from '@/lib/utils/user-display';
 
 /**
- * HR attendance list — month/year filters, stats, and Excel import.
+ * HR attendance list — month/year/employee filters, search, stats, and Excel import.
  */
 export default function AttendanceListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const canViewHr = useCanViewHr();
 
   const now = useMemo(() => new Date(), []);
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  const [month, setMonth] = useState(currentMonth);
+  const [year, setYear] = useState(currentYear);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -49,17 +55,21 @@ export default function AttendanceListPageContent(): React.ReactNode {
     return () => window.clearTimeout(timer);
   }, [search]);
 
+  const usersQuery = useUsersDirectory(
+    { page: 1, limit: 200 },
+    { enabled: canViewHr },
+  );
+
   const listParams = useMemo(
     () => ({
       month,
       year,
       page,
       limit,
-      ...(canViewHr && debouncedSearch
-        ? { search: debouncedSearch }
-        : {}),
+      ...(canViewHr && debouncedSearch ? { search: debouncedSearch } : {}),
+      ...(canViewHr && employeeId ? { employeeId } : {}),
     }),
-    [month, year, page, limit, canViewHr, debouncedSearch],
+    [month, year, page, limit, canViewHr, debouncedSearch, employeeId],
   );
 
   const listQuery = useAttendanceRecords(listParams, true);
@@ -76,17 +86,45 @@ export default function AttendanceListPageContent(): React.ReactNode {
     [t],
   );
 
+  const employeeOptions = useMemo(
+    () =>
+      (usersQuery.data?.data ?? []).map((user) => ({
+        value: user.id,
+        label: formatUserName(user),
+      })),
+    [usersQuery.data?.data],
+  );
+
   const monthName = t(`hr.months.${month}`);
   const pageTitle = canViewHr
     ? t('pages.hr.attendance.listTitle')
     : t('pages.hr.attendance.myListTitle');
+
+  const hasFilters =
+    month !== currentMonth ||
+    year !== currentYear ||
+    Boolean(debouncedSearch) ||
+    Boolean(employeeId);
+
+  function resetPage(): void {
+    setPage(1);
+  }
+
+  function handleResetFilters(): void {
+    setMonth(currentMonth);
+    setYear(currentYear);
+    setSearch('');
+    setDebouncedSearch('');
+    setEmployeeId(undefined);
+    resetPage();
+  }
 
   function handleMonthChange(value: number | null): void {
     if (value == null) {
       return;
     }
     setMonth(value);
-    setPage(1);
+    resetPage();
   }
 
   function handleYearChange(value: number | null): void {
@@ -94,7 +132,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
       return;
     }
     setYear(value);
-    setPage(1);
+    resetPage();
   }
 
   function handlePaginationChange(nextPage: number, nextPageSize: number): void {
@@ -129,6 +167,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
 
       <AttendanceStatBar
         records={records}
+        totalEmployees={total}
         loading={listQuery.isFetching && !listQuery.data}
       />
 
@@ -141,31 +180,6 @@ export default function AttendanceListPageContent(): React.ReactNode {
             </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
-            <Select
-              value={month}
-              options={monthOptions}
-              onChange={handleMonthChange}
-              style={{ width: 140 }}
-              aria-label={t('pages.hr.attendance.filters.month')}
-            />
-            <InputNumber
-              value={year}
-              min={2020}
-              max={2030}
-              onChange={handleYearChange}
-              style={{ width: 100 }}
-              aria-label={t('pages.hr.attendance.filters.year')}
-            />
-            {canViewHr ? (
-              <Input
-                allowClear
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t('pages.hr.attendance.filters.search')}
-                prefix={<SearchOutlined />}
-                style={{ width: 220 }}
-              />
-            ) : null}
             <Tooltip title={t('common.refresh')}>
               <Button
                 type="text"
@@ -187,26 +201,106 @@ export default function AttendanceListPageContent(): React.ReactNode {
           </div>
         </div>
 
-        <AttendanceTable
-          records={records}
-          loading={listQuery.isFetching}
-          pagination={{
-            current: page,
-            pageSize: limit,
-            total,
-            onChange: handlePaginationChange,
-          }}
-          emptyText={
-            <TableEmptyState
-              icon={<CalendarOutlined />}
-              title={t('pages.hr.attendance.emptyTitle', {
-                month: monthName,
-                year,
-              })}
-              description={t('pages.hr.attendance.emptyDescription')}
+        <div className="erp-users-filter-bar">
+          {canViewHr ? (
+            <Input
+              allowClear
+              prefix={<SearchOutlined className="erp-users-search-icon" />}
+              placeholder={t('pages.hr.attendance.filters.search')}
+              className="erp-users-search-input min-w-0"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onPressEnter={() => {
+                setDebouncedSearch(search.trim());
+                resetPage();
+              }}
+              onClear={() => {
+                setSearch('');
+                setDebouncedSearch('');
+                resetPage();
+              }}
+              aria-label={t('pages.hr.attendance.filters.search')}
             />
-          }
-        />
+          ) : null}
+          <span className="erp-users-filter-spacer" aria-hidden />
+          {canViewHr ? (
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder={t('hr.placeholder.employee')}
+              className="erp-users-filter-select"
+              loading={usersQuery.isLoading}
+              options={employeeOptions}
+              value={employeeId}
+              onChange={(value: string | undefined) => {
+                setEmployeeId(value);
+                resetPage();
+              }}
+              aria-label={t('hr.placeholder.employee')}
+            />
+          ) : null}
+          <Select
+            value={month}
+            options={monthOptions}
+            onChange={handleMonthChange}
+            className="erp-users-filter-select"
+            placeholder={t('pages.hr.attendance.filters.month')}
+            aria-label={t('pages.hr.attendance.filters.month')}
+          />
+          <InputNumber
+            value={year}
+            min={2020}
+            max={2030}
+            onChange={handleYearChange}
+            className="w-28"
+            aria-label={t('pages.hr.attendance.filters.year')}
+          />
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="erp-pro-table-card-body">
+          <AttendanceTable
+            records={records}
+            loading={listQuery.isFetching}
+            pagination={{
+              current: page,
+              pageSize: limit,
+              total,
+              onChange: handlePaginationChange,
+            }}
+            emptyText={
+              <TableEmptyState
+                icon={<CalendarOutlined />}
+                title={
+                  hasFilters && total === 0
+                    ? t('pages.hr.attendance.emptyFiltered')
+                    : t('pages.hr.attendance.emptyTitle', {
+                        month: monthName,
+                        year,
+                      })
+                }
+                description={
+                  hasFilters && total === 0
+                    ? undefined
+                    : t('pages.hr.attendance.emptyDescription')
+                }
+                action={
+                  hasFilters && total === 0
+                    ? {
+                        label: t('common.reset'),
+                        onClick: handleResetFilters,
+                      }
+                    : undefined
+                }
+              />
+            }
+          />
+        </div>
       </div>
 
       {canViewHr ? (
