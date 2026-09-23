@@ -21,6 +21,7 @@ import {
 import { memoryStorage } from 'multer';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
@@ -85,12 +86,19 @@ export class AttendanceController {
     return this.attendanceService.confirmImport(dto, companyId, user.userId);
   }
 
+  @Get('import/history')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({ summary: 'List attendance import batches for the company' })
+  importHistory(@CurrentCompany() companyId: string): Promise<unknown> {
+    return this.attendanceService.getImportHistory(companyId);
+  }
+
   @Get()
-  @RequireAnyPermission(
-    { module: 'hr', action: 'view' },
-    { module: 'attendance', action: 'view' },
-  )
-  @ApiOperation({ summary: 'List attendance records (HR or self)' })
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'List attendance records (company-wide for hr.view; own otherwise)',
+  })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
@@ -100,6 +108,7 @@ export class AttendanceController {
   }
 
   @Get('me')
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'Get my attendance records for a year' })
   getMyAttendance(
     @CurrentUser() user: AuthenticatedUser,

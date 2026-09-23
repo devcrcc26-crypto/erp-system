@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -64,16 +65,26 @@ type CachedAttendancePreview = AttendancePreviewResult & {
   companyId: string;
 };
 
-const EMPLOYEE_SELECT = {
-  id: true,
-  firstName: true,
-  lastName: true,
-  employeeId: true,
-  departmentId: true,
-} as const;
+/**
+ * Attendance rate as a whole-number percentage, or null when expected days is 0.
+ */
+function computeAttendanceRate(
+  expectedDays: Prisma.Decimal | number,
+  actualDays: Prisma.Decimal | number,
+): number | null {
+  const expected = Number(expectedDays);
+  if (!(expected > 0)) {
+    return null;
+  }
+  return Math.round((Number(actualDays) / expected) * 100);
+}
 
 /**
  * Attendance import, list, and employee-year profile reads.
+ *
+ * PermissionService comes from the global PermissionsModule. Preview sessions
+ * use AttendancePreviewCache (Redis when REDIS_ENABLED, else in-memory) —
+ * the project does not use @nestjs/cache-manager.
  */
 @Injectable()
 export class AttendanceService {
@@ -101,7 +112,9 @@ export class AttendanceService {
       );
     } catch (error: unknown) {
       throw new BadRequestException(
-        error instanceof Error ? error.message : 'Failed to parse attendance file',
+        error instanceof Error
+          ? error.message
+          : 'Failed to parse attendance file',
       );
     }
 
@@ -270,7 +283,7 @@ export class AttendanceService {
 
   /**
    * Paginated attendance records. HR viewers see company-wide data; others
-   * are scoped to their own employee id.
+   * are scoped to their own employee id. Search applies to HR only.
    */
   async listRecords(
     filters: ListAttendanceDto,
@@ -301,20 +314,20 @@ export class AttendanceService {
         : !isHrViewer
           ? { employeeId: userId }
           : {}),
-      ...(filters.search?.trim()
+      ...(isHrViewer && filters.search?.trim()
         ? {
             employee: {
               OR: [
                 {
                   firstName: {
                     contains: filters.search.trim(),
-                    mode: 'insensitive',
+                    mode: 'insensitive' as const,
                   },
                 },
                 {
                   lastName: {
                     contains: filters.search.trim(),
-                    mode: 'insensitive',
+                    mode: 'insensitive' as const,
                   },
                 },
               ],
@@ -328,30 +341,133 @@ export class AttendanceService {
         where,
         skip,
         take,
-        orderBy: [{ month: 'asc' }, { createdAt: 'asc' }],
+        orderBy: [{ employee: { lastName: 'asc' } }],
         include: {
-          employee: { select: EMPLOYEE_SELECT },
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              employeeId: true,
+              departmentId: true,
+              department: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+          importBatch: {
+            select: {
+              id: true,
+              fileName: true,
+              importedAt: true,
+            },
+          },
         },
       }),
       this.prisma.attendanceRecord.count({ where }),
     ]);
 
-    return buildPaginatedResult(rows, total, page, limit);
+    const data = rows.map((record) => ({
+      ...record,
+      attendanceRate: computeAttendanceRate(
+        record.expectedDays,
+        record.actualDays,
+      ),
+    }));
+
+    return buildPaginatedResult(data, total, page, limit);
   }
 
   /**
-   * All attendance months for one employee in a calendar year (max 12 rows).
+   * Year profile for one employee: month rows with rates plus aggregate summary.
    */
   async getMyAttendance(
     employeeId: string,
     companyId: string,
     year: number,
-  ): Promise<unknown[]> {
-    return this.prisma.attendanceRecord.findMany({
+  ): Promise<unknown> {
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        employeeId: true,
+      },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const records = await this.prisma.attendanceRecord.findMany({
       where: { companyId, employeeId, year },
       orderBy: { month: 'asc' },
       include: {
-        employee: { select: EMPLOYEE_SELECT },
+        importBatch: {
+          select: { fileName: true, importedAt: true },
+        },
+      },
+    });
+
+    const data = records.map((record) => ({
+      ...record,
+      monthName: MONTH_NAMES[record.month - 1],
+      attendanceRate: computeAttendanceRate(
+        record.expectedDays,
+        record.actualDays,
+      ),
+    }));
+
+    const rates = data
+      .map((row) => row.attendanceRate)
+      .filter((rate): rate is number => rate !== null);
+
+    const summary = {
+      totalExpectedDays: data.reduce(
+        (sum, row) => sum + Number(row.expectedDays),
+        0,
+      ),
+      totalActualDays: data.reduce(
+        (sum, row) => sum + Number(row.actualDays),
+        0,
+      ),
+      totalAbsentDays: data.reduce(
+        (sum, row) => sum + Number(row.absentDays),
+        0,
+      ),
+      totalLateCount: data.reduce((sum, row) => sum + row.lateCount, 0),
+      totalOvertimePaidHours: data.reduce(
+        (sum, row) => sum + Number(row.overtimePaidHours),
+        0,
+      ),
+      averageAttendanceRate:
+        rates.length > 0
+          ? Math.round(
+              rates.reduce((sum, rate) => sum + rate, 0) / rates.length,
+            )
+          : null,
+    };
+
+    return {
+      employee,
+      year,
+      records: data,
+      summary,
+    };
+  }
+
+  /**
+   * Import batch history for HR — which months were imported and by whom.
+   */
+  async getImportHistory(companyId: string): Promise<unknown> {
+    return this.prisma.attendanceImportBatch.findMany({
+      where: { companyId },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      include: {
+        importer: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        _count: { select: { records: true } },
       },
     });
   }
