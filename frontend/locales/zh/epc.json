@@ -484,6 +484,39 @@
           "rejected": "已拒绝"
         }
       },
+      "attendance": {
+        "listTitle": "考勤",
+        "myListTitle": "我的考勤",
+        "listDescription": "从得力 e+ 考勤导出导入的月度出勤记录。",
+        "myListDescription": "按月查看您的出勤天数、迟到与缺勤。",
+        "loadFailed": "加载考勤记录失败。",
+        "import": "导入考勤",
+        "importComingSoon": "导入功能即将上线",
+        "emptyTitle": "{{month}} {{year}} 暂无考勤数据。",
+        "emptyDescription": "请导入得力 e+ 月度汇总表以开始使用。",
+        "filters": {
+          "month": "月份",
+          "year": "年份",
+          "search": "搜索员工"
+        },
+        "stats": {
+          "employees": "员工数",
+          "avgAttendance": "平均出勤率",
+          "totalLate": "迟到合计",
+          "totalAbsent": "缺勤天数合计"
+        },
+        "columns": {
+          "expectedDays": "应出勤天数",
+          "actualDays": "实际出勤天数",
+          "attendanceRate": "出勤率",
+          "lateCount": "迟到次数",
+          "absentDays": "缺勤天数",
+          "missingClockIn": "上班缺卡",
+          "missingClockOut": "下班缺卡",
+          "payableHours": "计薪时长",
+          "overtimePaid": "加班（计费）"
+        }
+      },
       "flight": {
         "new": "新建机票申请",
         "detail": "机票申请",

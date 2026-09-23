@@ -173,6 +173,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/leave-history/me': 'pages.hr.leaveHistory.myDescription',
   '/hr/overtime-history/me': 'pages.hr.overtimeHistory.myDescription',
   '/hr/overtime': 'pages.hr.overtime.listDescription',
+  '/hr/attendance': 'pages.hr.attendance.listDescription',
   '/hr/expense-claims': 'pages.hr.expenseClaim.listDescription',
   '/hr/purchase-requests': 'pages.hr.purchaseRequest.listDescription',
   '/hr/material-requisition': 'pages.hr.materialRequisition.listDescription',
@@ -368,6 +369,18 @@ function resolveRouteMetaCore(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.groups.humanResources') },
         { label: t('pages.hr.workSchedules.listTitle') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/attendance') {
+    return {
+      titleKey: 'pages.hr.attendance.listTitle',
+      descriptionKey: 'pages.hr.attendance.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.attendance.listTitle') },
       ],
     };
   }

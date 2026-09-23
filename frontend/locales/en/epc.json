@@ -484,6 +484,39 @@
           "rejected": "Rejected"
         }
       },
+      "attendance": {
+        "listTitle": "Attendance",
+        "myListTitle": "My Attendance",
+        "listDescription": "Monthly attendance imported from Deli e+ clock records.",
+        "myListDescription": "Your attendance days, late marks, and absences by month.",
+        "loadFailed": "Failed to load attendance records.",
+        "import": "Import Attendance",
+        "importComingSoon": "Import coming soon",
+        "emptyTitle": "No attendance data for {{month}} {{year}}.",
+        "emptyDescription": "Import the monthly export from Deli e+ to get started.",
+        "filters": {
+          "month": "Month",
+          "year": "Year",
+          "search": "Search employee"
+        },
+        "stats": {
+          "employees": "Employees",
+          "avgAttendance": "Avg Attendance",
+          "totalLate": "Total Late",
+          "totalAbsent": "Total Absent Days"
+        },
+        "columns": {
+          "expectedDays": "Expected Days",
+          "actualDays": "Actual Days",
+          "attendanceRate": "Attendance %",
+          "lateCount": "Late Count",
+          "absentDays": "Absent Days",
+          "missingClockIn": "Missing Clock-in",
+          "missingClockOut": "Missing Clock-out",
+          "payableHours": "Payable Hours",
+          "overtimePaid": "Overtime (Paid)"
+        }
+      },
       "flight": {
         "new": "New Flight Application",
         "detail": "Flight Application",

@@ -1,5 +1,5 @@
-import HrComingSoonPage from "@/components/modules/hr/HrComingSoonPage";
+import AttendanceListPageContent from '@/components/modules/hr/attendance/AttendanceListPageContent';
 
-export default function AttendancePage() {
-    return <HrComingSoonPage titleKey="nav.hr.attendance" />;
+export default function AttendancePage(): React.ReactNode {
+  return <AttendanceListPageContent />;
 }
