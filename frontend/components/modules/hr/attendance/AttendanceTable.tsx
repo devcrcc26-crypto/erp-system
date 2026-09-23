@@ -80,7 +80,7 @@ function compareText(a: string, b: string): number {
 }
 
 /**
- * Attendance records table — Users chrome / Pro table pattern.
+ * Attendance records table — schedule-based daily recalculation columns.
  */
 export default function AttendanceTable({
   records,
@@ -140,28 +140,48 @@ export default function AttendanceTable({
         ),
       },
       {
-        title: t('pages.hr.attendance.columns.expectedDays'),
-        key: 'expectedDays',
-        width: 110,
+        title: t('pages.hr.attendance.columns.scheduledDays'),
+        key: 'scheduledDays',
+        width: 120,
         align: 'right',
-        sorter: (a, b) => toNumber(a.expectedDays) - toNumber(b.expectedDays),
+        sorter: (a, b) => toNumber(a.scheduledDays) - toNumber(b.scheduledDays),
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-users-cell-sub">
-            {formatNumber(row.expectedDays)}
+            {formatNumber(row.scheduledDays)}
           </span>
         ),
       },
       {
-        title: t('pages.hr.attendance.columns.actualDays'),
-        key: 'actualDays',
-        width: 100,
+        title: t('pages.hr.attendance.columns.presentDays'),
+        key: 'presentDays',
+        width: 110,
         align: 'right',
-        sorter: (a, b) => toNumber(a.actualDays) - toNumber(b.actualDays),
+        sorter: (a, b) => toNumber(a.presentDays) - toNumber(b.presentDays),
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-users-cell-sub">
-            {formatNumber(row.actualDays)}
+            {formatNumber(row.presentDays)}
           </span>
         ),
+      },
+      {
+        title: t('pages.hr.attendance.columns.absentDays'),
+        key: 'absentDays',
+        width: 110,
+        align: 'right',
+        sorter: (a, b) => toNumber(a.absentDays) - toNumber(b.absentDays),
+        render: (_: unknown, row: AttendanceRecord) => {
+          const absent = Number(row.absentDays);
+          return (
+            <span
+              className="erp-users-cell-sub"
+              style={
+                absent > 0 ? { color: '#D32F2F', fontWeight: 600 } : undefined
+              }
+            >
+              {formatNumber(row.absentDays)}
+            </span>
+          );
+        },
       },
       {
         title: t('pages.hr.attendance.columns.attendanceRate'),
@@ -192,62 +212,40 @@ export default function AttendanceTable({
           ),
       },
       {
-        title: t('pages.hr.attendance.columns.lateCount'),
-        key: 'lateCount',
+        title: t('pages.hr.attendance.columns.lateDays'),
+        key: 'lateDays',
         width: 90,
         align: 'right',
-        sorter: (a, b) => a.lateCount - b.lateCount,
+        sorter: (a, b) => a.lateDays - b.lateDays,
         render: (_: unknown, row: AttendanceRecord) => (
           <span
             className="erp-users-cell-sub"
             style={
-              row.lateCount > 0 ? { color: '#BA7517', fontWeight: 600 } : undefined
+              row.lateDays > 0 ? { color: '#BA7517', fontWeight: 600 } : undefined
             }
           >
-            {row.lateCount}
+            {row.lateDays}
           </span>
         ),
       },
       {
-        title: t('pages.hr.attendance.columns.absentDays'),
-        key: 'absentDays',
-        width: 110,
-        align: 'right',
-        sorter: (a, b) => toNumber(a.absentDays) - toNumber(b.absentDays),
-        render: (_: unknown, row: AttendanceRecord) => {
-          const absent = Number(row.absentDays);
-          return (
-            <span
-              className="erp-users-cell-sub"
-              style={
-                absent > 0 ? { color: '#D32F2F', fontWeight: 600 } : undefined
-              }
-            >
-              {formatNumber(row.absentDays)}
-            </span>
-          );
-        },
-      },
-      {
-        title: t('pages.hr.attendance.columns.missingClockIn'),
-        key: 'missingClockIn',
-        width: 120,
-        align: 'right',
-        responsive: ['lg'],
-        sorter: (a, b) => a.missingClockIn - b.missingClockIn,
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-users-cell-sub">{row.missingClockIn}</span>
-        ),
-      },
-      {
         title: t('pages.hr.attendance.columns.missingClockOut'),
-        key: 'missingClockOut',
+        key: 'missingClockOutDays',
         width: 130,
         align: 'right',
         responsive: ['lg'],
-        sorter: (a, b) => a.missingClockOut - b.missingClockOut,
+        sorter: (a, b) => a.missingClockOutDays - b.missingClockOutDays,
         render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-users-cell-sub">{row.missingClockOut}</span>
+          <span
+            className="erp-users-cell-sub"
+            style={
+              row.missingClockOutDays > 0
+                ? { color: '#BA7517', fontWeight: 600 }
+                : undefined
+            }
+          >
+            {row.missingClockOutDays}
+          </span>
         ),
       },
       {
@@ -263,20 +261,6 @@ export default function AttendanceTable({
           </span>
         ),
       },
-      {
-        title: t('pages.hr.attendance.columns.overtimePaid'),
-        key: 'overtimePaidHours',
-        width: 120,
-        align: 'right',
-        responsive: ['xl'],
-        sorter: (a, b) =>
-          toNumber(a.overtimePaidHours) - toNumber(b.overtimePaidHours),
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-users-cell-sub">
-            {formatNumber(row.overtimePaidHours)}
-          </span>
-        ),
-      },
     ],
     [t],
   );
@@ -288,7 +272,7 @@ export default function AttendanceTable({
       columns={columns}
       dataSource={records}
       loading={loading}
-      scroll={{ x: 1280 }}
+      scroll={{ x: 1200 }}
       locale={emptyText ? { emptyText } : undefined}
       pagination={{
         current: pagination.current,

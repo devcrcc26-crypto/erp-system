@@ -6,6 +6,7 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   TeamOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import type { AttendanceRecord } from '@/lib/api/attendance.types';
@@ -22,7 +23,7 @@ type StatAccent = keyof typeof STAT_ACCENT;
 
 export interface AttendanceStatBarProps {
   records: AttendanceRecord[];
-  /** Total matching employees from the list API (not just the current page). */
+  /** Total matching employees from the list (not just the current page). */
   totalEmployees?: number;
   loading: boolean;
 }
@@ -55,21 +56,8 @@ function AttendanceStat({
   );
 }
 
-function avgRateAccent(rate: number | null): StatAccent {
-  if (rate == null) {
-    return 'blue';
-  }
-  if (rate >= 90) {
-    return 'green';
-  }
-  if (rate >= 75) {
-    return 'amber';
-  }
-  return 'red';
-}
-
 /**
- * Summary chips for the loaded attendance page (computed from current rows).
+ * Summary chips for the loaded attendance period (from recalculated daily logs).
  */
 export default function AttendanceStatBar({
   records,
@@ -79,35 +67,44 @@ export default function AttendanceStatBar({
   const { t } = useEpcTranslation();
 
   const stats = useMemo(() => {
-    const rates = records
-      .map((row) => row.attendanceRate)
-      .filter((rate): rate is number => rate != null);
-    const avgRate =
-      rates.length > 0
-        ? Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length)
-        : null;
-    const totalLate = records.reduce((sum, row) => sum + (row.lateCount ?? 0), 0);
+    const totalPresent = records.reduce(
+      (sum, row) => sum + Number(row.presentDays ?? 0),
+      0,
+    );
     const totalAbsent = records.reduce(
       (sum, row) => sum + Number(row.absentDays ?? 0),
       0,
     );
+    const totalLate = records.reduce(
+      (sum, row) => sum + (row.lateDays ?? 0),
+      0,
+    );
+    const totalMissingOut = records.reduce(
+      (sum, row) => sum + (row.missingClockOutDays ?? 0),
+      0,
+    );
     return {
       employees: totalEmployees ?? records.length,
-      avgRate,
-      totalLate,
+      totalPresent,
       totalAbsent,
+      totalLate,
+      totalMissingOut,
     };
   }, [records, totalEmployees]);
 
   if (loading) {
     return (
       <div className="erp-users-stat-bar">
-        {Array.from({ length: 4 }, (_, index) => (
+        {Array.from({ length: 5 }, (_, index) => (
           <div key={index} className="erp-users-stat">
             <Skeleton.Avatar active size={36} shape="square" />
             <div className="min-w-0 flex-1">
               <Skeleton.Input active size="small" style={{ width: 80 }} />
-              <Skeleton.Input active size="small" style={{ width: 48, marginTop: 4 }} />
+              <Skeleton.Input
+                active
+                size="small"
+                style={{ width: 48, marginTop: 4 }}
+              />
             </div>
           </div>
         ))}
@@ -124,10 +121,16 @@ export default function AttendanceStatBar({
         icon={<TeamOutlined />}
       />
       <AttendanceStat
-        label={t('pages.hr.attendance.stats.avgAttendance')}
-        value={stats.avgRate != null ? `${stats.avgRate}%` : '—'}
-        accent={avgRateAccent(stats.avgRate)}
+        label={t('pages.hr.attendance.stats.totalPresent')}
+        value={stats.totalPresent.toLocaleString()}
+        accent="green"
         icon={<CalendarOutlined />}
+      />
+      <AttendanceStat
+        label={t('pages.hr.attendance.stats.totalAbsent')}
+        value={stats.totalAbsent.toLocaleString()}
+        accent="red"
+        icon={<CloseCircleOutlined />}
       />
       <AttendanceStat
         label={t('pages.hr.attendance.stats.totalLate')}
@@ -136,10 +139,10 @@ export default function AttendanceStatBar({
         icon={<ClockCircleOutlined />}
       />
       <AttendanceStat
-        label={t('pages.hr.attendance.stats.totalAbsent')}
-        value={stats.totalAbsent.toLocaleString()}
-        accent="red"
-        icon={<CloseCircleOutlined />}
+        label={t('pages.hr.attendance.stats.totalMissingClockOut')}
+        value={stats.totalMissingOut.toLocaleString()}
+        accent="amber"
+        icon={<WarningOutlined />}
       />
     </div>
   );

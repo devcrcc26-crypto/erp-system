@@ -5,6 +5,27 @@ export type MatchConfidence =
   | 'MANUAL'
   | 'NO_MATCH';
 
+export interface AttendanceDailyLog {
+  id: string;
+  attendanceRecordId: string;
+  date: string;
+  clockInMachine: string | null;
+  clockOutMachine: string | null;
+  clockInLocal: string | null;
+  clockOutLocal: string | null;
+  isHoliday: boolean;
+  holidayName: string | null;
+  isWeekend: boolean;
+  isHalfDay: boolean;
+  wasPresent: boolean;
+  scheduledHours: number;
+  recordedHours: number | null;
+  isLate: boolean;
+  lateMinutes: number;
+  missingClockIn: boolean;
+  missingClockOut: boolean;
+}
+
 export interface AttendanceRecord {
   id: string;
   companyId: string;
@@ -12,20 +33,15 @@ export interface AttendanceRecord {
   importBatchId: string;
   month: number;
   year: number;
-  expectedDays: number;
-  actualDays: number;
-  expectedHours: number;
-  actualHours: number;
-  payableHours: number;
-  overtimePaidHours: number;
-  overtimeTimeOffHours: number;
-  lateCount: number;
-  lateMinutes: number;
-  earlyLeaveCount: number;
-  earlyLeaveMinutes: number;
-  missingClockIn: number;
-  missingClockOut: number;
+  scheduledDays: number;
+  presentDays: number;
   absentDays: number;
+  holidayDays: number;
+  lateDays: number;
+  totalLateMinutes: number;
+  missingClockInDays: number;
+  missingClockOutDays: number;
+  payableHours: number;
   attendanceRate: number | null;
   importedAt: string;
   employee: {
@@ -41,6 +57,7 @@ export interface AttendanceRecord {
     fileName: string;
     importedAt: string;
   };
+  dailyLogs?: AttendanceDailyLog[];
 }
 
 export interface AttendanceListParams {
@@ -77,6 +94,14 @@ export interface AttendanceImportBatch {
   _count: { records: number };
 }
 
+export interface AttendancePreviewDaily {
+  date: string;
+  clockInMachine: string | null;
+  clockOutMachine: string | null;
+  clockInLocal: string | null;
+  clockOutLocal: string | null;
+}
+
 export interface AttendancePreviewRow {
   attendanceName: string;
   attendanceId: string;
@@ -86,20 +111,8 @@ export interface AttendancePreviewRow {
   confidence: MatchConfidence;
   score: number | null;
   data: {
-    expectedDays: number;
-    actualDays: number;
-    expectedHours: number;
-    actualHours: number;
     payableHours: number;
-    overtimePaidHours: number;
-    overtimeTimeOffHours: number;
-    lateCount: number;
-    lateMinutes: number;
-    earlyLeaveCount: number;
-    earlyLeaveMinutes: number;
-    missingClockIn: number;
-    missingClockOut: number;
-    absentDays: number;
+    dailyData: AttendancePreviewDaily[];
   };
 }
 
@@ -136,7 +149,6 @@ export interface ConfirmAttendanceImportDto {
   previewToken: string;
   overwrite: boolean;
   confirmedReviewIndices?: number[];
-  /** Assign review overrides or rejected rows to ERP employees before import. */
   manualAssignments?: ManualAssignmentDto[];
 }
 
@@ -158,11 +170,12 @@ export interface MyAttendanceResponse {
   year: number;
   records: (AttendanceRecord & { monthName: string })[];
   summary: {
-    totalExpectedDays: number;
-    totalActualDays: number;
+    totalScheduledDays: number;
+    totalPresentDays: number;
     totalAbsentDays: number;
-    totalLateCount: number;
-    totalOvertimePaidHours: number;
+    totalLateDays: number;
+    totalLateMinutes: number;
+    totalMissingClockOutDays: number;
     averageAttendanceRate: number | null;
   };
 }

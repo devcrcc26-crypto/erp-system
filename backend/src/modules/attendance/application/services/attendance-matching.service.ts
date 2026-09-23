@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import Fuse from 'fuse.js';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
-import type { AttendanceRawRow } from '../../utils/attendance-excel.parser';
+import type {
+  AttendanceDailyRaw,
+  AttendanceRawRow,
+} from '../../utils/attendance-excel.parser';
 
 export type MatchConfidence =
   | 'ID_MATCH'
@@ -19,20 +22,8 @@ export interface AttendanceMatchResult {
   confidence: MatchConfidence;
   score: number | null;
   data: {
-    expectedDays: number;
-    actualDays: number;
-    expectedHours: number;
-    actualHours: number;
     payableHours: number;
-    overtimePaidHours: number;
-    overtimeTimeOffHours: number;
-    lateCount: number;
-    lateMinutes: number;
-    earlyLeaveCount: number;
-    earlyLeaveMinutes: number;
-    missingClockIn: number;
-    missingClockOut: number;
-    absentDays: number;
+    dailyData: AttendanceDailyRaw[];
   };
 }
 
@@ -96,20 +87,8 @@ export class AttendanceMatchingService {
     fuseByName: Fuse<EmployeeMatchCandidate>,
   ): AttendanceMatchResult {
     const data = {
-      expectedDays: row.expectedDays,
-      actualDays: row.actualDays,
-      expectedHours: row.expectedHours,
-      actualHours: row.actualHours,
       payableHours: row.payableHours,
-      overtimePaidHours: row.overtimePaidHours,
-      overtimeTimeOffHours: row.overtimeTimeOffHours,
-      lateCount: row.lateCount,
-      lateMinutes: row.lateMinutes,
-      earlyLeaveCount: row.earlyLeaveCount,
-      earlyLeaveMinutes: row.earlyLeaveMinutes,
-      missingClockIn: row.missingClockIn,
-      missingClockOut: row.missingClockOut,
-      absentDays: row.absentDays,
+      dailyData: row.dailyData,
     };
 
     if (row.attendanceId && row.attendanceId !== '-') {

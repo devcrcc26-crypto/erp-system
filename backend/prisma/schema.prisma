@@ -3954,20 +3954,15 @@ model AttendanceRecord {
   importBatchId         String   @map("import_batch_id")
   month                 Int
   year                  Int
-  expectedDays          Decimal  @map("expected_days") @db.Decimal(4, 1)
-  actualDays            Decimal  @map("actual_days") @db.Decimal(4, 1)
-  expectedHours         Decimal  @map("expected_hours") @db.Decimal(6, 2)
-  actualHours           Decimal  @map("actual_hours") @db.Decimal(6, 2)
+  scheduledDays         Decimal  @map("scheduled_days") @db.Decimal(4, 1)
+  presentDays           Decimal  @map("present_days") @db.Decimal(4, 1)
+  absentDays            Decimal  @map("absent_days") @db.Decimal(4, 1)
+  holidayDays           Decimal  @default(0) @map("holiday_days") @db.Decimal(4, 1)
+  lateDays              Int      @default(0) @map("late_days")
+  totalLateMinutes      Int      @default(0) @map("total_late_minutes")
+  missingClockInDays    Int      @default(0) @map("missing_clock_in_days")
+  missingClockOutDays   Int      @default(0) @map("missing_clock_out_days")
   payableHours          Decimal  @map("payable_hours") @db.Decimal(6, 2)
-  overtimePaidHours     Decimal  @default(0) @map("overtime_paid_hours") @db.Decimal(6, 2)
-  overtimeTimeOffHours  Decimal  @default(0) @map("overtime_time_off_hours") @db.Decimal(6, 2)
-  lateCount             Int      @default(0) @map("late_count")
-  lateMinutes           Int      @default(0) @map("late_minutes")
-  earlyLeaveCount       Int      @default(0) @map("early_leave_count")
-  earlyLeaveMinutes     Int      @default(0) @map("early_leave_minutes")
-  missingClockIn        Int      @default(0) @map("missing_clock_in")
-  missingClockOut       Int      @default(0) @map("missing_clock_out")
-  absentDays            Decimal  @default(0) @map("absent_days") @db.Decimal(4, 1)
   importedAt            DateTime @default(now()) @map("imported_at")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
@@ -3975,12 +3970,41 @@ model AttendanceRecord {
   company     Company               @relation(fields: [companyId], references: [id])
   employee    User                  @relation("AttendanceEmployee", fields: [employeeId], references: [id])
   importBatch AttendanceImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+  dailyLogs   AttendanceDailyLog[]
 
   @@unique([companyId, employeeId, month, year])
   @@index([companyId, month, year], map: "idx_attendance_record_company_period")
   @@index([employeeId], map: "idx_attendance_record_employee")
   @@index([importBatchId], map: "idx_attendance_record_batch")
   @@map("attendance_record")
+}
+
+model AttendanceDailyLog {
+  id                 String   @id @default(uuid())
+  attendanceRecordId String   @map("attendance_record_id")
+  date               DateTime @db.Date
+  clockInMachine     String?  @map("clock_in_machine")
+  clockOutMachine    String?  @map("clock_out_machine")
+  clockInLocal       String?  @map("clock_in_local")
+  clockOutLocal      String?  @map("clock_out_local")
+  isHoliday          Boolean  @default(false) @map("is_holiday")
+  holidayName        String?  @map("holiday_name")
+  isWeekend          Boolean  @default(false) @map("is_weekend")
+  isHalfDay          Boolean  @default(false) @map("is_half_day")
+  wasPresent         Boolean  @default(false) @map("was_present")
+  scheduledHours     Decimal  @default(0) @map("scheduled_hours") @db.Decimal(4, 1)
+  recordedHours      Decimal? @map("recorded_hours") @db.Decimal(5, 2)
+  isLate             Boolean  @default(false) @map("is_late")
+  lateMinutes        Int      @default(0) @map("late_minutes")
+  missingClockIn     Boolean  @default(false) @map("missing_clock_in")
+  missingClockOut    Boolean  @default(false) @map("missing_clock_out")
+
+  record AttendanceRecord @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
+
+  @@unique([attendanceRecordId, date], map: "uq_attendance_daily_log_record_date")
+  @@index([attendanceRecordId], map: "idx_attendance_daily_log_record")
+  @@index([date], map: "idx_attendance_daily_log_date")
+  @@map("attendance_daily_log")
 }
 
 // ─── Flight Applications ─────────────────────────────────────────────────────

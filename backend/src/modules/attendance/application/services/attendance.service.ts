@@ -14,7 +14,18 @@ import {
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import {
+  holidayAppliesToNationality,
+  holidayFallsOnDate,
+} from '../../../work-schedule/application/services/work-schedule.dates';
+import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
+import type { AttendanceDailyRaw } from '../../utils/attendance-excel.parser';
 import { parseAttendanceExcel } from '../../utils/attendance-excel.parser';
+import {
+  calculateHoursBetween,
+  isAfterTime,
+  minutesBetween,
+} from '../../utils/time.util';
 import {
   ConfirmAttendanceImportDto,
   ListAttendanceDto,
@@ -71,36 +82,85 @@ export interface AttendanceEmployeeSearchResult {
   department: { id: string; name: string } | null;
 }
 
+export interface AttendanceDailyLogInput {
+  date: Date;
+  clockInMachine: string | null;
+  clockOutMachine: string | null;
+  clockInLocal: string | null;
+  clockOutLocal: string | null;
+  isHoliday: boolean;
+  holidayName: string | null;
+  isWeekend: boolean;
+  isHalfDay: boolean;
+  wasPresent: boolean;
+  scheduledHours: number;
+  recordedHours: number | null;
+  isLate: boolean;
+  lateMinutes: number;
+  missingClockIn: boolean;
+  missingClockOut: boolean;
+}
+
+export interface AttendanceDailySummary {
+  scheduledDays: number;
+  presentDays: number;
+  absentDays: number;
+  holidayDays: number;
+  lateDays: number;
+  totalLateMinutes: number;
+  missingClockInDays: number;
+  missingClockOutDays: number;
+}
+
 type CachedAttendancePreview = AttendancePreviewResult & {
   companyId: string;
 };
 
+type ScheduleDayLike = {
+  dayOfWeek: number;
+  isWorkingDay: boolean;
+  isHalfDay: boolean;
+  morningStart: string | null;
+  totalHours: Prisma.Decimal | number;
+};
+
 /**
- * Attendance rate as a whole-number percentage, or null when expected days is 0.
+ * Attendance rate as present/scheduled percentage, or null when scheduled is 0.
  */
 function computeAttendanceRate(
-  expectedDays: Prisma.Decimal | number,
-  actualDays: Prisma.Decimal | number,
+  scheduledDays: Prisma.Decimal | number,
+  presentDays: Prisma.Decimal | number,
 ): number | null {
-  const expected = Number(expectedDays);
-  if (!(expected > 0)) {
+  const scheduled = Number(scheduledDays);
+  if (!(scheduled > 0)) {
     return null;
   }
-  return Math.round((Number(actualDays) / expected) * 100);
+  return Math.round((Number(presentDays) / scheduled) * 100);
 }
 
 /**
- * Attendance import, list, and employee-year profile reads.
- *
- * PermissionService comes from the global PermissionsModule. Preview sessions
- * use AttendancePreviewCache (Redis when REDIS_ENABLED, else in-memory) —
- * the project does not use @nestjs/cache-manager.
+ * Revives Date objects after Redis JSON round-trip.
+ */
+function reviveMatchResultDates(rows: AttendanceMatchResult[]): void {
+  for (const row of rows) {
+    for (const day of row.data.dailyData) {
+      if (typeof day.date === 'string') {
+        day.date = new Date(day.date);
+      }
+    }
+  }
+}
+
+/**
+ * Attendance import and reporting — daily logs from Deli clock times,
+ * recalculated against company work schedules and public holidays.
  */
 @Injectable()
 export class AttendanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly matchingService: AttendanceMatchingService,
+    private readonly workScheduleService: WorkScheduleService,
     private readonly permissionService: PermissionService,
     private readonly previewCache: AttendancePreviewCache,
   ) {}
@@ -178,9 +238,159 @@ export class AttendanceService {
   }
 
   /**
-   * Persists a cached preview as an import batch + attendance records.
-   * Optionally overwrites an existing month batch (cascade deletes records).
-   * Supports manualAssignments for review overrides and rejected assignments.
+   * Builds daily logs and month summary from raw clock times, work schedule,
+   * and public holidays (Ethiopia-local times).
+   */
+  async calculateDailyLogs(
+    employeeId: string,
+    companyId: string,
+    rawDailyData: AttendanceDailyRaw[],
+    month: number,
+    year: number,
+  ): Promise<{ logs: AttendanceDailyLogInput[]; summary: AttendanceDailySummary }> {
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { nationality: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const holidays = await this.prisma.publicHoliday.findMany({
+      where: {
+        companyId,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        name: true,
+        date: true,
+        isRecurring: true,
+        appliesToNationality: true,
+      },
+    });
+
+    const applicableHolidays = holidays.filter((holiday) =>
+      holidayAppliesToNationality(
+        holiday.appliesToNationality,
+        employee.nationality,
+      ),
+    );
+
+    const periodStart = new Date(Date.UTC(year, month - 1, 1));
+    let scheduleDays: ScheduleDayLike[] = [];
+    try {
+      const schedule = await this.workScheduleService.getActiveSchedule(
+        employeeId,
+        companyId,
+        periodStart,
+      );
+      scheduleDays = schedule.days;
+    } catch {
+      scheduleDays = this.fallbackWeekdaySchedule();
+    }
+
+    const logs: AttendanceDailyLogInput[] = [];
+
+    for (const day of rawDailyData) {
+      const date =
+        day.date instanceof Date ? day.date : new Date(String(day.date));
+      const dayOfWeek = date.getUTCDay();
+      const scheduleDay = scheduleDays.find(
+        (row) => row.dayOfWeek === dayOfWeek,
+      );
+
+      const isWeekend = !(scheduleDay?.isWorkingDay ?? false);
+      const isHalfDay = scheduleDay?.isHalfDay ?? false;
+      const scheduledHours = Number(scheduleDay?.totalHours ?? 0);
+
+      const matchedHoliday = applicableHolidays.find((holiday) =>
+        holidayFallsOnDate(holiday.date, holiday.isRecurring, date),
+      );
+      const isHoliday = Boolean(matchedHoliday);
+
+      const wasPresent = Boolean(day.clockInLocal);
+      let recordedHours: number | null = null;
+      if (day.clockInLocal && day.clockOutLocal) {
+        recordedHours = calculateHoursBetween(
+          day.clockInLocal,
+          day.clockOutLocal,
+        );
+      }
+
+      let isLate = false;
+      let lateMinutes = 0;
+      if (
+        wasPresent &&
+        !isHoliday &&
+        !isWeekend &&
+        scheduleDay?.morningStart &&
+        day.clockInLocal
+      ) {
+        isLate = isAfterTime(day.clockInLocal, scheduleDay.morningStart);
+        if (isLate) {
+          lateMinutes = minutesBetween(
+            scheduleDay.morningStart,
+            day.clockInLocal,
+          );
+        }
+      }
+
+      logs.push({
+        date,
+        clockInMachine: day.clockInMachine,
+        clockOutMachine: day.clockOutMachine,
+        clockInLocal: day.clockInLocal,
+        clockOutLocal: day.clockOutLocal,
+        isHoliday,
+        holidayName: matchedHoliday?.name ?? null,
+        isWeekend,
+        isHalfDay,
+        wasPresent,
+        scheduledHours,
+        recordedHours,
+        isLate,
+        lateMinutes,
+        missingClockIn:
+          !isHoliday && !isWeekend && !wasPresent && Boolean(day.clockOutLocal),
+        missingClockOut: wasPresent && !day.clockOutLocal,
+      });
+    }
+
+    const workingDayLogs = logs.filter(
+      (log) => !log.isHoliday && !log.isWeekend,
+    );
+    const holidayLogs = logs.filter((log) => log.isHoliday);
+
+    const scheduledDays = workingDayLogs.reduce(
+      (sum, log) => sum + (log.isHalfDay ? 0.5 : 1),
+      0,
+    );
+    const presentDays = workingDayLogs
+      .filter((log) => log.wasPresent)
+      .reduce((sum, log) => sum + (log.isHalfDay ? 0.5 : 1), 0);
+
+    const summary: AttendanceDailySummary = {
+      scheduledDays,
+      presentDays,
+      absentDays: Math.max(0, scheduledDays - presentDays),
+      holidayDays: holidayLogs.length,
+      lateDays: workingDayLogs.filter((log) => log.isLate).length,
+      totalLateMinutes: workingDayLogs.reduce(
+        (sum, log) => sum + log.lateMinutes,
+        0,
+      ),
+      missingClockInDays: workingDayLogs.filter((log) => log.missingClockIn)
+        .length,
+      missingClockOutDays: workingDayLogs.filter((log) => log.missingClockOut)
+        .length,
+    };
+
+    return { logs, summary };
+  }
+
+  /**
+   * Persists a cached preview as an import batch + attendance records + daily logs.
    */
   async confirmImport(
     dto: ConfirmAttendanceImportDto,
@@ -200,6 +410,10 @@ export class AttendanceService {
         'Preview does not belong to the current company',
       );
     }
+
+    reviveMatchResultDates(cached.matched);
+    reviveMatchResultDates(cached.review);
+    reviveMatchResultDates(cached.rejected);
 
     const { month, year, fileName, matched, review, rejected, totalRows } =
       cached;
@@ -313,13 +527,13 @@ export class AttendanceService {
     const rowsToImport: ImportRow[] = [];
     const takenEmployeeIds = new Set<string>();
 
-    const claimEmployee = (employeeId: string): void => {
-      if (takenEmployeeIds.has(employeeId)) {
+    const claimEmployee = (id: string): void => {
+      if (takenEmployeeIds.has(id)) {
         throw new BadRequestException(
           'Each ERP employee can only be matched once in an import',
         );
       }
-      takenEmployeeIds.add(employeeId);
+      takenEmployeeIds.add(id);
     };
 
     let autoMatchedCount = 0;
@@ -400,63 +614,116 @@ export class AttendanceService {
       (index) => index >= 0 && index < review.length,
     ).length;
 
-    await this.prisma.$transaction(async (tx) => {
-      if (existing && dto.overwrite) {
-        await tx.attendanceImportBatch.delete({
-          where: { id: existing.id },
-        });
-      }
-
-      const batch = await tx.attendanceImportBatch.create({
-        data: {
-          id: randomUUID(),
+    const prepared = await Promise.all(
+      rowsToImport.map(async (row) => {
+        const { logs, summary } = await this.calculateDailyLogs(
+          row.matchedEmployeeId,
           companyId,
+          row.data.dailyData ?? [],
           month,
           year,
-          fileName,
-          importedBy: userId,
-          totalRows,
-          matchedRows: rowsToImport.length,
-          reviewRows: confirmedReviewCount,
-          rejectedRows: stillRejected.length,
-          importedAt: new Date(),
-        },
-      });
+        );
+        return {
+          row,
+          logs,
+          summary,
+          recordId: randomUUID(),
+        };
+      }),
+    );
 
-      if (rowsToImport.length > 0) {
-        await tx.attendanceRecord.createMany({
-          data: rowsToImport.map((row) => ({
+    await this.prisma.$transaction(
+      async (tx) => {
+        if (existing && dto.overwrite) {
+          await tx.attendanceImportBatch.delete({
+            where: { id: existing.id },
+          });
+        }
+
+        const batch = await tx.attendanceImportBatch.create({
+          data: {
             id: randomUUID(),
             companyId,
-            employeeId: row.matchedEmployeeId,
-            importBatchId: batch.id,
             month,
             year,
-            expectedDays: row.data.expectedDays,
-            actualDays: row.data.actualDays,
-            expectedHours: row.data.expectedHours,
-            actualHours: row.data.actualHours,
-            payableHours: row.data.payableHours,
-            overtimePaidHours: row.data.overtimePaidHours,
-            overtimeTimeOffHours: row.data.overtimeTimeOffHours,
-            lateCount: row.data.lateCount,
-            lateMinutes: row.data.lateMinutes,
-            earlyLeaveCount: row.data.earlyLeaveCount,
-            earlyLeaveMinutes: row.data.earlyLeaveMinutes,
-            missingClockIn: row.data.missingClockIn,
-            missingClockOut: row.data.missingClockOut,
-            absentDays: row.data.absentDays,
-          })),
+            fileName,
+            importedBy: userId,
+            totalRows,
+            matchedRows: prepared.length,
+            reviewRows: confirmedReviewCount,
+            rejectedRows: stillRejected.length,
+            importedAt: new Date(),
+          },
         });
-      }
-    });
+
+        if (prepared.length > 0) {
+          await tx.attendanceRecord.createMany({
+            data: prepared.map((item) => ({
+              id: item.recordId,
+              companyId,
+              employeeId: item.row.matchedEmployeeId,
+              importBatchId: batch.id,
+              month,
+              year,
+              scheduledDays: item.summary.scheduledDays,
+              presentDays: item.summary.presentDays,
+              absentDays: item.summary.absentDays,
+              holidayDays: item.summary.holidayDays,
+              lateDays: item.summary.lateDays,
+              totalLateMinutes: item.summary.totalLateMinutes,
+              missingClockInDays: item.summary.missingClockInDays,
+              missingClockOutDays: item.summary.missingClockOutDays,
+              payableHours: item.row.data.payableHours,
+              importedAt: new Date(),
+            })),
+          });
+
+          const dailyRows = prepared.flatMap((item) =>
+            item.logs.map((log) => ({
+              id: randomUUID(),
+              attendanceRecordId: item.recordId,
+              date:
+                log.date instanceof Date
+                  ? log.date
+                  : new Date(String(log.date)),
+              clockInMachine: log.clockInMachine,
+              clockOutMachine: log.clockOutMachine,
+              clockInLocal: log.clockInLocal,
+              clockOutLocal: log.clockOutLocal,
+              isHoliday: log.isHoliday,
+              holidayName: log.holidayName,
+              isWeekend: log.isWeekend,
+              isHalfDay: log.isHalfDay,
+              wasPresent: log.wasPresent,
+              scheduledHours: log.scheduledHours,
+              recordedHours: log.recordedHours,
+              isLate: log.isLate,
+              lateMinutes: log.lateMinutes,
+              missingClockIn: log.missingClockIn,
+              missingClockOut: log.missingClockOut,
+            })),
+          );
+
+          const CHUNK = 400;
+          for (let offset = 0; offset < dailyRows.length; offset += CHUNK) {
+            await tx.attendanceDailyLog.createMany({
+              data: dailyRows.slice(offset, offset + CHUNK),
+            });
+          }
+        }
+      },
+      {
+        maxWait: 20_000,
+        timeout: 120_000,
+      },
+    );
 
     await this.previewCache.del(dto.previewToken);
 
     return {
       month,
       year,
-      importedCount: rowsToImport.length,
+      importedCount: prepared.length,
       autoMatchedCount,
       manualAssignedCount,
       skippedReviewCount,
@@ -589,8 +856,8 @@ export class AttendanceService {
     const data = rows.map((record) => ({
       ...record,
       attendanceRate: computeAttendanceRate(
-        record.expectedDays,
-        record.actualDays,
+        record.scheduledDays,
+        record.presentDays,
       ),
     }));
 
@@ -598,7 +865,7 @@ export class AttendanceService {
   }
 
   /**
-   * Year profile for one employee: month rows with rates plus aggregate summary.
+   * Year profile for one employee: month rows with rates, daily logs, summary.
    */
   async getMyAttendance(
     employeeId: string,
@@ -625,6 +892,9 @@ export class AttendanceService {
         importBatch: {
           select: { fileName: true, importedAt: true },
         },
+        dailyLogs: {
+          orderBy: { date: 'asc' },
+        },
       },
     });
 
@@ -632,8 +902,8 @@ export class AttendanceService {
       ...record,
       monthName: MONTH_NAMES[record.month - 1],
       attendanceRate: computeAttendanceRate(
-        record.expectedDays,
-        record.actualDays,
+        record.scheduledDays,
+        record.presentDays,
       ),
     }));
 
@@ -642,21 +912,25 @@ export class AttendanceService {
       .filter((rate): rate is number => rate !== null);
 
     const summary = {
-      totalExpectedDays: data.reduce(
-        (sum, row) => sum + Number(row.expectedDays),
+      totalScheduledDays: data.reduce(
+        (sum, row) => sum + Number(row.scheduledDays),
         0,
       ),
-      totalActualDays: data.reduce(
-        (sum, row) => sum + Number(row.actualDays),
+      totalPresentDays: data.reduce(
+        (sum, row) => sum + Number(row.presentDays),
         0,
       ),
       totalAbsentDays: data.reduce(
         (sum, row) => sum + Number(row.absentDays),
         0,
       ),
-      totalLateCount: data.reduce((sum, row) => sum + row.lateCount, 0),
-      totalOvertimePaidHours: data.reduce(
-        (sum, row) => sum + Number(row.overtimePaidHours),
+      totalLateDays: data.reduce((sum, row) => sum + row.lateDays, 0),
+      totalLateMinutes: data.reduce(
+        (sum, row) => sum + row.totalLateMinutes,
+        0,
+      ),
+      totalMissingClockOutDays: data.reduce(
+        (sum, row) => sum + row.missingClockOutDays,
         0,
       ),
       averageAttendanceRate:
@@ -689,5 +963,59 @@ export class AttendanceService {
         _count: { select: { records: true } },
       },
     });
+  }
+
+  private fallbackWeekdaySchedule(): ScheduleDayLike[] {
+    return [
+      {
+        dayOfWeek: 0,
+        isWorkingDay: false,
+        isHalfDay: false,
+        morningStart: null,
+        totalHours: 0,
+      },
+      {
+        dayOfWeek: 1,
+        isWorkingDay: true,
+        isHalfDay: false,
+        morningStart: '08:30',
+        totalHours: 8,
+      },
+      {
+        dayOfWeek: 2,
+        isWorkingDay: true,
+        isHalfDay: false,
+        morningStart: '08:30',
+        totalHours: 8,
+      },
+      {
+        dayOfWeek: 3,
+        isWorkingDay: true,
+        isHalfDay: false,
+        morningStart: '08:30',
+        totalHours: 8,
+      },
+      {
+        dayOfWeek: 4,
+        isWorkingDay: true,
+        isHalfDay: false,
+        morningStart: '08:30',
+        totalHours: 8,
+      },
+      {
+        dayOfWeek: 5,
+        isWorkingDay: true,
+        isHalfDay: false,
+        morningStart: '08:30',
+        totalHours: 8,
+      },
+      {
+        dayOfWeek: 6,
+        isWorkingDay: true,
+        isHalfDay: true,
+        morningStart: '08:30',
+        totalHours: 4,
+      },
+    ];
   }
 }

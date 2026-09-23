@@ -15,7 +15,6 @@ import {
   type MatchConfidence,
 } from '../application/services/attendance-matching.service';
 
-// Load backend/.env when present (optional — COMPANY_ID / ATTENDANCE_TEST_FILE).
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('dotenv').config({ path: resolve(__dirname, '../../../../.env') });
@@ -23,12 +22,10 @@ try {
   // dotenv is optional for this standalone script
 }
 
-/** August 2026 Deli e+ monthly export used for offline matching verification. */
 const AUGUST_ATTENDANCE_FILE =
   process.env.ATTENDANCE_TEST_FILE ??
   'C:\\Users\\PAVILION\\Downloads\\Telegram Desktop\\August Attendance (2).xlsx';
 
-/** Demo tenant; override with COMPANY_ID in .env if needed. */
 const DEFAULT_COMPANY_ID = '00000000-0000-4000-8000-000000000001';
 
 function pad(value: string, width: number): string {
@@ -40,13 +37,13 @@ function pad(value: string, width: number): string {
 
 function printTable(results: AttendanceMatchResult[]): void {
   const header =
-    `${pad('Attendance name', 28)} | ${pad('ERP name', 28)} | ${pad('ERP ID', 14)} | ${pad('Confidence', 12)} | Score`;
+    `${pad('Attendance name', 28)} | ${pad('ERP name', 28)} | ${pad('ERP ID', 14)} | ${pad('Confidence', 12)} | Days | Score`;
   console.log(header);
   console.log('-'.repeat(header.length));
 
   for (const row of results) {
     console.log(
-      `${pad(row.attendanceName, 28)} | ${pad(row.matchedEmployeeName ?? '—', 28)} | ${pad(row.matchedEmployeeErpId ?? '—', 14)} | ${pad(row.confidence, 12)} | ${row.score ?? '—'}`,
+      `${pad(row.attendanceName, 28)} | ${pad(row.matchedEmployeeName ?? '—', 28)} | ${pad(row.matchedEmployeeErpId ?? '—', 14)} | ${pad(row.confidence, 12)} | ${String(row.data.dailyData.length).padStart(4)} | ${row.score ?? '—'}`,
     );
   }
 }
@@ -77,6 +74,17 @@ async function main(): Promise<void> {
   console.log(
     `Parsed ${parsed.rows.length} rows for ${parsed.year}-${String(parsed.month).padStart(2, '0')}`,
   );
+  if (parsed.rows[0]) {
+    console.log(
+      `Sample daily columns: ${parsed.rows[0].dailyData.length}, payableHours=${parsed.rows[0].payableHours}`,
+    );
+    const sample = parsed.rows[0].dailyData.find((d) => d.clockInMachine);
+    if (sample) {
+      console.log(
+        `Sample clock: machine ${sample.clockInMachine} → local ${sample.clockInLocal}`,
+      );
+    }
+  }
 
   const prisma = new PrismaClient() as unknown as PrismaService;
   const matching = new AttendanceMatchingService(prisma);
@@ -104,7 +112,4 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exit(1);
-});
+void main();

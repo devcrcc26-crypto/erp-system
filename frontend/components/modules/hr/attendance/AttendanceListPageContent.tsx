@@ -49,7 +49,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
   const [importModalOpen, setImportModalOpen] = useState(false);
 
   const usersQuery = useUsersDirectory(
-    { page: 1, limit: 200 },
+    { page: 1, limit: 100 },
     { enabled: canViewHr },
   );
 

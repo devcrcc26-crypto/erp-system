@@ -1,11 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Badge, InputNumber, Skeleton, Table } from 'antd';
+import { Badge, InputNumber, Skeleton, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CalendarOutlined } from '@ant-design/icons';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import type { AttendanceRecord } from '@/lib/api/attendance.types';
+import type {
+  AttendanceDailyLog,
+  AttendanceRecord,
+} from '@/lib/api/attendance.types';
 import {
   useEmployeeAttendance,
   useMyAttendance,
@@ -47,6 +50,17 @@ function rateAccent(rate: number | null): string {
     return '#ba7517';
   }
   return '#d32f2f';
+}
+
+function formatNumber(value: number | string | null | undefined): string {
+  if (value == null || value === '') {
+    return '0';
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return '0';
+  }
+  return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
 }
 
 function AttendanceProfileSection({
@@ -104,8 +118,145 @@ function StatTile({
   );
 }
 
+function dayStatusLabel(
+  log: AttendanceDailyLog,
+  t: (key: string) => string,
+): string {
+  if (log.isHoliday) {
+    return t('pages.hr.attendance.daily.holiday');
+  }
+  if (log.isWeekend) {
+    return t('pages.hr.attendance.daily.weekend');
+  }
+  if (log.isHalfDay) {
+    return t('pages.hr.attendance.daily.halfDay');
+  }
+  if (!log.wasPresent) {
+    return t('pages.hr.attendance.daily.absent');
+  }
+  return t('pages.hr.attendance.daily.workingDay');
+}
+
+function dailyRowClassName(log: AttendanceDailyLog): string {
+  if (log.isHoliday) {
+    return 'bg-[#E8F1FB]';
+  }
+  if (log.isWeekend) {
+    return 'bg-[#F5F6F7]';
+  }
+  if (!log.wasPresent) {
+    return 'bg-[#FCEBEB]';
+  }
+  return '';
+}
+
+function DailyLogsTable({
+  logs,
+  t,
+}: {
+  logs: AttendanceDailyLog[];
+  t: (key: string, options?: Record<string, unknown>) => string;
+}): React.ReactNode {
+  const columns: ColumnsType<AttendanceDailyLog> = [
+    {
+      title: t('pages.hr.attendance.daily.date'),
+      key: 'date',
+      width: 110,
+      render: (_: unknown, row: AttendanceDailyLog) =>
+        String(row.date).slice(0, 10),
+    },
+    {
+      title: t('pages.hr.attendance.daily.day'),
+      key: 'day',
+      width: 90,
+      render: (_: unknown, row: AttendanceDailyLog) => {
+        const date = new Date(row.date);
+        return date.toLocaleDateString(undefined, { weekday: 'short' });
+      },
+    },
+    {
+      title: t('pages.hr.attendance.daily.status'),
+      key: 'status',
+      width: 120,
+      render: (_: unknown, row: AttendanceDailyLog) => (
+        <Tag>{dayStatusLabel(row, t)}</Tag>
+      ),
+    },
+    {
+      title: t('pages.hr.attendance.daily.holidayName'),
+      key: 'holidayName',
+      width: 140,
+      ellipsis: true,
+      render: (_: unknown, row: AttendanceDailyLog) =>
+        row.holidayName ?? '—',
+    },
+    {
+      title: t('pages.hr.attendance.daily.clockIn'),
+      key: 'clockIn',
+      width: 90,
+      render: (_: unknown, row: AttendanceDailyLog) => (
+        <span
+          style={
+            row.isLate ? { color: '#BA7517', fontWeight: 600 } : undefined
+          }
+        >
+          {row.clockInLocal ?? '—'}
+        </span>
+      ),
+    },
+    {
+      title: t('pages.hr.attendance.daily.clockOut'),
+      key: 'clockOut',
+      width: 90,
+      render: (_: unknown, row: AttendanceDailyLog) => (
+        <span
+          style={
+            row.missingClockOut
+              ? { color: '#BA7517', fontWeight: 600 }
+              : undefined
+          }
+        >
+          {row.clockOutLocal ?? (row.missingClockOut ? '—' : '—')}
+        </span>
+      ),
+    },
+    {
+      title: t('pages.hr.attendance.daily.hours'),
+      key: 'hours',
+      width: 80,
+      align: 'right',
+      render: (_: unknown, row: AttendanceDailyLog) =>
+        row.recordedHours == null ? '—' : formatNumber(row.recordedHours),
+    },
+    {
+      title: t('pages.hr.attendance.daily.late'),
+      key: 'late',
+      width: 120,
+      render: (_: unknown, row: AttendanceDailyLog) =>
+        row.isLate
+          ? t('pages.hr.attendance.daily.yesLate', {
+              minutes: row.lateMinutes,
+            })
+          : t('pages.hr.attendance.daily.no'),
+    },
+  ];
+
+  return (
+    <Table<AttendanceDailyLog>
+      rowKey="id"
+      size="small"
+      className="erp-data-table"
+      pagination={false}
+      columns={columns}
+      dataSource={logs}
+      scroll={{ x: 900 }}
+      rowClassName={(row) => dailyRowClassName(row)}
+    />
+  );
+}
+
 /**
- * Year attendance summary and monthly breakdown for My Profile or HR employee detail.
+ * Year attendance summary, monthly breakdown, and expandable daily logs.
  */
 export default function EmployeeAttendanceProfileSection({
   employeeId,
@@ -114,6 +265,7 @@ export default function EmployeeAttendanceProfileSection({
   const { t } = useEpcTranslation();
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
+  const [expandedKeys, setExpandedKeys] = useState<readonly React.Key[]>([]);
 
   const myQuery = useMyAttendance(year, isOwnProfile);
   const employeeQuery = useEmployeeAttendance(
@@ -145,23 +297,23 @@ export default function EmployeeAttendanceProfileSection({
         ),
       },
       {
-        title: t('pages.hr.attendance.columns.expectedDays'),
-        dataIndex: 'expectedDays',
-        key: 'expectedDays',
+        title: t('pages.hr.attendance.columns.scheduledDays'),
+        dataIndex: 'scheduledDays',
+        key: 'scheduledDays',
         width: 110,
         align: 'right',
         render: (value: number) => (
-          <span className="tabular-nums">{value}</span>
+          <span className="tabular-nums">{formatNumber(value)}</span>
         ),
       },
       {
-        title: t('pages.hr.attendance.columns.actualDays'),
-        dataIndex: 'actualDays',
-        key: 'actualDays',
+        title: t('pages.hr.attendance.columns.presentDays'),
+        dataIndex: 'presentDays',
+        key: 'presentDays',
         width: 100,
         align: 'right',
         render: (value: number) => (
-          <span className="tabular-nums">{value}</span>
+          <span className="tabular-nums">{formatNumber(value)}</span>
         ),
       },
       {
@@ -177,9 +329,9 @@ export default function EmployeeAttendanceProfileSection({
         ),
       },
       {
-        title: t('pages.hr.attendance.columns.lateCount'),
-        dataIndex: 'lateCount',
-        key: 'lateCount',
+        title: t('pages.hr.attendance.columns.lateDays'),
+        dataIndex: 'lateDays',
+        key: 'lateDays',
         width: 100,
         align: 'right',
         render: (value: number) => (
@@ -189,17 +341,6 @@ export default function EmployeeAttendanceProfileSection({
           >
             {value}
           </span>
-        ),
-      },
-      {
-        title: t('pages.hr.attendance.columns.lateMinutes'),
-        dataIndex: 'lateMinutes',
-        key: 'lateMinutes',
-        width: 110,
-        align: 'right',
-        responsive: ['md'],
-        render: (value: number) => (
-          <span className="tabular-nums">{value}</span>
         ),
       },
       {
@@ -213,7 +354,7 @@ export default function EmployeeAttendanceProfileSection({
             className="tabular-nums"
             style={{ color: value > 0 ? '#d32f2f' : undefined }}
           >
-            {value}
+            {formatNumber(value)}
           </span>
         ),
       },
@@ -225,18 +366,7 @@ export default function EmployeeAttendanceProfileSection({
         align: 'right',
         responsive: ['lg'],
         render: (value: number) => (
-          <span className="tabular-nums">{value}</span>
-        ),
-      },
-      {
-        title: t('pages.hr.attendance.columns.overtimePaid'),
-        dataIndex: 'overtimePaidHours',
-        key: 'overtimePaidHours',
-        width: 120,
-        align: 'right',
-        responsive: ['lg'],
-        render: (value: number) => (
-          <span className="tabular-nums">{value}</span>
+          <span className="tabular-nums">{formatNumber(value)}</span>
         ),
       },
     ],
@@ -305,26 +435,26 @@ export default function EmployeeAttendanceProfileSection({
         ) : (
           <div className="erp-leave-balance-grid">
             <StatTile
-              label={t('pages.hr.attendance.stats.avgAttendance')}
+              label={t('pages.hr.attendance.columns.attendanceRate')}
               value={avgRate !== null ? `${avgRate}%` : '—'}
               accent={rateAccent(avgRate)}
             />
             <StatTile
               label={t('pages.hr.attendance.profilePresentDays')}
-              value={`${summary.totalActualDays}`}
+              value={`${formatNumber(summary.totalPresentDays)}`}
               accent="#1d9e75"
               meta={t('pages.hr.attendance.profileDaysUnit')}
             />
             <StatTile
               label={t('pages.hr.attendance.stats.totalAbsent')}
-              value={`${summary.totalAbsentDays}`}
+              value={`${formatNumber(summary.totalAbsentDays)}`}
               accent={summary.totalAbsentDays > 0 ? '#d32f2f' : '#94a3b8'}
               meta={t('pages.hr.attendance.profileDaysUnit')}
             />
             <StatTile
               label={t('pages.hr.attendance.stats.totalLate')}
-              value={`${summary.totalLateCount}`}
-              accent={summary.totalLateCount > 0 ? '#ba7517' : '#94a3b8'}
+              value={`${summary.totalLateDays}`}
+              accent={summary.totalLateDays > 0 ? '#ba7517' : '#94a3b8'}
               meta={t('pages.hr.attendance.profileTimesUnit')}
             />
           </div>
@@ -350,6 +480,22 @@ export default function EmployeeAttendanceProfileSection({
               pagination={false}
               columns={columns}
               dataSource={records}
+              expandable={{
+                expandedRowKeys: expandedKeys,
+                onExpandedRowsChange: setExpandedKeys,
+                expandedRowRender: (row) => (
+                  <div className="p-3">
+                    <p className="mb-2 text-[12px] font-medium text-[#6B7280]">
+                      {t('pages.hr.attendance.daily.title', {
+                        month: row.monthName || t(`hr.months.${row.month}`),
+                        year: row.year,
+                      })}
+                    </p>
+                    <DailyLogsTable logs={row.dailyLogs ?? []} t={t} />
+                  </div>
+                ),
+                rowExpandable: (row) => (row.dailyLogs?.length ?? 0) > 0,
+              }}
             />
           )}
         </AttendanceProfileSection>
