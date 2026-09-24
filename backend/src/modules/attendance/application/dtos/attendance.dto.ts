@@ -1,16 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { AttendanceMonthStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsEnum,
   IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Max,
   Min,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -99,4 +103,68 @@ export class ListAttendanceDto {
   @IsOptional()
   @IsString()
   search?: string;
+}
+
+export class ReviewAttendanceMonthDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class ApproveAttendanceMonthDto {
+  @ApiProperty()
+  @IsUUID()
+  monthlyApprovalId!: string;
+}
+
+export class UnlockAttendanceMonthDto {
+  @ApiPropertyOptional({
+    description: 'Taken from the route param when omitted from the body',
+  })
+  @IsOptional()
+  @IsUUID()
+  monthlyApprovalId?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  unlockReason!: string;
+}
+
+export class CorrectDailyLogDto {
+  @ApiProperty()
+  @IsUUID()
+  dailyLogId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Time must be in HH:mm format' })
+  correctedClockInLocal?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Time must be in HH:mm format' })
+  correctedClockOutLocal?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(10, { message: 'Correction note must be at least 10 characters' })
+  correctionNote!: string;
+}
+
+export class ListAttendanceMonthlyApprovalsDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  year?: number;
+
+  @ApiPropertyOptional({ enum: AttendanceMonthStatus })
+  @IsOptional()
+  @IsEnum(AttendanceMonthStatus)
+  status?: AttendanceMonthStatus;
 }

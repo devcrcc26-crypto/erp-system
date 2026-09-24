@@ -8,14 +8,17 @@ import {
   InputNumber,
   Select,
   Spin,
+  Tag,
   Tooltip,
 } from 'antd';
 import {
   CalendarOutlined,
+  CheckCircleOutlined,
   ImportOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
 import AttendanceImportModal from '@/components/modules/hr/attendance/AttendanceImportModal';
 import AttendanceStatBar from '@/components/modules/hr/attendance/AttendanceStatBar';
 import AttendanceTable from '@/components/modules/hr/attendance/AttendanceTable';
@@ -23,10 +26,29 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import { useAttendanceRecordsAll } from '@/lib/query/attendance';
+import type { AttendanceMonthStatus } from '@/lib/api/attendance.types';
+import {
+  useAttendanceMonthlyApproval,
+  useAttendanceRecordsAll,
+} from '@/lib/query/attendance';
 import { useUsersDirectory } from '@/lib/query/users';
 import { filterAttendanceRecords } from '@/lib/utils/attendance-list-filter';
 import { formatUserName } from '@/lib/utils/user-display';
+
+function approvalStatusColor(status: AttendanceMonthStatus): string {
+  switch (status) {
+    case 'PENDING_REVIEW':
+      return 'blue';
+    case 'REVIEWED':
+      return 'gold';
+    case 'APPROVED':
+      return 'green';
+    case 'UNLOCKED':
+      return 'orange';
+    default:
+      return 'default';
+  }
+}
 
 /**
  * HR attendance list — load month/year from API, filter/search on the frontend.
@@ -34,6 +56,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 export default function AttendanceListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const canViewHr = useCanViewHr();
+  const router = useRouter();
 
   const now = useMemo(() => new Date(), []);
   const currentMonth = now.getMonth() + 1;
@@ -54,7 +77,9 @@ export default function AttendanceListPageContent(): React.ReactNode {
   );
 
   const listQuery = useAttendanceRecordsAll({ month, year }, true);
+  const approvalQuery = useAttendanceMonthlyApproval(month, year, canViewHr);
   const allRows = listQuery.data ?? [];
+  const approval = approvalQuery.data ?? null;
 
   const filtered = useMemo(
     () =>
@@ -174,6 +199,11 @@ export default function AttendanceListPageContent(): React.ReactNode {
             <span className="erp-users-count-pill">
               {filtered.length.toLocaleString()}
             </span>
+            {canViewHr && approval ? (
+              <Tag color={approvalStatusColor(approval.status)}>
+                {t(`pages.hr.attendance.review.status.${approval.status}`)}
+              </Tag>
+            ) : null}
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
             <Tooltip title={t('common.refresh')}>
@@ -185,6 +215,19 @@ export default function AttendanceListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            {canViewHr ? (
+              <Button
+                icon={<CheckCircleOutlined />}
+                onClick={() =>
+                  router.push(`/hr/attendance/review/${month}/${year}`)
+                }
+              >
+                {t('pages.hr.attendance.review.reviewButton', {
+                  month: monthName,
+                  year: String(year),
+                })}
+              </Button>
+            ) : null}
             {canViewHr ? (
               <Button
                 type="primary"
@@ -311,6 +354,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
           onSuccess={() => {
             setImportModalOpen(false);
             void listQuery.refetch();
+            void approvalQuery.refetch();
           }}
         />
       ) : null}

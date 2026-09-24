@@ -26,6 +26,13 @@ export function isAfterTime(timeA: string, timeB: string): boolean {
 }
 
 /**
+ * True when timeA is strictly before timeB (both HH:mm).
+ */
+export function isBeforeTime(timeA: string, timeB: string): boolean {
+  return isAfterTime(timeB, timeA);
+}
+
+/**
  * Minutes from start to end (both HH:mm). May be negative if end is earlier.
  */
 export function minutesBetween(start: string, end: string): number {

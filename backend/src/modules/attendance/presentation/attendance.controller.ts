@@ -27,7 +27,10 @@ import { RequireAnyPermission } from '../../../shared/permissions/require-any-pe
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
 import {
   ConfirmAttendanceImportDto,
+  CorrectDailyLogDto,
   ListAttendanceDto,
+  ListAttendanceMonthlyApprovalsDto,
+  UnlockAttendanceMonthDto,
 } from '../application/dtos/attendance.dto';
 import {
   AttendanceEmployeeSearchResult,
@@ -106,6 +109,80 @@ export class AttendanceController {
     return this.attendanceService.searchEmployees(query, companyId);
   }
 
+  @Get('monthly-approvals')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({ summary: 'List monthly attendance approvals' })
+  listMonthlyApprovals(
+    @CurrentCompany() companyId: string,
+    @Query() query: ListAttendanceMonthlyApprovalsDto,
+  ): Promise<unknown> {
+    return this.attendanceService.listMonthlyApprovals(query, companyId);
+  }
+
+  @Get('monthly-approvals/:month/:year')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({ summary: 'Get monthly attendance approval for a period' })
+  getMonthlyApproval(
+    @CurrentCompany() companyId: string,
+    @Param('month') month: string,
+    @Param('year') year: string,
+  ): Promise<unknown> {
+    return this.attendanceService.getMonthlyApproval(
+      parseInt(month, 10),
+      parseInt(year, 10),
+      companyId,
+    );
+  }
+
+  @Post('monthly-approvals/:id/review')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({ summary: 'Mark a monthly attendance as reviewed' })
+  markAsReviewed(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.attendanceService.markAsReviewed(id, companyId, user.userId);
+  }
+
+  @Post('monthly-approvals/:id/approve')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({ summary: 'Approve and lock a monthly attendance period' })
+  approveMonth(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.attendanceService.approveMonth(id, companyId, user.userId);
+  }
+
+  @Post('monthly-approvals/:id/unlock')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({ summary: 'Unlock an approved monthly attendance period' })
+  unlockMonth(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UnlockAttendanceMonthDto,
+  ): Promise<unknown> {
+    return this.attendanceService.unlockMonth(
+      { ...dto, monthlyApprovalId: id },
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Post('daily-logs/correct')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({ summary: 'Correct clock times on a daily attendance log' })
+  correctDailyLog(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: CorrectDailyLogDto,
+  ): Promise<unknown> {
+    return this.attendanceService.correctDailyLog(dto, companyId, user.userId);
+  }
+
   @Get()
   @DelegatePermissionCheck()
   @ApiOperation({
@@ -133,6 +210,25 @@ export class AttendanceController {
       user.userId,
       companyId,
       parsedYear,
+    );
+  }
+
+  @Get(':employeeId/month/:month/year/:year/daily-logs')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({
+    summary: 'Get employee daily logs for a month (HR review)',
+  })
+  getEmployeeDailyLogs(
+    @CurrentCompany() companyId: string,
+    @Param('employeeId') employeeId: string,
+    @Param('month') month: string,
+    @Param('year') year: string,
+  ): Promise<unknown> {
+    return this.attendanceService.getEmployeeDailyLogs(
+      employeeId,
+      parseInt(month, 10),
+      parseInt(year, 10),
+      companyId,
     );
   }
 

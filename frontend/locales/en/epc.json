@@ -544,6 +544,84 @@
         "profileEmptyTitle": "No attendance records for {{year}}",
         "profileEmptyHint": "Attendance data is imported monthly by HR from the Deli e+ system.",
         "profileLoadError": "Failed to load attendance data. Please try again.",
+        "review": {
+          "title": "Review {{month}} {{year}}",
+          "breadcrumb": "Review {{month}} {{year}}",
+          "reviewButton": "Review {{month}} {{year}}",
+          "hrOnly": "Only HR users can review attendance months.",
+          "noApproval": "No monthly approval record for this period. Re-import attendance to create one.",
+          "locked": "Locked",
+          "markReviewed": "Mark as Reviewed",
+          "approveMonth": "Approve Month",
+          "unlockMonth": "Unlock Month",
+          "approveTitle": "Approve {{month}} {{year}} Attendance?",
+          "approveBody": "This will lock the attendance for this month and notify all employees with flagged days to submit explanations.",
+          "approveConfirm": "Approve",
+          "approveSuccess": "Attendance month approved and locked.",
+          "markReviewedSuccess": "Month marked as reviewed.",
+          "unlockTitle": "Unlock attendance month",
+          "unlockReason": "Unlock reason",
+          "unlockReasonRequired": "Please enter a reason for unlocking",
+          "unlockConfirm": "Unlock",
+          "unlockSuccess": "Attendance month unlocked.",
+          "actionFailed": "Could not complete that action.",
+          "viewDailyLogs": "View Daily Logs",
+          "dailyLogsTitle": "Daily logs",
+          "clockInLocal": "Clock In (Local)",
+          "clockOutLocal": "Clock Out (Local)",
+          "correct": "Correct",
+          "correctTitle": "Correct clock times",
+          "correctedClockIn": "Corrected Clock In",
+          "correctedClockOut": "Corrected Clock Out",
+          "correctionNote": "Correction Note",
+          "correctionNoteRequired": "Correction note is required",
+          "timeFormat": "Use HH:mm format",
+          "saveCorrection": "Save Correction",
+          "correctSuccess": "Daily log corrected.",
+          "banner": {
+            "pending": "Pending Review — Review all employee records before approving",
+            "reviewed": "Reviewed — Ready for approval",
+            "approved": "Approved and locked on {{date}} by {{name}}",
+            "unlocked": "Unlocked on {{date}} — Reason: {{reason}}"
+          },
+          "status": {
+            "PENDING_REVIEW": "Pending Review",
+            "REVIEWED": "Reviewed",
+            "APPROVED": "Approved",
+            "UNLOCKED": "Unlocked"
+          },
+          "stats": {
+            "employees": "Total Employees",
+            "employeesWithFlags": "Employees with Flags",
+            "totalFlagged": "Total Flagged Days",
+            "resolved": "Resolved Flags"
+          },
+          "columns": {
+            "flaggedDays": "Flagged Days",
+            "resolved": "Resolved",
+            "status": "Status",
+            "flag": "Flag",
+            "flagResolved": "Resolved"
+          },
+          "flagStatus": {
+            "none": "No Flags",
+            "hasFlags": "Has Flags",
+            "allResolved": "All Resolved"
+          },
+          "flags": {
+            "NONE": "None",
+            "MISSING_CLOCK_IN": "Missing Clock In",
+            "MISSING_CLOCK_OUT": "Missing Clock Out",
+            "EARLY_LEAVE": "Early Leave"
+          },
+          "dayStatus": {
+            "PRESENT": "Present",
+            "ABSENT": "Absent",
+            "HOLIDAY": "Holiday",
+            "WEEKEND": "Weekend",
+            "ON_LEAVE": "On Leave"
+          }
+        },
         "importModal": {
           "title": "Import Attendance",
           "stepUpload": "Upload File",

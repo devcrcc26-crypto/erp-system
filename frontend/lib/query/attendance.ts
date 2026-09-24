@@ -2,17 +2,25 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  approveAttendanceMonth,
   confirmAttendanceImport,
+  correctAttendanceDailyLog,
   getAttendanceImportHistory,
+  getAttendanceMonthlyApproval,
   getEmployeeAttendance,
+  getEmployeeAttendanceDailyLogs,
   getMyAttendance,
   listAttendanceRecords,
+  markAttendanceMonthReviewed,
   previewAttendanceImport,
+  unlockAttendanceMonth,
 } from '@/lib/api/attendance.api';
 import type {
   AttendanceListParams,
   AttendanceRecord,
   ConfirmAttendanceImportDto,
+  CorrectDailyLogDto,
+  UnlockAttendanceMonthDto,
 } from '@/lib/api/attendance.types';
 
 export const attendanceKeys = {
@@ -26,6 +34,16 @@ export const attendanceKeys = {
   employeeYear: (employeeId: string, year: number) =>
     [...attendanceKeys.all, 'employee', employeeId, year] as const,
   history: () => [...attendanceKeys.all, 'import-history'] as const,
+  monthlyApproval: (month: number, year: number) =>
+    [...attendanceKeys.all, 'monthly-approval', month, year] as const,
+  employeeDailyLogs: (employeeId: string, month: number, year: number) =>
+    [
+      ...attendanceKeys.all,
+      'daily-logs',
+      employeeId,
+      month,
+      year,
+    ] as const,
 };
 
 const FETCH_PAGE_SIZE = 100;
@@ -134,6 +152,39 @@ export function useAttendanceImportHistory(enabled = true) {
 }
 
 /**
+ * Monthly approval status for a period.
+ */
+export function useAttendanceMonthlyApproval(
+  month: number,
+  year: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: attendanceKeys.monthlyApproval(month, year),
+    queryFn: () => getAttendanceMonthlyApproval(month, year),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Employee daily logs for the HR review drawer.
+ */
+export function useEmployeeAttendanceDailyLogs(
+  employeeId: string | undefined,
+  month: number,
+  year: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: attendanceKeys.employeeDailyLogs(employeeId ?? '', month, year),
+    queryFn: () => getEmployeeAttendanceDailyLogs(employeeId!, month, year),
+    enabled: Boolean(employeeId) && enabled,
+    retry: false,
+  });
+}
+
+/**
  * Preview an attendance Excel upload.
  */
 export function useAttendanceImportPreview() {
@@ -150,6 +201,66 @@ export function useAttendanceImportConfirm() {
   return useMutation({
     mutationFn: (dto: ConfirmAttendanceImportDto) =>
       confirmAttendanceImport(dto),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
+  });
+}
+
+/**
+ * Mark month as reviewed.
+ */
+export function useMarkAttendanceMonthReviewed() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (monthlyApprovalId: string) =>
+      markAttendanceMonthReviewed(monthlyApprovalId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
+  });
+}
+
+/**
+ * Approve and lock a month.
+ */
+export function useApproveAttendanceMonth() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (monthlyApprovalId: string) =>
+      approveAttendanceMonth(monthlyApprovalId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
+  });
+}
+
+/**
+ * Unlock an approved month.
+ */
+export function useUnlockAttendanceMonth() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      monthlyApprovalId,
+      dto,
+    }: {
+      monthlyApprovalId: string;
+      dto: UnlockAttendanceMonthDto;
+    }) => unlockAttendanceMonth(monthlyApprovalId, dto),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
+  });
+}
+
+/**
+ * Correct a daily log clock time.
+ */
+export function useCorrectAttendanceDailyLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CorrectDailyLogDto) => correctAttendanceDailyLog(dto),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
     },

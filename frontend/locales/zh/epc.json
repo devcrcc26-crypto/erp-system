@@ -544,6 +544,84 @@
         "profileEmptyTitle": "{{year}} 年暂无考勤记录",
         "profileEmptyHint": "考勤数据由人力资源部每月从得力 e+ 系统导入。",
         "profileLoadError": "加载考勤数据失败，请重试。",
+        "review": {
+          "title": "审核 {{month}} {{year}}",
+          "breadcrumb": "审核 {{month}} {{year}}",
+          "reviewButton": "审核 {{month}} {{year}}",
+          "hrOnly": "仅人力资源用户可审核考勤月份。",
+          "noApproval": "该期间尚无月度审批记录。请重新导入考勤以创建。",
+          "locked": "已锁定",
+          "markReviewed": "标记为已审核",
+          "approveMonth": "批准本月",
+          "unlockMonth": "解锁本月",
+          "approveTitle": "批准 {{month}} {{year}} 考勤？",
+          "approveBody": "批准后将锁定本月考勤，并通知有异常标记的员工提交说明。",
+          "approveConfirm": "批准",
+          "approveSuccess": "考勤月份已批准并锁定。",
+          "markReviewedSuccess": "已标记为已审核。",
+          "unlockTitle": "解锁考勤月份",
+          "unlockReason": "解锁原因",
+          "unlockReasonRequired": "请填写解锁原因",
+          "unlockConfirm": "解锁",
+          "unlockSuccess": "考勤月份已解锁。",
+          "actionFailed": "操作失败。",
+          "viewDailyLogs": "查看每日记录",
+          "dailyLogsTitle": "每日考勤",
+          "clockInLocal": "上班打卡（本地）",
+          "clockOutLocal": "下班打卡（本地）",
+          "correct": "更正",
+          "correctTitle": "更正打卡时间",
+          "correctedClockIn": "更正后上班时间",
+          "correctedClockOut": "更正后下班时间",
+          "correctionNote": "更正说明",
+          "correctionNoteRequired": "请填写更正说明",
+          "timeFormat": "请使用 HH:mm 格式",
+          "saveCorrection": "保存更正",
+          "correctSuccess": "每日记录已更正。",
+          "banner": {
+            "pending": "待审核 — 请在批准前核对本月全部员工记录",
+            "reviewed": "已审核 — 可进行批准",
+            "approved": "已于 {{date}} 由 {{name}} 批准并锁定",
+            "unlocked": "已于 {{date}} 解锁 — 原因：{{reason}}"
+          },
+          "status": {
+            "PENDING_REVIEW": "待审核",
+            "REVIEWED": "已审核",
+            "APPROVED": "已批准",
+            "UNLOCKED": "已解锁"
+          },
+          "stats": {
+            "employees": "员工总数",
+            "employeesWithFlags": "有异常的员工",
+            "totalFlagged": "异常天数合计",
+            "resolved": "已解决异常"
+          },
+          "columns": {
+            "flaggedDays": "异常天数",
+            "resolved": "已解决",
+            "status": "状态",
+            "flag": "标记",
+            "flagResolved": "已解决"
+          },
+          "flagStatus": {
+            "none": "无异常",
+            "hasFlags": "有异常",
+            "allResolved": "全部已解决"
+          },
+          "flags": {
+            "NONE": "无",
+            "MISSING_CLOCK_IN": "缺上班卡",
+            "MISSING_CLOCK_OUT": "缺下班卡",
+            "EARLY_LEAVE": "早退"
+          },
+          "dayStatus": {
+            "PRESENT": "出勤",
+            "ABSENT": "缺勤",
+            "HOLIDAY": "节假日",
+            "WEEKEND": "休息日",
+            "ON_LEAVE": "休假"
+          }
+        },
         "importModal": {
           "title": "导入考勤",
           "stepUpload": "上传文件",

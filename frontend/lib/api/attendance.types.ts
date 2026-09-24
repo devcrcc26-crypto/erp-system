@@ -5,6 +5,45 @@ export type MatchConfidence =
   | 'MANUAL'
   | 'NO_MATCH';
 
+export type AttendanceDayFlag =
+  | 'MISSING_CLOCK_IN'
+  | 'MISSING_CLOCK_OUT'
+  | 'EARLY_LEAVE'
+  | 'NONE';
+
+export type AttendanceMonthStatus =
+  | 'PENDING_REVIEW'
+  | 'REVIEWED'
+  | 'APPROVED'
+  | 'UNLOCKED';
+
+export interface AttendanceDailyLogCorrection {
+  id: string;
+  dailyLogId: string;
+  correctedBy: string;
+  originalClockInLocal: string | null;
+  originalClockOutLocal: string | null;
+  correctedClockInLocal: string | null;
+  correctedClockOutLocal: string | null;
+  correctionNote: string;
+  correctedAt: string;
+  corrector?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface AttendanceFieldMovementEntryLink {
+  id: string;
+  reason: string;
+  log: {
+    id: string;
+    status: string;
+    requestNumber: string;
+  };
+}
+
 export interface AttendanceDailyLog {
   id: string;
   attendanceRecordId: string;
@@ -24,6 +63,14 @@ export interface AttendanceDailyLog {
   lateMinutes: number;
   missingClockIn: boolean;
   missingClockOut: boolean;
+  flag: AttendanceDayFlag;
+  flagResolved: boolean;
+  flagResolvedAt: string | null;
+  correctedClockInLocal: string | null;
+  correctedClockOutLocal: string | null;
+  isLastExportDay: boolean;
+  corrections?: AttendanceDailyLogCorrection[];
+  fieldMovementEntries?: AttendanceFieldMovementEntryLink[];
 }
 
 export interface AttendanceRecord {
@@ -42,6 +89,8 @@ export interface AttendanceRecord {
   missingClockInDays: number;
   missingClockOutDays: number;
   payableHours: number;
+  flaggedDays: number;
+  resolvedDays: number;
   attendanceRate: number | null;
   importedAt: string;
   employee: {
@@ -178,4 +227,70 @@ export interface MyAttendanceResponse {
     totalMissingClockOutDays: number;
     averageAttendanceRate: number | null;
   };
+}
+
+export interface AttendanceMonthlyApproval {
+  id: string;
+  companyId: string;
+  importBatchId: string;
+  month: number;
+  year: number;
+  status: AttendanceMonthStatus;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  unlockedAt: string | null;
+  unlockedBy: string | null;
+  unlockReason: string | null;
+  notificationsSentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  importBatch?: {
+    id?: string;
+    fileName: string;
+    importedAt: string;
+    totalRows: number;
+    matchedRows: number;
+    rejectedRows?: number;
+    _count?: { records: number };
+    importer?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+    };
+  };
+  reviewer?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  approver?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+}
+
+export interface CorrectDailyLogDto {
+  dailyLogId: string;
+  correctedClockInLocal?: string;
+  correctedClockOutLocal?: string;
+  correctionNote: string;
+}
+
+export interface UnlockAttendanceMonthDto {
+  unlockReason: string;
+}
+
+export interface EmployeeDailyLogsResponse extends AttendanceRecord {
+  employee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    employeeId: string | null;
+    departmentId?: string | null;
+    department?: { id: string; name: string } | null;
+  };
+  dailyLogs: AttendanceDailyLog[];
 }

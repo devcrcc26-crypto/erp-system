@@ -5,10 +5,14 @@ import type {
   AttendanceImportSummary,
   AttendanceListParams,
   AttendanceListResponse,
+  AttendanceMonthlyApproval,
   AttendancePreviewResult,
   AttendanceRecord,
   ConfirmAttendanceImportDto,
+  CorrectDailyLogDto,
+  EmployeeDailyLogsResponse,
   MyAttendanceResponse,
+  UnlockAttendanceMonthDto,
 } from '@/lib/api/attendance.types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
 
@@ -101,5 +105,88 @@ export async function searchAttendanceEmployees(
   }
   return apiGet<AttendanceEmployeeSearchResult[]>(
     `${ATTENDANCE_PATH}/employees/search${toQueryString({ q: trimmed })}`,
+  );
+}
+
+/**
+ * Monthly approval for one period (null when none exists).
+ */
+export async function getAttendanceMonthlyApproval(
+  month: number,
+  year: number,
+): Promise<AttendanceMonthlyApproval | null> {
+  return apiGet<AttendanceMonthlyApproval | null>(
+    `${ATTENDANCE_PATH}/monthly-approvals/${month}/${year}`,
+  );
+}
+
+/**
+ * List monthly approvals, optionally filtered by year/status.
+ */
+export async function listAttendanceMonthlyApprovals(params?: {
+  year?: number;
+  status?: string;
+}): Promise<AttendanceMonthlyApproval[]> {
+  return apiGet<AttendanceMonthlyApproval[]>(
+    `${ATTENDANCE_PATH}/monthly-approvals${toQueryString(params ?? {})}`,
+  );
+}
+
+/**
+ * Mark a monthly approval as reviewed.
+ */
+export async function markAttendanceMonthReviewed(
+  monthlyApprovalId: string,
+): Promise<AttendanceMonthlyApproval> {
+  return apiPost<AttendanceMonthlyApproval>(
+    `${ATTENDANCE_PATH}/monthly-approvals/${monthlyApprovalId}/review`,
+    {},
+  );
+}
+
+/**
+ * Approve and lock a monthly attendance period.
+ */
+export async function approveAttendanceMonth(
+  monthlyApprovalId: string,
+): Promise<{ message: string }> {
+  return apiPost<{ message: string }>(
+    `${ATTENDANCE_PATH}/monthly-approvals/${monthlyApprovalId}/approve`,
+    {},
+  );
+}
+
+/**
+ * Unlock an approved month for corrections.
+ */
+export async function unlockAttendanceMonth(
+  monthlyApprovalId: string,
+  dto: UnlockAttendanceMonthDto,
+): Promise<AttendanceMonthlyApproval> {
+  return apiPost<AttendanceMonthlyApproval>(
+    `${ATTENDANCE_PATH}/monthly-approvals/${monthlyApprovalId}/unlock`,
+    dto,
+  );
+}
+
+/**
+ * Correct clock times on a daily log.
+ */
+export async function correctAttendanceDailyLog(
+  dto: CorrectDailyLogDto,
+): Promise<unknown> {
+  return apiPost(`${ATTENDANCE_PATH}/daily-logs/correct`, dto);
+}
+
+/**
+ * Employee day-by-day logs for HR review.
+ */
+export async function getEmployeeAttendanceDailyLogs(
+  employeeId: string,
+  month: number,
+  year: number,
+): Promise<EmployeeDailyLogsResponse> {
+  return apiGet<EmployeeDailyLogsResponse>(
+    `${ATTENDANCE_PATH}/${employeeId}/month/${month}/year/${year}/daily-logs`,
   );
 }

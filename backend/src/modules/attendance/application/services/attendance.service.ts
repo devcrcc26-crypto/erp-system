@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { AttendanceDayFlag, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
@@ -24,11 +24,15 @@ import { parseAttendanceExcel } from '../../utils/attendance-excel.parser';
 import {
   calculateHoursBetween,
   isAfterTime,
+  isBeforeTime,
   minutesBetween,
 } from '../../utils/time.util';
 import {
   ConfirmAttendanceImportDto,
+  CorrectDailyLogDto,
   ListAttendanceDto,
+  ListAttendanceMonthlyApprovalsDto,
+  UnlockAttendanceMonthDto,
 } from '../dtos/attendance.dto';
 import {
   AttendanceMatchResult,
@@ -99,6 +103,8 @@ export interface AttendanceDailyLogInput {
   lateMinutes: number;
   missingClockIn: boolean;
   missingClockOut: boolean;
+  flag: AttendanceDayFlag;
+  isLastExportDay: boolean;
 }
 
 export interface AttendanceDailySummary {
@@ -112,6 +118,7 @@ export interface AttendanceDailySummary {
   missingClockOutDays: number;
   /** Recalculated from daily logs + paid public holidays (not machine totals). */
   payableHours: number;
+  flaggedDays: number;
 }
 
 type CachedAttendancePreview = AttendancePreviewResult & {
@@ -123,8 +130,67 @@ type ScheduleDayLike = {
   isWorkingDay: boolean;
   isHalfDay: boolean;
   morningStart: string | null;
+  morningEnd: string | null;
+  afternoonEnd: string | null;
   totalHours: Prisma.Decimal | number;
 };
+
+type DailyLogFlagSource = {
+  id: string;
+  date: Date;
+  isHoliday: boolean;
+  isWeekend: boolean;
+  isHalfDay: boolean;
+  isLastExportDay: boolean;
+  clockInLocal: string | null;
+  clockOutLocal: string | null;
+  correctedClockInLocal: string | null;
+  correctedClockOutLocal: string | null;
+};
+
+/**
+ * Resolves the HR review flag for a single duty day from effective punch times.
+ */
+function resolveAttendanceDayFlag(params: {
+  isHoliday: boolean;
+  isWeekend: boolean;
+  clockIn: string | null;
+  clockOut: string | null;
+  isLastExportDay: boolean;
+  scheduledEnd: string | null;
+}): AttendanceDayFlag {
+  if (params.isHoliday || params.isWeekend) {
+    return AttendanceDayFlag.NONE;
+  }
+  if (!params.clockIn) {
+    return AttendanceDayFlag.MISSING_CLOCK_IN;
+  }
+  if (!params.clockOut && !params.isLastExportDay) {
+    return AttendanceDayFlag.MISSING_CLOCK_OUT;
+  }
+  if (
+    params.clockIn &&
+    params.clockOut &&
+    params.scheduledEnd &&
+    isBeforeTime(params.clockOut, params.scheduledEnd)
+  ) {
+    return AttendanceDayFlag.EARLY_LEAVE;
+  }
+  return AttendanceDayFlag.NONE;
+}
+
+/**
+ * Scheduled end time for early-leave checks (half day uses morning end).
+ */
+function scheduledEndForDay(scheduleDay: ScheduleDayLike | undefined): string | null {
+  if (!scheduleDay?.isWorkingDay) {
+    return null;
+  }
+  if (scheduleDay.isHalfDay) {
+    return scheduleDay.morningEnd ?? '12:30';
+  }
+  return scheduleDay.afternoonEnd ?? '17:30';
+}
 
 /**
  * Attendance rate as present/scheduled percentage, or null when scheduled is 0.
@@ -249,6 +315,7 @@ export class AttendanceService {
     rawDailyData: AttendanceDailyRaw[],
     month: number,
     year: number,
+    lastExportDate?: Date | null,
   ): Promise<{ logs: AttendanceDailyLogInput[]; summary: AttendanceDailySummary }> {
     const employee = await this.prisma.user.findFirst({
       where: { id: employeeId, companyId, deletedAt: null },
@@ -287,10 +354,22 @@ export class AttendanceService {
         companyId,
         periodStart,
       );
-      scheduleDays = schedule.days;
+      scheduleDays = schedule.days.map((day) => ({
+        dayOfWeek: day.dayOfWeek,
+        isWorkingDay: day.isWorkingDay,
+        isHalfDay: day.isHalfDay,
+        morningStart: day.morningStart,
+        morningEnd: day.morningEnd,
+        afternoonEnd: day.afternoonEnd,
+        totalHours: day.totalHours,
+      }));
     } catch {
       scheduleDays = this.fallbackWeekdaySchedule();
     }
+
+    const exportDayKey = lastExportDate
+      ? lastExportDate.toISOString().slice(0, 10)
+      : null;
 
     const logs: AttendanceDailyLogInput[] = [];
     let payableHours = 0;
@@ -344,7 +423,11 @@ export class AttendanceService {
       // Missing punches only apply on scheduled duty days (not holidays/weekends).
       const missingClockIn =
         isDutyDay && !wasPresent && Boolean(day.clockOutLocal);
-      const missingClockOut = isDutyDay && wasPresent && !day.clockOutLocal;
+      const isLastExportDay =
+        exportDayKey != null &&
+        date.toISOString().slice(0, 10) === exportDayKey;
+      const missingClockOut =
+        isDutyDay && wasPresent && !day.clockOutLocal && !isLastExportDay;
 
       // Payable hours: recorded duty time + paid public-holiday credit
       // (holiday on a normally working weekday credits that day's hours).
@@ -353,6 +436,15 @@ export class AttendanceService {
       } else if (isDutyDay && recordedHours != null) {
         payableHours += recordedHours;
       }
+
+      const flag = resolveAttendanceDayFlag({
+        isHoliday,
+        isWeekend,
+        clockIn: day.clockInLocal,
+        clockOut: day.clockOutLocal,
+        isLastExportDay,
+        scheduledEnd: scheduledEndForDay(scheduleDay),
+      });
 
       logs.push({
         date,
@@ -371,6 +463,8 @@ export class AttendanceService {
         lateMinutes,
         missingClockIn,
         missingClockOut,
+        flag,
+        isLastExportDay,
       });
     }
 
@@ -402,6 +496,8 @@ export class AttendanceService {
       missingClockOutDays: workingDayLogs.filter((log) => log.missingClockOut)
         .length,
       payableHours: Math.round(payableHours * 100) / 100,
+      flaggedDays: logs.filter((log) => log.flag !== AttendanceDayFlag.NONE)
+        .length,
     };
 
     return { logs, summary };
@@ -632,6 +728,17 @@ export class AttendanceService {
       (index) => index >= 0 && index < review.length,
     ).length;
 
+    let lastExportDate: Date | null = null;
+    for (const row of rowsToImport) {
+      for (const day of row.data.dailyData ?? []) {
+        const date =
+          day.date instanceof Date ? day.date : new Date(String(day.date));
+        if (!lastExportDate || date.getTime() > lastExportDate.getTime()) {
+          lastExportDate = date;
+        }
+      }
+    }
+
     const prepared = await Promise.all(
       rowsToImport.map(async (row) => {
         const { logs, summary } = await this.calculateDailyLogs(
@@ -640,6 +747,7 @@ export class AttendanceService {
           row.data.dailyData ?? [],
           month,
           year,
+          lastExportDate,
         );
         return {
           row,
@@ -650,9 +758,19 @@ export class AttendanceService {
       }),
     );
 
+    let batchId = '';
+
     await this.prisma.$transaction(
       async (tx) => {
         if (existing && dto.overwrite) {
+          await tx.attendanceMonthlyApproval.deleteMany({
+            where: {
+              OR: [
+                { importBatchId: existing.id },
+                { companyId, month, year },
+              ],
+            },
+          });
           await tx.attendanceImportBatch.delete({
             where: { id: existing.id },
           });
@@ -673,6 +791,7 @@ export class AttendanceService {
             importedAt: new Date(),
           },
         });
+        batchId = batch.id;
 
         if (prepared.length > 0) {
           await tx.attendanceRecord.createMany({
@@ -692,6 +811,8 @@ export class AttendanceService {
               missingClockInDays: item.summary.missingClockInDays,
               missingClockOutDays: item.summary.missingClockOutDays,
               payableHours: item.summary.payableHours,
+              flaggedDays: item.summary.flaggedDays,
+              resolvedDays: 0,
               importedAt: new Date(),
             })),
           });
@@ -719,6 +840,8 @@ export class AttendanceService {
               lateMinutes: log.lateMinutes,
               missingClockIn: log.missingClockIn,
               missingClockOut: log.missingClockOut,
+              flag: log.flag,
+              isLastExportDay: log.isLastExportDay,
             })),
           );
 
@@ -736,6 +859,7 @@ export class AttendanceService {
       },
     );
 
+    await this.createMonthlyApproval(batchId, companyId, userId);
     await this.previewCache.del(dto.previewToken);
 
     return {
@@ -983,6 +1107,461 @@ export class AttendanceService {
     });
   }
 
+  /**
+   * Creates or resets the monthly approval after a successful import confirm.
+   * Also refreshes flaggedDays on each attendance record for the batch.
+   */
+  async createMonthlyApproval(
+    importBatchId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<void> {
+    void userId;
+    const batch = await this.prisma.attendanceImportBatch.findFirst({
+      where: { id: importBatchId, companyId },
+    });
+    if (!batch) {
+      throw new NotFoundException('Import batch not found');
+    }
+
+    await this.prisma.attendanceMonthlyApproval.upsert({
+      where: { importBatchId },
+      create: {
+        id: randomUUID(),
+        companyId,
+        importBatchId,
+        month: batch.month,
+        year: batch.year,
+        status: 'PENDING_REVIEW',
+      },
+      update: {
+        status: 'PENDING_REVIEW',
+        reviewedAt: null,
+        reviewedBy: null,
+        approvedAt: null,
+        approvedBy: null,
+        unlockedAt: null,
+        unlockedBy: null,
+        unlockReason: null,
+        notificationsSentAt: null,
+      },
+    });
+
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: { importBatchId, companyId },
+      select: { id: true },
+    });
+
+    for (const record of records) {
+      const flaggedCount = await this.prisma.attendanceDailyLog.count({
+        where: {
+          attendanceRecordId: record.id,
+          flag: { not: AttendanceDayFlag.NONE },
+        },
+      });
+      await this.prisma.attendanceRecord.update({
+        where: { id: record.id },
+        data: { flaggedDays: flaggedCount, resolvedDays: 0 },
+      });
+    }
+  }
+
+  /**
+   * Returns the monthly approval for one company month/year.
+   */
+  async getMonthlyApproval(
+    month: number,
+    year: number,
+    companyId: string,
+  ): Promise<unknown> {
+    return this.prisma.attendanceMonthlyApproval.findUnique({
+      where: { companyId_month_year: { companyId, month, year } },
+      include: {
+        importBatch: {
+          select: {
+            id: true,
+            fileName: true,
+            importedAt: true,
+            totalRows: true,
+            matchedRows: true,
+            rejectedRows: true,
+            importer: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+          },
+        },
+        reviewer: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        approver: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+      },
+    });
+  }
+
+  /**
+   * Lists monthly approvals for the company, newest first.
+   */
+  async listMonthlyApprovals(
+    filters: ListAttendanceMonthlyApprovalsDto,
+    companyId: string,
+  ): Promise<unknown> {
+    return this.prisma.attendanceMonthlyApproval.findMany({
+      where: {
+        companyId,
+        ...(filters.year ? { year: filters.year } : {}),
+        ...(filters.status ? { status: filters.status } : {}),
+      },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      include: {
+        importBatch: {
+          select: {
+            fileName: true,
+            importedAt: true,
+            totalRows: true,
+            matchedRows: true,
+            _count: { select: { records: true } },
+          },
+        },
+        approver: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+      },
+    });
+  }
+
+  /**
+   * Marks a pending month as reviewed by HR.
+   */
+  async markAsReviewed(
+    monthlyApprovalId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const approval = await this.prisma.attendanceMonthlyApproval.findFirst({
+      where: { id: monthlyApprovalId, companyId },
+    });
+    if (!approval) {
+      throw new NotFoundException('Monthly approval not found');
+    }
+    if (approval.status !== 'PENDING_REVIEW') {
+      throw new BadRequestException(
+        'Only pending review attendance can be marked as reviewed',
+      );
+    }
+
+    return this.prisma.attendanceMonthlyApproval.update({
+      where: { id: monthlyApprovalId },
+      data: {
+        status: 'REVIEWED',
+        reviewedAt: new Date(),
+        reviewedBy: userId,
+      },
+    });
+  }
+
+  /**
+   * Approves and locks a month. Employee notifications are Chunk C.
+   */
+  async approveMonth(
+    monthlyApprovalId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
+    const approval = await this.prisma.attendanceMonthlyApproval.findFirst({
+      where: { id: monthlyApprovalId, companyId },
+      include: { importBatch: true },
+    });
+    if (!approval) {
+      throw new NotFoundException('Monthly approval not found');
+    }
+    if (
+      approval.status !== 'PENDING_REVIEW' &&
+      approval.status !== 'REVIEWED'
+    ) {
+      throw new BadRequestException(
+        'Only pending or reviewed attendance can be approved',
+      );
+    }
+
+    await this.prisma.attendanceMonthlyApproval.update({
+      where: { id: monthlyApprovalId },
+      data: {
+        status: 'APPROVED',
+        approvedAt: new Date(),
+        approvedBy: userId,
+      },
+    });
+
+    // Chunk C: sendAttendanceApprovalNotifications(approval)
+
+    return {
+      message: `Attendance for ${approval.month}/${approval.year} approved and locked`,
+    };
+  }
+
+  /**
+   * Unlocks a previously approved month so HR can correct daily logs.
+   */
+  async unlockMonth(
+    dto: UnlockAttendanceMonthDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    if (!dto.monthlyApprovalId) {
+      throw new BadRequestException('monthlyApprovalId is required');
+    }
+
+    const approval = await this.prisma.attendanceMonthlyApproval.findFirst({
+      where: { id: dto.monthlyApprovalId, companyId },
+    });
+    if (!approval) {
+      throw new NotFoundException('Monthly approval not found');
+    }
+    if (approval.status !== 'APPROVED') {
+      throw new BadRequestException(
+        'Only approved attendance months can be unlocked',
+      );
+    }
+
+    return this.prisma.attendanceMonthlyApproval.update({
+      where: { id: dto.monthlyApprovalId },
+      data: {
+        status: 'UNLOCKED',
+        unlockedAt: new Date(),
+        unlockedBy: userId,
+        unlockReason: dto.unlockReason,
+      },
+    });
+  }
+
+  /**
+   * Applies an HR clock-in/out correction to a daily log while the month is open.
+   */
+  async correctDailyLog(
+    dto: CorrectDailyLogDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    if (
+      dto.correctedClockInLocal === undefined &&
+      dto.correctedClockOutLocal === undefined
+    ) {
+      throw new BadRequestException(
+        'Provide at least one corrected clock-in or clock-out time',
+      );
+    }
+
+    const dailyLog = await this.prisma.attendanceDailyLog.findFirst({
+      where: { id: dto.dailyLogId },
+      include: {
+        record: {
+          include: {
+            importBatch: {
+              include: { monthlyApproval: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!dailyLog || dailyLog.record.companyId !== companyId) {
+      throw new NotFoundException('Daily log not found');
+    }
+
+    const approval = dailyLog.record.importBatch.monthlyApproval;
+    if (!approval) {
+      throw new BadRequestException(
+        'No monthly approval found for this record',
+      );
+    }
+
+    if (
+      !['PENDING_REVIEW', 'REVIEWED', 'UNLOCKED'].includes(approval.status)
+    ) {
+      throw new BadRequestException(
+        'Attendance is locked. Unlock the month before making corrections.',
+      );
+    }
+
+    await this.prisma.attendanceDailyLogCorrection.create({
+      data: {
+        id: randomUUID(),
+        dailyLogId: dto.dailyLogId,
+        correctedBy: userId,
+        originalClockInLocal: dailyLog.clockInLocal,
+        originalClockOutLocal: dailyLog.clockOutLocal,
+        correctedClockInLocal: dto.correctedClockInLocal ?? null,
+        correctedClockOutLocal: dto.correctedClockOutLocal ?? null,
+        correctionNote: dto.correctionNote,
+      },
+    });
+
+    const updatedLog = await this.prisma.attendanceDailyLog.update({
+      where: { id: dto.dailyLogId },
+      data: {
+        ...(dto.correctedClockInLocal !== undefined
+          ? { correctedClockInLocal: dto.correctedClockInLocal }
+          : {}),
+        ...(dto.correctedClockOutLocal !== undefined
+          ? { correctedClockOutLocal: dto.correctedClockOutLocal }
+          : {}),
+      },
+    });
+
+    await this.recalculateDailyLogFlag(updatedLog, {
+      employeeId: dailyLog.record.employeeId,
+      companyId: dailyLog.record.companyId,
+    });
+
+    const flaggedCount = await this.prisma.attendanceDailyLog.count({
+      where: {
+        attendanceRecordId: dailyLog.attendanceRecordId,
+        flag: { not: AttendanceDayFlag.NONE },
+      },
+    });
+    const resolvedCount = await this.prisma.attendanceDailyLog.count({
+      where: {
+        attendanceRecordId: dailyLog.attendanceRecordId,
+        flag: { not: AttendanceDayFlag.NONE },
+        flagResolved: true,
+      },
+    });
+    await this.prisma.attendanceRecord.update({
+      where: { id: dailyLog.attendanceRecordId },
+      data: { flaggedDays: flaggedCount, resolvedDays: resolvedCount },
+    });
+
+    return updatedLog;
+  }
+
+  /**
+   * Day-by-day breakdown for one employee in one month (HR review drawer).
+   */
+  async getEmployeeDailyLogs(
+    employeeId: string,
+    month: number,
+    year: number,
+    companyId: string,
+  ): Promise<unknown> {
+    const record = await this.prisma.attendanceRecord.findUnique({
+      where: {
+        companyId_employeeId_month_year: {
+          companyId,
+          employeeId,
+          month,
+          year,
+        },
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            employeeId: true,
+          },
+        },
+        dailyLogs: {
+          orderBy: { date: 'asc' },
+          include: {
+            corrections: {
+              orderBy: { correctedAt: 'desc' },
+              take: 1,
+              include: {
+                corrector: {
+                  select: { id: true, firstName: true, lastName: true },
+                },
+              },
+            },
+            fieldMovementEntries: {
+              include: {
+                log: {
+                  select: { id: true, status: true, requestNumber: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!record) {
+      throw new NotFoundException('Attendance record not found');
+    }
+
+    return record;
+  }
+
+  /**
+   * Recalculates the review flag after an HR correction using effective times.
+   */
+  private async recalculateDailyLogFlag(
+    dailyLog: DailyLogFlagSource,
+    record: { employeeId: string; companyId: string },
+  ): Promise<void> {
+    const effectiveClockIn =
+      dailyLog.correctedClockInLocal ?? dailyLog.clockInLocal;
+    const effectiveClockOut =
+      dailyLog.correctedClockOutLocal ?? dailyLog.clockOutLocal;
+
+    let scheduledEnd: string | null = '17:30';
+    try {
+      const schedule = await this.workScheduleService.getActiveSchedule(
+        record.employeeId,
+        record.companyId,
+        dailyLog.date,
+      );
+      const dayOfWeek = dailyLog.date.getUTCDay();
+      const scheduleDay = schedule.days.find(
+        (row) => row.dayOfWeek === dayOfWeek,
+      );
+      scheduledEnd = scheduledEndForDay(
+        scheduleDay
+          ? {
+              dayOfWeek: scheduleDay.dayOfWeek,
+              isWorkingDay: scheduleDay.isWorkingDay,
+              isHalfDay: scheduleDay.isHalfDay,
+              morningStart: scheduleDay.morningStart,
+              morningEnd: scheduleDay.morningEnd,
+              afternoonEnd: scheduleDay.afternoonEnd,
+              totalHours: scheduleDay.totalHours,
+            }
+          : undefined,
+      );
+    } catch {
+      scheduledEnd = '17:30';
+    }
+
+    const flag = resolveAttendanceDayFlag({
+      isHoliday: dailyLog.isHoliday,
+      isWeekend: dailyLog.isWeekend,
+      clockIn: effectiveClockIn,
+      clockOut: effectiveClockOut,
+      isLastExportDay: dailyLog.isLastExportDay,
+      scheduledEnd,
+    });
+
+    await this.prisma.attendanceDailyLog.update({
+      where: { id: dailyLog.id },
+      data: {
+        flag,
+        missingClockIn:
+          !dailyLog.isHoliday &&
+          !dailyLog.isWeekend &&
+          !effectiveClockIn &&
+          Boolean(effectiveClockOut),
+        missingClockOut:
+          !dailyLog.isHoliday &&
+          !dailyLog.isWeekend &&
+          Boolean(effectiveClockIn) &&
+          !effectiveClockOut &&
+          !dailyLog.isLastExportDay,
+      },
+    });
+  }
+
   private fallbackWeekdaySchedule(): ScheduleDayLike[] {
     return [
       {
@@ -990,6 +1569,8 @@ export class AttendanceService {
         isWorkingDay: false,
         isHalfDay: false,
         morningStart: null,
+        morningEnd: null,
+        afternoonEnd: null,
         totalHours: 0,
       },
       {
@@ -997,6 +1578,8 @@ export class AttendanceService {
         isWorkingDay: true,
         isHalfDay: false,
         morningStart: '08:30',
+        morningEnd: '12:30',
+        afternoonEnd: '17:30',
         totalHours: 8,
       },
       {
@@ -1004,6 +1587,8 @@ export class AttendanceService {
         isWorkingDay: true,
         isHalfDay: false,
         morningStart: '08:30',
+        morningEnd: '12:30',
+        afternoonEnd: '17:30',
         totalHours: 8,
       },
       {
@@ -1011,6 +1596,8 @@ export class AttendanceService {
         isWorkingDay: true,
         isHalfDay: false,
         morningStart: '08:30',
+        morningEnd: '12:30',
+        afternoonEnd: '17:30',
         totalHours: 8,
       },
       {
@@ -1018,6 +1605,8 @@ export class AttendanceService {
         isWorkingDay: true,
         isHalfDay: false,
         morningStart: '08:30',
+        morningEnd: '12:30',
+        afternoonEnd: '17:30',
         totalHours: 8,
       },
       {
@@ -1025,6 +1614,8 @@ export class AttendanceService {
         isWorkingDay: true,
         isHalfDay: false,
         morningStart: '08:30',
+        morningEnd: '12:30',
+        afternoonEnd: '17:30',
         totalHours: 8,
       },
       {
@@ -1032,6 +1623,8 @@ export class AttendanceService {
         isWorkingDay: true,
         isHalfDay: true,
         morningStart: '08:30',
+        morningEnd: '12:30',
+        afternoonEnd: null,
         totalHours: 4,
       },
     ];
