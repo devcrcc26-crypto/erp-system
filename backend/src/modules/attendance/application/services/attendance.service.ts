@@ -804,6 +804,40 @@ export class AttendanceService
     await this.prisma.$transaction(
       async (tx) => {
         if (existing && dto.overwrite) {
+          // Cascade from AttendanceImportBatch cannot remove FieldMovementEntry
+          // (onDelete: NoAction on dailyLog). Clear dependents first.
+          const records = await tx.attendanceRecord.findMany({
+            where: { importBatchId: existing.id },
+            select: { id: true },
+          });
+          const recordIds = records.map((r) => r.id);
+
+          const dailyLogs =
+            recordIds.length > 0
+              ? await tx.attendanceDailyLog.findMany({
+                  where: { attendanceRecordId: { in: recordIds } },
+                  select: { id: true },
+                })
+              : [];
+          const dailyLogIds = dailyLogs.map((l) => l.id);
+
+          if (dailyLogIds.length > 0) {
+            await tx.fieldMovementEntry.deleteMany({
+              where: { dailyLogId: { in: dailyLogIds } },
+            });
+
+            await tx.attendanceDailyLogCorrection.deleteMany({
+              where: { dailyLogId: { in: dailyLogIds } },
+            });
+          }
+
+          await tx.fieldMovementLog.deleteMany({
+            where: {
+              companyId,
+              entries: { none: {} },
+            },
+          });
+
           await tx.attendanceMonthlyApproval.deleteMany({
             where: {
               OR: [
@@ -812,6 +846,7 @@ export class AttendanceService
               ],
             },
           });
+
           await tx.attendanceImportBatch.delete({
             where: { id: existing.id },
           });
