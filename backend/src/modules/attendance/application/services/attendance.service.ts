@@ -110,6 +110,8 @@ export interface AttendanceDailySummary {
   totalLateMinutes: number;
   missingClockInDays: number;
   missingClockOutDays: number;
+  /** Recalculated from daily logs + paid public holidays (not machine totals). */
+  payableHours: number;
 }
 
 type CachedAttendancePreview = AttendancePreviewResult & {
@@ -291,6 +293,7 @@ export class AttendanceService {
     }
 
     const logs: AttendanceDailyLogInput[] = [];
+    let payableHours = 0;
 
     for (const day of rawDailyData) {
       const date =
@@ -300,14 +303,17 @@ export class AttendanceService {
         (row) => row.dayOfWeek === dayOfWeek,
       );
 
-      const isWeekend = !(scheduleDay?.isWorkingDay ?? false);
-      const isHalfDay = scheduleDay?.isHalfDay ?? false;
-      const scheduledHours = Number(scheduleDay?.totalHours ?? 0);
-
       const matchedHoliday = applicableHolidays.find((holiday) =>
         holidayFallsOnDate(holiday.date, holiday.isRecurring, date),
       );
       const isHoliday = Boolean(matchedHoliday);
+      const wouldBeWorkingDay = scheduleDay?.isWorkingDay ?? false;
+      const isWeekend = !wouldBeWorkingDay;
+      const isDutyDay = !isHoliday && wouldBeWorkingDay;
+      const isHalfDay = isDutyDay ? (scheduleDay?.isHalfDay ?? false) : false;
+      const weekdayHours = Number(scheduleDay?.totalHours ?? 0);
+      // Holidays / weekends are not scheduled duty — expected hours are 0.
+      const scheduledHours = isDutyDay ? weekdayHours : 0;
 
       const wasPresent = Boolean(day.clockInLocal);
       let recordedHours: number | null = null;
@@ -322,8 +328,7 @@ export class AttendanceService {
       let lateMinutes = 0;
       if (
         wasPresent &&
-        !isHoliday &&
-        !isWeekend &&
+        isDutyDay &&
         scheduleDay?.morningStart &&
         day.clockInLocal
       ) {
@@ -334,6 +339,19 @@ export class AttendanceService {
             day.clockInLocal,
           );
         }
+      }
+
+      // Missing punches only apply on scheduled duty days (not holidays/weekends).
+      const missingClockIn =
+        isDutyDay && !wasPresent && Boolean(day.clockOutLocal);
+      const missingClockOut = isDutyDay && wasPresent && !day.clockOutLocal;
+
+      // Payable hours: recorded duty time + paid public-holiday credit
+      // (holiday on a normally working weekday credits that day's hours).
+      if (isHoliday && wouldBeWorkingDay) {
+        payableHours += weekdayHours;
+      } else if (isDutyDay && recordedHours != null) {
+        payableHours += recordedHours;
       }
 
       logs.push({
@@ -351,9 +369,8 @@ export class AttendanceService {
         recordedHours,
         isLate,
         lateMinutes,
-        missingClockIn:
-          !isHoliday && !isWeekend && !wasPresent && Boolean(day.clockOutLocal),
-        missingClockOut: wasPresent && !day.clockOutLocal,
+        missingClockIn,
+        missingClockOut,
       });
     }
 
@@ -384,6 +401,7 @@ export class AttendanceService {
         .length,
       missingClockOutDays: workingDayLogs.filter((log) => log.missingClockOut)
         .length,
+      payableHours: Math.round(payableHours * 100) / 100,
     };
 
     return { logs, summary };
@@ -673,7 +691,7 @@ export class AttendanceService {
               totalLateMinutes: item.summary.totalLateMinutes,
               missingClockInDays: item.summary.missingClockInDays,
               missingClockOutDays: item.summary.missingClockOutDays,
-              payableHours: item.row.data.payableHours,
+              payableHours: item.summary.payableHours,
               importedAt: new Date(),
             })),
           });

@@ -12,7 +12,10 @@ export interface AttendanceDailyRaw {
 export interface AttendanceRawRow {
   attendanceName: string;
   attendanceId: string;
-  /** Column H — only aggregated machine field we keep (HR-validated). */
+  /**
+   * Column H machine total — kept for preview/debug only.
+   * Persisted payable hours are recalculated from daily logs + holidays.
+   */
   payableHours: number;
   dailyData: AttendanceDailyRaw[];
 }
