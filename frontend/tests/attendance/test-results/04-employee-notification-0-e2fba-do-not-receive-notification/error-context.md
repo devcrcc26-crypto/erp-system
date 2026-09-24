@@ -1,0 +1,218 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: 04-employee-notification.spec.ts >> 04 �?Employee notification after approval >> employees with no flagged days do not receive notification
+- Location: tests\attendance\04-employee-notification.spec.ts:54:7
+
+# Error details
+
+```
+Test timeout of 45000ms exceeded.
+```
+
+```
+Error: page.waitForURL: Test timeout of 45000ms exceeded.
+=========================== logs ===========================
+waiting for navigation until "load"
+============================================================
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=f1e1]:
+  - generic [ref=f1e5]:
+    - banner [ref=f1e6]:
+      - generic [ref=f1e7]:
+        - img "CCECC" [ref=f1e9]
+        - generic [ref=f1e10]:
+          - generic [ref=f1e11]: CCECC
+          - generic [ref=f1e12]: Construction ERP
+    - main [ref=f1e13]:
+      - generic [ref=f1e14]:
+        - generic [ref=f1e16]:
+          - heading "Sign in" [level=1] [ref=f1e17]
+          - paragraph [ref=f1e18]: Enter your email and password to continue
+          - generic [ref=f1e19]:
+            - generic [ref=f1e21]:
+              - generic "Email" [ref=f1e23]
+              - textbox "Email" [ref=f1e27]:
+                - /placeholder: name@company.com
+                - text: demo.seed.designer@company.local
+            - generic [ref=f1e29]:
+              - generic "Password" [ref=f1e31]
+              - generic [ref=f1e35]:
+                - textbox "Password" [ref=f1e36]: Admin@12345
+                - button "Show" [ref=f1e38] [cursor=pointer]:
+                  - img "eye-invisible" [ref=f1e39]
+            - button "Sign in" [active] [ref=f1e48] [cursor=pointer]
+          - paragraph [ref=f1e50]:
+            - link "Forgot password?" [ref=f1e51] [cursor=pointer]:
+              - /url: /forgot-password
+        - complementary "Demo access" [ref=f1e52]:
+          - generic [ref=f1e53]:
+            - generic [ref=f1e54]:
+              - paragraph [ref=f1e55]: Demo access
+              - paragraph [ref=f1e56]: Click an account to fill email and password
+            - generic [ref=f1e57]:
+              - button "Employee Eyuel Tilahun eyuel.tilahun@company.local" [ref=f1e58]:
+                - generic [ref=f1e59]: Employee
+                - generic [ref=f1e60]: Eyuel Tilahun
+                - generic [ref=f1e61]: eyuel.tilahun@company.local
+              - button "Discipline Leader Xiaoming Li xiaoming.li@company.local" [ref=f1e62]:
+                - generic [ref=f1e63]: Discipline Leader
+                - generic [ref=f1e64]: Xiaoming Li
+                - generic [ref=f1e65]: xiaoming.li@company.local
+              - button "HR Manager Jinxia Dong jinxia.dong@company.local" [ref=f1e66]:
+                - generic [ref=f1e67]: HR Manager
+                - generic [ref=f1e68]: Jinxia Dong
+                - generic [ref=f1e69]: jinxia.dong@company.local
+    - contentinfo [ref=f1e70]: © 2026 CCECC · Construction ERP
+  - button "Open Next.js Dev Tools" [ref=f1e76] [cursor=pointer]:
+    - generic [ref=f1e79]:
+      - text: Compiling
+      - generic [ref=f1e80]:
+        - generic [ref=f1e81]: .
+        - generic [ref=f1e82]: .
+        - generic [ref=f1e83]: .
+  - alert [ref=f1e84]
+```
+
+# Test source
+
+```ts
+  1   | import type { Page } from '@playwright/test';
+  2   | import { expect } from '@playwright/test';
+  3   | 
+  4   | export const ATTENDANCE_USERS = {
+  5   |   hrOfficer: {
+  6   |     email: 'jinxia.dong@company.local',
+  7   |     password: 'Admin@12345',
+  8   |     name: 'Jinxia Dong',
+  9   |   },
+  10  |   employee: {
+  11  |     email: 'demo.seed.designer@company.local',
+  12  |     password: 'Admin@12345',
+  13  |     name: 'Demo Designer',
+  14  |   },
+  15  |   supervisor: {
+  16  |     email: 'xiaoming.li@company.local',
+  17  |     password: 'Admin@12345',
+  18  |     name: 'Xiaoming Li',
+  19  |   },
+  20  |   samuel: {
+  21  |     email: 'samuel.hailemariam@company.local',
+  22  |     password: 'Admin@12345',
+  23  |     name: 'Samuel Hailemariam',
+  24  |   },
+  25  | } as const;
+  26  | 
+  27  | export type AttendanceUserKey = keyof typeof ATTENDANCE_USERS;
+  28  | 
+  29  | /**
+  30  |  * Clears session storage and logs in with email/password.
+  31  |  * Mirrors frontend/e2e/helpers/auth.ts, with stronger post-login readiness checks.
+  32  |  */
+  33  | export async function loginAs(
+  34  |   page: Page,
+  35  |   email: string,
+  36  |   password: string,
+  37  |   redirectTo = '/',
+  38  | ): Promise<void> {
+  39  |   await page.goto('/login');
+  40  |   await page.evaluate(() => {
+  41  |     localStorage.clear();
+  42  |     sessionStorage.clear();
+  43  |   });
+  44  | 
+  45  |   const from = encodeURIComponent(redirectTo);
+  46  |   await page.goto(`/login?from=${from}`);
+  47  | 
+  48  |   const emailField = page.getByLabel(/^email$/i).first();
+  49  |   await emailField.waitFor({ state: 'visible', timeout: 30_000 });
+  50  |   await emailField.fill(email);
+  51  | 
+  52  |   const passwordField = page.getByLabel(/^password$/i).first();
+  53  |   await passwordField.fill(password);
+  54  | 
+  55  |   const loginResponse = page.waitForResponse(
+  56  |     (response) =>
+  57  |       response.url().includes('/auth/login') &&
+  58  |       response.request().method() === 'POST',
+  59  |     { timeout: 45_000 },
+  60  |   );
+  61  | 
+  62  |   await page.getByRole('button', { name: /^sign in$/i }).click();
+  63  | 
+  64  |   const response = await loginResponse.catch(() => null);
+  65  |   if (response && !response.ok()) {
+  66  |     throw new Error(
+  67  |       `Login failed for ${email}: HTTP ${response.status()}`,
+  68  |     );
+  69  |   }
+  70  | 
+> 71  |   await page.waitForURL(
+      |              ^ Error: page.waitForURL: Test timeout of 45000ms exceeded.
+  72  |     (url) => !url.pathname.startsWith('/login'),
+  73  |     { timeout: 45_000 },
+  74  |   );
+  75  | 
+  76  |   // Shell / session must be ready before navigating to gated routes
+  77  |   await expect(
+  78  |     page.getByRole('button', { name: /open notifications|open profile/i }).first(),
+  79  |   ).toBeVisible({ timeout: 30_000 });
+  80  | }
+  81  | 
+  82  | export async function loginAsHrOfficer(page: Page): Promise<void> {
+  83  |   await loginAs(
+  84  |     page,
+  85  |     ATTENDANCE_USERS.hrOfficer.email,
+  86  |     ATTENDANCE_USERS.hrOfficer.password,
+  87  |     '/hr/attendance',
+  88  |   );
+  89  | }
+  90  | 
+  91  | export async function loginAsEmployee(page: Page): Promise<void> {
+  92  |   await loginAs(
+  93  |     page,
+  94  |     ATTENDANCE_USERS.employee.email,
+  95  |     ATTENDANCE_USERS.employee.password,
+  96  |     '/profile',
+  97  |   );
+  98  | }
+  99  | 
+  100 | export async function loginAsSupervisor(page: Page): Promise<void> {
+  101 |   await loginAs(
+  102 |     page,
+  103 |     ATTENDANCE_USERS.supervisor.email,
+  104 |     ATTENDANCE_USERS.supervisor.password,
+  105 |     '/approvals',
+  106 |   );
+  107 | }
+  108 | 
+  109 | export async function loginAsSamuel(page: Page): Promise<void> {
+  110 |   await loginAs(
+  111 |     page,
+  112 |     ATTENDANCE_USERS.samuel.email,
+  113 |     ATTENDANCE_USERS.samuel.password,
+  114 |     '/profile',
+  115 |   );
+  116 | }
+  117 | 
+  118 | /**
+  119 |  * Logs out by clearing storage and returning to login.
+  120 |  */
+  121 | export async function logout(page: Page): Promise<void> {
+  122 |   await page.evaluate(() => {
+  123 |     localStorage.clear();
+  124 |     sessionStorage.clear();
+  125 |   });
+  126 |   await page.goto('/login');
+  127 | }
+  128 | 
+```
