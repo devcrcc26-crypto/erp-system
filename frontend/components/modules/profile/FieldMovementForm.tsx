@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Checkbox,
@@ -24,6 +24,7 @@ import type {
   FlaggedDay,
 } from '@/lib/api/attendance.types';
 import {
+  useCancelFieldMovementLog,
   useCreateFieldMovementLog,
   useSubmitFieldMovementLog,
 } from '@/lib/query/attendance';
@@ -170,6 +171,7 @@ export default function FieldMovementForm({
   const messageApi = useAppMessage();
   const createMutation = useCreateFieldMovementLog();
   const submitMutation = useSubmitFieldMovementLog();
+  const cancelMutation = useCancelFieldMovementLog();
 
   const [step, setStep] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -184,10 +186,28 @@ export default function FieldMovementForm({
   const [bulkEarlyLeaveReason, setBulkEarlyLeaveReason] = useState('');
   const [bulkNotes, setBulkNotes] = useState('');
 
+  useEffect(() => {
+    if (open) {
+      onSuccess();
+    }
+    // Refresh locked-day state whenever the modal opens (avoids stale drafts).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on open
+  }, [open]);
+
   const selectableDays = useMemo(
     () => flaggedDays.filter((day) => !day.alreadySubmitted),
     [flaggedDays],
   );
+
+  const orphanDraftIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const day of flaggedDays) {
+      if (day.submittedLog?.status === 'DRAFT') {
+        ids.add(day.submittedLog.id);
+      }
+    }
+    return [...ids];
+  }, [flaggedDays]);
 
   const selectedDays = useMemo(
     () =>
@@ -401,21 +421,54 @@ export default function FieldMovementForm({
       return;
     }
 
+    let createdId: string | null = null;
     try {
       const created = await createMutation.mutateAsync({
         entries: buildEntries(),
         notes: overallNotes.trim() || undefined,
       });
+      createdId = created.id;
       const submitted = await submitMutation.mutateAsync(created.id);
       setSubmittedNumber(submitted.requestNumber);
       setStep(3);
       onSuccess();
     } catch (error) {
+      if (createdId) {
+        try {
+          await cancelMutation.mutateAsync(createdId);
+        } catch {
+          // Keep original submit error; draft may still need manual cancel.
+        }
+      }
       notifyApiError(error, 'Failed to submit field movement log', messageApi);
     }
   }
 
-  const busy = createMutation.isPending || submitMutation.isPending;
+  async function handleCancelOrphanDrafts(): Promise<void> {
+    if (orphanDraftIds.length === 0) {
+      return;
+    }
+    try {
+      for (const id of orphanDraftIds) {
+        await cancelMutation.mutateAsync(id);
+      }
+      messageApi.success(
+        orphanDraftIds.length === 1
+          ? 'Draft cancelled. You can explain those days again.'
+          : 'Drafts cancelled. You can explain those days again.',
+      );
+      onSuccess();
+    } catch (error) {
+      // Stale UI may still list a draft that was already cancelled elsewhere.
+      onSuccess();
+      notifyApiError(error, 'Failed to cancel draft', messageApi);
+    }
+  }
+
+  const busy =
+    createMutation.isPending ||
+    submitMutation.isPending ||
+    cancelMutation.isPending;
   const monthName = new Date(year, month - 1, 1).toLocaleString('en', {
     month: 'long',
   });
@@ -498,6 +551,25 @@ export default function FieldMovementForm({
             Select the flagged days you want to explain.
           </Typography.Paragraph>
 
+          {orphanDraftIds.length > 0 ? (
+            <div className="rounded-lg border border-[#f59e0b] bg-[#fffbeb] px-3 py-2 text-sm text-[#92400e]">
+              <p className="m-0 mb-2">
+                An unsubmitted draft is locking some days, so it will not appear
+                under Approvals. Cancel it to unlock and submit again.
+              </p>
+              <Button
+                size="small"
+                danger
+                loading={cancelMutation.isPending}
+                onClick={() => {
+                  void handleCancelOrphanDrafts();
+                }}
+              >
+                Cancel draft & unlock days
+              </Button>
+            </div>
+          ) : null}
+
           {selectableDays.length > 0 ? (
             <Checkbox
               indeterminate={someSelected}
@@ -510,7 +582,9 @@ export default function FieldMovementForm({
             </Checkbox>
           ) : (
             <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2 text-sm text-[#64748b]">
-              All flagged days already have a pending explanation.
+              {orphanDraftIds.length > 0
+                ? 'All flagged days are locked by an unsubmitted draft.'
+                : 'All flagged days already have a pending explanation.'}
             </div>
           )}
 
@@ -537,12 +611,20 @@ export default function FieldMovementForm({
                   {formatFlaggedDate(day.date)} — {FLAG_LABELS[day.flag]}
                 </div>
                 {day.alreadySubmitted && day.submittedLog ? (
-                  <div className="mt-1 text-xs text-[#1d9e75]">
-                    Already submitted: {day.submittedLog.requestNumber}
-                    {day.submittedLog.pendingApproverName
-                      ? ` · waiting on ${day.submittedLog.pendingApproverName}`
-                      : ''}{' '}
-                    ✓
+                  <div
+                    className={`mt-1 text-xs ${
+                      day.submittedLog.status === 'DRAFT'
+                        ? 'text-[#b45309]'
+                        : 'text-[#1d9e75]'
+                    }`}
+                  >
+                    {day.submittedLog.status === 'DRAFT'
+                      ? `Unsubmitted draft ${day.submittedLog.requestNumber} — not in Approvals yet`
+                      : `Already submitted: ${day.submittedLog.requestNumber}${
+                          day.submittedLog.pendingApproverName
+                            ? ` · waiting on ${day.submittedLog.pendingApproverName}`
+                            : ''
+                        } ✓`}
                   </div>
                 ) : null}
               </div>

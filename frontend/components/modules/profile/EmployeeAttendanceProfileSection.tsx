@@ -482,7 +482,10 @@ export default function EmployeeAttendanceProfileSection({
               <Button
                 type="primary"
                 size="small"
-                onClick={() => setShowFieldMovementForm(true)}
+                onClick={() => {
+                  setShowFieldMovementForm(true);
+                  void flaggedQuery.refetch();
+                }}
               >
                 Submit Explanation
               </Button>

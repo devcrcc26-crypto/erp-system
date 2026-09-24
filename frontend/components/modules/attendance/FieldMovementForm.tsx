@@ -28,6 +28,7 @@ import type {
   FlaggedDay,
 } from '@/lib/api/attendance.types';
 import {
+  useCancelFieldMovementLog,
   useCreateFieldMovementLog,
   useSubmitFieldMovementLog,
 } from '@/lib/query/attendance';
@@ -134,6 +135,7 @@ type DayEntry = {
   availableReasons: FieldMovementReason[];
   alreadySubmitted: boolean;
   submittedLog: {
+    id: string;
     requestNumber: string;
     status: string;
     approvalRequestId: string | null;
@@ -200,6 +202,7 @@ function toDayEntry(day: FlaggedDay): DayEntry {
     alreadySubmitted: day.alreadySubmitted,
     submittedLog: day.submittedLog
       ? {
+          id: day.submittedLog.id,
           requestNumber: day.submittedLog.requestNumber,
           status: day.submittedLog.status,
           approvalRequestId: day.submittedLog.approvalRequestId,
@@ -258,6 +261,16 @@ function dayNeedsAttention(day: DayEntry): boolean {
   return !dayIsFullyExplained(day);
 }
 
+function blockingLogLabel(log: NonNullable<DayEntry['submittedLog']>): string {
+  if (log.status === 'DRAFT') {
+    return `${log.requestNumber} — unsubmitted draft (not in Approvals yet)`;
+  }
+  if (log.pendingApproverName) {
+    return `${log.requestNumber} — waiting on ${log.pendingApproverName}`;
+  }
+  return `${log.requestNumber} — ${log.status}`;
+}
+
 /**
  * Full-page New Request form for Field Movement / Early Departure Log.
  */
@@ -266,6 +279,7 @@ export default function FieldMovementForm(): React.ReactNode {
   const messageApi = useAppMessage();
   const createMutation = useCreateFieldMovementLog();
   const submitMutation = useSubmitFieldMovementLog();
+  const cancelMutation = useCancelFieldMovementLog();
   const defaults = previousMonthDefault();
 
   const [month, setMonth] = useState(defaults.month);
@@ -297,6 +311,15 @@ export default function FieldMovementForm(): React.ReactNode {
     () => dayEntries.filter((day) => !day.alreadySubmitted),
     [dayEntries],
   );
+  const orphanDraftIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const day of dayEntries) {
+      if (day.submittedLog?.status === 'DRAFT') {
+        ids.add(day.submittedLog.id);
+      }
+    }
+    return [...ids];
+  }, [dayEntries]);
   const selectedDays = useMemo(
     () => dayEntries.filter((day) => day.selected),
     [dayEntries],
@@ -590,7 +613,9 @@ export default function FieldMovementForm(): React.ReactNode {
     }
     if (fetchState === 'all-explained') {
       setStepOneError(
-        'These days already have a pending or approved explanation. Open Approvals → My Requests to track it.',
+        orphanDraftIds.length > 0
+          ? 'These days are locked by an unsubmitted draft. Cancel the draft below to explain them again.'
+          : 'These days already have a pending or approved explanation. Open Approvals → My Requests to track it.',
       );
       return false;
     }
@@ -725,8 +750,10 @@ export default function FieldMovementForm(): React.ReactNode {
       return;
     }
     setSubmitting(true);
+    let createdId: string | null = null;
     try {
       const created = await createMutation.mutateAsync(buildDto());
+      createdId = created.id;
       const submitted = await submitMutation.mutateAsync(created.id);
       setSubmittedLog({
         id: submitted.id,
@@ -734,9 +761,35 @@ export default function FieldMovementForm(): React.ReactNode {
       });
       messageApi.success('Field movement log submitted.');
     } catch (error) {
+      if (createdId) {
+        try {
+          await cancelMutation.mutateAsync(createdId);
+        } catch {
+          // Keep original submit error; draft may still need manual cancel.
+        }
+      }
       notifyApiError(error, 'Failed to submit field movement log', messageApi);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleCancelOrphanDrafts(): Promise<void> {
+    if (orphanDraftIds.length === 0) {
+      return;
+    }
+    try {
+      for (const id of orphanDraftIds) {
+        await cancelMutation.mutateAsync(id);
+      }
+      messageApi.success(
+        orphanDraftIds.length === 1
+          ? 'Draft cancelled. You can explain those days again.'
+          : 'Drafts cancelled. You can explain those days again.',
+      );
+      await handleCheckFlaggedDays();
+    } catch (error) {
+      notifyApiError(error, 'Failed to cancel draft', messageApi);
     }
   }
 
@@ -892,22 +945,46 @@ export default function FieldMovementForm(): React.ReactNode {
               <div className="erp-notice erp-notice--info mt-4">
                 <div className="erp-notice-body">
                   <p className="erp-notice-title m-0">
-                    All flagged days for {periodLabel} already have an
-                    explanation in progress.
+                    {orphanDraftIds.length > 0
+                      ? `Unsubmitted draft locking ${periodLabel}`
+                      : `All flagged days for ${periodLabel} already have an explanation in progress.`}
                   </p>
                   <p className="erp-notice-description m-0 mt-1">
-                    {pendingRequestNumbers.join(', ') || 'Your request'} is
-                    awaiting approval
-                    {pendingApprovalMeta?.pendingApproverName
-                      ? ` from ${pendingApprovalMeta.pendingApproverName}`
-                      : ''}
-                    {pendingApprovalMeta?.pendingTierLabel
-                      ? ` (${pendingApprovalMeta.pendingTierLabel})`
-                      : ''}
-                    . You cannot select these days again until that request is
-                    rejected or cancelled.
+                    {orphanDraftIds.length > 0 ? (
+                      <>
+                        {pendingRequestNumbers.join(', ') || 'A draft'} was
+                        created but never sent for approval, so it will not
+                        appear under Approvals. Cancel the draft to unlock these
+                        days and submit again.
+                      </>
+                    ) : (
+                      <>
+                        {pendingRequestNumbers.join(', ') || 'Your request'} is
+                        awaiting approval
+                        {pendingApprovalMeta?.pendingApproverName
+                          ? ` from ${pendingApprovalMeta.pendingApproverName}`
+                          : ''}
+                        {pendingApprovalMeta?.pendingTierLabel
+                          ? ` (${pendingApprovalMeta.pendingTierLabel})`
+                          : ''}
+                        . You cannot select these days again until that request
+                        is rejected or cancelled.
+                      </>
+                    )}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
+                    {orphanDraftIds.length > 0 ? (
+                      <Button
+                        type="primary"
+                        danger
+                        loading={cancelMutation.isPending}
+                        onClick={() => {
+                          void handleCancelOrphanDrafts();
+                        }}
+                      >
+                        Cancel draft & unlock days
+                      </Button>
+                    ) : null}
                     {pendingApprovalMeta?.approvalRequestId ? (
                       <Button
                         type="primary"
@@ -920,13 +997,15 @@ export default function FieldMovementForm(): React.ReactNode {
                         Open request
                       </Button>
                     ) : null}
-                    <Button
-                      onClick={() =>
-                        router.push('/approvals?tab=my-requests')
-                      }
-                    >
-                      View in My Requests
-                    </Button>
+                    {orphanDraftIds.length === 0 ? (
+                      <Button
+                        onClick={() =>
+                          router.push('/approvals?tab=my-requests')
+                        }
+                      >
+                        View in My Requests
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -947,19 +1026,36 @@ export default function FieldMovementForm(): React.ReactNode {
                   Nothing left to explain for {periodLabel}.
                 </p>
                 <p className="erp-notice-description m-0 mt-1">
-                  Every flagged day is already covered by a pending request
-                  {pendingRequestNumbers.length > 0
-                    ? ` (${pendingRequestNumbers.join(', ')})`
-                    : ''}
-                  . Track it under Approvals → My Requests.
+                  {orphanDraftIds.length > 0
+                    ? `Every flagged day is locked by an unsubmitted draft (${pendingRequestNumbers.join(', ')}). Cancel it to unlock and submit again — drafts do not appear in Approvals.`
+                    : `Every flagged day is already covered by a pending request${
+                        pendingRequestNumbers.length > 0
+                          ? ` (${pendingRequestNumbers.join(', ')})`
+                          : ''
+                      }. Track it under Approvals → My Requests.`}
                 </p>
-                <div className="mt-3">
-                  <Button
-                    type="primary"
-                    onClick={() => router.push('/approvals?tab=my-requests')}
-                  >
-                    View in My Requests
-                  </Button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {orphanDraftIds.length > 0 ? (
+                    <Button
+                      type="primary"
+                      danger
+                      loading={cancelMutation.isPending}
+                      onClick={() => {
+                        void handleCancelOrphanDrafts();
+                      }}
+                    >
+                      Cancel draft & unlock days
+                    </Button>
+                  ) : (
+                    <Button
+                      type="primary"
+                      onClick={() =>
+                        router.push('/approvals?tab=my-requests')
+                      }
+                    >
+                      View in My Requests
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1245,8 +1341,12 @@ export default function FieldMovementForm(): React.ReactNode {
                       {FLAG_LABELS[day.flag]}
                     </Tag>
                     {day.alreadySubmitted && day.submittedLog ? (
-                      <Tag color="green">
-                        {day.submittedLog.requestNumber} ✅ Already explained
+                      <Tag
+                        color={
+                          day.submittedLog.status === 'DRAFT' ? 'orange' : 'green'
+                        }
+                      >
+                        {blockingLogLabel(day.submittedLog)}
                       </Tag>
                     ) : null}
                     {day.selectedReason && !isExpanded ? (

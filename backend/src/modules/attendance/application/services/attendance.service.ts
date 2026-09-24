@@ -2272,7 +2272,12 @@ export class AttendanceService
       'hr',
       'view',
     );
-    if (!isHr && log.employeeId !== userId) {
+    const isOwner = log.employeeId === userId;
+    const isApprover =
+      log.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
+      false;
+
+    if (!isHr && !isOwner && !isApprover) {
       throw new ForbiddenException('You do not have access to this log');
     }
 
@@ -2369,6 +2374,9 @@ export class AttendanceService
     }
     if (log.employeeId !== userId) {
       throw new ForbiddenException('Only the owner can cancel this log');
+    }
+    if (log.status === FieldMovementStatus.CANCELLED) {
+      return this.getFieldMovementLog(logId, companyId, userId);
     }
     if (
       log.status !== FieldMovementStatus.DRAFT &&
