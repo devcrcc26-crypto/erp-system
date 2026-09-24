@@ -85,6 +85,7 @@ enum FolderContextType {
   EMPLOYEE_CONTRACT
   EMPLOYEE_PROFILE
   EXIT_PERMIT
+  FIELD_MOVEMENT_LOG
 }
 
 enum Nationality {
@@ -300,6 +301,8 @@ model Company {
   employeeScheduleAssignments EmployeeScheduleAssignment[]
   attendanceImportBatches  AttendanceImportBatch[]
   attendanceRecords        AttendanceRecord[]
+  attendanceMonthlyApprovals AttendanceMonthlyApproval[]
+  fieldMovementLogs          FieldMovementLog[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -784,6 +787,12 @@ model User {
   photoDocument                   Document?                 @relation("UserPhotoDocument", fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   attendanceRecords               AttendanceRecord[]        @relation("AttendanceEmployee")
   attendanceImportBatches         AttendanceImportBatch[]   @relation("AttendanceImporter")
+  fieldMovementLogs               FieldMovementLog[]        @relation("FieldMovementEmployee")
+  fieldMovementLogsCreated        FieldMovementLog[]        @relation("FieldMovementCreator")
+  attendanceMonthlyReviews        AttendanceMonthlyApproval[] @relation("AttendanceReviewer")
+  attendanceMonthlyApprovals      AttendanceMonthlyApproval[] @relation("AttendanceApprover")
+  attendanceMonthlyUnlocks        AttendanceMonthlyApproval[] @relation("AttendanceUnlocker")
+  attendanceDailyCorrections      AttendanceDailyLogCorrection[] @relation("AttendanceCorrector")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([leavePolicyId], map: "idx_user_leave_policy")
@@ -3522,7 +3531,7 @@ model ApprovalRequest {
   officialSeal            OfficialSeal?
   projectSeal            ProjectSeal?
   exitPermit             ExitPermit?
-
+  fieldMovementLog       FieldMovementLog?
 
   @@index([categoryId], map: "idx_approval_request_category")
   @@index([companyId], map: "idx_approval_request_company")
@@ -3924,6 +3933,37 @@ model OvertimeEntryDocument {
 
 // ─── Attendance ──────────────────────────────────────────────────────────────
 
+enum AttendanceMonthStatus {
+  PENDING_REVIEW
+  REVIEWED
+  APPROVED
+  UNLOCKED
+}
+
+enum FieldMovementReason {
+  FIELD_VISIT
+  EARLY_LEAVE
+  FORGOT_CLOCK_IN
+  FORGOT_CLOCK_OUT
+}
+
+enum FieldMovementStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
+enum AttendanceDayFlag {
+  MISSING_CLOCK_IN
+  MISSING_CLOCK_OUT
+  EARLY_LEAVE
+  NONE
+}
+
 model AttendanceImportBatch {
   id            String   @id @default(uuid())
   companyId     String   @map("company_id")
@@ -3937,9 +3977,10 @@ model AttendanceImportBatch {
   rejectedRows  Int      @map("rejected_rows")
   importedAt    DateTime @default(now()) @map("imported_at")
 
-  company   Company            @relation(fields: [companyId], references: [id])
-  importer  User               @relation("AttendanceImporter", fields: [importedBy], references: [id])
-  records   AttendanceRecord[]
+  company         Company                     @relation(fields: [companyId], references: [id])
+  importer        User                        @relation("AttendanceImporter", fields: [importedBy], references: [id])
+  records         AttendanceRecord[]
+  monthlyApproval AttendanceMonthlyApproval?
 
   @@unique([companyId, month, year])
   @@index([companyId], map: "idx_attendance_import_batch_company")
@@ -3963,6 +4004,8 @@ model AttendanceRecord {
   missingClockInDays    Int      @default(0) @map("missing_clock_in_days")
   missingClockOutDays   Int      @default(0) @map("missing_clock_out_days")
   payableHours          Decimal  @map("payable_hours") @db.Decimal(6, 2)
+  flaggedDays           Int      @default(0) @map("flagged_days")
+  resolvedDays          Int      @default(0) @map("resolved_days")
   importedAt            DateTime @default(now()) @map("imported_at")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
@@ -3980,31 +4023,143 @@ model AttendanceRecord {
 }
 
 model AttendanceDailyLog {
-  id                 String   @id @default(uuid())
-  attendanceRecordId String   @map("attendance_record_id")
-  date               DateTime @db.Date
-  clockInMachine     String?  @map("clock_in_machine")
-  clockOutMachine    String?  @map("clock_out_machine")
-  clockInLocal       String?  @map("clock_in_local")
-  clockOutLocal      String?  @map("clock_out_local")
-  isHoliday          Boolean  @default(false) @map("is_holiday")
-  holidayName        String?  @map("holiday_name")
-  isWeekend          Boolean  @default(false) @map("is_weekend")
-  isHalfDay          Boolean  @default(false) @map("is_half_day")
-  wasPresent         Boolean  @default(false) @map("was_present")
-  scheduledHours     Decimal  @default(0) @map("scheduled_hours") @db.Decimal(4, 1)
-  recordedHours      Decimal? @map("recorded_hours") @db.Decimal(5, 2)
-  isLate             Boolean  @default(false) @map("is_late")
-  lateMinutes        Int      @default(0) @map("late_minutes")
-  missingClockIn     Boolean  @default(false) @map("missing_clock_in")
-  missingClockOut    Boolean  @default(false) @map("missing_clock_out")
+  id                       String            @id @default(uuid())
+  attendanceRecordId       String            @map("attendance_record_id")
+  date                     DateTime          @db.Date
+  clockInMachine           String?           @map("clock_in_machine")
+  clockOutMachine          String?           @map("clock_out_machine")
+  clockInLocal             String?           @map("clock_in_local")
+  clockOutLocal            String?           @map("clock_out_local")
+  isHoliday                Boolean           @default(false) @map("is_holiday")
+  holidayName              String?           @map("holiday_name")
+  isWeekend                Boolean           @default(false) @map("is_weekend")
+  isHalfDay                Boolean           @default(false) @map("is_half_day")
+  wasPresent               Boolean           @default(false) @map("was_present")
+  scheduledHours           Decimal           @default(0) @map("scheduled_hours") @db.Decimal(4, 1)
+  recordedHours            Decimal?          @map("recorded_hours") @db.Decimal(5, 2)
+  isLate                   Boolean           @default(false) @map("is_late")
+  lateMinutes              Int               @default(0) @map("late_minutes")
+  missingClockIn           Boolean           @default(false) @map("missing_clock_in")
+  missingClockOut          Boolean           @default(false) @map("missing_clock_out")
+  flag                     AttendanceDayFlag @default(NONE)
+  flagResolved             Boolean           @default(false) @map("flag_resolved")
+  flagResolvedAt           DateTime?         @map("flag_resolved_at")
+  fieldMovementEntryId     String?           @map("field_movement_entry_id")
+  correctedClockInLocal    String?           @map("corrected_clock_in_local")
+  correctedClockOutLocal   String?           @map("corrected_clock_out_local")
+  isLastExportDay          Boolean           @default(false) @map("is_last_export_day")
 
-  record AttendanceRecord @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
+  record               AttendanceRecord              @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
+  corrections          AttendanceDailyLogCorrection[]
+  fieldMovementEntries FieldMovementEntry[]
 
   @@unique([attendanceRecordId, date], map: "uq_attendance_daily_log_record_date")
   @@index([attendanceRecordId], map: "idx_attendance_daily_log_record")
   @@index([date], map: "idx_attendance_daily_log_date")
   @@map("attendance_daily_log")
+}
+
+model AttendanceMonthlyApproval {
+  id                  String                @id @default(uuid())
+  companyId           String                @map("company_id")
+  importBatchId       String                @unique @map("import_batch_id")
+  month               Int
+  year                Int
+  status              AttendanceMonthStatus @default(PENDING_REVIEW)
+  reviewedAt          DateTime?             @map("reviewed_at")
+  reviewedBy          String?               @map("reviewed_by")
+  approvedAt          DateTime?             @map("approved_at")
+  approvedBy          String?               @map("approved_by")
+  unlockedAt          DateTime?             @map("unlocked_at")
+  unlockedBy          String?               @map("unlocked_by")
+  unlockReason        String?               @map("unlock_reason")
+  notificationsSentAt DateTime?             @map("notifications_sent_at")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  company     Company               @relation(fields: [companyId], references: [id])
+  importBatch AttendanceImportBatch @relation(fields: [importBatchId], references: [id])
+  reviewer    User?                 @relation("AttendanceReviewer", fields: [reviewedBy], references: [id])
+  approver    User?                 @relation("AttendanceApprover", fields: [approvedBy], references: [id])
+  unlocker    User?                 @relation("AttendanceUnlocker", fields: [unlockedBy], references: [id])
+
+  @@unique([companyId, month, year])
+  @@index([companyId], map: "idx_attendance_monthly_approval_company")
+  @@index([status], map: "idx_attendance_monthly_approval_status")
+  @@map("attendance_monthly_approval")
+}
+
+model FieldMovementLog {
+  id                String              @id @default(uuid())
+  companyId         String              @map("company_id")
+  requestNumber     String              @map("request_number")
+  employeeId        String              @map("employee_id")
+  month             Int
+  year              Int
+  status            FieldMovementStatus @default(DRAFT)
+  notes             String?
+  approvalRequestId String?             @unique @map("approval_request_id")
+  submittedAt       DateTime?           @map("submitted_at")
+  completedAt       DateTime?           @map("completed_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  createdBy         String              @map("created_by")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  updatedBy         String              @map("updated_by")
+  deletedAt         DateTime?           @map("deleted_at")
+  deletedBy         String?             @map("deleted_by")
+
+  company         Company              @relation(fields: [companyId], references: [id])
+  employee        User                 @relation("FieldMovementEmployee", fields: [employeeId], references: [id])
+  creator         User                 @relation("FieldMovementCreator", fields: [createdBy], references: [id])
+  approvalRequest ApprovalRequest?     @relation(fields: [approvalRequestId], references: [id])
+  entries         FieldMovementEntry[]
+
+  @@unique([companyId, requestNumber])
+  @@index([companyId], map: "idx_field_movement_log_company")
+  @@index([employeeId], map: "idx_field_movement_log_employee")
+  @@index([status], map: "idx_field_movement_log_status")
+  @@index([companyId, month, year], map: "idx_field_movement_log_period")
+  @@index([companyId, deletedAt], map: "idx_field_movement_log_deleted")
+  @@map("field_movement_log")
+}
+
+model FieldMovementEntry {
+  id            String              @id @default(uuid())
+  logId         String              @map("log_id")
+  dailyLogId    String              @map("daily_log_id")
+  date          DateTime            @db.Date
+  reason        FieldMovementReason
+  destination   String?
+  departureTime String?             @map("departure_time")
+  returnTime    String?             @map("return_time")
+  notes         String?
+  createdAt     DateTime            @default(now()) @map("created_at")
+
+  log      FieldMovementLog   @relation(fields: [logId], references: [id], onDelete: Cascade)
+  dailyLog AttendanceDailyLog @relation(fields: [dailyLogId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([logId, dailyLogId])
+  @@index([logId], map: "idx_field_movement_entry_log")
+  @@index([dailyLogId], map: "idx_field_movement_entry_daily_log")
+  @@map("field_movement_entry")
+}
+
+model AttendanceDailyLogCorrection {
+  id                     String   @id @default(uuid())
+  dailyLogId             String   @map("daily_log_id")
+  correctedBy            String   @map("corrected_by")
+  originalClockInLocal   String?  @map("original_clock_in_local")
+  originalClockOutLocal  String?  @map("original_clock_out_local")
+  correctedClockInLocal  String?  @map("corrected_clock_in_local")
+  correctedClockOutLocal String?  @map("corrected_clock_out_local")
+  correctionNote         String   @map("correction_note")
+  correctedAt            DateTime @default(now()) @map("corrected_at")
+
+  dailyLog  AttendanceDailyLog @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  corrector User               @relation("AttendanceCorrector", fields: [correctedBy], references: [id])
+
+  @@index([dailyLogId], map: "idx_attendance_daily_log_correction_daily_log")
+  @@map("attendance_daily_log_correction")
 }
 
 // ─── Flight Applications ─────────────────────────────────────────────────────
