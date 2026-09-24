@@ -16,6 +16,10 @@ import {
   useMyAttendance,
   useMyFlaggedDays,
 } from '@/lib/query/attendance';
+import {
+  attendanceFlagTagColor,
+  formatAttendanceDayFlag,
+} from '@/lib/utils/attendance-flag-display';
 
 type AttendanceYearRecord = AttendanceRecord & { monthName: string };
 
@@ -245,6 +249,16 @@ function DailyLogsTable({
               minutes: row.lateMinutes,
             })
           : t('pages.hr.attendance.daily.no'),
+    },
+    {
+      title: t('pages.hr.attendance.review.columns.flag'),
+      key: 'flag',
+      width: 220,
+      render: (_: unknown, row: AttendanceDailyLog) => (
+        <Tag color={attendanceFlagTagColor(row)}>
+          {formatAttendanceDayFlag(row)}
+        </Tag>
+      ),
     },
   ];
 

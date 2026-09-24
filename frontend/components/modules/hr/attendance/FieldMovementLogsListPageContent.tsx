@@ -3,7 +3,10 @@
 import { useMemo, useState } from 'react';
 import { Button, InputNumber, Select, Spin } from 'antd';
 import {
+  CheckCircleOutlined,
   ClockCircleOutlined,
+  CloseCircleOutlined,
+  InboxOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
@@ -22,7 +25,7 @@ import type {
   FieldMovementStatus,
 } from '@/lib/api/attendance.types';
 import type { PaginationMeta } from '@/lib/api/types';
-import { useFieldMovementLogs } from '@/lib/query/attendance';
+import { useFieldMovementLogsAll } from '@/lib/query/attendance';
 import { useUsersDirectory } from '@/lib/query/users';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
@@ -37,10 +40,24 @@ const STATUS_OPTIONS: FieldMovementStatus[] = [
   'CANCELLED',
 ];
 
+const PENDING_STATUSES: FieldMovementStatus[] = [
+  'DRAFT',
+  'SUBMITTED',
+  'IN_REVIEW',
+  'RETURNED',
+];
+
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
   value: index + 1,
   label: new Date(2026, index, 1).toLocaleString('en', { month: 'long' }),
 }));
+
+const STAT_ACCENT = {
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
+  amber: { bg: '#FAEEDA', fg: '#BA7517' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+} as const;
 
 function statusVariant(status: FieldMovementStatus): StatusBadgeVariant {
   switch (status) {
@@ -67,6 +84,42 @@ function formatStatus(status: FieldMovementStatus): string {
     .join(' ');
 }
 
+function StatCard({
+  label,
+  value,
+  accent,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: keyof typeof STAT_ACCENT;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  const tint = STAT_ACCENT[accent];
+  return (
+    <button
+      type="button"
+      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
+      onClick={onClick}
+    >
+      <span
+        className="erp-users-stat-chip"
+        style={{ background: tint.bg, color: tint.fg }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 text-left">
+        <p className="erp-users-stat-label">{label}</p>
+        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
+
 /**
  * HR list of field movement / early departure log submissions.
  */
@@ -81,14 +134,14 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
   const [year, setYear] = useState<number>(now.getFullYear());
   const [status, setStatus] = useState<FieldMovementStatus | undefined>();
   const [employeeId, setEmployeeId] = useState<string | undefined>();
+  const [statMode, setStatMode] = useState<
+    'all' | 'pending' | 'approved' | 'rejected'
+  >('all');
 
-  const listQuery = useFieldMovementLogs(
+  const listQuery = useFieldMovementLogsAll(
     {
-      page: params.page,
-      limit: params.limit,
       month,
       year,
-      status,
       employeeId: canViewHr ? employeeId : undefined,
     },
     true,
@@ -99,17 +152,53 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
     { enabled: canViewHr },
   );
 
-  const rows = listQuery.data?.data ?? [];
-  const meta: PaginationMeta = {
-    total: listQuery.data?.total ?? 0,
-    page: listQuery.data?.page ?? params.page ?? 1,
-    limit: listQuery.data?.limit ?? params.limit ?? 20,
-    pages: Math.max(
-      1,
-      Math.ceil((listQuery.data?.total ?? 0) / (listQuery.data?.limit ?? 20)) ||
-        1,
-    ),
-  };
+  const allRows = listQuery.data ?? [];
+
+  const statusCounts = useMemo(
+    () => ({
+      all: allRows.length,
+      pending: allRows.filter((row) => PENDING_STATUSES.includes(row.status))
+        .length,
+      approved: allRows.filter((row) => row.status === 'APPROVED').length,
+      rejected: allRows.filter(
+        (row) => row.status === 'REJECTED' || row.status === 'CANCELLED',
+      ).length,
+    }),
+    [allRows],
+  );
+
+  const filtered = useMemo(() => {
+    let rows = allRows;
+    if (status) {
+      rows = rows.filter((row) => row.status === status);
+    } else if (statMode === 'pending') {
+      rows = rows.filter((row) => PENDING_STATUSES.includes(row.status));
+    } else if (statMode === 'approved') {
+      rows = rows.filter((row) => row.status === 'APPROVED');
+    } else if (statMode === 'rejected') {
+      rows = rows.filter(
+        (row) => row.status === 'REJECTED' || row.status === 'CANCELLED',
+      );
+    }
+    return rows;
+  }, [allRows, status, statMode]);
+
+  const meta: PaginationMeta = useMemo(() => {
+    const total = filtered.length;
+    const limit = params.limit ?? 20;
+    const page = params.page ?? 1;
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.max(1, Math.ceil(total / limit) || 1),
+    };
+  }, [filtered.length, params.limit, params.page]);
+
+  const rows = useMemo(() => {
+    const start = (meta.page - 1) * meta.limit;
+    return filtered.slice(start, start + meta.limit);
+  }, [filtered, meta.page, meta.limit]);
 
   const employeeOptions = useMemo(
     () =>
@@ -122,7 +211,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
 
   const columns: ColumnsType<FieldMovementLog> = [
     {
-      title: 'Request #',
+      title: 'Log #',
       dataIndex: 'requestNumber',
       key: 'requestNumber',
       width: 120,
@@ -133,11 +222,9 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
     {
       title: 'Employee',
       key: 'employee',
-      width: 200,
+      width: 220,
       render: (_: unknown, row: FieldMovementLog) =>
-        row.employee
-          ? formatUserName(row.employee)
-          : '—',
+        row.employee ? formatUserName(row.employee) : '—',
     },
     {
       title: 'Period',
@@ -145,7 +232,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
       width: 140,
       render: (_: unknown, row: FieldMovementLog) => {
         const name = new Date(row.year, row.month - 1, 1).toLocaleString('en', {
-          month: 'short',
+          month: 'long',
         });
         return `${name} ${row.year}`;
       },
@@ -167,14 +254,14 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
       ),
     },
     {
-      title: 'Current tier',
+      title: 'Current Tier',
       key: 'currentTierLabel',
       width: 160,
       render: (_: unknown, row: FieldMovementLog) =>
         row.currentTierLabel ?? '—',
     },
     {
-      title: 'Submitted',
+      title: 'Submitted At',
       key: 'submittedAt',
       width: 140,
       render: (_: unknown, row: FieldMovementLog) =>
@@ -182,15 +269,29 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
           ? new Date(row.submittedAt).toLocaleDateString('en-GB')
           : '—',
     },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 90,
+      render: (_: unknown, row: FieldMovementLog) => (
+        <Button
+          type="link"
+          size="small"
+          onClick={(event) => {
+            event.stopPropagation();
+            router.push(`/hr/field-movement-logs/${row.id}`);
+          }}
+        >
+          View
+        </Button>
+      ),
+    },
   ];
 
   if (!canViewHr) {
     return (
       <div className="erp-pro-list-page erp-users-page">
-        <ErpNotice
-          tone="error"
-          title={t('pages.hr.accessDenied')}
-        />
+        <ErpNotice tone="error" title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
@@ -212,6 +313,57 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
         >
           Refresh
         </Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label="Total Submissions"
+          value={statusCounts.all}
+          accent="teal"
+          icon={<InboxOutlined />}
+          active={statMode === 'all' && !status}
+          onClick={() => {
+            setStatMode('all');
+            setStatus(undefined);
+            resetPage();
+          }}
+        />
+        <StatCard
+          label="Pending Approval"
+          value={statusCounts.pending}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+          active={statMode === 'pending' && !status}
+          onClick={() => {
+            setStatMode('pending');
+            setStatus(undefined);
+            resetPage();
+          }}
+        />
+        <StatCard
+          label="Approved"
+          value={statusCounts.approved}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statMode === 'approved' && !status}
+          onClick={() => {
+            setStatMode('approved');
+            setStatus(undefined);
+            resetPage();
+          }}
+        />
+        <StatCard
+          label="Rejected"
+          value={statusCounts.rejected}
+          accent="red"
+          icon={<CloseCircleOutlined />}
+          active={statMode === 'rejected' && !status}
+          onClick={() => {
+            setStatMode('rejected');
+            setStatus(undefined);
+            resetPage();
+          }}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -248,6 +400,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
           }))}
           onChange={(value) => {
             setStatus(value);
+            setStatMode('all');
             resetPage();
           }}
         />
@@ -297,12 +450,8 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
             ),
           }}
           onRow={(row) => ({
-            onClick: () => {
-              if (row.approvalRequestId) {
-                router.push(`/approvals/${row.approvalRequestId}`);
-              }
-            },
-            className: row.approvalRequestId ? 'cursor-pointer' : undefined,
+            onClick: () => router.push(`/hr/field-movement-logs/${row.id}`),
+            className: 'cursor-pointer',
           })}
         />
       )}

@@ -20,12 +20,15 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   AttendanceDailyLog,
-  AttendanceDayFlag,
 } from '@/lib/api/attendance.types';
 import {
   useCorrectAttendanceDailyLog,
   useEmployeeAttendanceDailyLogs,
 } from '@/lib/query/attendance';
+import {
+  attendanceFlagTagColor,
+  formatAttendanceDayFlag,
+} from '@/lib/utils/attendance-flag-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 export interface AttendanceDailyLogsDrawerProps {
@@ -63,18 +66,6 @@ function statusColor(
       return 'purple';
     case 'WEEKEND':
       return 'default';
-    default:
-      return 'default';
-  }
-}
-
-function flagColor(flag: AttendanceDayFlag): string {
-  switch (flag) {
-    case 'MISSING_CLOCK_IN':
-    case 'MISSING_CLOCK_OUT':
-      return 'orange';
-    case 'EARLY_LEAVE':
-      return 'gold';
     default:
       return 'default';
   }
@@ -277,30 +268,12 @@ export default function AttendanceDailyLogsDrawer({
       {
         title: t('pages.hr.attendance.review.columns.flag'),
         key: 'flag',
-        width: 150,
-        render: (_: unknown, row: AttendanceDailyLog) => {
-          const flag = row.flag ?? 'NONE';
-          if (flag === 'NONE') {
-            return <Tag>{t('pages.hr.attendance.review.flags.NONE')}</Tag>;
-          }
-          return (
-            <Tag color={flagColor(flag)}>
-              {t(`pages.hr.attendance.review.flags.${flag}`)}
-            </Tag>
-          );
-        },
-      },
-      {
-        title: t('pages.hr.attendance.review.columns.flagResolved'),
-        key: 'flagResolved',
-        width: 100,
-        align: 'center',
-        render: (_: unknown, row: AttendanceDailyLog) => {
-          if ((row.flag ?? 'NONE') === 'NONE') {
-            return <span className="erp-users-cell-sub">—</span>;
-          }
-          return row.flagResolved ? '✅' : '⏳';
-        },
+        width: 220,
+        render: (_: unknown, row: AttendanceDailyLog) => (
+          <Tag color={attendanceFlagTagColor(row)}>
+            {formatAttendanceDayFlag(row)}
+          </Tag>
+        ),
       },
       {
         title: t('common.actions'),

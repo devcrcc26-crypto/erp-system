@@ -105,6 +105,7 @@ const REQUEST_DETAIL_INCLUDE = {
   officialSeal: { select: { id: true } },
   projectSeal: { select: { id: true } },
   exitPermit: { select: { id: true } },
+  fieldMovementLog: { select: { id: true } },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -355,6 +356,7 @@ export class ApprovalsService {
       request.officialSeal?.id ??
       request.projectSeal?.id ??
       request.exitPermit?.id ??
+      request.fieldMovementLog?.id ??
       null; 
 
     return {
@@ -375,6 +377,7 @@ export class ApprovalsService {
       officialSeal: undefined,
       projectSeal: undefined,
       exitPermit: undefined,
+      fieldMovementLog: undefined,
     };
   }
 

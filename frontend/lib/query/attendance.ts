@@ -136,6 +136,7 @@ export function useMyAttendance(year: number, enabled = true) {
     queryFn: () => getMyAttendance(year),
     enabled,
     retry: false,
+    refetchOnMount: 'always',
   });
 }
 
@@ -296,6 +297,7 @@ export function useMyFlaggedDays(
     queryFn: () => getMyFlaggedDays(month, year),
     enabled: enabled && month >= 1 && month <= 12 && year >= 2020,
     retry: false,
+    refetchOnMount: 'always',
   });
 }
 
@@ -309,6 +311,47 @@ export function useFieldMovementLogs(
   return useQuery({
     queryKey: attendanceKeys.fieldMovementList(params),
     queryFn: () => listFieldMovementLogs(params),
+    enabled,
+    retry: false,
+  });
+}
+
+const FIELD_MOVEMENT_FETCH_PAGE_SIZE = 100;
+
+/**
+ * All field movement logs for current filters (client-side stats/paging).
+ */
+export function useFieldMovementLogsAll(
+  params: Omit<ListFieldMovementLogsParams, 'page' | 'limit'>,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...attendanceKeys.fieldMovementLists(), 'all', params] as const,
+    queryFn: async () => {
+      const first = await listFieldMovementLogs({
+        ...params,
+        page: 1,
+        limit: FIELD_MOVEMENT_FETCH_PAGE_SIZE,
+      });
+      const all = [...first.data];
+      const pages = Math.max(1, Math.ceil(first.total / FIELD_MOVEMENT_FETCH_PAGE_SIZE) || 1);
+      if (pages <= 1) {
+        return all;
+      }
+      const rest = await Promise.all(
+        Array.from({ length: pages - 1 }, (_, index) =>
+          listFieldMovementLogs({
+            ...params,
+            page: index + 2,
+            limit: FIELD_MOVEMENT_FETCH_PAGE_SIZE,
+          }),
+        ),
+      );
+      for (const page of rest) {
+        all.push(...page.data);
+      }
+      return all;
+    },
     enabled,
     retry: false,
   });

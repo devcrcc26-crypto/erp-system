@@ -5,11 +5,16 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import {
+  AttendanceDailyLog,
   AttendanceDayFlag,
   AttendanceImportBatch,
   AttendanceMonthlyApproval,
+  FieldMovementEntry,
+  FieldMovementLog,
   FieldMovementReason,
   FieldMovementStatus,
   Prisma,
@@ -22,6 +27,11 @@ import {
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import {
+  ApprovalDecisionListener,
+  ApprovalFinalDecision,
+} from '../../../approvals/application/ports/approval-decision.listener';
+import { ApprovalDecisionRegistry } from '../../../approvals/application/services/approval-decision-registry.service';
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
@@ -239,7 +249,9 @@ function reviveMatchResultDates(rows: AttendanceMatchResult[]): void {
  * recalculated against company work schedules and public holidays.
  */
 @Injectable()
-export class AttendanceService {
+export class AttendanceService
+  implements ApprovalDecisionListener, OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(AttendanceService.name);
 
   constructor(
@@ -251,7 +263,16 @@ export class AttendanceService {
     private readonly notificationService: NotificationService,
     private readonly approvalsService: ApprovalsService,
     private readonly hrApprovalChain: HrApprovalChainService,
+    private readonly decisionRegistry: ApprovalDecisionRegistry,
   ) {}
+
+  onModuleInit(): void {
+    this.decisionRegistry.register(this);
+  }
+
+  onModuleDestroy(): void {
+    this.decisionRegistry.unregister(this);
+  }
 
   /**
    * Parses an uploaded Deli export, matches employees, and caches the preview
@@ -1499,9 +1520,14 @@ export class AttendanceService {
             fieldMovementEntries: {
               include: {
                 log: {
-                  select: { id: true, status: true, requestNumber: true },
+                  select: {
+                    id: true,
+                    status: true,
+                    requestNumber: true,
+                  },
                 },
               },
+              orderBy: { createdAt: 'desc' },
             },
           },
         },
@@ -2071,10 +2097,13 @@ export class AttendanceService {
               select: {
                 date: true,
                 flag: true,
+                flagResolved: true,
                 clockInLocal: true,
                 clockOutLocal: true,
                 correctedClockInLocal: true,
                 correctedClockOutLocal: true,
+                isEarlyLeave: true,
+                earlyLeaveMinutes: true,
               },
             },
           },
@@ -2240,5 +2269,295 @@ export class AttendanceService {
     `;
     const seq = Number(result[0]?.nextval ?? 1);
     return `FM-${String(seq).padStart(4, '0')}`;
+  }
+
+  /**
+   * Called by the approval engine when a field movement request is finalized.
+   */
+  async onApprovalDecision(
+    approvalRequestId: string,
+    decision: ApprovalFinalDecision,
+  ): Promise<void> {
+    const log = await this.prisma.fieldMovementLog.findFirst({
+      where: { approvalRequestId, deletedAt: null },
+      include: {
+        entries: {
+          include: {
+            dailyLog: true,
+          },
+        },
+      },
+    });
+
+    if (!log) {
+      return;
+    }
+
+    if (
+      log.status === FieldMovementStatus.APPROVED ||
+      log.status === FieldMovementStatus.REJECTED ||
+      log.status === FieldMovementStatus.CANCELLED
+    ) {
+      return;
+    }
+
+    const now = new Date();
+
+    if (decision === 'APPROVED') {
+      await this.applyFieldMovementCorrections(log, now);
+    } else if (decision === 'REJECTED') {
+      await this.prisma.fieldMovementLog.update({
+        where: { id: log.id },
+        data: {
+          status: FieldMovementStatus.REJECTED,
+          completedAt: now,
+          updatedBy: log.employeeId,
+        },
+      });
+    } else if (decision === 'RETURNED') {
+      await this.prisma.fieldMovementLog.update({
+        where: { id: log.id },
+        data: {
+          status: FieldMovementStatus.RETURNED,
+          updatedBy: log.employeeId,
+        },
+      });
+    }
+  }
+
+  /**
+   * Approves a field movement log and applies daily-log corrections in one transaction.
+   */
+  private async applyFieldMovementCorrections(
+    log: FieldMovementLog & {
+      entries: Array<FieldMovementEntry & { dailyLog: AttendanceDailyLog }>;
+    },
+    now: Date,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.fieldMovementLog.update({
+        where: { id: log.id },
+        data: {
+          status: FieldMovementStatus.APPROVED,
+          completedAt: now,
+          updatedBy: log.employeeId,
+        },
+      });
+
+      for (const entry of log.entries) {
+        await this.applyEntryCorrection(tx, entry, log.employeeId, now);
+      }
+
+      await this.recalculateAttendanceRecord(
+        tx,
+        log.employeeId,
+        log.companyId,
+        log.month,
+        log.year,
+      );
+    });
+  }
+
+  /**
+   * Applies one entry's reason to its linked attendance daily log.
+   */
+  private async applyEntryCorrection(
+    tx: Prisma.TransactionClient,
+    entry: FieldMovementEntry & { dailyLog: AttendanceDailyLog },
+    employeeId: string,
+    now: Date,
+  ): Promise<void> {
+    void employeeId;
+    const dailyLog = entry.dailyLog;
+    const scheduledEnd = dailyLog.isHalfDay ? '12:30' : '17:30';
+    const scheduledStart = '08:30';
+
+    const data: Prisma.AttendanceDailyLogUpdateInput = {
+      wasPresent: true,
+      flag: AttendanceDayFlag.NONE,
+      flagResolved: true,
+      flagResolvedAt: now,
+      fieldMovementEntryId: entry.id,
+    };
+
+    switch (entry.reason) {
+      case FieldMovementReason.FIELD_VISIT:
+        if (dailyLog.flag === AttendanceDayFlag.MISSING_CLOCK_OUT && !dailyLog.clockOutLocal) {
+          data.correctedClockOutLocal = scheduledEnd;
+          data.missingClockOut = false;
+        }
+        if (dailyLog.flag === AttendanceDayFlag.MISSING_CLOCK_IN && !dailyLog.clockInLocal) {
+          data.correctedClockInLocal = scheduledStart;
+          data.missingClockIn = false;
+        }
+        if (dailyLog.flag === AttendanceDayFlag.EARLY_LEAVE) {
+          data.correctedClockOutLocal =
+            entry.returnTime ?? entry.departureTime ?? dailyLog.clockOutLocal;
+        }
+        break;
+
+      case FieldMovementReason.FORGOT_CLOCK_OUT:
+        data.correctedClockOutLocal = scheduledEnd;
+        data.missingClockOut = false;
+        break;
+
+      case FieldMovementReason.FORGOT_CLOCK_IN:
+        data.correctedClockInLocal = scheduledStart;
+        data.missingClockIn = false;
+        break;
+
+      case FieldMovementReason.EARLY_LEAVE:
+        data.isEarlyLeave = true;
+        if (entry.departureTime) {
+          data.correctedClockOutLocal = entry.departureTime;
+          data.earlyLeaveMinutes = this.calculateEarlyLeaveMinutes(
+            entry.departureTime,
+            scheduledEnd,
+          );
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    const effectiveClockIn =
+      (typeof data.correctedClockInLocal === 'string'
+        ? data.correctedClockInLocal
+        : null) ??
+      dailyLog.correctedClockInLocal ??
+      dailyLog.clockInLocal;
+    const effectiveClockOut =
+      (typeof data.correctedClockOutLocal === 'string'
+        ? data.correctedClockOutLocal
+        : null) ??
+      dailyLog.correctedClockOutLocal ??
+      dailyLog.clockOutLocal;
+
+    if (effectiveClockIn && effectiveClockOut) {
+      data.recordedHours = calculateHoursBetween(
+        effectiveClockIn,
+        effectiveClockOut,
+      );
+    }
+
+    await tx.attendanceDailyLog.update({
+      where: { id: dailyLog.id },
+      data,
+    });
+  }
+
+  /**
+   * Rebuilds AttendanceRecord summary counters from current daily logs.
+   */
+  private async recalculateAttendanceRecord(
+    tx: Prisma.TransactionClient,
+    employeeId: string,
+    companyId: string,
+    month: number,
+    year: number,
+  ): Promise<void> {
+    const record = await tx.attendanceRecord.findUnique({
+      where: {
+        companyId_employeeId_month_year: {
+          companyId,
+          employeeId,
+          month,
+          year,
+        },
+      },
+      include: {
+        dailyLogs: true,
+      },
+    });
+
+    if (!record) {
+      return;
+    }
+
+    const workingDayLogs = record.dailyLogs.filter(
+      (log) => !log.isWeekend && !log.isHoliday,
+    );
+    const holidayLogs = record.dailyLogs.filter((log) => log.isHoliday);
+
+    const scheduledDays = workingDayLogs.reduce(
+      (sum, log) => sum + (log.isHalfDay ? 0.5 : 1),
+      0,
+    );
+
+    const presentDays = workingDayLogs
+      .filter((log) => log.wasPresent)
+      .reduce((sum, log) => sum + (log.isHalfDay ? 0.5 : 1), 0);
+
+    const absentDays = Math.max(0, scheduledDays - presentDays);
+    const holidayDays = holidayLogs.length;
+    const lateDays = workingDayLogs.filter((log) => log.isLate).length;
+    const totalLateMinutes = workingDayLogs.reduce(
+      (sum, log) => sum + (log.lateMinutes ?? 0),
+      0,
+    );
+    const earlyLeaveDays = workingDayLogs.filter(
+      (log) => log.isEarlyLeave,
+    ).length;
+
+    const missingClockInDays = workingDayLogs.filter(
+      (log) =>
+        log.flag === AttendanceDayFlag.MISSING_CLOCK_IN && !log.flagResolved,
+    ).length;
+
+    const missingClockOutDays = workingDayLogs.filter(
+      (log) =>
+        log.flag === AttendanceDayFlag.MISSING_CLOCK_OUT && !log.flagResolved,
+    ).length;
+
+    const flaggedDays = record.dailyLogs.filter(
+      (log) => log.flag !== AttendanceDayFlag.NONE && !log.flagResolved,
+    ).length;
+
+    const resolvedDays = record.dailyLogs.filter(
+      (log) => log.flagResolved,
+    ).length;
+
+    let payableHours = 0;
+    for (const log of record.dailyLogs) {
+      const wouldBeWorkingDay = !log.isWeekend;
+      if (log.isHoliday && wouldBeWorkingDay) {
+        payableHours += Number(log.scheduledHours);
+      } else if (!log.isHoliday && !log.isWeekend && log.recordedHours != null) {
+        payableHours += Number(log.recordedHours);
+      }
+    }
+
+    await tx.attendanceRecord.update({
+      where: { id: record.id },
+      data: {
+        scheduledDays,
+        presentDays,
+        absentDays,
+        holidayDays,
+        lateDays,
+        totalLateMinutes,
+        earlyLeaveDays,
+        missingClockInDays,
+        missingClockOutDays,
+        flaggedDays,
+        resolvedDays,
+        payableHours: Math.round(payableHours * 100) / 100,
+      },
+    });
+  }
+
+  /**
+   * Minutes left early relative to the scheduled end time (HH:mm).
+   */
+  private calculateEarlyLeaveMinutes(
+    actualDeparture: string,
+    scheduledEnd: string,
+  ): number {
+    const [actualHour, actualMinute] = actualDeparture.split(':').map(Number);
+    const [scheduledHour, scheduledMinute] = scheduledEnd.split(':').map(Number);
+    const actualMins = (actualHour ?? 0) * 60 + (actualMinute ?? 0);
+    const scheduledMins = (scheduledHour ?? 0) * 60 + (scheduledMinute ?? 0);
+    return Math.max(0, scheduledMins - actualMins);
   }
 }

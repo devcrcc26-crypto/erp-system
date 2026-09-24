@@ -29,6 +29,7 @@ import OfficialSealDetail from '@/components/modules/approvals/detail/OfficialSe
 import ProjectSealDetail from '@/components/modules/approvals/detail/ProjectSealDetail';
 import InspectionRepairDetail from '@/components/modules/approvals/detail/InspectionRepairDetail';
 import ExitPermitDetail from '@/components/modules/approvals/detail/ExitPermitDetail';
+import FieldMovementDetail from '@/components/modules/approvals/detail/FieldMovementDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
@@ -217,6 +218,16 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       }
       return (
         <ExitPermitDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
+      );
+    case 'FIELD_MOVEMENT_LOG':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <FieldMovementDetail
           approvalRequestId={request.id}
           sourceId={sourceId}
         />

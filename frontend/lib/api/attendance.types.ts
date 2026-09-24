@@ -37,6 +37,10 @@ export interface AttendanceDailyLogCorrection {
 export interface AttendanceFieldMovementEntryLink {
   id: string;
   reason: string;
+  destination?: string | null;
+  departureTime?: string | null;
+  returnTime?: string | null;
+  notes?: string | null;
   log: {
     id: string;
     status: string;
@@ -63,6 +67,8 @@ export interface AttendanceDailyLog {
   lateMinutes: number;
   missingClockIn: boolean;
   missingClockOut: boolean;
+  isEarlyLeave?: boolean;
+  earlyLeaveMinutes?: number;
   flag: AttendanceDayFlag;
   flagResolved: boolean;
   flagResolvedAt: string | null;
@@ -91,6 +97,7 @@ export interface AttendanceRecord {
   payableHours: number;
   flaggedDays: number;
   resolvedDays: number;
+  earlyLeaveDays?: number;
   attendanceRate: number | null;
   importedAt: string;
   employee: {
@@ -360,10 +367,13 @@ export interface FieldMovementLogEntry {
   dailyLog?: {
     date: string;
     flag: AttendanceDayFlag;
+    flagResolved?: boolean;
     clockInLocal: string | null;
     clockOutLocal: string | null;
     correctedClockInLocal: string | null;
     correctedClockOutLocal: string | null;
+    isEarlyLeave?: boolean;
+    earlyLeaveMinutes?: number;
   };
 }
 
