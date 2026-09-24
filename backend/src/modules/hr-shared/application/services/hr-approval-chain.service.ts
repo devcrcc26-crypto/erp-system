@@ -682,6 +682,16 @@ export class HrApprovalChainService {
 
   }
   /**
+   * Field movement / early departure: same chain as leave (Discipline Lead → HR).
+   */
+  async buildFieldMovementApprovalChain(
+    userId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    return this.buildOrgApprovalChain(userId, companyId, false);
+  }
+
+  /**
    * Org-structure approval chain with role-based skips and duplicate collapse.
    * Regular employees: Discipline Lead → HR Officer → (optional) General Manager.
    * Discipline Lead / HR+ skip lower tiers they already satisfy (no self-approval).

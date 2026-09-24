@@ -20,6 +20,7 @@ import {
   useApprovalCategories,
   useSubmitApprovalRequest,
 } from '@/lib/query/approvals';
+import { useMyFlaggedDays } from '@/lib/query/attendance';
 import { tokens } from '@/lib/theme/tokens';
 import {
   formatApprovalCategoryDescription,
@@ -45,6 +46,7 @@ const CATEGORY_ROUTES: Record<string, string> = {
   INSPECTION_REPAIR: '/approvals/new/inspection-repair',
   OFFICIAL_SEAL_USAGE: '/approvals/new/official-seal',
   PROJECT_SEAL_USAGE: '/approvals/new/project-seal',
+  FIELD_MOVEMENT_LOG: '/approvals/new/field-movement',
 };
 
 /**
@@ -56,6 +58,21 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const categoriesQuery = useApprovalCategories();
   const submitMutation = useSubmitApprovalRequest();
+
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+  const currentFlagsQuery = useMyFlaggedDays(currentMonth, currentYear, true);
+  const previousFlagsQuery = useMyFlaggedDays(
+    previousMonth,
+    previousYear,
+    true,
+  );
+  const hasUnresolvedFlags =
+    (currentFlagsQuery.data?.flaggedDays.length ?? 0) > 0 ||
+    (previousFlagsQuery.data?.flaggedDays.length ?? 0) > 0;
 
   const [selectedCategory, setSelectedCategory] =
     useState<ApprovalCategorySummary | null>(null);
@@ -151,7 +168,12 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
     );
   }
 
-  const categories = categoriesQuery.data ?? [];
+  const categories = (categoriesQuery.data ?? []).filter((category) => {
+    if (category.code !== 'FIELD_MOVEMENT_LOG') {
+      return true;
+    }
+    return hasUnresolvedFlags;
+  });
 
   if (!selectedCategory) {
     return (

@@ -1,4 +1,4 @@
-import { apiGet, apiGetPaginated, apiPost, apiPostForm } from '@/lib/api/client';
+import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from '@/lib/api/client';
 import type {
   AttendanceEmployeeSearchResult,
   AttendanceImportBatch,
@@ -10,7 +10,12 @@ import type {
   AttendanceRecord,
   ConfirmAttendanceImportDto,
   CorrectDailyLogDto,
+  CreateFieldMovementLogDto,
   EmployeeDailyLogsResponse,
+  FieldMovementLog,
+  FieldMovementLogsListResponse,
+  FlaggedDaysResponse,
+  ListFieldMovementLogsParams,
   MyAttendanceResponse,
   UnlockAttendanceMonthDto,
 } from '@/lib/api/attendance.types';
@@ -189,4 +194,80 @@ export async function getEmployeeAttendanceDailyLogs(
   return apiGet<EmployeeDailyLogsResponse>(
     `${ATTENDANCE_PATH}/${employeeId}/month/${month}/year/${year}/daily-logs`,
   );
+}
+
+/**
+ * Unresolved flagged days for the signed-in employee.
+ */
+export async function getMyFlaggedDays(
+  month: number,
+  year: number,
+): Promise<FlaggedDaysResponse> {
+  return apiGet<FlaggedDaysResponse>(
+    `${ATTENDANCE_PATH}/flagged-days/me${toQueryString({ month, year })}`,
+  );
+}
+
+/**
+ * Create a draft field movement log.
+ */
+export async function createFieldMovementLog(
+  dto: CreateFieldMovementLogDto,
+): Promise<FieldMovementLog> {
+  return apiPost<FieldMovementLog>(
+    `${ATTENDANCE_PATH}/field-movement-logs`,
+    dto,
+  );
+}
+
+/**
+ * Submit a field movement log for approval.
+ */
+export async function submitFieldMovementLog(
+  id: string,
+): Promise<FieldMovementLog> {
+  return apiPost<FieldMovementLog>(
+    `${ATTENDANCE_PATH}/field-movement-logs/${id}/submit`,
+    {},
+  );
+}
+
+/**
+ * Cancel a draft or submitted field movement log.
+ */
+export async function cancelFieldMovementLog(
+  id: string,
+): Promise<FieldMovementLog> {
+  return apiPatch<FieldMovementLog>(
+    `${ATTENDANCE_PATH}/field-movement-logs/${id}/cancel`,
+    {},
+  );
+}
+
+/**
+ * Get one field movement log.
+ */
+export async function getFieldMovementLog(
+  id: string,
+): Promise<FieldMovementLog> {
+  return apiGet<FieldMovementLog>(
+    `${ATTENDANCE_PATH}/field-movement-logs/${id}`,
+  );
+}
+
+/**
+ * List field movement logs (paginated).
+ */
+export async function listFieldMovementLogs(
+  params: ListFieldMovementLogsParams = {},
+): Promise<FieldMovementLogsListResponse> {
+  const result = await apiGetPaginated<FieldMovementLog>(
+    `${ATTENDANCE_PATH}/field-movement-logs${toQueryString(params)}`,
+  );
+  return {
+    data: result.data,
+    total: result.meta.total,
+    page: result.meta.page,
+    limit: result.meta.limit,
+  };
 }

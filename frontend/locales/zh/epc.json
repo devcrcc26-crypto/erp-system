@@ -87,6 +87,7 @@
       "noApprovalChain": "无需审批链",
       "directApproved": "已直接批准 - 无需审批",
       "attendance": "考勤",
+      "fieldMovementLogs": "外勤 / 早退说明",
       "employeeEvaluation": "员工考核",
       "companyAssets": "公司资产",
       "employeeContract": "劳动合同",
@@ -215,6 +216,10 @@
         "EXIT_PERMIT": {
           "name": "出入证",
           "description": "设备物资进出场许可，用于现场安保。"
+        },
+        "FIELD_MOVEMENT_LOG": {
+          "name": "外勤 / 早退说明",
+          "description": "说明月度考勤中标记的缺打卡、缺签退或早退情况。"
         },
         "PER_DIEM": {
           "name": "差旅补贴申请",

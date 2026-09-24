@@ -294,3 +294,121 @@ export interface EmployeeDailyLogsResponse extends AttendanceRecord {
   };
   dailyLogs: AttendanceDailyLog[];
 }
+
+export type FieldMovementReason =
+  | 'FIELD_VISIT'
+  | 'EARLY_LEAVE'
+  | 'FORGOT_CLOCK_IN'
+  | 'FORGOT_CLOCK_OUT';
+
+export type FieldMovementStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'IN_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'RETURNED'
+  | 'CANCELLED';
+
+export interface FlaggedDay {
+  id: string;
+  date: string;
+  flag: AttendanceDayFlag;
+  clockInLocal: string | null;
+  clockOutLocal: string | null;
+  correctedClockInLocal: string | null;
+  correctedClockOutLocal: string | null;
+  isHalfDay: boolean;
+  availableReasons: FieldMovementReason[];
+  alreadySubmitted: boolean;
+  submittedLog: {
+    id: string;
+    requestNumber: string;
+    status: string;
+  } | null;
+}
+
+export interface FlaggedDaysResponse {
+  flaggedDays: FlaggedDay[];
+  month: number;
+  year: number;
+}
+
+export interface CreateFieldMovementEntryDto {
+  dailyLogId: string;
+  reason: FieldMovementReason;
+  destination?: string;
+  departureTime?: string;
+  returnTime?: string;
+  notes?: string;
+}
+
+export interface CreateFieldMovementLogDto {
+  entries: CreateFieldMovementEntryDto[];
+  notes?: string;
+}
+
+export interface FieldMovementLogEntry {
+  id: string;
+  dailyLogId: string;
+  date: string;
+  reason: FieldMovementReason;
+  destination: string | null;
+  departureTime: string | null;
+  returnTime: string | null;
+  notes: string | null;
+  dailyLog?: {
+    date: string;
+    flag: AttendanceDayFlag;
+    clockInLocal: string | null;
+    clockOutLocal: string | null;
+    correctedClockInLocal: string | null;
+    correctedClockOutLocal: string | null;
+  };
+}
+
+export interface FieldMovementLog {
+  id: string;
+  companyId: string;
+  requestNumber: string;
+  employeeId: string;
+  month: number;
+  year: number;
+  status: FieldMovementStatus;
+  notes: string | null;
+  approvalRequestId: string | null;
+  submittedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  entryCount?: number;
+  currentTierLabel?: string | null;
+  employee?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    employeeId: string | null;
+  };
+  entries?: FieldMovementLogEntry[];
+  approvalRequest?: {
+    id: string;
+    status: string;
+    currentTier?: number | null;
+    tiers?: Array<{ label: string }>;
+  } | null;
+}
+
+export interface ListFieldMovementLogsParams {
+  page?: number;
+  limit?: number;
+  month?: number;
+  year?: number;
+  employeeId?: string;
+  status?: FieldMovementStatus;
+}
+
+export interface FieldMovementLogsListResponse {
+  data: FieldMovementLog[];
+  total: number;
+  page: number;
+  limit: number;
+}

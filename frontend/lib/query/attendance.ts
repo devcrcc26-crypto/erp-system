@@ -3,16 +3,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   approveAttendanceMonth,
+  cancelFieldMovementLog,
   confirmAttendanceImport,
   correctAttendanceDailyLog,
+  createFieldMovementLog,
   getAttendanceImportHistory,
   getAttendanceMonthlyApproval,
   getEmployeeAttendance,
   getEmployeeAttendanceDailyLogs,
+  getFieldMovementLog,
   getMyAttendance,
+  getMyFlaggedDays,
   listAttendanceRecords,
+  listFieldMovementLogs,
   markAttendanceMonthReviewed,
   previewAttendanceImport,
+  submitFieldMovementLog,
   unlockAttendanceMonth,
 } from '@/lib/api/attendance.api';
 import type {
@@ -20,6 +26,8 @@ import type {
   AttendanceRecord,
   ConfirmAttendanceImportDto,
   CorrectDailyLogDto,
+  CreateFieldMovementLogDto,
+  ListFieldMovementLogsParams,
   UnlockAttendanceMonthDto,
 } from '@/lib/api/attendance.types';
 
@@ -44,6 +52,14 @@ export const attendanceKeys = {
       month,
       year,
     ] as const,
+  flaggedDays: (month: number, year: number) =>
+    [...attendanceKeys.all, 'flagged-days', month, year] as const,
+  fieldMovementLists: () =>
+    [...attendanceKeys.all, 'field-movement'] as const,
+  fieldMovementList: (params: ListFieldMovementLogsParams) =>
+    [...attendanceKeys.fieldMovementLists(), params] as const,
+  fieldMovementDetail: (id: string) =>
+    [...attendanceKeys.all, 'field-movement', id] as const,
 };
 
 const FETCH_PAGE_SIZE = 100;
@@ -263,6 +279,103 @@ export function useCorrectAttendanceDailyLog() {
     mutationFn: (dto: CorrectDailyLogDto) => correctAttendanceDailyLog(dto),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
+  });
+}
+
+/**
+ * Unresolved flagged days for the signed-in employee.
+ */
+export function useMyFlaggedDays(
+  month: number,
+  year: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: attendanceKeys.flaggedDays(month, year),
+    queryFn: () => getMyFlaggedDays(month, year),
+    enabled: enabled && month >= 1 && month <= 12 && year >= 2020,
+    retry: false,
+  });
+}
+
+/**
+ * Paginated field movement logs.
+ */
+export function useFieldMovementLogs(
+  params: ListFieldMovementLogsParams,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: attendanceKeys.fieldMovementList(params),
+    queryFn: () => listFieldMovementLogs(params),
+    enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Single field movement log detail.
+ */
+export function useFieldMovementLog(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: attendanceKeys.fieldMovementDetail(id ?? ''),
+    queryFn: () => getFieldMovementLog(id!),
+    enabled: Boolean(id) && enabled,
+    retry: false,
+  });
+}
+
+/**
+ * Create draft then optionally submit via separate mutation.
+ */
+export function useCreateFieldMovementLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateFieldMovementLogDto) => createFieldMovementLog(dto),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: attendanceKeys.fieldMovementLists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: attendanceKeys.all,
+      });
+    },
+  });
+}
+
+/**
+ * Submit a field movement log for approval.
+ */
+export function useSubmitFieldMovementLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => submitFieldMovementLog(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: attendanceKeys.fieldMovementLists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: attendanceKeys.all,
+      });
+    },
+  });
+}
+
+/**
+ * Cancel a field movement log.
+ */
+export function useCancelFieldMovementLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cancelFieldMovementLog(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: attendanceKeys.fieldMovementLists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: attendanceKeys.all,
+      });
     },
   });
 }

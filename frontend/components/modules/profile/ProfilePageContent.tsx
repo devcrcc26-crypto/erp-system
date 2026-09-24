@@ -15,6 +15,7 @@ import {
   WalletOutlined,
 } from '@ant-design/icons';
 import { User } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
@@ -98,6 +99,7 @@ function MetaStat({
 export default function ProfilePageContent(): React.ReactNode {
   const { t, locale } = useEpcTranslation();
   const isMdUp = useIsMdUp();
+  const searchParams = useSearchParams();
   const [prefsForm] = Form.useForm<PreferencesFormValues>();
   const [passwordForm] = Form.useForm<PasswordFormValues>();
   const [emailForm] = Form.useForm<{ newEmail: string }>();
@@ -111,7 +113,24 @@ export default function ProfilePageContent(): React.ReactNode {
 
   const profile = profileQuery.data;
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>('account');
+  const tabFromUrl = searchParams.get('tab');
+  const initialTab: ProfileTab =
+    tabFromUrl && (PROFILE_TABS as readonly string[]).includes(tabFromUrl)
+      ? (tabFromUrl as ProfileTab)
+      : 'account';
+  const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
+  const attendanceMonthParam = Number(searchParams.get('month') ?? '');
+  const attendanceYearParam = Number(searchParams.get('year') ?? '');
+  const attendanceInitialMonth =
+    Number.isFinite(attendanceMonthParam) &&
+    attendanceMonthParam >= 1 &&
+    attendanceMonthParam <= 12
+      ? attendanceMonthParam
+      : undefined;
+  const attendanceInitialYear =
+    Number.isFinite(attendanceYearParam) && attendanceYearParam >= 2020
+      ? attendanceYearParam
+      : undefined;
   const tabRefs = useRef<Partial<Record<ProfileTab, HTMLButtonElement | null>>>({});
   const tabsMountedRef = useRef(false);
 
@@ -541,6 +560,8 @@ export default function ProfilePageContent(): React.ReactNode {
           <EmployeeAttendanceProfileSection
             employeeId={currentProfile.id}
             isOwnProfile
+            initialMonth={attendanceInitialMonth}
+            initialYear={attendanceInitialYear}
           />
         );
       case 'workSchedule':

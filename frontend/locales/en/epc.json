@@ -88,6 +88,7 @@
       "directApproved": "Approved directly - no approval required",
       "companyAssets": "Company Assets",
       "attendance": "Attendance",
+      "fieldMovementLogs": "Field Movement Logs",
       "employeeEvaluation": "Employee Evaluation",
       "employeeContract": "Employee Contracts",
       "equipmentAndMaterialsExitPermit": "Exit Permit"
@@ -215,6 +216,10 @@
         "EXIT_PERMIT": {
           "name": "Exit Permit",
           "description": "Equipment and materials exit or entrance permit for site security."
+        },
+        "FIELD_MOVEMENT_LOG": {
+          "name": "Field Movement / Early Departure Log",
+          "description": "Explain missing clock-ins, missing clock-outs, or early departures flagged in your monthly attendance."
         },
         "PER_DIEM": {
           "name": "Per Diem Request",

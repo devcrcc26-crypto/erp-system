@@ -338,7 +338,7 @@ export default function AttendanceDailyLogsDrawer({
       }
       open={open}
       onClose={onClose}
-      width={920}
+      size={920}
       destroyOnHidden
     >
       {query.isLoading && !query.data ? (

@@ -1,17 +1,20 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Badge, InputNumber, Skeleton, Table, Tag } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Badge, Button, InputNumber, Skeleton, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CalendarOutlined } from '@ant-design/icons';
+import FieldMovementForm from '@/components/modules/profile/FieldMovementForm';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   AttendanceDailyLog,
   AttendanceRecord,
+  FlaggedDay,
 } from '@/lib/api/attendance.types';
 import {
   useEmployeeAttendance,
   useMyAttendance,
+  useMyFlaggedDays,
 } from '@/lib/query/attendance';
 
 type AttendanceYearRecord = AttendanceRecord & { monthName: string };
@@ -22,6 +25,10 @@ export interface EmployeeAttendanceProfileSectionProps {
   isOwnProfile: boolean;
   /** Reserved for future tenant-scoped UI; company is resolved from the JWT. */
   companyId?: string;
+  /** Optional month from notification deep-link (`?month=`). */
+  initialMonth?: number;
+  /** Optional year from notification deep-link (`?year=`). */
+  initialYear?: number;
 }
 
 type RateBadgeStatus = 'success' | 'warning' | 'error' | 'default';
@@ -261,11 +268,19 @@ function DailyLogsTable({
 export default function EmployeeAttendanceProfileSection({
   employeeId,
   isOwnProfile,
+  initialMonth,
+  initialYear,
 }: EmployeeAttendanceProfileSectionProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear);
+  const [year, setYear] = useState(initialYear ?? currentYear);
   const [expandedKeys, setExpandedKeys] = useState<readonly React.Key[]>([]);
+  const [showFieldMovementForm, setShowFieldMovementForm] = useState(false);
+  const [bannerMonth, setBannerMonth] = useState<number | null>(
+    initialMonth && initialMonth >= 1 && initialMonth <= 12
+      ? initialMonth
+      : null,
+  );
 
   const myQuery = useMyAttendance(year, isOwnProfile);
   const employeeQuery = useEmployeeAttendance(
@@ -283,6 +298,29 @@ export default function EmployeeAttendanceProfileSection({
     const rows = data?.records ?? [];
     return [...rows].sort((a, b) => a.month - b.month);
   }, [data?.records]);
+
+  useEffect(() => {
+    if (!isOwnProfile || bannerMonth != null || records.length === 0) {
+      return;
+    }
+    const withFlags = [...records]
+      .filter((row) => row.flaggedDays > row.resolvedDays)
+      .sort((a, b) => b.month - a.month);
+    if (withFlags[0]) {
+      setBannerMonth(withFlags[0].month);
+    }
+  }, [isOwnProfile, bannerMonth, records]);
+
+  const flaggedQuery = useMyFlaggedDays(
+    bannerMonth ?? 0,
+    year,
+    isOwnProfile && bannerMonth != null,
+  );
+  const flaggedDays: FlaggedDay[] = flaggedQuery.data?.flaggedDays ?? [];
+  const monthName =
+    bannerMonth != null
+      ? t(`hr.months.${bannerMonth}`)
+      : '';
 
   const columns: ColumnsType<AttendanceYearRecord> = useMemo(
     () => [
@@ -414,6 +452,31 @@ export default function EmployeeAttendanceProfileSection({
 
   return (
     <div className="erp-leave-profile erp-attendance-profile">
+      {isOwnProfile && flaggedDays.length > 0 && bannerMonth != null ? (
+        <div className="erp-notice erp-notice--warning mb-4">
+          <div className="erp-notice-chip">⚠️</div>
+          <div className="erp-notice-body">
+            <p className="erp-notice-title">
+              You have {flaggedDays.length} day(s) requiring explanation for{' '}
+              {monthName} {year}
+            </p>
+            <p className="erp-notice-description">
+              HR has processed your attendance. Please submit a Field Movement /
+              Early Departure log to explain these days.
+            </p>
+            <div className="erp-notice-action">
+              <Button
+                type="primary"
+                size="small"
+                onClick={() => setShowFieldMovementForm(true)}
+              >
+                Submit Explanation
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <AttendanceProfileSection
         title={t('pages.hr.attendance.profileYearTitle')}
         action={yearControl}
@@ -499,6 +562,21 @@ export default function EmployeeAttendanceProfileSection({
             />
           )}
         </AttendanceProfileSection>
+      ) : null}
+
+      {isOwnProfile && bannerMonth != null ? (
+        <FieldMovementForm
+          open={showFieldMovementForm}
+          onClose={() => setShowFieldMovementForm(false)}
+          onSuccess={() => {
+            void flaggedQuery.refetch();
+            void myQuery.refetch();
+          }}
+          employeeId={employeeId}
+          month={bannerMonth}
+          year={year}
+          flaggedDays={flaggedDays}
+        />
       ) : null}
     </div>
   );

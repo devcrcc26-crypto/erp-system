@@ -720,6 +720,37 @@ const CATEGORIES: CategorySeedDef[] = [
       },
     ],
   },
+  {
+    code: 'FIELD_MOVEMENT_LOG',
+    name: 'Field Movement / Early Departure Log',
+    description:
+      'Explain missing clock-ins, missing clock-outs, or early departures flagged in monthly attendance.',
+    module: 'HR',
+    numberPrefix: 'FM',
+    icon: 'clock-circle',
+    sortOrder: 150,
+    formSchema: {
+      fields: [
+        { name: 'month', label: 'Month', type: 'number', required: true },
+        { name: 'year', label: 'Year', type: 'number', required: true },
+        {
+          name: 'entryCount',
+          label: 'Days Explained',
+          type: 'number',
+          required: true,
+        },
+      ],
+    },
+    approvalRules: [
+      {
+        name: 'Default',
+        tiers: [
+          tier('Department Head', 'DEPARTMENT_HEAD', 1),
+          tier('HR Officer', 'HR', 2),
+        ],
+      },
+    ],
+  },
 ];
 
 /** Maps short aliases in category rules to seeded Role.name values. */

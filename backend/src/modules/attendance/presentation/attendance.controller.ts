@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -28,8 +29,11 @@ import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
 import {
   ConfirmAttendanceImportDto,
   CorrectDailyLogDto,
+  CreateFieldMovementLogDto,
+  GetFlaggedDaysDto,
   ListAttendanceDto,
   ListAttendanceMonthlyApprovalsDto,
+  ListFieldMovementLogsDto,
   UnlockAttendanceMonthDto,
 } from '../application/dtos/attendance.dto';
 import {
@@ -181,6 +185,99 @@ export class AttendanceController {
     @Body() dto: CorrectDailyLogDto,
   ): Promise<unknown> {
     return this.attendanceService.correctDailyLog(dto, companyId, user.userId);
+  }
+
+  @Get('flagged-days/me')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'List unresolved flagged days for the signed-in employee',
+  })
+  getMyFlaggedDays(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: GetFlaggedDaysDto,
+  ): Promise<unknown> {
+    return this.attendanceService.getFlaggedDaysForEmployee(
+      user.userId,
+      query.month,
+      query.year,
+      companyId,
+    );
+  }
+
+  @Post('field-movement-logs')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Create a draft field movement / early departure log' })
+  createFieldMovementLog(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: CreateFieldMovementLogDto,
+  ): Promise<unknown> {
+    return this.attendanceService.createFieldMovementLog(
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Get('field-movement-logs')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'List field movement logs' })
+  listFieldMovementLogs(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: ListFieldMovementLogsDto,
+  ): Promise<unknown> {
+    return this.attendanceService.listFieldMovementLogs(
+      query,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Get('field-movement-logs/:id')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Get a field movement log by id' })
+  getFieldMovementLog(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.attendanceService.getFieldMovementLog(
+      id,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Post('field-movement-logs/:id/submit')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Submit a field movement log for approval' })
+  submitFieldMovementLog(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.attendanceService.submitFieldMovementLog(
+      id,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Patch('field-movement-logs/:id/cancel')
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Cancel a draft or submitted field movement log' })
+  cancelFieldMovementLog(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.attendanceService.cancelFieldMovementLog(
+      id,
+      companyId,
+      user.userId,
+    );
   }
 
   @Get()

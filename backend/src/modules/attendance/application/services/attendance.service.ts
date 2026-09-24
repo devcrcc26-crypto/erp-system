@@ -3,9 +3,17 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { AttendanceDayFlag, Prisma } from '@prisma/client';
+import {
+  AttendanceDayFlag,
+  AttendanceImportBatch,
+  AttendanceMonthlyApproval,
+  FieldMovementReason,
+  FieldMovementStatus,
+  Prisma,
+} from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
@@ -14,6 +22,9 @@ import {
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
+import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
   holidayAppliesToNationality,
   holidayFallsOnDate,
@@ -30,8 +41,10 @@ import {
 import {
   ConfirmAttendanceImportDto,
   CorrectDailyLogDto,
+  CreateFieldMovementLogDto,
   ListAttendanceDto,
   ListAttendanceMonthlyApprovalsDto,
+  ListFieldMovementLogsDto,
   UnlockAttendanceMonthDto,
 } from '../dtos/attendance.dto';
 import {
@@ -39,6 +52,8 @@ import {
   AttendanceMatchingService,
 } from './attendance-matching.service';
 import { AttendancePreviewCache } from './attendance-preview.cache';
+
+const ATTENDANCE_APPROVED_EVENT = 'attendance.month_approved';
 
 const MONTH_NAMES = [
   'January',
@@ -225,12 +240,17 @@ function reviveMatchResultDates(rows: AttendanceMatchResult[]): void {
  */
 @Injectable()
 export class AttendanceService {
+  private readonly logger = new Logger(AttendanceService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly matchingService: AttendanceMatchingService,
     private readonly workScheduleService: WorkScheduleService,
     private readonly permissionService: PermissionService,
     private readonly previewCache: AttendancePreviewCache,
+    private readonly notificationService: NotificationService,
+    private readonly approvalsService: ApprovalsService,
+    private readonly hrApprovalChain: HrApprovalChainService,
   ) {}
 
   /**
@@ -1262,7 +1282,7 @@ export class AttendanceService {
   }
 
   /**
-   * Approves and locks a month. Employee notifications are Chunk C.
+   * Approves and locks a month, then notifies employees with unresolved flags.
    */
   async approveMonth(
     monthlyApprovalId: string,
@@ -1285,16 +1305,17 @@ export class AttendanceService {
       );
     }
 
-    await this.prisma.attendanceMonthlyApproval.update({
+    const updated = await this.prisma.attendanceMonthlyApproval.update({
       where: { id: monthlyApprovalId },
       data: {
         status: 'APPROVED',
         approvedAt: new Date(),
         approvedBy: userId,
       },
+      include: { importBatch: true },
     });
 
-    // Chunk C: sendAttendanceApprovalNotifications(approval)
+    await this.sendAttendanceApprovalNotifications(updated, companyId, userId);
 
     return {
       message: `Attendance for ${approval.month}/${approval.year} approved and locked`,
@@ -1628,5 +1649,596 @@ export class AttendanceService {
         totalHours: 4,
       },
     ];
+  }
+
+  /**
+   * Notifies each employee with unresolved flagged days after month approval.
+   */
+  private async sendAttendanceApprovalNotifications(
+    approval: AttendanceMonthlyApproval & {
+      importBatch: AttendanceImportBatch;
+    },
+    companyId: string,
+    approvedBy: string,
+  ): Promise<void> {
+    void approvedBy;
+    const monthName = MONTH_NAMES[approval.month - 1] ?? String(approval.month);
+
+    const flaggedRecords = await this.prisma.attendanceRecord.findMany({
+      where: {
+        importBatchId: approval.importBatchId,
+        flaggedDays: { gt: 0 },
+      },
+      include: {
+        employee: {
+          select: { id: true, firstName: true },
+        },
+        dailyLogs: {
+          where: { flag: { not: 'NONE' } },
+          select: {
+            id: true,
+            date: true,
+            flag: true,
+            flagResolved: true,
+          },
+        },
+      },
+    });
+
+    for (const record of flaggedRecords) {
+      const unresolvedFlags = record.dailyLogs.filter((log) => !log.flagResolved);
+      if (unresolvedFlags.length === 0) {
+        continue;
+      }
+
+      const flagSummary = this.buildFlagSummary(unresolvedFlags);
+
+      try {
+        await this.notificationService.send(
+          { companyId, userId: approvedBy },
+          {
+            recipientId: record.employee.id,
+            eventType: ATTENDANCE_APPROVED_EVENT,
+            channel: 'IN_APP',
+            subject: `Your ${monthName} ${approval.year} attendance has been processed`,
+            body: `Your attendance for ${monthName} ${approval.year} has been reviewed and approved by HR. You have ${unresolvedFlags.length} day(s) requiring explanation:\n\n${flagSummary}\n\nPlease submit a Field Movement / Early Departure log to explain these days.`,
+            link: `/profile?tab=attendance&month=${approval.month}&year=${approval.year}`,
+          },
+        );
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn(
+          `Failed attendance approval notification for ${record.employee.id}: ${message}`,
+        );
+      }
+    }
+
+    await this.prisma.attendanceMonthlyApproval.update({
+      where: { id: approval.id },
+      data: { notificationsSentAt: new Date() },
+    });
+  }
+
+  /**
+   * Formats unresolved daily-log flags into a bullet list for notifications.
+   */
+  private buildFlagSummary(
+    flags: Array<{ date: Date; flag: string }>,
+  ): string {
+    return flags
+      .map((flag) => {
+        const dateStr = flag.date.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          weekday: 'short',
+        });
+        const flagLabel: Record<string, string> = {
+          MISSING_CLOCK_IN: 'Missing clock-in',
+          MISSING_CLOCK_OUT: 'Missing clock-out',
+          EARLY_LEAVE: 'Early departure detected',
+        };
+        return `• ${dateStr}: ${flagLabel[flag.flag] ?? flag.flag}`;
+      })
+      .join('\n');
+  }
+
+  /**
+   * Returns unresolved flagged days for an employee month (form dropdown source).
+   */
+  async getFlaggedDaysForEmployee(
+    employeeId: string,
+    month: number,
+    year: number,
+    companyId: string,
+  ): Promise<{
+    flaggedDays: Array<{
+      id: string;
+      date: Date;
+      flag: AttendanceDayFlag;
+      clockInLocal: string | null;
+      clockOutLocal: string | null;
+      correctedClockInLocal: string | null;
+      correctedClockOutLocal: string | null;
+      isHalfDay: boolean;
+      availableReasons: FieldMovementReason[];
+      alreadySubmitted: boolean;
+      submittedLog: { id: string; requestNumber: string; status: string } | null;
+    }>;
+    month: number;
+    year: number;
+  }> {
+    const record = await this.prisma.attendanceRecord.findUnique({
+      where: {
+        companyId_employeeId_month_year: {
+          companyId,
+          employeeId,
+          month,
+          year,
+        },
+      },
+    });
+
+    if (!record) {
+      return { flaggedDays: [], month, year };
+    }
+
+    const flaggedDays = await this.prisma.attendanceDailyLog.findMany({
+      where: {
+        attendanceRecordId: record.id,
+        flag: { not: 'NONE' },
+        flagResolved: false,
+      },
+      orderBy: { date: 'asc' },
+      select: {
+        id: true,
+        date: true,
+        flag: true,
+        clockInLocal: true,
+        clockOutLocal: true,
+        correctedClockInLocal: true,
+        correctedClockOutLocal: true,
+        isHalfDay: true,
+        fieldMovementEntries: {
+          include: {
+            log: {
+              select: { id: true, requestNumber: true, status: true },
+            },
+          },
+        },
+      },
+    });
+
+    const flaggedDaysWithOptions = flaggedDays.map((day) => {
+      const availableReasons: FieldMovementReason[] = [];
+
+      if (day.flag === 'MISSING_CLOCK_IN') {
+        availableReasons.push(
+          FieldMovementReason.FIELD_VISIT,
+          FieldMovementReason.FORGOT_CLOCK_IN,
+        );
+      } else if (day.flag === 'MISSING_CLOCK_OUT') {
+        availableReasons.push(
+          FieldMovementReason.FIELD_VISIT,
+          FieldMovementReason.EARLY_LEAVE,
+          FieldMovementReason.FORGOT_CLOCK_OUT,
+        );
+      } else if (day.flag === 'EARLY_LEAVE') {
+        availableReasons.push(
+          FieldMovementReason.FIELD_VISIT,
+          FieldMovementReason.EARLY_LEAVE,
+        );
+      }
+
+      return {
+        ...day,
+        availableReasons,
+        alreadySubmitted: day.fieldMovementEntries.length > 0,
+        submittedLog: day.fieldMovementEntries[0]?.log ?? null,
+      };
+    });
+
+    return { flaggedDays: flaggedDaysWithOptions, month, year };
+  }
+
+  /**
+   * Creates a draft field movement / early departure log for the signed-in employee.
+   */
+  async createFieldMovementLog(
+    dto: CreateFieldMovementLogDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const dailyLogIds = dto.entries.map((entry) => entry.dailyLogId);
+    const uniqueIds = [...new Set(dailyLogIds)];
+    if (uniqueIds.length !== dailyLogIds.length) {
+      throw new BadRequestException('Duplicate daily log entries are not allowed');
+    }
+
+    const dailyLogs = await this.prisma.attendanceDailyLog.findMany({
+      where: { id: { in: dailyLogIds } },
+      include: {
+        record: {
+          select: {
+            employeeId: true,
+            companyId: true,
+            month: true,
+            year: true,
+          },
+        },
+      },
+    });
+
+    if (dailyLogs.length !== dailyLogIds.length) {
+      throw new BadRequestException('One or more daily logs were not found');
+    }
+
+    for (const log of dailyLogs) {
+      if (log.record.companyId !== companyId) {
+        throw new ForbiddenException('Daily log does not belong to this company');
+      }
+      if (log.record.employeeId !== userId) {
+        throw new ForbiddenException(
+          'You can only submit logs for your own attendance',
+        );
+      }
+      if (log.flag === 'NONE') {
+        throw new BadRequestException(
+          `Day ${log.date.toISOString().split('T')[0]} has no flag — no explanation needed`,
+        );
+      }
+    }
+
+    for (const entry of dto.entries) {
+      if (entry.reason === FieldMovementReason.FIELD_VISIT && !entry.destination) {
+        throw new BadRequestException(
+          'Destination is required for field visit entries',
+        );
+      }
+      if (
+        entry.reason === FieldMovementReason.EARLY_LEAVE &&
+        !entry.departureTime
+      ) {
+        throw new BadRequestException(
+          'Departure time is required for early leave entries',
+        );
+      }
+    }
+
+    const firstLog = dailyLogs[0];
+    if (!firstLog) {
+      throw new BadRequestException('At least one entry is required');
+    }
+    const month = firstLog.record.month;
+    const year = firstLog.record.year;
+
+    const samePeriod = dailyLogs.every(
+      (log) =>
+        log.record.month === month && log.record.year === year,
+    );
+    if (!samePeriod) {
+      throw new BadRequestException(
+        'All entries must belong to the same attendance month',
+      );
+    }
+
+    const requestNumber = await this.nextFieldMovementNumber();
+
+    return this.prisma.fieldMovementLog.create({
+      data: {
+        id: randomUUID(),
+        companyId,
+        requestNumber,
+        employeeId: userId,
+        month,
+        year,
+        status: FieldMovementStatus.DRAFT,
+        notes: dto.notes ?? null,
+        createdBy: userId,
+        updatedBy: userId,
+        entries: {
+          create: dto.entries.map((entry) => {
+            const dailyLog = dailyLogs.find((log) => log.id === entry.dailyLogId);
+            if (!dailyLog) {
+              throw new BadRequestException('Daily log not found for entry');
+            }
+            return {
+              id: randomUUID(),
+              dailyLogId: entry.dailyLogId,
+              date: dailyLog.date,
+              reason: entry.reason,
+              destination: entry.destination ?? null,
+              departureTime: entry.departureTime ?? null,
+              returnTime: entry.returnTime ?? null,
+              notes: entry.notes ?? null,
+            };
+          }),
+        },
+      },
+      include: {
+        entries: {
+          include: { dailyLog: { select: { date: true, flag: true } } },
+        },
+      },
+    });
+  }
+
+  /**
+   * Submits a draft/returned field movement log into the approval workflow.
+   */
+  async submitFieldMovementLog(
+    logId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const log = await this.prisma.fieldMovementLog.findFirst({
+      where: { id: logId, companyId, deletedAt: null },
+      include: { entries: true },
+    });
+
+    if (!log) {
+      throw new NotFoundException('Field movement log not found');
+    }
+    if (log.employeeId !== userId) {
+      throw new ForbiddenException('Only the owner can submit this log');
+    }
+    if (
+      log.status !== FieldMovementStatus.DRAFT &&
+      log.status !== FieldMovementStatus.RETURNED
+    ) {
+      throw new BadRequestException(
+        'Only draft or returned logs can be submitted',
+      );
+    }
+    if (log.entries.length === 0) {
+      throw new BadRequestException('Add at least one entry before submitting');
+    }
+
+    const resolvedTiers =
+      await this.hrApprovalChain.buildFieldMovementApprovalChain(
+        userId,
+        companyId,
+      );
+
+    if (resolvedTiers.length === 0) {
+      await this.prisma.fieldMovementLog.update({
+        where: { id: logId },
+        data: {
+          status: FieldMovementStatus.APPROVED,
+          submittedAt: new Date(),
+          completedAt: new Date(),
+          updatedBy: userId,
+        },
+      });
+      return this.getFieldMovementLog(logId, companyId, userId);
+    }
+
+    const approval = (await this.approvalsService.submitRequest(
+      {
+        categoryCode: 'FIELD_MOVEMENT_LOG',
+        title: `Field Movement Log ${log.requestNumber}`,
+        formData: {
+          month: log.month,
+          year: log.year,
+          entryCount: log.entries.length,
+          employeeId: log.employeeId,
+        },
+      },
+      companyId,
+      userId,
+      {
+        resolvedTiers: {
+          ruleName: 'Field movement chain',
+          tiers: resolvedTiers,
+        },
+      },
+    )) as { id: string };
+
+    await this.prisma.fieldMovementLog.update({
+      where: { id: logId },
+      data: {
+        status: FieldMovementStatus.SUBMITTED,
+        approvalRequestId: approval.id,
+        submittedAt: new Date(),
+        updatedBy: userId,
+      },
+    });
+
+    return this.getFieldMovementLog(logId, companyId, userId);
+  }
+
+  /**
+   * Returns one field movement log with entries and approval tiers.
+   */
+  async getFieldMovementLog(
+    logId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const log = await this.prisma.fieldMovementLog.findFirst({
+      where: { id: logId, companyId, deletedAt: null },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            employeeId: true,
+          },
+        },
+        entries: {
+          include: {
+            dailyLog: {
+              select: {
+                date: true,
+                flag: true,
+                clockInLocal: true,
+                clockOutLocal: true,
+                correctedClockInLocal: true,
+                correctedClockOutLocal: true,
+              },
+            },
+          },
+          orderBy: { date: 'asc' },
+        },
+        approvalRequest: {
+          include: {
+            tiers: {
+              include: {
+                approver: {
+                  select: { id: true, firstName: true, lastName: true },
+                },
+              },
+              orderBy: { tierOrder: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!log) {
+      throw new NotFoundException('Field movement log not found');
+    }
+
+    const isHr = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    if (!isHr && log.employeeId !== userId) {
+      throw new ForbiddenException('You do not have access to this log');
+    }
+
+    return log;
+  }
+
+  /**
+   * Lists field movement logs (own for employees; company-wide for HR).
+   */
+  async listFieldMovementLogs(
+    filters: ListFieldMovementLogsDto,
+    companyId: string,
+    userId: string,
+  ): Promise<PaginatedResult<unknown>> {
+    const isHr = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const { skip, take } = buildPrismaPagination(page, limit);
+
+    const where: Prisma.FieldMovementLogWhereInput = {
+      companyId,
+      deletedAt: null,
+      ...(isHr ? {} : { employeeId: userId }),
+      ...(isHr && filters.employeeId ? { employeeId: filters.employeeId } : {}),
+      ...(filters.month ? { month: filters.month } : {}),
+      ...(filters.year ? { year: filters.year } : {}),
+      ...(filters.status ? { status: filters.status } : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.fieldMovementLog.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              employeeId: true,
+            },
+          },
+          _count: { select: { entries: true } },
+          approvalRequest: {
+            select: {
+              id: true,
+              status: true,
+              currentTier: true,
+              tiers: {
+                where: { decision: 'PENDING' },
+                take: 1,
+                select: { label: true },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.fieldMovementLog.count({ where }),
+    ]);
+
+    return buildPaginatedResult(
+      rows.map((row) => ({
+        ...row,
+        entryCount: row._count.entries,
+        currentTierLabel: row.approvalRequest?.tiers[0]?.label ?? null,
+      })),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  /**
+   * Cancels a draft or submitted field movement log owned by the caller.
+   */
+  async cancelFieldMovementLog(
+    logId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const log = await this.prisma.fieldMovementLog.findFirst({
+      where: { id: logId, companyId, deletedAt: null },
+    });
+
+    if (!log) {
+      throw new NotFoundException('Field movement log not found');
+    }
+    if (log.employeeId !== userId) {
+      throw new ForbiddenException('Only the owner can cancel this log');
+    }
+    if (
+      log.status !== FieldMovementStatus.DRAFT &&
+      log.status !== FieldMovementStatus.SUBMITTED
+    ) {
+      throw new BadRequestException(
+        'Only draft or submitted logs can be cancelled',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.fieldMovementLog.update({
+        where: { id: logId },
+        data: {
+          status: FieldMovementStatus.CANCELLED,
+          updatedBy: userId,
+        },
+      });
+      if (log.approvalRequestId) {
+        await tx.approvalRequest.update({
+          where: { id: log.approvalRequestId },
+          data: { status: 'CANCELLED' },
+        });
+      }
+    });
+
+    return this.getFieldMovementLog(logId, companyId, userId);
+  }
+
+  /**
+   * Allocates the next FM-#### request number from the PostgreSQL sequence.
+   */
+  private async nextFieldMovementNumber(): Promise<string> {
+    const result = await this.prisma.$queryRaw<Array<{ nextval: bigint }>>`
+      SELECT nextval('field_movement_log_number_seq')
+    `;
+    const seq = Number(result[0]?.nextval ?? 1);
+    return `FM-${String(seq).padStart(4, '0')}`;
   }
 }

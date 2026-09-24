@@ -1,7 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AttendanceMonthStatus } from '@prisma/client';
+import {
+  AttendanceMonthStatus,
+  FieldMovementReason,
+  FieldMovementStatus,
+} from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -167,4 +172,125 @@ export class ListAttendanceMonthlyApprovalsDto {
   @IsOptional()
   @IsEnum(AttendanceMonthStatus)
   status?: AttendanceMonthStatus;
+}
+
+export class CreateFieldMovementEntryDto {
+  @ApiProperty()
+  @IsUUID()
+  dailyLogId!: string;
+
+  @ApiProperty({ enum: FieldMovementReason })
+  @IsEnum(FieldMovementReason)
+  reason!: FieldMovementReason;
+
+  @ApiPropertyOptional({
+    description: 'Required when reason is FIELD_VISIT',
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  destination?: string;
+
+  @ApiPropertyOptional({
+    description: 'Departure time in HH:mm local format',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Time must be in HH:mm format' })
+  departureTime?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Return time in HH:mm local format — omit if did not return to office',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'Time must be in HH:mm format' })
+  returnTime?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class CreateFieldMovementLogDto {
+  @ApiProperty({ type: [CreateFieldMovementEntryDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateFieldMovementEntryDto)
+  @ArrayMinSize(1, { message: 'At least one entry is required' })
+  entries!: CreateFieldMovementEntryDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class UpdateFieldMovementLogDto {
+  @ApiPropertyOptional({ type: [CreateFieldMovementEntryDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateFieldMovementEntryDto)
+  entries?: CreateFieldMovementEntryDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class ListFieldMovementLogsDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  month?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  year?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  employeeId?: string;
+
+  @ApiPropertyOptional({ enum: FieldMovementStatus })
+  @IsOptional()
+  @IsEnum(FieldMovementStatus)
+  status?: FieldMovementStatus;
+}
+
+export class GetFlaggedDaysDto {
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month!: number;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2020)
+  year!: number;
 }
