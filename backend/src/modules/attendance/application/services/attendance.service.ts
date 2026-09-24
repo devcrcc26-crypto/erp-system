@@ -2026,15 +2026,18 @@ export class AttendanceService
       );
 
     if (resolvedTiers.length === 0) {
-      await this.prisma.fieldMovementLog.update({
-        where: { id: logId },
-        data: {
-          status: FieldMovementStatus.APPROVED,
-          submittedAt: new Date(),
-          completedAt: new Date(),
-          updatedBy: userId,
+      const fullLog = await this.prisma.fieldMovementLog.findFirst({
+        where: { id: logId, companyId, deletedAt: null },
+        include: {
+          entries: {
+            include: { dailyLog: true },
+          },
         },
       });
+      if (!fullLog) {
+        throw new NotFoundException('Field movement log not found');
+      }
+      await this.applyFieldMovementCorrections(fullLog, new Date());
       return this.getFieldMovementLog(logId, companyId, userId);
     }
 
