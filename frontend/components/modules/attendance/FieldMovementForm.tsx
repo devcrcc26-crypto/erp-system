@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Checkbox,
   Form,
   Input,
   InputNumber,
+  Progress,
   Select,
   Switch,
   Tag,
@@ -30,6 +31,10 @@ import {
   useCreateFieldMovementLog,
   useSubmitFieldMovementLog,
 } from '@/lib/query/attendance';
+import {
+  formatDateList,
+  groupBy,
+} from '@/lib/utils/date-format.util';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { tokens } from '@/lib/theme/tokens';
 
@@ -72,12 +77,30 @@ const FLAG_COLORS: Record<AttendanceDayFlag, string> = {
   NONE: 'default',
 };
 
-const REASON_SUMMARY: Record<FieldMovementReason, string> = {
+const REASON_LABELS: Record<FieldMovementReason, string> = {
   FIELD_VISIT: 'Field visit',
   EARLY_LEAVE: 'Left early',
   FORGOT_CLOCK_IN: 'Forgot to clock in',
   FORGOT_CLOCK_OUT: 'Forgot to clock out',
 };
+
+const BULK_REASON_CATALOG: Array<{
+  value: FieldMovementReason;
+  label: string;
+}> = [
+  {
+    value: 'FIELD_VISIT',
+    label: '🏗️ Field visit (applies to all flag types)',
+  },
+  {
+    value: 'FORGOT_CLOCK_IN',
+    label: '⏰ Forgot to clock in (only for missing clock-in days)',
+  },
+  {
+    value: 'FORGOT_CLOCK_OUT',
+    label: '⏰ Forgot to clock out (only for missing clock-out days)',
+  },
+];
 
 type FetchState =
   | 'idle'
@@ -115,6 +138,7 @@ type DayEntry = {
   notes: string;
   earlyLeaveReason: string;
   errors: DayErrors;
+  filledViaBulk: boolean;
 };
 
 function previousMonthDefault(): { month: number; year: number } {
@@ -178,32 +202,42 @@ function toDayEntry(day: FlaggedDay): DayEntry {
     notes: '',
     earlyLeaveReason: '',
     errors: {},
+    filledViaBulk: false,
   };
 }
 
-function ReviewItem({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}): React.ReactNode {
-  return (
-    <div className="min-w-0">
-      <p
-        className="mb-0.5 text-xs font-medium uppercase tracking-wide"
-        style={{ color: tokens.colorTextTertiary }}
-      >
-        {label}
-      </p>
-      <p
-        className="m-0 whitespace-pre-wrap text-sm"
-        style={{ color: tokens.colorTextPrimary }}
-      >
-        {value}
-      </p>
-    </div>
-  );
+function getValidBulkReasons(
+  selectedDays: DayEntry[],
+): FieldMovementReason[] {
+  const flags = new Set(selectedDays.map((d) => d.flag));
+  const reasons: FieldMovementReason[] = ['FIELD_VISIT'];
+
+  if (!flags.has('MISSING_CLOCK_OUT') && !flags.has('EARLY_LEAVE')) {
+    reasons.push('FORGOT_CLOCK_IN');
+  }
+  if (!flags.has('MISSING_CLOCK_IN') && !flags.has('EARLY_LEAVE')) {
+    reasons.push('FORGOT_CLOCK_OUT');
+  }
+  return reasons;
+}
+
+function dayNeedsAttention(day: DayEntry): boolean {
+  if (!day.selected || day.alreadySubmitted) {
+    return false;
+  }
+  if (!day.selectedReason) {
+    return true;
+  }
+  if (day.selectedReason === 'FIELD_VISIT' && !day.destination.trim()) {
+    return true;
+  }
+  if (
+    day.selectedReason === 'EARLY_LEAVE' &&
+    (!day.departureTime || !day.earlyLeaveReason.trim())
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -228,14 +262,88 @@ export default function FieldMovementForm(): React.ReactNode {
     requestNumber: string;
   } | null>(null);
   const [stepOneError, setStepOneError] = useState<string | null>(null);
+  const [bulkReason, setBulkReason] = useState<FieldMovementReason | null>(
+    null,
+  );
+  const [bulkDestination, setBulkDestination] = useState('');
+  const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
 
   useSetHeaderExtra(null);
 
+  const selectableDays = useMemo(
+    () => dayEntries.filter((day) => !day.alreadySubmitted),
+    [dayEntries],
+  );
   const selectedDays = useMemo(
     () => dayEntries.filter((day) => day.selected),
     [dayEntries],
   );
+  const selectedCount = selectedDays.length;
+  const filledCount = selectedDays.filter(
+    (day) =>
+      day.selectedReason != null &&
+      (day.selectedReason !== 'FIELD_VISIT' || day.destination.trim().length > 0),
+  ).length;
+  const allSelected =
+    selectableDays.length > 0 &&
+    selectableDays.every((day) => day.selected);
+  const someSelected =
+    selectableDays.some((day) => day.selected) && !allSelected;
+  const anySelected = selectedCount > 0;
   const periodLabel = `${monthName(month)} ${year}`;
+
+  const bulkReasonOptions = useMemo(() => {
+    const valid = new Set(getValidBulkReasons(selectedDays));
+    return BULK_REASON_CATALOG.filter((option) => valid.has(option.value));
+  }, [selectedDays]);
+
+  const canProceedToStep3 =
+    selectedCount > 0 &&
+    dayEntries.every((day) => {
+      if (!day.selected) {
+        return true;
+      }
+      if (!day.selectedReason) {
+        return false;
+      }
+      if (
+        day.selectedReason === 'FIELD_VISIT' &&
+        day.destination.trim().length < 3
+      ) {
+        return false;
+      }
+      if (day.selectedReason === 'EARLY_LEAVE') {
+        if (!day.departureTime || !day.earlyLeaveReason.trim()) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+  const unfilledSelectedCount = dayEntries.filter(
+    (day) => day.selected && !day.selectedReason,
+  ).length;
+
+  const reviewGroups = useMemo(() => {
+    return groupBy(
+      selectedDays.filter((day) => day.selectedReason),
+      (day) => `${day.selectedReason}||${day.destination.trim()}`,
+    );
+  }, [selectedDays]);
+
+  useEffect(() => {
+    if (dayEntries.length === 0) {
+      setExpandedDays(new Set());
+      return;
+    }
+    const needsAttention = new Set(
+      dayEntries
+        .map((day, index) => ({ day, index }))
+        .filter(({ day }) => dayNeedsAttention(day))
+        .map(({ index }) => index),
+    );
+    setExpandedDays(needsAttention);
+  }, [dayEntries.length, fetchState]);
 
   function updateDay(id: string, patch: Partial<DayEntry>): void {
     setDayEntries((prev) =>
@@ -256,10 +364,91 @@ export default function FieldMovementForm(): React.ReactNode {
     );
   }
 
+  function handleSelectAll(checked: boolean): void {
+    setDayEntries((prev) =>
+      prev.map((day) =>
+        day.alreadySubmitted
+          ? day
+          : { ...day, selected: checked, errors: {} },
+      ),
+    );
+  }
+
+  function handleApplyBulk(): void {
+    if (!bulkReason) {
+      return;
+    }
+    if (bulkReason === 'FIELD_VISIT' && bulkDestination.trim().length < 3) {
+      messageApi.warning('Enter a destination of at least 3 characters.');
+      return;
+    }
+
+    const reason = bulkReason;
+    const destination =
+      reason === 'FIELD_VISIT' ? bulkDestination.trim() : '';
+
+    setDayEntries((prev) =>
+      prev.map((day) => {
+        if (!day.selected || day.alreadySubmitted) {
+          return day;
+        }
+        const validReasons = REASON_OPTIONS[day.flag].map(
+          (option) => option.value,
+        );
+        if (!validReasons.includes(reason)) {
+          return day;
+        }
+        if (!day.availableReasons.includes(reason)) {
+          return day;
+        }
+        return {
+          ...day,
+          selectedReason: reason,
+          destination: reason === 'FIELD_VISIT' ? destination : day.destination,
+          filledViaBulk: true,
+          errors: {},
+        };
+      }),
+    );
+
+    setExpandedDays((prev) => {
+      const next = new Set(prev);
+      dayEntries.forEach((day, index) => {
+        if (!day.selected || day.alreadySubmitted) {
+          return;
+        }
+        const validReasons = REASON_OPTIONS[day.flag].map(
+          (option) => option.value,
+        );
+        if (validReasons.includes(reason)) {
+          next.delete(index);
+        }
+      });
+      return next;
+    });
+
+    setBulkReason(null);
+    setBulkDestination('');
+  }
+
+  function toggleDayExpanded(index: number): void {
+    setExpandedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }
+
   async function handleCheckFlaggedDays(): Promise<void> {
     setStepOneError(null);
     setFetchError(null);
     setFetchState('loading');
+    setBulkReason(null);
+    setBulkDestination('');
     try {
       const [flags, yearAttendance] = await Promise.all([
         getMyFlaggedDays(month, year),
@@ -313,8 +502,9 @@ export default function FieldMovementForm(): React.ReactNode {
       return false;
     }
     let valid = true;
+    const needsExpand = new Set<number>();
     setDayEntries((prev) =>
-      prev.map((day) => {
+      prev.map((day, index) => {
         if (!day.selected) {
           return { ...day, errors: {} };
         }
@@ -322,17 +512,17 @@ export default function FieldMovementForm(): React.ReactNode {
         if (!day.selectedReason) {
           errors.selectedReason = 'Reason is required';
           valid = false;
+          needsExpand.add(index);
         }
         if (day.selectedReason === 'FIELD_VISIT') {
           if (!day.destination.trim()) {
             errors.destination = 'Destination is required';
             valid = false;
-          }
-          if (!day.departureTime || !parseTime(day.departureTime)) {
-            errors.departureTime = day.departureTime
-              ? 'Use HH:mm format'
-              : 'Departure time is required';
+            needsExpand.add(index);
+          } else if (day.destination.trim().length < 3) {
+            errors.destination = 'Destination must be at least 3 characters';
             valid = false;
+            needsExpand.add(index);
           }
           if (day.didReturn) {
             const dep = parseTime(day.departureTime);
@@ -340,10 +530,19 @@ export default function FieldMovementForm(): React.ReactNode {
             if (!day.returnTime) {
               errors.returnTime = 'Return time is required';
               valid = false;
+              needsExpand.add(index);
             } else if (dep && ret && !ret.isAfter(dep)) {
               errors.returnTime = 'Return time must be after departure time';
               valid = false;
+              needsExpand.add(index);
             }
+          } else if (
+            day.departureTime &&
+            !parseTime(day.departureTime)
+          ) {
+            errors.departureTime = 'Use HH:mm format';
+            valid = false;
+            needsExpand.add(index);
           }
         }
         if (day.selectedReason === 'EARLY_LEAVE') {
@@ -355,18 +554,31 @@ export default function FieldMovementForm(): React.ReactNode {
               ? 'Use HH:mm format'
               : 'Departure time is required';
             valid = false;
+            needsExpand.add(index);
           } else if (endTime && !dep.isBefore(endTime)) {
             errors.departureTime = `Departure must be before scheduled end (${end})`;
             valid = false;
+            needsExpand.add(index);
           }
           if (!day.earlyLeaveReason.trim()) {
             errors.earlyLeaveReason = 'Reason for early departure is required';
             valid = false;
+            needsExpand.add(index);
           }
         }
         return { ...day, errors };
       }),
     );
+    if (!valid) {
+      setExpandedDays((prev) => {
+        const next = new Set(prev);
+        needsExpand.forEach((index) => next.add(index));
+        return next;
+      });
+      messageApi.warning(
+        `${unfilledSelectedCount || 'Some'} selected day(s) still need a reason. Use bulk actions to fill them quickly.`,
+      );
+    }
     return valid;
   }
 
@@ -381,7 +593,7 @@ export default function FieldMovementForm(): React.ReactNode {
           destination:
             reason === 'FIELD_VISIT' ? day.destination.trim() : undefined,
           departureTime: ['FIELD_VISIT', 'EARLY_LEAVE'].includes(reason)
-            ? day.departureTime
+            ? day.departureTime || undefined
             : undefined,
           returnTime:
             reason === 'FIELD_VISIT' && day.didReturn
@@ -426,6 +638,9 @@ export default function FieldMovementForm(): React.ReactNode {
     setOverallNotes('');
     setSubmittedLog(null);
     setStepOneError(null);
+    setBulkReason(null);
+    setBulkDestination('');
+    setExpandedDays(new Set());
   }
 
   if (submittedLog) {
@@ -565,242 +780,411 @@ export default function FieldMovementForm(): React.ReactNode {
       validate: () => validateStep2(),
       content: (
         <div className="flex flex-col gap-4">
-          {dayEntries.map((day) => {
+          {dayEntries.length > 3 ? (
+            <>
+              <div style={{ marginBottom: 4 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: 4,
+                  }}
+                >
+                  <span style={{ fontSize: 12, color: '#64748b' }}>
+                    {filledCount} of {selectedCount} selected days explained
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color:
+                        filledCount === selectedCount && selectedCount > 0
+                          ? '#1d9e75'
+                          : '#94a3b8',
+                    }}
+                  >
+                    {filledCount === selectedCount && selectedCount > 0
+                      ? '✅ All filled'
+                      : `${Math.max(0, selectedCount - filledCount)} remaining`}
+                  </span>
+                </div>
+                <Progress
+                  percent={
+                    selectedCount > 0
+                      ? Math.round((filledCount / selectedCount) * 100)
+                      : 0
+                  }
+                  strokeColor="#1d9e75"
+                  size="small"
+                  showInfo={false}
+                />
+              </div>
+
+              <div className="erp-employee-section" style={{ marginBottom: 8 }}>
+                <div className="erp-employee-section-header">
+                  <span className="erp-employee-section-title">
+                    Bulk Actions
+                  </span>
+                </div>
+                <div className="erp-employee-section-body">
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <Checkbox
+                      indeterminate={someSelected}
+                      checked={allSelected}
+                      onChange={(event) =>
+                        handleSelectAll(event.target.checked)
+                      }
+                    >
+                      {allSelected
+                        ? 'Deselect All'
+                        : `Select All (${selectableDays.length} days)`}
+                    </Checkbox>
+
+                    {anySelected ? (
+                      <>
+                        <Select
+                          placeholder="Apply reason to selected days"
+                          style={{ width: 280 }}
+                          onChange={(reason: FieldMovementReason | null) =>
+                            setBulkReason(reason)
+                          }
+                          value={bulkReason ?? undefined}
+                          allowClear
+                          options={bulkReasonOptions}
+                        />
+
+                        {bulkReason === 'FIELD_VISIT' ? (
+                          <Input
+                            placeholder="Destination (applies to all selected)"
+                            style={{ width: 300 }}
+                            value={bulkDestination}
+                            onChange={(event) =>
+                              setBulkDestination(event.target.value)
+                            }
+                          />
+                        ) : null}
+
+                        <Button
+                          type="default"
+                          disabled={
+                            !bulkReason ||
+                            (bulkReason === 'FIELD_VISIT' &&
+                              bulkDestination.trim().length < 3)
+                          }
+                          onClick={handleApplyBulk}
+                        >
+                          Apply to {selectedCount} day(s)
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          {dayEntries.map((day, index) => {
             const reasonOptions = REASON_OPTIONS[day.flag].filter((option) =>
               day.availableReasons.includes(option.value),
             );
+            const isExpanded = expandedDays.has(index);
+            const showBody = isExpanded && day.selected;
+
             return (
               <div
                 key={day.id}
                 className="erp-employee-section"
-                style={{ opacity: day.selected ? 1 : 0.55 }}
+                style={{
+                  marginBottom: 8,
+                  opacity: day.selected ? 1 : 0.55,
+                }}
               >
-                <div className="erp-employee-section-header">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                <div
+                  className="erp-employee-section-header"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => toggleDayExpanded(index)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      toggleDayExpanded(index);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      flex: 1,
+                      minWidth: 0,
+                      flexWrap: 'wrap',
+                    }}
+                  >
                     <Checkbox
                       checked={day.selected}
-                      onChange={(event) =>
+                      disabled={day.alreadySubmitted}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) => {
                         updateDay(day.id, {
                           selected: event.target.checked,
-                          errors: {},
-                        })
-                      }
-                    />
-                    <div className="min-w-0">
-                      <h3 className="erp-employee-section-title m-0">
-                        {formatFlaggedDate(day.date)}
-                      </h3>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <Tag color={FLAG_COLORS[day.flag]}>
-                          Flag: {FLAG_LABELS[day.flag]}
-                        </Tag>
-                        {day.alreadySubmitted && day.submittedLog ? (
-                          <Tag color="green">
-                            {day.submittedLog.requestNumber} ✅ Already
-                            explained
-                          </Tag>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="erp-employee-section-body erp-advanced-form">
-                  <Form.Item
-                    label="Reason"
-                    required
-                    validateStatus={
-                      day.errors.selectedReason ? 'error' : undefined
-                    }
-                    help={day.errors.selectedReason}
-                    className="mb-3"
-                  >
-                    <Select
-                      disabled={!day.selected}
-                      placeholder="Select reason"
-                      value={day.selectedReason ?? undefined}
-                      options={reasonOptions}
-                      onChange={(value: FieldMovementReason) => {
-                        updateDay(day.id, {
-                          selectedReason: value,
-                          destination: '',
-                          departureTime: '',
-                          didReturn: false,
-                          returnTime: '',
-                          earlyLeaveReason: '',
                           errors: {},
                         });
                       }}
                     />
-                  </Form.Item>
+                    <span style={{ fontWeight: 500 }}>
+                      {formatFlaggedDate(day.date)}
+                    </span>
+                    <Tag color={FLAG_COLORS[day.flag]}>
+                      {FLAG_LABELS[day.flag]}
+                    </Tag>
+                    {day.alreadySubmitted && day.submittedLog ? (
+                      <Tag color="green">
+                        {day.submittedLog.requestNumber} ✅ Already explained
+                      </Tag>
+                    ) : null}
+                    {day.selectedReason && !isExpanded ? (
+                      <span style={{ color: '#64748b', fontSize: 12 }}>
+                        {REASON_LABELS[day.selectedReason]}
+                        {day.destination ? ` — ${day.destination}` : ''}{' '}
+                        <Tag color="green" style={{ fontSize: 11 }}>
+                          ✓ Filled
+                        </Tag>
+                      </span>
+                    ) : null}
+                  </div>
+                  <span style={{ color: '#94a3b8', fontSize: 12 }}>
+                    {isExpanded ? '▲ Collapse' : '▼ Edit'}
+                  </span>
+                </div>
 
-                  {day.selectedReason === 'FIELD_VISIT' ? (
-                    <>
-                      <Form.Item
-                        label="Destination"
-                        required
-                        validateStatus={
-                          day.errors.destination ? 'error' : undefined
-                        }
-                        help={day.errors.destination}
-                        className="mb-3"
-                      >
-                        <Input
-                          disabled={!day.selected}
-                          placeholder='e.g. "Addis Ring Road construction site"'
-                          value={day.destination}
-                          onChange={(event) => {
-                            updateDay(day.id, {
-                              destination: event.target.value,
-                            });
-                            clearDayError(day.id, 'destination');
-                          }}
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        label="Departure Time"
-                        required
-                        validateStatus={
-                          day.errors.departureTime ? 'error' : undefined
-                        }
-                        help={day.errors.departureTime}
-                        className="mb-3"
-                      >
-                        <TimePicker
-                          disabled={!day.selected}
-                          format="HH:mm"
-                          className="w-full"
-                          value={parseTime(day.departureTime)}
-                          onChange={(value) => {
-                            updateDay(day.id, {
-                              departureTime: value
-                                ? value.format('HH:mm')
-                                : '',
-                            });
-                            clearDayError(day.id, 'departureTime');
-                          }}
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        label="Did you return to the office?"
-                        className="mb-3"
-                      >
-                        <Switch
-                          disabled={!day.selected}
-                          checked={day.didReturn}
-                          onChange={(checked) =>
-                            updateDay(day.id, {
-                              didReturn: checked,
-                              returnTime: checked ? day.returnTime : '',
-                            })
-                          }
-                        />
-                      </Form.Item>
-                      {day.didReturn ? (
+                {showBody ? (
+                  <div className="erp-employee-section-body erp-advanced-form">
+                    <Form.Item
+                      label="Reason"
+                      required
+                      validateStatus={
+                        day.errors.selectedReason ? 'error' : undefined
+                      }
+                      help={day.errors.selectedReason}
+                      className="mb-3"
+                    >
+                      <Select
+                        disabled={!day.selected}
+                        placeholder="Select reason"
+                        value={day.selectedReason ?? undefined}
+                        options={reasonOptions}
+                        onChange={(value: FieldMovementReason) => {
+                          updateDay(day.id, {
+                            selectedReason: value,
+                            destination: '',
+                            departureTime: '',
+                            didReturn: false,
+                            returnTime: '',
+                            earlyLeaveReason: '',
+                            filledViaBulk: false,
+                            errors: {},
+                          });
+                        }}
+                      />
+                    </Form.Item>
+
+                    {day.selectedReason === 'FIELD_VISIT' ? (
+                      <>
                         <Form.Item
-                          label="Return Time"
+                          label="Destination"
                           required
                           validateStatus={
-                            day.errors.returnTime ? 'error' : undefined
+                            day.errors.destination ? 'error' : undefined
                           }
-                          help={day.errors.returnTime}
+                          help={day.errors.destination}
+                          className="mb-3"
+                        >
+                          <Input
+                            disabled={!day.selected}
+                            placeholder='e.g. "Addis Ring Road construction site"'
+                            value={day.destination}
+                            onChange={(event) => {
+                              updateDay(day.id, {
+                                destination: event.target.value,
+                                filledViaBulk: false,
+                              });
+                              clearDayError(day.id, 'destination');
+                            }}
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          label="Departure Time (optional)"
+                          validateStatus={
+                            day.errors.departureTime ? 'error' : undefined
+                          }
+                          help={day.errors.departureTime}
                           className="mb-3"
                         >
                           <TimePicker
                             disabled={!day.selected}
                             format="HH:mm"
                             className="w-full"
-                            value={parseTime(day.returnTime)}
+                            value={parseTime(day.departureTime)}
                             onChange={(value) => {
                               updateDay(day.id, {
-                                returnTime: value
+                                departureTime: value
                                   ? value.format('HH:mm')
                                   : '',
+                                filledViaBulk: false,
                               });
-                              clearDayError(day.id, 'returnTime');
+                              clearDayError(day.id, 'departureTime');
                             }}
                           />
                         </Form.Item>
-                      ) : null}
-                    </>
-                  ) : null}
+                        <Form.Item
+                          label="Did you return to the office?"
+                          className="mb-3"
+                        >
+                          <Switch
+                            disabled={!day.selected}
+                            checked={day.didReturn}
+                            onChange={(checked) =>
+                              updateDay(day.id, {
+                                didReturn: checked,
+                                returnTime: checked ? day.returnTime : '',
+                                filledViaBulk: false,
+                              })
+                            }
+                          />
+                        </Form.Item>
+                        {day.didReturn ? (
+                          <Form.Item
+                            label="Return Time"
+                            required
+                            validateStatus={
+                              day.errors.returnTime ? 'error' : undefined
+                            }
+                            help={day.errors.returnTime}
+                            className="mb-3"
+                          >
+                            <TimePicker
+                              disabled={!day.selected}
+                              format="HH:mm"
+                              className="w-full"
+                              value={parseTime(day.returnTime)}
+                              onChange={(value) => {
+                                updateDay(day.id, {
+                                  returnTime: value
+                                    ? value.format('HH:mm')
+                                    : '',
+                                  filledViaBulk: false,
+                                });
+                                clearDayError(day.id, 'returnTime');
+                              }}
+                            />
+                          </Form.Item>
+                        ) : null}
+                      </>
+                    ) : null}
 
-                  {day.selectedReason === 'EARLY_LEAVE' ? (
-                    <>
-                      <Form.Item
-                        label="Departure Time"
-                        required
-                        validateStatus={
-                          day.errors.departureTime ? 'error' : undefined
-                        }
-                        help={day.errors.departureTime}
-                        className="mb-3"
+                    {day.selectedReason === 'EARLY_LEAVE' ? (
+                      <>
+                        <Form.Item
+                          label="Departure Time"
+                          required
+                          validateStatus={
+                            day.errors.departureTime ? 'error' : undefined
+                          }
+                          help={day.errors.departureTime}
+                          className="mb-3"
+                        >
+                          <TimePicker
+                            disabled={!day.selected}
+                            format="HH:mm"
+                            className="w-full"
+                            value={parseTime(day.departureTime)}
+                            onChange={(value) => {
+                              updateDay(day.id, {
+                                departureTime: value
+                                  ? value.format('HH:mm')
+                                  : '',
+                                filledViaBulk: false,
+                              });
+                              clearDayError(day.id, 'departureTime');
+                            }}
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          label="Reason for early departure"
+                          required
+                          validateStatus={
+                            day.errors.earlyLeaveReason ? 'error' : undefined
+                          }
+                          help={day.errors.earlyLeaveReason}
+                          className="mb-3"
+                        >
+                          <Input.TextArea
+                            disabled={!day.selected}
+                            rows={3}
+                            value={day.earlyLeaveReason}
+                            onChange={(event) => {
+                              updateDay(day.id, {
+                                earlyLeaveReason: event.target.value,
+                                filledViaBulk: false,
+                              });
+                              clearDayError(day.id, 'earlyLeaveReason');
+                            }}
+                          />
+                        </Form.Item>
+                      </>
+                    ) : null}
+
+                    {day.selectedReason === 'FORGOT_CLOCK_IN' ||
+                    day.selectedReason === 'FORGOT_CLOCK_OUT' ? (
+                      <p
+                        className="mb-3 text-sm"
+                        style={{ color: tokens.colorTextSecondary }}
                       >
-                        <TimePicker
-                          disabled={!day.selected}
-                          format="HH:mm"
-                          className="w-full"
-                          value={parseTime(day.departureTime)}
-                          onChange={(value) => {
-                            updateDay(day.id, {
-                              departureTime: value
-                                ? value.format('HH:mm')
-                                : '',
-                            });
-                            clearDayError(day.id, 'departureTime');
-                          }}
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        label="Reason for early departure"
-                        required
-                        validateStatus={
-                          day.errors.earlyLeaveReason ? 'error' : undefined
-                        }
-                        help={day.errors.earlyLeaveReason}
-                        className="mb-3"
-                      >
+                        Your attendance will be marked as present for this day.
+                      </p>
+                    ) : null}
+
+                    {day.selectedReason &&
+                    day.selectedReason !== 'EARLY_LEAVE' ? (
+                      <Form.Item label="Notes" className="mb-0">
                         <Input.TextArea
                           disabled={!day.selected}
-                          rows={3}
-                          value={day.earlyLeaveReason}
-                          onChange={(event) => {
+                          rows={2}
+                          value={day.notes}
+                          onChange={(event) =>
                             updateDay(day.id, {
-                              earlyLeaveReason: event.target.value,
-                            });
-                            clearDayError(day.id, 'earlyLeaveReason');
-                          }}
+                              notes: event.target.value,
+                              filledViaBulk: false,
+                            })
+                          }
                         />
                       </Form.Item>
-                    </>
-                  ) : null}
-
-                  {day.selectedReason === 'FORGOT_CLOCK_IN' ||
-                  day.selectedReason === 'FORGOT_CLOCK_OUT' ? (
-                    <p
-                      className="mb-3 text-sm"
-                      style={{ color: tokens.colorTextSecondary }}
-                    >
-                      Your attendance will be marked as present for this day.
-                    </p>
-                  ) : null}
-
-                  {day.selectedReason &&
-                  day.selectedReason !== 'EARLY_LEAVE' ? (
-                    <Form.Item label="Notes" className="mb-0">
-                      <Input.TextArea
-                        disabled={!day.selected}
-                        rows={2}
-                        value={day.notes}
-                        onChange={(event) =>
-                          updateDay(day.id, { notes: event.target.value })
-                        }
-                      />
-                    </Form.Item>
-                  ) : null}
-                </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             );
           })}
+
+          {!canProceedToStep3 && selectedCount > 0 ? (
+            <div className="erp-notice erp-notice--warning" style={{ marginTop: 4 }}>
+              <div className="erp-notice-body">
+                <p className="erp-notice-description m-0">
+                  {unfilledSelectedCount > 0
+                    ? `${unfilledSelectedCount} selected day(s) still need a reason. Use bulk actions above to fill them quickly.`
+                    : 'Complete destination or early-leave details for all selected days before continuing.'}
+                </p>
+              </div>
+            </div>
+          ) : null}
         </div>
       ),
     },
@@ -819,60 +1203,37 @@ export default function FieldMovementForm(): React.ReactNode {
           >
             Days: {selectedDays.length} day(s)
           </p>
-          <div className="flex flex-col gap-4">
-            {selectedDays.map((day) => (
-              <div
-                key={day.id}
-                className="rounded-lg border border-[#e8ebef] p-3"
-              >
-                <p className="m-0 mb-2 font-medium">
-                  {formatFlaggedDate(day.date)}
-                </p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <ReviewItem
-                    label="Reason"
-                    value={
-                      day.selectedReason
-                        ? REASON_SUMMARY[day.selectedReason]
-                        : '—'
-                    }
-                  />
-                  {day.selectedReason === 'FIELD_VISIT' ? (
-                    <>
-                      <ReviewItem
-                        label="Destination"
-                        value={day.destination || '—'}
-                      />
-                      <ReviewItem
-                        label="Departed"
-                        value={
-                          day.departureTime
-                            ? `${day.departureTime}${
-                                day.didReturn && day.returnTime
-                                  ? ` · Returned ${day.returnTime}`
-                                  : ' · Did not return to office'
-                              }`
-                            : '—'
-                        }
-                      />
-                    </>
-                  ) : null}
-                  {day.selectedReason === 'EARLY_LEAVE' ? (
-                    <>
-                      <ReviewItem
-                        label="Departure"
-                        value={day.departureTime || '—'}
-                      />
-                      <ReviewItem
-                        label="Reason"
-                        value={day.earlyLeaveReason || '—'}
-                      />
-                    </>
-                  ) : null}
-                  <ReviewItem label="Notes" value={day.notes || '—'} />
+          <div className="flex flex-col gap-3">
+            {Object.entries(reviewGroups).map(([key, days]) => {
+              const [reasonKey, destination] = key.split('||');
+              const reason = reasonKey as FieldMovementReason;
+              return (
+                <div
+                  key={key}
+                  className="erp-employee-section"
+                  style={{ marginBottom: 4 }}
+                >
+                  <div className="erp-employee-section-header">
+                    <span className="erp-employee-section-title">
+                      {REASON_LABELS[reason] ?? reason}
+                      {destination ? ` — ${destination}` : ''}
+                    </span>
+                    <Tag>{days.length} day(s)</Tag>
+                  </div>
+                  <div className="erp-employee-section-body">
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 13,
+                        color: '#64748b',
+                      }}
+                    >
+                      {formatDateList(days.map((day) => day.date))}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <Form.Item label="Overall Notes (optional)" className="mt-4 mb-0">
             <Input.TextArea

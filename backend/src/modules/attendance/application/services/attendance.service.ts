@@ -1950,10 +1950,22 @@ export class AttendanceService
     }
 
     for (const entry of dto.entries) {
-      if (entry.reason === FieldMovementReason.FIELD_VISIT && !entry.destination) {
-        throw new BadRequestException(
-          'Destination is required for field visit entries',
-        );
+      const dailyLog = dailyLogs.find((log) => log.id === entry.dailyLogId);
+      const dateLabel = dailyLog
+        ? dailyLog.date.toISOString().split('T')[0]
+        : entry.dailyLogId;
+
+      if (entry.reason === FieldMovementReason.FIELD_VISIT) {
+        if (!entry.destination?.trim()) {
+          throw new BadRequestException(
+            `Destination is required for field visit on ${dateLabel}`,
+          );
+        }
+        if (entry.destination.trim().length < 3) {
+          throw new BadRequestException(
+            `Destination must be at least 3 characters for field visit on ${dateLabel}`,
+          );
+        }
       }
       if (
         entry.reason === FieldMovementReason.EARLY_LEAVE &&
