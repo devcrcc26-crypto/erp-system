@@ -1823,7 +1823,14 @@ export class AttendanceService
       isHalfDay: boolean;
       availableReasons: FieldMovementReason[];
       alreadySubmitted: boolean;
-      submittedLog: { id: string; requestNumber: string; status: string } | null;
+      submittedLog: {
+        id: string;
+        requestNumber: string;
+        status: string;
+        approvalRequestId: string | null;
+        pendingTierLabel: string | null;
+        pendingApproverName: string | null;
+      } | null;
     }>;
     month: number;
     year: number;
@@ -1862,12 +1869,46 @@ export class AttendanceService
         fieldMovementEntries: {
           include: {
             log: {
-              select: { id: true, requestNumber: true, status: true },
+              select: {
+                id: true,
+                requestNumber: true,
+                status: true,
+                approvalRequestId: true,
+                approvalRequest: {
+                  select: {
+                    id: true,
+                    currentTier: true,
+                    tiers: {
+                      where: { decision: 'PENDING' },
+                      orderBy: { tierOrder: 'asc' },
+                      take: 1,
+                      select: {
+                        label: true,
+                        approver: {
+                          select: {
+                            firstName: true,
+                            lastName: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },
       },
     });
+
+    /** Active logs still block a new explanation for that day. */
+    const blockingStatuses = new Set<FieldMovementStatus>([
+      FieldMovementStatus.DRAFT,
+      FieldMovementStatus.SUBMITTED,
+      FieldMovementStatus.IN_REVIEW,
+      FieldMovementStatus.RETURNED,
+      FieldMovementStatus.APPROVED,
+    ]);
 
     const flaggedDaysWithOptions = flaggedDays.map((day) => {
       const availableReasons: FieldMovementReason[] = [];
@@ -1890,11 +1931,29 @@ export class AttendanceService
         );
       }
 
+      const activeEntry = day.fieldMovementEntries.find((entry) =>
+        blockingStatuses.has(entry.log.status),
+      );
+      const activeLog = activeEntry?.log ?? null;
+      const pendingTier = activeLog?.approvalRequest?.tiers[0];
+      const pendingApprover = pendingTier?.approver
+        ? `${pendingTier.approver.firstName} ${pendingTier.approver.lastName}`.trim()
+        : null;
+
       return {
         ...day,
         availableReasons,
-        alreadySubmitted: day.fieldMovementEntries.length > 0,
-        submittedLog: day.fieldMovementEntries[0]?.log ?? null,
+        alreadySubmitted: activeLog != null,
+        submittedLog: activeLog
+          ? {
+              id: activeLog.id,
+              requestNumber: activeLog.requestNumber,
+              status: activeLog.status,
+              approvalRequestId: activeLog.approvalRequestId,
+              pendingTierLabel: pendingTier?.label ?? null,
+              pendingApproverName: pendingApprover,
+            }
+          : null,
       };
     });
 
@@ -1947,6 +2006,35 @@ export class AttendanceService
           `Day ${log.date.toISOString().split('T')[0]} has no flag — no explanation needed`,
         );
       }
+    }
+
+    const existingBlockingEntries = await this.prisma.fieldMovementEntry.findMany({
+      where: {
+        dailyLogId: { in: dailyLogIds },
+        log: {
+          status: {
+            in: [
+              FieldMovementStatus.DRAFT,
+              FieldMovementStatus.SUBMITTED,
+              FieldMovementStatus.IN_REVIEW,
+              FieldMovementStatus.RETURNED,
+              FieldMovementStatus.APPROVED,
+            ],
+          },
+          deletedAt: null,
+        },
+      },
+      include: {
+        log: { select: { requestNumber: true, status: true } },
+        dailyLog: { select: { date: true } },
+      },
+    });
+    if (existingBlockingEntries.length > 0) {
+      const sample = existingBlockingEntries[0]!;
+      const dateLabel = sample.dailyLog.date.toISOString().split('T')[0];
+      throw new BadRequestException(
+        `Day ${dateLabel} is already covered by ${sample.log.requestNumber} (${sample.log.status}). Wait for that request to finish, or cancel/reject it before submitting again.`,
+      );
     }
 
     for (const entry of dto.entries) {

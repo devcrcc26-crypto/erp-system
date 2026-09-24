@@ -100,6 +100,10 @@ const BULK_REASON_CATALOG: Array<{
     value: 'FORGOT_CLOCK_OUT',
     label: '⏰ Forgot to clock out (only for missing clock-out days)',
   },
+  {
+    value: 'EARLY_LEAVE',
+    label: '🚪 Left early (only for early leave / missing clock-out days)',
+  },
 ];
 
 type FetchState =
@@ -108,6 +112,7 @@ type FetchState =
   | 'no-data'
   | 'not-approved'
   | 'has-flags'
+  | 'all-explained'
   | 'error';
 
 type DayErrors = Partial<
@@ -128,7 +133,13 @@ type DayEntry = {
   isHalfDay: boolean;
   availableReasons: FieldMovementReason[];
   alreadySubmitted: boolean;
-  submittedLog: { requestNumber: string; status: string } | null;
+  submittedLog: {
+    requestNumber: string;
+    status: string;
+    approvalRequestId: string | null;
+    pendingTierLabel: string | null;
+    pendingApproverName: string | null;
+  } | null;
   selected: boolean;
   selectedReason: FieldMovementReason | null;
   destination: string;
@@ -191,6 +202,9 @@ function toDayEntry(day: FlaggedDay): DayEntry {
       ? {
           requestNumber: day.submittedLog.requestNumber,
           status: day.submittedLog.status,
+          approvalRequestId: day.submittedLog.approvalRequestId,
+          pendingTierLabel: day.submittedLog.pendingTierLabel,
+          pendingApproverName: day.submittedLog.pendingApproverName,
         }
       : null,
     selected: !day.alreadySubmitted,
@@ -218,26 +232,30 @@ function getValidBulkReasons(
   if (!flags.has('MISSING_CLOCK_IN') && !flags.has('EARLY_LEAVE')) {
     reasons.push('FORGOT_CLOCK_OUT');
   }
+  if (!flags.has('MISSING_CLOCK_IN')) {
+    reasons.push('EARLY_LEAVE');
+  }
   return reasons;
+}
+
+function dayIsFullyExplained(day: DayEntry): boolean {
+  if (!day.selected || !day.selectedReason) {
+    return false;
+  }
+  if (day.selectedReason === 'FIELD_VISIT') {
+    return day.destination.trim().length >= 3;
+  }
+  if (day.selectedReason === 'EARLY_LEAVE') {
+    return Boolean(day.departureTime) && day.earlyLeaveReason.trim().length > 0;
+  }
+  return true;
 }
 
 function dayNeedsAttention(day: DayEntry): boolean {
   if (!day.selected || day.alreadySubmitted) {
     return false;
   }
-  if (!day.selectedReason) {
-    return true;
-  }
-  if (day.selectedReason === 'FIELD_VISIT' && !day.destination.trim()) {
-    return true;
-  }
-  if (
-    day.selectedReason === 'EARLY_LEAVE' &&
-    (!day.departureTime || !day.earlyLeaveReason.trim())
-  ) {
-    return true;
-  }
-  return false;
+  return !dayIsFullyExplained(day);
 }
 
 /**
@@ -266,6 +284,11 @@ export default function FieldMovementForm(): React.ReactNode {
     null,
   );
   const [bulkDestination, setBulkDestination] = useState('');
+  const [bulkDepartureTime, setBulkDepartureTime] = useState('');
+  const [bulkDidReturn, setBulkDidReturn] = useState(false);
+  const [bulkReturnTime, setBulkReturnTime] = useState('');
+  const [bulkEarlyLeaveReason, setBulkEarlyLeaveReason] = useState('');
+  const [bulkNotes, setBulkNotes] = useState('');
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
 
   useSetHeaderExtra(null);
@@ -279,11 +302,8 @@ export default function FieldMovementForm(): React.ReactNode {
     [dayEntries],
   );
   const selectedCount = selectedDays.length;
-  const filledCount = selectedDays.filter(
-    (day) =>
-      day.selectedReason != null &&
-      (day.selectedReason !== 'FIELD_VISIT' || day.destination.trim().length > 0),
-  ).length;
+  const filledCount = selectedDays.filter((day) => dayIsFullyExplained(day))
+    .length;
   const allSelected =
     selectableDays.length > 0 &&
     selectableDays.every((day) => day.selected);
@@ -291,11 +311,78 @@ export default function FieldMovementForm(): React.ReactNode {
     selectableDays.some((day) => day.selected) && !allSelected;
   const anySelected = selectedCount > 0;
   const periodLabel = `${monthName(month)} ${year}`;
+  const pendingRequestNumbers = useMemo(() => {
+    return [
+      ...new Set(
+        dayEntries
+          .map((day) => day.submittedLog?.requestNumber)
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ];
+  }, [dayEntries]);
+
+  const pendingApprovalMeta = useMemo(() => {
+    const withMeta = dayEntries.find(
+      (day) =>
+        day.submittedLog?.approvalRequestId ||
+        day.submittedLog?.pendingApproverName,
+    )?.submittedLog;
+    return withMeta ?? null;
+  }, [dayEntries]);
 
   const bulkReasonOptions = useMemo(() => {
     const valid = new Set(getValidBulkReasons(selectedDays));
     return BULK_REASON_CATALOG.filter((option) => valid.has(option.value));
   }, [selectedDays]);
+
+  const canApplyBulk = useMemo((): boolean => {
+    if (!bulkReason || selectedCount === 0) {
+      return false;
+    }
+    if (bulkReason === 'FIELD_VISIT') {
+      if (bulkDestination.trim().length < 3) {
+        return false;
+      }
+      if (bulkDidReturn && !parseTime(bulkReturnTime)) {
+        return false;
+      }
+      if (
+        bulkDidReturn &&
+        bulkDepartureTime &&
+        parseTime(bulkDepartureTime) &&
+        parseTime(bulkReturnTime) &&
+        !parseTime(bulkReturnTime)!.isAfter(parseTime(bulkDepartureTime)!)
+      ) {
+        return false;
+      }
+      return true;
+    }
+    if (bulkReason === 'EARLY_LEAVE') {
+      return (
+        Boolean(parseTime(bulkDepartureTime)) &&
+        bulkEarlyLeaveReason.trim().length > 0
+      );
+    }
+    return true;
+  }, [
+    bulkReason,
+    selectedCount,
+    bulkDestination,
+    bulkDidReturn,
+    bulkReturnTime,
+    bulkDepartureTime,
+    bulkEarlyLeaveReason,
+  ]);
+
+  function clearBulkFields(): void {
+    setBulkReason(null);
+    setBulkDestination('');
+    setBulkDepartureTime('');
+    setBulkDidReturn(false);
+    setBulkReturnTime('');
+    setBulkEarlyLeaveReason('');
+    setBulkNotes('');
+  }
 
   const canProceedToStep3 =
     selectedCount > 0 &&
@@ -321,7 +408,7 @@ export default function FieldMovementForm(): React.ReactNode {
     });
 
   const unfilledSelectedCount = dayEntries.filter(
-    (day) => day.selected && !day.selectedReason,
+    (day) => day.selected && !dayIsFullyExplained(day),
   ).length;
 
   const reviewGroups = useMemo(() => {
@@ -375,17 +462,24 @@ export default function FieldMovementForm(): React.ReactNode {
   }
 
   function handleApplyBulk(): void {
-    if (!bulkReason) {
-      return;
-    }
-    if (bulkReason === 'FIELD_VISIT' && bulkDestination.trim().length < 3) {
-      messageApi.warning('Enter a destination of at least 3 characters.');
+    if (!bulkReason || !canApplyBulk) {
       return;
     }
 
     const reason = bulkReason;
     const destination =
       reason === 'FIELD_VISIT' ? bulkDestination.trim() : '';
+    const departureTime =
+      reason === 'FIELD_VISIT' || reason === 'EARLY_LEAVE'
+        ? bulkDepartureTime
+        : '';
+    const didReturn = reason === 'FIELD_VISIT' ? bulkDidReturn : false;
+    const returnTime =
+      reason === 'FIELD_VISIT' && bulkDidReturn ? bulkReturnTime : '';
+    const earlyLeaveReason =
+      reason === 'EARLY_LEAVE' ? bulkEarlyLeaveReason.trim() : '';
+    const notes =
+      reason === 'EARLY_LEAVE' ? '' : bulkNotes.trim();
 
     setDayEntries((prev) =>
       prev.map((day) => {
@@ -404,7 +498,12 @@ export default function FieldMovementForm(): React.ReactNode {
         return {
           ...day,
           selectedReason: reason,
-          destination: reason === 'FIELD_VISIT' ? destination : day.destination,
+          destination: reason === 'FIELD_VISIT' ? destination : '',
+          departureTime,
+          didReturn,
+          returnTime,
+          earlyLeaveReason,
+          notes: reason === 'EARLY_LEAVE' ? '' : notes,
           filledViaBulk: true,
           errors: {},
         };
@@ -427,8 +526,8 @@ export default function FieldMovementForm(): React.ReactNode {
       return next;
     });
 
-    setBulkReason(null);
-    setBulkDestination('');
+    clearBulkFields();
+    messageApi.success(`Applied to ${selectedCount} day(s).`);
   }
 
   function toggleDayExpanded(index: number): void {
@@ -447,8 +546,7 @@ export default function FieldMovementForm(): React.ReactNode {
     setStepOneError(null);
     setFetchError(null);
     setFetchState('loading');
-    setBulkReason(null);
-    setBulkDestination('');
+    clearBulkFields();
     try {
       const [flags, yearAttendance] = await Promise.all([
         getMyFlaggedDays(month, year),
@@ -467,8 +565,10 @@ export default function FieldMovementForm(): React.ReactNode {
         setFetchState('no-data');
         return;
       }
-      setDayEntries(flags.flaggedDays.map(toDayEntry));
-      setFetchState('has-flags');
+      const entries = flags.flaggedDays.map(toDayEntry);
+      setDayEntries(entries);
+      const pendingCount = entries.filter((day) => !day.alreadySubmitted).length;
+      setFetchState(pendingCount === 0 ? 'all-explained' : 'has-flags');
     } catch (error) {
       setFetchError(
         error instanceof ApiRequestError
@@ -488,7 +588,13 @@ export default function FieldMovementForm(): React.ReactNode {
       setStepOneError('Check for flagged days before continuing.');
       return false;
     }
-    if (fetchState !== 'has-flags' || dayEntries.length === 0) {
+    if (fetchState === 'all-explained') {
+      setStepOneError(
+        'These days already have a pending or approved explanation. Open Approvals → My Requests to track it.',
+      );
+      return false;
+    }
+    if (fetchState !== 'has-flags' || selectableDays.length === 0) {
       setStepOneError('No flagged days available to explain for this period.');
       return false;
     }
@@ -497,6 +603,12 @@ export default function FieldMovementForm(): React.ReactNode {
   }
 
   function validateStep2(): boolean {
+    if (selectableDays.length === 0) {
+      messageApi.warning(
+        'All flagged days for this month are already explained. Check Approvals → My Requests.',
+      );
+      return false;
+    }
     if (selectedDays.length === 0) {
       messageApi.warning('Select at least one day to explain.');
       return false;
@@ -638,8 +750,7 @@ export default function FieldMovementForm(): React.ReactNode {
     setOverallNotes('');
     setSubmittedLog(null);
     setStepOneError(null);
-    setBulkReason(null);
-    setBulkDestination('');
+    clearBulkFields();
     setExpandedDays(new Set());
   }
 
@@ -765,9 +876,58 @@ export default function FieldMovementForm(): React.ReactNode {
               <div className="erp-notice erp-notice--warning mt-4">
                 <div className="erp-notice-body">
                   <p className="erp-notice-title m-0">
-                    You have {dayEntries.length} day(s) requiring explanation
-                    for {periodLabel}.
+                    You have {selectableDays.length} day(s) requiring
+                    explanation for {periodLabel}.
                   </p>
+                  {dayEntries.length > selectableDays.length ? (
+                    <p className="erp-notice-description m-0 mt-1">
+                      {dayEntries.length - selectableDays.length} day(s)
+                      already have a pending explanation and are locked.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {fetchState === 'all-explained' ? (
+              <div className="erp-notice erp-notice--info mt-4">
+                <div className="erp-notice-body">
+                  <p className="erp-notice-title m-0">
+                    All flagged days for {periodLabel} already have an
+                    explanation in progress.
+                  </p>
+                  <p className="erp-notice-description m-0 mt-1">
+                    {pendingRequestNumbers.join(', ') || 'Your request'} is
+                    awaiting approval
+                    {pendingApprovalMeta?.pendingApproverName
+                      ? ` from ${pendingApprovalMeta.pendingApproverName}`
+                      : ''}
+                    {pendingApprovalMeta?.pendingTierLabel
+                      ? ` (${pendingApprovalMeta.pendingTierLabel})`
+                      : ''}
+                    . You cannot select these days again until that request is
+                    rejected or cancelled.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {pendingApprovalMeta?.approvalRequestId ? (
+                      <Button
+                        type="primary"
+                        onClick={() =>
+                          router.push(
+                            `/approvals/${pendingApprovalMeta.approvalRequestId}`,
+                          )
+                        }
+                      >
+                        Open request
+                      </Button>
+                    ) : null}
+                    <Button
+                      onClick={() =>
+                        router.push('/approvals?tab=my-requests')
+                      }
+                    >
+                      View in My Requests
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : null}
@@ -780,7 +940,32 @@ export default function FieldMovementForm(): React.ReactNode {
       validate: () => validateStep2(),
       content: (
         <div className="flex flex-col gap-4">
-          {dayEntries.length > 3 ? (
+          {selectableDays.length === 0 ? (
+            <div className="erp-notice erp-notice--info">
+              <div className="erp-notice-body">
+                <p className="erp-notice-title m-0">
+                  Nothing left to explain for {periodLabel}.
+                </p>
+                <p className="erp-notice-description m-0 mt-1">
+                  Every flagged day is already covered by a pending request
+                  {pendingRequestNumbers.length > 0
+                    ? ` (${pendingRequestNumbers.join(', ')})`
+                    : ''}
+                  . Track it under Approvals → My Requests.
+                </p>
+                <div className="mt-3">
+                  <Button
+                    type="primary"
+                    onClick={() => router.push('/approvals?tab=my-requests')}
+                  >
+                    View in My Requests
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {selectableDays.length > 0 ? (
             <>
               <div style={{ marginBottom: 4 }}>
                 <div
@@ -847,42 +1032,156 @@ export default function FieldMovementForm(): React.ReactNode {
                     </Checkbox>
 
                     {anySelected ? (
-                      <>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 12,
+                          width: '100%',
+                        }}
+                      >
                         <Select
                           placeholder="Apply reason to selected days"
-                          style={{ width: 280 }}
-                          onChange={(reason: FieldMovementReason | null) =>
-                            setBulkReason(reason)
-                          }
+                          style={{ maxWidth: 420 }}
+                          onChange={(reason: FieldMovementReason | null) => {
+                            setBulkReason(reason);
+                            setBulkDestination('');
+                            setBulkDepartureTime('');
+                            setBulkDidReturn(false);
+                            setBulkReturnTime('');
+                            setBulkEarlyLeaveReason('');
+                            setBulkNotes('');
+                          }}
                           value={bulkReason ?? undefined}
                           allowClear
                           options={bulkReasonOptions}
                         />
 
                         {bulkReason === 'FIELD_VISIT' ? (
-                          <Input
-                            placeholder="Destination (applies to all selected)"
-                            style={{ width: 300 }}
-                            value={bulkDestination}
+                          <>
+                            <Input
+                              placeholder="Destination (required, applies to all selected)"
+                              value={bulkDestination}
+                              onChange={(event) =>
+                                setBulkDestination(event.target.value)
+                              }
+                            />
+                            <div className="erp-form-grid-2">
+                              <Form.Item
+                                label="Departure time (optional)"
+                                className="mb-0"
+                              >
+                                <TimePicker
+                                  format="HH:mm"
+                                  className="w-full"
+                                  value={parseTime(bulkDepartureTime)}
+                                  onChange={(value) =>
+                                    setBulkDepartureTime(
+                                      value ? value.format('HH:mm') : '',
+                                    )
+                                  }
+                                />
+                              </Form.Item>
+                              <Form.Item
+                                label="Returned to office?"
+                                className="mb-0"
+                              >
+                                <Switch
+                                  checked={bulkDidReturn}
+                                  onChange={(checked) => {
+                                    setBulkDidReturn(checked);
+                                    if (!checked) {
+                                      setBulkReturnTime('');
+                                    }
+                                  }}
+                                />
+                              </Form.Item>
+                            </div>
+                            {bulkDidReturn ? (
+                              <Form.Item
+                                label="Return time"
+                                required
+                                className="mb-0"
+                              >
+                                <TimePicker
+                                  format="HH:mm"
+                                  className="w-full"
+                                  value={parseTime(bulkReturnTime)}
+                                  onChange={(value) =>
+                                    setBulkReturnTime(
+                                      value ? value.format('HH:mm') : '',
+                                    )
+                                  }
+                                />
+                              </Form.Item>
+                            ) : null}
+                            <Input.TextArea
+                              rows={2}
+                              placeholder="Notes (optional, applies to all selected)"
+                              value={bulkNotes}
+                              onChange={(event) =>
+                                setBulkNotes(event.target.value)
+                              }
+                            />
+                          </>
+                        ) : null}
+
+                        {bulkReason === 'EARLY_LEAVE' ? (
+                          <>
+                            <Form.Item
+                              label="Departure time"
+                              required
+                              className="mb-0"
+                            >
+                              <TimePicker
+                                format="HH:mm"
+                                className="w-full"
+                                value={parseTime(bulkDepartureTime)}
+                                onChange={(value) =>
+                                  setBulkDepartureTime(
+                                    value ? value.format('HH:mm') : '',
+                                  )
+                                }
+                              />
+                            </Form.Item>
+                            <Input.TextArea
+                              rows={3}
+                              placeholder="Reason for early departure (required)"
+                              value={bulkEarlyLeaveReason}
+                              onChange={(event) =>
+                                setBulkEarlyLeaveReason(event.target.value)
+                              }
+                            />
+                          </>
+                        ) : null}
+
+                        {bulkReason === 'FORGOT_CLOCK_IN' ||
+                        bulkReason === 'FORGOT_CLOCK_OUT' ? (
+                          <Input.TextArea
+                            rows={2}
+                            placeholder="Notes (optional, applies to all selected)"
+                            value={bulkNotes}
                             onChange={(event) =>
-                              setBulkDestination(event.target.value)
+                              setBulkNotes(event.target.value)
                             }
                           />
                         ) : null}
 
-                        <Button
-                          type="default"
-                          disabled={
-                            !bulkReason ||
-                            (bulkReason === 'FIELD_VISIT' &&
-                              bulkDestination.trim().length < 3)
-                          }
-                          onClick={handleApplyBulk}
-                        >
-                          Apply to {selectedCount} day(s)
-                        </Button>
-                      </>
-                    ) : null}
+                        <div>
+                          <Button
+                            type="primary"
+                            disabled={!canApplyBulk}
+                            onClick={handleApplyBulk}
+                          >
+                            Apply to {selectedCount} day(s)
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 12, color: '#64748b' }}>
+                        Select one or more days to apply a reason in bulk.
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -953,7 +1252,11 @@ export default function FieldMovementForm(): React.ReactNode {
                     {day.selectedReason && !isExpanded ? (
                       <span style={{ color: '#64748b', fontSize: 12 }}>
                         {REASON_LABELS[day.selectedReason]}
-                        {day.destination ? ` — ${day.destination}` : ''}{' '}
+                        {day.destination ? ` — ${day.destination}` : ''}
+                        {day.departureTime ? ` · left ${day.departureTime}` : ''}
+                        {day.earlyLeaveReason
+                          ? ` — ${day.earlyLeaveReason}`
+                          : ''}{' '}
                         <Tag color="green" style={{ fontSize: 11 }}>
                           ✓ Filled
                         </Tag>
@@ -1178,9 +1481,9 @@ export default function FieldMovementForm(): React.ReactNode {
             <div className="erp-notice erp-notice--warning" style={{ marginTop: 4 }}>
               <div className="erp-notice-body">
                 <p className="erp-notice-description m-0">
-                  {unfilledSelectedCount > 0
-                    ? `${unfilledSelectedCount} selected day(s) still need a reason. Use bulk actions above to fill them quickly.`
-                    : 'Complete destination or early-leave details for all selected days before continuing.'}
+                  {unfilledSelectedCount} selected day(s) still need details.
+                  Use Bulk Actions above to fill reason, destination, times, and
+                  notes for all selected days at once.
                 </p>
               </div>
             </div>

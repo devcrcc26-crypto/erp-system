@@ -332,6 +332,9 @@ export interface FlaggedDay {
     id: string;
     requestNumber: string;
     status: string;
+    approvalRequestId: string | null;
+    pendingTierLabel: string | null;
+    pendingApproverName: string | null;
   } | null;
 }
 
