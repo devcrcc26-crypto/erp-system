@@ -1,6 +1,7 @@
+import { SYSTEM_ADMINISTRATOR_ROLE } from '../constants/protected-accounts';
 import { PermissionFlags } from './permission.types';
 
-export const SYSTEM_ADMINISTRATOR_ROLE = 'System Administrator';
+export { SYSTEM_ADMINISTRATOR_ROLE } from '../constants/protected-accounts';
 export const PROJECT_ADMINISTRATOR_ROLE = 'Project Administrator';
 
 /** Roles that receive unrestricted system-wide access. */

@@ -581,6 +581,8 @@ export interface AuthCapabilities {
   canCreateBusinessTrip: boolean;
   canManageBusinessTrip: boolean;
   isSystemAdministrator: boolean;
+  /** True System Administrator role only (not Project Administrator). */
+  isSystemAdmin: boolean;
 }
 
 export interface EpcCapabilities {
@@ -638,6 +640,7 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canCreateBusinessTrip: false,
   canManageBusinessTrip: false,
   isSystemAdministrator: false,
+  isSystemAdmin: false,
   pm: createEmptyPmCapabilities(),
   epc: { ...EMPTY_EPC_CAPABILITIES },
 };

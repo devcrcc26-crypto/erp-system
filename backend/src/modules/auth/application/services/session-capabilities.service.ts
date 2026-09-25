@@ -5,7 +5,7 @@ import { PermissionFlags } from '../../../../shared/permissions/permission.types
 import {
   PROJECT_ADMINISTRATOR_ROLE,
 } from '../../../../shared/permissions/project-admin.util';
-import { isSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
+import { isSystemAdministrator, isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -101,6 +101,7 @@ export class SessionCapabilitiesService {
       ]);
 
     const systemAdministrator = isSystemAdministrator(roleNames);
+    const isSystemAdmin = isTrueSystemAdministrator(roleNames);
     const users = permissionMap.users;
     const roles = permissionMap.roles;
     const audit = permissionMap.audit;
@@ -133,6 +134,7 @@ export class SessionCapabilitiesService {
       canCreateBusinessTrip: businessTrip.canCreate,
       canManageBusinessTrip: businessTrip.canEdit,
       isSystemAdministrator: systemAdministrator,
+      isSystemAdmin,
       pm,
       epc: this.resolveEpcCapabilities(
         roleNames,

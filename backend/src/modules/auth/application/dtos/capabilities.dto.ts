@@ -195,6 +195,12 @@ export class CapabilitiesDto {
   })
   isSystemAdministrator!: boolean;
 
+  @ApiProperty({
+    description:
+      'True System Administrator role only (not Project Administrator). Required to assign/revoke System Administrator.',
+  })
+  isSystemAdmin!: boolean;
+
   @ApiProperty({ type: PmCapabilitiesDto })
   pm!: PmCapabilitiesDto;
 

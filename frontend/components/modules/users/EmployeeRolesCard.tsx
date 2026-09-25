@@ -2,11 +2,20 @@
 
 import { useMemo, useState } from 'react';
 import { Button, Select, Tag, Tooltip } from 'antd';
-import { PlusOutlined, CloseOutlined } from '@ant-design/icons';
+import {
+  CloseOutlined,
+  LockOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useIsSystemAdmin } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { UserRoleAssignment } from '@/lib/api/types';
+import {
+  PROTECTED_SYSTEM_ADMIN_EMPLOYEE_ID,
+  SYSTEM_ADMINISTRATOR_ROLE,
+} from '@/lib/constants/protected-accounts';
 import { useRoles } from '@/lib/query/roles';
 import {
   useAssignRole,
@@ -16,7 +25,10 @@ import {
 import { getRoleColor, formatRoleDisplayName } from '@/lib/utils/role-colors';
 
 export interface EmployeeRolesCardProps {
+  /** User UUID. */
   employeeId: string;
+  /** Business employee code (e.g. EM-092). */
+  employeeCode?: string | null;
   roles: UserRoleAssignment[];
   /** When true, show add / set-primary / remove controls. */
   canEdit: boolean;
@@ -28,12 +40,15 @@ export interface EmployeeRolesCardProps {
  */
 export default function EmployeeRolesCard({
   employeeId,
+  employeeCode,
   roles,
   canEdit,
   onRolesChanged,
 }: EmployeeRolesCardProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const messageApi = useAppMessage();
+  const viewerIsAdmin = useIsSystemAdmin();
+  const isProtectedAdmin = employeeCode === PROTECTED_SYSTEM_ADMIN_EMPLOYEE_ID;
   const [adding, setAdding] = useState(false);
   const [pendingRoleId, setPendingRoleId] = useState<string | undefined>();
 
@@ -53,12 +68,23 @@ export default function EmployeeRolesCard({
   const availableRoleOptions = useMemo(() => {
     const catalog = rolesQuery.data?.data ?? [];
     return catalog
-      .filter((role) => role.isActive !== false && !assignedRoleIds.has(role.id))
+      .filter((role) => {
+        if (role.isActive === false || assignedRoleIds.has(role.id)) {
+          return false;
+        }
+        if (
+          role.name === SYSTEM_ADMINISTRATOR_ROLE &&
+          !viewerIsAdmin
+        ) {
+          return false;
+        }
+        return true;
+      })
       .map((role) => ({
         value: role.id,
         label: formatRoleDisplayName(role.name),
       }));
-  }, [assignedRoleIds, rolesQuery.data?.data]);
+  }, [assignedRoleIds, rolesQuery.data?.data, viewerIsAdmin]);
 
   const sortedRoles = useMemo(
     () =>
@@ -75,6 +101,16 @@ export default function EmployeeRolesCard({
     assignRole.isPending ||
     revokeRole.isPending ||
     setPrimaryRole.isPending;
+
+  function canModifyAdminRole(roleName: string): boolean {
+    if (roleName !== SYSTEM_ADMINISTRATOR_ROLE) {
+      return true;
+    }
+    if (isProtectedAdmin) {
+      return false;
+    }
+    return viewerIsAdmin;
+  }
 
   async function handleSetPrimary(roleId: string): Promise<void> {
     try {
@@ -181,12 +217,23 @@ export default function EmployeeRolesCard({
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {sortedRoles.map((assignment) => {
             const isPrimary = Boolean(assignment.isPrimary);
-            const removeDisabled = isPrimary || roles.length <= 1 || busy;
-            const removeTooltip = isPrimary
-              ? t('users.cannotRemovePrimaryRole')
-              : roles.length <= 1
-                ? t('users.cannotRemoveLastRole')
-                : t('users.removeRole');
+            const isAdminRole =
+              assignment.role.name === SYSTEM_ADMINISTRATOR_ROLE;
+            const canModifyThisRole = canModifyAdminRole(assignment.role.name);
+            const removeDisabled =
+              !canModifyThisRole ||
+              isPrimary ||
+              roles.length <= 1 ||
+              busy;
+            const removeTooltip = !canModifyThisRole
+              ? isProtectedAdmin && isAdminRole
+                ? t('users.roleProtectedLock')
+                : t('users.roleAdminOnlyLock')
+              : isPrimary
+                ? t('users.cannotRemovePrimaryRole')
+                : roles.length <= 1
+                  ? t('users.cannotRemoveLastRole')
+                  : t('users.removeRole');
 
             return (
               <li
@@ -214,7 +261,7 @@ export default function EmployeeRolesCard({
                   </Tag>
                 ) : null}
                 <div className="ml-auto flex flex-wrap items-center gap-1">
-                  {canEdit && !isPrimary ? (
+                  {canEdit && !isPrimary && canModifyThisRole ? (
                     <Button
                       type="link"
                       size="small"
@@ -225,7 +272,14 @@ export default function EmployeeRolesCard({
                       {t('users.setAsPrimary')}
                     </Button>
                   ) : null}
-                  {canEdit ? (
+                  {canEdit && !canModifyThisRole ? (
+                    <Tooltip title={removeTooltip}>
+                      <LockOutlined
+                        aria-label={removeTooltip}
+                        style={{ color: 'var(--color-text-tertiary, #9CA3AF)' }}
+                      />
+                    </Tooltip>
+                  ) : canEdit ? (
                     <Tooltip title={removeTooltip}>
                       <Button
                         type="text"

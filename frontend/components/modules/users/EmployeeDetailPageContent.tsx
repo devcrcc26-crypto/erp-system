@@ -26,11 +26,16 @@ import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanManageEmployeePerDiemRates,
   useCanViewHr,
+  useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { getRoleColor, formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { EmergencyContact, UserDetail } from '@/lib/api/types';
+import {
+  PROTECTED_SYSTEM_ADMIN_EMPLOYEE_ID,
+  SYSTEM_ADMINISTRATOR_ROLE,
+} from '@/lib/constants/protected-accounts';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
   useDeleteUser,
@@ -164,6 +169,7 @@ export default function EmployeeDetailPageContent({
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
+  const viewerIsAdmin = useIsSystemAdmin();
   const currentUserQuery = useCurrentUser();
   const detailQuery = useUser(userId);
   const deleteUser = useDeleteUser();
@@ -188,6 +194,15 @@ export default function EmployeeDetailPageContent({
   const user = detailQuery.data;
   const showResend =
     Boolean(user?.isActive && user.email && !user.emailVerifiedAt);
+  const isProtectedAccount =
+    user?.employeeId === PROTECTED_SYSTEM_ADMIN_EMPLOYEE_ID;
+  const targetIsAdmin = Boolean(
+    user?.userRoles?.some(
+      (assignment) => assignment.role.name === SYSTEM_ADMINISTRATOR_ROLE,
+    ),
+  );
+  const showDestructiveActions =
+    !isProtectedAccount && (!targetIsAdmin || viewerIsAdmin);
 
   async function handleResend(): Promise<void> {
     if (!user) {
@@ -306,14 +321,16 @@ export default function EmployeeDetailPageContent({
               >
                 {isNarrow ? undefined : t('common.update')}
               </Button>
-              <Button
-                danger
-                icon={<UserDeleteOutlined />}
-                onClick={() => setConfirmDelete(true)}
-                aria-label={t('common.delete')}
-              >
-                {isNarrow ? undefined : t('common.delete')}
-              </Button>
+              {showDestructiveActions ? (
+                <Button
+                  danger
+                  icon={<UserDeleteOutlined />}
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label={t('common.delete')}
+                >
+                  {isNarrow ? undefined : t('common.delete')}
+                </Button>
+              ) : null}
             </Space.Compact>
           </div>
         </div>
@@ -681,6 +698,7 @@ export default function EmployeeDetailPageContent({
                 <DetailSection title={t('users.assignedRoles')}>
                   <EmployeeRolesCard
                     employeeId={user.id}
+                    employeeCode={user.employeeId}
                     roles={user.userRoles ?? []}
                     canEdit={canViewHr}
                     onRolesChanged={() => {

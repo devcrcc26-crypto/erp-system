@@ -38,6 +38,7 @@ function systemAdminWithProjects(): Partial<Capabilities> {
   return {
     canViewHr: true,
     isSystemAdministrator: true,
+    isSystemAdmin: true,
     ...withProjects(),
   };
 }

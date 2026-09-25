@@ -140,6 +140,14 @@ export function useCanManageUsers(): boolean {
 }
 
 /**
+ * True when the session holds the System Administrator role
+ * (not merely Project Administrator / elevated access).
+ */
+export function useIsSystemAdmin(): boolean {
+  return useAuthStore((state) => state.capabilities.isSystemAdmin ?? false);
+}
+
+/**
  * True when the session can manage employee per diem rates (HR module or user admin).
  */
 export function useCanManageEmployeePerDiemRates(): boolean {

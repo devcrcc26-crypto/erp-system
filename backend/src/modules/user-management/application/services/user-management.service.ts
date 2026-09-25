@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,10 @@ import { PasswordService } from '../../../auth/application/services/password.ser
 import { DocumentService } from '../../../documents/application/services/document.service';
 import { LeavePolicyService } from '../../../leave-policy/application/services/leave-policy.service';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
+import {
+  PROTECTED_SYSTEM_ADMIN_ID,
+  SYSTEM_ADMINISTRATOR_ROLE,
+} from '../../../../shared/constants/protected-accounts';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
@@ -282,6 +287,11 @@ export class UserManagementService {
       throw new NotFoundException('User not found');
     }
 
+    // Deactivation via isActive=false is not a personal-data update — same rules as delete.
+    if (dto.isActive === false) {
+      await this.assertCanDeactivateOrDeleteUser(ctx, id);
+    }
+
     const { password, employeeId: dtoEmployeeId, workScheduleId, ...rest } = dto;
 
     if (rest.leavePolicyId) {
@@ -354,6 +364,7 @@ export class UserManagementService {
   }
 
   async deleteUser(ctx: AuditContext, id: string): Promise<void> {
+    await this.assertCanDeactivateOrDeleteUser(ctx, id);
     await this.getUser(ctx, id);
     await this.prisma.user.update({
       where: { id },
@@ -507,7 +518,12 @@ export class UserManagementService {
     dto: AssignUserRoleDto,
   ): Promise<unknown> {
     await this.getUser(ctx, userId);
-    await this.getRole(ctx, dto.roleId);
+    const role = await this.getRole(ctx, dto.roleId);
+    await this.assertCanAssignOrRevokeSystemAdminRole(
+      ctx,
+      (role as { name: string }).name,
+      'assign',
+    );
 
     const existingPrimary = await this.prisma.userRole.findFirst({
       where: activeOnly({ userId, isPrimary: true }),
@@ -573,6 +589,12 @@ export class UserManagementService {
       throw new NotFoundException('User role assignment not found');
     }
 
+    await this.assertCanAssignOrRevokeSystemAdminRole(
+      ctx,
+      assignment.role.name,
+      'assign',
+    );
+
     await this.prisma.$transaction(async (tx) => {
       await tx.userRole.updateMany({
         where: activeOnly({ userId, isPrimary: true }),
@@ -594,9 +616,24 @@ export class UserManagementService {
   ): Promise<void> {
     const userRole = await this.prisma.userRole.findFirst({
       where: activeOnly({ userId, roleId }),
+      include: { role: { select: { name: true } } },
     });
     if (!userRole) {
       throw new NotFoundException('User role assignment not found');
+    }
+
+    if (userRole.role.name === SYSTEM_ADMINISTRATOR_ROLE) {
+      const actingUserIsAdmin = await this.isSystemAdmin(ctx.userId);
+      if (!actingUserIsAdmin) {
+        throw new ForbiddenException(
+          'Only a System Administrator can remove the System Administrator role.',
+        );
+      }
+      if (userId === PROTECTED_SYSTEM_ADMIN_ID) {
+        throw new ForbiddenException(
+          "This account's System Administrator access is permanently protected and cannot be revoked.",
+        );
+      }
     }
     await this.prisma.$transaction(async (tx) => {
       await tx.userRole.update({
@@ -1450,5 +1487,71 @@ export class UserManagementService {
         user.experienceStartDate ?? null,
       ),
     };
+  }
+
+  /**
+   * True when the user holds an active System Administrator role assignment
+   * (primary or secondary).
+   */
+  private async isSystemAdmin(userId: string): Promise<boolean> {
+    const adminRole = await this.prisma.userRole.findFirst({
+      where: {
+        userId,
+        deletedAt: null,
+        role: {
+          name: SYSTEM_ADMINISTRATOR_ROLE,
+          deletedAt: null,
+          isActive: true,
+        },
+      },
+      select: { id: true },
+    });
+    return adminRole !== null;
+  }
+
+  /**
+   * Blocks assign/revoke of the System Administrator role for non-admins.
+   */
+  private async assertCanAssignOrRevokeSystemAdminRole(
+    ctx: AuditContext,
+    roleName: string,
+    action: 'assign' | 'revoke',
+  ): Promise<void> {
+    if (roleName !== SYSTEM_ADMINISTRATOR_ROLE) {
+      return;
+    }
+    const actingUserIsAdmin = await this.isSystemAdmin(ctx.userId);
+    if (!actingUserIsAdmin) {
+      throw new ForbiddenException(
+        action === 'assign'
+          ? 'Only a System Administrator can assign the System Administrator role.'
+          : 'Only a System Administrator can remove the System Administrator role.',
+      );
+    }
+  }
+
+  /**
+   * Blocks deactivate/delete of the protected account, and of other System
+   * Administrators unless the actor is also a System Administrator.
+   */
+  private async assertCanDeactivateOrDeleteUser(
+    ctx: AuditContext,
+    userId: string,
+  ): Promise<void> {
+    if (userId === PROTECTED_SYSTEM_ADMIN_ID) {
+      throw new ForbiddenException(
+        'This account is permanently protected and cannot be deactivated.',
+      );
+    }
+
+    const targetIsAdmin = await this.isSystemAdmin(userId);
+    if (targetIsAdmin) {
+      const actingUserIsAdmin = await this.isSystemAdmin(ctx.userId);
+      if (!actingUserIsAdmin) {
+        throw new ForbiddenException(
+          'Only a System Administrator can deactivate another System Administrator account.',
+        );
+      }
+    }
   }
 }

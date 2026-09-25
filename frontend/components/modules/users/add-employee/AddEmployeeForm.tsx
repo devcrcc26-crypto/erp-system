@@ -27,8 +27,10 @@ import {
 } from '@/components/modules/users/add-employee/add-employee.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useIsSystemAdmin } from '@/hooks/use-auth-capabilities';
 import { toApiRequestError } from '@/lib/api/errors';
 import type { CreateUserRequest, UpdateUserRequest, UserDetail } from '@/lib/api/types';
+import { SYSTEM_ADMINISTRATOR_ROLE } from '@/lib/constants/protected-accounts';
 import {
   chineseNameRules,
   nameFieldRules,
@@ -157,12 +159,24 @@ export default function AddEmployeeForm({
   const uploadPhoto = useUploadUserPhoto();
   const rolesQuery = useRoles();
   const roles = rolesQuery.data?.data ?? [];
+  const viewerIsAdmin = useIsSystemAdmin();
   const availableRoles = useMemo(
     () =>
       roles
-        .filter((role) => role.isActive !== false)
+        .filter((role) => {
+          if (role.isActive === false) {
+            return false;
+          }
+          if (
+            role.name === SYSTEM_ADMINISTRATOR_ROLE &&
+            !viewerIsAdmin
+          ) {
+            return false;
+          }
+          return true;
+        })
         .map((role) => ({ id: role.id, name: role.name })),
-    [roles],
+    [roles, viewerIsAdmin],
   );
   const { options: disciplineOptions, isLoading: disciplinesLoading } =
     useEngineeringDisciplineOptions(true, true);

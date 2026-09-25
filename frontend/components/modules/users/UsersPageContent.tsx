@@ -44,8 +44,13 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import UserImportModal from '@/components/modules/users/UserImportModal';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useIsSystemAdmin } from '@/hooks/use-auth-capabilities';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
+import {
+  PROTECTED_SYSTEM_ADMIN_EMPLOYEE_ID,
+  SYSTEM_ADMINISTRATOR_ROLE,
+} from '@/lib/constants/protected-accounts';
 import {
   useAllUsers,
   useDeleteUser,
@@ -221,6 +226,7 @@ export default function UsersPageContent(): React.ReactNode {
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
+  const viewerIsAdmin = useIsSystemAdmin();
   const { params, bindMeta, resetPage } = useTablePagination(10);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
@@ -492,6 +498,16 @@ export default function UsersPageContent(): React.ReactNode {
 
   function buildActionMenu(user: User): MenuProps['items'] {
     const showResend = user.isActive && Boolean(user.email) && !user.emailVerifiedAt;
+    const isProtectedAccount =
+      user.employeeId === PROTECTED_SYSTEM_ADMIN_EMPLOYEE_ID;
+    const targetIsAdmin = Boolean(
+      user.userRoles?.some(
+        (assignment) => assignment.role.name === SYSTEM_ADMINISTRATOR_ROLE,
+      ),
+    );
+    const showDestructiveActions =
+      !isProtectedAccount && (!targetIsAdmin || viewerIsAdmin);
+
     const items: MenuProps['items'] = [
       {
         key: 'update',
@@ -510,13 +526,24 @@ export default function UsersPageContent(): React.ReactNode {
       });
     }
 
-    items.push({
-      key: 'delete',
-      icon: <UserDeleteOutlined />,
-      label: t('common.delete'),
-      danger: true,
-      onClick: () => setDeletingUser(user),
-    });
+    if (showDestructiveActions) {
+      items.push({
+        key: 'delete',
+        icon: <UserDeleteOutlined />,
+        label: t('common.delete'),
+        danger: true,
+        onClick: () => setDeletingUser(user),
+      });
+    } else if (isProtectedAccount) {
+      items.push({
+        key: 'delete',
+        icon: <UserDeleteOutlined />,
+        label: t('common.delete'),
+        danger: true,
+        disabled: true,
+        title: t('users.accountProtectedCannotDeactivate'),
+      });
+    }
 
     return items;
   }
