@@ -615,7 +615,7 @@ export default function ConstructionSubmittalDetailPageContent({
                   leader, or reject with a comment or file.
                 </p>
                 {!designerRejectOpen ? (
-                  <Space direction="vertical" className="w-full">
+                  <Space orientation="vertical" className="w-full">
                     <Form
                       form={designerForm}
                       layout="vertical"
@@ -697,7 +697,7 @@ export default function ConstructionSubmittalDetailPageContent({
                         </Button>
                       </Upload>
                     </Form.Item>
-                    <Space className="w-full" direction="vertical">
+                    <Space className="w-full" orientation="vertical">
                       <Button
                         danger
                         type="primary"

@@ -300,7 +300,7 @@ export default function AttendanceDailyLogsDrawer({
   return (
     <Drawer
       title={
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <span>{t('pages.hr.attendance.review.dailyLogsTitle')}</span>
           {employeeName ? (
             <Typography.Text type="secondary" className="text-sm font-normal">
