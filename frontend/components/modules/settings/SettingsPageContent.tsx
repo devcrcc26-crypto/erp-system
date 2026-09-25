@@ -22,6 +22,7 @@ import {
 } from '@/lib/query/roles';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
+import { formatRoleDisplayName } from '@/lib/utils/role-colors';
 
 const ACTIONS = [
   'view',
@@ -209,7 +210,7 @@ function RoleList({
                         : 'font-medium text-[#1A1A1A]',
                     ].join(' ')}
                   >
-                    {role.name}
+                    {formatRoleDisplayName(role.name)}
                   </p>
                   {role.description ? (
                     <p className="mt-1 line-clamp-2 text-xs text-[#6B7280]">

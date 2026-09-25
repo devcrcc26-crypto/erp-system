@@ -17,6 +17,7 @@ import {
 } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { formatUserName } from '@/lib/utils/user-display';
+import { formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { formatEmployeeAddress } from '@/components/modules/users/EmployeeProfileFormFields';
 import type { Role } from '@/lib/api/types';
 import type { AddEmployeeFormValues } from './add-employee.types';
@@ -272,7 +273,9 @@ export default function AddEmployeeReviewStep({
                 {statusLabel}
               </span>
               {roleName ? (
-                <span className="erp-users-role-tag">{roleName}</span>
+                <span className="erp-users-role-tag">
+                  {formatRoleDisplayName(roleName)}
+                </span>
               ) : null}
               {mode === 'create' ? (
                 <span className="erp-users-role-tag">
@@ -339,7 +342,7 @@ export default function AddEmployeeReviewStep({
             />
             <ReviewField
               label={t('users.form.role')}
-              value={roleName ?? '-'}
+              value={roleName ? formatRoleDisplayName(roleName) : '-'}
             />
             <ReviewField
               label={t('users.form.activeAccount')}

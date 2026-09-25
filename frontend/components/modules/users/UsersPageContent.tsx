@@ -13,6 +13,7 @@ import {
   Popover,
   Select,
   Spin,
+  Tag,
   Tooltip,
   type MenuProps,
 } from 'antd';
@@ -63,6 +64,7 @@ import {
   type UsersListSortField,
 } from '@/lib/utils/users-list-filter';
 import { pickTopLevelRoleName } from '@/lib/utils/user-display';
+import { getRoleColor, formatRoleDisplayName } from '@/lib/utils/role-colors';
 import {
   userStatusLabel,
   userStatusVariant,
@@ -84,7 +86,7 @@ function formatUserRoleNames(user: User): string {
       isPrimary: assignment.isPrimary,
     })) ?? [];
   const top = pickTopLevelRoleName(roles, '');
-  return top || '-';
+  return top ? formatRoleDisplayName(top) : '-';
 }
 
 
@@ -914,21 +916,44 @@ export default function UsersPageContent(): React.ReactNode {
                 width: 170,
                 responsive: ['md'],
                 render: (_, record) => {
-                  const roles =
-                    record.userRoles?.map((assignment) => ({
-                      name: assignment.role.name,
-                      isPrimary: assignment.isPrimary,
-                    })) ?? [];
-                  if (roles.length === 0) {
+                  const assignments = record.userRoles ?? [];
+                  if (assignments.length === 0) {
                     return <span className="erp-users-dash">-</span>;
                   }
-                  const topRole = pickTopLevelRoleName(roles, '');
-                  if (!topRole) {
-                    return <span className="erp-users-dash">-</span>;
-                  }
+                  const primaryRole =
+                    assignments.find((ur) => ur.isPrimary) ??
+                    assignments[0];
+                  const secondaryRoles = assignments.filter(
+                    (ur) => ur.id !== primaryRole.id,
+                  );
+                  const allNames = assignments
+                    .map((ur) => formatRoleDisplayName(ur.role.name))
+                    .join(', ');
                   return (
-                    <Tooltip title={topRole} mouseEnterDelay={0.35}>
-                      <span className="erp-users-role-tag">{topRole}</span>
+                    <Tooltip title={allNames} mouseEnterDelay={0.35}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 4,
+                        }}
+                      >
+                        <Tag
+                          color={getRoleColor(primaryRole.role.name)}
+                          style={{ margin: 0, fontWeight: 600 }}
+                        >
+                          {formatRoleDisplayName(primaryRole.role.name)}
+                        </Tag>
+                        {secondaryRoles.map((ur) => (
+                          <Tag
+                            key={ur.id}
+                            color={getRoleColor(ur.role.name)}
+                            style={{ margin: 0, fontSize: 11, opacity: 0.8 }}
+                          >
+                            {formatRoleDisplayName(ur.role.name)}
+                          </Tag>
+                        ))}
+                      </div>
                     </Tooltip>
                   );
                 },

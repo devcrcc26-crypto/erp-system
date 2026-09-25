@@ -37,6 +37,7 @@ import {
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { useIsMdUp } from '@/hooks/useMediaQuery';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useResendActivation } from '@/lib/query/auth';
@@ -656,7 +657,9 @@ export default function ProfilePageContent(): React.ReactNode {
                 variant={isEmailVerified ? 'success' : 'warning'}
               />
               {primaryRole ? (
-                <span className="erp-users-role-tag">{primaryRole}</span>
+                <span className="erp-users-role-tag">
+                  {formatRoleDisplayName(primaryRole)}
+                </span>
               ) : null}
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">

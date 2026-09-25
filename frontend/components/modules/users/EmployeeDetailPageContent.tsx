@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Grid, Skeleton, Space } from 'antd';
+import { Alert, Button, Grid, Skeleton, Space, Tag } from 'antd';
 import {
   BarChartOutlined,
   CalendarOutlined,
@@ -19,6 +19,7 @@ import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/Employ
 import EmployeeAttendanceProfileSection from '@/components/modules/profile/EmployeeAttendanceProfileSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
+import EmployeeRolesCard from '@/components/modules/users/EmployeeRolesCard';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -27,6 +28,7 @@ import {
   useCanViewHr,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { getRoleColor, formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { EmergencyContact, UserDetail } from '@/lib/api/types';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -333,7 +335,13 @@ export default function EmployeeDetailPageContent({
               ) : null}
               <UserStatusIndicator user={user} t={t} />
               {primaryRole ? (
-                <span className="erp-users-role-tag">{primaryRole}</span>
+                <Tag
+                  color={getRoleColor(primaryRole)}
+                  className="m-0"
+                  style={{ fontWeight: 600 }}
+                >
+                  {formatRoleDisplayName(primaryRole)}
+                </Tag>
               ) : null}
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
@@ -671,29 +679,14 @@ export default function EmployeeDetailPageContent({
                 </DetailSection>
 
                 <DetailSection title={t('users.assignedRoles')}>
-                  {user.userRoles.length === 0 ? (
-                    <p className="erp-users-cell-sub m-0">
-                      {t('users.noRoleAssigned')}
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {user.userRoles.map((assignment) => (
-                        <span
-                          key={assignment.id}
-                          className={`erp-users-role-tag${
-                            assignment.isPrimary
-                              ? ' erp-users-role-tag--primary'
-                              : ''
-                          }`}
-                        >
-                          {assignment.role.name}
-                          {assignment.isPrimary
-                            ? ` · ${t('users.primaryRole')}`
-                            : ''}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <EmployeeRolesCard
+                    employeeId={user.id}
+                    roles={user.userRoles ?? []}
+                    canEdit={canViewHr}
+                    onRolesChanged={() => {
+                      void detailQuery.refetch();
+                    }}
+                  />
                 </DetailSection>
               </div>
 

@@ -23,6 +23,7 @@ import {
   type AddEmployeeFormValues,
 } from '@/components/modules/users/add-employee/add-employee.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { ApiRequestError, toApiRequestError } from '@/lib/api/errors';
 import type { CreateUserRequest, Role, UpdateUserRequest, UserDetail } from '@/lib/api/types';
@@ -376,7 +377,7 @@ export default function AddEmployeeForm({
                     loading={rolesQuery.isLoading}
                     options={roles.map((role: Role) => ({
                       value: role.id,
-                      label: role.name,
+                      label: formatRoleDisplayName(role.name),
                     }))}
                     placeholder={t('common.selectRole')}
                   />
