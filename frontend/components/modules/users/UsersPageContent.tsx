@@ -7,6 +7,7 @@ import {
   Avatar,
   Badge,
   Button,
+  Checkbox,
   Dropdown,
   Grid,
   Input,
@@ -32,6 +33,7 @@ import {
   SearchOutlined,
   UserDeleteOutlined,
   UserOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { Users } from 'lucide-react';
 import PlaceholderPage from '@/components/PlaceholderPage';
@@ -240,6 +242,7 @@ export default function UsersPageContent(): React.ReactNode {
   const [nationalityFilter, setNationalityFilter] = useState<
     Nationality | undefined
   >();
+  const [filterNoRole, setFilterNoRole] = useState(false);
   const [sortBy, setSortBy] = useState<UsersListSortField | undefined>();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | undefined>();
 
@@ -345,6 +348,9 @@ export default function UsersPageContent(): React.ReactNode {
       if (nationalityFilter && user.nationality !== nationalityFilter) {
         return false;
       }
+      if (filterNoRole && (user.userRoles?.length ?? 0) > 0) {
+        return false;
+      }
       return true;
     });
   }, [
@@ -356,6 +362,7 @@ export default function UsersPageContent(): React.ReactNode {
     statusFilter,
     employeeTypeFilter,
     nationalityFilter,
+    filterNoRole,
     sortBy,
     sortOrder,
   ]);
@@ -375,6 +382,7 @@ export default function UsersPageContent(): React.ReactNode {
     setStatusFilter(undefined);
     setEmployeeTypeFilter(undefined);
     setNationalityFilter(undefined);
+    setFilterNoRole(false);
     resetPage();
   }
 
@@ -384,12 +392,14 @@ export default function UsersPageContent(): React.ReactNode {
     if (positionFilter) count += 1;
     if (employeeTypeFilter) count += 1;
     if (nationalityFilter) count += 1;
+    if (filterNoRole) count += 1;
     return count;
   }, [
     disciplineFilter,
     positionFilter,
     employeeTypeFilter,
     nationalityFilter,
+    filterNoRole,
   ]);
 
   const hasActiveFilters = Boolean(
@@ -676,6 +686,15 @@ export default function UsersPageContent(): React.ReactNode {
             }}
             aria-label={t('common.status')}
           />
+          <Checkbox
+            checked={filterNoRole}
+            onChange={(event) => {
+              setFilterNoRole(event.target.checked);
+              resetPage();
+            }}
+          >
+            {t('users.filterNoRole')}
+          </Checkbox>
           <Popover
             trigger="click"
             placement={isCompact ? 'bottom' : 'bottomLeft'}
@@ -918,7 +937,13 @@ export default function UsersPageContent(): React.ReactNode {
                 render: (_, record) => {
                   const assignments = record.userRoles ?? [];
                   if (assignments.length === 0) {
-                    return <span className="erp-users-dash">-</span>;
+                    return (
+                      <Tooltip title={t('users.noRoleTooltip')}>
+                        <Tag color="error" style={{ margin: 0 }}>
+                          <WarningOutlined /> {t('users.noRole')}
+                        </Tag>
+                      </Tooltip>
+                    );
                   }
                   const primaryRole =
                     assignments.find((ur) => ur.isPrimary) ??

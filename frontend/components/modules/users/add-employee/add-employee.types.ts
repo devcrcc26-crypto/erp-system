@@ -10,7 +10,13 @@ export interface AddEmployeeFormValues extends EmployeeProfileFormValues {
   departmentId?: string;
   positionId?: string;
   reportsToUserId?: string;
+  /** @deprecated Prefer roleAssignments. */
   roleId?: string;
+  roleAssignments?: Array<{
+    roleId: string;
+    roleName: string;
+    isPrimary: boolean;
+  }>;
   engineeringDisciplineId?: string;
   isActive: boolean;
   dateOfBirth?: Dayjs;
@@ -18,7 +24,16 @@ export interface AddEmployeeFormValues extends EmployeeProfileFormValues {
 }
 
 export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
-  ['firstName', 'lastName', 'middleName', 'chineseName', 'gender', 'email', 'phone'],
+  [
+    'firstName',
+    'lastName',
+    'middleName',
+    'chineseName',
+    'gender',
+    'email',
+    'phone',
+    'roleAssignments',
+  ],
   [
     'dateOfBirth',
     'nationalId',
@@ -38,7 +53,6 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
     'positionId',
     'reportsToUserId',
     'engineeringDisciplineId',
-    'roleId',
   ],
   ['educationLevel', 'fieldOfStudy', 'experienceStartDate'],
   ['leavePolicyId', 'workScheduleId'],

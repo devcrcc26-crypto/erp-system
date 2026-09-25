@@ -18,15 +18,17 @@ import AddEmployeePendingDocuments, {
 } from '@/components/modules/users/add-employee/AddEmployeePendingDocuments';
 import AddEmployeePendingPhoto from '@/components/modules/users/add-employee/AddEmployeePendingPhoto';
 import AddEmployeeReviewStep from '@/components/modules/users/add-employee/AddEmployeeReviewStep';
+import RoleAssignmentField, {
+  type RoleAssignment,
+} from '@/components/modules/users/add-employee/RoleAssignmentField';
 import {
   ADD_EMPLOYEE_STEP_FIELDS,
   type AddEmployeeFormValues,
 } from '@/components/modules/users/add-employee/add-employee.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { ApiRequestError, toApiRequestError } from '@/lib/api/errors';
-import type { CreateUserRequest, Role, UpdateUserRequest, UserDetail } from '@/lib/api/types';
+import { toApiRequestError } from '@/lib/api/errors';
+import type { CreateUserRequest, UpdateUserRequest, UserDetail } from '@/lib/api/types';
 import {
   chineseNameRules,
   nameFieldRules,
@@ -37,6 +39,7 @@ import {
   useAssignRole,
   useCreateUser,
   useRevokeRole,
+  useSetPrimaryRole,
   useUpdateUser,
   useUploadUserDocuments,
   useUploadUserPhoto,
@@ -49,16 +52,16 @@ import {
 } from '@/lib/query/org';
 import { useRoles } from '@/lib/query/roles';
 
-function resolvePrimaryRoleId(user: UserDetail): string | undefined {
-  return (
-    user.userRoles.find((assignment) => assignment.isPrimary)?.roleId ??
-    user.userRoles[0]?.roleId ??
-    user.userRoles[0]?.role?.id ??
-    undefined
-  );
+function resolveRoleAssignments(user: UserDetail): RoleAssignment[] {
+  return (user.userRoles ?? []).map((assignment) => ({
+    roleId: assignment.roleId,
+    roleName: assignment.role.name,
+    isPrimary: Boolean(assignment.isPrimary),
+  }));
 }
 
 function buildFormValuesFromUser(user: UserDetail): AddEmployeeFormValues {
+  const roleAssignments = resolveRoleAssignments(user);
   return {
     firstName: user.firstName,
     lastName: user.lastName,
@@ -70,9 +73,57 @@ function buildFormValuesFromUser(user: UserDetail): AddEmployeeFormValues {
     reportsToUserId: user.reportsToUserId ?? undefined,
     engineeringDisciplineId: user.engineeringDisciplineId ?? undefined,
     isActive: user.isActive,
-    roleId: resolvePrimaryRoleId(user),
+    roleAssignments,
+    roleId: roleAssignments.find((role) => role.isPrimary)?.roleId,
     ...employeeProfileInitialValues(user),
   };
+}
+
+/**
+ * Syncs desired role assignments onto a user via assign / revoke / set-primary APIs.
+ */
+async function syncUserRoles(params: {
+  userId: string;
+  desired: RoleAssignment[];
+  current: RoleAssignment[];
+  assignRole: ReturnType<typeof useAssignRole>;
+  revokeRole: ReturnType<typeof useRevokeRole>;
+  setPrimaryRole: ReturnType<typeof useSetPrimaryRole>;
+}): Promise<void> {
+  const { userId, desired, current, assignRole, revokeRole, setPrimaryRole } =
+    params;
+  const currentIds = new Set(current.map((role) => role.roleId));
+  const desiredIds = new Set(desired.map((role) => role.roleId));
+
+  const ordered = [...desired].sort(
+    (a, b) => Number(b.isPrimary) - Number(a.isPrimary),
+  );
+  for (const role of ordered) {
+    if (!currentIds.has(role.roleId)) {
+      await assignRole.mutateAsync({
+        userId,
+        roleId: role.roleId,
+        isPrimary: role.isPrimary,
+      });
+    }
+  }
+
+  const primary = desired.find((role) => role.isPrimary) ?? desired[0];
+  if (primary) {
+    const currentPrimary = current.find((role) => role.isPrimary)?.roleId;
+    if (currentPrimary !== primary.roleId || !currentIds.has(primary.roleId)) {
+      await setPrimaryRole.mutateAsync({
+        userId,
+        roleId: primary.roleId,
+      });
+    }
+  }
+
+  for (const role of current) {
+    if (!desiredIds.has(role.roleId)) {
+      await revokeRole.mutateAsync({ userId, roleId: role.roleId });
+    }
+  }
 }
 
 export interface AddEmployeeFormProps {
@@ -101,10 +152,18 @@ export default function AddEmployeeForm({
   const updateUser = useUpdateUser();
   const assignRole = useAssignRole();
   const revokeRole = useRevokeRole();
+  const setPrimaryRole = useSetPrimaryRole();
   const uploadDocuments = useUploadUserDocuments();
   const uploadPhoto = useUploadUserPhoto();
   const rolesQuery = useRoles();
   const roles = rolesQuery.data?.data ?? [];
+  const availableRoles = useMemo(
+    () =>
+      roles
+        .filter((role) => role.isActive !== false)
+        .map((role) => ({ id: role.id, name: role.name })),
+    [roles],
+  );
   const { options: disciplineOptions, isLoading: disciplinesLoading } =
     useEngineeringDisciplineOptions(true, true);
   const departmentsQuery = useDepartments({ page: 1, limit: 100 }, true);
@@ -133,7 +192,9 @@ export default function AddEmployeeForm({
     [allPositions],
   );
 
-  const currentRoleId = userQuery.data ? resolvePrimaryRoleId(userQuery.data) ?? '' : '';
+  const currentRoleAssignments = userQuery.data
+    ? resolveRoleAssignments(userQuery.data)
+    : [];
 
   useEffect(() => {
     if (!isEdit || !userQuery.data) {
@@ -147,6 +208,7 @@ export default function AddEmployeeForm({
     updateUser.isPending ||
     assignRole.isPending ||
     revokeRole.isPending ||
+    setPrimaryRole.isPending ||
     uploadDocuments.isPending ||
     uploadPhoto.isPending;
 
@@ -155,7 +217,11 @@ export default function AddEmployeeForm({
       form.setFieldsValue(buildFormValuesFromUser(userQuery.data));
     } else {
       form.resetFields();
-      form.setFieldsValue({ isActive: true, emergencyContacts: [] });
+      form.setFieldsValue({
+        isActive: true,
+        emergencyContacts: [],
+        roleAssignments: [],
+      });
     }
     setPendingDocuments([]);
     setPendingPhoto(null);
@@ -202,14 +268,14 @@ export default function AddEmployeeForm({
 
         await updateUser.mutateAsync({ userId, body });
 
-        if ((values.roleId ?? '') !== currentRoleId) {
-          if (currentRoleId) {
-            await revokeRole.mutateAsync({ userId, roleId: currentRoleId });
-          }
-          if (values.roleId) {
-            await assignRole.mutateAsync({ userId, roleId: values.roleId });
-          }
-        }
+        await syncUserRoles({
+          userId,
+          desired: values.roleAssignments ?? [],
+          current: currentRoleAssignments,
+          assignRole,
+          revokeRole,
+          setPrimaryRole,
+        });
 
         if (pendingDocuments.length > 0) {
           await uploadDocuments.mutateAsync({
@@ -251,9 +317,14 @@ export default function AddEmployeeForm({
 
       const user = await createUser.mutateAsync(body);
 
-      if (values.roleId) {
-        await assignRole.mutateAsync({ userId: user.id, roleId: values.roleId });
-      }
+      await syncUserRoles({
+        userId: user.id,
+        desired: values.roleAssignments ?? [],
+        current: [],
+        assignRole,
+        revokeRole,
+        setPrimaryRole,
+      });
 
       if (pendingDocuments.length > 0) {
         await uploadDocuments.mutateAsync({
@@ -371,18 +442,38 @@ export default function AddEmployeeForm({
                 >
                   <Input />
                 </Form.Item>
-                <Form.Item label={t('users.form.role')} name="roleId" extra={t('users.form.roleHint')}>
-                  <Select
-                    allowClear
-                    loading={rolesQuery.isLoading}
-                    options={roles.map((role: Role) => ({
-                      value: role.id,
-                      label: formatRoleDisplayName(role.name),
-                    }))}
-                    placeholder={t('common.selectRole')}
-                  />
-                </Form.Item>
               </div>
+              <Form.Item
+                label={t('users.form.roles')}
+                name="roleAssignments"
+                required
+                extra={t('users.form.rolesHint')}
+                rules={[
+                  {
+                    validator: async (_, value: RoleAssignment[] | undefined) => {
+                      const assignments = value ?? [];
+                      if (assignments.length === 0) {
+                        throw new Error(t('users.form.rolesRequired'));
+                      }
+                      const primaryCount = assignments.filter(
+                        (assignment) => assignment.isPrimary,
+                      ).length;
+                      if (primaryCount !== 1) {
+                        throw new Error(t('users.form.rolesPrimaryRequired'));
+                      }
+                      const ids = assignments.map((assignment) => assignment.roleId);
+                      if (new Set(ids).size !== ids.length) {
+                        throw new Error(t('users.form.rolesDuplicate'));
+                      }
+                    },
+                  },
+                ]}
+              >
+                <RoleAssignmentField
+                  availableRoles={availableRoles}
+                  loading={rolesQuery.isLoading}
+                />
+              </Form.Item>
               <div className="erp-form-grid-3">
                 <Form.Item
                   label={t('users.form.activeAccount')}
@@ -543,9 +634,9 @@ export default function AddEmployeeForm({
                 firstName: '',
                 lastName: '',
                 isActive: true,
+                roleAssignments: [],
               }
             }
-            roles={roles}
             pendingDocuments={pendingDocuments}
             pendingPhoto={pendingPhoto}
             mode={isEdit ? 'edit' : 'create'}
@@ -562,7 +653,7 @@ export default function AddEmployeeForm({
       userQuery.data,
       profileMode,
       rolesQuery.isLoading,
-      roles,
+      availableRoles,
       departmentsQuery.isLoading,
       departmentOptions,
       positionsQuery.isLoading,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { Avatar } from 'antd';
+import { Avatar, Tag } from 'antd';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import { UserOutlined } from '@ant-design/icons';
@@ -17,9 +17,11 @@ import {
 } from '@/lib/query/org';
 import { tokens } from '@/lib/theme/tokens';
 import { formatUserName } from '@/lib/utils/user-display';
-import { formatRoleDisplayName } from '@/lib/utils/role-colors';
+import {
+  formatRoleDisplayName,
+  getRoleColor,
+} from '@/lib/utils/role-colors';
 import { formatEmployeeAddress } from '@/components/modules/users/EmployeeProfileFormFields';
-import type { Role } from '@/lib/api/types';
 import type { AddEmployeeFormValues } from './add-employee.types';
 import ProfileFileTypeIcon, {
   profileFileMetaLine,
@@ -28,7 +30,6 @@ import type { PendingEmployeeDocument } from './AddEmployeePendingDocuments';
 
 interface AddEmployeeReviewStepProps {
   values: AddEmployeeFormValues;
-  roles: Role[];
   pendingDocuments: PendingEmployeeDocument[];
   pendingPhoto?: File | null;
   mode?: 'create' | 'edit';
@@ -96,14 +97,18 @@ function ReviewSection({
  */
 export default function AddEmployeeReviewStep({
   values,
-  roles,
   pendingDocuments,
   pendingPhoto = null,
   mode = 'create',
 }: AddEmployeeReviewStepProps): React.ReactNode {
   const { t } = useEpcTranslation();
-  const roleName =
-    roles.find((role) => role.id === values.roleId)?.name ?? null;
+  const roleAssignments = [...(values.roleAssignments ?? [])].sort(
+    (a, b) => Number(b.isPrimary) - Number(a.isPrimary),
+  );
+  const primaryRoleName =
+    roleAssignments.find((role) => role.isPrimary)?.roleName ??
+    roleAssignments[0]?.roleName ??
+    null;
   const reportsToQuery = useUser(
     values.reportsToUserId ?? '',
     Boolean(values.reportsToUserId),
@@ -272,10 +277,14 @@ export default function AddEmployeeReviewStep({
                 />
                 {statusLabel}
               </span>
-              {roleName ? (
-                <span className="erp-users-role-tag">
-                  {formatRoleDisplayName(roleName)}
-                </span>
+              {primaryRoleName ? (
+                <Tag
+                  color={getRoleColor(primaryRoleName)}
+                  className="m-0"
+                  style={{ fontWeight: 600 }}
+                >
+                  {formatRoleDisplayName(primaryRoleName)}
+                </Tag>
               ) : null}
               {mode === 'create' ? (
                 <span className="erp-users-role-tag">
@@ -340,10 +349,28 @@ export default function AddEmployeeReviewStep({
               label={t('users.form.phone')}
               value={values.phone?.trim() || '-'}
             />
-            <ReviewField
-              label={t('users.form.role')}
-              value={roleName ? formatRoleDisplayName(roleName) : '-'}
-            />
+            <div className="erp-review-field erp-review-field--wide">
+              <p className="erp-review-field-label">{t('users.form.roles')}</p>
+              {roleAssignments.length === 0 ? (
+                <ReviewValue value="-" />
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {roleAssignments.map((assignment) => (
+                    <Tag
+                      key={assignment.roleId}
+                      color={getRoleColor(assignment.roleName)}
+                      style={{
+                        margin: 0,
+                        fontWeight: assignment.isPrimary ? 600 : 400,
+                      }}
+                    >
+                      {formatRoleDisplayName(assignment.roleName)}
+                      {assignment.isPrimary ? ' ★' : ''}
+                    </Tag>
+                  ))}
+                </div>
+              )}
+            </div>
             <ReviewField
               label={t('users.form.activeAccount')}
               value={

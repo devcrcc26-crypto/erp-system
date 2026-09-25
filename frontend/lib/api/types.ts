@@ -366,6 +366,7 @@ export interface UpdateUserRequest {
 
 export interface AssignUserRoleRequest {
   roleId: string;
+  isPrimary?: boolean;
 }
 
 export type ImportRowStatus =

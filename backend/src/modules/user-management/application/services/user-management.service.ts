@@ -514,6 +514,18 @@ export class UserManagementService {
       select: { id: true },
     });
 
+    const forcePrimary = dto.isPrimary === true;
+    const forceSecondary = dto.isPrimary === false;
+    // Always keep at least one primary: secondary only when another primary exists.
+    const isPrimary = forcePrimary || !existingPrimary;
+
+    if (forcePrimary && existingPrimary) {
+      await this.prisma.userRole.updateMany({
+        where: activeOnly({ userId, isPrimary: true }),
+        data: { isPrimary: false, updatedBy: ctx.userId },
+      });
+    }
+
     return this.prisma.userRole.upsert({
       where: {
         userId_roleId: { userId, roleId: dto.roleId },
@@ -523,12 +535,18 @@ export class UserManagementService {
         updatedBy: ctx.userId,
         deletedAt: null,
         deletedBy: null,
-        ...(existingPrimary ? {} : { isPrimary: true }),
+        ...(forcePrimary || forceSecondary || !existingPrimary
+          ? { isPrimary: forcePrimary ? true : forceSecondary && existingPrimary ? false : isPrimary }
+          : {}),
       },
       create: {
         userId,
         roleId: dto.roleId,
-        isPrimary: !existingPrimary,
+        isPrimary: forcePrimary
+          ? true
+          : forceSecondary && existingPrimary
+            ? false
+            : !existingPrimary,
         assignedBy: ctx.userId,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,

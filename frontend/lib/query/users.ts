@@ -351,12 +351,15 @@ export function useAssignRole() {
     mutationFn: ({
       userId,
       roleId,
+      isPrimary,
     }: {
       userId: string;
       roleId: string;
+      isPrimary?: boolean;
     }) =>
       apiPost<UserRoleAssignmentResponse>(`/users/${userId}/roles`, {
         roleId,
+        ...(isPrimary === undefined ? {} : { isPrimary }),
       } satisfies AssignUserRoleRequest),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: userKeys.lists() });

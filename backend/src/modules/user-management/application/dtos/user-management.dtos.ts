@@ -510,6 +510,15 @@ export class AssignUserRoleDto {
   @ApiProperty()
   @IsEntityUuid()
   roleId!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, marks this role as primary (clears other primaries). ' +
+      'When false, assigns as secondary. When omitted, first role becomes primary.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isPrimary?: boolean;
 }
 
 export class SetPrimaryRoleDto {
