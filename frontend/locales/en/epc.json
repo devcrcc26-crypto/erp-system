@@ -1408,7 +1408,7 @@
     },
     "positions": {
       "title": "Positions",
-      "description": "Company-wide job titles and grades for user assignment.",
+      "description": "Company-wide job titles for user assignment.",
       "accessDenied": "You do not have access to positions.",
       "loadFailed": "Failed to load positions",
       "addPosition": "Add position",
@@ -1418,7 +1418,7 @@
       "updated": "Position updated",
       "createFailed": "Failed to create position",
       "updateFailed": "Failed to update position",
-      "searchPlaceholder": "Search title, Chinese title, or grade",
+      "searchPlaceholder": "Search title or Chinese title",
       "empty": "No positions defined",
       "emptyFiltered": "No positions match your filters",
       "count": "{{count}} positions",
@@ -1431,24 +1431,14 @@
         "total": "Total"
       },
       "table": {
-        "title": "Title",
-        "grade": "Grade"
+        "title": "Title"
       },
       "form": {
         "title": "Title",
         "titleRequired": "Title is required",
         "titlePlaceholder": "e.g. Project Manager",
         "titleZh": "Title (Chinese)",
-        "titleZhPlaceholder": "例如：项目经理",
-        "grade": "Grade",
-        "gradePlaceholder": "Select grade"
-      },
-      "grades": {
-        "1": "Grade 1",
-        "2": "Grade 2",
-        "3": "Grade 3",
-        "4": "Grade 4",
-        "5": "Grade 5"
+        "titleZhPlaceholder": "例如：项目经理"
       }
     },
     "disciplinesCatalog": {

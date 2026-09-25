@@ -476,7 +476,6 @@ model Position {
   companyId String    @map("company_id")
   title     String
   titleZh   String?   @map("title_zh")
-  grade     String?
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at")
   createdBy String    @map("created_by")

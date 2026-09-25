@@ -630,7 +630,6 @@ export class CompanySetupService {
         companyId: ctx.companyId,
         title: dto.title.trim(),
         titleZh: dto.titleZh?.trim() || null,
-        grade: dto.grade?.trim() || null,
         isActive: dto.isActive ?? true,
         createdBy: ctx.userId,
         updatedBy: ctx.userId,
@@ -647,7 +646,6 @@ export class CompanySetupService {
     const data: {
       title?: string;
       titleZh?: string | null;
-      grade?: string | null;
       isActive?: boolean;
       updatedBy: string;
     } = { updatedBy: ctx.userId };
@@ -656,9 +654,6 @@ export class CompanySetupService {
     }
     if (dto.titleZh !== undefined) {
       data.titleZh = dto.titleZh.trim() || null;
-    }
-    if (dto.grade !== undefined) {
-      data.grade = dto.grade.trim() || null;
     }
     if (dto.isActive !== undefined) {
       data.isActive = dto.isActive;

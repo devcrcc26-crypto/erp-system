@@ -48,7 +48,6 @@ export interface Position {
   companyId: string;
   title: string;
   titleZh: string | null;
-  grade: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -276,7 +275,6 @@ export function useCreatePosition() {
     mutationFn: (body: {
       title: string;
       titleZh?: string;
-      grade?: string;
       isActive?: boolean;
     }) => apiPost<Position>('/positions', body),
     onSuccess: () => {
@@ -296,7 +294,6 @@ export function useUpdatePosition() {
       body: {
         title?: string;
         titleZh?: string;
-        grade?: string;
         isActive?: boolean;
       };
     }) => apiPatch<Position>(`/positions/${id}`, body),

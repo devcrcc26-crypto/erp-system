@@ -1702,7 +1702,6 @@ async function main(): Promise<void> {
       id: '00000000-0000-4000-8000-000000000020',
       companyId: company.id,
       title: 'System Administrator',
-      grade: '5',
       isActive: true,
       createdBy: SYSTEM_USER_ID,
       updatedBy: SYSTEM_USER_ID,

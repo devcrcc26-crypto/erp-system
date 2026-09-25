@@ -46,7 +46,6 @@ import {
   type Position,
 } from '@/lib/query/org';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatPositionGrade } from '@/lib/utils/position-grades';
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -68,8 +67,7 @@ function filterPositions(
     }
     return (
       row.title.toLowerCase().includes(query) ||
-      (row.titleZh?.toLowerCase().includes(query) ?? false) ||
-      (row.grade?.toLowerCase().includes(query) ?? false)
+      (row.titleZh?.toLowerCase().includes(query) ?? false)
     );
   });
 }
@@ -211,17 +209,6 @@ export default function PositionsPageContent(): React.ReactNode {
               <p className="erp-users-cell-sub m-0 truncate">{row.titleZh}</p>
             ) : null}
           </div>
-        ),
-      },
-      {
-        title: t('pages.positions.table.grade'),
-        dataIndex: 'grade',
-        key: 'grade',
-        responsive: ['lg'],
-        render: (value: string | null) => (
-          <span className="erp-users-email">
-            {formatPositionGrade(value, t)}
-          </span>
         ),
       },
       {
