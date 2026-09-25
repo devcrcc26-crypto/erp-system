@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import type { ResolvedApprovalTier } from '../../../approvals/application/services/approval-resolver.service';
@@ -8,16 +8,75 @@ interface ChainTierDraft {
   label: string;
   approverId: string;
   resolver: string;
+  /** Present when this tier replaced a skipped tier. */
+  skipNote?: string;
 }
 
-/** Roles that skip the HR approval tier (because they ARE HR approvers or above). */
-export const HR_APPROVER_ROLES: readonly string[] = [
+export interface SkippedTier {
+  order: number;
+  label: string;
+  skipped: true;
+  skipReason: string;
+}
+
+/** Roles that skip the Discipline Lead tier (already at or above that level). */
+export const DISCIPLINE_LEAD_OR_ABOVE_ROLES: readonly string[] = [
+  'Discipline Lead',
+  'Department Head',
+  'HR Officer',
+  'HR Manager',
+  'Local HR Manager',
+  'HR Specialist',
+  'HR Assistant',
+  'General Manager',
+  'Managing Director',
+  'System Administrator',
+];
+
+/**
+ * Roles that ARE the HR Manager tier
+ * (their requests skip the HR Manager tier and go to GM).
+ */
+export const HR_MANAGER_ROLES: readonly string[] = [
   'HR Officer',
   'HR Manager',
   'General Manager',
   'Managing Director',
   'System Administrator',
 ];
+
+/** Roles that skip the Department Head tier (already at or above that level). */
+export const DEPARTMENT_HEAD_OR_ABOVE_ROLES: readonly string[] = [
+  'Department Head',
+  'HR Officer',
+  'HR Manager',
+  'Local HR Manager',
+  'HR Specialist',
+  'HR Assistant',
+  'General Manager',
+  'Managing Director',
+  'System Administrator',
+];
+
+/** Roles that auto-approve (no approval chain needed). */
+export const AUTO_APPROVE_ROLES: readonly string[] = [
+  'General Manager',
+  'Managing Director',
+  'System Administrator',
+];
+
+/** HR staff roles — their org requests go directly to HR Manager. */
+export const HR_STAFF_ROLES: readonly string[] = [
+  'HR Assistant',
+  'HR Specialist',
+  'Local HR Manager',
+];
+
+/** Keep for backward compatibility — same as HR_MANAGER_ROLES. */
+export const HR_OR_FULL_ACCESS_ROLES: readonly string[] = HR_MANAGER_ROLES;
+
+/** Keep for backward compatibility — same as HR_MANAGER_ROLES. */
+export const HR_APPROVER_ROLES: readonly string[] = HR_MANAGER_ROLES;
 
 /** Roles that have HR module access (used for permission checks). */
 export const HR_ACCESS_ROLES: readonly string[] = [
@@ -30,12 +89,6 @@ export const HR_ACCESS_ROLES: readonly string[] = [
   'Managing Director',
   'System Administrator',
 ];
-
-/**
- * Keep for backward compatibility — same as HR_APPROVER_ROLES.
- * Used for on-behalf and HR-tier skip in approval chains.
- */
-export const HR_OR_FULL_ACCESS_ROLES: readonly string[] = HR_APPROVER_ROLES;
 
 /** HR request modules that support on-behalf submission (approval category codes). */
 export const HR_ON_BEHALF_MODULE_CODES = [
@@ -52,6 +105,7 @@ export const HR_ON_BEHALF_MODULE_CODES = [
   'PROJECT_SEAL_USAGE',
   'VEHICLE_REFUELING',
   'OVERTIME_APPLICATION',
+  'FIELD_MOVEMENT_LOG',
   'INSPECTION_REPAIR',
   'EXIT_PERMIT',
 ] as const;
@@ -67,12 +121,14 @@ export interface ExitPermitChainOptions {
 }
 
 /**
- * Builds Discipline Lead → HR Officer → (optional) General Manager chains
- * for HR workflows (leave, overtime, etc.).
+ * Builds Discipline Lead → Department Head → HR Manager / GM chains
+ * for HR workflows (leave, overtime, flight, etc.).
  * Role-based tiers resolve only users whose matching role is marked isPrimary.
  */
 @Injectable()
 export class HrApprovalChainService {
+  private readonly logger = new Logger(HrApprovalChainService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -252,36 +308,44 @@ export class HrApprovalChainService {
   ): Promise<ResolvedApprovalTier[]> {
     switch (moduleCode) {
       case 'LEAVE_REQUEST':
+      case 'OVERTIME_APPLICATION':
+      case 'FIELD_MOVEMENT_LOG':
+      case 'EXIT_PERMIT':
         return this.buildOrgApprovalChain(employeeId, companyId, false);
+
       case 'EXPENSE_CLAIM':
       case 'PER_DIEM':
-      case 'OVERTIME_APPLICATION':
         return this.buildOrgApprovalChain(employeeId, companyId, true);
+
       case 'PURCHASE_REQUEST':
         return this.buildPurchaseApprovalChain(
           employeeId,
           Number.MAX_SAFE_INTEGER,
           companyId,
         );
+
       case 'MATERIAL_REQUISITION':
         return this.buildMaterialRequisitionApprovalChain(employeeId, companyId);
+
       case 'CONSUMABLES_REQUISITION':
         return this.buildConsumablesApprovalChain(employeeId, companyId);
+
       case 'FLIGHT_APPLICATION':
       case 'BUSINESS_TRIP':
         return this.buildFlightApprovalChain(employeeId, companyId);
+
       case 'VEHICLE_APPLICATION':
         return this.buildVehicleApplicationApprovalChain(employeeId, companyId);
+
       case 'VEHICLE_REFUELING':
         return this.buildVehicleRefuelingApprovalChain(employeeId, companyId);
+
       case 'OFFICIAL_SEAL_USAGE':
         return this.buildOfficialSealApprovalChain(employeeId, companyId);
+
       case 'PROJECT_SEAL_USAGE':
         return this.buildProjectSealApprovalChain(employeeId, companyId);
-      case 'EXIT_PERMIT':
-        return this.buildExitPermitApprovalChain(employeeId, companyId, {
-          submittedOnBehalf: true,
-        });
+
       case 'INSPECTION_REPAIR':
         return [];
     }
@@ -710,17 +774,22 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Org-structure approval chain with role-based skips and duplicate collapse.
-   * Regular employees: Discipline Lead → HR Officer → (optional) General Manager.
-   * Discipline Lead / HR+ skip lower tiers they already satisfy (no self-approval).
-   * GM+ with no remaining tiers → empty array (auto-approve).
-   * @param includeGeneralManager When true, appends General Manager unless submitter is GM+.
+   * Org-structure approval chain with role-based routing.
+   * Standard: Discipline Lead (optional) → HR Manager.
+   * Discipline Lead: Department Head (optional) → HR Manager.
+   * Department Head: GM → HR Manager.
+   * HR staff: HR Manager.
+   * HR Manager: GM.
+   * GM+: auto-approve (empty).
+   * @param includeGeneralManager Kept for callers; routing is role-based.
    */
   async buildOrgApprovalChain(
     employeeId: string,
     companyId: string,
-    includeGeneralManager: boolean,
+    _includeGeneralManager: boolean,
   ): Promise<ResolvedApprovalTier[]> {
+    void _includeGeneralManager;
+
     const primaryRole =
       (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
 
@@ -735,54 +804,115 @@ export class HrApprovalChainService {
       throw new BadRequestException('Employee not found');
     }
 
-    const isHrOrAbove = HR_OR_FULL_ACCESS_ROLES.includes(primaryRole);
+    const isAutoApprove = AUTO_APPROVE_ROLES.includes(primaryRole);
+    if (isAutoApprove) {
+      return [];
+    }
 
-    const isGmOrAbove = [
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(primaryRole);
-
-    const isDisciplineLeadOrAbove =
-      [
-        'Discipline Lead',
-        ...HR_OR_FULL_ACCESS_ROLES,
-      ].includes(primaryRole) || employee.ledDisciplines.length > 0;
+    const isHrManager = HR_MANAGER_ROLES.includes(primaryRole);
+    const isHrStaff = HR_STAFF_ROLES.includes(primaryRole);
+    const isDisciplineLeadByRole = primaryRole === 'Discipline Lead';
+    const isDisciplineLeadByData = employee.ledDisciplines.length > 0;
+    const isDisciplineLead = isDisciplineLeadByRole || isDisciplineLeadByData;
+    const isDepartmentHead = primaryRole === 'Department Head';
 
     const tiers: ChainTierDraft[] = [];
 
-    if (!isDisciplineLeadOrAbove) {
-      const disciplineLead = await this.getDisciplineLead(
-        employeeId,
-        companyId,
-      );
+    if (isHrManager) {
+      // HR Manager → GM → done
+      const gm = await this.getGeneralManager(companyId);
+      tiers.push({
+        order: 1,
+        label: 'General Manager',
+        approverId: gm.id,
+        resolver: 'ROLE:General Manager',
+      });
+      return this.finalizeTiers(tiers);
+    }
+
+    if (isHrStaff) {
+      // HR staff → HR Manager → done
+      const hrManager = await this.getHRManager(companyId);
+      tiers.push({
+        order: 1,
+        label: 'HR Manager',
+        approverId: hrManager.id,
+        resolver: 'ROLE:HR Manager',
+      });
+      return this.finalizeTiers(tiers);
+    }
+
+    if (isDepartmentHead) {
+      // Department Head → GM → HR Manager
+      const gm = await this.getGeneralManager(companyId);
+      tiers.push({
+        order: 1,
+        label: 'General Manager',
+        approverId: gm.id,
+        resolver: 'ROLE:General Manager',
+      });
+      const hrManager = await this.getHRManager(companyId);
+      tiers.push({
+        order: 2,
+        label: 'HR Manager',
+        approverId: hrManager.id,
+        resolver: 'ROLE:HR Manager',
+      });
+      return this.finalizeTiers(tiers);
+    }
+
+    if (isDisciplineLead) {
+      // Discipline Lead → Department Head (if assigned) → HR Manager
+      const deptHead = await this.getDepartmentHead(employeeId, companyId);
+      if (deptHead.found) {
+        tiers.push({
+          order: tiers.length + 1,
+          label: 'Department Head',
+          approverId: deptHead.id,
+          resolver: 'ROLE:Department Head',
+        });
+      } else {
+        this.logger.warn(
+          `[ApprovalChain] Department Head tier skipped for ${employeeId}: ${deptHead.reason}`,
+        );
+      }
+
+      const hrManager = await this.getHRManager(companyId);
+      tiers.push({
+        order: tiers.length + 1,
+        label: 'HR Manager',
+        approverId: hrManager.id,
+        resolver: 'ROLE:HR Manager',
+      });
+      return this.finalizeTiers(tiers);
+    }
+
+    // Standard employee → Discipline Lead (if assigned) → HR Manager
+    const disciplineLead = await this.getDisciplineLeadSafe(
+      employeeId,
+      companyId,
+    );
+
+    if (disciplineLead.found) {
       tiers.push({
         order: 1,
         label: 'Discipline Lead',
         approverId: disciplineLead.id,
         resolver: 'DISCIPLINE_LEAD',
       });
+    } else {
+      this.logger.warn(
+        `[ApprovalChain] Discipline Lead tier skipped for ${employeeId}: ${disciplineLead.reason}`,
+      );
     }
 
-    if (!isHrOrAbove) {
-      const hrOfficer = await this.getHROfficer(companyId);
-      tiers.push({
-        order: tiers.length + 1,
-        label: 'HR Officer',
-        approverId: hrOfficer.id,
-        resolver: 'ROLE:HR Officer',
-      });
-    }
-
-    if (includeGeneralManager && !isGmOrAbove) {
-      const gm = await this.getGeneralManager(companyId);
-      tiers.push({
-        order: tiers.length + 1,
-        label: 'General Manager',
-        approverId: gm.id,
-        resolver: 'ROLE:General Manager',
-      });
-    }
+    const hrManager = await this.getHRManager(companyId);
+    tiers.push({
+      order: tiers.length + 1,
+      label: 'HR Manager',
+      approverId: hrManager.id,
+      resolver: 'ROLE:HR Manager',
+    });
 
     return this.finalizeTiers(tiers);
   }
@@ -850,11 +980,113 @@ export class HrApprovalChainService {
   }
 
   /**
+   * Soft-fail discipline lead lookup — skips the tier instead of throwing.
+   */
+  async getDisciplineLeadSafe(
+    employeeId: string,
+    companyId: string,
+  ): Promise<{ id: string; found: true } | { found: false; reason: string }> {
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      include: {
+        engineeringDiscipline: {
+          include: {
+            leader: {
+              select: { id: true, deletedAt: true, isActive: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!employee) {
+      return { found: false, reason: 'Employee not found' };
+    }
+
+    if (!employee.engineeringDiscipline) {
+      return {
+        found: false,
+        reason: 'Employee is not assigned to an engineering discipline',
+      };
+    }
+
+    const leader = employee.engineeringDiscipline.leader;
+    if (!leader || leader.deletedAt || !leader.isActive) {
+      return {
+        found: false,
+        reason: `No Discipline Lead assigned for ${employee.engineeringDiscipline.name}`,
+      };
+    }
+
+    // Discipline Lead cannot approve their own request
+    if (leader.id === employeeId) {
+      return {
+        found: false,
+        reason: 'Employee is the Discipline Lead of their own discipline',
+      };
+    }
+
+    return { found: true, id: leader.id };
+  }
+
+  /**
+   * Resolves the department head (Department.leaderUser) for an employee.
+   */
+  async getDepartmentHead(
+    employeeId: string,
+    companyId: string,
+  ): Promise<{ id: string; found: true } | { found: false; reason: string }> {
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      include: {
+        department: {
+          select: {
+            id: true,
+            name: true,
+            leaderUserId: true,
+            leaderUser: {
+              select: { id: true, deletedAt: true, isActive: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!employee) {
+      return { found: false, reason: 'Employee not found' };
+    }
+
+    if (!employee.department) {
+      return { found: false, reason: 'Employee is not assigned to a department' };
+    }
+
+    if (
+      !employee.department.leaderUserId ||
+      !employee.department.leaderUser ||
+      employee.department.leaderUser.deletedAt ||
+      !employee.department.leaderUser.isActive
+    ) {
+      return {
+        found: false,
+        reason: `No Department Head assigned for ${employee.department.name}`,
+      };
+    }
+
+    // Department Head cannot approve their own request
+    if (employee.department.leaderUserId === employeeId) {
+      return {
+        found: false,
+        reason: 'Employee is the Department Head of their own department',
+      };
+    }
+
+    return { found: true, id: employee.department.leaderUser.id };
+  }
+
+  /**
    * Resolves the company HR Manager (primary role), falling back to HR Officer.
    */
-  async getHROfficer(companyId: string): Promise<{ id: string }> {
-    // Try HR Manager first (primary role going forward).
-    // Fall back to HR Officer for backward compatibility.
+  async getHRManager(companyId: string): Promise<{ id: string }> {
     const hrManager = await this.findActiveUserByPrimaryRoleName(
       companyId,
       'HR Manager',
@@ -872,8 +1104,16 @@ export class HrApprovalChainService {
     }
 
     throw new BadRequestException(
-      'No HR Manager or HR Officer found. Please assign an HR Manager in the system.',
+      'No HR Manager found. Please assign a user with the HR Manager role.',
     );
+  }
+
+  /**
+   * Resolves the company HR Manager (primary role), falling back to HR Officer.
+   * @deprecated Prefer {@link getHRManager}.
+   */
+  async getHROfficer(companyId: string): Promise<{ id: string }> {
+    return this.getHRManager(companyId);
   }
 
   /**
@@ -919,27 +1159,23 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Flight approval chain with role-based tier skipping.
-   * Empty array = GM / MD / SysAdmin — direct APPROVED record (no approval request).
+   * Flight / business-trip approval chain.
+   * Standard: Discipline Lead (optional) → GM → HR Manager.
+   * Discipline Lead: Department Head (optional) → GM → HR Manager.
+   * Department Head / HR staff: GM → HR Manager.
+   * HR Manager: GM.
+   * GM+: auto-approve (empty).
    */
   async buildFlightApprovalChain(
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    const primaryRole =
+      (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
+
     const submitter = await this.prisma.user.findFirst({
       where: activeOnly({ id: submitterId, companyId }),
       include: {
-        userRoles: {
-          where: activeOnly({ isPrimary: true }),
-          include: { role: true },
-        },
-        engineeringDiscipline: {
-          include: {
-            leader: {
-              select: { id: true, deletedAt: true, isActive: true },
-            },
-          },
-        },
         ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
       },
     });
@@ -948,80 +1184,115 @@ export class HrApprovalChainService {
       throw new BadRequestException('Submitter not found');
     }
 
-    const primaryRole = submitter.userRoles[0]?.role?.name ?? '';
+    const isAutoApprove = AUTO_APPROVE_ROLES.includes(primaryRole);
+    if (isAutoApprove) {
+      return [];
+    }
 
-    const isHrOrAbove = [
-      'HR Officer',
-      'HR Manager',
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(primaryRole);
-
-    const isGmOrAbove = [
-      'General Manager',
-      'Managing Director',
-      'System Administrator',
-    ].includes(primaryRole);
-
-    const isDisciplineLeadOrAbove =
-      [
-        'Discipline Lead',
-        'HR Officer',
-        'HR Manager',
-        'General Manager',
-        'Managing Director',
-        'System Administrator',
-      ].includes(primaryRole) || submitter.ledDisciplines.length > 0;
+    const isHrManager = HR_MANAGER_ROLES.includes(primaryRole);
+    const isHrStaff = HR_STAFF_ROLES.includes(primaryRole);
+    const isDisciplineLeadByRole = primaryRole === 'Discipline Lead';
+    const isDisciplineLeadByData = submitter.ledDisciplines.length > 0;
+    const isDisciplineLead = isDisciplineLeadByRole || isDisciplineLeadByData;
+    const isDepartmentHead = primaryRole === 'Department Head';
 
     const tiers: ChainTierDraft[] = [];
 
-    if (!isDisciplineLeadOrAbove) {
-      const lead = submitter.engineeringDiscipline?.leader;
-      if (!lead || lead.deletedAt || !lead.isActive) {
-        throw new BadRequestException(
-          'No discipline leader assigned for your discipline.',
-        );
-      }
+    const gm = await this.getGeneralManager(companyId);
+    const hrManager = await this.getHRManager(companyId);
+
+    if (isHrManager) {
+      // HR Manager → GM → done
       tiers.push({
         order: 1,
-        label: 'Discipline Lead',
-        approverId: lead.id,
-        resolver: 'DISCIPLINE_LEAD',
+        label: 'General Manager',
+        approverId: gm.id,
+        resolver: 'ROLE:General Manager',
       });
+      return this.finalizeTiers(tiers);
     }
 
-    if (!isHrOrAbove) {
-      const hr = await this.getHROfficer(companyId);
+    if (isHrStaff || isDepartmentHead) {
+      // HR staff / Department Head → GM → HR Manager
       tiers.push({
-        order: tiers.length + 1,
-        label: 'HR Officer',
-        approverId: hr.id,
-        resolver: 'ROLE:HR Officer',
+        order: 1,
+        label: 'General Manager',
+        approverId: gm.id,
+        resolver: 'ROLE:General Manager',
       });
+      tiers.push({
+        order: 2,
+        label: 'HR Manager',
+        approverId: hrManager.id,
+        resolver: 'ROLE:HR Manager',
+      });
+      return this.finalizeTiers(tiers);
     }
 
-    if (!isGmOrAbove) {
-      const gm = await this.getGeneralManager(companyId);
+    if (isDisciplineLead) {
+      // Discipline Lead → Department Head (if assigned) → GM → HR Manager
+      const deptHead = await this.getDepartmentHead(submitterId, companyId);
+      if (deptHead.found) {
+        tiers.push({
+          order: tiers.length + 1,
+          label: 'Department Head',
+          approverId: deptHead.id,
+          resolver: 'ROLE:Department Head',
+        });
+      } else {
+        this.logger.warn(
+          `[ApprovalChain] Department Head tier skipped for ${submitterId}: ${deptHead.reason}`,
+        );
+      }
       tiers.push({
         order: tiers.length + 1,
         label: 'General Manager',
         approverId: gm.id,
         resolver: 'ROLE:General Manager',
       });
+      tiers.push({
+        order: tiers.length + 1,
+        label: 'HR Manager',
+        approverId: hrManager.id,
+        resolver: 'ROLE:HR Manager',
+      });
+      return this.finalizeTiers(tiers);
     }
 
-    const uniqueTiers = tiers.filter(
-      (tier, index, self) =>
-        index === self.findIndex((t) => t.approverId === tier.approverId),
+    // Standard employee → Discipline Lead (if assigned) → GM → HR Manager
+    const disciplineLead = await this.getDisciplineLeadSafe(
+      submitterId,
+      companyId,
     );
 
-    return uniqueTiers.map((tier, index) => ({
-      tierOrder: index + 1,
-      label: tier.label,
-      approverId: tier.approverId,
-      resolver: tier.resolver,
-    }));
+    if (disciplineLead.found) {
+      tiers.push({
+        order: tiers.length + 1,
+        label: 'Discipline Lead',
+        approverId: disciplineLead.id,
+        resolver: 'DISCIPLINE_LEAD',
+      });
+    } else {
+      this.logger.warn(
+        `[ApprovalChain] Discipline Lead tier skipped for ${submitterId}: ${disciplineLead.reason}`,
+      );
+    }
+
+    tiers.push({
+      order: tiers.length + 1,
+      label: 'General Manager',
+      approverId: gm.id,
+      resolver: 'ROLE:General Manager',
+    });
+
+    tiers.push({
+      order: tiers.length + 1,
+      label: 'HR Manager',
+      approverId: hrManager.id,
+      resolver: 'ROLE:HR Manager',
+    });
+
+    return this.finalizeTiers(tiers);
   }
 
   /**

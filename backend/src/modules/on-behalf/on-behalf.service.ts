@@ -60,6 +60,10 @@ const MODULE_AUDIT: Record<
     recordType: 'VehicleRefueling',
   },
   OVERTIME_APPLICATION: { module: 'overtime', recordType: 'OvertimeSheet' },
+  FIELD_MOVEMENT_LOG: {
+    module: 'field-movement',
+    recordType: 'FieldMovementLog',
+  },
   INSPECTION_REPAIR: {
     module: 'inspection-repair',
     recordType: 'InspectionRepair',
