@@ -224,41 +224,6 @@ export default function AttendanceListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            marginBottom: 4,
-          }}
-        >
-          <h1 className="erp-shell-header-title" style={{ margin: 0 }}>
-            {pageTitle}
-          </h1>
-          {canViewHr && approval ? (
-            <Tag color={STATUS_COLORS[approval.status]}>
-              {t(`pages.hr.attendance.review.status.${approval.status}`)}
-            </Tag>
-          ) : null}
-        </div>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 13,
-            color: 'var(--color-text-tertiary)',
-          }}
-        >
-          {canViewHr
-            ? t('pages.hr.attendance.listDescription')
-            : t('pages.hr.attendance.myListDescription')}{' '}
-          {t('pages.hr.attendance.showingPeriod', {
-            month: monthName,
-            year: String(year),
-          })}
-        </p>
-      </div>
-
       <AttendanceStatBar
         records={allRows}
         totalEmployees={allRows.length}
@@ -391,9 +356,14 @@ export default function AttendanceListPageContent(): React.ReactNode {
             <span className="erp-users-count-pill">
               {filtered.length.toLocaleString()}
             </span>
-            {approval?.status === 'APPROVED' ? (
-              <Tag color="success" icon={<LockOutlined />}>
-                {t('pages.hr.attendance.review.status.APPROVED')}
+            {canViewHr && approval ? (
+              <Tag
+                color={STATUS_COLORS[approval.status]}
+                icon={
+                  approval.status === 'APPROVED' ? <LockOutlined /> : undefined
+                }
+              >
+                {t(`pages.hr.attendance.review.status.${approval.status}`)}
               </Tag>
             ) : null}
           </div>

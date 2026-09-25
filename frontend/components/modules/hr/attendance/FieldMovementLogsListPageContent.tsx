@@ -465,34 +465,6 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <div style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            marginBottom: 4,
-          }}
-        >
-          <h1 className="erp-shell-header-title" style={{ margin: 0 }}>
-            {t('pages.hr.fieldMovementLogs.listTitle')}
-          </h1>
-        </div>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 13,
-            color: 'var(--color-text-tertiary)',
-          }}
-        >
-          {t('pages.hr.fieldMovementLogs.listDescription')}{' '}
-          {t('pages.hr.fieldMovementLogs.showingPeriod', {
-            month: monthName,
-            year: String(year),
-          })}
-        </p>
-      </div>
-
       <div className="erp-users-stat-bar">
         {stats.map((stat) => {
           const active = statMode === stat.mode && !status;

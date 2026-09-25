@@ -585,13 +585,12 @@ export default function AttendanceReviewPageContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page flex flex-col gap-4">
       <div className="erp-pro-card" style={{ marginBottom: 0 }}>
-        <div style={{ padding: '20px 24px' }}>
+        <div style={{ padding: '16px 20px' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 12,
-              marginBottom: 16,
               flexWrap: 'wrap',
             }}
           >
@@ -604,43 +603,34 @@ export default function AttendanceReviewPageContent({
             />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
-                style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  flexWrap: 'wrap',
+                }}
               >
-                <h1
-                  style={{
-                    margin: 0,
-                    fontSize: 20,
-                    fontWeight: 650,
-                    color: 'var(--color-text-primary)',
-                  }}
-                >
-                  {t('pages.hr.attendance.review.title', {
-                    month: monthName,
-                    year: String(year),
-                  })}
-                </h1>
                 {approval ? (
                   <Tag
                     color={STATUS_COLORS[approval.status]}
-                    style={{ fontWeight: 600, borderRadius: 999 }}
+                    style={{ fontWeight: 600, borderRadius: 999, margin: 0 }}
                   >
                     {t(`pages.hr.attendance.review.status.${approval.status}`)}
                   </Tag>
                 ) : null}
+                <span
+                  style={{
+                    fontSize: 13,
+                    color: 'var(--color-text-tertiary)',
+                  }}
+                >
+                  {t('pages.hr.attendance.review.importMeta', {
+                    date: importedAt,
+                    file: fileName,
+                    count: String(totalRows),
+                  })}
+                </span>
               </div>
-              <p
-                style={{
-                  margin: '4px 0 0',
-                  fontSize: 13,
-                  color: 'var(--color-text-tertiary)',
-                }}
-              >
-                {t('pages.hr.attendance.review.importMeta', {
-                  date: importedAt,
-                  file: fileName,
-                  count: String(totalRows),
-                })}
-              </p>
             </div>
             <div
               style={{
@@ -686,7 +676,7 @@ export default function AttendanceReviewPageContent({
             <Alert
               type="error"
               showIcon
-              style={{ borderRadius: 8, marginBottom: banner ? 12 : 0 }}
+              style={{ borderRadius: 8, marginTop: 12 }}
               title={
                 listQuery.error instanceof ApiRequestError
                   ? listQuery.error.message
@@ -701,7 +691,7 @@ export default function AttendanceReviewPageContent({
             <Alert
               type="warning"
               showIcon
-              style={{ borderRadius: 8 }}
+              style={{ borderRadius: 8, marginTop: 12 }}
               title={t('pages.hr.attendance.review.noApproval')}
             />
           ) : null}
@@ -712,7 +702,7 @@ export default function AttendanceReviewPageContent({
               showIcon
               icon={banner.icon}
               title={banner.message}
-              style={{ borderRadius: 8 }}
+              style={{ borderRadius: 8, marginTop: 12 }}
             />
           ) : null}
         </div>

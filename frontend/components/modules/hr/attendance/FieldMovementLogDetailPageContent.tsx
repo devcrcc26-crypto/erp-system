@@ -356,15 +356,15 @@ export default function FieldMovementLogDetailPageContent({
                       margin: '4px 0 0',
                       fontSize: 13,
                       color: 'var(--color-text-tertiary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      flexWrap: 'wrap',
                     }}
                   >
-                    {t('pages.hr.fieldMovementLogs.detailEyebrow')}
-                    {' · '}
-                    {log?.requestNumber}
-                    {' · '}
+                    <span>{log?.requestNumber}</span>
                     <span className="erp-users-id-chip">{employeeCode}</span>
-                    {' · '}
-                    {periodLabel}
+                    <span>{periodLabel}</span>
                   </p>
                 </div>
               </div>
