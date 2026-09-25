@@ -25,7 +25,12 @@ const CORE_ROLES = [
   'Accountant',
   'Procurement Officer',
   'Storekeeper',
-  'HR Officer',
+  'HR Officer', // keep — legacy, maps to HR Manager going forward
+  'HR Manager', // NEW — Ms. Dong, full HR access + final approver
+  'Local HR Manager', // NEW — Mekides, full HR access except approvals
+  'HR Specialist', // NEW — Ms. Tang, view all HR + manage flight tickets
+  'HR Assistant', // NEW — Asli, limited HR view + data entry
+  'Department Head', // NEW — view own department employees
   'Safety Officer',
   'Employee',
   'General Manager',
@@ -234,6 +239,36 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'review_comments', action: 'create', description: 'Create review comments' },
   { module: 'review_comments', action: 'edit', description: 'Edit review comments' },
   { module: 'review_comments', action: 'delete', description: 'Delete review comments' },
+
+  // Attendance module
+  { module: 'attendance', action: 'view', description: 'View attendance records' },
+  { module: 'attendance', action: 'create', description: 'Import attendance data' },
+  { module: 'attendance', action: 'edit', description: 'Correct attendance records' },
+  { module: 'attendance', action: 'approve', description: 'Approve monthly attendance' },
+  { module: 'attendance', action: 'export', description: 'Export attendance data' },
+
+  // Field movement log
+  { module: 'field-movement', action: 'view', description: 'View field movement logs' },
+  { module: 'field-movement', action: 'create', description: 'Submit field movement logs' },
+  { module: 'field-movement', action: 'approve', description: 'Approve field movement logs' },
+
+  // Exit permit
+  { module: 'exit-permit', action: 'view', description: 'View exit permits' },
+  { module: 'exit-permit', action: 'create', description: 'Submit exit permits' },
+  { module: 'exit-permit', action: 'approve', description: 'Approve exit permits' },
+
+  // Per diem
+  { module: 'per-diem', action: 'view', description: 'View per diem requests' },
+  { module: 'per-diem', action: 'create', description: 'Submit per diem requests' },
+  { module: 'per-diem', action: 'approve', description: 'Approve per diem requests' },
+  { module: 'per-diem', action: 'export', description: 'Export per diem data' },
+
+  // Payroll (future module — seed now)
+  { module: 'payroll', action: 'view', description: 'View payroll records and payslips' },
+  { module: 'payroll', action: 'create', description: 'Run payroll calculations' },
+  { module: 'payroll', action: 'edit', description: 'Edit payroll entries' },
+  { module: 'payroll', action: 'approve', description: 'Approve and lock payroll' },
+  { module: 'payroll', action: 'export', description: 'Export payroll and bank files' },
 ];
 
 const ACTION_TO_FLAG: Record<string, keyof PermissionFlags> = {
@@ -284,6 +319,62 @@ function viewOnlyFlags(): PermissionFlags {
     canDelete: false,
     canApprove: false,
     canExport: false,
+  };
+}
+
+function viewExportFlags(): PermissionFlags {
+  return {
+    canView: true,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+    canApprove: false,
+    canExport: true,
+  };
+}
+
+function viewCreateFlags(): PermissionFlags {
+  return {
+    canView: true,
+    canCreate: true,
+    canEdit: false,
+    canDelete: false,
+    canApprove: false,
+    canExport: false,
+  };
+}
+
+function viewApproveExportFlags(): PermissionFlags {
+  return {
+    canView: true,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+    canApprove: true,
+    canExport: true,
+  };
+}
+
+function hrManagerFlags(): PermissionFlags {
+  return {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+    canApprove: true,
+    canExport: true,
+  };
+}
+
+function localHrManagerFlags(): PermissionFlags {
+  // Full access except approve
+  return {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+    canApprove: false,
+    canExport: true,
   };
 }
 
@@ -1185,6 +1276,220 @@ async function main(): Promise<void> {
     }
   }
 
+  // ── New HR role permissions ──────────────────────────────────────────────
+
+  const newHrRolePermissions: Array<{
+    roleName: string;
+    module: string;
+    flags: PermissionFlags;
+  }> = [
+    // ── HR Manager (Ms. Dong) — full access to all HR modules ──
+    { roleName: 'HR Manager', module: 'hr', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'users', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'departments', flags: viewOnlyFlags() },
+    { roleName: 'HR Manager', module: 'roles', flags: viewOnlyFlags() },
+    { roleName: 'HR Manager', module: 'leave', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'overtime', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'attendance', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'field-movement', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'exit-permit', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'per-diem', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'employee-contract', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'flight', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'business-trip', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'payroll', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'reports', flags: viewExportFlags() },
+    { roleName: 'HR Manager', module: 'approvals', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'notifications', flags: viewOnlyFlags() },
+    { roleName: 'HR Manager', module: 'documents', flags: viewOnlyFlags() },
+    { roleName: 'HR Manager', module: 'company', flags: viewOnlyFlags() },
+
+    // ── Local HR Manager (Mekides) — full HR access except approve ──
+    { roleName: 'Local HR Manager', module: 'hr', flags: localHrManagerFlags() },
+    { roleName: 'Local HR Manager', module: 'users', flags: localHrManagerFlags() },
+    { roleName: 'Local HR Manager', module: 'departments', flags: viewOnlyFlags() },
+    { roleName: 'Local HR Manager', module: 'roles', flags: viewOnlyFlags() },
+    { roleName: 'Local HR Manager', module: 'leave', flags: localHrManagerFlags() },
+    { roleName: 'Local HR Manager', module: 'overtime', flags: localHrManagerFlags() },
+    { roleName: 'Local HR Manager', module: 'attendance', flags: localHrManagerFlags() },
+    {
+      roleName: 'Local HR Manager',
+      module: 'field-movement',
+      flags: localHrManagerFlags(),
+    },
+    { roleName: 'Local HR Manager', module: 'exit-permit', flags: localHrManagerFlags() },
+    { roleName: 'Local HR Manager', module: 'per-diem', flags: localHrManagerFlags() },
+    {
+      roleName: 'Local HR Manager',
+      module: 'employee-contract',
+      flags: localHrManagerFlags(),
+    },
+    { roleName: 'Local HR Manager', module: 'flight', flags: viewExportFlags() },
+    { roleName: 'Local HR Manager', module: 'business-trip', flags: viewExportFlags() },
+    { roleName: 'Local HR Manager', module: 'payroll', flags: localHrManagerFlags() },
+    { roleName: 'Local HR Manager', module: 'reports', flags: viewExportFlags() },
+    { roleName: 'Local HR Manager', module: 'approvals', flags: viewOnlyFlags() },
+    { roleName: 'Local HR Manager', module: 'notifications', flags: viewOnlyFlags() },
+    { roleName: 'Local HR Manager', module: 'documents', flags: viewOnlyFlags() },
+
+    // ── HR Specialist (Ms. Tang) — view all HR + manage flight tickets ──
+    { roleName: 'HR Specialist', module: 'hr', flags: viewOnlyFlags() },
+    { roleName: 'HR Specialist', module: 'users', flags: viewOnlyFlags() },
+    { roleName: 'HR Specialist', module: 'leave', flags: viewExportFlags() },
+    { roleName: 'HR Specialist', module: 'overtime', flags: viewExportFlags() },
+    { roleName: 'HR Specialist', module: 'attendance', flags: viewExportFlags() },
+    { roleName: 'HR Specialist', module: 'field-movement', flags: viewOnlyFlags() },
+    { roleName: 'HR Specialist', module: 'exit-permit', flags: viewOnlyFlags() },
+    { roleName: 'HR Specialist', module: 'per-diem', flags: viewExportFlags() },
+    { roleName: 'HR Specialist', module: 'employee-contract', flags: viewOnlyFlags() },
+    {
+      roleName: 'HR Specialist',
+      module: 'flight',
+      flags: {
+        canView: true,
+        canCreate: false,
+        canEdit: true, // ticket attachment
+        canDelete: false,
+        canApprove: false,
+        canExport: true,
+      },
+    },
+    { roleName: 'HR Specialist', module: 'business-trip', flags: viewExportFlags() },
+    { roleName: 'HR Specialist', module: 'payroll', flags: viewOnlyFlags() },
+    { roleName: 'HR Specialist', module: 'approvals', flags: viewOnlyFlags() },
+    { roleName: 'HR Specialist', module: 'notifications', flags: viewOnlyFlags() },
+    { roleName: 'HR Specialist', module: 'documents', flags: viewOnlyFlags() },
+
+    // ── HR Assistant (Asli) — limited HR view + data entry ──
+    { roleName: 'HR Assistant', module: 'hr', flags: viewCreateFlags() },
+    { roleName: 'HR Assistant', module: 'users', flags: viewCreateFlags() },
+    { roleName: 'HR Assistant', module: 'leave', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'overtime', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'attendance', flags: viewCreateFlags() },
+    { roleName: 'HR Assistant', module: 'field-movement', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'exit-permit', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'per-diem', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'employee-contract', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'flight', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'business-trip', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'payroll', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'approvals', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'notifications', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'documents', flags: viewOnlyFlags() },
+
+    // ── Department Head — view own department employees ──
+    { roleName: 'Department Head', module: 'hr', flags: viewOnlyFlags() },
+    { roleName: 'Department Head', module: 'users', flags: viewOnlyFlags() },
+    { roleName: 'Department Head', module: 'leave', flags: viewOnlyFlags() },
+    { roleName: 'Department Head', module: 'overtime', flags: viewOnlyFlags() },
+    { roleName: 'Department Head', module: 'attendance', flags: viewOnlyFlags() },
+    {
+      roleName: 'Department Head',
+      module: 'approvals',
+      flags: viewApproveExportFlags(),
+    },
+    { roleName: 'Department Head', module: 'notifications', flags: viewOnlyFlags() },
+    { roleName: 'Department Head', module: 'documents', flags: viewOnlyFlags() },
+
+    // ── Discipline Lead — view own discipline employees ──
+    { roleName: 'Discipline Lead', module: 'hr', flags: viewOnlyFlags() },
+    { roleName: 'Discipline Lead', module: 'users', flags: viewOnlyFlags() },
+    {
+      roleName: 'Discipline Lead',
+      module: 'leave',
+      flags: viewApproveExportFlags(),
+    },
+    {
+      roleName: 'Discipline Lead',
+      module: 'overtime',
+      flags: viewApproveExportFlags(),
+    },
+    { roleName: 'Discipline Lead', module: 'attendance', flags: viewOnlyFlags() },
+    {
+      roleName: 'Discipline Lead',
+      module: 'field-movement',
+      flags: viewApproveExportFlags(),
+    },
+    {
+      roleName: 'Discipline Lead',
+      module: 'exit-permit',
+      flags: viewApproveExportFlags(),
+    },
+    {
+      roleName: 'Discipline Lead',
+      module: 'per-diem',
+      flags: viewApproveExportFlags(),
+    },
+    {
+      roleName: 'Discipline Lead',
+      module: 'approvals',
+      flags: viewApproveExportFlags(),
+    },
+    { roleName: 'Discipline Lead', module: 'notifications', flags: viewOnlyFlags() },
+    { roleName: 'Discipline Lead', module: 'documents', flags: viewOnlyFlags() },
+
+    // ── General Manager — view all ──
+    { roleName: 'General Manager', module: 'attendance', flags: viewOnlyFlags() },
+    {
+      roleName: 'General Manager',
+      module: 'field-movement',
+      flags: viewApproveExportFlags(),
+    },
+    {
+      roleName: 'General Manager',
+      module: 'exit-permit',
+      flags: viewApproveExportFlags(),
+    },
+    {
+      roleName: 'General Manager',
+      module: 'per-diem',
+      flags: viewApproveExportFlags(),
+    },
+    { roleName: 'General Manager', module: 'payroll', flags: viewOnlyFlags() },
+    {
+      roleName: 'General Manager',
+      module: 'approvals',
+      flags: viewApproveExportFlags(),
+    },
+
+    // ── Employee — self-service only ──
+    { roleName: 'Employee', module: 'attendance', flags: viewOnlyFlags() },
+    { roleName: 'Employee', module: 'field-movement', flags: viewCreateFlags() },
+    { roleName: 'Employee', module: 'exit-permit', flags: viewCreateFlags() },
+    { roleName: 'Employee', module: 'per-diem', flags: viewCreateFlags() },
+    { roleName: 'Employee', module: 'payroll', flags: viewOnlyFlags() },
+    { roleName: 'Employee', module: 'approvals', flags: viewCreateFlags() },
+  ];
+
+  // Upsert all new role permissions — write full intended flags onto each
+  // module action row so merged module permissions match the role matrix.
+  const actionToFlag: Record<string, keyof PermissionFlags> = {
+    view: 'canView',
+    create: 'canCreate',
+    edit: 'canEdit',
+    delete: 'canDelete',
+    approve: 'canApprove',
+    export: 'canExport',
+    manage: 'canEdit',
+  };
+  for (const { roleName, module, flags } of newHrRolePermissions) {
+    const roleId = roleMap.get(roleName);
+    if (!roleId) {
+      console.warn(`Role not found: ${roleName}`);
+      continue;
+    }
+    const modulePermissions = permissions.filter((p) => p.module === module);
+    for (const perm of modulePermissions) {
+      const flagKey = actionToFlag[perm.action];
+      if (!flagKey) {
+        continue;
+      }
+      // Persist the full flag set on each action row so modules without a
+      // dedicated approve/export action still carry those flags on view rows.
+      await upsertRolePermission(roleId, perm.id, flags);
+    }
+  }
+
   // Organization sidebar — HR Officer manages user accounts; view org catalogs for assignment.
   const departmentsView = permissions.find(
     (permission) =>
@@ -2026,7 +2331,7 @@ async function main(): Promise<void> {
     await seedPmDemoData(pmCtx);
     await seedAllProjectTypes(pmCtx);
     await appendRichDemoProjects(pmCtx);
-    await seedComment8Walkthrough(pmCtx);
+    // await seedComment8Walkthrough(pmCtx);
     console.log('  Demo password for all seeded accounts: Admin@12345 (or SEED_ADMIN_PASSWORD)');
   }
 }

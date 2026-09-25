@@ -10,14 +10,32 @@ interface ChainTierDraft {
   resolver: string;
 }
 
-/** HR and full-access roles that may create or submit HR requests on behalf of another employee. */
-export const HR_OR_FULL_ACCESS_ROLES: readonly string[] = [
+/** Roles that skip the HR approval tier (because they ARE HR approvers or above). */
+export const HR_APPROVER_ROLES: readonly string[] = [
   'HR Officer',
   'HR Manager',
   'General Manager',
   'Managing Director',
   'System Administrator',
 ];
+
+/** Roles that have HR module access (used for permission checks). */
+export const HR_ACCESS_ROLES: readonly string[] = [
+  'HR Officer',
+  'HR Manager',
+  'Local HR Manager',
+  'HR Specialist',
+  'HR Assistant',
+  'General Manager',
+  'Managing Director',
+  'System Administrator',
+];
+
+/**
+ * Keep for backward compatibility — same as HR_APPROVER_ROLES.
+ * Used for on-behalf and HR-tier skip in approval chains.
+ */
+export const HR_OR_FULL_ACCESS_ROLES: readonly string[] = HR_APPROVER_ROLES;
 
 /** HR request modules that support on-behalf submission (approval category codes). */
 export const HR_ON_BEHALF_MODULE_CODES = [
@@ -832,19 +850,30 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Resolves the company HR Officer (primary role).
+   * Resolves the company HR Manager (primary role), falling back to HR Officer.
    */
   async getHROfficer(companyId: string): Promise<{ id: string }> {
+    // Try HR Manager first (primary role going forward).
+    // Fall back to HR Officer for backward compatibility.
+    const hrManager = await this.findActiveUserByPrimaryRoleName(
+      companyId,
+      'HR Manager',
+    );
+    if (hrManager) {
+      return hrManager;
+    }
+
     const hrOfficer = await this.findActiveUserByPrimaryRoleName(
       companyId,
       'HR Officer',
     );
-    if (!hrOfficer) {
-      throw new BadRequestException(
-        'No user with primary role HR Officer found.',
-      );
+    if (hrOfficer) {
+      return hrOfficer;
     }
-    return hrOfficer;
+
+    throw new BadRequestException(
+      'No HR Manager or HR Officer found. Please assign an HR Manager in the system.',
+    );
   }
 
   /**

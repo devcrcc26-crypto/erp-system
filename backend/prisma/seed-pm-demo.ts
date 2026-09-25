@@ -835,7 +835,7 @@ export async function seedProjectBundle(
       dailyLogId,
       visitorName: 'Client QA Inspector',
       company: 'Owner Representative',
-      purpose: 'Monthly site inspection',
+      purpose: 'INSPECTION',
       createdBy: adminUserId,
     },
   });
@@ -847,7 +847,7 @@ export async function seedProjectBundle(
       dailyLogId,
       incidentType: 'NEAR_MISS',
       description: 'Unsecured ladder observed at grid B2 - corrected on site.',
-      severity: 'LOW',
+      severity: 'MINOR',
       createdBy: users.safetyUserId,
     },
   });

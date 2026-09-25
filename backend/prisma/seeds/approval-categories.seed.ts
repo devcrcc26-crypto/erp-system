@@ -832,11 +832,59 @@ export async function seedApprovalCategories(
 
 /**
  * Removes prior approval data for the company so re-seed can replace codes safely.
+ * Nulls module FKs first — live HR docs reference approval_request and block deleteMany.
  */
 async function clearCompanyApprovalCategories(
   prisma: PrismaClient,
   companyId: string,
 ): Promise<void> {
+  const unlinkWhere = { companyId, approvalRequestId: { not: null } };
+  const unlinkData = { approvalRequestId: null };
+
+  await prisma.leaveRequest.updateMany({ where: unlinkWhere, data: unlinkData });
+  await prisma.overtimeSheet.updateMany({ where: unlinkWhere, data: unlinkData });
+  await prisma.fieldMovementLog.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.flightApplication.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.businessTrip.updateMany({ where: unlinkWhere, data: unlinkData });
+  await prisma.expenseClaim.updateMany({ where: unlinkWhere, data: unlinkData });
+  await prisma.perDiemRequest.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.purchaseRequest.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.materialRequisition.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.consumablesRequisition.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.vehicleApplication.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.vehicleRefueling.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.inspectionRepair.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.officialSeal.updateMany({ where: unlinkWhere, data: unlinkData });
+  await prisma.projectSeal.updateMany({ where: unlinkWhere, data: unlinkData });
+  await prisma.exitPermit.updateMany({ where: unlinkWhere, data: unlinkData });
+
   await prisma.approvalComment.deleteMany({
     where: { request: { companyId } },
   });
