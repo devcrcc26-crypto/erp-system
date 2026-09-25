@@ -446,6 +446,7 @@ export class AttendanceService
 
       let isLate = false;
       let lateMinutes = 0;
+      // Late detection MUST use Ethiopia-local clock-in, never machine CST.
       if (
         wasPresent &&
         isDutyDay &&
@@ -470,12 +471,12 @@ export class AttendanceService
       const missingClockOut =
         isDutyDay && wasPresent && !day.clockOutLocal && !isLastExportDay;
 
-      // Payable hours: recorded duty time + paid public-holiday credit
-      // (holiday on a normally working weekday credits that day's hours).
+      // Payable hours: scheduled duty hours when present, plus paid public-holiday
+      // credit on weekdays. Absent / weekend days add nothing.
       if (isHoliday && wouldBeWorkingDay) {
         payableHours += weekdayHours;
-      } else if (isDutyDay && recordedHours != null) {
-        payableHours += recordedHours;
+      } else if (isDutyDay && wasPresent) {
+        payableHours += scheduledHours;
       }
 
       const flag = resolveAttendanceDayFlag({
@@ -1073,10 +1074,6 @@ export class AttendanceService
 
     const data = rows.map((record) => ({
       ...record,
-      attendanceRate: computeAttendanceRate(
-        record.scheduledDays,
-        record.presentDays,
-      ),
     }));
 
     return buildPaginatedResult(data, total, page, limit);
@@ -1151,6 +1148,9 @@ export class AttendanceService
         (sum, row) => sum + row.missingClockOutDays,
         0,
       ),
+      totalPayableHours: Math.round(
+        data.reduce((sum, row) => sum + Number(row.payableHours), 0) * 100,
+      ) / 100,
       averageAttendanceRate:
         rates.length > 0
           ? Math.round(
@@ -2667,10 +2667,19 @@ export class AttendanceService
     let payableHours = 0;
     for (const log of record.dailyLogs) {
       const wouldBeWorkingDay = !log.isWeekend;
+      const dutyHours = Number(log.isHalfDay ? 4 : log.scheduledHours || 8);
       if (log.isHoliday && wouldBeWorkingDay) {
-        payableHours += Number(log.scheduledHours);
-      } else if (!log.isHoliday && !log.isWeekend && log.recordedHours != null) {
-        payableHours += Number(log.recordedHours);
+        // Holiday credit uses scheduled weekday hours (stored as 0 on holidays).
+        payableHours += Number(log.isHalfDay ? 4 : 8);
+      } else if (
+        !log.isHoliday &&
+        !log.isWeekend &&
+        log.wasPresent
+      ) {
+        payableHours +=
+          Number(log.scheduledHours) > 0
+            ? Number(log.scheduledHours)
+            : dutyHours;
       }
     }
 

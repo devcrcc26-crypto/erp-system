@@ -14,21 +14,24 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import {
+  ArrowLeftOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
   AttendanceDailyLog,
+  AttendanceDayFlag,
 } from '@/lib/api/attendance.types';
 import {
   useCorrectAttendanceDailyLog,
   useEmployeeAttendanceDailyLogs,
 } from '@/lib/query/attendance';
-import {
-  attendanceFlagTagColor,
-  formatAttendanceDayFlag,
-} from '@/lib/utils/attendance-flag-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 export interface AttendanceDailyLogsDrawerProps {
@@ -37,6 +40,43 @@ export interface AttendanceDailyLogsDrawerProps {
   year: number;
   canCorrect: boolean;
   onClose: () => void;
+}
+
+const STATUS_COLORS = {
+  PRESENT: 'success',
+  ABSENT: 'error',
+  HOLIDAY: 'processing',
+  ON_LEAVE: 'purple',
+  WEEKEND: 'default',
+} as const;
+
+const FLAG_COLORS: Record<Exclude<AttendanceDayFlag, 'NONE'>, string> = {
+  MISSING_CLOCK_IN: 'error',
+  MISSING_CLOCK_OUT: 'warning',
+  EARLY_LEAVE: 'orange',
+};
+
+const FLAG_LABELS: Record<Exclude<AttendanceDayFlag, 'NONE'>, string> = {
+  MISSING_CLOCK_IN: 'Missing clock-in',
+  MISSING_CLOCK_OUT: 'Missing clock-out',
+  EARLY_LEAVE: 'Early departure',
+};
+
+function FlagIcon({
+  flag,
+}: {
+  flag: Exclude<AttendanceDayFlag, 'NONE'>;
+}): React.ReactNode {
+  switch (flag) {
+    case 'MISSING_CLOCK_IN':
+      return <CloseCircleOutlined />;
+    case 'MISSING_CLOCK_OUT':
+      return <ExclamationCircleOutlined />;
+    case 'EARLY_LEAVE':
+      return <ArrowLeftOutlined />;
+    default:
+      return null;
+  }
 }
 
 function dayStatus(
@@ -54,21 +94,30 @@ function dayStatus(
   return 'ABSENT';
 }
 
-function statusColor(
-  status: ReturnType<typeof dayStatus>,
-): string {
-  switch (status) {
-    case 'PRESENT':
-      return 'green';
-    case 'ABSENT':
-      return 'red';
-    case 'HOLIDAY':
-      return 'purple';
-    case 'WEEKEND':
-      return 'default';
-    default:
-      return 'default';
+function formatClockTime(time: string | null | undefined): React.ReactNode {
+  return (
+    <span
+      style={{
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        color: time ? '#0f172a' : '#94a3b8',
+      }}
+    >
+      {time ?? '—'}
+    </span>
+  );
+}
+
+function rowClassName(log: AttendanceDailyLog): string {
+  if (log.isHoliday) {
+    return 'attendance-row-holiday';
   }
+  if (log.isWeekend) {
+    return 'attendance-row-weekend';
+  }
+  if (dayStatus(log) === 'ABSENT') {
+    return 'attendance-row-absent';
+  }
+  return '';
 }
 
 function CorrectPopover({
@@ -203,21 +252,27 @@ export default function AttendanceDailyLogsDrawer({
   );
 
   const logs = query.data?.dailyLogs ?? [];
-  const employeeName = query.data?.employee
-    ? formatUserName(query.data.employee)
-    : '';
+  const employee = query.data?.employee;
+  const employeeName = employee ? formatUserName(employee) : '';
+  const employeeCode = employee?.employeeId?.trim() || '—';
+  const monthLabel = t(`hr.months.${month}`);
+  const presentDays = Number(query.data?.presentDays ?? 0);
+  const absentDays = Number(query.data?.absentDays ?? 0);
 
   const columns: ColumnsType<AttendanceDailyLog> = useMemo(
     () => [
       {
         title: t('pages.hr.attendance.daily.date'),
         key: 'date',
-        width: 120,
+        width: 130,
         render: (_: unknown, row: AttendanceDailyLog) => {
           const d = dayjs(row.date);
           return (
-            <span className="erp-users-cell-sub">
-              {d.format('MMM D')} ({d.format('ddd')})
+            <span>
+              <span style={{ fontWeight: 500 }}>{d.format('ddd')}</span>
+              <span style={{ color: '#64748b', marginLeft: 4 }}>
+                {d.format('D MMM')}
+              </span>
             </span>
           );
         },
@@ -229,7 +284,7 @@ export default function AttendanceDailyLogsDrawer({
         render: (_: unknown, row: AttendanceDailyLog) => {
           const status = dayStatus(row);
           return (
-            <Tag color={statusColor(status)}>
+            <Tag color={STATUS_COLORS[status]}>
               {t(`pages.hr.attendance.review.dayStatus.${status}`)}
             </Tag>
           );
@@ -240,8 +295,10 @@ export default function AttendanceDailyLogsDrawer({
         key: 'clockIn',
         width: 110,
         render: (_: unknown, row: AttendanceDailyLog) => (
-          <span className="erp-users-cell-sub">
-            {row.correctedClockInLocal ?? row.clockInLocal ?? '—'}
+          <span>
+            {formatClockTime(
+              row.correctedClockInLocal ?? row.clockInLocal,
+            )}
             {row.correctedClockInLocal ? (
               <Typography.Text type="secondary" className="ml-1 text-xs">
                 *
@@ -255,8 +312,10 @@ export default function AttendanceDailyLogsDrawer({
         key: 'clockOut',
         width: 110,
         render: (_: unknown, row: AttendanceDailyLog) => (
-          <span className="erp-users-cell-sub">
-            {row.correctedClockOutLocal ?? row.clockOutLocal ?? '—'}
+          <span>
+            {formatClockTime(
+              row.correctedClockOutLocal ?? row.clockOutLocal,
+            )}
             {row.correctedClockOutLocal ? (
               <Typography.Text type="secondary" className="ml-1 text-xs">
                 *
@@ -268,12 +327,27 @@ export default function AttendanceDailyLogsDrawer({
       {
         title: t('pages.hr.attendance.review.columns.flag'),
         key: 'flag',
-        width: 220,
-        render: (_: unknown, row: AttendanceDailyLog) => (
-          <Tag color={attendanceFlagTagColor(row)}>
-            {formatAttendanceDayFlag(row)}
-          </Tag>
-        ),
+        width: 200,
+        render: (_: unknown, row: AttendanceDailyLog) => {
+          if (row.flag === 'NONE') {
+            return <span style={{ color: '#94a3b8' }}>—</span>;
+          }
+          if (row.flagResolved) {
+            return (
+              <Tag color="success" icon={<CheckCircleOutlined />}>
+                Resolved
+              </Tag>
+            );
+          }
+          return (
+            <Tag
+              color={FLAG_COLORS[row.flag]}
+              icon={<FlagIcon flag={row.flag} />}
+            >
+              {FLAG_LABELS[row.flag]}
+            </Tag>
+          );
+        },
       },
       {
         title: t('common.actions'),
@@ -301,10 +375,13 @@ export default function AttendanceDailyLogsDrawer({
     <Drawer
       title={
         <Space orientation="vertical" size={0}>
-          <span>{t('pages.hr.attendance.review.dailyLogsTitle')}</span>
+          <span style={{ fontWeight: 600, fontSize: 15 }}>
+            {employeeName || t('pages.hr.attendance.review.dailyLogsTitle')}
+          </span>
           {employeeName ? (
-            <Typography.Text type="secondary" className="text-sm font-normal">
-              {employeeName}
+            <Typography.Text type="secondary" className="text-xs font-normal">
+              {employeeCode} · {monthLabel} {year} · {presentDays} present ·{' '}
+              {absentDays} absent
             </Typography.Text>
           ) : null}
         </Space>
@@ -328,6 +405,7 @@ export default function AttendanceDailyLogsDrawer({
           size="small"
           scroll={{ x: 800, y: 'calc(100vh - 200px)' }}
           pagination={false}
+          rowClassName={rowClassName}
         />
       )}
     </Drawer>

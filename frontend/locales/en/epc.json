@@ -510,7 +510,8 @@
           "totalPresent": "Total Present Days",
           "totalAbsent": "Total Absent Days",
           "totalLate": "Total Late Days",
-          "totalMissingClockOut": "Missing Clock-outs"
+          "totalMissingClockOut": "Missing Clock-outs",
+          "totalPayableHours": "Total Payable Hours"
         },
         "columns": {
           "scheduledDays": "Scheduled Days",
@@ -611,7 +612,10 @@
           "flagStatus": {
             "none": "No Flags",
             "hasFlags": "Has Flags",
-            "allResolved": "All Resolved"
+            "allResolved": "All Resolved",
+            "complete": "✓ Complete",
+            "partial": "Partial",
+            "needsAttention": "Needs Attention"
           },
           "flags": {
             "NONE": "None",

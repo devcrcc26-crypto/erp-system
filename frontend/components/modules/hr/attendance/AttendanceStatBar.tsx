@@ -2,11 +2,10 @@
 
 import { useMemo } from 'react';
 import {
-  CalendarOutlined,
+  CheckCircleOutlined,
   CloseCircleOutlined,
-  ClockCircleOutlined,
+  FieldTimeOutlined,
   TeamOutlined,
-  WarningOutlined,
 } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import type { AttendanceRecord } from '@/lib/api/attendance.types';
@@ -15,8 +14,8 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 const STAT_ACCENT = {
   blue: { bg: '#E8F1FB', fg: '#185FA5' },
   green: { bg: '#EAF3DE', fg: '#639922' },
-  amber: { bg: '#FAEEDA', fg: '#BA7517' },
   red: { bg: '#FCEBEB', fg: '#D32F2F' },
+  teal: { bg: '#E1F5EE', fg: '#0F6E56' },
 } as const;
 
 type StatAccent = keyof typeof STAT_ACCENT;
@@ -56,8 +55,17 @@ function AttendanceStat({
   );
 }
 
+function formatHours(value: number): string {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+  return Number.isInteger(value)
+    ? value.toLocaleString()
+    : value.toFixed(1).replace(/\.0$/, '');
+}
+
 /**
- * Summary chips for the loaded attendance period (from recalculated daily logs).
+ * Summary chips for the loaded attendance period (4 cards, one row).
  */
 export default function AttendanceStatBar({
   records,
@@ -75,27 +83,22 @@ export default function AttendanceStatBar({
       (sum, row) => sum + Number(row.absentDays ?? 0),
       0,
     );
-    const totalLate = records.reduce(
-      (sum, row) => sum + (row.lateDays ?? 0),
-      0,
-    );
-    const totalMissingOut = records.reduce(
-      (sum, row) => sum + (row.missingClockOutDays ?? 0),
+    const totalPayableHours = records.reduce(
+      (sum, row) => sum + Number(row.payableHours ?? 0),
       0,
     );
     return {
       employees: totalEmployees ?? records.length,
       totalPresent,
       totalAbsent,
-      totalLate,
-      totalMissingOut,
+      totalPayableHours,
     };
   }, [records, totalEmployees]);
 
   if (loading) {
     return (
       <div className="erp-users-stat-bar">
-        {Array.from({ length: 5 }, (_, index) => (
+        {Array.from({ length: 4 }, (_, index) => (
           <div key={index} className="erp-users-stat">
             <Skeleton.Avatar active size={36} shape="square" />
             <div className="min-w-0 flex-1">
@@ -124,7 +127,7 @@ export default function AttendanceStatBar({
         label={t('pages.hr.attendance.stats.totalPresent')}
         value={stats.totalPresent.toLocaleString()}
         accent="green"
-        icon={<CalendarOutlined />}
+        icon={<CheckCircleOutlined />}
       />
       <AttendanceStat
         label={t('pages.hr.attendance.stats.totalAbsent')}
@@ -133,16 +136,10 @@ export default function AttendanceStatBar({
         icon={<CloseCircleOutlined />}
       />
       <AttendanceStat
-        label={t('pages.hr.attendance.stats.totalLate')}
-        value={stats.totalLate.toLocaleString()}
-        accent="amber"
-        icon={<ClockCircleOutlined />}
-      />
-      <AttendanceStat
-        label={t('pages.hr.attendance.stats.totalMissingClockOut')}
-        value={stats.totalMissingOut.toLocaleString()}
-        accent="amber"
-        icon={<WarningOutlined />}
+        label={t('pages.hr.attendance.stats.totalPayableHours')}
+        value={formatHours(stats.totalPayableHours)}
+        accent="teal"
+        icon={<FieldTimeOutlined />}
       />
     </div>
   );

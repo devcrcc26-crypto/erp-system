@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Avatar, Tag } from 'antd';
+import { Avatar, Button, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { CalendarOutlined } from '@ant-design/icons';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import type { AttendanceRecord } from '@/lib/api/attendance.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -30,6 +31,7 @@ export interface AttendanceTableProps {
     onChange: (page: number, pageSize: number) => void;
   };
   emptyText?: React.ReactNode;
+  onViewDailyLogs?: (record: AttendanceRecord) => void;
 }
 
 function initialsOf(firstName: string, lastName: string): string {
@@ -44,19 +46,6 @@ function avatarColor(seed: string): string {
     hash = seed.charCodeAt(i) + ((hash << 5) - hash);
   }
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function rateColor(rate: number | null): string {
-  if (rate == null) {
-    return 'default';
-  }
-  if (rate >= 90) {
-    return 'success';
-  }
-  if (rate >= 75) {
-    return 'warning';
-  }
-  return 'error';
 }
 
 function formatNumber(value: number | string | null | undefined): string {
@@ -79,6 +68,21 @@ function compareText(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: 'base' });
 }
 
+function mutedOrValue(
+  value: number,
+  activeColor: string,
+  formatter: (n: number) => string = String,
+): React.ReactNode {
+  if (value <= 0) {
+    return <span style={{ color: '#94a3b8' }}>—</span>;
+  }
+  return (
+    <span style={{ color: activeColor, fontWeight: 600 }}>
+      {formatter(value)}
+    </span>
+  );
+}
+
 /**
  * Attendance records table — schedule-based daily recalculation columns.
  */
@@ -87,6 +91,7 @@ export default function AttendanceTable({
   loading,
   pagination,
   emptyText,
+  onViewDailyLogs,
 }: AttendanceTableProps): React.ReactNode {
   const { t } = useEpcTranslation();
 
@@ -124,22 +129,6 @@ export default function AttendanceTable({
         },
       },
       {
-        title: t('hr.table.department'),
-        key: 'department',
-        width: 140,
-        responsive: ['md'],
-        sorter: (a, b) =>
-          compareText(
-            a.employee.department?.name?.trim() ?? '',
-            b.employee.department?.name?.trim() ?? '',
-          ),
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-users-cell-sub">
-            {row.employee.department?.name?.trim() || '—'}
-          </span>
-        ),
-      },
-      {
         title: t('pages.hr.attendance.columns.scheduledDays'),
         key: 'scheduledDays',
         width: 120,
@@ -169,47 +158,8 @@ export default function AttendanceTable({
         width: 110,
         align: 'right',
         sorter: (a, b) => toNumber(a.absentDays) - toNumber(b.absentDays),
-        render: (_: unknown, row: AttendanceRecord) => {
-          const absent = Number(row.absentDays);
-          return (
-            <span
-              className="erp-users-cell-sub"
-              style={
-                absent > 0 ? { color: '#D32F2F', fontWeight: 600 } : undefined
-              }
-            >
-              {formatNumber(row.absentDays)}
-            </span>
-          );
-        },
-      },
-      {
-        title: t('pages.hr.attendance.columns.attendanceRate'),
-        key: 'attendanceRate',
-        width: 120,
-        align: 'center',
-        sorter: (a, b) => {
-          const left = a.attendanceRate;
-          const right = b.attendanceRate;
-          if (left == null && right == null) {
-            return 0;
-          }
-          if (left == null) {
-            return 1;
-          }
-          if (right == null) {
-            return -1;
-          }
-          return left - right;
-        },
         render: (_: unknown, row: AttendanceRecord) =>
-          row.attendanceRate == null ? (
-            <span className="erp-users-cell-sub">—</span>
-          ) : (
-            <Tag color={rateColor(row.attendanceRate)}>
-              {row.attendanceRate}%
-            </Tag>
-          ),
+          mutedOrValue(toNumber(row.absentDays), '#D32F2F', formatNumber),
       },
       {
         title: t('pages.hr.attendance.columns.lateDays'),
@@ -217,52 +167,76 @@ export default function AttendanceTable({
         width: 90,
         align: 'right',
         sorter: (a, b) => a.lateDays - b.lateDays,
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span
-            className="erp-users-cell-sub"
-            style={
-              row.lateDays > 0 ? { color: '#BA7517', fontWeight: 600 } : undefined
-            }
-          >
-            {row.lateDays}
-          </span>
-        ),
+        render: (_: unknown, row: AttendanceRecord) =>
+          mutedOrValue(row.lateDays, '#BA7517'),
       },
       {
         title: t('pages.hr.attendance.columns.missingClockOut'),
         key: 'missingClockOutDays',
-        width: 130,
+        width: 140,
         align: 'right',
-        responsive: ['lg'],
         sorter: (a, b) => a.missingClockOutDays - b.missingClockOutDays,
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span
-            className="erp-users-cell-sub"
-            style={
-              row.missingClockOutDays > 0
-                ? { color: '#BA7517', fontWeight: 600 }
-                : undefined
-            }
-          >
-            {row.missingClockOutDays}
-          </span>
-        ),
+        render: (_: unknown, row: AttendanceRecord) =>
+          mutedOrValue(row.missingClockOutDays, '#BA7517'),
       },
       {
         title: t('pages.hr.attendance.columns.payableHours'),
         key: 'payableHours',
-        width: 110,
+        width: 120,
         align: 'right',
-        responsive: ['xl'],
         sorter: (a, b) => toNumber(a.payableHours) - toNumber(b.payableHours),
         render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-users-cell-sub">
+          <span style={{ color: '#0F6E56', fontWeight: 600 }}>
             {formatNumber(row.payableHours)}
           </span>
         ),
       },
+      {
+        title: t('pages.hr.attendance.review.columns.flaggedDays'),
+        key: 'flaggedDays',
+        width: 130,
+        align: 'center',
+        sorter: (a, b) => a.flaggedDays - b.flaggedDays,
+        render: (_: unknown, row: AttendanceRecord) => {
+          const flagged = row.flaggedDays ?? 0;
+          if (flagged > 0) {
+            return (
+              <Tag color="warning" className="erp-attendance-flag-badge m-0">
+                {flagged} flag{flagged !== 1 ? 's' : ''}
+              </Tag>
+            );
+          }
+          return (
+            <Tag color="success" className="erp-attendance-flag-badge m-0">
+              ✓ No flags
+            </Tag>
+          );
+        },
+      },
+      ...(onViewDailyLogs
+        ? [
+            {
+              title: t('common.actions'),
+              key: 'actions',
+              width: 72,
+              align: 'center' as const,
+              fixed: 'right' as const,
+              render: (_: unknown, row: AttendanceRecord) => (
+                <Tooltip title={t('pages.hr.attendance.review.viewDailyLogs')}>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<CalendarOutlined />}
+                    onClick={() => onViewDailyLogs(row)}
+                    aria-label={t('pages.hr.attendance.review.viewDailyLogs')}
+                  />
+                </Tooltip>
+              ),
+            },
+          ]
+        : []),
     ],
-    [t],
+    [onViewDailyLogs, t],
   );
 
   return (

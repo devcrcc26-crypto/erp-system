@@ -19,6 +19,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
+import AttendanceDailyLogsDrawer from '@/components/modules/hr/attendance/AttendanceDailyLogsDrawer';
 import AttendanceImportModal from '@/components/modules/hr/attendance/AttendanceImportModal';
 import AttendanceStatBar from '@/components/modules/hr/attendance/AttendanceStatBar';
 import AttendanceTable from '@/components/modules/hr/attendance/AttendanceTable';
@@ -26,29 +27,22 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { AttendanceMonthStatus } from '@/lib/api/attendance.types';
+import type {
+  AttendanceMonthStatus,
+  AttendanceRecord,
+} from '@/lib/api/attendance.types';
 import {
   useAttendanceMonthlyApproval,
   useAttendanceRecordsAll,
 } from '@/lib/query/attendance';
-import { useUsersDirectory } from '@/lib/query/users';
 import { filterAttendanceRecords } from '@/lib/utils/attendance-list-filter';
-import { formatUserName } from '@/lib/utils/user-display';
 
-function approvalStatusColor(status: AttendanceMonthStatus): string {
-  switch (status) {
-    case 'PENDING_REVIEW':
-      return 'blue';
-    case 'REVIEWED':
-      return 'gold';
-    case 'APPROVED':
-      return 'green';
-    case 'UNLOCKED':
-      return 'orange';
-    default:
-      return 'default';
-  }
-}
+const STATUS_COLORS: Record<AttendanceMonthStatus, string> = {
+  PENDING_REVIEW: 'blue',
+  REVIEWED: 'orange',
+  APPROVED: 'green',
+  UNLOCKED: 'gold',
+};
 
 /**
  * HR attendance list — load month/year from API, filter/search on the frontend.
@@ -66,15 +60,10 @@ export default function AttendanceListPageContent(): React.ReactNode {
   const [year, setYear] = useState(currentYear);
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
-  const [employeeId, setEmployeeId] = useState<string | undefined>();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [importModalOpen, setImportModalOpen] = useState(false);
-
-  const usersQuery = useUsersDirectory(
-    { page: 1, limit: 100 },
-    { enabled: canViewHr },
-  );
+  const [drawerEmployeeId, setDrawerEmployeeId] = useState<string | undefined>();
 
   const listQuery = useAttendanceRecordsAll({ month, year }, true);
   const approvalQuery = useAttendanceMonthlyApproval(month, year, canViewHr);
@@ -85,9 +74,8 @@ export default function AttendanceListPageContent(): React.ReactNode {
     () =>
       filterAttendanceRecords(allRows, {
         search: appliedSearch,
-        employeeId: canViewHr ? employeeId : undefined,
       }),
-    [allRows, appliedSearch, employeeId, canViewHr],
+    [allRows, appliedSearch],
   );
 
   const monthOptions = useMemo(
@@ -99,26 +87,14 @@ export default function AttendanceListPageContent(): React.ReactNode {
     [t],
   );
 
-  const employeeOptions = useMemo(
-    () =>
-      (usersQuery.data?.data ?? []).map((user) => ({
-        value: user.id,
-        label: formatUserName(user),
-      })),
-    [usersQuery.data?.data],
-  );
-
   const monthName = t(`hr.months.${month}`);
   const pageTitle = canViewHr
     ? t('pages.hr.attendance.listTitle')
     : t('pages.hr.attendance.myListTitle');
 
-  const hasSearchOrEmployee =
-    Boolean(appliedSearch.trim()) || Boolean(employeeId);
+  const hasSearch = Boolean(appliedSearch.trim());
   const hasFilters =
-    hasSearchOrEmployee ||
-    month !== currentMonth ||
-    year !== currentYear;
+    hasSearch || month !== currentMonth || year !== currentYear;
 
   function resetPage(): void {
     setPage(1);
@@ -129,7 +105,6 @@ export default function AttendanceListPageContent(): React.ReactNode {
     setYear(currentYear);
     setSearch('');
     setAppliedSearch('');
-    setEmployeeId(undefined);
     resetPage();
   }
 
@@ -159,6 +134,10 @@ export default function AttendanceListPageContent(): React.ReactNode {
       return;
     }
     setPage(nextPage);
+  }
+
+  function openDailyLogsDrawer(record: AttendanceRecord): void {
+    setDrawerEmployeeId(record.employeeId);
   }
 
   if (listQuery.isLoading && !listQuery.data) {
@@ -199,54 +178,16 @@ export default function AttendanceListPageContent(): React.ReactNode {
             <span className="erp-users-count-pill">
               {filtered.length.toLocaleString()}
             </span>
-            {canViewHr && approval ? (
-              <Tag color={approvalStatusColor(approval.status)}>
-                {t(`pages.hr.attendance.review.status.${approval.status}`)}
-              </Tag>
-            ) : null}
-          </div>
-          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
-            <Tooltip title={t('common.refresh')}>
-              <Button
-                type="text"
-                icon={<ReloadOutlined />}
-                loading={listQuery.isFetching && !listQuery.isLoading}
-                onClick={() => void listQuery.refetch()}
-                aria-label={t('common.refresh')}
-              />
-            </Tooltip>
-            {canViewHr ? (
-              <Button
-                icon={<CheckCircleOutlined />}
-                onClick={() =>
-                  router.push(`/hr/attendance/review/${month}/${year}`)
-                }
-              >
-                {t('pages.hr.attendance.review.reviewButton', {
-                  month: monthName,
-                  year: String(year),
-                })}
-              </Button>
-            ) : null}
-            {canViewHr ? (
-              <Button
-                type="primary"
-                icon={<ImportOutlined />}
-                onClick={() => setImportModalOpen(true)}
-              >
-                {t('pages.hr.attendance.import')}
-              </Button>
-            ) : null}
           </div>
         </div>
 
-        <div className="erp-users-filter-bar">
+        <div className="erp-users-filter-bar flex flex-wrap items-center gap-2">
           {canViewHr ? (
             <Input
               allowClear
               prefix={<SearchOutlined className="erp-users-search-icon" />}
               placeholder={t('pages.hr.attendance.filters.search')}
-              className="erp-users-search-input min-w-0"
+              className="erp-users-search-input min-w-[200px] flex-1"
               value={search}
               onChange={(event) => {
                 const value = event.target.value;
@@ -266,24 +207,6 @@ export default function AttendanceListPageContent(): React.ReactNode {
               aria-label={t('pages.hr.attendance.filters.search')}
             />
           ) : null}
-          <span className="erp-users-filter-spacer" aria-hidden />
-          {canViewHr ? (
-            <Select
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              placeholder={t('hr.placeholder.employee')}
-              className="erp-users-filter-select"
-              loading={usersQuery.isLoading}
-              options={employeeOptions}
-              value={employeeId}
-              onChange={(value: string | undefined) => {
-                setEmployeeId(value);
-                resetPage();
-              }}
-              aria-label={t('hr.placeholder.employee')}
-            />
-          ) : null}
           <Select
             value={month}
             options={monthOptions}
@@ -300,9 +223,48 @@ export default function AttendanceListPageContent(): React.ReactNode {
             className="w-28"
             aria-label={t('pages.hr.attendance.filters.year')}
           />
+          {canViewHr && approval ? (
+            <Tag color={STATUS_COLORS[approval.status]}>
+              {t(`pages.hr.attendance.review.status.${approval.status}`)}
+            </Tag>
+          ) : null}
           {hasFilters ? (
             <Button type="link" onClick={handleResetFilters} className="!px-1">
               {t('common.reset')}
+            </Button>
+          ) : null}
+
+          <span className="erp-users-filter-spacer" aria-hidden />
+
+          {canViewHr ? (
+            <Button
+              icon={<CheckCircleOutlined />}
+              onClick={() =>
+                router.push(`/hr/attendance/review/${month}/${year}`)
+              }
+            >
+              {t('pages.hr.attendance.review.reviewButton', {
+                month: monthName,
+                year: String(year),
+              })}
+            </Button>
+          ) : null}
+          <Tooltip title={t('common.refresh')}>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              loading={listQuery.isFetching && !listQuery.isLoading}
+              onClick={() => void listQuery.refetch()}
+              aria-label={t('common.refresh')}
+            />
+          </Tooltip>
+          {canViewHr ? (
+            <Button
+              type="primary"
+              icon={<ImportOutlined />}
+              onClick={() => setImportModalOpen(true)}
+            >
+              {t('pages.hr.attendance.import')}
             </Button>
           ) : null}
         </div>
@@ -311,6 +273,9 @@ export default function AttendanceListPageContent(): React.ReactNode {
           <AttendanceTable
             records={filtered}
             loading={listQuery.isFetching}
+            onViewDailyLogs={
+              canViewHr ? openDailyLogsDrawer : undefined
+            }
             pagination={{
               current: page,
               pageSize: limit,
@@ -321,7 +286,7 @@ export default function AttendanceListPageContent(): React.ReactNode {
               <TableEmptyState
                 icon={<CalendarOutlined />}
                 title={
-                  hasSearchOrEmployee && filtered.length === 0
+                  hasSearch && filtered.length === 0
                     ? t('pages.hr.attendance.emptyFiltered')
                     : t('pages.hr.attendance.emptyTitle', {
                         month: monthName,
@@ -329,12 +294,12 @@ export default function AttendanceListPageContent(): React.ReactNode {
                       })
                 }
                 description={
-                  hasSearchOrEmployee && filtered.length === 0
+                  hasSearch && filtered.length === 0
                     ? undefined
                     : t('pages.hr.attendance.emptyDescription')
                 }
                 action={
-                  hasSearchOrEmployee && filtered.length === 0
+                  hasSearch && filtered.length === 0
                     ? {
                         label: t('common.reset'),
                         onClick: handleResetFilters,
@@ -356,6 +321,16 @@ export default function AttendanceListPageContent(): React.ReactNode {
             void listQuery.refetch();
             void approvalQuery.refetch();
           }}
+        />
+      ) : null}
+
+      {canViewHr ? (
+        <AttendanceDailyLogsDrawer
+          employeeId={drawerEmployeeId}
+          month={month}
+          year={year}
+          canCorrect={false}
+          onClose={() => setDrawerEmployeeId(undefined)}
         />
       ) : null}
     </div>

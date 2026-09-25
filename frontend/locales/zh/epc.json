@@ -510,7 +510,8 @@
           "totalPresent": "出勤天数合计",
           "totalAbsent": "缺勤天数合计",
           "totalLate": "迟到天数合计",
-          "totalMissingClockOut": "下班缺卡合计"
+          "totalMissingClockOut": "下班缺卡合计",
+          "totalPayableHours": "应付工时合计"
         },
         "columns": {
           "scheduledDays": "应出勤天数",
@@ -611,7 +612,10 @@
           "flagStatus": {
             "none": "无异常",
             "hasFlags": "有异常",
-            "allResolved": "全部已解决"
+            "allResolved": "全部已解决",
+            "complete": "✓ 完整",
+            "partial": "部分解决",
+            "needsAttention": "需处理"
           },
           "flags": {
             "NONE": "无",

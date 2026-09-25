@@ -4664,3 +4664,40 @@ main::-webkit-scrollbar,
     border-bottom: none;
   }
 }
+
+/* Attendance module */
+.erp-attendance-page .erp-users-stat-bar {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 768px) {
+  .erp-attendance-page .erp-users-stat-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.erp-attendance-flag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.erp-attendance-review-page .erp-pro-card {
+  border-radius: 12px;
+}
+
+.attendance-row-holiday td {
+  background: #eff6ff !important;
+}
+
+.attendance-row-weekend td {
+  background: #f8fafc !important;
+}
+
+.attendance-row-absent td {
+  background: #fef2f2 !important;
+}

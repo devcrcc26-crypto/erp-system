@@ -232,6 +232,7 @@ export interface MyAttendanceResponse {
     totalLateDays: number;
     totalLateMinutes: number;
     totalMissingClockOutDays: number;
+    totalPayableHours: number;
     averageAttendanceRate: number | null;
   };
 }

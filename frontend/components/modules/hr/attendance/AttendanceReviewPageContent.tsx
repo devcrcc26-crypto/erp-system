@@ -9,15 +9,19 @@ import {
   Form,
   Input,
   Modal,
+  Progress,
   Space,
   Spin,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ArrowLeftOutlined,
+  CalendarOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
   EditOutlined,
   LockOutlined,
   TeamOutlined,
@@ -107,7 +111,11 @@ function statusBanner(
     unlockedAt?: string | null;
     unlockReason?: string | null;
   },
-): { type: 'info' | 'warning' | 'success' | 'error'; message: string } | null {
+): {
+  type: 'info' | 'warning' | 'success' | 'error';
+  message: string;
+  icon: React.ReactNode;
+} | null {
   if (!status) {
     return null;
   }
@@ -115,16 +123,19 @@ function statusBanner(
     case 'PENDING_REVIEW':
       return {
         type: 'info',
+        icon: <ClockCircleOutlined />,
         message: t('pages.hr.attendance.review.banner.pending'),
       };
     case 'REVIEWED':
       return {
         type: 'warning',
+        icon: <CheckCircleOutlined />,
         message: t('pages.hr.attendance.review.banner.reviewed'),
       };
     case 'APPROVED':
       return {
         type: 'success',
+        icon: <CheckCircleOutlined />,
         message: t('pages.hr.attendance.review.banner.approved', {
           date: meta.approvedAt
             ? new Date(meta.approvedAt).toLocaleString()
@@ -135,6 +146,7 @@ function statusBanner(
     case 'UNLOCKED':
       return {
         type: 'warning',
+        icon: <UnlockOutlined />,
         message: t('pages.hr.attendance.review.banner.unlocked', {
           date: meta.unlockedAt
             ? new Date(meta.unlockedAt).toLocaleString()
@@ -144,21 +156,6 @@ function statusBanner(
       };
     default:
       return null;
-  }
-}
-
-function statusBadgeColor(status: AttendanceMonthStatus): string {
-  switch (status) {
-    case 'PENDING_REVIEW':
-      return 'blue';
-    case 'REVIEWED':
-      return 'gold';
-    case 'APPROVED':
-      return 'green';
-    case 'UNLOCKED':
-      return 'orange';
-    default:
-      return 'default';
   }
 }
 
@@ -296,13 +293,21 @@ export default function AttendanceReviewPageContent({
       {
         title: t('pages.hr.attendance.review.columns.flaggedDays'),
         key: 'flaggedDays',
-        width: 120,
+        width: 140,
         align: 'center',
         render: (_: unknown, row: AttendanceRecord) => {
           const flagged = toNumber(row.flaggedDays);
-          return (
-            <Tag color={flagged > 0 ? 'orange' : 'green'}>{flagged}</Tag>
-          );
+          if (flagged > 0) {
+            return (
+              <Tag
+                color="warning"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                ⚠ {flagged} flag{flagged !== 1 ? 's' : ''}
+              </Tag>
+            );
+          }
+          return <Tag color="success">✓ No flags</Tag>;
         },
       },
       {
@@ -310,36 +315,55 @@ export default function AttendanceReviewPageContent({
         key: 'resolved',
         width: 110,
         align: 'center',
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-users-cell-sub">
-            {toNumber(row.resolvedDays)}/{toNumber(row.flaggedDays)}
-          </span>
-        ),
+        render: (_: unknown, row: AttendanceRecord) => {
+          const flagged = toNumber(row.flaggedDays);
+          const resolved = toNumber(row.resolvedDays);
+          if (flagged <= 0) {
+            return <span style={{ color: '#94a3b8' }}>—</span>;
+          }
+          const percent = Math.round((resolved / flagged) * 100);
+          return (
+            <Progress
+              type="circle"
+              percent={percent}
+              size={28}
+              strokeColor="#1d9e75"
+              format={() => `${resolved}/${flagged}`}
+            />
+          );
+        },
       },
       {
         title: t('pages.hr.attendance.review.columns.status'),
         key: 'flagStatus',
-        width: 130,
+        width: 150,
         render: (_: unknown, row: AttendanceRecord) => {
           const flagged = toNumber(row.flaggedDays);
           const resolved = toNumber(row.resolvedDays);
           if (flagged === 0) {
             return (
-              <Tag color="default">
-                {t('pages.hr.attendance.review.flagStatus.none')}
+              <Tag color="success">
+                {t('pages.hr.attendance.review.flagStatus.complete')}
               </Tag>
             );
           }
           if (resolved >= flagged) {
             return (
-              <Tag color="green">
+              <Tag color="success">
                 {t('pages.hr.attendance.review.flagStatus.allResolved')}
               </Tag>
             );
           }
+          if (resolved > 0) {
+            return (
+              <Tag color="processing">
+                {t('pages.hr.attendance.review.flagStatus.partial')}
+              </Tag>
+            );
+          }
           return (
-            <Tag color="orange">
-              {t('pages.hr.attendance.review.flagStatus.hasFlags')}
+            <Tag color="warning">
+              {t('pages.hr.attendance.review.flagStatus.needsAttention')}
             </Tag>
           );
         },
@@ -347,16 +371,19 @@ export default function AttendanceReviewPageContent({
       {
         title: t('common.actions'),
         key: 'actions',
-        width: 140,
+        width: 72,
+        align: 'center',
         fixed: 'right',
         render: (_: unknown, row: AttendanceRecord) => (
-          <Button
-            type="link"
-            className="!px-0"
-            onClick={() => setDrawerEmployeeId(row.employeeId)}
-          >
-            {t('pages.hr.attendance.review.viewDailyLogs')}
-          </Button>
+          <Tooltip title={t('pages.hr.attendance.review.viewDailyLogs')}>
+            <Button
+              type="text"
+              size="small"
+              icon={<CalendarOutlined />}
+              onClick={() => setDrawerEmployeeId(row.employeeId)}
+              aria-label={t('pages.hr.attendance.review.viewDailyLogs')}
+            />
+          </Tooltip>
         ),
       },
     ],
@@ -458,7 +485,7 @@ export default function AttendanceReviewPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2 text-sm text-[#6B7280]">
         <Link href="/hr/attendance" className="text-[#185FA5] hover:underline">
           {t('nav.hr.attendance')}
@@ -487,11 +514,6 @@ export default function AttendanceReviewPageContent({
                 year: String(year),
               })}
             </Typography.Title>
-            {approval ? (
-              <Tag color={statusBadgeColor(approval.status)}>
-                {t(`pages.hr.attendance.review.status.${approval.status}`)}
-              </Tag>
-            ) : null}
           </Space>
         </div>
         <Space wrap>
@@ -555,7 +577,13 @@ export default function AttendanceReviewPageContent({
       ) : null}
 
       {banner ? (
-        <Alert type={banner.type} showIcon title={banner.message} />
+        <Alert
+          type={banner.type}
+          showIcon
+          icon={banner.icon}
+          title={banner.message}
+          className="mb-0"
+        />
       ) : null}
 
       <div className="erp-users-stats-row grid grid-cols-2 gap-3 md:grid-cols-4">

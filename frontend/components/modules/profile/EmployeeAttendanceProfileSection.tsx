@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Badge, Button, InputNumber, Skeleton, Table, Tag } from 'antd';
+import { Button, InputNumber, Skeleton, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CalendarOutlined } from '@ant-design/icons';
 import FieldMovementForm from '@/components/modules/profile/FieldMovementForm';
@@ -33,34 +33,6 @@ export interface EmployeeAttendanceProfileSectionProps {
   initialMonth?: number;
   /** Optional year from notification deep-link (`?year=`). */
   initialYear?: number;
-}
-
-type RateBadgeStatus = 'success' | 'warning' | 'error' | 'default';
-
-function getAttendanceRateColor(rate: number | null): RateBadgeStatus {
-  if (rate === null) {
-    return 'default';
-  }
-  if (rate >= 90) {
-    return 'success';
-  }
-  if (rate >= 75) {
-    return 'warning';
-  }
-  return 'error';
-}
-
-function rateAccent(rate: number | null): string {
-  if (rate === null) {
-    return '#94a3b8';
-  }
-  if (rate >= 90) {
-    return '#1d9e75';
-  }
-  if (rate >= 75) {
-    return '#ba7517';
-  }
-  return '#d32f2f';
 }
 
 function formatNumber(value: number | string | null | undefined): string {
@@ -369,18 +341,6 @@ export default function EmployeeAttendanceProfileSection({
         ),
       },
       {
-        title: t('pages.hr.attendance.columns.attendanceRate'),
-        dataIndex: 'attendanceRate',
-        key: 'attendanceRate',
-        width: 120,
-        render: (value: number | null) => (
-          <Badge
-            status={getAttendanceRateColor(value)}
-            text={value !== null ? `${value}%` : '—'}
-          />
-        ),
-      },
-      {
         title: t('pages.hr.attendance.columns.lateDays'),
         dataIndex: 'lateDays',
         key: 'lateDays',
@@ -462,7 +422,9 @@ export default function EmployeeAttendanceProfileSection({
   }
 
   const summary = data?.summary;
-  const avgRate = summary?.averageAttendanceRate ?? null;
+  const totalPayableHours =
+    summary?.totalPayableHours ??
+    records.reduce((sum, row) => sum + Number(row.payableHours ?? 0), 0);
 
   return (
     <div className="erp-leave-profile erp-attendance-profile">
@@ -515,9 +477,9 @@ export default function EmployeeAttendanceProfileSection({
         ) : (
           <div className="erp-leave-balance-grid">
             <StatTile
-              label={t('pages.hr.attendance.columns.attendanceRate')}
-              value={avgRate !== null ? `${avgRate}%` : '—'}
-              accent={rateAccent(avgRate)}
+              label={t('pages.hr.attendance.stats.totalPayableHours')}
+              value={formatNumber(totalPayableHours)}
+              accent="#0F6E56"
             />
             <StatTile
               label={t('pages.hr.attendance.profilePresentDays')}
