@@ -26,7 +26,6 @@ export interface EngineeringDiscipline {
   createdAt: string;
   updatedAt: string;
   _count?: {
-    taskDisciplines: number;
     users: number;
   };
 }

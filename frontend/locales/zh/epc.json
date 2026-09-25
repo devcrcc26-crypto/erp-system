@@ -1428,17 +1428,24 @@
       "deleted": "职位已删除",
       "deleteFailed": "删除职位失败",
       "stats": {
-        "total": "全部"
+        "total": "全部",
+        "totalHint": "已分配 {{count}} 人",
+        "activeHint": "可用于分配",
+        "inactiveHint": "新分配时隐藏"
       },
       "table": {
-        "title": "职务"
+        "title": "职务",
+        "assignees": "人数",
+        "updated": "更新"
       },
       "form": {
         "title": "职务名称",
         "titleRequired": "请输入职务名称",
         "titlePlaceholder": "例如：Project Manager",
         "titleZh": "中文职务名称",
-        "titleZhPlaceholder": "例如：项目经理"
+        "titleZhPlaceholder": "例如：项目经理",
+        "assigneesCount": "已分配 {{count}} 人",
+        "activeHelp": "停用后现有用户仍保留该职位，但新分配选择器中不再显示。"
       }
     },
     "disciplinesCatalog": {
@@ -1461,7 +1468,7 @@
       "table": {
         "discipline": "专业",
         "leader": "负责人",
-        "taskAssignments": "活跃任务分配"
+        "people": "人数"
       }
     },
     "statusBoard": {

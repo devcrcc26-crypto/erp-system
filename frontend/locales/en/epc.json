@@ -1428,17 +1428,24 @@
       "deleted": "Position deleted",
       "deleteFailed": "Failed to delete position",
       "stats": {
-        "total": "Total"
+        "total": "Total",
+        "totalHint": "{{count}} people assigned",
+        "activeHint": "Available for assignment",
+        "inactiveHint": "Hidden from new assignments"
       },
       "table": {
-        "title": "Title"
+        "title": "Title",
+        "assignees": "People",
+        "updated": "Updated"
       },
       "form": {
         "title": "Title",
         "titleRequired": "Title is required",
         "titlePlaceholder": "e.g. Project Manager",
         "titleZh": "Title (Chinese)",
-        "titleZhPlaceholder": "例如：项目经理"
+        "titleZhPlaceholder": "例如：项目经理",
+        "assigneesCount": "{{count}} people assigned",
+        "activeHelp": "Inactive positions stay on existing users but are hidden from new assignment pickers."
       }
     },
     "disciplinesCatalog": {
@@ -1461,7 +1468,7 @@
       "table": {
         "discipline": "Discipline",
         "leader": "Leader",
-        "taskAssignments": "Active task assignments"
+        "people": "People"
       }
     },
     "statusBoard": {

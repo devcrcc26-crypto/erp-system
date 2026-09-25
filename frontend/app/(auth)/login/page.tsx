@@ -115,6 +115,7 @@ function LoginForm(): React.ReactNode {
               height={28}
               className="object-contain"
               priority
+              suppressHydrationWarning
             />
           </span>
           <div className="flex min-w-0 flex-col leading-tight">

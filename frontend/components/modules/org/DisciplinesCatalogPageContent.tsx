@@ -204,14 +204,14 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
         ),
       },
       {
-        title: t('pages.disciplinesCatalog.table.taskAssignments'),
-        key: 'taskDisciplines',
+        title: t('pages.disciplinesCatalog.table.people'),
+        key: 'users',
         align: 'right',
-        width: 150,
+        width: 110,
         responsive: ['lg'],
         render: (_value, record) => (
           <span className="erp-users-cell-strong">
-            {record._count?.taskDisciplines ?? 0}
+            {record._count?.users ?? 0}
           </span>
         ),
       },

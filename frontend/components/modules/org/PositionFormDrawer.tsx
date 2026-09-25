@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Button, Drawer, Form, Input, Switch } from 'antd';
+import { TeamOutlined } from '@ant-design/icons';
 import {
   useCreatePosition,
   useUpdatePosition,
@@ -21,12 +22,14 @@ export default function PositionFormDrawer({
   open,
   editing,
   readOnly,
+  assigneeCount = 0,
   onClose,
   onSaved,
 }: {
   open: boolean;
   editing: Position | null;
   readOnly: boolean;
+  assigneeCount?: number;
   onClose: () => void;
   onSaved: () => void;
 }): React.ReactNode {
@@ -85,18 +88,30 @@ export default function PositionFormDrawer({
     }
   }
 
+  const drawerTitle = readOnly
+    ? t('pages.positions.viewPosition')
+    : editing
+      ? t('pages.positions.editPosition')
+      : t('pages.positions.addPosition');
+
   return (
     <Drawer
       open={open}
       title={
-        readOnly
-          ? t('pages.positions.viewPosition')
-          : editing
-            ? t('pages.positions.editPosition')
-            : t('pages.positions.addPosition')
+        <div className="erp-position-drawer-title">
+          <span>{drawerTitle}</span>
+          {editing ? (
+            <span className="erp-position-drawer-meta">
+              <TeamOutlined aria-hidden />
+              {t('pages.positions.form.assigneesCount', {
+                count: assigneeCount,
+              })}
+            </span>
+          ) : null}
+        </div>
       }
       size={480}
-      className="erp-responsive-drawer"
+      className="erp-responsive-drawer erp-position-drawer"
       onClose={onClose}
       destroyOnHidden
       extra={
@@ -105,7 +120,6 @@ export default function PositionFormDrawer({
             type="primary"
             loading={createPosition.isPending || updatePosition.isPending}
             onClick={() => form.submit()}
-            style={{ borderRadius: 0 }}
           >
             {t('common.save')}
           </Button>
@@ -117,6 +131,7 @@ export default function PositionFormDrawer({
         layout="vertical"
         disabled={readOnly}
         onFinish={(values) => void handleSubmit(values)}
+        className="erp-position-drawer-form"
       >
         <Form.Item
           label={t('pages.positions.form.title')}
@@ -134,6 +149,7 @@ export default function PositionFormDrawer({
           label={t('common.active')}
           name="isActive"
           valuePropName="checked"
+          extra={t('pages.positions.form.activeHelp')}
         >
           <Switch disabled={readOnly} />
         </Form.Item>
