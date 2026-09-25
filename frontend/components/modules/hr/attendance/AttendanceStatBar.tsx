@@ -12,17 +12,28 @@ import type { AttendanceRecord } from '@/lib/api/attendance.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const STAT_ACCENT = {
-  blue: { bg: '#E8F1FB', fg: '#185FA5' },
-  green: { bg: '#EAF3DE', fg: '#639922' },
-  red: { bg: '#FCEBEB', fg: '#D32F2F' },
-  teal: { bg: '#E1F5EE', fg: '#0F6E56' },
+  blue: {
+    bg: 'var(--color-blue-50)',
+    fg: 'var(--color-blue-400)',
+  },
+  green: {
+    bg: 'var(--color-teal-50)',
+    fg: 'var(--color-teal-400)',
+  },
+  red: {
+    bg: 'color-mix(in srgb, var(--color-red-400) 12%, var(--color-surface-secondary))',
+    fg: 'var(--color-red-400)',
+  },
+  teal: {
+    bg: 'var(--color-teal-50)',
+    fg: 'var(--color-teal-600)',
+  },
 } as const;
 
 type StatAccent = keyof typeof STAT_ACCENT;
 
 export interface AttendanceStatBarProps {
   records: AttendanceRecord[];
-  /** Total matching employees from the list (not just the current page). */
   totalEmployees?: number;
   loading: boolean;
 }
@@ -30,11 +41,13 @@ export interface AttendanceStatBarProps {
 function AttendanceStat({
   label,
   value,
+  subLabel,
   accent,
   icon,
 }: {
   label: string;
   value: string;
+  subLabel: string;
   accent: StatAccent;
   icon: React.ReactNode;
 }): React.ReactNode {
@@ -47,9 +60,19 @@ function AttendanceStat({
       >
         {icon}
       </span>
-      <div className="min-w-0 text-left">
+      <div style={{ flex: 1, minWidth: 0 }}>
         <p className="erp-users-stat-label">{label}</p>
         <p className="erp-users-stat-value">{value}</p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 11,
+            color: 'var(--color-text-tertiary)',
+            lineHeight: 1.4,
+          }}
+        >
+          {subLabel}
+        </p>
       </div>
     </div>
   );
@@ -65,7 +88,7 @@ function formatHours(value: number): string {
 }
 
 /**
- * Summary chips for the loaded attendance period (4 cards, one row).
+ * Summary chips for the loaded attendance period (4 cards with sub-labels).
  */
 export default function AttendanceStatBar({
   records,
@@ -120,24 +143,28 @@ export default function AttendanceStatBar({
       <AttendanceStat
         label={t('pages.hr.attendance.stats.employees')}
         value={stats.employees.toLocaleString()}
+        subLabel={t('pages.hr.attendance.stats.employeesHint')}
         accent="blue"
         icon={<TeamOutlined />}
       />
       <AttendanceStat
         label={t('pages.hr.attendance.stats.totalPresent')}
         value={stats.totalPresent.toLocaleString()}
+        subLabel={t('pages.hr.attendance.stats.totalPresentHint')}
         accent="green"
         icon={<CheckCircleOutlined />}
       />
       <AttendanceStat
         label={t('pages.hr.attendance.stats.totalAbsent')}
         value={stats.totalAbsent.toLocaleString()}
+        subLabel={t('pages.hr.attendance.stats.totalAbsentHint')}
         accent="red"
         icon={<CloseCircleOutlined />}
       />
       <AttendanceStat
         label={t('pages.hr.attendance.stats.totalPayableHours')}
         value={formatHours(stats.totalPayableHours)}
+        subLabel={t('pages.hr.attendance.stats.totalPayableHoursHint')}
         accent="teal"
         icon={<FieldTimeOutlined />}
       />

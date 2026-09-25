@@ -99,7 +99,7 @@ export default function AppShell({
   );
 
   const routeMeta = resolveRouteMeta(pathname, projectName, t);
-  const pageTitle = t(routeMeta.titleKey);
+  const pageTitle = routeMeta.title ?? t(routeMeta.titleKey);
   const pageSubtitle = routeMeta.descriptionKey
     ? t(routeMeta.descriptionKey)
     : undefined;

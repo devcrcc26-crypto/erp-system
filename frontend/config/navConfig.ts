@@ -7,6 +7,8 @@ export interface BreadcrumbSegment {
 
 export interface RouteMeta {
   readonly titleKey: string;
+  /** Optional resolved page title (for dynamic routes with interpolated labels). */
+  readonly title?: string;
   /** Optional i18n key for the top-bar subtitle under the page title. */
   readonly descriptionKey?: string;
   readonly breadcrumbs: readonly BreadcrumbSegment[];
@@ -248,7 +250,7 @@ export function extractProjectId(pathname: string): string | null {
 export function resolveRouteMeta(
   pathname: string,
   projectName: string | null,
-  t: (key: string) => string,
+  t: (key: string, vars?: Record<string, string | number>) => string,
 ): RouteMeta {
   const meta = resolveRouteMetaCore(pathname, projectName, t);
   return {
@@ -260,7 +262,7 @@ export function resolveRouteMeta(
 function resolveRouteMetaCore(
   pathname: string,
   projectName: string | null,
-  t: (key: string) => string,
+  t: (key: string, vars?: Record<string, string | number>) => string,
 ): RouteMeta {
   const projectId = extractProjectId(pathname);
 
@@ -392,6 +394,33 @@ function resolveRouteMetaCore(
     };
   }
 
+  const attendanceReviewMatch = pathname.match(
+    /^\/hr\/attendance\/review\/(\d{1,2})\/(\d{4})$/,
+  );
+  if (attendanceReviewMatch) {
+    const month = Number(attendanceReviewMatch[1]);
+    const year = attendanceReviewMatch[2];
+    const monthName = t(`hr.months.${month}`);
+    const reviewLabel = t('pages.hr.attendance.review.breadcrumb', {
+      month: monthName,
+      year,
+    });
+    return {
+      titleKey: 'pages.hr.attendance.review.title',
+      title: reviewLabel,
+      descriptionKey: 'pages.hr.attendance.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        {
+          label: t('pages.hr.attendance.listTitle'),
+          href: '/hr/attendance',
+        },
+        { label: reviewLabel },
+      ],
+    };
+  }
+
   if (pathname === '/hr/field-movement-logs') {
     return {
       titleKey: 'pages.hr.fieldMovementLogs.listTitle',
@@ -407,8 +436,10 @@ function resolveRouteMetaCore(
   if (pathname.startsWith('/hr/field-movement-logs/')) {
     return {
       titleKey: 'pages.hr.fieldMovementLogs.detail',
+      descriptionKey: 'pages.hr.fieldMovementLogs.listDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
         {
           label: t('pages.hr.fieldMovementLogs.listTitle'),
           href: '/hr/field-movement-logs',

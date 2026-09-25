@@ -60,6 +60,7 @@ export function buildAntdTheme(fontSizePx: number = FONT_SIZE_BASE_PX): ThemeCon
         headerColor: tokens.colorTextSecondary,
         headerSplitColor: tokens.colorBorder,
         rowHoverBg: tokens.colorSurfaceSecondary,
+        headerBorderRadius: 0,
         fontSize,
       },
       Input: {

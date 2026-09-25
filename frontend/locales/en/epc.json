@@ -497,8 +497,8 @@
         "loadFailed": "Failed to load attendance records.",
         "import": "Import Attendance",
         "importComingSoon": "Import coming soon",
-        "emptyTitle": "No attendance data for {{month}} {{year}}.",
-        "emptyDescription": "Import the monthly export from Deli e+ to get started.",
+        "emptyTitle": "No attendance data for {{month}} {{year}}",
+        "emptyDescription": "Import the monthly export from Deli e+ to get started. Make sure employees have their IDs set in the attendance system.",
         "emptyFiltered": "No attendance records match your filters.",
         "filters": {
           "month": "Month",
@@ -511,8 +511,13 @@
           "totalAbsent": "Total Absent Days",
           "totalLate": "Total Late Days",
           "totalMissingClockOut": "Missing Clock-outs",
-          "totalPayableHours": "Total Payable Hours"
+          "totalPayableHours": "Total Payable Hours",
+          "employeesHint": "With attendance records",
+          "totalPresentHint": "Across all employees",
+          "totalAbsentHint": "Requiring payroll deduction",
+          "totalPayableHoursHint": "For salary calculation"
         },
+        "showingPeriod": "Showing {{month}} {{year}}.",
         "columns": {
           "scheduledDays": "Scheduled Days",
           "presentDays": "Present Days",
@@ -600,8 +605,13 @@
             "employees": "Total Employees",
             "employeesWithFlags": "Employees with Flags",
             "totalFlagged": "Total Flagged Days",
-            "resolved": "Resolved Flags"
+            "resolved": "Resolved Flags",
+            "employeesHint": "In this import period",
+            "employeesWithFlagsHint": "Need employee explanation",
+            "totalFlaggedHint": "Days requiring explanation",
+            "resolvedHint": "Explanations approved"
           },
+          "importMeta": "Imported on {{date}} from {{file}} · {{count}} employees processed",
           "columns": {
             "flaggedDays": "Flagged Days",
             "resolved": "Resolved",
@@ -685,7 +695,53 @@
       "fieldMovementLogs": {
         "listTitle": "Field Movement Logs",
         "detail": "Field Movement Log",
-        "listDescription": "Review employee explanations for missing clock-ins, missing clock-outs, and early departures."
+        "listDescription": "Review employee explanations for missing clock-ins, missing clock-outs, and early departures.",
+        "showingPeriod": "Showing {{month}} {{year}}.",
+        "emptyTitle": "No field movement logs for {{month}} {{year}}",
+        "emptyDescription": "When employees submit explanations for flagged attendance days, they will appear here.",
+        "emptyFiltered": "No field movement logs match your filters.",
+        "stats": {
+          "all": "All submissions",
+          "allHint": "In this period",
+          "pending": "Pending approval",
+          "pendingHint": "Awaiting reviewer action",
+          "approved": "Approved",
+          "approvedHint": "Applied to attendance",
+          "rejected": "Rejected or cancelled",
+          "rejectedHint": "Closed without approval"
+        },
+        "columns": {
+          "logNumber": "Log #",
+          "period": "Period",
+          "days": "Days",
+          "status": "Status",
+          "waitingOn": "Waiting on",
+          "submitted": "Submitted",
+          "notSubmitted": "Not submitted"
+        },
+        "filters": {
+          "month": "Month",
+          "year": "Year",
+          "status": "Status",
+          "employee": "Employee",
+          "allMonths": "All months",
+          "anyStatus": "Any status",
+          "everyone": "Everyone"
+        },
+        "detailEyebrow": "Field movement log",
+        "openInApprovals": "Open in Approvals",
+        "facts": {
+          "period": "Period",
+          "daysExplained": "Days explained",
+          "submitted": "Submitted",
+          "completed": "Completed",
+          "waitingOn": "Waiting on"
+        },
+        "employeeNote": "Note from the employee",
+        "explainedDays": "Explained days",
+        "noEntries": "This log has no entries.",
+        "loadFailed": "Failed to load field movement logs",
+        "notFound": "Field movement log not found"
       },
       "flight": {
         "new": "New Flight Application",

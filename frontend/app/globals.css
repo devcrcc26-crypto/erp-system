@@ -767,6 +767,58 @@ main::-webkit-scrollbar,
   background: transparent;
 }
 
+ re/* Tables sit under card toolbars — never round the top corners */
+.erp-pro-table-card-body .ant-table-container,
+.erp-pro-table-card-body .ant-table-container::before,
+.erp-pro-table-card-body .ant-table-container::after,
+.erp-pro-table-card-body .ant-table-content,
+.erp-pro-table-card-body .ant-table-header,
+.erp-pro-table-card-body table > thead > tr:first-child > th:first-child,
+.erp-pro-table-card-body table > thead > tr:first-child > th:last-child,
+.erp-pro-table-card-body table > thead > tr:first-child > td:first-child,
+.erp-pro-table-card-body table > thead > tr:first-child > td:last-child {
+  border-start-start-radius: 0 !important;
+  border-start-end-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+/* Keep sort icons inline beside the header label (not stacked/overlapping) */
+.erp-data-table .ant-table-column-sorters,
+.erp-pro-table .ant-table-column-sorters {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 4px;
+  width: 100%;
+  position: relative;
+}
+
+.erp-data-table .ant-table-column-title,
+.erp-pro-table .ant-table-column-title {
+  flex: 0 1 auto !important;
+  position: static !important;
+  z-index: auto !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-data-table .ant-table-column-sorter,
+.erp-pro-table .ant-table-column-sorter {
+  flex: 0 0 auto !important;
+  margin-inline-start: 0 !important;
+  align-self: center;
+}
+
+.erp-data-table th.ant-table-cell-align-right .ant-table-column-sorters,
+.erp-pro-table th.ant-table-cell-align-right .ant-table-column-sorters,
+.erp-data-table .ant-table-cell-fix-right .ant-table-column-sorters,
+.erp-pro-table .ant-table-cell-fix-right .ant-table-column-sorters {
+  justify-content: flex-end !important;
+}
+
 .erp-data-table .ant-table-container,
 .erp-pro-table .ant-table-container {
   border: none !important;
@@ -4665,39 +4717,72 @@ main::-webkit-scrollbar,
   }
 }
 
+/* Attendance daily logs drawer — keep close at top-right with tall header */
+.erp-attendance-daily-drawer .ant-drawer-header {
+  position: relative;
+  align-items: flex-start;
+}
+
+.erp-attendance-daily-drawer .ant-drawer-header-title {
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.erp-attendance-daily-drawer .ant-drawer-close {
+  position: absolute;
+  top: 16px;
+  inset-inline-end: 16px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  border-radius: 8px;
+}
+
+.erp-attendance-daily-drawer .ant-drawer-close:hover {
+  background: var(--color-surface-secondary);
+}
+
 /* Attendance module */
 .erp-attendance-page .erp-users-stat-bar {
   grid-template-columns: repeat(4, 1fr);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .erp-attendance-page .erp-users-stat-bar {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-.erp-attendance-flag-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
+/* Daily log row backgrounds */
+.erp-attendance-row-holiday > td {
+  background: var(--color-blue-50) !important;
 }
 
+.erp-attendance-row-weekend > td {
+  background: var(--color-surface-secondary) !important;
+}
+
+.erp-attendance-row-absent > td {
+  background: color-mix(in srgb, var(--color-red-400) 8%, var(--color-surface-secondary)) !important;
+}
+
+/* Attendance review page */
 .erp-attendance-review-page .erp-pro-card {
   border-radius: 12px;
 }
 
-.attendance-row-holiday td {
-  background: #eff6ff !important;
+/* Progress bar in resolved column */
+.erp-attendance-progress-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-border-secondary);
+  overflow: hidden;
 }
 
-.attendance-row-weekend td {
-  background: #f8fafc !important;
-}
-
-.attendance-row-absent td {
-  background: #fef2f2 !important;
+.erp-attendance-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
 }

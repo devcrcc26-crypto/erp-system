@@ -497,8 +497,8 @@
         "loadFailed": "加载考勤记录失败。",
         "import": "导入考勤",
         "importComingSoon": "导入功能即将上线",
-        "emptyTitle": "{{month}} {{year}} 暂无考勤数据。",
-        "emptyDescription": "请导入得力 e+ 月度汇总表以开始使用。",
+        "emptyTitle": "{{month}} {{year}} 暂无考勤数据",
+        "emptyDescription": "请导入得力 e+ 月度汇总表以开始使用。请确认员工已在考勤系统中设置工号。",
         "emptyFiltered": "没有符合筛选条件的考勤记录。",
         "filters": {
           "month": "月份",
@@ -511,8 +511,13 @@
           "totalAbsent": "缺勤天数合计",
           "totalLate": "迟到天数合计",
           "totalMissingClockOut": "下班缺卡合计",
-          "totalPayableHours": "应付工时合计"
+          "totalPayableHours": "应付工时合计",
+          "employeesHint": "有考勤记录",
+          "totalPresentHint": "全体员工合计",
+          "totalAbsentHint": "需薪资扣减",
+          "totalPayableHoursHint": "用于薪资计算"
         },
+        "showingPeriod": "当前显示 {{month}} {{year}}。",
         "columns": {
           "scheduledDays": "应出勤天数",
           "presentDays": "出勤天数",
@@ -600,8 +605,13 @@
             "employees": "员工总数",
             "employeesWithFlags": "有异常的员工",
             "totalFlagged": "异常天数合计",
-            "resolved": "已解决异常"
+            "resolved": "已解决异常",
+            "employeesHint": "本导入期间",
+            "employeesWithFlagsHint": "需员工说明",
+            "totalFlaggedHint": "需说明的天数",
+            "resolvedHint": "已批准的说明"
           },
+          "importMeta": "于 {{date}} 从 {{file}} 导入 · 已处理 {{count}} 名员工",
           "columns": {
             "flaggedDays": "异常天数",
             "resolved": "已解决",
@@ -685,7 +695,53 @@
       "fieldMovementLogs": {
         "listTitle": "外勤 / 早退说明",
         "detail": "外勤 / 早退说明详情",
-        "listDescription": "审核员工对缺卡上班、缺卡下班和早退的说明。"
+        "listDescription": "审核员工对缺卡上班、缺卡下班和早退的说明。",
+        "showingPeriod": "当前显示 {{month}} {{year}}。",
+        "emptyTitle": "{{month}} {{year}} 暂无外勤说明",
+        "emptyDescription": "员工提交缺卡或早退说明后，记录将显示在此处。",
+        "emptyFiltered": "没有符合筛选条件的外勤说明。",
+        "stats": {
+          "all": "全部提交",
+          "allHint": "本期间内",
+          "pending": "待审批",
+          "pendingHint": "等待审核人处理",
+          "approved": "已批准",
+          "approvedHint": "已应用到考勤",
+          "rejected": "已驳回或取消",
+          "rejectedHint": "未获批准已关闭"
+        },
+        "columns": {
+          "logNumber": "单号",
+          "period": "期间",
+          "days": "天数",
+          "status": "状态",
+          "waitingOn": "当前节点",
+          "submitted": "提交时间",
+          "notSubmitted": "未提交"
+        },
+        "filters": {
+          "month": "月份",
+          "year": "年份",
+          "status": "状态",
+          "employee": "员工",
+          "allMonths": "全部月份",
+          "anyStatus": "任意状态",
+          "everyone": "全部员工"
+        },
+        "detailEyebrow": "外勤 / 早退说明",
+        "openInApprovals": "在审批中打开",
+        "facts": {
+          "period": "期间",
+          "daysExplained": "说明天数",
+          "submitted": "提交时间",
+          "completed": "完成时间",
+          "waitingOn": "当前节点"
+        },
+        "employeeNote": "员工备注",
+        "explainedDays": "说明的日期",
+        "noEntries": "此说明单没有明细。",
+        "loadFailed": "加载外勤说明失败",
+        "notFound": "未找到外勤说明"
       },
       "flight": {
         "new": "新建机票申请",

@@ -1,17 +1,23 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button, InputNumber, Select, Spin } from 'antd';
+import {
+  Alert,
+  Avatar,
+  Button,
+  InputNumber,
+  Select,
+  Spin,
+  Tooltip,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
-  CircleCheck,
-  CircleX,
-  Clock,
-  Inbox,
-  RefreshCw,
-  RotateCcw,
-  type LucideIcon,
-} from 'lucide-react';
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
+  InboxOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -19,8 +25,6 @@ import {
   formatFieldMovementStatus,
 } from '@/components/modules/attendance/field-movement-display';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
-import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -51,30 +55,29 @@ const PENDING_STATUSES: FieldMovementStatus[] = [
   'RETURNED',
 ];
 
-const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
-  value: index + 1,
-  label: new Date(2026, index, 1).toLocaleString('en', { month: 'long' }),
-}));
+const AVATAR_COLORS = [
+  'var(--color-teal-400)',
+  'var(--color-blue-400)',
+  'var(--color-amber-400)',
+  'var(--color-teal-600)',
+  'var(--color-blue-800)',
+  'var(--color-red-400)',
+] as const;
 
 type StatMode = 'all' | 'pending' | 'approved' | 'rejected';
 
-const STAT_FILTERS: Array<{
-  mode: StatMode;
-  label: string;
-  tone: 'teal' | 'amber' | 'green' | 'red';
-  icon: LucideIcon;
-}> = [
-  { mode: 'all', label: 'All submissions', tone: 'teal', icon: Inbox },
-  { mode: 'pending', label: 'Pending approval', tone: 'amber', icon: Clock },
-  { mode: 'approved', label: 'Approved', tone: 'green', icon: CircleCheck },
-  { mode: 'rejected', label: 'Rejected or cancelled', tone: 'red', icon: CircleX },
-];
+function initialsOf(firstName: string, lastName: string): string {
+  const a = firstName.trim().charAt(0);
+  const b = lastName.trim().charAt(0);
+  return `${a}${b}`.toUpperCase() || '?';
+}
 
-function periodLabel(month: number, year: number): string {
-  return new Date(year, month - 1, 1).toLocaleString('en', {
-    month: 'long',
-    year: 'numeric',
-  });
+function avatarColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 /**
@@ -86,7 +89,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
   const canViewHr = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination(20);
 
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
   const defaultMonth = now.getMonth() + 1;
   const defaultYear = now.getFullYear();
   const [month, setMonth] = useState<number | undefined>(defaultMonth);
@@ -157,6 +160,15 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
     return filtered.slice(start, start + meta.limit);
   }, [filtered, meta.page, meta.limit]);
 
+  const monthOptions = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, i) => ({
+        value: i + 1,
+        label: t(`hr.months.${i + 1}`),
+      })),
+    [t],
+  );
+
   const employeeOptions = useMemo(
     () =>
       (usersQuery.data?.data ?? []).map((user) => ({
@@ -166,6 +178,8 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
     [usersQuery.data?.data],
   );
 
+  const monthName =
+    month != null ? t(`hr.months.${month}`) : t('pages.hr.fieldMovementLogs.filters.allMonths');
   const filtersChanged =
     month !== defaultMonth ||
     year !== defaultYear ||
@@ -182,294 +196,472 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
     resetPage();
   }
 
-  const scopeLabel = month ? periodLabel(month, year) : `all of ${year}`;
-  const resultsLabel = `${filtered.length} ${filtered.length === 1 ? 'log' : 'logs'} for ${scopeLabel}${
-    status
-      ? ` · ${formatFieldMovementStatus(status)}`
-      : statMode !== 'all'
-        ? ` · ${STAT_FILTERS.find((item) => item.mode === statMode)?.label}`
-        : ''
-  }`;
-
-  const columns: ColumnsType<FieldMovementLog> = [
-    {
-      title: 'Log #',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 120,
-      render: (value: string, row: FieldMovementLog) => (
-        <Link
-          href={`/hr/field-movement-logs/${row.id}`}
-          className="fm-table-link"
-          onClick={(event) => event.stopPropagation()}
-        >
-          {value}
-        </Link>
-      ),
-    },
-    {
-      title: 'Employee',
-      key: 'employee',
-      width: 220,
-      render: (_: unknown, row: FieldMovementLog) =>
-        row.employee ? (
-          <span>
-            {formatUserName(row.employee)}
-            {row.employee.employeeId ? (
-              <span className="fm-cell-sub">{row.employee.employeeId}</span>
-            ) : null}
+  const columns: ColumnsType<FieldMovementLog> = useMemo(
+    () => [
+      {
+        title: t('pages.hr.fieldMovementLogs.columns.logNumber'),
+        dataIndex: 'requestNumber',
+        key: 'requestNumber',
+        width: 130,
+        render: (value: string, row: FieldMovementLog) => (
+          <Link
+            href={`/hr/field-movement-logs/${row.id}`}
+            className="erp-users-name"
+            style={{ color: 'var(--color-teal-600)' }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {value}
+          </Link>
+        ),
+      },
+      {
+        title: t('hr.table.employee'),
+        key: 'employee',
+        width: 260,
+        render: (_: unknown, row: FieldMovementLog) => {
+          if (!row.employee) {
+            return (
+              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+            );
+          }
+          const name = formatUserName(row.employee);
+          const erpId = row.employee.employeeId?.trim() || '—';
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar
+                size={36}
+                className="erp-users-avatar"
+                style={{
+                  background: avatarColor(row.employee.id),
+                  borderRadius: 10,
+                  flexShrink: 0,
+                }}
+              >
+                {initialsOf(row.employee.firstName, row.employee.lastName)}
+              </Avatar>
+              <div style={{ minWidth: 0 }}>
+                <div className="erp-users-name">{name}</div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 2,
+                  }}
+                >
+                  <span className="erp-users-id-chip">{erpId}</span>
+                </div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        title: t('pages.hr.fieldMovementLogs.columns.period'),
+        key: 'period',
+        width: 140,
+        render: (_: unknown, row: FieldMovementLog) =>
+          `${t(`hr.months.${row.month}`)} ${row.year}`,
+      },
+      {
+        title: t('pages.hr.fieldMovementLogs.columns.days'),
+        key: 'entryCount',
+        width: 80,
+        align: 'right',
+        render: (_: unknown, row: FieldMovementLog) => (
+          <span
+            style={{
+              fontVariantNumeric: 'tabular-nums',
+              fontWeight: 500,
+              color: 'var(--color-text-primary)',
+            }}
+          >
+            {row.entryCount ?? '—'}
           </span>
-        ) : (
-          <span className="fm-muted">—</span>
         ),
-    },
-    {
-      title: 'Period',
-      key: 'period',
-      width: 140,
-      render: (_: unknown, row: FieldMovementLog) =>
-        periodLabel(row.month, row.year),
-    },
-    {
-      title: 'Days',
-      key: 'entryCount',
-      width: 80,
-      align: 'right',
-      render: (_: unknown, row: FieldMovementLog) => row.entryCount ?? '—',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 140,
-      render: (value: FieldMovementStatus) => (
-        <FieldMovementStatusBadge status={value} />
-      ),
-    },
-    {
-      title: 'Waiting on',
-      key: 'currentTierLabel',
-      width: 160,
-      render: (_: unknown, row: FieldMovementLog) =>
-        PENDING_STATUSES.includes(row.status) && row.currentTierLabel ? (
-          row.currentTierLabel
-        ) : (
-          <span className="fm-muted">—</span>
+      },
+      {
+        title: t('pages.hr.fieldMovementLogs.columns.status'),
+        dataIndex: 'status',
+        key: 'status',
+        width: 140,
+        render: (value: FieldMovementStatus) => (
+          <FieldMovementStatusBadge status={value} />
         ),
-    },
-    {
-      title: 'Submitted',
-      key: 'submittedAt',
-      width: 130,
-      render: (_: unknown, row: FieldMovementLog) =>
-        row.submittedAt ? (
-          new Date(row.submittedAt).toLocaleDateString('en-GB', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-          })
-        ) : (
-          <span className="fm-muted">Not submitted</span>
-        ),
-    },
-  ];
+      },
+      {
+        title: t('pages.hr.fieldMovementLogs.columns.waitingOn'),
+        key: 'currentTierLabel',
+        width: 160,
+        render: (_: unknown, row: FieldMovementLog) =>
+          PENDING_STATUSES.includes(row.status) && row.currentTierLabel ? (
+            row.currentTierLabel
+          ) : (
+            <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+          ),
+      },
+      {
+        title: t('pages.hr.fieldMovementLogs.columns.submitted'),
+        key: 'submittedAt',
+        width: 130,
+        render: (_: unknown, row: FieldMovementLog) =>
+          row.submittedAt ? (
+            new Date(row.submittedAt).toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })
+          ) : (
+            <span style={{ color: 'var(--color-text-tertiary)' }}>
+              {t('pages.hr.fieldMovementLogs.columns.notSubmitted')}
+            </span>
+          ),
+      },
+    ],
+    [t],
+  );
 
   if (!canViewHr) {
     return (
       <div className="erp-pro-list-page erp-users-page">
-        <ErpNotice tone="error" title={t('pages.hr.accessDenied')} />
+        <Alert
+          type="error"
+          showIcon
+          title={t('pages.hr.accessDenied')}
+        />
       </div>
     );
   }
 
-  return (
-    <div className="fm-page erp-pro-list-page erp-users-page flex flex-col gap-4">
-      <header className="fm-page-header">
-        <div>
-          <h1 className="fm-h1">Field movement logs</h1>
-          <p className="fm-lead">
-            Employee explanations for flagged attendance days, such as field
-            visits, early departures and missed clock-ins.
-          </p>
+  if (listQuery.isLoading && !listQuery.data) {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page">
+        <div className="flex justify-center rounded-xl border border-[var(--color-border-tertiary)] bg-white p-12">
+          <Spin />
         </div>
-        <Button
-          icon={<RefreshCw size={16} aria-hidden />}
-          loading={listQuery.isFetching && !listQuery.isLoading}
-          onClick={() => void listQuery.refetch()}
-        >
-          Refresh
-        </Button>
-      </header>
+      </div>
+    );
+  }
 
+  const emptyState = (
+    <div
+      style={{
+        padding: '48px 24px',
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12,
+      }}
+    >
       <div
-        className="fm-stat-filters"
-        role="group"
-        aria-label="Show submissions by status"
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 16,
+          background: 'var(--color-teal-50)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--color-teal-400)',
+          fontSize: 24,
+          marginBottom: 4,
+        }}
       >
-        {STAT_FILTERS.map((item) => {
-          const Icon = item.icon;
+        <InboxOutlined />
+      </div>
+      <div
+        style={{
+          fontWeight: 600,
+          fontSize: 15,
+          color: 'var(--color-text-primary)',
+        }}
+      >
+        {filtersChanged
+          ? t('pages.hr.fieldMovementLogs.emptyFiltered')
+          : t('pages.hr.fieldMovementLogs.emptyTitle', {
+              month: monthName,
+              year: String(year),
+            })}
+      </div>
+      {!filtersChanged ? (
+        <div
+          style={{
+            fontSize: 13,
+            color: 'var(--color-text-tertiary)',
+            maxWidth: 340,
+          }}
+        >
+          {t('pages.hr.fieldMovementLogs.emptyDescription')}
+        </div>
+      ) : null}
+      {filtersChanged ? (
+        <Button type="link" onClick={resetFilters} style={{ marginTop: 4 }}>
+          {t('common.reset')}
+        </Button>
+      ) : null}
+    </div>
+  );
+
+  const stats: Array<{
+    mode: StatMode;
+    label: string;
+    hint: string;
+    value: number;
+    chipBg: string;
+    chipFg: string;
+    icon: React.ReactNode;
+  }> = [
+    {
+      mode: 'all',
+      label: t('pages.hr.fieldMovementLogs.stats.all'),
+      hint: t('pages.hr.fieldMovementLogs.stats.allHint'),
+      value: statusCounts.all,
+      chipBg: 'var(--color-blue-50)',
+      chipFg: 'var(--color-blue-400)',
+      icon: <InboxOutlined />,
+    },
+    {
+      mode: 'pending',
+      label: t('pages.hr.fieldMovementLogs.stats.pending'),
+      hint: t('pages.hr.fieldMovementLogs.stats.pendingHint'),
+      value: statusCounts.pending,
+      chipBg: 'var(--color-amber-50)',
+      chipFg: 'var(--color-amber-400)',
+      icon: <ClockCircleOutlined />,
+    },
+    {
+      mode: 'approved',
+      label: t('pages.hr.fieldMovementLogs.stats.approved'),
+      hint: t('pages.hr.fieldMovementLogs.stats.approvedHint'),
+      value: statusCounts.approved,
+      chipBg: 'var(--color-teal-50)',
+      chipFg: 'var(--color-teal-400)',
+      icon: <CheckCircleOutlined />,
+    },
+    {
+      mode: 'rejected',
+      label: t('pages.hr.fieldMovementLogs.stats.rejected'),
+      hint: t('pages.hr.fieldMovementLogs.stats.rejectedHint'),
+      value: statusCounts.rejected,
+      chipBg: 'color-mix(in srgb, var(--color-red-400) 12%, var(--color-surface-secondary))',
+      chipFg: 'var(--color-red-400)',
+      icon: <CloseCircleOutlined />,
+    },
+  ];
+
+  return (
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page">
+      {listQuery.isError ? (
+        <Alert
+          type="error"
+          showIcon
+          className="mb-4"
+          title={getFriendlyApiErrorMessage(
+            listQuery.error,
+            t('pages.hr.fieldMovementLogs.loadFailed'),
+            t,
+          )}
+        />
+      ) : null}
+
+      <div style={{ marginBottom: 20 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            marginBottom: 4,
+          }}
+        >
+          <h1 className="erp-shell-header-title" style={{ margin: 0 }}>
+            {t('pages.hr.fieldMovementLogs.listTitle')}
+          </h1>
+        </div>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 13,
+            color: 'var(--color-text-tertiary)',
+          }}
+        >
+          {t('pages.hr.fieldMovementLogs.listDescription')}{' '}
+          {t('pages.hr.fieldMovementLogs.showingPeriod', {
+            month: monthName,
+            year: String(year),
+          })}
+        </p>
+      </div>
+
+      <div className="erp-users-stat-bar">
+        {stats.map((stat) => {
+          const active = statMode === stat.mode && !status;
           return (
             <button
-              key={item.mode}
+              key={stat.mode}
               type="button"
-              className="fm-stat-filter"
-              aria-pressed={statMode === item.mode && !status}
+              className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
               onClick={() => {
-                setStatMode(item.mode);
+                setStatMode(stat.mode);
                 setStatus(undefined);
                 resetPage();
               }}
+              aria-pressed={active}
             >
               <span
-                className={`fm-stat-filter__icon fm-stat-filter__icon--${item.tone}`}
-                aria-hidden
+                className="erp-users-stat-chip"
+                style={{ background: stat.chipBg, color: stat.chipFg }}
               >
-                <Icon size={18} />
+                {stat.icon}
               </span>
-              <span className="min-w-0">
-                <span className="fm-stat-filter__label">{item.label}</span>
-                <span className="fm-stat-filter__value">
-                  {statusCounts[item.mode].toLocaleString()}
-                </span>
-              </span>
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                <p className="erp-users-stat-label">{stat.label}</p>
+                <p className="erp-users-stat-value">
+                  {stat.value.toLocaleString()}
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 11,
+                    color: 'var(--color-text-tertiary)',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {stat.hint}
+                </p>
+              </div>
             </button>
           );
         })}
       </div>
 
-      <section className="fm-card" aria-labelledby="fm-filters-title">
-        <div className="fm-card__body">
-          <h2 id="fm-filters-title" className="fm-sr-only">
-            Filters
-          </h2>
-          <div className="fm-filters">
-            <div className="fm-field">
-              <label htmlFor="fm-filter-month" className="fm-field__label">
-                Month
-              </label>
-              <Select
-                id="fm-filter-month"
-                allowClear
-                placeholder="All months"
-                value={month}
-                options={MONTH_OPTIONS}
-                onChange={(value) => {
-                  setMonth(value);
+      <div className="erp-pro-card" style={{ marginBottom: 16, marginTop: 16 }}>
+        <div style={{ padding: '14px 20px' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <Select
+              allowClear
+              value={month}
+              options={monthOptions}
+              onChange={(value) => {
+                setMonth(value);
+                resetPage();
+              }}
+              className="erp-users-filter-select"
+              placeholder={t('pages.hr.fieldMovementLogs.filters.allMonths')}
+              aria-label={t('pages.hr.fieldMovementLogs.filters.month')}
+              style={{ minWidth: 140 }}
+            />
+            <InputNumber
+              value={year}
+              min={2020}
+              max={now.getFullYear() + 1}
+              onChange={(value) => {
+                if (typeof value === 'number') {
+                  setYear(value);
                   resetPage();
-                }}
-              />
-            </div>
-            <div className="fm-field">
-              <label htmlFor="fm-filter-year" className="fm-field__label">
-                Year
-              </label>
-              <InputNumber
-                id="fm-filter-year"
-                style={{ width: '100%' }}
-                min={2020}
-                max={now.getFullYear() + 1}
-                value={year}
-                onChange={(value) => {
-                  if (typeof value === 'number') {
-                    setYear(value);
-                    resetPage();
-                  }
-                }}
-              />
-            </div>
-            <div className="fm-field">
-              <label htmlFor="fm-filter-status" className="fm-field__label">
-                Status
-              </label>
-              <Select
-                id="fm-filter-status"
-                allowClear
-                placeholder="Any status"
-                value={status}
-                options={STATUS_OPTIONS.map((item) => ({
-                  value: item,
-                  label: formatFieldMovementStatus(item),
-                }))}
-                onChange={(value) => {
-                  setStatus(value);
-                  setStatMode('all');
-                  resetPage();
-                }}
-              />
-            </div>
-            <div className="fm-field">
-              <label htmlFor="fm-filter-employee" className="fm-field__label">
-                Employee
-              </label>
-              <Select
-                id="fm-filter-employee"
-                allowClear
-                showSearch
-                placeholder="Everyone"
-                optionFilterProp="label"
-                value={employeeId}
-                options={employeeOptions}
-                loading={usersQuery.isLoading}
-                onChange={(value) => {
-                  setEmployeeId(value);
-                  resetPage();
-                }}
-              />
-            </div>
-            <Button
-              icon={<RotateCcw size={16} aria-hidden />}
-              disabled={!filtersChanged}
-              onClick={resetFilters}
-            >
-              Reset filters
-            </Button>
+                }
+              }}
+              className="w-28"
+              aria-label={t('pages.hr.fieldMovementLogs.filters.year')}
+            />
+            <Select
+              allowClear
+              value={status}
+              options={STATUS_OPTIONS.map((item) => ({
+                value: item,
+                label: formatFieldMovementStatus(item),
+              }))}
+              onChange={(value) => {
+                setStatus(value);
+                setStatMode('all');
+                resetPage();
+              }}
+              className="erp-users-filter-select"
+              placeholder={t('pages.hr.fieldMovementLogs.filters.anyStatus')}
+              aria-label={t('pages.hr.fieldMovementLogs.filters.status')}
+              style={{ minWidth: 160 }}
+            />
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              value={employeeId}
+              options={employeeOptions}
+              loading={usersQuery.isLoading}
+              onChange={(value) => {
+                setEmployeeId(value);
+                resetPage();
+              }}
+              className="erp-users-filter-select"
+              placeholder={t('pages.hr.fieldMovementLogs.filters.everyone')}
+              aria-label={t('pages.hr.fieldMovementLogs.filters.employee')}
+              style={{ minWidth: 200, flex: 1 }}
+            />
+            {filtersChanged ? (
+              <Button type="link" onClick={resetFilters} className="!px-1">
+                {t('common.reset')}
+              </Button>
+            ) : null}
           </div>
         </div>
-      </section>
-
-      <p className="fm-results-line" aria-live="polite">
-        {listQuery.isLoading ? 'Loading logs…' : `Showing ${resultsLabel}`}
-      </p>
-
-      {listQuery.isError ? (
-        <ErpNotice
-          tone="error"
-          title={getFriendlyApiErrorMessage(
-            listQuery.error,
-            'Failed to load field movement logs',
-            t,
-          )}
-        />
-      ) : listQuery.isLoading && rows.length === 0 ? (
-        <div className="flex justify-center p-12">
-          <Spin />
-        </div>
-      ) : (
-        <DataTable<FieldMovementLog>
-          rowKey="id"
-          columns={columns}
-          dataSource={rows}
-          loading={listQuery.isFetching}
-          pagination={bindMeta(meta)}
-          locale={{
-            emptyText: (
-              <TableEmptyState
-                icon={<Inbox size={20} aria-hidden />}
-                title="No field movement logs"
-                description={
-                  filtersChanged
-                    ? 'Nothing matches these filters. Try another month or reset the filters.'
-                    : 'No one has submitted an explanation for this month yet.'
-                }
-              />
-            ),
+        <div
+          style={{
+            padding: '10px 20px',
+            borderTop: '1px solid var(--color-border-tertiary)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 8,
+            background: 'var(--color-surface-secondary)',
+            borderRadius: '0 0 10px 10px',
           }}
-          onRow={(row) => ({
-            onClick: () => router.push(`/hr/field-movement-logs/${row.id}`),
-            className: 'cursor-pointer',
-          })}
-        />
-      )}
+        >
+          <Tooltip title={t('common.refresh')}>
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              loading={listQuery.isFetching && !listQuery.isLoading}
+              onClick={() => void listQuery.refetch()}
+              aria-label={t('common.refresh')}
+            />
+          </Tooltip>
+        </div>
+      </div>
+
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('pages.hr.fieldMovementLogs.listTitle')}
+            </h3>
+            <span className="erp-users-count-pill">
+              {filtered.length.toLocaleString()}
+            </span>
+          </div>
+        </div>
+        <div className="erp-pro-table-card-body">
+          <DataTable<FieldMovementLog>
+            className="erp-data-table erp-pro-table"
+            rowKey="id"
+            columns={columns}
+            dataSource={rows}
+            loading={listQuery.isFetching}
+            scroll={{ x: 1100 }}
+            pagination={bindMeta(meta)}
+            locale={{ emptyText: emptyState }}
+            onRow={(row) => ({
+              onClick: () => router.push(`/hr/field-movement-logs/${row.id}`),
+              className: 'cursor-pointer',
+            })}
+          />
+        </div>
+      </div>
     </div>
   );
 }

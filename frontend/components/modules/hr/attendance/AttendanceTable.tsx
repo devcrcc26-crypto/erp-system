@@ -10,18 +10,15 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { formatUserName } from '@/lib/utils/user-display';
 
 const AVATAR_COLORS = [
-  '#F47B20',
-  '#1B2B4B',
-  '#185FA5',
-  '#639922',
-  '#BA7517',
-  '#7F77DD',
-  '#D32F2F',
-  '#0F6E56',
+  'var(--color-teal-400)',
+  'var(--color-blue-400)',
+  'var(--color-amber-400)',
+  'var(--color-teal-600)',
+  'var(--color-blue-800)',
+  'var(--color-red-400)',
 ] as const;
 
 export interface AttendanceTableProps {
-  /** Full filtered list — table sorts then paginates locally. */
   records: AttendanceRecord[];
   loading: boolean;
   pagination: {
@@ -68,23 +65,8 @@ function compareText(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: 'base' });
 }
 
-function mutedOrValue(
-  value: number,
-  activeColor: string,
-  formatter: (n: number) => string = String,
-): React.ReactNode {
-  if (value <= 0) {
-    return <span style={{ color: '#94a3b8' }}>—</span>;
-  }
-  return (
-    <span style={{ color: activeColor, fontWeight: 600 }}>
-      {formatter(value)}
-    </span>
-  );
-}
-
 /**
- * Attendance records table — schedule-based daily recalculation columns.
+ * Attendance records table — theme-token numeric styling and flag badges.
  */
 export default function AttendanceTable({
   records,
@@ -100,7 +82,7 @@ export default function AttendanceTable({
       {
         title: t('hr.table.employee'),
         key: 'employee',
-        width: 240,
+        width: 260,
         fixed: 'left',
         sorter: (a, b) =>
           compareText(formatUserName(a.employee), formatUserName(b.employee)),
@@ -108,21 +90,30 @@ export default function AttendanceTable({
           const name = formatUserName(row.employee);
           const erpId = row.employee.employeeId?.trim() || '—';
           return (
-            <div className="flex min-w-0 items-center gap-2.5">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Avatar
-                size={32}
+                size={36}
+                className="erp-users-avatar"
                 style={{
-                  backgroundColor: avatarColor(row.employee.id),
+                  background: avatarColor(row.employee.id),
+                  borderRadius: 10,
                   flexShrink: 0,
-                  fontSize: 12,
-                  fontWeight: 600,
                 }}
               >
                 {initialsOf(row.employee.firstName, row.employee.lastName)}
               </Avatar>
-              <div className="min-w-0">
-                <p className="erp-users-cell-strong m-0 truncate">{name}</p>
-                <span className="erp-users-id-chip">{erpId}</span>
+              <div style={{ minWidth: 0 }}>
+                <div className="erp-users-name">{name}</div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 2,
+                  }}
+                >
+                  <span className="erp-users-id-chip">{erpId}</span>
+                </div>
               </div>
             </div>
           );
@@ -135,7 +126,12 @@ export default function AttendanceTable({
         align: 'right',
         sorter: (a, b) => toNumber(a.scheduledDays) - toNumber(b.scheduledDays),
         render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-users-cell-sub">
+          <span
+            style={{
+              fontVariantNumeric: 'tabular-nums',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
             {formatNumber(row.scheduledDays)}
           </span>
         ),
@@ -147,7 +143,13 @@ export default function AttendanceTable({
         align: 'right',
         sorter: (a, b) => toNumber(a.presentDays) - toNumber(b.presentDays),
         render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-users-cell-sub">
+          <span
+            style={{
+              fontVariantNumeric: 'tabular-nums',
+              color: 'var(--color-text-primary)',
+              fontWeight: 500,
+            }}
+          >
             {formatNumber(row.presentDays)}
           </span>
         ),
@@ -158,17 +160,47 @@ export default function AttendanceTable({
         width: 110,
         align: 'right',
         sorter: (a, b) => toNumber(a.absentDays) - toNumber(b.absentDays),
-        render: (_: unknown, row: AttendanceRecord) =>
-          mutedOrValue(toNumber(row.absentDays), '#D32F2F', formatNumber),
+        render: (_: unknown, row: AttendanceRecord) => {
+          const value = toNumber(row.absentDays);
+          return (
+            <span
+              style={{
+                fontWeight: value > 0 ? 600 : 400,
+                color:
+                  value > 0
+                    ? 'var(--color-red-400)'
+                    : 'var(--color-text-tertiary)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {value > 0 ? formatNumber(row.absentDays) : '—'}
+            </span>
+          );
+        },
       },
       {
         title: t('pages.hr.attendance.columns.lateDays'),
         key: 'lateDays',
-        width: 90,
+        width: 100,
         align: 'right',
         sorter: (a, b) => a.lateDays - b.lateDays,
-        render: (_: unknown, row: AttendanceRecord) =>
-          mutedOrValue(row.lateDays, '#BA7517'),
+        render: (_: unknown, row: AttendanceRecord) => {
+          const value = row.lateDays;
+          return (
+            <span
+              style={{
+                fontWeight: value > 0 ? 600 : 400,
+                color:
+                  value > 0
+                    ? 'var(--color-amber-400)'
+                    : 'var(--color-text-tertiary)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {value > 0 ? value : '—'}
+            </span>
+          );
+        },
       },
       {
         title: t('pages.hr.attendance.columns.missingClockOut'),
@@ -176,8 +208,23 @@ export default function AttendanceTable({
         width: 140,
         align: 'right',
         sorter: (a, b) => a.missingClockOutDays - b.missingClockOutDays,
-        render: (_: unknown, row: AttendanceRecord) =>
-          mutedOrValue(row.missingClockOutDays, '#BA7517'),
+        render: (_: unknown, row: AttendanceRecord) => {
+          const value = row.missingClockOutDays;
+          return (
+            <span
+              style={{
+                fontWeight: value > 0 ? 600 : 400,
+                color:
+                  value > 0
+                    ? 'var(--color-amber-400)'
+                    : 'var(--color-text-tertiary)',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {value > 0 ? value : '—'}
+            </span>
+          );
+        },
       },
       {
         title: t('pages.hr.attendance.columns.payableHours'),
@@ -186,29 +233,47 @@ export default function AttendanceTable({
         align: 'right',
         sorter: (a, b) => toNumber(a.payableHours) - toNumber(b.payableHours),
         render: (_: unknown, row: AttendanceRecord) => (
-          <span style={{ color: '#0F6E56', fontWeight: 600 }}>
-            {formatNumber(row.payableHours)}
+          <span
+            style={{
+              color: 'var(--color-teal-600)',
+              fontWeight: 500,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {formatNumber(row.payableHours)}h
           </span>
         ),
       },
       {
         title: t('pages.hr.attendance.review.columns.flaggedDays'),
         key: 'flaggedDays',
-        width: 130,
+        width: 140,
         align: 'center',
         sorter: (a, b) => a.flaggedDays - b.flaggedDays,
         render: (_: unknown, row: AttendanceRecord) => {
           const flagged = row.flaggedDays ?? 0;
-          if (flagged > 0) {
+          const resolved = row.resolvedDays ?? 0;
+          if (flagged === 0) {
             return (
-              <Tag color="warning" className="erp-attendance-flag-badge m-0">
-                {flagged} flag{flagged !== 1 ? 's' : ''}
+              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+            );
+          }
+          if (resolved === flagged) {
+            return (
+              <Tag
+                color="success"
+                style={{ borderRadius: 999, fontWeight: 500 }}
+              >
+                ✓ Resolved
               </Tag>
             );
           }
           return (
-            <Tag color="success" className="erp-attendance-flag-badge m-0">
-              ✓ No flags
+            <Tag
+              color="warning"
+              style={{ borderRadius: 999, fontWeight: 600 }}
+            >
+              {flagged - resolved} pending
             </Tag>
           );
         },
@@ -222,15 +287,19 @@ export default function AttendanceTable({
               align: 'center' as const,
               fixed: 'right' as const,
               render: (_: unknown, row: AttendanceRecord) => (
-                <Tooltip title={t('pages.hr.attendance.review.viewDailyLogs')}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<CalendarOutlined />}
-                    onClick={() => onViewDailyLogs(row)}
-                    aria-label={t('pages.hr.attendance.review.viewDailyLogs')}
-                  />
-                </Tooltip>
+                <div className="erp-table-row-actions">
+                  <Tooltip title={t('pages.hr.attendance.review.viewDailyLogs')}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<CalendarOutlined />}
+                      onClick={() => onViewDailyLogs(row)}
+                      aria-label={t(
+                        'pages.hr.attendance.review.viewDailyLogs',
+                      )}
+                    />
+                  </Tooltip>
+                </div>
               ),
             },
           ]

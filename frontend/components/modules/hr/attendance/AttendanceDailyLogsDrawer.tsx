@@ -3,24 +3,26 @@
 import { useMemo, useState } from 'react';
 import {
   App,
+  Avatar,
   Button,
   Drawer,
   Form,
   Input,
-  Popover,
-  Space,
+  Modal,
   Spin,
   Tag,
-  Typography,
+  TimePicker,
+  Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  EditOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -42,12 +44,21 @@ export interface AttendanceDailyLogsDrawerProps {
   onClose: () => void;
 }
 
-const STATUS_COLORS = {
-  PRESENT: 'success',
-  ABSENT: 'error',
-  HOLIDAY: 'processing',
-  ON_LEAVE: 'purple',
-  WEEKEND: 'default',
+const AVATAR_COLORS = [
+  'var(--color-teal-400)',
+  'var(--color-blue-400)',
+  'var(--color-amber-400)',
+  'var(--color-teal-600)',
+  'var(--color-blue-800)',
+  'var(--color-red-400)',
+] as const;
+
+const STATUS_CONFIG = {
+  PRESENT: { color: 'success', labelKey: 'PRESENT' },
+  ABSENT: { color: 'error', labelKey: 'ABSENT' },
+  HOLIDAY: { color: 'processing', labelKey: 'HOLIDAY' },
+  ON_LEAVE: { color: 'purple', labelKey: 'ON_LEAVE' },
+  WEEKEND: { color: 'default', labelKey: 'WEEKEND' },
 } as const;
 
 const FLAG_COLORS: Record<Exclude<AttendanceDayFlag, 'NONE'>, string> = {
@@ -79,9 +90,23 @@ function FlagIcon({
   }
 }
 
+function initialsOf(firstName: string, lastName: string): string {
+  const a = firstName.trim().charAt(0);
+  const b = lastName.trim().charAt(0);
+  return `${a}${b}`.toUpperCase() || '?';
+}
+
+function avatarColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
 function dayStatus(
   log: AttendanceDailyLog,
-): 'PRESENT' | 'ABSENT' | 'HOLIDAY' | 'WEEKEND' {
+): keyof typeof STATUS_CONFIG {
   if (log.isHoliday) {
     return 'HOLIDAY';
   }
@@ -94,33 +119,96 @@ function dayStatus(
   return 'ABSENT';
 }
 
-function formatClockTime(time: string | null | undefined): React.ReactNode {
+function formatClockCell(
+  original: string | null | undefined,
+  corrected: string | null | undefined,
+): React.ReactNode {
+  if (corrected) {
+    return (
+      <div>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 13,
+            color: 'var(--color-teal-600)',
+            letterSpacing: '0.02em',
+          }}
+        >
+          {corrected}
+        </span>
+        {original ? (
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              color: 'var(--color-text-tertiary)',
+              marginLeft: 6,
+              textDecoration: 'line-through',
+            }}
+          >
+            {original}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <span
       style={{
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        color: time ? '#0f172a' : '#94a3b8',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 13,
+        color: original
+          ? 'var(--color-text-primary)'
+          : 'var(--color-text-tertiary)',
+        letterSpacing: '0.02em',
       }}
     >
-      {time ?? '—'}
+      {original ?? '—'}
     </span>
   );
 }
 
 function rowClassName(log: AttendanceDailyLog): string {
   if (log.isHoliday) {
-    return 'attendance-row-holiday';
+    return 'erp-attendance-row-holiday';
   }
   if (log.isWeekend) {
-    return 'attendance-row-weekend';
+    return 'erp-attendance-row-weekend';
   }
   if (dayStatus(log) === 'ABSENT') {
-    return 'attendance-row-absent';
+    return 'erp-attendance-row-absent';
   }
   return '';
 }
 
-function CorrectPopover({
+function parseTimeValue(value: string | null | undefined): Dayjs | undefined {
+  if (!value || !/^\d{2}:\d{2}$/.test(value)) {
+    return undefined;
+  }
+  const [hoursText, minutesText] = value.split(':');
+  const hours = Number(hoursText);
+  const minutes = Number(minutesText);
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return undefined;
+  }
+  return dayjs().hour(hours).minute(minutes).second(0).millisecond(0);
+}
+
+function formatTimeValue(value: Dayjs | null | undefined): string | undefined {
+  if (!value || !value.isValid()) {
+    return undefined;
+  }
+  return value.format('HH:mm');
+}
+
+function CorrectModal({
   log,
   onSaved,
 }: {
@@ -128,11 +216,46 @@ function CorrectPopover({
   onSaved: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const { message } = App.useApp();
   const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="default"
+        size="small"
+        icon={<EditOutlined />}
+        onClick={() => setOpen(true)}
+      >
+        {t('pages.hr.attendance.review.correct')}
+      </Button>
+      {open ? (
+        <CorrectModalBody
+          log={log}
+          open={open}
+          onClose={() => setOpen(false)}
+          onSaved={onSaved}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function CorrectModalBody({
+  log,
+  open,
+  onClose,
+  onSaved,
+}: {
+  log: AttendanceDailyLog;
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}): React.ReactNode {
+  const { t } = useEpcTranslation();
+  const { message } = App.useApp();
   const [form] = Form.useForm<{
-    correctedClockInLocal?: string;
-    correctedClockOutLocal?: string;
+    correctedClockInLocal?: Dayjs | null;
+    correctedClockOutLocal?: Dayjs | null;
     correctionNote: string;
   }>();
   const correctMutation = useCorrectAttendanceDailyLog();
@@ -142,13 +265,12 @@ function CorrectPopover({
     try {
       await correctMutation.mutateAsync({
         dailyLogId: log.id,
-        correctedClockInLocal: values.correctedClockInLocal || undefined,
-        correctedClockOutLocal: values.correctedClockOutLocal || undefined,
+        correctedClockInLocal: formatTimeValue(values.correctedClockInLocal),
+        correctedClockOutLocal: formatTimeValue(values.correctedClockOutLocal),
         correctionNote: values.correctionNote,
       });
       message.success(t('pages.hr.attendance.review.correctSuccess'));
-      setOpen(false);
-      form.resetFields();
+      onClose();
       onSaved();
     } catch (error) {
       message.error(
@@ -160,75 +282,76 @@ function CorrectPopover({
   }
 
   return (
-    <Popover
-      trigger="click"
-      open={open}
-      onOpenChange={setOpen}
+    <Modal
       title={t('pages.hr.attendance.review.correctTitle')}
-      content={
-        <Form
-          form={form}
-          layout="vertical"
-          className="w-64"
-          initialValues={{
-            correctedClockInLocal:
-              log.correctedClockInLocal ?? log.clockInLocal ?? undefined,
-            correctedClockOutLocal:
-              log.correctedClockOutLocal ?? log.clockOutLocal ?? undefined,
-          }}
-        >
-          <Form.Item
-            name="correctedClockInLocal"
-            label={t('pages.hr.attendance.review.correctedClockIn')}
-            rules={[
-              {
-                pattern: /^\d{2}:\d{2}$/,
-                message: t('pages.hr.attendance.review.timeFormat'),
-              },
-            ]}
-          >
-            <Input placeholder="HH:mm" />
-          </Form.Item>
-          <Form.Item
-            name="correctedClockOutLocal"
-            label={t('pages.hr.attendance.review.correctedClockOut')}
-            rules={[
-              {
-                pattern: /^\d{2}:\d{2}$/,
-                message: t('pages.hr.attendance.review.timeFormat'),
-              },
-            ]}
-          >
-            <Input placeholder="HH:mm" />
-          </Form.Item>
-          <Form.Item
-            name="correctionNote"
-            label={t('pages.hr.attendance.review.correctionNote')}
-            rules={[
-              {
-                required: true,
-                message: t('pages.hr.attendance.review.correctionNoteRequired'),
-              },
-              { min: 10 },
-            ]}
-          >
-            <Input.TextArea rows={3} />
-          </Form.Item>
-          <Button
-            type="primary"
-            block
-            loading={correctMutation.isPending}
-            onClick={() => void handleSave()}
-          >
-            {t('pages.hr.attendance.review.saveCorrection')}
-          </Button>
-        </Form>
-      }
+      open={open}
+      onCancel={onClose}
+      onOk={() => void handleSave()}
+      confirmLoading={correctMutation.isPending}
+      okText={t('pages.hr.attendance.review.saveCorrection')}
+      cancelText={t('common.cancel')}
+      destroyOnHidden
+      centered
+      width={420}
+      styles={{
+        body: { paddingTop: 12 },
+      }}
     >
-      <Button type="link" className="!px-0" size="small">
-        {t('pages.hr.attendance.review.correct')}
-      </Button>
-    </Popover>
+      <Form
+        form={form}
+        layout="vertical"
+        requiredMark={false}
+        initialValues={{
+          correctedClockInLocal: parseTimeValue(
+            log.correctedClockInLocal ?? log.clockInLocal,
+          ),
+          correctedClockOutLocal: parseTimeValue(
+            log.correctedClockOutLocal ?? log.clockOutLocal,
+          ),
+          correctionNote: '',
+        }}
+      >
+        <Form.Item
+          name="correctedClockInLocal"
+          label={t('pages.hr.attendance.review.correctedClockIn')}
+        >
+          <TimePicker
+            className="w-full"
+            format="HH:mm"
+            needConfirm={false}
+            showNow={false}
+            placeholder="HH:mm"
+            getPopupContainer={(node) => node.parentElement ?? document.body}
+          />
+        </Form.Item>
+        <Form.Item
+          name="correctedClockOutLocal"
+          label={t('pages.hr.attendance.review.correctedClockOut')}
+        >
+          <TimePicker
+            className="w-full"
+            format="HH:mm"
+            needConfirm={false}
+            showNow={false}
+            placeholder="HH:mm"
+            getPopupContainer={(node) => node.parentElement ?? document.body}
+          />
+        </Form.Item>
+        <Form.Item
+          name="correctionNote"
+          label={t('pages.hr.attendance.review.correctionNote')}
+          rules={[
+            {
+              required: true,
+              message: t('pages.hr.attendance.review.correctionNoteRequired'),
+            },
+            { min: 10 },
+          ]}
+        >
+          <Input.TextArea rows={3} />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 }
 
@@ -256,8 +379,19 @@ export default function AttendanceDailyLogsDrawer({
   const employeeName = employee ? formatUserName(employee) : '';
   const employeeCode = employee?.employeeId?.trim() || '—';
   const monthLabel = t(`hr.months.${month}`);
+  const scheduledDays = Number(query.data?.scheduledDays ?? 0);
   const presentDays = Number(query.data?.presentDays ?? 0);
   const absentDays = Number(query.data?.absentDays ?? 0);
+  const flaggedDays = Number(query.data?.flaggedDays ?? 0);
+  const resolvedDays = Number(query.data?.resolvedDays ?? 0);
+
+  const miniStats = [
+    { label: 'Scheduled', value: scheduledDays },
+    { label: 'Present', value: presentDays },
+    { label: 'Absent', value: absentDays, alert: absentDays > 0 },
+    { label: 'Flagged', value: flaggedDays, alert: flaggedDays > 0 },
+    { label: 'Resolved', value: resolvedDays },
+  ] as const;
 
   const columns: ColumnsType<AttendanceDailyLog> = useMemo(
     () => [
@@ -268,24 +402,49 @@ export default function AttendanceDailyLogsDrawer({
         render: (_: unknown, row: AttendanceDailyLog) => {
           const d = dayjs(row.date);
           return (
-            <span>
-              <span style={{ fontWeight: 500 }}>{d.format('ddd')}</span>
-              <span style={{ color: '#64748b', marginLeft: 4 }}>
+            <div>
+              <span
+                style={{
+                  fontWeight: 600,
+                  color:
+                    row.isWeekend || row.isHoliday
+                      ? 'var(--color-text-tertiary)'
+                      : 'var(--color-text-primary)',
+                }}
+              >
+                {d.format('ddd')}
+              </span>
+              <span
+                style={{
+                  color: 'var(--color-text-tertiary)',
+                  marginLeft: 4,
+                  fontSize: 12,
+                }}
+              >
                 {d.format('D MMM')}
               </span>
-            </span>
+            </div>
           );
         },
       },
       {
         title: t('pages.hr.attendance.daily.status'),
         key: 'status',
-        width: 110,
+        width: 150,
         render: (_: unknown, row: AttendanceDailyLog) => {
           const status = dayStatus(row);
+          const config = STATUS_CONFIG[status];
           return (
-            <Tag color={STATUS_COLORS[status]}>
-              {t(`pages.hr.attendance.review.dayStatus.${status}`)}
+            <Tag
+              color={config.color}
+              style={{ borderRadius: 999, fontWeight: 500 }}
+            >
+              {t(`pages.hr.attendance.review.dayStatus.${config.labelKey}`)}
+              {row.holidayName ? (
+                <span style={{ fontWeight: 400, marginLeft: 4 }}>
+                  ({row.holidayName})
+                </span>
+              ) : null}
             </Tag>
           );
         },
@@ -293,36 +452,16 @@ export default function AttendanceDailyLogsDrawer({
       {
         title: t('pages.hr.attendance.review.clockInLocal'),
         key: 'clockIn',
-        width: 110,
-        render: (_: unknown, row: AttendanceDailyLog) => (
-          <span>
-            {formatClockTime(
-              row.correctedClockInLocal ?? row.clockInLocal,
-            )}
-            {row.correctedClockInLocal ? (
-              <Typography.Text type="secondary" className="ml-1 text-xs">
-                *
-              </Typography.Text>
-            ) : null}
-          </span>
-        ),
+        width: 130,
+        render: (_: unknown, row: AttendanceDailyLog) =>
+          formatClockCell(row.clockInLocal, row.correctedClockInLocal),
       },
       {
         title: t('pages.hr.attendance.review.clockOutLocal'),
         key: 'clockOut',
-        width: 110,
-        render: (_: unknown, row: AttendanceDailyLog) => (
-          <span>
-            {formatClockTime(
-              row.correctedClockOutLocal ?? row.clockOutLocal,
-            )}
-            {row.correctedClockOutLocal ? (
-              <Typography.Text type="secondary" className="ml-1 text-xs">
-                *
-              </Typography.Text>
-            ) : null}
-          </span>
-        ),
+        width: 130,
+        render: (_: unknown, row: AttendanceDailyLog) =>
+          formatClockCell(row.clockOutLocal, row.correctedClockOutLocal),
       },
       {
         title: t('pages.hr.attendance.review.columns.flag'),
@@ -330,35 +469,56 @@ export default function AttendanceDailyLogsDrawer({
         width: 200,
         render: (_: unknown, row: AttendanceDailyLog) => {
           if (row.flag === 'NONE') {
-            return <span style={{ color: '#94a3b8' }}>—</span>;
+            return (
+              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+            );
           }
           if (row.flagResolved) {
             return (
-              <Tag color="success" icon={<CheckCircleOutlined />}>
+              <Tag
+                icon={<CheckCircleOutlined />}
+                color="success"
+                style={{ borderRadius: 999 }}
+              >
                 Resolved
               </Tag>
             );
           }
+          const pendingEntry = row.fieldMovementEntries?.find(
+            (entry) =>
+              entry.log?.status === 'SUBMITTED' ||
+              entry.log?.status === 'IN_REVIEW' ||
+              entry.log?.status === 'APPROVED',
+          );
           return (
-            <Tag
-              color={FLAG_COLORS[row.flag]}
-              icon={<FlagIcon flag={row.flag} />}
+            <Tooltip
+              title={
+                pendingEntry
+                  ? `Explained: ${pendingEntry.reason}`
+                  : 'No explanation submitted yet'
+              }
             >
-              {FLAG_LABELS[row.flag]}
-            </Tag>
+              <Tag
+                color={FLAG_COLORS[row.flag]}
+                icon={<FlagIcon flag={row.flag} />}
+                style={{ borderRadius: 999, cursor: 'default' }}
+              >
+                {FLAG_LABELS[row.flag]}
+              </Tag>
+            </Tooltip>
           );
         },
       },
       {
         title: t('common.actions'),
         key: 'actions',
-        width: 100,
+        width: 120,
         render: (_: unknown, row: AttendanceDailyLog) => {
           if (!canCorrect || row.isWeekend || row.isHoliday) {
             return null;
           }
           return (
-            <CorrectPopover
+            <CorrectModal
               log={row}
               onSaved={() => {
                 void query.refetch();
@@ -373,18 +533,107 @@ export default function AttendanceDailyLogsDrawer({
 
   return (
     <Drawer
+      className="erp-attendance-daily-drawer"
+      closable
       title={
-        <Space orientation="vertical" size={0}>
-          <span style={{ fontWeight: 600, fontSize: 15 }}>
-            {employeeName || t('pages.hr.attendance.review.dailyLogsTitle')}
-          </span>
-          {employeeName ? (
-            <Typography.Text type="secondary" className="text-xs font-normal">
-              {employeeCode} · {monthLabel} {year} · {presentDays} present ·{' '}
-              {absentDays} absent
-            </Typography.Text>
-          ) : null}
-        </Space>
+        employee ? (
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 4,
+                paddingRight: 28,
+              }}
+            >
+              <Avatar
+                size={40}
+                style={{
+                  background: avatarColor(employee.id),
+                  borderRadius: 10,
+                  flexShrink: 0,
+                }}
+              >
+                {initialsOf(employee.firstName, employee.lastName)}
+              </Avatar>
+              <div>
+                <div
+                  style={{
+                    fontWeight: 650,
+                    fontSize: 15,
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  {employeeName}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 2,
+                  }}
+                >
+                  <span className="erp-users-id-chip">{employeeCode}</span>
+                  <span
+                    style={{
+                      color: 'var(--color-text-tertiary)',
+                      fontSize: 12,
+                    }}
+                  >
+                    {monthLabel} {year}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                gap: 16,
+                marginTop: 12,
+                padding: '10px 14px',
+                background: 'var(--color-surface-secondary)',
+                borderRadius: 8,
+                border: '1px solid var(--color-border-tertiary)',
+              }}
+            >
+              {miniStats.map((stat) => (
+                <div key={stat.label} style={{ textAlign: 'center' }}>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color:
+                        'alert' in stat && stat.alert
+                          ? stat.label === 'Absent'
+                            ? 'var(--color-red-400)'
+                            : 'var(--color-amber-400)'
+                          : 'var(--color-text-primary)',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {stat.value}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      color: 'var(--color-text-tertiary)',
+                      marginTop: 2,
+                    }}
+                  >
+                    {stat.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          t('pages.hr.attendance.review.dailyLogsTitle')
+        )
       }
       open={open}
       onClose={onClose}
@@ -403,7 +652,7 @@ export default function AttendanceDailyLogsDrawer({
           dataSource={logs}
           loading={query.isFetching}
           size="small"
-          scroll={{ x: 800, y: 'calc(100vh - 200px)' }}
+          scroll={{ x: 800, y: 'calc(100vh - 260px)' }}
           pagination={false}
           rowClassName={rowClassName}
         />

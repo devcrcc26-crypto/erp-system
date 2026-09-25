@@ -1,9 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Button, Skeleton } from 'antd';
+import { Alert, Avatar, Button, Skeleton } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ArrowLeft, ExternalLink, ListChecks } from 'lucide-react';
+import {
+  ArrowLeftOutlined,
+  ExportOutlined,
+  UnorderedListOutlined,
+} from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import {
   FieldMovementStatusBadge,
@@ -13,7 +17,6 @@ import {
 } from '@/components/modules/attendance/field-movement-display';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import DataTable from '@/components/ui/DataTable/DataTable';
-import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetBreadcrumbLabel } from '@/hooks/use-set-breadcrumb-label';
@@ -38,6 +41,29 @@ const REASON_TO_ORIGINAL_FLAG: Record<
   FORGOT_CLOCK_IN: 'MISSING_CLOCK_IN',
   FORGOT_CLOCK_OUT: 'MISSING_CLOCK_OUT',
 };
+
+const AVATAR_COLORS = [
+  'var(--color-teal-400)',
+  'var(--color-blue-400)',
+  'var(--color-amber-400)',
+  'var(--color-teal-600)',
+  'var(--color-blue-800)',
+  'var(--color-red-400)',
+] as const;
+
+function initialsOf(firstName: string, lastName: string): string {
+  const a = firstName.trim().charAt(0);
+  const b = lastName.trim().charAt(0);
+  return `${a}${b}`.toUpperCase() || '?';
+}
+
+function avatarColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 
 function formatDateTime(value: string | null): string {
   if (!value) {
@@ -118,7 +144,7 @@ export default function FieldMovementLogDetailPageContent({
         render: (_value, entry) => formatLongDate(entry.date),
       },
       {
-        title: 'Flag',
+        title: 'Original flag',
         key: 'flag',
         width: 160,
         render: (_value, entry) => <FlagBadge flag={entryFlag(entry)} />,
@@ -126,54 +152,56 @@ export default function FieldMovementLogDetailPageContent({
       {
         title: 'Reason',
         key: 'reason',
-        width: 150,
+        width: 160,
         render: (_value, entry) => <ReasonBadge reason={entry.reason} />,
       },
       {
         title: 'Destination',
         dataIndex: 'destination',
         key: 'destination',
-        width: 180,
+        width: 160,
         ellipsis: true,
         render: (value: string | null) => value?.trim() || '—',
       },
       {
-        title: 'Left at',
+        title: 'Departure',
         dataIndex: 'departureTime',
         key: 'departureTime',
         width: 100,
-        render: (value: string | null, entry) => {
-          if (
-            entry.reason !== 'FIELD_VISIT' &&
-            entry.reason !== 'EARLY_LEAVE'
-          ) {
-            return '—';
-          }
-          return value ?? '—';
-        },
+        render: (value: string | null) => (
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 13,
+              color: value
+                ? 'var(--color-text-primary)'
+                : 'var(--color-text-tertiary)',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {value ?? '—'}
+          </span>
+        ),
       },
       {
-        title: 'Returned at',
+        title: 'Return',
         dataIndex: 'returnTime',
         key: 'returnTime',
-        width: 120,
-        render: (value: string | null, entry) => {
-          if (entry.reason !== 'FIELD_VISIT') {
-            return '—';
-          }
-          return value ?? 'Did not return';
-        },
-      },
-      {
-        title: 'Recorded in / out',
-        key: 'recorded',
-        width: 140,
-        render: (_value, entry) => {
-          if (!entry.dailyLog) {
-            return '—';
-          }
-          return `${entry.dailyLog.clockInLocal ?? '—'} / ${entry.dailyLog.clockOutLocal ?? '—'}`;
-        },
+        width: 100,
+        render: (value: string | null) => (
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 13,
+              color: value
+                ? 'var(--color-text-primary)'
+                : 'var(--color-text-tertiary)',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {value ?? '—'}
+          </span>
+        ),
       },
       {
         title: 'Notes',
@@ -201,14 +229,17 @@ export default function FieldMovementLogDetailPageContent({
   if (!canViewHr) {
     return (
       <div className="erp-pro-list-page erp-users-page">
-        <ErpNotice tone="error" title={t('pages.hr.accessDenied')} />
+        <Alert type="error" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
 
   if (detailQuery.isLoading && !detailQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page" aria-busy="true">
+      <div
+        className="erp-pro-list-page erp-users-page erp-attendance-review-page"
+        aria-busy="true"
+      >
         <p className="sr-only">Loading field movement log…</p>
         <Skeleton active paragraph={{ rows: 10 }} />
       </div>
@@ -217,115 +248,223 @@ export default function FieldMovementLogDetailPageContent({
 
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page flex flex-col gap-4">
-        <div>
-          <Button
-            type="text"
-            icon={<ArrowLeft size={16} aria-hidden />}
-            onClick={() => router.push('/hr/field-movement-logs')}
-          >
-            {t('hr.buttons.back')}
-          </Button>
+      <div className="erp-pro-list-page erp-users-page erp-attendance-review-page flex flex-col gap-4">
+        <div className="erp-pro-card">
+          <div style={{ padding: '20px 24px' }}>
+            <Button
+              type="text"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => router.push('/hr/field-movement-logs')}
+              style={{ padding: '4px 8px', marginBottom: 12 }}
+            >
+              {t('hr.buttons.back')}
+            </Button>
+            <Alert
+              type="error"
+              showIcon
+              style={{ borderRadius: 8 }}
+              title={getFriendlyApiErrorMessage(
+                detailQuery.error,
+                t('pages.hr.fieldMovementLogs.notFound'),
+                t,
+              )}
+            />
+          </div>
         </div>
-        <ErpNotice
-          tone="error"
-          title={getFriendlyApiErrorMessage(
-            detailQuery.error,
-            'Field movement log not found',
-            t,
-          )}
-        />
       </div>
     );
   }
 
   const entries = log?.entries ?? [];
   const employeeName = log?.employee ? formatUserName(log.employee) : '—';
+  const employeeCode = log?.employee?.employeeId?.trim() || '—';
   const periodLabel = log
-    ? new Date(log.year, log.month - 1, 1).toLocaleString('en', {
-        month: 'long',
-        year: 'numeric',
-      })
+    ? `${t(`hr.months.${log.month}`)} ${log.year}`
     : '—';
   const tiers = (log?.approvalRequest?.tiers ?? []) as ApprovalTier[];
+  const daysExplained = entries.length || log?.entryCount || 0;
 
   return (
-    <div className="fm-page erp-pro-list-page erp-users-page erp-employee-detail-page flex flex-col gap-4">
-      <header className="fm-card">
-        <div className="fm-card__body">
-          <div className="fm-page-header">
-            <div className="min-w-0">
-              <div className="mb-2">
-                <Button
-                  type="text"
-                  icon={<ArrowLeft size={16} aria-hidden />}
-                  onClick={() => router.push('/hr/field-movement-logs')}
-                  aria-label={t('hr.buttons.backToList')}
-                  className="-ml-2"
-                >
-                  {t('hr.buttons.back')}
-                </Button>
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page flex flex-col gap-4">
+      <div className="erp-pro-card" style={{ marginBottom: 0 }}>
+        <div style={{ padding: '20px 24px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              marginBottom: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Button
+              type="text"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => router.push('/hr/field-movement-logs')}
+              style={{ padding: '4px 8px' }}
+              aria-label={t('common.back')}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  flexWrap: 'wrap',
+                }}
+              >
+                {log?.employee ? (
+                  <Avatar
+                    size={40}
+                    style={{
+                      background: avatarColor(log.employee.id),
+                      borderRadius: 10,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {initialsOf(
+                      log.employee.firstName,
+                      log.employee.lastName,
+                    )}
+                  </Avatar>
+                ) : null}
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <h1
+                      style={{
+                        margin: 0,
+                        fontSize: 20,
+                        fontWeight: 650,
+                        color: 'var(--color-text-primary)',
+                      }}
+                    >
+                      {employeeName}
+                    </h1>
+                    {log ? (
+                      <FieldMovementStatusBadge status={log.status} />
+                    ) : null}
+                  </div>
+                  <p
+                    style={{
+                      margin: '4px 0 0',
+                      fontSize: 13,
+                      color: 'var(--color-text-tertiary)',
+                    }}
+                  >
+                    {t('pages.hr.fieldMovementLogs.detailEyebrow')}
+                    {' · '}
+                    {log?.requestNumber}
+                    {' · '}
+                    <span className="erp-users-id-chip">{employeeCode}</span>
+                    {' · '}
+                    {periodLabel}
+                  </p>
+                </div>
               </div>
-              <p className="fm-eyebrow">
-                Field movement log · {log?.requestNumber}
-              </p>
-              <h1 className="fm-h1">{employeeName}</h1>
-              <p className="fm-lead">
-                {log?.employee?.employeeId
-                  ? `${log.employee.employeeId} · `
-                  : ''}
-                {periodLabel}
-              </p>
             </div>
-            <div className="fm-actions items-center">
-              {log ? <FieldMovementStatusBadge status={log.status} /> : null}
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+                flexShrink: 0,
+                flexWrap: 'wrap',
+              }}
+            >
               {log?.approvalRequestId ? (
                 <Button
-                  icon={<ExternalLink size={16} aria-hidden />}
+                  icon={<ExportOutlined />}
                   onClick={() =>
                     router.push(`/approvals/${log.approvalRequestId}`)
                   }
                 >
-                  Open in Approvals
+                  {t('pages.hr.fieldMovementLogs.openInApprovals')}
                 </Button>
               ) : null}
             </div>
           </div>
 
-          <dl className="fm-facts">
-            <div>
-              <dt>Period</dt>
-              <dd>{periodLabel}</dd>
-            </div>
-            <div>
-              <dt>Days explained</dt>
-              <dd>{entries.length || log?.entryCount || 0}</dd>
-            </div>
-            <div>
-              <dt>Submitted</dt>
-              <dd>{formatDateTime(log?.submittedAt ?? null)}</dd>
-            </div>
-            <div>
-              <dt>Completed</dt>
-              <dd>{formatDateTime(log?.completedAt ?? null)}</dd>
-            </div>
-            {log?.currentTierLabel &&
-            (log.status === 'SUBMITTED' || log.status === 'IN_REVIEW') ? (
-              <div>
-                <dt>Waiting on</dt>
-                <dd>{log.currentTierLabel}</dd>
+          <div
+            style={{
+              display: 'flex',
+              gap: 16,
+              flexWrap: 'wrap',
+              padding: '12px 14px',
+              background: 'var(--color-surface-secondary)',
+              borderRadius: 8,
+              border: '1px solid var(--color-border-tertiary)',
+            }}
+          >
+            {[
+              {
+                label: t('pages.hr.fieldMovementLogs.facts.period'),
+                value: periodLabel,
+              },
+              {
+                label: t('pages.hr.fieldMovementLogs.facts.daysExplained'),
+                value: String(daysExplained),
+              },
+              {
+                label: t('pages.hr.fieldMovementLogs.facts.submitted'),
+                value: formatDateTime(log?.submittedAt ?? null),
+              },
+              {
+                label: t('pages.hr.fieldMovementLogs.facts.completed'),
+                value: formatDateTime(log?.completedAt ?? null),
+              },
+              ...(log?.currentTierLabel &&
+              (log.status === 'SUBMITTED' || log.status === 'IN_REVIEW')
+                ? [
+                    {
+                      label: t('pages.hr.fieldMovementLogs.facts.waitingOn'),
+                      value: log.currentTierLabel,
+                    },
+                  ]
+                : []),
+            ].map((fact) => (
+              <div key={fact.label} style={{ minWidth: 100 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    color: 'var(--color-text-tertiary)',
+                    marginBottom: 2,
+                  }}
+                >
+                  {fact.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  {fact.value}
+                </div>
               </div>
-            ) : null}
-          </dl>
+            ))}
+          </div>
 
           {log?.notes?.trim() ? (
-            <p className="fm-quote">
-              <span className="fm-quote__label">Note from the employee</span>
-              {log.notes}
-            </p>
+            <Alert
+              type="info"
+              showIcon
+              style={{ borderRadius: 8, marginTop: 12 }}
+              title={t('pages.hr.fieldMovementLogs.employeeNote')}
+              description={log.notes}
+            />
           ) : null}
         </div>
-      </header>
+      </div>
 
       <div
         className={
@@ -334,27 +473,36 @@ export default function FieldMovementLogDetailPageContent({
             : 'flex flex-col gap-4'
         }
       >
-        <section aria-labelledby="fm-entries-title" className="fm-card">
-          <div className="fm-card__body !p-0">
-            <div className="flex items-center gap-2 border-b border-[var(--fm-border,#E5E7EB)] px-4 py-3">
-              <ListChecks
-                size={18}
-                aria-hidden
-                className="text-[var(--fm-accent)]"
+        <div className="erp-pro-card">
+          <div className="erp-pro-card-toolbar">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <UnorderedListOutlined
+                style={{ color: 'var(--color-teal-400)' }}
               />
-              <h2 id="fm-entries-title" className="fm-card__title m-0">
-                Explained days ({entries.length})
-              </h2>
+              <h3 className="erp-pro-card-toolbar-title">
+                {t('pages.hr.fieldMovementLogs.explainedDays')}
+              </h3>
+              <span className="erp-users-count-pill">
+                {entries.length.toLocaleString()}
+              </span>
             </div>
-
+          </div>
+          <div className="erp-pro-table-card-body">
             {entries.length === 0 ? (
-              <p className="fm-results-line px-4 py-6">
-                This log has no entries.
-              </p>
+              <div
+                style={{
+                  padding: '32px 24px',
+                  textAlign: 'center',
+                  color: 'var(--color-text-tertiary)',
+                  fontSize: 13,
+                }}
+              >
+                {t('pages.hr.fieldMovementLogs.noEntries')}
+              </div>
             ) : (
               <DataTable<FieldMovementLogEntry>
                 rowKey="id"
-                className="erp-pro-table erp-users-table"
+                className="erp-data-table erp-pro-table erp-users-table"
                 size="small"
                 columns={columns}
                 dataSource={entries}
@@ -363,7 +511,7 @@ export default function FieldMovementLogDetailPageContent({
               />
             )}
           </div>
-        </section>
+        </div>
 
         {tiers.length > 0 && log ? (
           <aside aria-label="Approval progress">
