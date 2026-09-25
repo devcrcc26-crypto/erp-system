@@ -1481,6 +1481,44 @@ main::-webkit-scrollbar,
   color: #92400e;
 }
 
+/* Employees table — keep role tags inside the Role column */
+.erp-users-role-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.erp-users-role-chip.ant-tag {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 20px;
+}
+
+.erp-users-role-cell .erp-users-role-chip.ant-tag {
+  flex: 1 1 auto;
+}
+
+.erp-users-role-extra.ant-tag {
+  flex: 0 0 auto;
+  padding-inline: 6px;
+  line-height: 20px;
+}
+
+.erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr
+  > td.ant-table-cell {
+  overflow: hidden;
+}
+
 /* Add / edit employee form - users page chrome */
 .erp-employee-form-page {
   display: flex;

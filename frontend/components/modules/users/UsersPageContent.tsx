@@ -933,51 +933,47 @@ export default function UsersPageContent(): React.ReactNode {
                 title: t('common.role'),
                 key: 'roles',
                 width: 170,
+                ellipsis: true,
                 responsive: ['md'],
                 render: (_, record) => {
                   const assignments = record.userRoles ?? [];
                   if (assignments.length === 0) {
                     return (
                       <Tooltip title={t('users.noRoleTooltip')}>
-                        <Tag color="error" style={{ margin: 0 }}>
-                          <WarningOutlined /> {t('users.noRole')}
-                        </Tag>
+                        <div className="erp-users-role-cell">
+                          <Tag
+                            color="error"
+                            className="erp-users-role-chip"
+                            style={{ margin: 0 }}
+                          >
+                            <WarningOutlined /> {t('users.noRole')}
+                          </Tag>
+                        </div>
                       </Tooltip>
                     );
                   }
                   const primaryRole =
                     assignments.find((ur) => ur.isPrimary) ??
                     assignments[0];
-                  const secondaryRoles = assignments.filter(
-                    (ur) => ur.id !== primaryRole.id,
-                  );
+                  const extraCount = assignments.length - 1;
                   const allNames = assignments
                     .map((ur) => formatRoleDisplayName(ur.role.name))
                     .join(', ');
                   return (
                     <Tooltip title={allNames} mouseEnterDelay={0.35}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 4,
-                        }}
-                      >
+                      <div className="erp-users-role-cell">
                         <Tag
                           color={getRoleColor(primaryRole.role.name)}
+                          className="erp-users-role-chip"
                           style={{ margin: 0, fontWeight: 600 }}
                         >
                           {formatRoleDisplayName(primaryRole.role.name)}
                         </Tag>
-                        {secondaryRoles.map((ur) => (
-                          <Tag
-                            key={ur.id}
-                            color={getRoleColor(ur.role.name)}
-                            style={{ margin: 0, fontSize: 11, opacity: 0.8 }}
-                          >
-                            {formatRoleDisplayName(ur.role.name)}
+                        {extraCount > 0 ? (
+                          <Tag className="erp-users-role-extra" style={{ margin: 0 }}>
+                            +{extraCount}
                           </Tag>
-                        ))}
+                        ) : null}
                       </div>
                     </Tooltip>
                   );
