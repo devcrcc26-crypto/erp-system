@@ -2,20 +2,24 @@
 
 import { useMemo, useState } from 'react';
 import { Button, InputNumber, Select, Spin } from 'antd';
-import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  InboxOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import {
+  CircleCheck,
+  CircleX,
+  Clock,
+  Inbox,
+  RefreshCw,
+  RotateCcw,
+  type LucideIcon,
+} from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import {
+  FieldMovementStatusBadge,
+  formatFieldMovementStatus,
+} from '@/components/modules/attendance/field-movement-display';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -52,72 +56,25 @@ const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
   label: new Date(2026, index, 1).toLocaleString('en', { month: 'long' }),
 }));
 
-const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
-  amber: { bg: '#FAEEDA', fg: '#BA7517' },
-  green: { bg: '#EAF3DE', fg: '#639922' },
-  red: { bg: '#FCEBEB', fg: '#D32F2F' },
-} as const;
+type StatMode = 'all' | 'pending' | 'approved' | 'rejected';
 
-function statusVariant(status: FieldMovementStatus): StatusBadgeVariant {
-  switch (status) {
-    case 'APPROVED':
-      return 'success';
-    case 'REJECTED':
-    case 'CANCELLED':
-      return 'error';
-    case 'SUBMITTED':
-    case 'IN_REVIEW':
-      return 'info';
-    case 'RETURNED':
-      return 'warning';
-    default:
-      return 'default';
-  }
-}
-
-function formatStatus(status: FieldMovementStatus): string {
-  return status
-    .toLowerCase()
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function StatCard({
-  label,
-  value,
-  accent,
-  icon,
-  active,
-  onClick,
-}: {
+const STAT_FILTERS: Array<{
+  mode: StatMode;
   label: string;
-  value: number;
-  accent: keyof typeof STAT_ACCENT;
-  icon: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}): React.ReactNode {
-  const tint = STAT_ACCENT[accent];
-  return (
-    <button
-      type="button"
-      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
-      onClick={onClick}
-    >
-      <span
-        className="erp-users-stat-chip"
-        style={{ background: tint.bg, color: tint.fg }}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0 text-left">
-        <p className="erp-users-stat-label">{label}</p>
-        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
-      </div>
-    </button>
-  );
+  tone: 'teal' | 'amber' | 'green' | 'red';
+  icon: LucideIcon;
+}> = [
+  { mode: 'all', label: 'All submissions', tone: 'teal', icon: Inbox },
+  { mode: 'pending', label: 'Pending approval', tone: 'amber', icon: Clock },
+  { mode: 'approved', label: 'Approved', tone: 'green', icon: CircleCheck },
+  { mode: 'rejected', label: 'Rejected or cancelled', tone: 'red', icon: CircleX },
+];
+
+function periodLabel(month: number, year: number): string {
+  return new Date(year, month - 1, 1).toLocaleString('en', {
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 /**
@@ -130,13 +87,13 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination(20);
 
   const now = new Date();
-  const [month, setMonth] = useState<number | undefined>(now.getMonth() + 1);
-  const [year, setYear] = useState<number>(now.getFullYear());
+  const defaultMonth = now.getMonth() + 1;
+  const defaultYear = now.getFullYear();
+  const [month, setMonth] = useState<number | undefined>(defaultMonth);
+  const [year, setYear] = useState<number>(defaultYear);
   const [status, setStatus] = useState<FieldMovementStatus | undefined>();
   const [employeeId, setEmployeeId] = useState<string | undefined>();
-  const [statMode, setStatMode] = useState<
-    'all' | 'pending' | 'approved' | 'rejected'
-  >('all');
+  const [statMode, setStatMode] = useState<StatMode>('all');
 
   const listQuery = useFieldMovementLogsAll(
     {
@@ -209,14 +166,45 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
     [usersQuery.data?.data],
   );
 
+  const filtersChanged =
+    month !== defaultMonth ||
+    year !== defaultYear ||
+    Boolean(status) ||
+    Boolean(employeeId) ||
+    statMode !== 'all';
+
+  function resetFilters(): void {
+    setMonth(defaultMonth);
+    setYear(defaultYear);
+    setStatus(undefined);
+    setEmployeeId(undefined);
+    setStatMode('all');
+    resetPage();
+  }
+
+  const scopeLabel = month ? periodLabel(month, year) : `all of ${year}`;
+  const resultsLabel = `${filtered.length} ${filtered.length === 1 ? 'log' : 'logs'} for ${scopeLabel}${
+    status
+      ? ` · ${formatFieldMovementStatus(status)}`
+      : statMode !== 'all'
+        ? ` · ${STAT_FILTERS.find((item) => item.mode === statMode)?.label}`
+        : ''
+  }`;
+
   const columns: ColumnsType<FieldMovementLog> = [
     {
       title: 'Log #',
       dataIndex: 'requestNumber',
       key: 'requestNumber',
       width: 120,
-      render: (value: string) => (
-        <span className="erp-users-cell-strong">{value}</span>
+      render: (value: string, row: FieldMovementLog) => (
+        <Link
+          href={`/hr/field-movement-logs/${row.id}`}
+          className="fm-table-link"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {value}
+        </Link>
       ),
     },
     {
@@ -224,23 +212,28 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
       key: 'employee',
       width: 220,
       render: (_: unknown, row: FieldMovementLog) =>
-        row.employee ? formatUserName(row.employee) : '—',
+        row.employee ? (
+          <span>
+            {formatUserName(row.employee)}
+            {row.employee.employeeId ? (
+              <span className="fm-cell-sub">{row.employee.employeeId}</span>
+            ) : null}
+          </span>
+        ) : (
+          <span className="fm-muted">—</span>
+        ),
     },
     {
       title: 'Period',
       key: 'period',
       width: 140,
-      render: (_: unknown, row: FieldMovementLog) => {
-        const name = new Date(row.year, row.month - 1, 1).toLocaleString('en', {
-          month: 'long',
-        });
-        return `${name} ${row.year}`;
-      },
+      render: (_: unknown, row: FieldMovementLog) =>
+        periodLabel(row.month, row.year),
     },
     {
-      title: 'Entries',
+      title: 'Days',
       key: 'entryCount',
-      width: 90,
+      width: 80,
       align: 'right',
       render: (_: unknown, row: FieldMovementLog) => row.entryCount ?? '—',
     },
@@ -248,43 +241,36 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      width: 130,
+      width: 140,
       render: (value: FieldMovementStatus) => (
-        <StatusBadge label={formatStatus(value)} variant={statusVariant(value)} />
+        <FieldMovementStatusBadge status={value} />
       ),
     },
     {
-      title: 'Current Tier',
+      title: 'Waiting on',
       key: 'currentTierLabel',
       width: 160,
       render: (_: unknown, row: FieldMovementLog) =>
-        row.currentTierLabel ?? '—',
+        PENDING_STATUSES.includes(row.status) && row.currentTierLabel ? (
+          row.currentTierLabel
+        ) : (
+          <span className="fm-muted">—</span>
+        ),
     },
     {
-      title: 'Submitted At',
+      title: 'Submitted',
       key: 'submittedAt',
-      width: 140,
+      width: 130,
       render: (_: unknown, row: FieldMovementLog) =>
-        row.submittedAt
-          ? new Date(row.submittedAt).toLocaleDateString('en-GB')
-          : '—',
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 90,
-      render: (_: unknown, row: FieldMovementLog) => (
-        <Button
-          type="link"
-          size="small"
-          onClick={(event) => {
-            event.stopPropagation();
-            router.push(`/hr/field-movement-logs/${row.id}`);
-          }}
-        >
-          View
-        </Button>
-      ),
+        row.submittedAt ? (
+          new Date(row.submittedAt).toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
+        ) : (
+          <span className="fm-muted">Not submitted</span>
+        ),
     },
   ];
 
@@ -297,128 +283,153 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="fm-page erp-pro-list-page erp-users-page flex flex-col gap-4">
+      <header className="fm-page-header">
         <div>
-          <h1 className="m-0 text-lg font-semibold text-[#1A1A1A]">
-            Field Movement Logs
-          </h1>
-          <p className="m-0 mt-1 text-sm text-[#6B7280]">
-            Employee explanations for flagged attendance days.
+          <h1 className="fm-h1">Field movement logs</h1>
+          <p className="fm-lead">
+            Employee explanations for flagged attendance days, such as field
+            visits, early departures and missed clock-ins.
           </p>
         </div>
         <Button
-          icon={<ReloadOutlined />}
+          icon={<RefreshCw size={16} aria-hidden />}
+          loading={listQuery.isFetching && !listQuery.isLoading}
           onClick={() => void listQuery.refetch()}
         >
           Refresh
         </Button>
+      </header>
+
+      <div
+        className="fm-stat-filters"
+        role="group"
+        aria-label="Show submissions by status"
+      >
+        {STAT_FILTERS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.mode}
+              type="button"
+              className="fm-stat-filter"
+              aria-pressed={statMode === item.mode && !status}
+              onClick={() => {
+                setStatMode(item.mode);
+                setStatus(undefined);
+                resetPage();
+              }}
+            >
+              <span
+                className={`fm-stat-filter__icon fm-stat-filter__icon--${item.tone}`}
+                aria-hidden
+              >
+                <Icon size={18} />
+              </span>
+              <span className="min-w-0">
+                <span className="fm-stat-filter__label">{item.label}</span>
+                <span className="fm-stat-filter__value">
+                  {statusCounts[item.mode].toLocaleString()}
+                </span>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          label="Total Submissions"
-          value={statusCounts.all}
-          accent="teal"
-          icon={<InboxOutlined />}
-          active={statMode === 'all' && !status}
-          onClick={() => {
-            setStatMode('all');
-            setStatus(undefined);
-            resetPage();
-          }}
-        />
-        <StatCard
-          label="Pending Approval"
-          value={statusCounts.pending}
-          accent="amber"
-          icon={<ClockCircleOutlined />}
-          active={statMode === 'pending' && !status}
-          onClick={() => {
-            setStatMode('pending');
-            setStatus(undefined);
-            resetPage();
-          }}
-        />
-        <StatCard
-          label="Approved"
-          value={statusCounts.approved}
-          accent="green"
-          icon={<CheckCircleOutlined />}
-          active={statMode === 'approved' && !status}
-          onClick={() => {
-            setStatMode('approved');
-            setStatus(undefined);
-            resetPage();
-          }}
-        />
-        <StatCard
-          label="Rejected"
-          value={statusCounts.rejected}
-          accent="red"
-          icon={<CloseCircleOutlined />}
-          active={statMode === 'rejected' && !status}
-          onClick={() => {
-            setStatMode('rejected');
-            setStatus(undefined);
-            resetPage();
-          }}
-        />
-      </div>
+      <section className="fm-card" aria-labelledby="fm-filters-title">
+        <div className="fm-card__body">
+          <h2 id="fm-filters-title" className="fm-sr-only">
+            Filters
+          </h2>
+          <div className="fm-filters">
+            <div className="fm-field">
+              <label htmlFor="fm-filter-month" className="fm-field__label">
+                Month
+              </label>
+              <Select
+                id="fm-filter-month"
+                allowClear
+                placeholder="All months"
+                value={month}
+                options={MONTH_OPTIONS}
+                onChange={(value) => {
+                  setMonth(value);
+                  resetPage();
+                }}
+              />
+            </div>
+            <div className="fm-field">
+              <label htmlFor="fm-filter-year" className="fm-field__label">
+                Year
+              </label>
+              <InputNumber
+                id="fm-filter-year"
+                style={{ width: '100%' }}
+                min={2020}
+                max={now.getFullYear() + 1}
+                value={year}
+                onChange={(value) => {
+                  if (typeof value === 'number') {
+                    setYear(value);
+                    resetPage();
+                  }
+                }}
+              />
+            </div>
+            <div className="fm-field">
+              <label htmlFor="fm-filter-status" className="fm-field__label">
+                Status
+              </label>
+              <Select
+                id="fm-filter-status"
+                allowClear
+                placeholder="Any status"
+                value={status}
+                options={STATUS_OPTIONS.map((item) => ({
+                  value: item,
+                  label: formatFieldMovementStatus(item),
+                }))}
+                onChange={(value) => {
+                  setStatus(value);
+                  setStatMode('all');
+                  resetPage();
+                }}
+              />
+            </div>
+            <div className="fm-field">
+              <label htmlFor="fm-filter-employee" className="fm-field__label">
+                Employee
+              </label>
+              <Select
+                id="fm-filter-employee"
+                allowClear
+                showSearch
+                placeholder="Everyone"
+                optionFilterProp="label"
+                value={employeeId}
+                options={employeeOptions}
+                loading={usersQuery.isLoading}
+                onChange={(value) => {
+                  setEmployeeId(value);
+                  resetPage();
+                }}
+              />
+            </div>
+            <Button
+              icon={<RotateCcw size={16} aria-hidden />}
+              disabled={!filtersChanged}
+              onClick={resetFilters}
+            >
+              Reset filters
+            </Button>
+          </div>
+        </div>
+      </section>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Select
-          allowClear
-          placeholder="Month"
-          style={{ width: 140 }}
-          value={month}
-          options={MONTH_OPTIONS}
-          onChange={(value) => {
-            setMonth(value);
-            resetPage();
-          }}
-        />
-        <InputNumber
-          min={2020}
-          max={now.getFullYear() + 1}
-          value={year}
-          onChange={(value) => {
-            if (typeof value === 'number') {
-              setYear(value);
-              resetPage();
-            }
-          }}
-        />
-        <Select
-          allowClear
-          placeholder="Status"
-          style={{ width: 160 }}
-          value={status}
-          options={STATUS_OPTIONS.map((item) => ({
-            value: item,
-            label: formatStatus(item),
-          }))}
-          onChange={(value) => {
-            setStatus(value);
-            setStatMode('all');
-            resetPage();
-          }}
-        />
-        <Select
-          allowClear
-          showSearch
-          placeholder="Employee"
-          style={{ minWidth: 220 }}
-          optionFilterProp="label"
-          value={employeeId}
-          options={employeeOptions}
-          suffixIcon={<SearchOutlined />}
-          onChange={(value) => {
-            setEmployeeId(value);
-            resetPage();
-          }}
-        />
-      </div>
+      <p className="fm-results-line" aria-live="polite">
+        {listQuery.isLoading ? 'Loading logs…' : `Showing ${resultsLabel}`}
+      </p>
 
       {listQuery.isError ? (
         <ErpNotice
@@ -443,9 +454,13 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
           locale={{
             emptyText: (
               <TableEmptyState
-                icon={<ClockCircleOutlined />}
+                icon={<Inbox size={20} aria-hidden />}
                 title="No field movement logs"
-                description="No submissions match the current filters."
+                description={
+                  filtersChanged
+                    ? 'Nothing matches these filters. Try another month or reset the filters.'
+                    : 'No one has submitted an explanation for this month yet.'
+                }
               />
             ),
           }}
