@@ -36,6 +36,7 @@ const PROFILE_INCLUDE = {
   userRoles: {
     where: { deletedAt: null },
     include: { role: { select: { id: true, name: true } } },
+    orderBy: [{ isPrimary: 'desc' }, { assignedAt: 'asc' }],
   },
   department: { select: { name: true, nameZh: true } },
   position: { select: { title: true, titleZh: true } },
@@ -488,6 +489,7 @@ export class ProfileService {
       roles: user.userRoles.map((assignment) => ({
         id: assignment.role.id,
         name: assignment.role.name,
+        isPrimary: assignment.isPrimary,
       })),
       employeeId: user.employeeId,
       middleName: user.middleName,

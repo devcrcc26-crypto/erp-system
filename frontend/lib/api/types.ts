@@ -98,6 +98,7 @@ export interface ConfirmEmailChangeRequest {
 export interface ProfileRole {
   id: string;
   name: string;
+  isPrimary?: boolean;
 }
 
 export interface UserProfile {

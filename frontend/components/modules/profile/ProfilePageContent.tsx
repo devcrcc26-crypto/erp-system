@@ -237,7 +237,9 @@ export default function ProfilePageContent(): React.ReactNode {
     profile.positionTitle,
     profile.positionTitleZh,
   );
-  const primaryRole = profile.roles[0]?.name;
+  const primaryRole =
+    profile.roles.find((role) => role.isPrimary)?.name ??
+    profile.roles[0]?.name;
 
   /** WAI-ARIA tabs: arrows / Home / End move focus and select. */
   function handleTabKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {

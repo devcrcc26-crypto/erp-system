@@ -7,6 +7,9 @@ export class ProfileRoleDto {
 
   @ApiProperty()
   name!: string;
+
+  @ApiProperty({ description: 'True when this is the user primary role' })
+  isPrimary!: boolean;
 }
 
 export class ProfileEmergencyContactDto {

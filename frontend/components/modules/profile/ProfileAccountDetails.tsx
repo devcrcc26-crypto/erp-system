@@ -1,8 +1,13 @@
 'use client';
 
+import { Tag } from 'antd';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { UserProfile } from '@/lib/api/types';
 import { formatDateWithPattern } from '@/lib/utils/date-format';
+import {
+  formatRoleDisplayName,
+  getRoleColor,
+} from '@/lib/utils/role-colors';
 import {
   PROFILE_FIELD_GRID,
   ProfileField,
@@ -46,6 +51,9 @@ export default function ProfileAccountDetails({
     .filter((part): part is string => Boolean(part));
 
   const contacts = profile.emergencyContacts ?? [];
+  const assignedRoles = [...(profile.roles ?? [])].sort(
+    (a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0),
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -158,6 +166,42 @@ export default function ProfileAccountDetails({
           </div>
         </ProfileSection>
       </div>
+
+      <ProfileSection title={t('users.assignedRoles')}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {assignedRoles.map((role) => (
+            <div
+              key={role.id}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <Tag
+                color={getRoleColor(role.name)}
+                style={{
+                  margin: 0,
+                  fontWeight: role.isPrimary ? 600 : 400,
+                }}
+              >
+                {formatRoleDisplayName(role.name)}
+              </Tag>
+              {role.isPrimary ? (
+                <Tag
+                  color="success"
+                  style={{ margin: 0, fontSize: 11, borderRadius: 999 }}
+                >
+                  {t('users.primaryRole')}
+                </Tag>
+              ) : null}
+            </div>
+          ))}
+          {assignedRoles.length === 0 ? (
+            <span
+              style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}
+            >
+              {t('users.noRoleAssigned')}
+            </span>
+          ) : null}
+        </div>
+      </ProfileSection>
 
       <ProfileSection title={t('profile.sectionEmergencyContacts')}>
         {contacts.length === 0 ? (
