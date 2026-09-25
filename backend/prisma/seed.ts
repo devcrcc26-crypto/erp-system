@@ -5,6 +5,7 @@ import { seedAllProjectTypes } from './seed-all-project-types';
 import { appendRichDemoProjects } from './seed-demo-projects';
 import { seedComment8Walkthrough } from './seed-comment8-walkthrough';
 import { seedApprovalCategories } from './seeds/approval-categories.seed';
+import { seedOrgStructure } from './seeds/org-structure.seed';
 import { seedLeavePolicies } from './seed-leave-policies';
 import { seedWorkSchedules } from './seed/work-schedules.seed';
 
@@ -1686,6 +1687,11 @@ async function main(): Promise<void> {
     divisionId: division.id,
     branchId: branch.id,
     name: 'Information Technology',
+    createdBy: SYSTEM_USER_ID,
+  });
+
+  await seedOrgStructure(prisma, {
+    companyId: company.id,
     createdBy: SYSTEM_USER_ID,
   });
 
