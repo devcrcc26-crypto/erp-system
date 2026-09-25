@@ -1,19 +1,22 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Button, Skeleton } from 'antd';
-import { ArrowLeft, CircleCheck, ExternalLink, ListChecks } from 'lucide-react';
+import type { ColumnsType } from 'antd/es/table';
+import { ArrowLeft, ExternalLink, ListChecks } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
-  DateTile,
   FieldMovementStatusBadge,
   FlagBadge,
   ReasonBadge,
   formatLongDate,
 } from '@/components/modules/attendance/field-movement-display';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useSetBreadcrumbLabel } from '@/hooks/use-set-breadcrumb-label';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type {
   AttendanceDayFlag,
@@ -77,16 +80,6 @@ function appliedCorrection(
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
-function entryTone(log: FieldMovementLog): string {
-  if (log.status === 'APPROVED') {
-    return 'ready';
-  }
-  if (log.status === 'REJECTED' || log.status === 'CANCELLED') {
-    return 'plain';
-  }
-  return 'pending';
-}
-
 /**
  * HR detail for one field movement / early departure log.
  */
@@ -99,15 +92,111 @@ export default function FieldMovementLogDetailPageContent({
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const detailQuery = useFieldMovementLog(logId, canViewHr);
+  const log = detailQuery.data;
 
-  useSetHeaderExtra(
-    <Button
-      icon={<ArrowLeft size={16} aria-hidden />}
-      onClick={() => router.push('/hr/field-movement-logs')}
-    >
-      Back to logs
-    </Button>,
+  useSetHeaderExtra(null);
+  useSetBreadcrumbLabel(
+    log
+      ? `${log.requestNumber}${
+          log.employee ? ` · ${formatUserName(log.employee)}` : ''
+        }`
+      : null,
   );
+
+  const showAppliedColumn = log?.status === 'APPROVED';
+
+  const columns = useMemo((): ColumnsType<FieldMovementLogEntry> => {
+    const cols: ColumnsType<FieldMovementLogEntry> = [
+      {
+        title: 'Date',
+        key: 'date',
+        width: 180,
+        fixed: 'left',
+        sorter: (a, b) =>
+          new Date(a.date).getTime() - new Date(b.date).getTime(),
+        defaultSortOrder: 'ascend',
+        render: (_value, entry) => formatLongDate(entry.date),
+      },
+      {
+        title: 'Flag',
+        key: 'flag',
+        width: 160,
+        render: (_value, entry) => <FlagBadge flag={entryFlag(entry)} />,
+      },
+      {
+        title: 'Reason',
+        key: 'reason',
+        width: 150,
+        render: (_value, entry) => <ReasonBadge reason={entry.reason} />,
+      },
+      {
+        title: 'Destination',
+        dataIndex: 'destination',
+        key: 'destination',
+        width: 180,
+        ellipsis: true,
+        render: (value: string | null) => value?.trim() || '—',
+      },
+      {
+        title: 'Left at',
+        dataIndex: 'departureTime',
+        key: 'departureTime',
+        width: 100,
+        render: (value: string | null, entry) => {
+          if (
+            entry.reason !== 'FIELD_VISIT' &&
+            entry.reason !== 'EARLY_LEAVE'
+          ) {
+            return '—';
+          }
+          return value ?? '—';
+        },
+      },
+      {
+        title: 'Returned at',
+        dataIndex: 'returnTime',
+        key: 'returnTime',
+        width: 120,
+        render: (value: string | null, entry) => {
+          if (entry.reason !== 'FIELD_VISIT') {
+            return '—';
+          }
+          return value ?? 'Did not return';
+        },
+      },
+      {
+        title: 'Recorded in / out',
+        key: 'recorded',
+        width: 140,
+        render: (_value, entry) => {
+          if (!entry.dailyLog) {
+            return '—';
+          }
+          return `${entry.dailyLog.clockInLocal ?? '—'} / ${entry.dailyLog.clockOutLocal ?? '—'}`;
+        },
+      },
+      {
+        title: 'Notes',
+        dataIndex: 'notes',
+        key: 'notes',
+        width: 220,
+        ellipsis: true,
+        render: (value: string | null) => value?.trim() || '—',
+      },
+    ];
+
+    if (showAppliedColumn && log) {
+      cols.push({
+        title: 'Applied to attendance',
+        key: 'applied',
+        width: 260,
+        ellipsis: true,
+        render: (_value, entry) => appliedCorrection(log, entry) ?? '—',
+      });
+    }
+
+    return cols;
+  }, [log, showAppliedColumn]);
 
   if (!canViewHr) {
     return (
@@ -128,7 +217,16 @@ export default function FieldMovementLogDetailPageContent({
 
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className="erp-pro-list-page erp-users-page flex flex-col gap-4">
+        <div>
+          <Button
+            type="text"
+            icon={<ArrowLeft size={16} aria-hidden />}
+            onClick={() => router.push('/hr/field-movement-logs')}
+          >
+            {t('hr.buttons.back')}
+          </Button>
+        </div>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -141,15 +239,15 @@ export default function FieldMovementLogDetailPageContent({
     );
   }
 
-  const log = detailQuery.data;
-  const entries = log.entries ?? [];
-  const employeeName = log.employee ? formatUserName(log.employee) : '—';
-  const periodLabel = new Date(log.year, log.month - 1, 1).toLocaleString(
-    'en',
-    { month: 'long', year: 'numeric' },
-  );
-  const tiers = (log.approvalRequest?.tiers ?? []) as ApprovalTier[];
-  const tone = entryTone(log);
+  const entries = log?.entries ?? [];
+  const employeeName = log?.employee ? formatUserName(log.employee) : '—';
+  const periodLabel = log
+    ? new Date(log.year, log.month - 1, 1).toLocaleString('en', {
+        month: 'long',
+        year: 'numeric',
+      })
+    : '—';
+  const tiers = (log?.approvalRequest?.tiers ?? []) as ApprovalTier[];
 
   return (
     <div className="fm-page erp-pro-list-page erp-users-page erp-employee-detail-page flex flex-col gap-4">
@@ -157,20 +255,31 @@ export default function FieldMovementLogDetailPageContent({
         <div className="fm-card__body">
           <div className="fm-page-header">
             <div className="min-w-0">
+              <div className="mb-2">
+                <Button
+                  type="text"
+                  icon={<ArrowLeft size={16} aria-hidden />}
+                  onClick={() => router.push('/hr/field-movement-logs')}
+                  aria-label={t('hr.buttons.backToList')}
+                  className="-ml-2"
+                >
+                  {t('hr.buttons.back')}
+                </Button>
+              </div>
               <p className="fm-eyebrow">
-                Field movement log · {log.requestNumber}
+                Field movement log · {log?.requestNumber}
               </p>
               <h1 className="fm-h1">{employeeName}</h1>
               <p className="fm-lead">
-                {log.employee?.employeeId
+                {log?.employee?.employeeId
                   ? `${log.employee.employeeId} · `
                   : ''}
                 {periodLabel}
               </p>
             </div>
             <div className="fm-actions items-center">
-              <FieldMovementStatusBadge status={log.status} />
-              {log.approvalRequestId ? (
+              {log ? <FieldMovementStatusBadge status={log.status} /> : null}
+              {log?.approvalRequestId ? (
                 <Button
                   icon={<ExternalLink size={16} aria-hidden />}
                   onClick={() =>
@@ -190,17 +299,17 @@ export default function FieldMovementLogDetailPageContent({
             </div>
             <div>
               <dt>Days explained</dt>
-              <dd>{entries.length || log.entryCount || 0}</dd>
+              <dd>{entries.length || log?.entryCount || 0}</dd>
             </div>
             <div>
               <dt>Submitted</dt>
-              <dd>{formatDateTime(log.submittedAt)}</dd>
+              <dd>{formatDateTime(log?.submittedAt ?? null)}</dd>
             </div>
             <div>
               <dt>Completed</dt>
-              <dd>{formatDateTime(log.completedAt)}</dd>
+              <dd>{formatDateTime(log?.completedAt ?? null)}</dd>
             </div>
-            {log.currentTierLabel &&
+            {log?.currentTierLabel &&
             (log.status === 'SUBMITTED' || log.status === 'IN_REVIEW') ? (
               <div>
                 <dt>Waiting on</dt>
@@ -209,7 +318,7 @@ export default function FieldMovementLogDetailPageContent({
             ) : null}
           </dl>
 
-          {log.notes?.trim() ? (
+          {log?.notes?.trim() ? (
             <p className="fm-quote">
               <span className="fm-quote__label">Note from the employee</span>
               {log.notes}
@@ -225,97 +334,38 @@ export default function FieldMovementLogDetailPageContent({
             : 'flex flex-col gap-4'
         }
       >
-        <section aria-labelledby="fm-entries-title" className="fm-stack">
-          <div className="flex items-center gap-2">
-            <ListChecks size={18} aria-hidden className="text-[var(--fm-accent)]" />
-            <h2 id="fm-entries-title" className="fm-card__title">
-              Explained days ({entries.length})
-            </h2>
-          </div>
+        <section aria-labelledby="fm-entries-title" className="fm-card">
+          <div className="fm-card__body !p-0">
+            <div className="flex items-center gap-2 border-b border-[var(--fm-border,#E5E7EB)] px-4 py-3">
+              <ListChecks
+                size={18}
+                aria-hidden
+                className="text-[var(--fm-accent)]"
+              />
+              <h2 id="fm-entries-title" className="fm-card__title m-0">
+                Explained days ({entries.length})
+              </h2>
+            </div>
 
-          {entries.length === 0 ? (
-            <p className="fm-results-line">This log has no entries.</p>
-          ) : (
-            <ul className="fm-day-list">
-              {entries.map((entry) => {
-                const correction = appliedCorrection(log, entry);
-                const recordedIn = entry.dailyLog?.clockInLocal;
-                const recordedOut = entry.dailyLog?.clockOutLocal;
-                return (
-                  <li key={entry.id} className={`fm-day fm-day--${tone}`}>
-                    <div className="fm-day__header">
-                      <DateTile date={entry.date} />
-                      <div className="fm-day__main">
-                        <h3 className="fm-day__title">
-                          {formatLongDate(entry.date)}
-                        </h3>
-                        <div className="fm-badge-row">
-                          <FlagBadge flag={entryFlag(entry)} />
-                          <ReasonBadge reason={entry.reason} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="fm-day__content fm-stack">
-                      <dl className="fm-facts">
-                        {entry.destination ? (
-                          <div>
-                            <dt>Destination</dt>
-                            <dd>{entry.destination}</dd>
-                          </div>
-                        ) : null}
-                        {entry.reason === 'FIELD_VISIT' ||
-                        entry.reason === 'EARLY_LEAVE' ? (
-                          <div>
-                            <dt>Left at</dt>
-                            <dd>{entry.departureTime ?? '—'}</dd>
-                          </div>
-                        ) : null}
-                        {entry.reason === 'FIELD_VISIT' ? (
-                          <div>
-                            <dt>Returned at</dt>
-                            <dd>{entry.returnTime ?? 'Did not return'}</dd>
-                          </div>
-                        ) : null}
-                        {entry.dailyLog ? (
-                          <div>
-                            <dt>Recorded clock-in / out</dt>
-                            <dd>
-                              {recordedIn ?? '—'} / {recordedOut ?? '—'}
-                            </dd>
-                          </div>
-                        ) : null}
-                      </dl>
-                      {entry.notes?.trim() ? (
-                        <p className="fm-quote">
-                          <span className="fm-quote__label">
-                            {entry.reason === 'EARLY_LEAVE'
-                              ? 'Reason for leaving early'
-                              : 'Notes'}
-                          </span>
-                          {entry.notes}
-                        </p>
-                      ) : null}
-                      {correction ? (
-                        <p className="fm-note fm-note--success">
-                          <CircleCheck
-                            size={16}
-                            aria-hidden
-                            className="mt-0.5 shrink-0"
-                          />
-                          <span>
-                            <strong>Applied to attendance:</strong> {correction}
-                          </span>
-                        </p>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+            {entries.length === 0 ? (
+              <p className="fm-results-line px-4 py-6">
+                This log has no entries.
+              </p>
+            ) : (
+              <DataTable<FieldMovementLogEntry>
+                rowKey="id"
+                className="erp-pro-table erp-users-table"
+                size="small"
+                columns={columns}
+                dataSource={entries}
+                pagination={false}
+                scroll={{ x: showAppliedColumn ? 1400 : 1200 }}
+              />
+            )}
+          </div>
         </section>
 
-        {tiers.length > 0 ? (
+        {tiers.length > 0 && log ? (
           <aside aria-label="Approval progress">
             <ApprovalTierTimeline
               tiers={tiers}

@@ -678,6 +678,11 @@
           "importAnother": "导入其他月份"
         }
       },
+      "fieldMovementLogs": {
+        "listTitle": "外勤 / 早退说明",
+        "detail": "外勤 / 早退说明详情",
+        "listDescription": "审核员工对缺卡上班、缺卡下班和早退的说明。"
+      },
       "flight": {
         "new": "新建机票申请",
         "detail": "机票申请",

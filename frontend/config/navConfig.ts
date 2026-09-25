@@ -73,6 +73,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/company-asset': 'nav.hr.companyAssets',
   '/hr/company-asset/new': 'pages.hr.companyAsset.new',
   '/hr/attendance': 'nav.hr.attendance',
+  '/hr/field-movement-logs': 'nav.hr.fieldMovementLogs',
   '/hr/employee-evaluation': 'nav.hr.employeeEvaluation',
   '/hr/equipment-and-materials-exit-permit': 'pages.hr.exitPermit.listTitle',
   '/hr/equipment-and-materials-exit-permit/new': 'pages.hr.exitPermit.new',
@@ -158,6 +159,11 @@ const APPROVAL_NEW_ROUTE_META: Record<
     listHref: '/hr/project-seal',
     listLabelKey: 'nav.hr.projectSeal',
   },
+  '/approvals/new/field-movement-log': {
+    titleKey: 'pages.approvals.categories.FIELD_MOVEMENT_LOG.name',
+    listHref: '/hr/field-movement-logs',
+    listLabelKey: 'nav.hr.fieldMovementLogs',
+  },
 };
 
 /** Route → page subtitle (description) i18n keys for MainContentHeader. */
@@ -174,6 +180,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/overtime-history/me': 'pages.hr.overtimeHistory.myDescription',
   '/hr/overtime': 'pages.hr.overtime.listDescription',
   '/hr/attendance': 'pages.hr.attendance.listDescription',
+  '/hr/field-movement-logs': 'pages.hr.fieldMovementLogs.listDescription',
   '/hr/expense-claims': 'pages.hr.expenseClaim.listDescription',
   '/hr/purchase-requests': 'pages.hr.purchaseRequest.listDescription',
   '/hr/material-requisition': 'pages.hr.materialRequisition.listDescription',
@@ -381,6 +388,32 @@ function resolveRouteMetaCore(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.groups.humanResources') },
         { label: t('pages.hr.attendance.listTitle') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/field-movement-logs') {
+    return {
+      titleKey: 'pages.hr.fieldMovementLogs.listTitle',
+      descriptionKey: 'pages.hr.fieldMovementLogs.listDescription',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.fieldMovementLogs.listTitle') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/field-movement-logs/')) {
+    return {
+      titleKey: 'pages.hr.fieldMovementLogs.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        {
+          label: t('pages.hr.fieldMovementLogs.listTitle'),
+          href: '/hr/field-movement-logs',
+        },
+        { label: t('pages.hr.fieldMovementLogs.detail') },
       ],
     };
   }

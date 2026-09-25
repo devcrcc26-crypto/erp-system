@@ -678,6 +678,11 @@
           "importAnother": "Import Another Month"
         }
       },
+      "fieldMovementLogs": {
+        "listTitle": "Field Movement Logs",
+        "detail": "Field Movement Log",
+        "listDescription": "Review employee explanations for missing clock-ins, missing clock-outs, and early departures."
+      },
       "flight": {
         "new": "New Flight Application",
         "detail": "Flight Application",
