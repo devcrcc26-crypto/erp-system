@@ -3,47 +3,31 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 /** Canonical per diem destination category labels stored on requests. */
 export const PER_DIEM_DESTINATION_CATEGORIES = [
-  'Americas',
-  'Asia',
   'Domestic',
-  'East Africa',
-  'Europe',
-  'Middle East',
-  'Other Africa',
+  'Regional',
+  'International',
 ] as const;
 
 export type PerDiemDestinationCategory =
   (typeof PER_DIEM_DESTINATION_CATEGORIES)[number];
 
-type RateField =
-  | 'americasRate'
-  | 'asiaRate'
-  | 'domesticRate'
-  | 'eastAfricaRate'
-  | 'europeRate'
-  | 'middleEastRate'
-  | 'otherAfricaRate';
+type RateField = 'domesticRate' | 'regionalRate' | 'internationalRate';
 
 type ActiveField =
-  | 'americasActive'
-  | 'asiaActive'
   | 'domesticActive'
-  | 'eastAfricaActive'
-  | 'europeActive'
-  | 'middleEastActive'
-  | 'otherAfricaActive';
+  | 'regionalActive'
+  | 'internationalActive';
 
 const CATEGORY_FIELD_MAP: Record<
   PerDiemDestinationCategory,
   { rate: RateField; active: ActiveField }
 > = {
-  Americas: { rate: 'americasRate', active: 'americasActive' },
-  Asia: { rate: 'asiaRate', active: 'asiaActive' },
   Domestic: { rate: 'domesticRate', active: 'domesticActive' },
-  'East Africa': { rate: 'eastAfricaRate', active: 'eastAfricaActive' },
-  Europe: { rate: 'europeRate', active: 'europeActive' },
-  'Middle East': { rate: 'middleEastRate', active: 'middleEastActive' },
-  'Other Africa': { rate: 'otherAfricaRate', active: 'otherAfricaActive' },
+  Regional: { rate: 'regionalRate', active: 'regionalActive' },
+  International: {
+    rate: 'internationalRate',
+    active: 'internationalActive',
+  },
 };
 
 export interface ResolvedEmployeePerDiemCategoryRate {

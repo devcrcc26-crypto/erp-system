@@ -336,7 +336,7 @@ const CATEGORIES: CategorySeedDef[] = [
     code: 'BUSINESS_TRIP',
     name: 'Third-Country Business Trip',
     description:
-      'Application for international business travel requiring GM approval.',
+      'Application for official travel to a third country (outside Ethiopia and China). Requires GM approval.',
     module: 'HR',
     numberPrefix: 'BT',
     icon: 'GlobalOutlined',
@@ -622,62 +622,6 @@ const CATEGORIES: CategorySeedDef[] = [
         tiers: [
           tier('Department Head', 'DEPARTMENT_HEAD', 1),
           tier('Finance Manager', 'FINANCE_MANAGER', 2),
-          tier('General Manager', 'GENERAL_MANAGER', 3),
-        ],
-      },
-    ],
-  },
-  {
-    code: 'BUSINESS_TRIP_THIRD_COUNTRY',
-    name: 'Third-Country Business Trip',
-    description:
-      'Application for an official business trip to a third country.',
-    module: 'HR',
-    numberPrefix: 'BTT',
-    icon: 'GlobalOutlined',
-    sortOrder: 130,
-    formSchema: {
-      fields: [
-        {
-          name: 'destination',
-          label: 'Destination',
-          type: 'text',
-          required: true,
-        },
-        { name: 'country', label: 'Country', type: 'text', required: true },
-        {
-          name: 'departureDate',
-          label: 'Departure Date',
-          type: 'date',
-          required: true,
-        },
-        {
-          name: 'returnDate',
-          label: 'Return Date',
-          type: 'date',
-          required: true,
-        },
-        { name: 'purpose', label: 'Purpose', type: 'textarea', required: true },
-        {
-          name: 'estimatedCost',
-          label: 'Estimated Cost',
-          type: 'currency',
-          required: true,
-        },
-        {
-          name: 'visaRequired',
-          label: 'Visa Required',
-          type: 'checkbox',
-          required: false,
-        },
-      ],
-    },
-    approvalRules: [
-      {
-        name: 'Default',
-        tiers: [
-          tier('Department Head', 'DEPARTMENT_HEAD', 1),
-          tier('HR Manager', 'HR_MANAGER', 2),
           tier('General Manager', 'GENERAL_MANAGER', 3),
         ],
       },

@@ -36,13 +36,9 @@ const RATE_FIELDS = PER_DIEM_DESTINATION_CATEGORIES.map(
 );
 
 const CATEGORY_ACCENT: Record<PerDiemDestinationCategory, string> = {
-  Americas: '#2563eb',
-  Asia: '#7c3aed',
   Domestic: '#1d9e75',
-  'East Africa': '#0d9488',
-  Europe: '#0369a1',
-  'Middle East': '#d4610a',
-  'Other Africa': '#64748b',
+  Regional: '#0d9488',
+  International: '#0369a1',
 };
 
 function toNumber(value: number | string | null | undefined): number | null {
@@ -80,6 +76,7 @@ function PerDiemProfileSection({
 function PerDiemRateCard({
   category,
   label,
+  description,
   rateField,
   activeField,
   accent,
@@ -94,6 +91,7 @@ function PerDiemRateCard({
 }: {
   category: PerDiemDestinationCategory;
   label: string;
+  description: string;
   rateField: string;
   activeField: string;
   accent: string;
@@ -119,7 +117,10 @@ function PerDiemRateCard({
           style={{ background: isActive ? accent : '#cbd5e1' }}
           aria-hidden
         />
-        <p className="erp-per-diem-rate-label">{label}</p>
+        <div className="min-w-0 flex-1">
+          <p className="erp-per-diem-rate-label">{label}</p>
+          <p className="erp-per-diem-rate-meta m-0 mt-0.5">{description}</p>
+        </div>
         {editable ? (
           <Form.Item
             name={activeField}
@@ -252,20 +253,12 @@ export default function EmployeePerDiemRatesSection({
     try {
       await saveMutation.mutateAsync({
         currency: values.currency,
-        americasRate: toNumber(values.americasRate),
-        asiaRate: toNumber(values.asiaRate),
         domesticRate: toNumber(values.domesticRate),
-        eastAfricaRate: toNumber(values.eastAfricaRate),
-        europeRate: toNumber(values.europeRate),
-        middleEastRate: toNumber(values.middleEastRate),
-        otherAfricaRate: toNumber(values.otherAfricaRate),
-        americasActive: Boolean(values.americasActive),
-        asiaActive: Boolean(values.asiaActive),
+        regionalRate: toNumber(values.regionalRate),
+        internationalRate: toNumber(values.internationalRate),
         domesticActive: Boolean(values.domesticActive),
-        eastAfricaActive: Boolean(values.eastAfricaActive),
-        europeActive: Boolean(values.europeActive),
-        middleEastActive: Boolean(values.middleEastActive),
-        otherAfricaActive: Boolean(values.otherAfricaActive),
+        regionalActive: Boolean(values.regionalActive),
+        internationalActive: Boolean(values.internationalActive),
       });
       messageApi.success(t('hr.messages.employeePerDiemRatesSaved'));
     } catch (error: unknown) {
@@ -393,13 +386,14 @@ export default function EmployeePerDiemRatesSection({
       ) : (
         <div className="erp-per-diem-rate-grid">
           {PER_DIEM_DESTINATION_CATEGORIES.map((category) => {
-            const { rate, active, labelKey } =
+            const { rate, active, labelKey, descriptionKey } =
               PER_DIEM_CATEGORY_FIELDS[category];
             return (
               <PerDiemRateCard
                 key={category}
                 category={category}
                 label={t(labelKey)}
+                description={t(descriptionKey)}
                 rateField={rate}
                 activeField={active}
                 accent={CATEGORY_ACCENT[category]}

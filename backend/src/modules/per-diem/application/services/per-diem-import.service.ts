@@ -101,7 +101,7 @@ export class PerDiemImportService {
     sheet.addRow({
       employeeEmail: 'employee@company.local',
       employeeId: '',
-      destinationCategory: 'East Africa',
+      destinationCategory: 'Regional',
       destination: 'Nairobi',
       startDate: today,
       endDate: today,

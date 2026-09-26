@@ -77,7 +77,7 @@
       "projectSeal": "Project Seal Usage",
       "vehicleRefueling": "Vehicle Refueling",
       "inspectionRepair": "Inspection & Repair",
-      "businessTrips": "Business Trips",
+      "businessTrips": "Third-Country Business Trips",
       "reports": "HR Reports",
       "perDiem": "Per Diem",
       "employeePerDiemRates": "Employee Per Diem Rates",
@@ -183,7 +183,7 @@
         },
         "BUSINESS_TRIP": {
           "name": "Third-Country Business Trip",
-          "description": "Application for international business travel requiring GM approval."
+          "description": "Application for official travel to a third country (outside Ethiopia and China). Requires GM approval."
         },
         "VEHICLE_APPLICATION": {
           "name": "Vehicle Application",
@@ -208,10 +208,6 @@
         "INSPECTION_REPAIR": {
           "name": "Inspection and Repair",
           "description": "Request for equipment inspection, maintenance, or repair."
-        },
-        "BUSINESS_TRIP_THIRD_COUNTRY": {
-          "name": "Third-Country Business Trip",
-          "description": "Application for an official business trip to a third country."
         },
         "EXIT_PERMIT": {
           "name": "Exit Permit",
@@ -785,14 +781,14 @@
         }
       },
       "businessTrip": {
-        "new": "New Business Trip",
-        "detail": "Business Trip",
-        "listTitle": "Business Trips",
-        "myListTitle": "My Business Trips",
-        "listDescription": "Submit and track international business trips through the approval workflow.",
-        "myListDescription": "View and submit your own business trip requests.",
+        "new": "New Third-Country Business Trip",
+        "detail": "Third-Country Business Trip",
+        "listTitle": "Third-Country Business Trips",
+        "myListTitle": "My Third-Country Business Trips",
+        "listDescription": "Submit and track international business trips to third countries through the approval workflow.",
+        "myListDescription": "View and submit your own third-country business trip requests.",
         "formDescription": "Enter trip details, purpose, budget, and passengers, then review and submit.",
-        "tripStepDescription": "Set the international route, dates, and ticket class.",
+        "tripStepDescription": "Set the international route, dates, and ticket class for your third-country trip.",
         "purposeStepDescription": "Describe the trip purpose, host, and expected outcomes.",
         "budgetStepDescription": "Estimate flight, lodging, per diem, and other costs in ETB.",
         "passengersStepDescription": "Select travelers and enter passport and visa details.",
@@ -801,10 +797,10 @@
         "reviewStepDescription": "Confirm the trip summary before submitting for approval.",
         "searchPlaceholder": "Search by trip # or destination",
         "emptyFiltered": "No business trips match your filters",
-        "exportSheetName": "Business Trips",
+        "exportSheetName": "Third-Country Business Trips",
         "exportPassengersSheetName": "Business Trip Passengers",
         "exportTripPassengersSheetName": "Passengers",
-        "exportSuccess": "Business trips Excel downloaded.",
+        "exportSuccess": "Third-country business trips Excel downloaded.",
         "exportPassengersSuccess": "Business trip passengers Excel downloaded.",
         "exportError": "Failed to export business trips Excel.",
         "exportTrips": "Export trips",
@@ -3912,13 +3908,12 @@
       "OTHER": "Other (specify)"
     },
     "perDiemCategory": {
-      "americas": "Americas",
-      "asia": "Asia",
-      "domestic": "Domestic",
-      "eastAfrica": "East Africa",
-      "europe": "Europe",
-      "middleEast": "Middle East",
-      "otherAfrica": "Other Africa"
+      "domestic": "Domestic (Ethiopia)",
+      "regional": "Regional (Neighboring Countries)",
+      "international": "International",
+      "domesticDescription": "Ethiopia — daily rate in ETB",
+      "regionalDescription": "Neighboring countries — Uganda, Kenya, Tanzania, Rwanda, etc.",
+      "internationalDescription": "All other countries — Middle East, Asia, Europe, Americas"
     },
     "inspectionType": {
       "INSPECTION": "Inspection",

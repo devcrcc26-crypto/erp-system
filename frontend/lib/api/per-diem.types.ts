@@ -21,20 +21,12 @@ export interface EmployeePerDiemRate {
   id: string;
   companyId: string;
   employeeId: string;
-  americasRate?: number | string | null;
-  asiaRate?: number | string | null;
   domesticRate?: number | string | null;
-  eastAfricaRate?: number | string | null;
-  europeRate?: number | string | null;
-  middleEastRate?: number | string | null;
-  otherAfricaRate?: number | string | null;
-  americasActive: boolean;
-  asiaActive: boolean;
+  regionalRate?: number | string | null;
+  internationalRate?: number | string | null;
   domesticActive: boolean;
-  eastAfricaActive: boolean;
-  europeActive: boolean;
-  middleEastActive: boolean;
-  otherAfricaActive: boolean;
+  regionalActive: boolean;
+  internationalActive: boolean;
   currency: SupportedCurrency;
   createdAt: string;
   updatedAt: string;
@@ -48,20 +40,12 @@ export interface EmployeePerDiemActiveCategory {
 }
 
 export interface UpsertEmployeePerDiemRatePayload {
-  americasRate?: number | null;
-  asiaRate?: number | null;
   domesticRate?: number | null;
-  eastAfricaRate?: number | null;
-  europeRate?: number | null;
-  middleEastRate?: number | null;
-  otherAfricaRate?: number | null;
-  americasActive?: boolean;
-  asiaActive?: boolean;
+  regionalRate?: number | null;
+  internationalRate?: number | null;
   domesticActive?: boolean;
-  eastAfricaActive?: boolean;
-  europeActive?: boolean;
-  middleEastActive?: boolean;
-  otherAfricaActive?: boolean;
+  regionalActive?: boolean;
+  internationalActive?: boolean;
   currency?: SupportedCurrency;
 }
 

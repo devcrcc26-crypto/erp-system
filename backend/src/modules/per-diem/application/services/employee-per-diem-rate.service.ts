@@ -25,18 +25,11 @@ import {
   mapEmployeePerDiemRateResponse,
 } from '../../infrastructure/mappers/employee-per-diem-rate.mapper';
 
-const DEFAULT_RATES: Omit<
-  UpsertEmployeePerDiemRateDto,
-  'currency'
-> & { currency: 'ETB' | 'USD' } = {
+const DEFAULT_RATES = {
   domesticRate: 500,
-  eastAfricaRate: 30,
-  otherAfricaRate: 50,
-  middleEastRate: 60,
-  asiaRate: 70,
-  europeRate: 80,
-  americasRate: 80,
-  currency: 'ETB',
+  regionalRate: 80,
+  internationalRate: 150,
+  currency: 'ETB' as const,
 };
 
 /**
@@ -91,7 +84,10 @@ export class EmployeePerDiemRateService {
         : {}),
     });
 
-    const orderBy = buildOrderBy(query.sortBy ?? 'lastName', query.sortOrder ?? 'asc');
+    const orderBy = buildOrderBy(
+      query.sortBy ?? 'lastName',
+      query.sortOrder ?? 'asc',
+    );
 
     const [total, users] = await Promise.all([
       this.prisma.user.count({ where }),
@@ -220,7 +216,10 @@ export class EmployeePerDiemRateService {
       employeeId,
       actorUserId,
     );
-    const resolved = resolveEmployeePerDiemCategoryRate(row, destinationCategory);
+    const resolved = resolveEmployeePerDiemCategoryRate(
+      row,
+      destinationCategory,
+    );
     if (!resolved) {
       throw new BadRequestException(
         `No per diem rate configured for "${destinationCategory}"`,
@@ -256,13 +255,12 @@ export class EmployeePerDiemRateService {
         id: randomUUID(),
         companyId,
         employeeId,
-        domesticRate: new Prisma.Decimal(DEFAULT_RATES.domesticRate ?? 0),
-        eastAfricaRate: new Prisma.Decimal(DEFAULT_RATES.eastAfricaRate ?? 0),
-        otherAfricaRate: new Prisma.Decimal(DEFAULT_RATES.otherAfricaRate ?? 0),
-        middleEastRate: new Prisma.Decimal(DEFAULT_RATES.middleEastRate ?? 0),
-        asiaRate: new Prisma.Decimal(DEFAULT_RATES.asiaRate ?? 0),
-        europeRate: new Prisma.Decimal(DEFAULT_RATES.europeRate ?? 0),
-        americasRate: new Prisma.Decimal(DEFAULT_RATES.americasRate ?? 0),
+        domesticRate: new Prisma.Decimal(DEFAULT_RATES.domesticRate),
+        regionalRate: new Prisma.Decimal(DEFAULT_RATES.regionalRate),
+        internationalRate: new Prisma.Decimal(DEFAULT_RATES.internationalRate),
+        domesticActive: true,
+        regionalActive: true,
+        internationalActive: true,
         currency: DEFAULT_RATES.currency,
         createdBy: actorUserId,
         updatedBy: actorUserId,
@@ -274,49 +272,29 @@ export class EmployeePerDiemRateService {
     dto: UpsertEmployeePerDiemRateDto,
   ): Pick<
     Prisma.EmployeePerDiemRateUncheckedCreateInput,
-    | 'americasRate'
-    | 'asiaRate'
     | 'domesticRate'
-    | 'eastAfricaRate'
-    | 'europeRate'
-    | 'middleEastRate'
-    | 'otherAfricaRate'
-    | 'americasActive'
-    | 'asiaActive'
+    | 'regionalRate'
+    | 'internationalRate'
     | 'domesticActive'
-    | 'eastAfricaActive'
-    | 'europeActive'
-    | 'middleEastActive'
-    | 'otherAfricaActive'
+    | 'regionalActive'
+    | 'internationalActive'
     | 'currency'
   > {
     const data: Pick<
       Prisma.EmployeePerDiemRateUncheckedCreateInput,
-      | 'americasRate'
-      | 'asiaRate'
       | 'domesticRate'
-      | 'eastAfricaRate'
-      | 'europeRate'
-      | 'middleEastRate'
-      | 'otherAfricaRate'
-      | 'americasActive'
-      | 'asiaActive'
+      | 'regionalRate'
+      | 'internationalRate'
       | 'domesticActive'
-      | 'eastAfricaActive'
-      | 'europeActive'
-      | 'middleEastActive'
-      | 'otherAfricaActive'
+      | 'regionalActive'
+      | 'internationalActive'
       | 'currency'
     > = {};
 
     const rateFields = [
-      'americasRate',
-      'asiaRate',
       'domesticRate',
-      'eastAfricaRate',
-      'europeRate',
-      'middleEastRate',
-      'otherAfricaRate',
+      'regionalRate',
+      'internationalRate',
     ] as const;
 
     for (const field of rateFields) {
@@ -327,13 +305,9 @@ export class EmployeePerDiemRateService {
     }
 
     const activeFields = [
-      'americasActive',
-      'asiaActive',
       'domesticActive',
-      'eastAfricaActive',
-      'europeActive',
-      'middleEastActive',
-      'otherAfricaActive',
+      'regionalActive',
+      'internationalActive',
     ] as const;
 
     for (const field of activeFields) {

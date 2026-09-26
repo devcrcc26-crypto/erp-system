@@ -22,16 +22,12 @@ interface EmployeePerDiemRateImportPayload {
 /** Destination categories, in the order the rate form shows them. */
 const CATEGORIES = [
   { field: 'domesticRate', active: 'domesticActive', label: 'Domestic' },
-  { field: 'eastAfricaRate', active: 'eastAfricaActive', label: 'East Africa' },
+  { field: 'regionalRate', active: 'regionalActive', label: 'Regional' },
   {
-    field: 'otherAfricaRate',
-    active: 'otherAfricaActive',
-    label: 'Other Africa',
+    field: 'internationalRate',
+    active: 'internationalActive',
+    label: 'International',
   },
-  { field: 'middleEastRate', active: 'middleEastActive', label: 'Middle East' },
-  { field: 'asiaRate', active: 'asiaActive', label: 'Asia' },
-  { field: 'europeRate', active: 'europeActive', label: 'Europe' },
-  { field: 'americasRate', active: 'americasActive', label: 'Americas' },
 ] as const;
 
 const EMPLOYEE_PER_DIEM_RATE_IMPORT_SCHEMA: ImportColumnSchema = {

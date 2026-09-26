@@ -183,7 +183,7 @@
         },
         "BUSINESS_TRIP": {
           "name": "第三国出差",
-          "description": "需总经理审批的国际公务出行申请。"
+          "description": "赴第三国（埃塞俄比亚与中国以外）公务出行申请。需总经理审批。"
         },
         "VEHICLE_APPLICATION": {
           "name": "用车申请",
@@ -208,10 +208,6 @@
         "INSPECTION_REPAIR": {
           "name": "检修申请",
           "description": "设备检查、保养或维修申请。"
-        },
-        "BUSINESS_TRIP_THIRD_COUNTRY": {
-          "name": "第三国出差",
-          "description": "赴第三国公务出差申请。"
         },
         "EXIT_PERMIT": {
           "name": "出入证",
@@ -785,14 +781,14 @@
         }
       },
       "businessTrip": {
-        "new": "新建出差申请",
-        "detail": "出差申请",
+        "new": "新建第三国出差",
+        "detail": "第三国出差",
         "listTitle": "第三国出差",
-        "myListTitle": "我的出差申请",
-        "listDescription": "提交并跟踪国际出差审批流程。",
-        "myListDescription": "查看并提交您的出差申请。",
+        "myListTitle": "我的第三国出差",
+        "listDescription": "通过审批流程提交并跟踪赴第三国的国际出差申请。",
+        "myListDescription": "查看并提交您的第三国出差申请。",
         "formDescription": "填写行程、目的、预算与乘客信息，确认后提交审批。",
-        "tripStepDescription": "设置国际航线、日期与舱位。",
+        "tripStepDescription": "设置第三国国际航线、日期与舱位。",
         "purposeStepDescription": "填写出行目的、接待方与预期成果。",
         "budgetStepDescription": "估算机票、住宿、差旅补贴及其他费用（ETB）。",
         "passengersStepDescription": "选择出行人员并填写护照与签证信息。",
@@ -804,7 +800,7 @@
         "exportSheetName": "第三国出差",
         "exportPassengersSheetName": "出差乘客",
         "exportTripPassengersSheetName": "乘客",
-        "exportSuccess": "出差申请 Excel 已下载。",
+        "exportSuccess": "第三国出差 Excel 已下载。",
         "exportPassengersSuccess": "出差乘客 Excel 已下载。",
         "exportError": "导出出差申请 Excel 失败。",
         "exportTrips": "导出申请",
@@ -3912,13 +3908,12 @@
       "OTHER": "其他（请填写）"
     },
     "perDiemCategory": {
-      "americas": "美洲",
-      "asia": "亚洲",
-      "domestic": "国内",
-      "eastAfrica": "东非",
-      "europe": "欧洲",
-      "middleEast": "中东",
-      "otherAfrica": "其他非洲地区"
+      "domestic": "国内 (埃塞俄比亚)",
+      "regional": "周边国家",
+      "international": "国际",
+      "domesticDescription": "埃塞俄比亚 — 日补贴（ETB）",
+      "regionalDescription": "周边国家 — 乌干达、肯尼亚、坦桑尼亚、卢旺达等",
+      "internationalDescription": "其他国家 — 中东、亚洲、欧洲、美洲"
     },
     "inspectionType": {
       "INSPECTION": "检查",

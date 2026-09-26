@@ -70,16 +70,12 @@ export function buildPerDiemRequestExportSheets(
 /** Destination categories in the order the rate form shows them. */
 const RATE_CATEGORIES = [
   { label: 'Domestic', rate: 'domesticRate', active: 'domesticActive' },
-  { label: 'East Africa', rate: 'eastAfricaRate', active: 'eastAfricaActive' },
+  { label: 'Regional', rate: 'regionalRate', active: 'regionalActive' },
   {
-    label: 'Other Africa',
-    rate: 'otherAfricaRate',
-    active: 'otherAfricaActive',
+    label: 'International',
+    rate: 'internationalRate',
+    active: 'internationalActive',
   },
-  { label: 'Middle East', rate: 'middleEastRate', active: 'middleEastActive' },
-  { label: 'Asia', rate: 'asiaRate', active: 'asiaActive' },
-  { label: 'Europe', rate: 'europeRate', active: 'europeActive' },
-  { label: 'Americas', rate: 'americasRate', active: 'americasActive' },
 ] as const;
 
 /**

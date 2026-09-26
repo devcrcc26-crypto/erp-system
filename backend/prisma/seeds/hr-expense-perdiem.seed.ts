@@ -1,4 +1,4 @@
-ï»¿/**
+/**
  * Wipes and reseeds expense claims + per diem requests with 10 realistic
  * records each, including full approval chains and ETB totals.
  *
@@ -57,9 +57,9 @@ interface ExpenseItemDraft {
   date: string;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 // Approval chain helpers (mirrors hr-test-data.seed.ts)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 
 function buildTierDecisions(
   tiers: { order: number; label: string; approverId: string; resolver: string }[],
@@ -119,7 +119,7 @@ function buildTierDecisions(
 }
 
 /**
- * Builds a Discipline Lead â†’ HR Officer â†’ (optional) General Manager approval
+ * Builds a Discipline Lead ¡ú HR Officer ¡ú (optional) General Manager approval
  * request whose tier decisions already reflect the requested final status.
  */
 async function createApprovalChain(
@@ -215,9 +215,9 @@ async function createApprovalChain(
   return { id: approvalRequest.id, requestNumber: approvalRequest.requestNumber };
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 // Exchange rate helper (standalone - no Nest DI)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 
 function todayDateOnly(): Date {
   const now = new Date();
@@ -295,7 +295,7 @@ async function getExchangeRate(
   });
   if (lastKnown) {
     console.warn(
-      `âš  Using last-known ${fromCurrency}->ETB rate ${Number(lastKnown.rate)} (API unavailable)`,
+      `? Using last-known ${fromCurrency}->ETB rate ${Number(lastKnown.rate)} (API unavailable)`,
     );
     return Number(lastKnown.rate);
   }
@@ -307,14 +307,14 @@ async function getExchangeRate(
         ? 16.5
         : 1;
   console.warn(
-    `âš  Using static fallback ${fromCurrency}->ETB rate ${fallback}`,
+    `? Using static fallback ${fromCurrency}->ETB rate ${fallback}`,
   );
   return fallback;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 // Wipe
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 
 async function wipeExpenseAndPerDiem(companyId: string): Promise<void> {
   console.log('Wiping existing expense claim + per diem data...');
@@ -341,9 +341,9 @@ async function wipeExpenseAndPerDiem(companyId: string): Promise<void> {
   console.log('Wipe complete.');
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 // Expense claims
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 
 async function seedExpenseClaims(
   ctx: ChainContext,
@@ -533,16 +533,16 @@ async function seedExpenseClaims(
     });
 
     console.log(
-      `âœ“ Expense claim ${claimNumber} created - ${claim.items.length} items - ETB ${totalEtb.toFixed(2)}`,
+      `? Expense claim ${claimNumber} created - ${claim.items.length} items - ETB ${totalEtb.toFixed(2)}`,
     );
   }
 
-  console.log('âœ“ Expense claims seeded');
+  console.log('? Expense claims seeded');
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 // Per diem requests
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 
 async function ensureEmployeePerDiemRate(
   companyId: string,
@@ -562,12 +562,8 @@ async function ensureEmployeePerDiemRate(
       companyId,
       employeeId,
       domesticRate: 500,
-      eastAfricaRate: 30,
-      otherAfricaRate: 50,
-      middleEastRate: 60,
-      asiaRate: 70,
-      europeRate: 80,
-      americasRate: 80,
+      regionalRate: 80,
+      internationalRate: 150,
       currency: SupportedCurrency.ETB,
       createdBy: actorUserId,
       updatedBy: actorUserId,
@@ -578,25 +574,17 @@ async function ensureEmployeePerDiemRate(
 
 function resolveCategoryRate(
   row: {
-    americasRate: { toString(): string } | null;
-    asiaRate: { toString(): string } | null;
     domesticRate: { toString(): string } | null;
-    eastAfricaRate: { toString(): string } | null;
-    europeRate: { toString(): string } | null;
-    middleEastRate: { toString(): string } | null;
-    otherAfricaRate: { toString(): string } | null;
+    regionalRate: { toString(): string } | null;
+    internationalRate: { toString(): string } | null;
     currency: SupportedCurrency;
   },
   destinationCategory: string,
 ): { dailyRate: number; currency: SupportedCurrency } | null {
   const map: Record<string, { toString(): string } | null> = {
-    Americas: row.americasRate,
-    Asia: row.asiaRate,
     Domestic: row.domesticRate,
-    'East Africa': row.eastAfricaRate,
-    Europe: row.europeRate,
-    'Middle East': row.middleEastRate,
-    'Other Africa': row.otherAfricaRate,
+    Regional: row.regionalRate,
+    International: row.internationalRate,
   };
   const value = map[destinationCategory];
   if (value == null) {
@@ -631,7 +619,7 @@ async function seedPerDiemRequests(
   }> = [
     {
       employee: weiChen,
-      destinationCategory: 'East Africa',
+      destinationCategory: 'Regional',
       destination: 'Nairobi, Kenya',
       startDate: '2026-08-15',
       endDate: '2026-08-20',
@@ -653,7 +641,7 @@ async function seedPerDiemRequests(
     },
     {
       employee: weiChen,
-      destinationCategory: 'Asia',
+      destinationCategory: 'International',
       destination: 'Cairo, Egypt',
       startDate: '2026-10-05',
       endDate: '2026-10-09',
@@ -664,7 +652,7 @@ async function seedPerDiemRequests(
     },
     {
       employee: xiaomingLi,
-      destinationCategory: 'Middle East',
+      destinationCategory: 'International',
       destination: 'Dubai, UAE',
       startDate: '2026-09-10',
       endDate: '2026-09-14',
@@ -686,7 +674,7 @@ async function seedPerDiemRequests(
     },
     {
       employee: otherEmployees[0],
-      destinationCategory: 'Other Africa',
+      destinationCategory: 'International',
       destination: 'Johannesburg, South Africa',
       startDate: '2026-09-20',
       endDate: '2026-09-25',
@@ -708,7 +696,7 @@ async function seedPerDiemRequests(
     },
     {
       employee: otherEmployees[1],
-      destinationCategory: 'East Africa',
+      destinationCategory: 'Regional',
       destination: 'Dar es Salaam, Tanzania',
       startDate: '2026-08-25',
       endDate: '2026-08-28',
@@ -719,7 +707,7 @@ async function seedPerDiemRequests(
     },
     {
       employee: otherEmployees[2],
-      destinationCategory: 'Asia',
+      destinationCategory: 'International',
       destination: 'Beijing, China',
       startDate: '2026-09-01',
       endDate: '2026-09-07',
@@ -730,7 +718,7 @@ async function seedPerDiemRequests(
     },
     {
       employee: otherEmployees[3],
-      destinationCategory: 'Other Africa',
+      destinationCategory: 'International',
       destination: 'Lagos, Nigeria',
       startDate: '2026-08-30',
       endDate: '2026-09-03',
@@ -750,13 +738,13 @@ async function seedPerDiemRequests(
       },
     });
     if (!employeeRateRow) {
-      console.warn(`âš  No employee per diem rate for ${pd.employee.id} - skipping`);
+      console.warn(`? No employee per diem rate for ${pd.employee.id} - skipping`);
       continue;
     }
 
     const rate = resolveCategoryRate(employeeRateRow, pd.destinationCategory);
     if (!rate) {
-      console.warn(`âš  No rate found for ${pd.destinationCategory} - skipping`);
+      console.warn(`? No rate found for ${pd.destinationCategory} - skipping`);
       continue;
     }
 
@@ -819,16 +807,16 @@ async function seedPerDiemRequests(
     });
 
     console.log(
-      `âœ“ Per diem ${requestNumber} - ${pd.destination} - ${days} days - ETB ${totalAmountEtb.toFixed(2)}`,
+      `? Per diem ${requestNumber} - ${pd.destination} - ${days} days - ETB ${totalAmountEtb.toFixed(2)}`,
     );
   }
 
-  console.log('âœ“ Per diem requests seeded');
+  console.log('? Per diem requests seeded');
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 // Runner
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 
 async function main(): Promise<void> {
   console.log('Starting expense claim + per diem seed...');
@@ -935,7 +923,7 @@ async function main(): Promise<void> {
     },
   });
 
-  console.log('\nâœ“ Expense claims + per diem seed complete');
+  console.log('\n? Expense claims + per diem seed complete');
   console.log(`  Expense claims: ${claimCount} (${itemCount} line items)`);
   console.log(`  Per diem:       ${perDiemCount} (${linkedCount} with flight/trip links)`);
 }

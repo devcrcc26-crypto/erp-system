@@ -241,12 +241,12 @@ export const projectSealImportSchema: HrImportModuleSchema = {
 
 const RATE_CATEGORIES = [
   { field: 'domesticRate', active: 'domesticActive', label: 'Domestic' },
-  { field: 'eastAfricaRate', active: 'eastAfricaActive', label: 'East Africa' },
-  { field: 'otherAfricaRate', active: 'otherAfricaActive', label: 'Other Africa' },
-  { field: 'middleEastRate', active: 'middleEastActive', label: 'Middle East' },
-  { field: 'asiaRate', active: 'asiaActive', label: 'Asia' },
-  { field: 'europeRate', active: 'europeActive', label: 'Europe' },
-  { field: 'americasRate', active: 'americasActive', label: 'Americas' },
+  { field: 'regionalRate', active: 'regionalActive', label: 'Regional' },
+  {
+    field: 'internationalRate',
+    active: 'internationalActive',
+    label: 'International',
+  },
 ] as const;
 
 export const employeePerDiemRateImportSchema: HrImportModuleSchema = {
