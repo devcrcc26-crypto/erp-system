@@ -20,10 +20,23 @@ export class CurrencyService {
   private readonly logger = new Logger(CurrencyService.name);
   private readonly FRANKFURTER_URL = 'https://api.frankfurter.dev/v2';
 
+  /** Fallback rates — used when Frankfurter is unreachable. */
+  private readonly FALLBACK_RATES: Partial<
+    Record<SupportedCurrency, Partial<Record<SupportedCurrency, number>>>
+  > = {
+    [SupportedCurrency.USD]: {
+      [SupportedCurrency.ETB]: 57.5,
+    },
+    [SupportedCurrency.CNY]: {
+      [SupportedCurrency.ETB]: 7.9,
+    },
+  };
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Returns the conversion rate from `fromCurrency` to `toCurrency`, cached per day.
+   * Falls back to hardcoded rates, then to the most recent cached rate from any day.
    */
   async getRate(
     fromCurrency: SupportedCurrency,
@@ -43,29 +56,46 @@ export class CurrencyService {
       return Number(cached.rate);
     }
 
-    const rate = await this.fetchFromFrankfurter(fromCurrency, toCurrency);
+    try {
+      const rate = await this.fetchFromFrankfurter(fromCurrency, toCurrency);
 
-    await this.prisma.exchangeRate.upsert({
-      where: {
-        companyId_fromCurrency_toCurrency_fetchedAt: {
+      await this.prisma.exchangeRate.upsert({
+        where: {
+          companyId_fromCurrency_toCurrency_fetchedAt: {
+            companyId,
+            fromCurrency,
+            toCurrency,
+            fetchedAt: today,
+          },
+        },
+        create: {
+          id: randomUUID(),
           companyId,
           fromCurrency,
           toCurrency,
+          rate,
           fetchedAt: today,
         },
-      },
-      create: {
-        id: randomUUID(),
-        companyId,
-        fromCurrency,
-        toCurrency,
-        rate,
-        fetchedAt: today,
-      },
-      update: { rate },
-    });
+        update: { rate },
+      });
 
-    return rate;
+      return rate;
+    } catch {
+      const mostRecent = await this.prisma.exchangeRate.findFirst({
+        where: { companyId, fromCurrency, toCurrency },
+        orderBy: { fetchedAt: 'desc' },
+      });
+      if (mostRecent) {
+        this.logger.warn(
+          `Using stale cached rate for ${fromCurrency}->${toCurrency} from ${mostRecent.fetchedAt.toISOString()}`,
+        );
+        return Number(mostRecent.rate);
+      }
+
+      throw new BadGatewayException(
+        `Unable to fetch exchange rate for ${fromCurrency}->${toCurrency}.`,
+      );
+    }
   }
 
   /**
@@ -98,12 +128,18 @@ export class CurrencyService {
     return { USD: usdRate, CNY: cnyRate, ETB: 1 };
   }
 
+  /**
+   * Fetches a rate from Frankfurter with a timeout; uses hardcoded fallbacks on failure.
+   */
   private async fetchFromFrankfurter(
     from: SupportedCurrency,
     to: SupportedCurrency,
   ): Promise<number> {
     try {
-      const res = await fetch(`${this.FRANKFURTER_URL}/rate/${from}/${to}`);
+      const res = await fetch(
+        `${this.FRANKFURTER_URL}/rate/${from}/${to}`,
+        { signal: AbortSignal.timeout(5000) },
+      );
       if (!res.ok) {
         throw new Error(`Frankfurter responded with status ${res.status}`);
       }
@@ -113,13 +149,22 @@ export class CurrencyService {
       }
       return data.rate;
     } catch (error: unknown) {
-      this.logger.error(
-        `Failed to fetch exchange rate ${from}->${to}: ${
+      this.logger.warn(
+        `Failed to fetch exchange rate ${from}->${to} from Frankfurter: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        } — using fallback rate`,
       );
+
+      const fallback = this.FALLBACK_RATES[from]?.[to];
+      if (fallback != null) {
+        this.logger.warn(
+          `Using fallback rate for ${from}->${to}: ${fallback}`,
+        );
+        return fallback;
+      }
+
       throw new BadGatewayException(
-        'Unable to fetch current exchange rates. Please try again shortly.',
+        `Unable to fetch exchange rate for ${from}->${to}. Please try again shortly.`,
       );
     }
   }

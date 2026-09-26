@@ -88,6 +88,9 @@ export default function FlightTripDetailsStep({
                     ? {
                         isInternational: true,
                         originCountry: values.originCountry || 'Ethiopia',
+                        destinationCountry: '',
+                        destinationCity: '',
+                        destination: '',
                       }
                     : {
                         isInternational: false,
@@ -114,7 +117,7 @@ export default function FlightTripDetailsStep({
                 </label>
                 <CountrySelector
                   value={values.originCountry}
-                  onChange={(val) => patch({ originCountry: val })}
+                  onChange={(country) => patch({ originCountry: country })}
                   defaultCountry="Ethiopia"
                   placeholder={t('hr.placeholder.selectOriginCountry')}
                 />
@@ -126,11 +129,11 @@ export default function FlightTripDetailsStep({
                   {t('hr.form.originCity')}{' '}
                   <span className="text-[#DC2626]">*</span>
                 </label>
-                <Input
+                <CitySelector
+                  countryName={values.originCountry}
                   value={values.originCity}
-                  onChange={(e) => patch({ originCity: e.target.value })}
-                  placeholder="e.g. Addis Ababa"
-                  maxLength={100}
+                  onChange={(val) => patch({ originCity: val })}
+                  placeholder="Select or type origin city"
                 />
               </div>
             </Col>
@@ -144,7 +147,14 @@ export default function FlightTripDetailsStep({
                 </label>
                 <CountrySelector
                   value={values.destinationCountry}
-                  onChange={(val) => patch({ destinationCountry: val })}
+                  onChange={(country) =>
+                    patch({
+                      destinationCountry: country,
+                      destinationCity: '',
+                      destination: '',
+                    })
+                  }
+                  excludeCountries={['Ethiopia']}
                   placeholder={t('hr.placeholder.selectDestinationCountry')}
                 />
               </div>
@@ -155,16 +165,13 @@ export default function FlightTripDetailsStep({
                   {t('hr.form.destinationCity')}{' '}
                   <span className="text-[#DC2626]">*</span>
                 </label>
-                <Input
+                <CitySelector
+                  countryName={values.destinationCountry}
                   value={values.destinationCity ?? values.destination}
-                  onChange={(e) =>
-                    patch({
-                      destination: e.target.value,
-                      destinationCity: e.target.value,
-                    })
+                  onChange={(val) =>
+                    patch({ destination: val, destinationCity: val })
                   }
-                  placeholder="e.g. Nairobi, Dubai"
-                  maxLength={100}
+                  placeholder="Select or type destination city"
                 />
               </div>
             </Col>
@@ -178,7 +185,7 @@ export default function FlightTripDetailsStep({
               <span className="text-[#DC2626]">*</span>
             </label>
             <CitySelector
-              cities={ETHIOPIA_CITIES}
+              staticCities={ETHIOPIA_CITIES}
               value={values.originCity}
               onChange={(val) =>
                 patch({ originCity: val, originCountry: 'Ethiopia' })
@@ -192,7 +199,7 @@ export default function FlightTripDetailsStep({
               <span className="text-[#DC2626]">*</span>
             </label>
             <CitySelector
-              cities={ETHIOPIA_CITIES}
+              staticCities={ETHIOPIA_CITIES}
               value={values.destinationCity ?? values.destination}
               onChange={(val) =>
                 patch({

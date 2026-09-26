@@ -2,32 +2,58 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Input, Select } from 'antd';
-import { WORLD_COUNTRIES } from '@/lib/constants/world-countries';
+import { Country } from 'country-state-city';
+import { getPerDiemCategoryForCountry } from '@/lib/constants/world-countries';
+import type { PerDiemDestinationCategory } from '@/lib/constants/per-diem-destination-categories';
 
 export interface CountrySelectorProps {
   value?: string;
-  onChange?: (value: string) => void;
+  onChange?: (
+    value: string,
+    category: PerDiemDestinationCategory | null,
+  ) => void;
   placeholder?: string;
   defaultCountry?: string;
+  /** Country names to omit from the dropdown (e.g. Ethiopia on international destinations). */
+  excludeCountries?: readonly string[];
 }
 
 /**
- * Searchable country select with an "Other (specify)" free-text fallback.
+ * Searchable country select backed by country-state-city, with an "Other" free-text fallback.
  */
 export default function CountrySelector({
   value,
   onChange,
   placeholder = 'Select country',
   defaultCountry,
+  excludeCountries = [],
 }: CountrySelectorProps): React.ReactNode {
   const countries = useMemo(() => {
-    if (defaultCountry && !WORLD_COUNTRIES.includes(defaultCountry)) {
-      return [defaultCountry, ...WORLD_COUNTRIES];
-    }
-    return WORLD_COUNTRIES;
-  }, [defaultCountry]);
+    const excluded = new Set(excludeCountries);
+    const list = Country.getAllCountries()
+      .map((country) => ({
+        value: country.name,
+        label: country.name,
+        isoCode: country.isoCode,
+      }))
+      .filter((country) => !excluded.has(country.value));
 
-  const isOther = Boolean(value && !countries.includes(value));
+    if (
+      defaultCountry &&
+      !excluded.has(defaultCountry) &&
+      !list.some((country) => country.value === defaultCountry)
+    ) {
+      return [
+        { value: defaultCountry, label: defaultCountry, isoCode: '' },
+        ...list,
+      ];
+    }
+    return list;
+  }, [defaultCountry, excludeCountries]);
+
+  const isOther = Boolean(
+    value && !countries.some((country) => country.value === value),
+  );
   const [showCustom, setShowCustom] = useState(isOther);
   const [selectValue, setSelectValue] = useState<string | undefined>(
     isOther ? '__other__' : (value ?? undefined),
@@ -35,7 +61,9 @@ export default function CountrySelector({
   const [customValue, setCustomValue] = useState(isOther ? (value ?? '') : '');
 
   useEffect(() => {
-    const nextIsOther = Boolean(value && !countries.includes(value));
+    const nextIsOther = Boolean(
+      value && !countries.some((country) => country.value === value),
+    );
     setShowCustom(nextIsOther);
     setSelectValue(nextIsOther ? '__other__' : (value || undefined));
     setCustomValue(nextIsOther ? (value ?? '') : '');
@@ -46,12 +74,12 @@ export default function CountrySelector({
     if (val === '__other__') {
       setShowCustom(true);
       setCustomValue('');
-      onChange?.('');
+      onChange?.('', null);
       return;
     }
     setShowCustom(false);
     setCustomValue('');
-    onChange?.(val);
+    onChange?.(val, getPerDiemCategoryForCountry(val));
   }
 
   return (
@@ -63,17 +91,15 @@ export default function CountrySelector({
         showSearch
         optionFilterProp="label"
         className="w-full"
+        virtual
         filterOption={(input, option) =>
           String(option?.label ?? '')
             .toLowerCase()
             .includes(input.toLowerCase())
         }
         options={[
-          ...countries.map((country) => ({
-            value: country,
-            label: country,
-          })),
-          { value: '__other__', label: 'Other (specify)' },
+          ...countries,
+          { value: '__other__', label: 'Other (specify)', isoCode: '' },
         ]}
       />
       {showCustom ? (
@@ -82,10 +108,10 @@ export default function CountrySelector({
           value={customValue}
           onChange={(event) => {
             setCustomValue(event.target.value);
-            onChange?.(event.target.value);
+            onChange?.(event.target.value, null);
           }}
           suffix={
-            <span className="text-[11px] text-[var(--color-text-tertiary,#9CA3AF)]">
+            <span className="text-[11px] text-[var(--color-amber-500,#F59E0B)]">
               Manual entry — per diem category needs manual selection
             </span>
           }

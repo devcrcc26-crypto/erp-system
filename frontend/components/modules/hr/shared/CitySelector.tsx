@@ -1,27 +1,49 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Input, Select } from 'antd';
+import { City, Country } from 'country-state-city';
 
 export interface CitySelectorProps {
   value?: string;
   onChange?: (value: string) => void;
   placeholder?: string;
-  cities: readonly string[];
+  /** Country name used to load cities from country-state-city. */
+  countryName?: string;
+  /** Static city list (e.g. Ethiopia domestic flights). */
+  staticCities?: readonly string[];
 }
 
 /**
- * Searchable city select with an "Other (specify)" free-text fallback.
+ * Searchable city select — either from a static list or country-state-city.
+ * Falls back to a plain text input when the library has no cities for the country.
  */
 export default function CitySelector({
   value,
   onChange,
   placeholder,
-  cities,
+  countryName,
+  staticCities,
 }: CitySelectorProps): React.ReactNode {
-  const isOther = Boolean(
-    value && !(cities as readonly string[]).includes(value),
-  );
+  const libraryCities = useMemo(() => {
+    if (staticCities || !countryName) {
+      return [];
+    }
+    const country = Country.getAllCountries().find(
+      (entry) => entry.name === countryName,
+    );
+    if (!country) {
+      return [];
+    }
+    const cities = City.getCitiesOfCountry(country.isoCode) ?? [];
+    return cities.map((city) => city.name).sort((a, b) => a.localeCompare(b));
+  }, [countryName, staticCities]);
+
+  const cities = staticCities
+    ? ([...staticCities] as string[])
+    : libraryCities;
+
+  const isOther = Boolean(value && !cities.includes(value));
   const [showCustom, setShowCustom] = useState(isOther);
   const [selectValue, setSelectValue] = useState<string | undefined>(
     isOther ? '__other__' : (value ?? undefined),
@@ -29,9 +51,7 @@ export default function CitySelector({
   const [customValue, setCustomValue] = useState(isOther ? (value ?? '') : '');
 
   useEffect(() => {
-    const nextIsOther = Boolean(
-      value && !(cities as readonly string[]).includes(value),
-    );
+    const nextIsOther = Boolean(value && !cities.includes(value));
     setShowCustom(nextIsOther);
     setSelectValue(nextIsOther ? '__other__' : (value || undefined));
     setCustomValue(nextIsOther ? (value ?? '') : '');
@@ -50,6 +70,17 @@ export default function CitySelector({
     onChange?.(val);
   }
 
+  if (!staticCities && cities.length === 0) {
+    return (
+      <Input
+        value={value}
+        onChange={(event) => onChange?.(event.target.value)}
+        placeholder={placeholder ?? 'Enter city name'}
+        maxLength={100}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       <Select
@@ -59,16 +90,15 @@ export default function CitySelector({
         showSearch
         optionFilterProp="label"
         className="w-full"
+        virtual
+        notFoundContent="No cities found — type to search"
         filterOption={(input, option) =>
           String(option?.label ?? '')
             .toLowerCase()
             .includes(input.toLowerCase())
         }
         options={[
-          ...(cities as readonly string[]).map((city) => ({
-            value: city,
-            label: city,
-          })),
+          ...cities.map((city) => ({ value: city, label: city })),
           { value: '__other__', label: 'Other (specify)' },
         ]}
       />
@@ -81,7 +111,7 @@ export default function CitySelector({
             onChange?.(event.target.value);
           }}
           suffix={
-            <span className="text-[11px] text-[var(--color-text-tertiary,#9CA3AF)]">
+            <span className="text-[11px] text-[var(--color-amber-500,#F59E0B)]">
               Manual entry
             </span>
           }

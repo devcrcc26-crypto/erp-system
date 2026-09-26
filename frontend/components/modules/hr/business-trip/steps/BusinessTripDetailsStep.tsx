@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Col, DatePicker, Input, Radio, Row, Select } from 'antd';
+import { Col, DatePicker, Radio, Row, Select } from 'antd';
+import CitySelector from '@/components/modules/hr/shared/CitySelector';
 import CountrySelector from '@/components/modules/hr/shared/CountrySelector';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { PER_DIEM_DESTINATION_CATEGORIES } from '@/lib/constants/per-diem-destination-categories';
+import type { PerDiemDestinationCategory } from '@/lib/constants/per-diem-destination-categories';
 import { getPerDiemCategoryForCountry } from '@/lib/constants/world-countries';
 import type { BusinessTripDetailsValues } from './business-trip-stepper.types';
 import {
@@ -47,8 +49,10 @@ export default function BusinessTripDetailsStep({
     onChange({ ...values, ...partial });
   }
 
-  function handleCountryChange(country: string): void {
-    const category = getPerDiemCategoryForCountry(country);
+  function handleDestinationCountryChange(
+    country: string,
+    category: PerDiemDestinationCategory | null,
+  ): void {
     if (category) {
       setDetectedCategory(category);
       setCategoryManual(false);
@@ -103,7 +107,7 @@ export default function BusinessTripDetailsStep({
             </label>
             <CountrySelector
               value={values.originCountry}
-              onChange={(val) => patch({ originCountry: val })}
+              onChange={(country) => patch({ originCountry: country })}
               defaultCountry="Ethiopia"
               placeholder={t('hr.placeholder.selectOriginCountry')}
             />
@@ -115,11 +119,11 @@ export default function BusinessTripDetailsStep({
               {t('hr.form.originCity')}{' '}
               <span className="text-[#DC2626]">*</span>
             </label>
-            <Input
+            <CitySelector
+              countryName={values.originCountry}
               value={values.originCity}
-              onChange={(e) => patch({ originCity: e.target.value })}
-              placeholder="e.g. Addis Ababa"
-              maxLength={100}
+              onChange={(val) => patch({ originCity: val })}
+              placeholder="Select or type origin city"
             />
           </div>
         </Col>
@@ -134,7 +138,8 @@ export default function BusinessTripDetailsStep({
             </label>
             <CountrySelector
               value={values.destinationCountry}
-              onChange={handleCountryChange}
+              onChange={handleDestinationCountryChange}
+              excludeCountries={['Ethiopia']}
               placeholder={t('hr.placeholder.selectDestinationCountry')}
             />
           </div>
@@ -145,11 +150,11 @@ export default function BusinessTripDetailsStep({
               {t('hr.form.destinationCity')}{' '}
               <span className="text-[#DC2626]">*</span>
             </label>
-            <Input
+            <CitySelector
+              countryName={values.destinationCountry}
               value={values.destinationCity}
-              onChange={(e) => patch({ destinationCity: e.target.value })}
-              placeholder="e.g. Kampala, Dubai, Berlin"
-              maxLength={100}
+              onChange={(val) => patch({ destinationCity: val })}
+              placeholder="Select or type city"
             />
           </div>
         </Col>
