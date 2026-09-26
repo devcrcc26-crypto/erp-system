@@ -102,21 +102,47 @@ export default function PerDiemRequestForm({
 
   const travelOptions = useMemo(
     () => [
+      {
+        value: '',
+        label: t('hr.placeholder.noLinkedTravel'),
+      },
       ...(flightsQuery.data?.data ?? [])
         .filter((flight) => flight.submittedBy === onBehalf.effectiveEmployeeId)
         .map((flight) => ({
-        value: `flight:${flight.id}`,
-        label: `Flight ${flight.applicationNumber} — ${flight.destination}`,
-      })),
+          value: `flight:${flight.id}`,
+          label: `${flight.isInternational ? t('hr.labels.intlFlightPrefix') : t('hr.labels.flightPrefix')} ${flight.applicationNumber} — ${flight.destination}`,
+        })),
       ...(tripsQuery.data?.data ?? [])
         .filter((trip) => trip.submittedBy === onBehalf.effectiveEmployeeId)
         .map((trip) => ({
-        value: `trip:${trip.id}`,
-        label: `Business Trip ${trip.tripNumber} — ${trip.destinationCountry}`,
-      })),
+          value: `trip:${trip.id}`,
+          label: `${t('hr.labels.businessTripPrefix')} ${trip.tripNumber} — ${
+            trip.destinationCity
+              ? `${trip.destinationCity}, ${trip.destinationCountry}`
+              : trip.destinationCountry
+          }`,
+        })),
     ],
-    [flightsQuery.data?.data, tripsQuery.data?.data, onBehalf.effectiveEmployeeId],
+    [
+      flightsQuery.data?.data,
+      tripsQuery.data?.data,
+      onBehalf.effectiveEmployeeId,
+      t,
+    ],
   );
+
+  const linkedKind = useMemo(() => {
+    const val = formValues?.linkedTravel ?? '';
+    if (val.startsWith('flight:')) {
+      const flightId = val.replace('flight:', '');
+      const flight = flightsQuery.data?.data.find((f) => f.id === flightId);
+      return flight?.isInternational ? 'international-flight' : 'domestic-flight';
+    }
+    if (val.startsWith('trip:')) {
+      return 'trip';
+    }
+    return 'none';
+  }, [formValues?.linkedTravel, flightsQuery.data?.data]);
 
   const categoryOptions = useMemo(
     () =>
@@ -147,10 +173,10 @@ export default function PerDiemRequestForm({
   const linkedTravelLabel = useMemo(() => {
     const value = formValues?.linkedTravel;
     if (!value) {
-      return '—';
+      return t('hr.labels.standalonePerDiem');
     }
     return travelOptions.find((option) => option.value === value)?.label ?? '—';
-  }, [formValues?.linkedTravel, travelOptions]);
+  }, [formValues?.linkedTravel, travelOptions, t]);
 
   const noActiveRates =
     !ratesQuery.isLoading && (ratesQuery.data?.length ?? 0) === 0;
@@ -159,6 +185,57 @@ export default function PerDiemRequestForm({
     onBehalf.reset();
     form.resetFields();
     setFormError(null);
+  }
+
+  function handleLinkedTravelChange(val: string | null | undefined): void {
+    const linked = val ?? '';
+    form.setFieldValue('linkedTravel', linked || undefined);
+
+    if (!linked) {
+      return;
+    }
+
+    if (linked.startsWith('flight:')) {
+      const flightId = linked.replace('flight:', '');
+      const flight = flightsQuery.data?.data.find((f) => f.id === flightId);
+      if (!flight) {
+        return;
+      }
+      if (!flight.isInternational) {
+        form.setFieldValue('destinationCategory', 'Domestic');
+      }
+      if (flight.destination) {
+        form.setFieldValue('destination', flight.destination);
+      }
+      if (flight.departureDate) {
+        const start = dayjs(flight.departureDate);
+        const end = flight.returnDate ? dayjs(flight.returnDate) : start;
+        form.setFieldValue('dateRange', [start, end]);
+      }
+      return;
+    }
+
+    if (linked.startsWith('trip:')) {
+      const tripId = linked.replace('trip:', '');
+      const trip = tripsQuery.data?.data.find((item) => item.id === tripId);
+      if (!trip) {
+        return;
+      }
+      if (trip.perDiemCategory) {
+        form.setFieldValue('destinationCategory', trip.perDiemCategory);
+      }
+      const dest = [trip.destinationCity, trip.destinationCountry]
+        .filter(Boolean)
+        .join(', ');
+      if (dest) {
+        form.setFieldValue('destination', dest);
+      }
+      if (trip.departureDate) {
+        const start = dayjs(trip.departureDate);
+        const end = trip.returnDate ? dayjs(trip.returnDate) : start;
+        form.setFieldValue('dateRange', [start, end]);
+      }
+    }
   }
 
   async function validateFields(
@@ -270,24 +347,56 @@ export default function PerDiemRequestForm({
               title={t('hr.form.destinationCategory')}
               description={t('pages.hr.perDiem.destinationStepDescription')}
             >
+              <Form.Item
+                name="linkedTravel"
+                label={t('hr.form.linkedTravel')}
+                extra={t('hr.messages.linkedTravelHint')}
+                className="mb-4"
+              >
+                <Select
+                  allowClear
+                  placeholder={t('hr.placeholder.selectLinkedTravel')}
+                  options={travelOptions}
+                  onChange={handleLinkedTravelChange}
+                />
+              </Form.Item>
+
               <div className="erp-form-grid-2">
-                <Form.Item
-                  name="destinationCategory"
-                  label={t('hr.form.destinationCategory')}
-                  rules={[
-                    {
-                      required: true,
-                      message: t('hr.validation.selectDestinationCategory'),
-                    },
-                  ]}
-                >
-                  <Select
-                    loading={ratesQuery.isLoading}
-                    placeholder={t('hr.placeholder.selectDestinationCategory')}
-                    options={categoryOptions}
-                    disabled={noActiveRates}
-                  />
-                </Form.Item>
+                {linkedKind === 'domestic-flight' ? (
+                  <>
+                    <Form.Item name="destinationCategory" hidden>
+                      <Input />
+                    </Form.Item>
+                    <div
+                      className="erp-notice erp-notice--success"
+                      style={{ padding: '8px 12px' }}
+                    >
+                      <span className="text-xs">
+                        {t('hr.messages.domesticRateAutoApplied')}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <Form.Item
+                    name="destinationCategory"
+                    label={t('hr.form.destinationCategory')}
+                    rules={[
+                      {
+                        required: true,
+                        message: t('hr.validation.selectDestinationCategory'),
+                      },
+                    ]}
+                  >
+                    <Select
+                      loading={ratesQuery.isLoading}
+                      placeholder={t(
+                        'hr.placeholder.selectDestinationCategory',
+                      )}
+                      options={categoryOptions}
+                      disabled={noActiveRates}
+                    />
+                  </Form.Item>
+                )}
                 <Form.Item
                   name="destination"
                   label={t('hr.form.specificDestination')}
@@ -336,14 +445,6 @@ export default function PerDiemRequestForm({
                 className="w-full"
                 picker="date"
                 format="YYYY-MM-DD"
-              />
-            </Form.Item>
-
-            <Form.Item name="linkedTravel" label={t('hr.form.linkedTravel')}>
-              <Select
-                allowClear
-                placeholder={t('hr.placeholder.selectLinkedTravel')}
-                options={travelOptions}
               />
             </Form.Item>
 
@@ -444,6 +545,7 @@ export default function PerDiemRequestForm({
       formValues,
       dateRange,
       linkedTravelLabel,
+      linkedKind,
       days,
       selectedRate,
       totalAmount,

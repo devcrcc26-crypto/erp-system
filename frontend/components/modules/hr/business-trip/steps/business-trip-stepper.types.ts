@@ -13,6 +13,8 @@ export interface BusinessTripDetailsValues {
   originCity: string;
   destinationCountry: string;
   destinationCity: string;
+  /** Auto-detected or manually selected per diem destination category. */
+  perDiemCategory?: string;
   departureDate: Dayjs | null;
   returnDate: Dayjs | null;
   ticketClass: FlightTicketClass;

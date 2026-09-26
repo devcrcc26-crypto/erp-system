@@ -36,10 +36,11 @@ export interface BusinessTripFormProps {
 
 const INITIAL_TRIP: BusinessTripDetailsValues = {
   tripType: 'ONE_WAY',
-  originCountry: '',
+  originCountry: 'Ethiopia',
   originCity: '',
   destinationCountry: '',
   destinationCity: '',
+  perDiemCategory: undefined,
   departureDate: null,
   returnDate: null,
   ticketClass: 'ECONOMY',
@@ -252,6 +253,7 @@ export function BusinessTripForm({
         originCity: tripDetails.originCity.trim(),
         destinationCountry: tripDetails.destinationCountry.trim(),
         destinationCity: tripDetails.destinationCity.trim(),
+        perDiemCategory: tripDetails.perDiemCategory?.trim() || undefined,
         departureDate: tripDetails.departureDate.toISOString(),
         returnDate:
           tripDetails.tripType === 'ROUND_TRIP' && tripDetails.returnDate

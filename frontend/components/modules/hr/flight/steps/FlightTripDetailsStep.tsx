@@ -10,9 +10,12 @@ import {
   Row,
   Select,
 } from 'antd';
+import CitySelector from '@/components/modules/hr/shared/CitySelector';
+import CountrySelector from '@/components/modules/hr/shared/CountrySelector';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { ETHIOPIA_CITIES } from '@/lib/constants/ethiopia-cities';
 import type { FlightTripDetailsValues } from './flight-stepper.types';
 import {
   getDisabledDepartureDate,
@@ -78,7 +81,21 @@ export default function FlightTripDetailsStep({
           <div className="mb-4 flex items-center sm:pt-7">
             <Checkbox
               checked={values.isInternational}
-              onChange={(e) => patch({ isInternational: e.target.checked })}
+              onChange={(e) => {
+                const isInternational = e.target.checked;
+                patch(
+                  isInternational
+                    ? {
+                        isInternational: true,
+                        originCountry: values.originCountry || 'Ethiopia',
+                      }
+                    : {
+                        isInternational: false,
+                        originCountry: 'Ethiopia',
+                        destinationCountry: 'Ethiopia',
+                      },
+                );
+              }}
             >
               {t('hr.form.isInternational')}
             </Checkbox>
@@ -86,49 +103,109 @@ export default function FlightTripDetailsStep({
         </Col>
       </Row>
 
-      <Row gutter={[16, 0]}>
-        <Col xs={24} sm={12}>
-          <div className="mb-4">
-            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
-              {t('hr.form.originCountry')}{' '}
-              <span className="text-[#DC2626]">*</span>
-            </label>
-            <Input
-              value={values.originCountry}
-              onChange={(e) => patch({ originCountry: e.target.value })}
-              placeholder={t('hr.placeholder.enterDestination')}
-              maxLength={100}
-            />
-          </div>
-        </Col>
-        <Col xs={24} sm={12}>
+      {values.isInternational ? (
+        <>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={12}>
+              <div className="mb-4">
+                <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+                  {t('hr.form.originCountry')}{' '}
+                  <span className="text-[#DC2626]">*</span>
+                </label>
+                <CountrySelector
+                  value={values.originCountry}
+                  onChange={(val) => patch({ originCountry: val })}
+                  defaultCountry="Ethiopia"
+                  placeholder={t('hr.placeholder.selectOriginCountry')}
+                />
+              </div>
+            </Col>
+            <Col xs={24} sm={12}>
+              <div className="mb-4">
+                <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+                  {t('hr.form.originCity')}{' '}
+                  <span className="text-[#DC2626]">*</span>
+                </label>
+                <Input
+                  value={values.originCity}
+                  onChange={(e) => patch({ originCity: e.target.value })}
+                  placeholder="e.g. Addis Ababa"
+                  maxLength={100}
+                />
+              </div>
+            </Col>
+          </Row>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={12}>
+              <div className="mb-4">
+                <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+                  {t('hr.form.destinationCountry')}{' '}
+                  <span className="text-[#DC2626]">*</span>
+                </label>
+                <CountrySelector
+                  value={values.destinationCountry}
+                  onChange={(val) => patch({ destinationCountry: val })}
+                  placeholder={t('hr.placeholder.selectDestinationCountry')}
+                />
+              </div>
+            </Col>
+            <Col xs={24} sm={12}>
+              <div className="mb-4">
+                <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+                  {t('hr.form.destinationCity')}{' '}
+                  <span className="text-[#DC2626]">*</span>
+                </label>
+                <Input
+                  value={values.destinationCity ?? values.destination}
+                  onChange={(e) =>
+                    patch({
+                      destination: e.target.value,
+                      destinationCity: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. Nairobi, Dubai"
+                  maxLength={100}
+                />
+              </div>
+            </Col>
+          </Row>
+        </>
+      ) : (
+        <>
           <div className="mb-4">
             <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.originCity')}{' '}
               <span className="text-[#DC2626]">*</span>
             </label>
-            <Input
+            <CitySelector
+              cities={ETHIOPIA_CITIES}
               value={values.originCity}
-              onChange={(e) => patch({ originCity: e.target.value })}
-              placeholder={t('hr.placeholder.enterDestination')}
-              maxLength={100}
+              onChange={(val) =>
+                patch({ originCity: val, originCountry: 'Ethiopia' })
+              }
+              placeholder={t('hr.placeholder.selectDepartureCity')}
             />
           </div>
-        </Col>
-      </Row>
-
-      <div className="mb-4">
-        <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
-          {t('hr.form.destination')}{' '}
-          <span className="text-[#DC2626]">*</span>
-        </label>
-        <Input
-          value={values.destination}
-          onChange={(e) => patch({ destination: e.target.value })}
-          placeholder={t('hr.placeholder.enterDestination')}
-          maxLength={100}
-        />
-      </div>
+          <div className="mb-4">
+            <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+              {t('hr.labels.destination')}{' '}
+              <span className="text-[#DC2626]">*</span>
+            </label>
+            <CitySelector
+              cities={ETHIOPIA_CITIES}
+              value={values.destinationCity ?? values.destination}
+              onChange={(val) =>
+                patch({
+                  destination: val,
+                  destinationCity: val,
+                  destinationCountry: 'Ethiopia',
+                })
+              }
+              placeholder={t('hr.placeholder.selectDestinationCity')}
+            />
+          </div>
+        </>
+      )}
 
       <Row gutter={[16, 0]}>
         <Col xs={24} sm={values.tripType === 'ROUND_TRIP' ? 12 : 24}>
@@ -146,7 +223,6 @@ export default function FlightTripDetailsStep({
               onChange={(date) =>
                 patch({
                   departureDate: date,
-                  // A return that is now before the new departure is no longer valid.
                   ...(date &&
                   values.returnDate &&
                   values.returnDate.isBefore(date)
@@ -183,7 +259,6 @@ export default function FlightTripDetailsStep({
           </Col>
         ) : null}
       </Row>
-
 
       <div className="mb-4">
         <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">

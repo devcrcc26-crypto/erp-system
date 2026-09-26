@@ -1,10 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Col, DatePicker, Input, Radio, Row, Select } from 'antd';
+import CountrySelector from '@/components/modules/hr/shared/CountrySelector';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { PER_DIEM_DESTINATION_CATEGORIES } from '@/lib/constants/per-diem-destination-categories';
+import { getPerDiemCategoryForCountry } from '@/lib/constants/world-countries';
 import type { BusinessTripDetailsValues } from './business-trip-stepper.types';
 import {
   getDisabledDepartureDate,
@@ -25,6 +28,13 @@ export default function BusinessTripDetailsStep({
   // HR / full access may record trips already taken; everyone else books ahead.
   const canBackdate = useCanViewHr();
 
+  const [detectedCategory, setDetectedCategory] = useState<string | null>(
+    values.destinationCountry
+      ? getPerDiemCategoryForCountry(values.destinationCountry)
+      : null,
+  );
+  const [categoryManual, setCategoryManual] = useState(false);
+
   const ticketClassOptions = useMemo(
     () => [
       { value: 'ECONOMY' as const, label: t('hr.ticketClass.ECONOMY') },
@@ -35,6 +45,27 @@ export default function BusinessTripDetailsStep({
 
   function patch(partial: Partial<BusinessTripDetailsValues>): void {
     onChange({ ...values, ...partial });
+  }
+
+  function handleCountryChange(country: string): void {
+    const category = getPerDiemCategoryForCountry(country);
+    if (category) {
+      setDetectedCategory(category);
+      setCategoryManual(false);
+      patch({
+        destinationCountry: country,
+        destinationCity: '',
+        perDiemCategory: category,
+      });
+      return;
+    }
+    setDetectedCategory(null);
+    setCategoryManual(true);
+    patch({
+      destinationCountry: country,
+      destinationCity: '',
+      perDiemCategory: undefined,
+    });
   }
 
   return (
@@ -64,21 +95,21 @@ export default function BusinessTripDetailsStep({
       </div>
 
       <Row gutter={[16, 0]}>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12}>
           <div className="mb-4">
             <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.originCountry')}{' '}
               <span className="text-[#DC2626]">*</span>
             </label>
-            <Input
+            <CountrySelector
               value={values.originCountry}
-              onChange={(e) => patch({ originCountry: e.target.value })}
-              placeholder={t('hr.placeholder.enterDestination')}
-              maxLength={100}
+              onChange={(val) => patch({ originCountry: val })}
+              defaultCountry="Ethiopia"
+              placeholder={t('hr.placeholder.selectOriginCountry')}
             />
           </div>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12}>
           <div className="mb-4">
             <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.originCity')}{' '}
@@ -87,26 +118,28 @@ export default function BusinessTripDetailsStep({
             <Input
               value={values.originCity}
               onChange={(e) => patch({ originCity: e.target.value })}
-              placeholder={t('hr.placeholder.enterDestination')}
+              placeholder="e.g. Addis Ababa"
               maxLength={100}
             />
           </div>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+      </Row>
+
+      <Row gutter={[16, 0]}>
+        <Col xs={24} sm={12}>
           <div className="mb-4">
             <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.destinationCountry')}{' '}
               <span className="text-[#DC2626]">*</span>
             </label>
-            <Input
+            <CountrySelector
               value={values.destinationCountry}
-              onChange={(e) => patch({ destinationCountry: e.target.value })}
-              placeholder={t('hr.placeholder.enterDestination')}
-              maxLength={100}
+              onChange={handleCountryChange}
+              placeholder={t('hr.placeholder.selectDestinationCountry')}
             />
           </div>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12}>
           <div className="mb-4">
             <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
               {t('hr.form.destinationCity')}{' '}
@@ -115,12 +148,67 @@ export default function BusinessTripDetailsStep({
             <Input
               value={values.destinationCity}
               onChange={(e) => patch({ destinationCity: e.target.value })}
-              placeholder={t('hr.placeholder.enterDestination')}
+              placeholder="e.g. Kampala, Dubai, Berlin"
               maxLength={100}
             />
           </div>
         </Col>
       </Row>
+
+      {detectedCategory && !categoryManual ? (
+        <div
+          className="erp-notice erp-notice--success mb-4"
+          style={{ padding: '8px 12px' }}
+        >
+          <span className="text-xs">
+            {t('hr.messages.perDiemCategoryAutoDetected', {
+              category: detectedCategory,
+            })}{' '}
+            <button
+              type="button"
+              onClick={() => setCategoryManual(true)}
+              className="ml-2 cursor-pointer border-0 bg-transparent p-0 text-[11px] text-[var(--color-teal-600,#0D9488)] underline"
+            >
+              {t('hr.buttons.changeManually')}
+            </button>
+          </span>
+        </div>
+      ) : (
+        <div className="mb-4">
+          <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">
+            {t('hr.form.perDiemCategory')}
+            {categoryManual ? (
+              <span className="ml-1.5 text-[11px] text-[var(--color-amber-500,#F59E0B)]">
+                {t('hr.labels.manualSelection')}
+              </span>
+            ) : null}
+          </label>
+          <Select
+            value={values.perDiemCategory}
+            onChange={(val) => patch({ perDiemCategory: val })}
+            placeholder={t('hr.placeholder.selectDestinationCategory')}
+            className="w-full"
+            options={PER_DIEM_DESTINATION_CATEGORIES.map((category) => ({
+              value: category,
+              label: category,
+            }))}
+          />
+          {detectedCategory && categoryManual ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCategoryManual(false);
+                patch({ perDiemCategory: detectedCategory });
+              }}
+              className="mt-1 cursor-pointer border-0 bg-transparent p-0 text-[11px] text-[var(--color-teal-600,#0D9488)] underline"
+            >
+              {t('hr.buttons.resetToAutoDetected', {
+                category: detectedCategory,
+              })}
+            </button>
+          ) : null}
+        </div>
+      )}
 
       <Row gutter={[16, 0]}>
         <Col xs={24} sm={values.tripType === 'ROUND_TRIP' ? 12 : 24}>
@@ -138,7 +226,6 @@ export default function BusinessTripDetailsStep({
               onChange={(date) =>
                 patch({
                   departureDate: date,
-                  // A return that is now before the new departure is no longer valid.
                   ...(date &&
                   values.returnDate &&
                   values.returnDate.isBefore(date)
@@ -175,7 +262,6 @@ export default function BusinessTripDetailsStep({
           </Col>
         ) : null}
       </Row>
-
 
       <div className="mb-0">
         <label className="mb-2 block text-[13px] text-[var(--color-text-primary)]">

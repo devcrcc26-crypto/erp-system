@@ -2,7 +2,8 @@ import type { PerDiemDestinationCategory } from './per-diem-destination-categori
 
 /**
  * Country → per diem category mapping for destination pickers.
- * Ethiopia is Domestic; neighboring countries are Regional; all others International.
+ * Neighboring countries are Regional; all other listed countries are International.
+ * Ethiopia is Domestic when selected (e.g. flight origin defaults).
  */
 export const COUNTRY_CATEGORY_MAP: Record<string, PerDiemDestinationCategory> =
   {
@@ -24,15 +25,30 @@ export const COUNTRY_CATEGORY_MAP: Record<string, PerDiemDestinationCategory> =
     Ghana: 'International',
     Egypt: 'International',
     Morocco: 'International',
+    Tunisia: 'International',
+    Cameroon: 'International',
+    Senegal: 'International',
+    Zimbabwe: 'International',
+    Zambia: 'International',
+    Mozambique: 'International',
     China: 'International',
     Japan: 'International',
     'South Korea': 'International',
     India: 'International',
     Singapore: 'International',
+    Malaysia: 'International',
+    Thailand: 'International',
+    Vietnam: 'International',
+    Indonesia: 'International',
+    Philippines: 'International',
     UAE: 'International',
     'Saudi Arabia': 'International',
     Qatar: 'International',
     Kuwait: 'International',
+    Bahrain: 'International',
+    Oman: 'International',
+    Jordan: 'International',
+    Lebanon: 'International',
     Turkey: 'International',
     Germany: 'International',
     France: 'International',
@@ -40,12 +56,26 @@ export const COUNTRY_CATEGORY_MAP: Record<string, PerDiemDestinationCategory> =
     Italy: 'International',
     Spain: 'International',
     Netherlands: 'International',
+    Belgium: 'International',
+    Switzerland: 'International',
+    Sweden: 'International',
+    Norway: 'International',
+    Denmark: 'International',
+    Austria: 'International',
+    Portugal: 'International',
+    Poland: 'International',
     'United States': 'International',
     Canada: 'International',
     Brazil: 'International',
+    Mexico: 'International',
+    Argentina: 'International',
+    Colombia: 'International',
+    Chile: 'International',
   };
 
-export const WORLD_COUNTRIES = Object.keys(COUNTRY_CATEGORY_MAP).sort();
+export const WORLD_COUNTRIES = Object.keys(COUNTRY_CATEGORY_MAP)
+  .filter((country) => country !== 'Ethiopia')
+  .sort();
 
 /**
  * Returns the per diem category for a known country, or null if unmapped.

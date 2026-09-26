@@ -1,5 +1,6 @@
 'use client';
 
+import { Tag } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { tokens } from '@/lib/theme/tokens';
 import { formatTicketClass, formatTripType } from '@/lib/utils/flight-display';
@@ -51,10 +52,15 @@ export default function FlightSummary({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
 
-  const origin =
-    [tripDetails.originCity, tripDetails.originCountry]
-      .filter(Boolean)
-      .join(', ') || '—';
+  const destinationCity =
+    tripDetails.destinationCity?.trim() || tripDetails.destination.trim();
+  const routeLabel = tripDetails.isInternational
+    ? `${tripDetails.originCity}, ${tripDetails.originCountry} → ${destinationCity}${
+        tripDetails.destinationCountry
+          ? `, ${tripDetails.destinationCountry}`
+          : ''
+      }`
+    : `${tripDetails.originCity} → ${destinationCity} (Ethiopia)`;
 
   return (
     <FormLayout
@@ -63,6 +69,15 @@ export default function FlightSummary({
       title={t('hr.labels.reviewApplication')}
       description={t('pages.hr.flight.reviewStepDescription')}
     >
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {tripDetails.isInternational ? (
+          <Tag color="blue" style={{ margin: 0 }}>
+            {t('hr.labels.international')}
+          </Tag>
+        ) : (
+          <Tag style={{ margin: 0 }}>{t('hr.labels.domestic')}</Tag>
+        )}
+      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ReviewItem
           label={t('hr.labels.tripType')}
@@ -74,11 +89,9 @@ export default function FlightSummary({
             tripDetails.isInternational ? t('hr.labels.yes') : t('hr.labels.no')
           }
         />
-        <ReviewItem label={t('hr.labels.origin')} value={origin} />
-        <ReviewItem
-          label={t('hr.labels.destination')}
-          value={tripDetails.destination || '—'}
-        />
+        <div className="sm:col-span-2">
+          <ReviewItem label={t('hr.labels.route')} value={routeLabel || '—'} />
+        </div>
         <ReviewItem
           label={t('hr.labels.departure')}
           value={

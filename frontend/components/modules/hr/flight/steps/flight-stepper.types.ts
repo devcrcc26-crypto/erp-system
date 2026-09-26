@@ -13,6 +13,9 @@ export interface FlightTripDetailsValues {
   originCountry: string;
   originCity: string;
   destination: string;
+  /** City portion when international; mirrors destination for domestic. */
+  destinationCity?: string;
+  destinationCountry?: string;
   departureDate: Dayjs | null;
   returnDate: Dayjs | null;
   purpose: string;

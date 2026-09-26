@@ -113,6 +113,13 @@ export class SubmitBusinessTripDto extends OnBehalfSubmissionDto {
   @MaxLength(200)
   destinationCity!: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  @MaxLength(100)
+  perDiemCategory?: string;
+
   @ApiProperty({ example: '2026-09-01T08:00:00.000Z' })
   @IsDateString()
   departureDate!: string;
@@ -275,6 +282,13 @@ export class CreateBusinessTripDraftDto {
   @IsNotEmpty()
   @MaxLength(200)
   destinationCity!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsString()
+  @MaxLength(100)
+  perDiemCategory?: string;
 
   @ApiProperty({ example: '2026-09-01' })
   @IsDateString()

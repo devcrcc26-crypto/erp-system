@@ -35,9 +35,11 @@ export interface FlightApplicationFormProps {
 const INITIAL_TRIP: FlightTripDetailsValues = {
   tripType: 'ONE_WAY',
   isInternational: false,
-  originCountry: '',
+  originCountry: 'Ethiopia',
   originCity: '',
   destination: '',
+  destinationCity: '',
+  destinationCountry: 'Ethiopia',
   departureDate: null,
   returnDate: null,
   purpose: '',
@@ -109,13 +111,30 @@ export function FlightApplicationForm({
         ),
         validate: (): boolean => {
           const errors: string[] = [];
-          if (!tripDetails.originCountry.trim()) {
+          if (tripDetails.isInternational && !tripDetails.originCountry.trim()) {
             errors.push(t('hr.validation.originCountryRequired'));
           }
           if (!tripDetails.originCity.trim()) {
             errors.push(t('hr.validation.originCityRequired'));
           }
-          if (!tripDetails.destination.trim()) {
+          if (tripDetails.isInternational) {
+            if (!tripDetails.destinationCountry?.trim()) {
+              errors.push(t('hr.validation.destinationCountryRequired'));
+            }
+            if (
+              !(
+                tripDetails.destinationCity?.trim() ||
+                tripDetails.destination.trim()
+              )
+            ) {
+              errors.push(t('hr.validation.destinationCityRequired'));
+            }
+          } else if (
+            !(
+              tripDetails.destinationCity?.trim() ||
+              tripDetails.destination.trim()
+            )
+          ) {
             errors.push(t('hr.validation.destinationRequired'));
           }
           if (!tripDetails.departureDate) {
@@ -215,13 +234,26 @@ export function FlightApplicationForm({
       return;
     }
     try {
+      const destinationCity = (
+        tripDetails.destinationCity?.trim() || tripDetails.destination.trim()
+      ).trim();
+      const destinationCountry = tripDetails.isInternational
+        ? tripDetails.destinationCountry?.trim() || ''
+        : 'Ethiopia';
+      const destination =
+        tripDetails.isInternational && destinationCountry
+          ? `${destinationCity}, ${destinationCountry}`
+          : destinationCity;
+
       const created = await submitMutation.mutateAsync({
         ...onBehalf.payload,
         tripType: tripDetails.tripType,
         isInternational: tripDetails.isInternational,
-        originCountry: tripDetails.originCountry.trim(),
+        originCountry: tripDetails.isInternational
+          ? tripDetails.originCountry.trim()
+          : 'Ethiopia',
         originCity: tripDetails.originCity.trim(),
-        destination: tripDetails.destination.trim(),
+        destination,
         departureDate: tripDetails.departureDate.toISOString(),
         returnDate:
           tripDetails.tripType === 'ROUND_TRIP' && tripDetails.returnDate

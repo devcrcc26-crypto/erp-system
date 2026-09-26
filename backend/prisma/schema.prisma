@@ -4321,6 +4321,7 @@ model BusinessTrip {
   accommodationRequired      Boolean            @default(true) @map("accommodation_required")
   accommodationDetails       String?            @map("accommodation_details")
   perDiemRequired            Boolean            @default(true) @map("per_diem_required")
+  perDiemCategory            String?            @map("per_diem_category")
   notes                      String?
   status                     BusinessTripStatus @default(DRAFT)
   approvalRequestId          String?            @unique @map("approval_request_id")
