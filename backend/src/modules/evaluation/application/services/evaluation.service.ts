@@ -9,6 +9,7 @@ import {
   EvaluationDisputeStage,
   EvaluationStage,
   EvaluationStatus,
+  Prisma,
 } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
@@ -424,6 +425,8 @@ export class EvaluationService {
 
   /**
    * Bulk-creates evaluations for all active employees in a cycle.
+   * Skips employees who already have a row for this cycle (including soft-deleted),
+   * since uq_eval_cycle_employee is independent of deletedAt.
    */
   async createEvaluationsForCycle(
     cycleId: string,
@@ -457,14 +460,19 @@ export class EvaluationService {
       },
     });
 
+    const existingRows = await this.prisma.employeeEvaluation.findMany({
+      where: { cycleId, companyId: ctx.companyId },
+      select: { employeeId: true },
+    });
+    const existingEmployeeIds = new Set(
+      existingRows.map((row) => row.employeeId),
+    );
+
     let created = 0;
     let skipped = 0;
 
     for (const employee of employees) {
-      const existing = await this.prisma.employeeEvaluation.findFirst({
-        where: { cycleId, employeeId: employee.id, deletedAt: null },
-      });
-      if (existing) {
+      if (existingEmployeeIds.has(employee.id)) {
         skipped++;
         continue;
       }
@@ -479,21 +487,36 @@ export class EvaluationService {
         orderBy: { startDate: 'desc' },
       });
 
-      await this.prisma.employeeEvaluation.create({
-        data: {
-          id: randomUUID(),
-          companyId: ctx.companyId,
-          cycleId,
-          employeeId: employee.id,
-          teamLeadId: employee.engineeringDiscipline?.localLeader?.id ?? null,
-          disciplineLeadId: employee.engineeringDiscipline?.leader?.id ?? null,
-          contractId: activeContract?.id ?? null,
-          status: EvaluationStatus.PENDING,
-          createdBy: ctx.userId,
-          updatedBy: ctx.userId,
-        },
-      });
-      created++;
+      try {
+        await this.prisma.employeeEvaluation.create({
+          data: {
+            id: randomUUID(),
+            companyId: ctx.companyId,
+            cycleId,
+            employeeId: employee.id,
+            teamLeadId:
+              employee.engineeringDiscipline?.localLeader?.id ?? null,
+            disciplineLeadId:
+              employee.engineeringDiscipline?.leader?.id ?? null,
+            contractId: activeContract?.id ?? null,
+            status: EvaluationStatus.PENDING,
+            createdBy: ctx.userId,
+            updatedBy: ctx.userId,
+          },
+        });
+        existingEmployeeIds.add(employee.id);
+        created++;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          existingEmployeeIds.add(employee.id);
+          skipped++;
+          continue;
+        }
+        throw error;
+      }
     }
 
     return { created, skipped, total: employees.length };
