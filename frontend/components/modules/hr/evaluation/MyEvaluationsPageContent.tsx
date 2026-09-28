@@ -1,10 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Empty, Select, Spin } from 'antd';
+import { Button, Select, Spin, Table, Tooltip } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { ReloadOutlined } from '@ant-design/icons';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import type { EvaluationStatus } from '@/lib/api/evaluation.types';
+import type {
+  EmployeeEvaluation,
+  EvaluationStatus,
+} from '@/lib/api/evaluation.types';
 import {
   useEvaluations,
   useMyEvaluations,
@@ -32,9 +38,44 @@ const COMPLETED_STATUSES: EvaluationStatus[] = [
   'HR_DECIDED',
 ];
 
+const STAGE_ORDER = ['SELF', 'TEAM_LEAD', 'DISCIPLINE_LEAD'] as const;
+const STAGE_LABELS = ['Self', 'Team Lead', 'DL'] as const;
+
 interface MyEvaluationsPageContentProps {
   /** When viewing another employee (HR), pass their user id. */
   employeeId?: string;
+}
+
+function StageProgress({
+  evaluation,
+}: {
+  evaluation: EmployeeEvaluation;
+}): React.ReactNode {
+  const assessments = evaluation.assessments ?? [];
+  return (
+    <div className="min-w-[120px]">
+      <div className="erp-evaluation-stage-bar">
+        {STAGE_ORDER.map((stage) => {
+          const done = assessments.some(
+            (a) => a.stage === stage && a.submittedAt !== null,
+          );
+          return (
+            <div
+              key={stage}
+              className={`erp-evaluation-stage-seg${
+                done ? ' erp-evaluation-stage-seg--done' : ''
+              }`}
+            />
+          );
+        })}
+      </div>
+      <div className="erp-evaluation-stage-labels">
+        {STAGE_LABELS.map((label) => (
+          <span key={label}>{label}</span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function MyEvaluationsPageContent({
@@ -56,26 +97,33 @@ export default function MyEvaluationsPageContent({
     [evaluationsQuery.data],
   );
 
-  if (evaluationsQuery.isLoading) {
-    return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page flex justify-center p-12">
-        <Spin size="large" />
-      </div>
-    );
-  }
-
-  const years = [...new Set(evaluations.map((e) => e.cycle.year))].sort(
-    (a, b) => b - a,
+  const years = useMemo(
+    () =>
+      [...new Set(evaluations.map((e) => e.cycle.year))].sort((a, b) => b - a),
+    [evaluations],
   );
-  const yearOptions = [
-    { value: '' as const, label: 'All Years' },
-    ...years.map((y) => ({ value: y, label: String(y) })),
-  ];
 
-  const filtered =
-    yearFilter === ''
-      ? evaluations
-      : evaluations.filter((e) => e.cycle.year === yearFilter);
+  const yearOptions = useMemo(
+    () => [
+      { value: '' as const, label: 'All Years' },
+      ...years.map((y) => ({ value: y, label: String(y) })),
+    ],
+    [years],
+  );
+
+  const sorted = useMemo(() => {
+    const filtered =
+      yearFilter === ''
+        ? evaluations
+        : evaluations.filter((e) => e.cycle.year === yearFilter);
+
+    return [...filtered].sort((a, b) => {
+      if (b.cycle.year !== a.cycle.year) {
+        return b.cycle.year - a.cycle.year;
+      }
+      return b.cycle.quarter - a.cycle.quarter;
+    });
+  }, [evaluations, yearFilter]);
 
   const needsAction = evaluations.filter((e) =>
     ACTION_STATUSES.includes(e.status),
@@ -85,16 +133,107 @@ export default function MyEvaluationsPageContent({
     COMPLETED_STATUSES.includes(e.status),
   );
 
-  const sorted = [...filtered].sort((a, b) => {
-    if (b.cycle.year !== a.cycle.year) {
-      return b.cycle.year - a.cycle.year;
-    }
-    return b.cycle.quarter - a.cycle.quarter;
-  });
+  const columns: ColumnsType<EmployeeEvaluation> = [
+    {
+      title: 'Cycle',
+      key: 'cycle',
+      width: 160,
+      render: (_value, row) => (
+        <div className="min-w-0">
+          <p className="erp-users-cell-strong m-0">
+            {getQuarterLabel(row.cycle.quarter, row.cycle.year)}
+          </p>
+          <p className="erp-users-email m-0 mt-0.5">
+            {getQuarterPeriodLabel(row.cycle.quarter, row.cycle.year)}
+          </p>
+        </div>
+      ),
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      width: 170,
+      render: (_value, row) => (
+        <div className="flex flex-wrap gap-1.5">
+          <StatusBadge
+            label={EVALUATION_STATUS_LABELS[row.status]}
+            variant={EVALUATION_STATUS_BADGE[row.status]}
+          />
+          {ACTION_STATUSES.includes(row.status) ? (
+            <StatusBadge label="Action Required" variant="info" />
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      title: 'Score',
+      key: 'score',
+      width: 150,
+      render: (_value, row) => {
+        const score = row.adjustedScore ?? row.finalScore;
+        if (score == null) {
+          return <span className="erp-users-cell-sub">—</span>;
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <span
+              className="font-semibold"
+              style={{ color: getScoreColor(Number(score)) }}
+            >
+              {Number(score).toFixed(1)}
+            </span>
+            <span className="erp-users-cell-sub">
+              {getScoreLabel(Number(score))}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Progress',
+      key: 'progress',
+      width: 150,
+      responsive: ['md'],
+      render: (_value, row) => <StageProgress evaluation={row} />,
+    },
+    {
+      title: '',
+      key: 'action',
+      width: 72,
+      render: (_value, row) => (
+        <Link
+          href={`/hr/evaluations/${row.id}`}
+          className="text-[13px] font-medium text-[#185FA5]"
+          onClick={(event) => event.stopPropagation()}
+        >
+          View
+        </Link>
+      ),
+    },
+  ];
+
+  if (evaluationsQuery.isLoading) {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page flex justify-center p-12">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
-      <div className="erp-pro-card erp-evaluation-trend-card">
+      {completed.length >= 2 ? (
+        <div className="erp-pro-card erp-evaluation-trend-card">
+          <div className="erp-pro-card-body">
+            <h4 className="mb-3 mt-0 text-[13px] font-semibold text-[#374151]">
+              Performance Trend
+            </h4>
+            <EvaluationTrendChart evaluations={completed} />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">
@@ -106,11 +245,22 @@ export default function MyEvaluationsPageContent({
               </span>
             ) : (
               <span className="erp-users-count-pill">
-                {evaluations.length.toLocaleString()}
+                {sorted.length.toLocaleString()}
               </span>
             )}
           </div>
-          <div className="erp-users-toolbar-actions">
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title="Refresh">
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={
+                  evaluationsQuery.isFetching && !evaluationsQuery.isLoading
+                }
+                onClick={() => void evaluationsQuery.refetch()}
+                aria-label="Refresh"
+              />
+            </Tooltip>
             <Select
               value={yearFilter}
               onChange={setYearFilter}
@@ -119,112 +269,30 @@ export default function MyEvaluationsPageContent({
             />
           </div>
         </div>
-        <div className="erp-pro-card-body">
-          <p className="erp-users-email m-0 mb-3">
+
+        <div className="erp-users-filter-bar">
+          <p className="erp-users-email m-0">
             {employeeId
               ? 'Quarterly performance evaluations for this employee'
               : 'Your quarterly performance evaluations'}
           </p>
-          {completed.length >= 2 ? (
-            <>
-              <h4 className="mb-3 mt-0 text-[13px] font-semibold text-[#374151]">
-                Performance Trend
-              </h4>
-              <EvaluationTrendChart evaluations={completed} />
-            </>
-          ) : null}
+        </div>
+
+        <div className="erp-pro-table-card-body">
+          <Table
+            dataSource={sorted}
+            columns={columns}
+            rowKey="id"
+            pagination={{ pageSize: 10 }}
+            locale={{ emptyText: 'No evaluations found' }}
+            className="erp-pro-table erp-users-table"
+            onRow={(row) => ({
+              onClick: () => router.push(`/hr/evaluations/${row.id}`),
+              style: { cursor: 'pointer' },
+            })}
+          />
         </div>
       </div>
-
-      {sorted.length === 0 ? (
-        <div className="erp-pro-card">
-          <div className="px-4 py-10">
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="No evaluations found"
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="erp-evaluation-card-grid">
-          {sorted.map((ev) => {
-            const finalScore = ev.adjustedScore ?? ev.finalScore;
-            const needsMyAction = ACTION_STATUSES.includes(ev.status);
-            const assessments = ev.assessments ?? [];
-
-            return (
-              <button
-                key={ev.id}
-                type="button"
-                className={`erp-evaluation-card${
-                  needsMyAction ? ' erp-evaluation-card--action' : ''
-                }`}
-                onClick={() => router.push(`/hr/evaluations/${ev.id}`)}
-              >
-                <div className="erp-evaluation-card-top">
-                  <div className="min-w-0">
-                    <p className="erp-users-cell-strong m-0 text-[15px]">
-                      {getQuarterLabel(ev.cycle.quarter, ev.cycle.year)}
-                    </p>
-                    <p className="erp-users-email m-0 mt-0.5">
-                      {getQuarterPeriodLabel(ev.cycle.quarter, ev.cycle.year)}
-                    </p>
-                  </div>
-                  {finalScore != null ? (
-                    <div className="text-right">
-                      <div
-                        className="erp-evaluation-score"
-                        style={{ color: getScoreColor(Number(finalScore)) }}
-                      >
-                        {Number(finalScore).toFixed(1)}
-                      </div>
-                      <div className="erp-evaluation-score-label">
-                        {getScoreLabel(Number(finalScore))}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-wrap gap-1.5">
-                  <StatusBadge
-                    label={EVALUATION_STATUS_LABELS[ev.status]}
-                    variant={EVALUATION_STATUS_BADGE[ev.status]}
-                  />
-                  {needsMyAction ? (
-                    <StatusBadge label="Action Required" variant="info" />
-                  ) : null}
-                </div>
-
-                <div>
-                  <div className="erp-evaluation-stage-bar">
-                    {(['SELF', 'TEAM_LEAD', 'DISCIPLINE_LEAD'] as const).map(
-                      (stage) => {
-                        const done = assessments.some(
-                          (a) =>
-                            a.stage === stage && a.submittedAt !== null,
-                        );
-                        return (
-                          <div
-                            key={stage}
-                            className={`erp-evaluation-stage-seg${
-                              done ? ' erp-evaluation-stage-seg--done' : ''
-                            }`}
-                          />
-                        );
-                      },
-                    )}
-                  </div>
-                  <div className="erp-evaluation-stage-labels">
-                    {['Self', 'Team Lead', 'DL'].map((label) => (
-                      <span key={label}>{label}</span>
-                    ))}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

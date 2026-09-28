@@ -2,35 +2,149 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Badge, Empty, Table, Tabs } from 'antd';
+import { Button, Input, Table, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
+  FieldTimeOutlined,
+  InboxOutlined,
+  ReloadOutlined,
+  SearchOutlined,
   TeamOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import Link from 'next/link';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import type { EmployeeEvaluation } from '@/lib/api/evaluation.types';
 import { useEvaluations } from '@/lib/query/evaluation';
 import {
   EVALUATION_STATUS_BADGE,
   EVALUATION_STATUS_LABELS,
   getQuarterLabel,
+  getQuarterPeriodLabel,
   getScoreColor,
+  getScoreLabel,
 } from '@/lib/utils/evaluation-status';
 import EvaluationStat from './EvaluationStat';
 
+type InboxQueue =
+  | 'needs-action'
+  | 'team-lead'
+  | 'awaiting'
+  | 'escalated'
+  | 'in-progress'
+  | 'completed';
+
+type InboxRole = 'discipline-lead' | 'team-lead';
+
+interface InboxRow extends EmployeeEvaluation {
+  inboxRole?: InboxRole;
+}
+
+const STAGE_ORDER = ['SELF', 'TEAM_LEAD', 'DISCIPLINE_LEAD'] as const;
+const STAGE_LABELS = ['Self', 'Team Lead', 'DL'] as const;
+
+const QUEUE_META: Record<
+  InboxQueue,
+  { title: string; emptyTitle: string; emptyDescription: string }
+> = {
+  'needs-action': {
+    title: 'Needs My Action',
+    emptyTitle: 'Nothing needs your action',
+    emptyDescription:
+      'When Team Lead or Discipline Lead assessments are waiting on you, they will show up here.',
+  },
+  'team-lead': {
+    title: 'As Team Lead',
+    emptyTitle: 'No Team Lead assignments',
+    emptyDescription:
+      'Evaluations where you are the Team Lead will appear in this queue.',
+  },
+  awaiting: {
+    title: 'Awaiting Employee',
+    emptyTitle: 'No evaluations awaiting employees',
+    emptyDescription:
+      'Shared results waiting for employee accept or dispute will appear here.',
+  },
+  escalated: {
+    title: 'Escalated to HR',
+    emptyTitle: 'No escalated evaluations',
+    emptyDescription:
+      'Disputes escalated to HR for a final decision will appear here.',
+  },
+  'in-progress': {
+    title: 'In Progress',
+    emptyTitle: 'No evaluations in progress',
+    emptyDescription:
+      'Draft or early-stage evaluations assigned to you will appear here.',
+  },
+  completed: {
+    title: 'Completed',
+    emptyTitle: 'No completed evaluations',
+    emptyDescription:
+      'Accepted, HR-decided, and locked evaluations will appear here.',
+  },
+};
+
+function StageProgress({
+  evaluation,
+}: {
+  evaluation: EmployeeEvaluation;
+}): React.ReactNode {
+  const assessments = evaluation.assessments ?? [];
+  return (
+    <div className="min-w-[120px]">
+      <div className="erp-evaluation-stage-bar">
+        {STAGE_ORDER.map((stage) => {
+          const done = assessments.some(
+            (a) => a.stage === stage && a.submittedAt !== null,
+          );
+          return (
+            <div
+              key={stage}
+              className={`erp-evaluation-stage-seg${
+                done ? ' erp-evaluation-stage-seg--done' : ''
+              }`}
+            />
+          );
+        })}
+      </div>
+      <div className="erp-evaluation-stage-labels">
+        {STAGE_LABELS.map((label) => (
+          <span key={label}>{label}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function matchesSearch(row: EmployeeEvaluation, q: string): boolean {
+  if (!q) {
+    return true;
+  }
+  const name =
+    `${row.employee.firstName} ${row.employee.lastName}`.toLowerCase();
+  const empId = (row.employee.employeeId ?? '').toLowerCase();
+  return name.includes(q) || empId.includes(q);
+}
+
 export default function DisciplineLeadInboxPageContent(): React.ReactNode {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('needs-action');
+  const [queue, setQueue] = useState<InboxQueue>('needs-action');
+  const [search, setSearch] = useState('');
 
   const dlEvaluationsQuery = useEvaluations({ disciplineLeadId: 'me' });
   const tlEvaluationsQuery = useEvaluations({ teamLeadId: 'me' });
 
   const dlEvaluations = dlEvaluationsQuery.data ?? [];
   const tlEvaluations = tlEvaluationsQuery.data ?? [];
+  const isLoading =
+    dlEvaluationsQuery.isLoading || tlEvaluationsQuery.isLoading;
+  const isFetching =
+    dlEvaluationsQuery.isFetching || tlEvaluationsQuery.isFetching;
 
   const needsDLAction = useMemo(
     () =>
@@ -45,283 +159,315 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
     [tlEvaluations],
   );
 
-  const dlByStatus = useMemo(
+  const needsActionRows = useMemo((): InboxRow[] => {
+    const asDl: InboxRow[] = needsDLAction.map((ev) => ({
+      ...ev,
+      inboxRole: 'discipline-lead' as const,
+    }));
+    const asTl: InboxRow[] = needsTLAction.map((ev) => ({
+      ...ev,
+      inboxRole: 'team-lead' as const,
+    }));
+    return [...asDl, ...asTl];
+  }, [needsDLAction, needsTLAction]);
+
+  const queues = useMemo(
     () => ({
-      inProgress: dlEvaluations.filter((ev) =>
-        ['PENDING', 'SELF_ASSESSED'].includes(ev.status),
-      ),
-      awaitingEmployee: dlEvaluations.filter((ev) =>
+      'needs-action': needsActionRows,
+      'team-lead': tlEvaluations as InboxRow[],
+      awaiting: dlEvaluations.filter((ev) =>
         ['RESULT_SHARED', 'DL_UPHELD', 'DL_ADJUSTED'].includes(ev.status),
-      ),
-      escalated: dlEvaluations.filter((ev) => ev.status === 'ESCALATED'),
+      ) as InboxRow[],
+      escalated: dlEvaluations.filter(
+        (ev) => ev.status === 'ESCALATED',
+      ) as InboxRow[],
+      'in-progress': dlEvaluations.filter((ev) =>
+        ['PENDING', 'SELF_ASSESSED'].includes(ev.status),
+      ) as InboxRow[],
       completed: dlEvaluations.filter((ev) =>
         ['ACCEPTED', 'HR_DECIDED', 'LOCKED'].includes(ev.status),
-      ),
+      ) as InboxRow[],
     }),
-    [dlEvaluations],
+    [needsActionRows, tlEvaluations, dlEvaluations],
   );
 
   const totalNeedsAction = needsDLAction.length + needsTLAction.length;
+  const searchQ = search.trim().toLowerCase();
+  const activeRows = queues[queue].filter((row) =>
+    matchesSearch(row, searchQ),
+  );
+  const meta = QUEUE_META[queue];
+  const showRoleColumn = queue === 'needs-action';
 
-  const columns: ColumnsType<EmployeeEvaluation> = [
-    {
-      title: 'Employee',
-      key: 'employee',
-      render: (_value, row) => (
-        <div className="min-w-0">
-          <p className="erp-users-cell-strong m-0">
-            {row.employee.firstName} {row.employee.lastName}
-          </p>
-          <p className="erp-users-email m-0 mt-0.5">
-            {row.employee.employeeId ?? '—'}
-          </p>
-        </div>
-      ),
-    },
-    {
-      title: 'Cycle',
-      key: 'cycle',
-      width: 120,
-      render: (_value, row) => (
-        <span className="erp-users-id-chip">
-          {getQuarterLabel(row.cycle.quarter, row.cycle.year)}
-        </span>
-      ),
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      width: 150,
-      render: (_value, row) => (
-        <StatusBadge
-          label={EVALUATION_STATUS_LABELS[row.status]}
-          variant={EVALUATION_STATUS_BADGE[row.status]}
-        />
-      ),
-    },
-    {
-      title: 'Final Score',
-      key: 'score',
-      width: 110,
-      render: (_value, row) => {
-        const score = row.adjustedScore ?? row.finalScore;
-        if (score == null) {
-          return <span className="erp-users-cell-sub">—</span>;
-        }
-        return (
-          <span
-            className="font-semibold"
-            style={{ color: getScoreColor(Number(score)) }}
-          >
-            {Number(score).toFixed(1)}
-          </span>
-        );
-      },
-    },
-    {
-      title: 'Disputes',
-      key: 'disputes',
-      width: 110,
-      render: (_value, row) =>
-        (row._count?.disputes ?? 0) > 0 ? (
-          <StatusBadge
-            label={`${row._count?.disputes} dispute(s)`}
-            variant="warning"
-          />
-        ) : (
-          <span className="erp-users-cell-sub">—</span>
+  const columns: ColumnsType<InboxRow> = useMemo(() => {
+    const cols: ColumnsType<InboxRow> = [
+      {
+        title: 'Employee',
+        key: 'employee',
+        render: (_value, row) => (
+          <div className="min-w-0">
+            <p className="erp-users-cell-strong m-0">
+              {row.employee.firstName} {row.employee.lastName}
+            </p>
+            <p className="erp-users-email m-0 mt-0.5">
+              {row.employee.employeeId ?? '—'}
+            </p>
+          </div>
         ),
-    },
-  ];
+      },
+    ];
 
-  const tlColumns: ColumnsType<EmployeeEvaluation> = columns.slice(0, 3);
-
-  function openEvaluation(row: EmployeeEvaluation): void {
-    router.push(`/hr/evaluations/${row.id}`);
-  }
-
-  function renderTable(
-    data: EmployeeEvaluation[],
-    cols: ColumnsType<EmployeeEvaluation>,
-    loading: boolean,
-    empty: string,
-    paginate = false,
-  ): React.ReactNode {
-    if (!loading && data.length === 0) {
-      return (
-        <div className="px-4 py-10">
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={empty} />
-        </div>
-      );
+    if (showRoleColumn) {
+      cols.push({
+        title: 'Your Role',
+        key: 'inboxRole',
+        width: 140,
+        render: (_value, row) =>
+          row.inboxRole === 'discipline-lead' ? (
+            <StatusBadge label="Discipline Lead" variant="info" />
+          ) : (
+            <StatusBadge label="Team Lead" variant="cyan" />
+          ),
+      });
     }
-    return (
-      <div className="erp-pro-table-card-body">
-        <Table
-          dataSource={data}
-          columns={cols}
-          rowKey="id"
-          loading={loading}
-          pagination={paginate ? { pageSize: 20 } : false}
-          className="erp-pro-table erp-users-table"
-          onRow={(row) => ({
-            onClick: () => openEvaluation(row),
-            style: { cursor: 'pointer' },
-          })}
-        />
-      </div>
+
+    cols.push(
+      {
+        title: 'Cycle',
+        key: 'cycle',
+        width: 150,
+        render: (_value, row) => (
+          <div className="min-w-0">
+            <p className="erp-users-cell-strong m-0">
+              {getQuarterLabel(row.cycle.quarter, row.cycle.year)}
+            </p>
+            <p className="erp-users-email m-0 mt-0.5">
+              {getQuarterPeriodLabel(row.cycle.quarter, row.cycle.year)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        title: 'Status',
+        key: 'status',
+        width: 160,
+        render: (_value, row) => (
+          <StatusBadge
+            label={EVALUATION_STATUS_LABELS[row.status]}
+            variant={EVALUATION_STATUS_BADGE[row.status]}
+          />
+        ),
+      },
+      {
+        title: 'Score',
+        key: 'score',
+        width: 140,
+        render: (_value, row) => {
+          const score = row.adjustedScore ?? row.finalScore;
+          if (score == null) {
+            return <span className="erp-users-cell-sub">—</span>;
+          }
+          return (
+            <div className="flex items-center gap-2">
+              <span
+                className="font-semibold"
+                style={{ color: getScoreColor(Number(score)) }}
+              >
+                {Number(score).toFixed(1)}
+              </span>
+              <span className="erp-users-cell-sub">
+                {getScoreLabel(Number(score))}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        title: 'Progress',
+        key: 'progress',
+        width: 150,
+        responsive: ['md'],
+        render: (_value, row) => <StageProgress evaluation={row} />,
+      },
+      {
+        title: 'Disputes',
+        key: 'disputes',
+        width: 100,
+        responsive: ['lg'],
+        render: (_value, row) =>
+          (row._count?.disputes ?? 0) > 0 ? (
+            <StatusBadge
+              label={`${row._count?.disputes}`}
+              variant="warning"
+            />
+          ) : (
+            <span className="erp-users-cell-sub">—</span>
+          ),
+      },
+      {
+        title: '',
+        key: 'action',
+        width: 72,
+        render: (_value, row) => (
+          <Link
+            href={`/hr/evaluations/${row.id}`}
+            className="text-[13px] font-medium text-[#185FA5]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            View
+          </Link>
+        ),
+      },
     );
+
+    return cols;
+  }, [showRoleColumn]);
+
+  async function handleRefresh(): Promise<void> {
+    await Promise.all([
+      dlEvaluationsQuery.refetch(),
+      tlEvaluationsQuery.refetch(),
+    ]);
   }
 
-  const tabItems = [
-    {
-      key: 'needs-action',
-      label: (
-        <span className="inline-flex items-center gap-1.5">
-          Needs My Action
-          {needsDLAction.length > 0 ? (
-            <Badge count={needsDLAction.length} size="small" />
-          ) : null}
-        </span>
-      ),
-      children: renderTable(
-        needsDLAction,
-        columns,
-        dlEvaluationsQuery.isLoading,
-        'No evaluations need your action',
-      ),
-    },
-    {
-      key: 'team-lead',
-      label: (
-        <span className="inline-flex items-center gap-1.5">
-          As Team Lead
-          {needsTLAction.length > 0 ? (
-            <Badge count={needsTLAction.length} size="small" />
-          ) : null}
-        </span>
-      ),
-      children: renderTable(
-        tlEvaluations,
-        tlColumns,
-        tlEvaluationsQuery.isLoading,
-        'No evaluations assigned to you as Team Lead',
-      ),
-    },
-    {
-      key: 'awaiting-employee',
-      label: `Awaiting (${dlByStatus.awaitingEmployee.length})`,
-      children: renderTable(
-        dlByStatus.awaitingEmployee,
-        columns,
-        false,
-        'No evaluations awaiting employee response',
-      ),
-    },
-    {
-      key: 'escalated',
-      label: (
-        <span className="inline-flex items-center gap-1.5">
-          Escalated
-          {dlByStatus.escalated.length > 0 ? (
-            <Badge
-              count={dlByStatus.escalated.length}
-              color="red"
-              size="small"
-            />
-          ) : null}
-        </span>
-      ),
-      children: renderTable(
-        dlByStatus.escalated,
-        columns,
-        false,
-        'No escalated evaluations',
-      ),
-    },
-    {
-      key: 'in-progress',
-      label: `In Progress (${dlByStatus.inProgress.length})`,
-      children: renderTable(
-        dlByStatus.inProgress,
-        columns,
-        false,
-        'No in-progress evaluations',
-      ),
-    },
-    {
-      key: 'completed',
-      label: `Completed (${dlByStatus.completed.length})`,
-      children: renderTable(
-        dlByStatus.completed,
-        columns,
-        false,
-        'No completed evaluations',
-        true,
-      ),
-    },
-  ];
+  function handleResetSearch(): void {
+    setSearch('');
+  }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
-      <div className="erp-users-stat-bar">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-inbox-page">
+      <div className="erp-users-stat-bar erp-evaluation-inbox-stats">
         <EvaluationStat
           label="Needs Action"
           value={totalNeedsAction}
           accent="amber"
           icon={<ExclamationCircleOutlined />}
-          active={activeTab === 'needs-action'}
-          onClick={() => setActiveTab('needs-action')}
+          active={queue === 'needs-action'}
+          onClick={() => setQueue('needs-action')}
         />
         <EvaluationStat
-          label="Team Lead Queue"
+          label="Team Lead"
           value={needsTLAction.length}
           accent="blue"
           icon={<TeamOutlined />}
-          active={activeTab === 'team-lead'}
-          onClick={() => setActiveTab('team-lead')}
+          active={queue === 'team-lead'}
+          onClick={() => setQueue('team-lead')}
+        />
+        <EvaluationStat
+          label="Awaiting"
+          value={queues.awaiting.length}
+          accent="teal"
+          icon={<FieldTimeOutlined />}
+          active={queue === 'awaiting'}
+          onClick={() => setQueue('awaiting')}
         />
         <EvaluationStat
           label="Escalated"
-          value={dlByStatus.escalated.length}
+          value={queues.escalated.length}
           accent="red"
           icon={<WarningOutlined />}
-          active={activeTab === 'escalated'}
-          onClick={() => setActiveTab('escalated')}
+          active={queue === 'escalated'}
+          onClick={() => setQueue('escalated')}
+        />
+        <EvaluationStat
+          label="In Progress"
+          value={queues['in-progress'].length}
+          accent="slate"
+          icon={<ClockCircleOutlined />}
+          active={queue === 'in-progress'}
+          onClick={() => setQueue('in-progress')}
         />
         <EvaluationStat
           label="Completed"
-          value={dlByStatus.completed.length}
+          value={queues.completed.length}
           accent="green"
           icon={<CheckCircleOutlined />}
-          active={activeTab === 'completed'}
-          onClick={() => setActiveTab('completed')}
+          active={queue === 'completed'}
+          onClick={() => setQueue('completed')}
         />
       </div>
 
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
-            <h3 className="erp-pro-card-toolbar-title">My Evaluation Inbox</h3>
-            {totalNeedsAction > 0 ? (
-              <span className="erp-users-count-pill">
-                {totalNeedsAction} action
-                {totalNeedsAction === 1 ? '' : 's'}
-              </span>
-            ) : (
-              <span className="erp-users-count-pill">
-                <ClockCircleOutlined className="mr-1" />
-                Up to date
-              </span>
-            )}
+            <h3 className="erp-pro-card-toolbar-title">{meta.title}</h3>
+            <span className="erp-users-count-pill">
+              {activeRows.length.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title="Refresh">
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={isFetching && !isLoading}
+                onClick={() => void handleRefresh()}
+                aria-label="Refresh"
+              />
+            </Tooltip>
           </div>
         </div>
 
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={tabItems}
-          className="erp-evaluation-inbox-tabs px-4 pt-2"
-        />
+        <div className="erp-users-filter-bar">
+          <Input
+            allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder="Search by name or employee ID"
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search.trim() ? (
+            <Button
+              type="link"
+              onClick={handleResetSearch}
+              className="!px-1"
+            >
+              Reset
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="erp-pro-table-card-body">
+          <Table
+            dataSource={activeRows}
+            columns={columns}
+            rowKey={(row) =>
+              row.inboxRole ? `${row.id}-${row.inboxRole}` : row.id
+            }
+            loading={isLoading}
+            pagination={{ pageSize: 10, hideOnSinglePage: true }}
+            className="erp-pro-table erp-users-table"
+            scroll={{ x: 880 }}
+            onRow={(row) => ({
+              onClick: () => router.push(`/hr/evaluations/${row.id}`),
+              className: 'cursor-pointer',
+            })}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<InboxOutlined />}
+                  title={
+                    searchQ ? 'No matching evaluations' : meta.emptyTitle
+                  }
+                  description={
+                    searchQ
+                      ? 'Try a different name or employee ID, or clear the search.'
+                      : meta.emptyDescription
+                  }
+                  action={
+                    searchQ
+                      ? {
+                          label: 'Clear search',
+                          onClick: handleResetSearch,
+                        }
+                      : undefined
+                  }
+                />
+              ),
+            }}
+          />
+        </div>
       </div>
     </div>
   );

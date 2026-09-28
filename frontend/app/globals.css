@@ -3686,6 +3686,22 @@ main::-webkit-scrollbar,
   margin-bottom: 16px;
 }
 
+.erp-evaluation-inbox-page .erp-evaluation-inbox-stats {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+@media (max-width: 1100px) {
+  .erp-evaluation-inbox-page .erp-evaluation-inbox-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .erp-evaluation-inbox-page .erp-evaluation-inbox-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .erp-evaluation-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
