@@ -122,7 +122,16 @@ export interface EmployeeEvaluation {
   resultSharedAt: string | null;
   employeeRespondBy: string | null;
   lockedAt: string | null;
-  cycle: { quarter: number; year: number; status: EvaluationCycleStatus };
+  cycle: {
+    quarter: number;
+    year: number;
+    status: EvaluationCycleStatus;
+    template?: {
+      id: string;
+      name: string;
+      sections: EvaluationSection[];
+    };
+  };
   employee: {
     id: string;
     firstName: string;
