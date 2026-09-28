@@ -146,7 +146,10 @@ export function useBulkCreateEvaluations() {
 
 // ─── Evaluation hooks ────────────────────────────────────────────────────────
 
-export function useEvaluations(filters?: EvaluationListFilters) {
+export function useEvaluations(
+  filters?: EvaluationListFilters,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: evaluationKeys.list(filters),
     queryFn: () => {
@@ -159,6 +162,7 @@ export function useEvaluations(filters?: EvaluationListFilters) {
         `${EVALUATIONS_PATH}${toQueryString(params)}`,
       );
     },
+    enabled: options?.enabled ?? true,
   });
 }
 

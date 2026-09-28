@@ -6,12 +6,14 @@ import {
   BarChartOutlined,
   CalendarOutlined,
   EditOutlined,
+  StarOutlined,
   UserDeleteOutlined,
   UserOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import MyEvaluationsPageContent from '@/components/modules/hr/evaluation/MyEvaluationsPageContent';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeeWorkScheduleSection from '@/components/modules/hr/work-schedule/EmployeeWorkScheduleSection';
@@ -85,7 +87,8 @@ type ProfileTab =
   | 'leave'
   | 'attendance'
   | 'workSchedule'
-  | 'perDiem';
+  | 'perDiem'
+  | 'evaluations';
 
 function resolveProfileTab(value: string | null): ProfileTab {
   if (value === 'leave') {
@@ -99,6 +102,9 @@ function resolveProfileTab(value: string | null): ProfileTab {
   }
   if (value === 'perDiem') {
     return 'perDiem';
+  }
+  if (value === 'evaluations') {
+    return 'evaluations';
   }
   return 'overview';
 }
@@ -491,6 +497,17 @@ export default function EmployeeDetailPageContent({
               </span>
             </button>
           ) : null}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'evaluations'}
+            onClick={() => setActiveTab('evaluations')}
+          >
+            <StarOutlined />
+            <span className="erp-employee-tab-label">
+              {t('users.tabEvaluations')}
+            </span>
+          </button>
         </div>
 
         <div className="erp-employee-tab-panel">
@@ -524,6 +541,10 @@ export default function EmployeeDetailPageContent({
             <EmployeePerDiemRatesSection
               employeeId={user.id}
               editable={canManagePerDiemRates}
+            />
+          ) : activeTab === 'evaluations' ? (
+            <MyEvaluationsPageContent
+              employeeId={isOwnProfile ? undefined : user.id}
             />
           ) : (
             <div className="flex flex-col gap-4">

@@ -11,6 +11,7 @@ import {
   FolderOpenOutlined,
   MailOutlined,
   ScheduleOutlined,
+  StarOutlined,
   UserOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
@@ -18,6 +19,7 @@ import { User } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import PlaceholderPage from '@/components/PlaceholderPage';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
+import MyEvaluationsPageContent from '@/components/modules/hr/evaluation/MyEvaluationsPageContent';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
@@ -71,6 +73,7 @@ const PROFILE_TABS = [
   'contract',
   'assets',
   'perDiem',
+  'evaluations',
 ] as const;
 
 type ProfileTab = (typeof PROFILE_TABS)[number];
@@ -203,6 +206,10 @@ export default function ProfilePageContent(): React.ReactNode {
       icon: <DesktopOutlined />,
     },
     perDiem: { label: t('profile.tabPerDiem'), icon: <WalletOutlined /> },
+    evaluations: {
+      label: t('profile.tabEvaluations'),
+      icon: <StarOutlined />,
+    },
   };
 
   if (profileQuery.isLoading) {
@@ -602,6 +609,8 @@ export default function ProfilePageContent(): React.ReactNode {
             emptyMessage={t('profile.noPerDiemRates')}
           />
         );
+      case 'evaluations':
+        return <MyEvaluationsPageContent />;
       case 'account':
       default:
         return accountTab;

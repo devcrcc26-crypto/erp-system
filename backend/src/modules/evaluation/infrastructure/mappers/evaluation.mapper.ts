@@ -1,15 +1,3 @@
-import type {
-  EmployeeEvaluation,
-  EvaluationAssessment,
-  EvaluationCriteria,
-  EvaluationCycle,
-  EvaluationDispute,
-  EvaluationScore,
-  EvaluationSection,
-  EvaluationTemplate,
-  Prisma,
-} from '@prisma/client';
-
 type DecimalLike = { toNumber: () => number } | number | null | undefined;
 
 /**
@@ -29,13 +17,33 @@ export function decimalToNumber(value: DecimalLike): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export type EvaluationTemplateWithSections = EvaluationTemplate & {
-  sections: Array<
-    EvaluationSection & {
-      criteria: EvaluationCriteria[];
-    }
-  >;
-};
+export interface EvaluationTemplateWithSections {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  version: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  sections: Array<{
+    id: string;
+    name: string;
+    nameZh: string | null;
+    description: string | null;
+    weight: DecimalLike;
+    sortOrder: number;
+    criteria: Array<{
+      id: string;
+      name: string;
+      nameZh: string | null;
+      description: string | null;
+      weight: DecimalLike;
+      isActive: boolean;
+      sortOrder: number;
+    }>;
+  }>;
+}
 
 /**
  * Maps an evaluation template (with nested sections/criteria) for API responses.
@@ -72,32 +80,21 @@ export function mapEvaluationTemplate(
   };
 }
 
-type EvaluationListRow = EmployeeEvaluation & {
-  cycle?: Pick<EvaluationCycle, 'quarter' | 'year' | 'status'> | null;
-  employee?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    employeeId: string | null;
-  } | null;
-  teamLead?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  } | null;
-  disciplineLead?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  } | null;
-  assessments?: Array<
-    EvaluationAssessment & {
-      scores: EvaluationScore[];
-    }
-  >;
-  disputes?: EvaluationDispute[];
-  _count?: { assessments: number; disputes: number };
-};
+interface EvaluationListRow {
+  finalScore: DecimalLike;
+  adjustedScore: DecimalLike;
+  assessments?: Array<{
+    overallAvg: DecimalLike;
+    scores: unknown[];
+    [key: string]: unknown;
+  }>;
+  disputes?: Array<{
+    dlAdjustedScore: DecimalLike;
+    hrFinalScore: DecimalLike;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown;
+}
 
 /**
  * Maps an employee evaluation row for API responses (decimals → numbers).
@@ -121,5 +118,3 @@ export function mapEmployeeEvaluation(
     })),
   };
 }
-
-export type EvaluationCycleCreateInput = Prisma.EvaluationCycleCreateInput;

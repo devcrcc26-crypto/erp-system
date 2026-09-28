@@ -23,6 +23,7 @@ import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import ContractEvaluationHistory from '@/components/modules/hr/evaluation/ContractEvaluationHistory';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -403,6 +404,13 @@ export default function EmployeeContractDetailPageContent({
             <AttachmentDownloadList
               documents={contract.attachmentFolder?.documents}
               emptyLabel={t('hr.empty.noAttachments')}
+            />
+          </DetailSection>
+
+          <DetailSection title={t('hr.section.evaluationHistory')}>
+            <ContractEvaluationHistory
+              contractId={contract.id}
+              employeeName={employeeName}
             />
           </DetailSection>
         </div>
