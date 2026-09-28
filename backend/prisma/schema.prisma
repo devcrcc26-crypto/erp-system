@@ -303,6 +303,9 @@ model Company {
   attendanceRecords        AttendanceRecord[]
   attendanceMonthlyApprovals AttendanceMonthlyApproval[]
   fieldMovementLogs          FieldMovementLog[]
+  evaluationTemplates        EvaluationTemplate[]
+  evaluationCycles           EvaluationCycle[]
+  employeeEvaluations        EmployeeEvaluation[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -420,21 +423,23 @@ model Department {
 
 /// Flat engineering discipline catalog (Highway, Structure, etc.) — not org HR department.
 model Discipline {
-  id        String    @id @default(uuid())
-  companyId String    @map("company_id")
-  name      String
-  nameZh    String?   @map("name_zh")
-  isActive  Boolean   @default(true) @map("is_active")
-  leaderId  String?   @map("leader_id")
-  createdAt DateTime  @default(now()) @map("created_at")
-  createdBy String    @map("created_by")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  updatedBy String    @map("updated_by")
-  deletedAt DateTime? @map("deleted_at")
-  deletedBy String?   @map("deleted_by")
+  id            String    @id @default(uuid())
+  companyId     String    @map("company_id")
+  name          String
+  nameZh        String?   @map("name_zh")
+  isActive      Boolean   @default(true) @map("is_active")
+  leaderId      String?   @map("leader_id")
+  localLeaderId String?   @map("local_leader_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  createdBy     String    @map("created_by")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  updatedBy     String    @map("updated_by")
+  deletedAt     DateTime? @map("deleted_at")
+  deletedBy     String?   @map("deleted_by")
 
   company         Company          @relation(fields: [companyId], references: [id])
   leader          User?            @relation("DisciplineLeader", fields: [leaderId], references: [id])
+  localLeader     User?            @relation("DisciplineLocalLeader", fields: [localLeaderId], references: [id])
   taskDisciplines TaskDiscipline[]
   users           User[]           @relation("UserEngineeringDiscipline")
 
@@ -443,6 +448,7 @@ model Discipline {
   @@index([companyId, deletedAt], map: "idx_engineering_discipline_company_deleted")
   @@index([companyId, isActive], map: "idx_engineering_discipline_company_active")
   @@index([leaderId], map: "idx_discipline_leader")
+  @@index([localLeaderId], map: "idx_discipline_local_leader")
   @@map("engineering_discipline")
 }
 
@@ -792,6 +798,31 @@ model User {
   attendanceMonthlyApprovals      AttendanceMonthlyApproval[] @relation("AttendanceApprover")
   attendanceMonthlyUnlocks        AttendanceMonthlyApproval[] @relation("AttendanceUnlocker")
   attendanceDailyCorrections      AttendanceDailyLogCorrection[] @relation("AttendanceCorrector")
+
+  // Evaluation relations
+  evaluationTemplatesCreated    EvaluationTemplate[]        @relation("EvaluationTemplateCreator")
+  evaluationTemplatesUpdated    EvaluationTemplate[]        @relation("EvaluationTemplateUpdater")
+  evaluationSectionsCreated     EvaluationSection[]         @relation("EvaluationSectionCreator")
+  evaluationSectionsUpdated     EvaluationSection[]         @relation("EvaluationSectionUpdater")
+  evaluationCriteriaCreated     EvaluationCriteria[]        @relation("EvaluationCriteriaCreator")
+  evaluationCriteriaUpdated     EvaluationCriteria[]        @relation("EvaluationCriteriaUpdater")
+  evaluationCyclesCreated       EvaluationCycle[]           @relation("EvaluationCycleCreator")
+  evaluationCyclesUpdated       EvaluationCycle[]           @relation("EvaluationCycleUpdater")
+  employeeEvaluations           EmployeeEvaluation[]        @relation("EvaluationEmployee")
+  teamLeadEvaluations           EmployeeEvaluation[]        @relation("EvaluationTeamLead")
+  disciplineLeadEvaluations     EmployeeEvaluation[]        @relation("EvaluationDisciplineLead")
+  lockedEvaluations             EmployeeEvaluation[]        @relation("EvaluationLocker")
+  employeeEvaluationsCreated    EmployeeEvaluation[]        @relation("EmployeeEvaluationCreator")
+  employeeEvaluationsUpdated    EmployeeEvaluation[]        @relation("EmployeeEvaluationUpdater")
+  evaluationAssessments         EvaluationAssessment[]      @relation("EvaluationAssessor")
+  evaluationAssessmentsCreated  EvaluationAssessment[]      @relation("EvaluationAssessmentCreator")
+  evaluationAssessmentsUpdated  EvaluationAssessment[]      @relation("EvaluationAssessmentUpdater")
+  evaluationScoresCreated       EvaluationScore[]           @relation("EvaluationScoreCreator")
+  evaluationScoresUpdated       EvaluationScore[]           @relation("EvaluationScoreUpdater")
+  evaluationDisputesInitiated   EvaluationDispute[]         @relation("EvaluationDisputeInitiator")
+  evaluationDisputesDLResponded EvaluationDispute[]         @relation("EvaluationDisputeDLResponder")
+  evaluationDisputesHRResponded EvaluationDispute[]         @relation("EvaluationDisputeHRResponder")
+  ledDisciplinesLocal           Discipline[]                @relation("DisciplineLocalLeader")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([leavePolicyId], map: "idx_user_leave_policy")
@@ -5221,6 +5252,7 @@ model EmployeeContract{
   employee                  User                          @relation("EmployeeContractEmployee", fields: [employeeId], references: [id])
   creator                   User                          @relation("EmployeeContractCreator", fields: [createdBy], references: [id])
   attachmentFolder          DocumentFolder?               @relation(fields: [attachmentFolderId], references: [id])
+  evaluations               EmployeeEvaluation[]
 
   @@unique([companyId, contractNumber], map: "uq_employee_contract_company_number")
   @@index([companyId], map:"idx_employee_contract_company")
@@ -5405,4 +5437,317 @@ model ExitPermitItem {
     @@index([documentId], map: "idx_exit_permit_item_document")
     @@map("exit_permit_item")
 
+}
+
+// ─── Employee Evaluation ──────────────────────────────────────────────────────
+
+enum EvaluationCycleStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+
+  @@map("evaluation_cycle_status")
+}
+
+enum EvaluationStatus {
+  PENDING
+  SELF_ASSESSED
+  TEAM_LEAD_ASSESSED
+  DISCIPLINE_ASSESSED
+  RESULT_SHARED
+  ACCEPTED
+  DISPUTED
+  DL_UPHELD
+  DL_ADJUSTED
+  ESCALATED
+  HR_DECIDED
+  LOCKED
+
+  @@map("evaluation_status")
+}
+
+enum EvaluationStage {
+  SELF
+  TEAM_LEAD
+  DISCIPLINE_LEAD
+  HR
+
+  @@map("evaluation_stage")
+}
+
+enum EvaluationDisputeStage {
+  SUBMITTED_TO_DL
+  DL_RESPONDED
+  ESCALATED_TO_HR
+  HR_DECIDED
+
+  @@map("evaluation_dispute_stage")
+}
+
+/**
+ * Versioned evaluation form template — created by HR or Discipline Lead.
+ * A new version is created when the form changes so old evaluations
+ * keep their original criteria.
+ */
+model EvaluationTemplate {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  name        String
+  description String?
+  version     Int      @default(1)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   String   @map("created_by")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String   @map("updated_by")
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?  @map("deleted_by")
+
+  company  Company               @relation(fields: [companyId], references: [id])
+  creator  User                  @relation("EvaluationTemplateCreator", fields: [createdBy], references: [id])
+  updater  User                  @relation("EvaluationTemplateUpdater", fields: [updatedBy], references: [id])
+  sections EvaluationSection[]
+  cycles   EvaluationCycle[]
+
+  @@index([companyId], map: "idx_eval_template_company")
+  @@map("evaluation_template")
+}
+
+/**
+ * Groups criteria into sections with a weight percentage.
+ * e.g. Work Performance (40%), Attitude (30%), etc.
+ */
+model EvaluationSection {
+  id          String   @id @default(uuid())
+  templateId  String   @map("template_id")
+  name        String
+  nameZh      String?  @map("name_zh")
+  description String?
+  weight      Decimal  @db.Decimal(5, 2)  // percentage, e.g. 40.00
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   String   @map("created_by")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String   @map("updated_by")
+
+  template EvaluationTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  creator  User                @relation("EvaluationSectionCreator", fields: [createdBy], references: [id])
+  updater  User                @relation("EvaluationSectionUpdater", fields: [updatedBy], references: [id])
+  criteria EvaluationCriteria[]
+
+  @@index([templateId], map: "idx_eval_section_template")
+  @@map("evaluation_section")
+}
+
+/**
+ * Individual scoring criterion within a section.
+ */
+model EvaluationCriteria {
+  id          String   @id @default(uuid())
+  sectionId   String   @map("section_id")
+  name        String
+  nameZh      String?  @map("name_zh")
+  description String?
+  weight      Decimal  @db.Decimal(5, 2)  // weight within section
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   String   @map("created_by")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String   @map("updated_by")
+
+  section  EvaluationSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  creator  User              @relation("EvaluationCriteriaCreator", fields: [createdBy], references: [id])
+  updater  User              @relation("EvaluationCriteriaUpdater", fields: [updatedBy], references: [id])
+  scores   EvaluationScore[]
+
+  @@index([sectionId], map: "idx_eval_criteria_section")
+  @@map("evaluation_criteria")
+}
+
+/**
+ * One evaluation cycle = one quarter.
+ * e.g. Q1 2026 (Jan–Mar), evaluated in April.
+ */
+model EvaluationCycle {
+  id           String                @id @default(uuid())
+  companyId    String                @map("company_id")
+  templateId   String                @map("template_id")
+  quarter      Int                   // 1 | 2 | 3 | 4
+  year         Int
+  periodStart  DateTime              @map("period_start") @db.Date
+  periodEnd    DateTime              @map("period_end") @db.Date
+  evalStart    DateTime?             @map("eval_start") @db.Date  // when evaluation opens
+  evalEnd      DateTime?             @map("eval_end") @db.Date    // when evaluation closes
+  status       EvaluationCycleStatus @default(DRAFT)
+  notes        String?
+  createdAt    DateTime              @default(now()) @map("created_at")
+  createdBy    String                @map("created_by")
+  updatedAt    DateTime              @default(now()) @updatedAt @map("updated_at")
+  updatedBy    String                @map("updated_by")
+  deletedAt    DateTime?             @map("deleted_at")
+  deletedBy    String?               @map("deleted_by")
+
+  company     Company              @relation(fields: [companyId], references: [id])
+  template    EvaluationTemplate   @relation(fields: [templateId], references: [id])
+  creator     User                 @relation("EvaluationCycleCreator", fields: [createdBy], references: [id])
+  updater     User                 @relation("EvaluationCycleUpdater", fields: [updatedBy], references: [id])
+  evaluations EmployeeEvaluation[]
+
+  @@unique([companyId, quarter, year], map: "uq_eval_cycle_quarter_year")
+  @@index([companyId], map: "idx_eval_cycle_company")
+  @@map("evaluation_cycle")
+}
+
+/**
+ * One evaluation per employee per cycle.
+ * Links to EmployeeContract for contract renewal reference.
+ */
+model EmployeeEvaluation {
+  id                  String           @id @default(uuid())
+  companyId           String           @map("company_id")
+  cycleId             String           @map("cycle_id")
+  employeeId          String           @map("employee_id")
+  contractId          String?          @map("contract_id")   // link to active contract
+  teamLeadId          String?          @map("team_lead_id")  // local Ethiopian team lead
+  disciplineLeadId    String?          @map("discipline_lead_id")
+  status              EvaluationStatus @default(PENDING)
+
+  // Consolidated final score (calculated by system after DL assessment)
+  // Average of self + team lead + discipline lead scores
+  finalScore          Decimal?         @map("final_score") @db.Decimal(5, 2)
+
+  // Score after HR or DL adjustment (if disputed and adjusted)
+  adjustedScore       Decimal?         @map("adjusted_score") @db.Decimal(5, 2)
+
+  // Timestamps for auto-resolution (5-day deadlines)
+  resultSharedAt      DateTime?        @map("result_shared_at")
+  employeeRespondBy   DateTime?        @map("employee_respond_by")    // resultSharedAt + 5 days
+  dlRespondBy         DateTime?        @map("dl_respond_by")          // disputedAt + 5 days
+  dlAdjustedAt        DateTime?        @map("dl_adjusted_at")
+  employeeAdjRespondBy DateTime?       @map("employee_adj_respond_by") // dlAdjustedAt + 5 days
+
+  lockedAt            DateTime?        @map("locked_at")
+  lockedBy            String?          @map("locked_by")
+  notes               String?
+  createdAt           DateTime         @default(now()) @map("created_at")
+  createdBy           String           @map("created_by")
+  updatedAt           DateTime         @default(now()) @updatedAt @map("updated_at")
+  updatedBy           String           @map("updated_by")
+  deletedAt           DateTime?        @map("deleted_at")
+  deletedBy           String?          @map("deleted_by")
+
+  company        Company              @relation(fields: [companyId], references: [id])
+  cycle          EvaluationCycle      @relation(fields: [cycleId], references: [id])
+  employee       User                 @relation("EvaluationEmployee", fields: [employeeId], references: [id])
+  teamLead       User?                @relation("EvaluationTeamLead", fields: [teamLeadId], references: [id])
+  disciplineLead User?                @relation("EvaluationDisciplineLead", fields: [disciplineLeadId], references: [id])
+  contract       EmployeeContract?    @relation(fields: [contractId], references: [id])
+  locker         User?                @relation("EvaluationLocker", fields: [lockedBy], references: [id])
+  creator        User                 @relation("EmployeeEvaluationCreator", fields: [createdBy], references: [id])
+  updater        User                 @relation("EmployeeEvaluationUpdater", fields: [updatedBy], references: [id])
+  assessments    EvaluationAssessment[]
+  disputes       EvaluationDispute[]
+
+  @@unique([cycleId, employeeId], map: "uq_eval_cycle_employee")
+  @@index([companyId], map: "idx_employee_eval_company")
+  @@index([employeeId], map: "idx_employee_eval_employee")
+  @@index([cycleId], map: "idx_employee_eval_cycle")
+  @@map("employee_evaluation")
+}
+
+/**
+ * One assessment per stage per evaluation.
+ * SELF | TEAM_LEAD | DISCIPLINE_LEAD | HR
+ */
+model EvaluationAssessment {
+  id             String          @id @default(uuid())
+  evaluationId   String          @map("evaluation_id")
+  stage          EvaluationStage
+  assessorId     String          @map("assessor_id")
+  sectionAvgJson Json?           @map("section_avg_json")  // cached section averages
+  overallAvg     Decimal?        @map("overall_avg") @db.Decimal(5, 2)
+  comment        String?         // overall comment from assessor
+  submittedAt    DateTime?       @map("submitted_at")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  createdBy      String          @map("created_by")
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
+  updatedBy      String          @map("updated_by")
+
+  evaluation EmployeeEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  assessor   User               @relation("EvaluationAssessor", fields: [assessorId], references: [id])
+  creator    User               @relation("EvaluationAssessmentCreator", fields: [createdBy], references: [id])
+  updater    User               @relation("EvaluationAssessmentUpdater", fields: [updatedBy], references: [id])
+  scores     EvaluationScore[]
+
+  @@unique([evaluationId, stage], map: "uq_eval_assessment_stage")
+  @@index([evaluationId], map: "idx_eval_assessment_evaluation")
+  @@map("evaluation_assessment")
+}
+
+/**
+ * Score per criterion per assessment.
+ * score is NULL when N/A is selected.
+ */
+model EvaluationScore {
+  id           String   @id @default(uuid())
+  assessmentId String   @map("assessment_id")
+  criteriaId   String   @map("criteria_id")
+  score        Int?     // 1-5, NULL = N/A
+  comment      String?  // optional per-criterion comment
+  createdAt    DateTime @default(now()) @map("created_at")
+  createdBy    String   @map("created_by")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+  updatedBy    String   @map("updated_by")
+
+  assessment EvaluationAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  criteria   EvaluationCriteria   @relation(fields: [criteriaId], references: [id])
+  creator    User                 @relation("EvaluationScoreCreator", fields: [createdBy], references: [id])
+  updater    User                 @relation("EvaluationScoreUpdater", fields: [updatedBy], references: [id])
+
+  @@unique([assessmentId, criteriaId], map: "uq_eval_score_assessment_criteria")
+  @@index([assessmentId], map: "idx_eval_score_assessment")
+  @@map("evaluation_score")
+}
+
+/**
+ * Dispute record — created when employee disputes result.
+ * Tracks the full dispute chain: employee → DL → HR.
+ */
+model EvaluationDispute {
+  id             String                 @id @default(uuid())
+  evaluationId   String                 @map("evaluation_id")
+  initiatedBy    String                 @map("initiated_by")   // employee
+  reason         String                 // employee's dispute reason
+  stage          EvaluationDisputeStage @default(SUBMITTED_TO_DL)
+
+  // DL response
+  dlRespondedAt  DateTime?              @map("dl_responded_at")
+  dlRespondedBy  String?                @map("dl_responded_by")
+  dlDecision     String?                @map("dl_decision")    // UPHELD | ADJUSTED
+  dlComment      String?                @map("dl_comment")
+  dlAdjustedScore Decimal?             @map("dl_adjusted_score") @db.Decimal(5, 2)
+
+  // Employee response to DL decision
+  employeeAcknowledgedAt DateTime?      @map("employee_acknowledged_at")
+  employeeDecision       String?        @map("employee_decision") // ACCEPTED | ESCALATED
+  employeeEscalationReason String?      @map("employee_escalation_reason")
+
+  // HR response (if escalated)
+  hrRespondedAt  DateTime?              @map("hr_responded_at")
+  hrRespondedBy  String?                @map("hr_responded_by")
+  hrDecision     String?                @map("hr_decision")    // UPHELD | ADJUSTED
+  hrComment      String?                @map("hr_comment")
+  hrFinalScore   Decimal?               @map("hr_final_score") @db.Decimal(5, 2)
+
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @default(now()) @updatedAt @map("updated_at")
+
+  evaluation     EmployeeEvaluation     @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  initiator      User                   @relation("EvaluationDisputeInitiator", fields: [initiatedBy], references: [id])
+  dlResponder    User?                  @relation("EvaluationDisputeDLResponder", fields: [dlRespondedBy], references: [id])
+  hrResponder    User?                  @relation("EvaluationDisputeHRResponder", fields: [hrRespondedBy], references: [id])
+
+  @@index([evaluationId], map: "idx_eval_dispute_evaluation")
+  @@map("evaluation_dispute")
 }

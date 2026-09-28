@@ -8,6 +8,7 @@ import { seedApprovalCategories } from './seeds/approval-categories.seed';
 import { seedOrgStructure } from './seeds/org-structure.seed';
 import { seedLeavePolicies } from './seed-leave-policies';
 import { seedWorkSchedules } from './seed/work-schedules.seed';
+import { seedEvaluationTemplate } from './seeds/evaluation-template.seed';
 
 const prisma = new PrismaClient();
 
@@ -2334,6 +2335,12 @@ async function main(): Promise<void> {
     // await seedComment8Walkthrough(pmCtx);
     console.log('  Demo password for all seeded accounts: Admin@12345 (or SEED_ADMIN_PASSWORD)');
   }
+
+  console.log('Seeding evaluation template...');
+  await seedEvaluationTemplate(prisma, {
+    companyId: company.id,
+    actorUserId: adminUser.id,
+  });
 }
 
 main()
