@@ -14,7 +14,9 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  CreateEvaluationCriteriaDto,
   CreateEvaluationTemplateDto,
+  UpdateEvaluationCriteriaDto,
   UpdateEvaluationTemplateDto,
 } from '../../application/dtos/evaluation-template.dtos';
 import { EvaluationTemplateService } from '../../application/services/evaluation-template.service';
@@ -62,6 +64,36 @@ export class EvaluationTemplateController {
     @CurrentCompany() companyId: string,
   ): Promise<unknown> {
     return this.templateService.createTemplate(dto, {
+      userId: user.userId,
+      companyId,
+    });
+  }
+
+  @Post('sections/:sectionId/criteria')
+  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @ApiOperation({ summary: 'Add a criterion to a template section' })
+  addCriteria(
+    @Param('sectionId') sectionId: string,
+    @Body() dto: CreateEvaluationCriteriaDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+  ): Promise<unknown> {
+    return this.templateService.addCriteria(sectionId, dto, {
+      userId: user.userId,
+      companyId,
+    });
+  }
+
+  @Patch('criteria/:criteriaId')
+  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @ApiOperation({ summary: 'Update an evaluation criterion' })
+  updateCriteria(
+    @Param('criteriaId') criteriaId: string,
+    @Body() dto: UpdateEvaluationCriteriaDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+  ): Promise<unknown> {
+    return this.templateService.updateCriteria(criteriaId, dto, {
       userId: user.userId,
       companyId,
     });

@@ -67,12 +67,21 @@ export default function EvaluationTrendChart({
       ? data[data.length - 1].score - data[0].score
       : 0;
 
+  const avgScore =
+    data.reduce((sum, d) => sum + (d.score ?? 0), 0) / data.length;
+
   const trendLabel =
-    trend > 0.2
-      ? 'Improving'
-      : trend < -0.2
-        ? 'Declining'
-        : 'Stable';
+    trend > 0.2 && avgScore >= 4.0
+      ? '🌟 Consistently Excellent'
+      : trend > 0.2
+        ? '📈 Improving'
+        : trend < -0.2
+          ? '📉 Declining'
+          : avgScore >= 4.0
+            ? '⭐ Consistently High'
+            : avgScore >= 3.0
+              ? '✅ Consistently Meeting Expectations'
+              : '⚠ Needs Attention';
 
   const latestScore = data[data.length - 1]?.score ?? 0;
 

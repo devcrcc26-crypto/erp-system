@@ -229,6 +229,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           items: [
             { kind: 'link', id: 'evaluations', labelKey: 'nav.hr.evaluations', icon: 'hr-employee-evaluation', href: '/hr/evaluations', requires: HR, activePaths: ['/hr/employee-evaluation'], keywords: ['performance', 'appraisal', 'review'] },
             { kind: 'link', id: 'evaluation-cycles', labelKey: 'nav.hr.evaluationCycles', icon: 'hr-employee-evaluation', href: '/hr/evaluations/cycles', requires: HR, keywords: ['quarter', 'cycle'] },
+            { kind: 'link', id: 'evaluation-templates', labelKey: 'nav.hr.evaluationTemplates', icon: 'hr-employee-evaluation', href: '/hr/evaluations/templates', requires: HR, keywords: ['form', 'template', 'criteria'] },
           ],
         },
         {

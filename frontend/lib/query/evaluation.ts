@@ -79,6 +79,58 @@ export function useUpdateEvaluationTemplate(id: string) {
   });
 }
 
+export function useEvaluationTemplate(id: string) {
+  return useQuery({
+    queryKey: [...evaluationKeys.templates(), id] as const,
+    queryFn: () => apiGet<EvaluationTemplate>(`${TEMPLATES_PATH}/${id}`),
+    enabled: Boolean(id),
+  });
+}
+
+export interface AddEvaluationCriteriaPayload {
+  sectionId: string;
+  name: string;
+  nameZh?: string;
+  description?: string;
+  weight: number;
+  sortOrder: number;
+}
+
+export function useAddEvaluationCriteria() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sectionId, ...dto }: AddEvaluationCriteriaPayload) =>
+      apiPost(`${TEMPLATES_PATH}/sections/${sectionId}/criteria`, dto),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: evaluationKeys.templates(),
+      });
+    },
+  });
+}
+
+export interface UpdateEvaluationCriteriaPayload {
+  criteriaId: string;
+  name?: string;
+  nameZh?: string;
+  description?: string;
+  weight?: number;
+  isActive?: boolean;
+}
+
+export function useUpdateEvaluationCriteria() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ criteriaId, ...dto }: UpdateEvaluationCriteriaPayload) =>
+      apiPatch(`${TEMPLATES_PATH}/criteria/${criteriaId}`, dto),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: evaluationKeys.templates(),
+      });
+    },
+  });
+}
+
 // ─── Cycle hooks ────────────────────────────────────────────────────────────
 
 export function useEvaluationCycles() {
