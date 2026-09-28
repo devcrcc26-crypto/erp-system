@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -13,6 +14,7 @@ import {
 } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import type {
   CreateEmployeeEvaluationDto,
@@ -29,12 +31,18 @@ interface ServiceContext {
 }
 
 const DISPUTE_DEADLINE_DAYS = 5;
+const HR_ROLE_NAMES = ['HR Manager', 'HR Officer'] as const;
 
 type CriteriaWeight = { id: string; weight: number | Decimal };
 
 @Injectable()
 export class EvaluationService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(EvaluationService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -42,6 +50,69 @@ export class EvaluationService {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
+  }
+
+  /**
+   * Sends an in-app notification; failures are logged and never block the flow.
+   */
+  private async notify(
+    companyId: string,
+    actorId: string,
+    recipientId: string,
+    eventType: string,
+    subject: string,
+    body: string,
+    options?: { allowSelf?: boolean },
+  ): Promise<void> {
+    if (!options?.allowSelf && recipientId === actorId) {
+      return;
+    }
+    try {
+      await this.notificationService.send(
+        { companyId, userId: actorId },
+        { recipientId, eventType, subject, body },
+      );
+    } catch (error) {
+      this.logger.warn(
+        `[Evaluation] Failed to send notification ${eventType} to ${recipientId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  private evaluationLabel(evaluation: {
+    cycle: { quarter: number; year: number };
+  }): string {
+    return `Q${evaluation.cycle.quarter} ${evaluation.cycle.year} Evaluation`;
+  }
+
+  private employeeName(employee: {
+    firstName: string;
+    lastName: string;
+  }): string {
+    return `${employee.firstName} ${employee.lastName}`;
+  }
+
+  private formatScore(
+    score: Decimal | number | null | undefined,
+  ): string {
+    if (score == null) {
+      return 'N/A';
+    }
+    return Number(score).toFixed(1);
+  }
+
+  private async findHrUserIds(companyId: string): Promise<string[]> {
+    const hrUsers = await this.prisma.userRole.findMany({
+      where: {
+        role: { name: { in: [...HR_ROLE_NAMES] }, deletedAt: null },
+        deletedAt: null,
+        user: { companyId, isActive: true, deletedAt: null },
+      },
+      include: { user: { select: { id: true } } },
+    });
+    return [...new Set(hrUsers.map((hr) => hr.user.id))];
   }
 
   private async getEvaluation(id: string, companyId: string) {
@@ -575,7 +646,19 @@ export class EvaluationService {
       },
     });
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
+    if (updatedEval.teamLeadId) {
+      await this.notify(
+        ctx.companyId,
+        ctx.userId,
+        updatedEval.teamLeadId,
+        'evaluation.self_assessment_submitted',
+        'Self-assessment ready for review',
+        `${this.employeeName(updatedEval.employee)} has submitted their self-assessment for ${this.evaluationLabel(updatedEval)}. Please complete your Team Lead assessment.`,
+      );
+    }
+
+    return updatedEval;
   }
 
   // ─── Stage 2: Team Lead Assessment ────────────────────────────────────────
@@ -628,7 +711,19 @@ export class EvaluationService {
       },
     });
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
+    if (updatedEval.disciplineLeadId) {
+      await this.notify(
+        ctx.companyId,
+        ctx.userId,
+        updatedEval.disciplineLeadId,
+        'evaluation.team_lead_assessment_submitted',
+        'Team Lead assessment ready',
+        `The Team Lead assessment for ${this.employeeName(updatedEval.employee)} (${this.evaluationLabel(updatedEval)}) has been submitted. Please complete your Discipline Lead assessment.`,
+      );
+    }
+
+    return updatedEval;
   }
 
   // ─── Stage 3: Discipline Lead Assessment + Consolidation ──────────────────
@@ -719,7 +814,20 @@ export class EvaluationService {
         },
       });
 
-      return this.getEvaluation(evaluationId, ctx.companyId);
+      const adjustedEval = await this.getEvaluation(
+        evaluationId,
+        ctx.companyId,
+      );
+      await this.notify(
+        ctx.companyId,
+        ctx.userId,
+        adjustedEval.employeeId,
+        'evaluation.dl_responded',
+        'Discipline Lead responded to your dispute',
+        `Your Discipline Lead has adjusted your score to ${this.formatScore(adjustedEval.adjustedScore ?? adjustedEval.finalScore)} for your ${this.evaluationLabel(adjustedEval)}. Comment: "${dto.comment ?? 'Score adjusted after re-assessment'}". You have 5 days to accept or escalate to HR.`,
+      );
+
+      return adjustedEval;
     }
 
     await this.prisma.employeeEvaluation.update({
@@ -731,7 +839,21 @@ export class EvaluationService {
       },
     });
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const consolidatedEval = await this.getEvaluation(
+      evaluationId,
+      ctx.companyId,
+    );
+    await this.notify(
+      ctx.companyId,
+      ctx.userId,
+      ctx.userId,
+      'evaluation.consolidation_complete',
+      'Evaluation consolidated — share result',
+      `The ${this.evaluationLabel(consolidatedEval)} for ${this.employeeName(consolidatedEval.employee)} has been consolidated. Final score: ${this.formatScore(consolidatedEval.finalScore)}. Please share the result with the employee.`,
+      { allowSelf: true },
+    );
+
+    return consolidatedEval;
   }
 
   // ─── Share result with employee ────────────────────────────────────────────
@@ -764,7 +886,17 @@ export class EvaluationService {
       },
     });
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
+    await this.notify(
+      ctx.companyId,
+      ctx.userId,
+      updatedEval.employeeId,
+      'evaluation.result_shared',
+      `Your ${this.evaluationLabel(updatedEval)} result is ready`,
+      `Your evaluation result for ${this.evaluationLabel(updatedEval)} is now available. Your score: ${this.formatScore(updatedEval.finalScore)}. You have 5 days to accept or dispute the result.`,
+    );
+
+    return updatedEval;
   }
 
   // ─── Employee accepts result ───────────────────────────────────────────────
@@ -804,7 +936,20 @@ export class EvaluationService {
       },
     });
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
+    const hrUserIds = await this.findHrUserIds(ctx.companyId);
+    for (const hrUserId of hrUserIds) {
+      await this.notify(
+        ctx.companyId,
+        ctx.userId,
+        hrUserId,
+        'evaluation.accepted',
+        'Evaluation accepted',
+        `${this.employeeName(updatedEval.employee)} has accepted their ${this.evaluationLabel(updatedEval)} result (Score: ${this.formatScore(updatedEval.adjustedScore ?? updatedEval.finalScore)}). Ready to lock and file.`,
+      );
+    }
+
+    return updatedEval;
   }
 
   // ─── Employee disputes result ──────────────────────────────────────────────
@@ -867,7 +1012,19 @@ export class EvaluationService {
       },
     });
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
+    if (updatedEval.disciplineLeadId) {
+      await this.notify(
+        ctx.companyId,
+        ctx.userId,
+        updatedEval.disciplineLeadId,
+        'evaluation.disputed',
+        'Evaluation disputed',
+        `${this.employeeName(updatedEval.employee)} has disputed their ${this.evaluationLabel(updatedEval)} result. Reason: "${dto.reason}". Please respond within 5 days.`,
+      );
+    }
+
+    return updatedEval;
   }
 
   // ─── DL responds to dispute ────────────────────────────────────────────────
@@ -939,7 +1096,21 @@ export class EvaluationService {
       },
     });
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
+    const decisionText =
+      dto.decision === 'ADJUSTED'
+        ? `adjusted your score to ${this.formatScore(dto.adjustedScore)}`
+        : 'upheld the original score';
+    await this.notify(
+      ctx.companyId,
+      ctx.userId,
+      updatedEval.employeeId,
+      'evaluation.dl_responded',
+      'Discipline Lead responded to your dispute',
+      `Your Discipline Lead has ${decisionText} for your ${this.evaluationLabel(updatedEval)}. Comment: "${dto.comment}". You have 5 days to accept or escalate to HR.`,
+    );
+
+    return updatedEval;
   }
 
   // ─── Employee responds to DL decision ─────────────────────────────────────
@@ -1002,7 +1173,23 @@ export class EvaluationService {
       });
     }
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
+
+    if (dto.decision === 'ESCALATED') {
+      const hrUserIds = await this.findHrUserIds(ctx.companyId);
+      for (const hrUserId of hrUserIds) {
+        await this.notify(
+          ctx.companyId,
+          ctx.userId,
+          hrUserId,
+          'evaluation.escalated_to_hr',
+          'Evaluation escalated to HR',
+          `${this.employeeName(updatedEval.employee)} has escalated their ${this.evaluationLabel(updatedEval)} dispute to HR. Reason: "${dto.escalationReason ?? 'Not provided'}". Please review and make a final decision.`,
+        );
+      }
+    }
+
+    return updatedEval;
   }
 
   // ─── HR decides escalated dispute ─────────────────────────────────────────
@@ -1061,7 +1248,33 @@ export class EvaluationService {
       },
     });
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
+    const hrDecisionText =
+      dto.decision === 'ADJUSTED'
+        ? `adjusted your final score to ${this.formatScore(dto.adjustedScore)}`
+        : 'upheld the existing score';
+
+    await this.notify(
+      ctx.companyId,
+      ctx.userId,
+      updatedEval.employeeId,
+      'evaluation.hr_decided',
+      'HR final decision on your evaluation',
+      `HR has made a final decision on your ${this.evaluationLabel(updatedEval)} dispute and ${hrDecisionText}. This decision is final. Comment: "${dto.comment}"`,
+    );
+
+    if (updatedEval.disciplineLeadId) {
+      await this.notify(
+        ctx.companyId,
+        ctx.userId,
+        updatedEval.disciplineLeadId,
+        'evaluation.hr_decided',
+        'HR decided on evaluation dispute',
+        `HR has made a final decision on the ${this.evaluationLabel(updatedEval)} dispute for ${this.employeeName(updatedEval.employee)}.`,
+      );
+    }
+
+    return updatedEval;
   }
 
   // ─── Lock evaluation (HR files it) ────────────────────────────────────────
@@ -1094,7 +1307,17 @@ export class EvaluationService {
       },
     });
 
-    return this.getEvaluation(evaluationId, ctx.companyId);
+    const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
+    await this.notify(
+      ctx.companyId,
+      ctx.userId,
+      updatedEval.employeeId,
+      'evaluation.locked',
+      'Your evaluation has been filed',
+      `Your ${this.evaluationLabel(updatedEval)} has been finalized and filed. Final score: ${this.formatScore(updatedEval.adjustedScore ?? updatedEval.finalScore)}.`,
+    );
+
+    return updatedEval;
   }
 
   // ─── Auto-resolve expired deadlines ───────────────────────────────────────
@@ -1219,6 +1442,32 @@ export class EvaluationService {
           'Auto-accepted: no employee response to DL adjustment within 5 days',
       });
       resolved++;
+    }
+
+    for (const resolution of resolutions) {
+      const ev = await this.getEvaluation(resolution.evaluationId, companyId);
+      if (resolution.newStatus === 'ACCEPTED') {
+        const hrUserIds = await this.findHrUserIds(companyId);
+        for (const hrUserId of hrUserIds) {
+          await this.notify(
+            companyId,
+            ev.updatedBy,
+            hrUserId,
+            'evaluation.auto_accepted',
+            'Evaluation auto-accepted',
+            `${this.employeeName(ev.employee)}'s ${this.evaluationLabel(ev)} was auto-accepted (no response within 5 days). Ready to lock and file.`,
+          );
+        }
+      } else if (resolution.newStatus === 'DL_UPHELD') {
+        await this.notify(
+          companyId,
+          ev.updatedBy,
+          ev.employeeId,
+          'evaluation.dl_auto_upheld',
+          'Dispute auto-upheld',
+          `Your ${this.evaluationLabel(ev)} dispute was auto-upheld as the Discipline Lead did not respond within 5 days. You may still escalate to HR.`,
+        );
+      }
     }
 
     return { resolved, resolutions };

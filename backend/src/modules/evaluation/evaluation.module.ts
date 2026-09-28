@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../shared/prisma/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { EvaluationCycleService } from './application/services/evaluation-cycle.service';
 import { EvaluationSchedulerService } from './application/services/evaluation-scheduler.service';
 import { EvaluationTemplateService } from './application/services/evaluation-template.service';
@@ -9,7 +10,7 @@ import { EvaluationTemplateController } from './presentation/controllers/evaluat
 import { EvaluationController } from './presentation/controllers/evaluation.controller';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, NotificationsModule],
   controllers: [
     EvaluationTemplateController,
     EvaluationCycleController,
