@@ -199,6 +199,20 @@ export function useBulkCreateEvaluations() {
   });
 }
 
+export function useTriggerEvaluationAutoResolve() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiPost<{ resolved: number; details: string }>(
+        `${EVALUATIONS_PATH}/admin/auto-resolve`,
+        {},
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: evaluationKeys.all });
+    },
+  });
+}
+
 // ─── Evaluation hooks ────────────────────────────────────────────────────────
 
 export function useEvaluations(

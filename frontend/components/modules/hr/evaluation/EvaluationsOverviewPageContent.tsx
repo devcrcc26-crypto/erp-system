@@ -1,14 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Input, Progress, Select, Table, Tag } from 'antd';
+import { Button, Input, Progress, Select, Table, Tag, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import type { EmployeeEvaluation } from '@/lib/api/evaluation.types';
 import {
   useEvaluationCycles,
   useEvaluations,
+  useTriggerEvaluationAutoResolve,
 } from '@/lib/query/evaluation';
 import {
   EVALUATION_STATUS_COLORS,
@@ -20,13 +22,30 @@ import {
 
 export default function EvaluationsOverviewPageContent(): React.ReactNode {
   const router = useRouter();
+  const canViewHr = useCanViewHr();
   const [selectedCycleId, setSelectedCycleId] = useState<string>('');
   const [search, setSearch] = useState('');
+  const [messageApi, contextHolder] = message.useMessage();
 
   const cyclesQuery = useEvaluationCycles();
   const evaluationsQuery = useEvaluations(
     selectedCycleId ? { cycleId: selectedCycleId } : undefined,
   );
+  const autoResolve = useTriggerEvaluationAutoResolve();
+
+  async function handleManualAutoResolve(): Promise<void> {
+    try {
+      const result = await autoResolve.mutateAsync();
+      void messageApi.success(
+        result.resolved > 0
+          ? `Auto-resolved ${result.resolved} evaluation(s)`
+          : 'No evaluations needed auto-resolution',
+      );
+      void evaluationsQuery.refetch();
+    } catch {
+      void messageApi.error('Failed to run auto-resolve');
+    }
+  }
 
   const cycleOptions = useMemo(
     () => [
@@ -163,17 +182,38 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page">
-      <div style={{ marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Employee Evaluations</h2>
-        <p
-          style={{
-            margin: 0,
-            color: 'var(--color-text-tertiary)',
-            fontSize: 13,
-          }}
-        >
-          Overview of all employee evaluations
-        </p>
+      {contextHolder}
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 12,
+        }}
+      >
+        <div>
+          <h2 style={{ margin: 0 }}>Employee Evaluations</h2>
+          <p
+            style={{
+              margin: 0,
+              color: 'var(--color-text-tertiary)',
+              fontSize: 13,
+            }}
+          >
+            Overview of all employee evaluations
+          </p>
+        </div>
+        {canViewHr ? (
+          <Button
+            size="small"
+            onClick={() => void handleManualAutoResolve()}
+            loading={autoResolve.isPending}
+            style={{ fontSize: 12 }}
+          >
+            Run Auto-Resolve
+          </Button>
+        ) : null}
       </div>
 
       <div

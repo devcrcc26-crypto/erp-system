@@ -25,6 +25,7 @@ import {
   SubmitAssessmentDto,
 } from '../../application/dtos/evaluation.dtos';
 import { EvaluationService } from '../../application/services/evaluation.service';
+import { EvaluationSchedulerService } from '../../application/services/evaluation-scheduler.service';
 
 @ApiTags('Evaluations')
 @ApiBearerAuth()
@@ -38,6 +39,7 @@ export class EvaluationController {
   constructor(
     private readonly evaluationService: EvaluationService,
     private readonly permissionService: PermissionService,
+    private readonly schedulerService: EvaluationSchedulerService,
   ) {}
 
   @Get()
@@ -177,6 +179,17 @@ export class EvaluationController {
       userId: user.userId,
       companyId,
     });
+  }
+
+  @Post('admin/auto-resolve')
+  @RequireAnyPermission({ module: 'hr', action: 'create' })
+  @ApiOperation({
+    summary: 'Manually trigger auto-resolve of expired evaluation deadlines',
+  })
+  triggerAutoResolve(
+    @CurrentCompany() companyId: string,
+  ): Promise<{ resolved: number; details: string }> {
+    return this.schedulerService.triggerManualAutoResolve(companyId);
   }
 
   @Post(':id/self-assessment')

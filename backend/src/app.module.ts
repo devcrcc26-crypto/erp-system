@@ -8,6 +8,7 @@ loadEnv({
 
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
@@ -72,6 +73,7 @@ import { EvaluationModule } from './modules/evaluation/evaluation.module';
           process.env.NODE_ENV === 'test',
       },
     ]),
+    ScheduleModule.forRoot(),
     PrismaModule,
     MailModule,
     StorageModule,

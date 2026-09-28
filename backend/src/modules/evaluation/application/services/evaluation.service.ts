@@ -1033,11 +1033,25 @@ export class EvaluationService {
   /**
    * Auto-resolves evaluations whose dispute / response deadlines have expired.
    */
-  async autoResolveExpiredDeadlines(
-    companyId: string,
-  ): Promise<{ resolved: number }> {
+  async autoResolveExpiredDeadlines(companyId: string): Promise<{
+    resolved: number;
+    resolutions: Array<{
+      evaluationId: string;
+      employeeId: string;
+      oldStatus: string;
+      newStatus: string;
+      reason: string;
+    }>;
+  }> {
     const now = new Date();
     let resolved = 0;
+    const resolutions: Array<{
+      evaluationId: string;
+      employeeId: string;
+      oldStatus: string;
+      newStatus: string;
+      reason: string;
+    }> = [];
 
     const expiredResultShared = await this.prisma.employeeEvaluation.findMany({
       where: {
@@ -1057,6 +1071,13 @@ export class EvaluationService {
           lockedBy: ev.updatedBy,
           updatedBy: ev.updatedBy,
         },
+      });
+      resolutions.push({
+        evaluationId: ev.id,
+        employeeId: ev.employeeId,
+        oldStatus: 'RESULT_SHARED',
+        newStatus: 'ACCEPTED',
+        reason: 'Auto-accepted: no employee response within 5 days',
       });
       resolved++;
     }
@@ -1079,7 +1100,8 @@ export class EvaluationService {
         data: {
           dlRespondedAt: now,
           dlDecision: 'UPHELD',
-          dlComment: 'Auto-upheld: no response within 5 days',
+          dlComment:
+            'Auto-upheld: Discipline Lead did not respond within 5 days',
           stage: EvaluationDisputeStage.DL_RESPONDED,
         },
       });
@@ -1089,6 +1111,13 @@ export class EvaluationService {
           status: EvaluationStatus.DL_UPHELD,
           updatedBy: ev.updatedBy,
         },
+      });
+      resolutions.push({
+        evaluationId: ev.id,
+        employeeId: ev.employeeId,
+        oldStatus: 'DISPUTED',
+        newStatus: 'DL_UPHELD',
+        reason: 'Auto-upheld: DL did not respond within 5 days',
       });
       resolved++;
     }
@@ -1112,10 +1141,18 @@ export class EvaluationService {
           updatedBy: ev.updatedBy,
         },
       });
+      resolutions.push({
+        evaluationId: ev.id,
+        employeeId: ev.employeeId,
+        oldStatus: 'DL_ADJUSTED',
+        newStatus: 'ACCEPTED',
+        reason:
+          'Auto-accepted: no employee response to DL adjustment within 5 days',
+      });
       resolved++;
     }
 
-    return { resolved };
+    return { resolved, resolutions };
   }
 
   // ─── Contract renewal view ────────────────────────────────────────────────
