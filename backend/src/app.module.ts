@@ -50,6 +50,7 @@ import { ProjectSealModule } from './modules/project-seal/project-seal.module';
 import { EmployeeContractModule } from './modules/employee-contract/employee-contract.module';
 import { ExitPermitModule } from './modules/exit-permit/exit-permit.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
+import { EvaluationModule } from './modules/evaluation/evaluation.module';
 
 @Module({
   imports: [
@@ -105,6 +106,7 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
     EmployeeContractModule,
     ExitPermitModule,
     AttendanceModule,
+    EvaluationModule,
   ],
   controllers: [AppController],
   providers: [
