@@ -224,6 +224,14 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           ],
         },
         {
+          id: 'hr-performance',
+          labelKey: 'nav.sections.performance',
+          items: [
+            { kind: 'link', id: 'evaluations', labelKey: 'nav.hr.evaluations', icon: 'hr-employee-evaluation', href: '/hr/evaluations', requires: HR, activePaths: ['/hr/employee-evaluation'], keywords: ['performance', 'appraisal', 'review'] },
+            { kind: 'link', id: 'evaluation-cycles', labelKey: 'nav.hr.evaluationCycles', icon: 'hr-employee-evaluation', href: '/hr/evaluations/cycles', requires: HR, keywords: ['quarter', 'cycle'] },
+          ],
+        },
+        {
           id: 'hr-time-leave',
           labelKey: 'nav.sections.timeOff',
           items: [

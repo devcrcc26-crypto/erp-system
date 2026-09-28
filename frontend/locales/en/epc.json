@@ -52,6 +52,7 @@
       "engineering": "Engineering",
       "siteOps": "Site Operations",
       "people": "People",
+      "performance": "Performance",
       "timeOff": "Time & Leave",
       "travelExpenses": "Travel & Expenses",
       "procurement": "Procurement",
@@ -90,6 +91,8 @@
       "attendance": "Attendance",
       "fieldMovementLogs": "Field Movement Logs",
       "employeeEvaluation": "Employee Evaluation",
+      "evaluations": "All Evaluations",
+      "evaluationCycles": "Evaluation Cycles",
       "employeeContract": "Employee Contracts",
       "equipmentAndMaterialsExitPermit": "Exit Permit"
     }

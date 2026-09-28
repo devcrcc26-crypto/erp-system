@@ -52,6 +52,7 @@
       "engineering": "工程",
       "siteOps": "现场运营",
       "people": "人员",
+      "performance": "绩效",
       "timeOff": "假期与加班",
       "travelExpenses": "差旅与报销",
       "procurement": "采购",
@@ -89,6 +90,8 @@
       "attendance": "考勤",
       "fieldMovementLogs": "外勤 / 早退说明",
       "employeeEvaluation": "员工考核",
+      "evaluations": "全部考核",
+      "evaluationCycles": "考核周期",
       "companyAssets": "公司资产",
       "employeeContract": "劳动合同",
       "equipmentAndMaterialsExitPermit": "设备和材料退出许可"

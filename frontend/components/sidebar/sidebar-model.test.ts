@@ -90,6 +90,7 @@ describe('sidebar permissions and filtering', () => {
     ]);
     expect(folder(model, 'hr')?.groups.map((group) => group.id)).toEqual([
       'hr-people',
+      'hr-performance',
       'hr-time-leave',
       'hr-travel-expenses',
       'hr-procurement',

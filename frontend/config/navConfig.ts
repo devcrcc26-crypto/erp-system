@@ -77,6 +77,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/attendance': 'nav.hr.attendance',
   '/hr/field-movement-logs': 'nav.hr.fieldMovementLogs',
   '/hr/employee-evaluation': 'nav.hr.employeeEvaluation',
+  '/hr/evaluations': 'nav.hr.evaluations',
+  '/hr/evaluations/cycles': 'nav.hr.evaluationCycles',
   '/hr/equipment-and-materials-exit-permit': 'pages.hr.exitPermit.listTitle',
   '/hr/equipment-and-materials-exit-permit/new': 'pages.hr.exitPermit.new',
 };
@@ -1129,6 +1131,33 @@ function resolveRouteMetaCore(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.groups.humanResources') },
         { label: t('pages.hr.companyAsset.listTitle') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/evaluations/cycles') {
+    return {
+      titleKey: 'nav.hr.evaluationCycles',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('nav.hr.evaluations'), href: '/hr/evaluations' },
+        { label: t('nav.hr.evaluationCycles') },
+      ],
+    };
+  }
+
+  if (
+    pathname.startsWith('/hr/evaluations/') &&
+    pathname !== '/hr/evaluations/cycles'
+  ) {
+    return {
+      titleKey: 'nav.hr.employeeEvaluation',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('nav.hr.evaluations'), href: '/hr/evaluations' },
+        { label: t('nav.hr.employeeEvaluation') },
       ],
     };
   }

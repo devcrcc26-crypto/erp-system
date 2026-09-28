@@ -1,5 +1,5 @@
-import HrComingSoonPage from "@/components/modules/hr/HrComingSoonPage";
+import { redirect } from 'next/navigation';
 
-export default function EmployeeEvaluationPage() {
-    return <HrComingSoonPage titleKey="nav.hr.employeeEvaluation" />;
+export default function EmployeeEvaluationPage(): never {
+  redirect('/hr/evaluations');
 }
