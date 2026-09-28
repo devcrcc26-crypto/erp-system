@@ -26,6 +26,7 @@ export const evaluationKeys = {
   list: (filters?: EvaluationListFilters) =>
     [...evaluationKeys.lists(), filters] as const,
   my: () => [...evaluationKeys.all, 'my'] as const,
+  pendingMyAction: () => [...evaluationKeys.all, 'pending-my-action'] as const,
   detail: (id: string) => [...evaluationKeys.all, 'detail', id] as const,
   contract: (contractId: string) =>
     [...evaluationKeys.all, 'contract', contractId] as const,
@@ -35,6 +36,8 @@ export interface EvaluationListFilters {
   cycleId?: string;
   employeeId?: string;
   status?: string;
+  disciplineLeadId?: string;
+  teamLeadId?: string;
 }
 
 // ─── Template hooks ────────────────────────────────────────────────────────
@@ -209,6 +212,8 @@ export function useEvaluations(
         cycleId: filters?.cycleId,
         employeeId: filters?.employeeId,
         status: filters?.status,
+        disciplineLeadId: filters?.disciplineLeadId,
+        teamLeadId: filters?.teamLeadId,
       };
       return apiGet<EmployeeEvaluation[]>(
         `${EVALUATIONS_PATH}${toQueryString(params)}`,
@@ -223,6 +228,23 @@ export function useMyEvaluations() {
     queryKey: evaluationKeys.my(),
     queryFn: () => apiGet<EmployeeEvaluation[]>(`${EVALUATIONS_PATH}/my`),
   });
+}
+
+export function usePendingMyAction(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: evaluationKeys.pendingMyAction(),
+    queryFn: () =>
+      apiGet<EmployeeEvaluation[]>(`${EVALUATIONS_PATH}/pending-my-action`),
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useTeamLeadEvaluations() {
+  return useEvaluations({ teamLeadId: 'me' });
+}
+
+export function useDisciplineLeadEvaluations() {
+  return useEvaluations({ disciplineLeadId: 'me' });
 }
 
 export function useEvaluation(id: string) {

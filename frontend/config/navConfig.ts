@@ -81,6 +81,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/evaluations': 'nav.hr.evaluations',
   '/hr/evaluations/cycles': 'nav.hr.evaluationCycles',
   '/hr/evaluations/templates': 'nav.hr.evaluationTemplates',
+  '/hr/evaluations/inbox': 'nav.hr.evaluationInbox',
   '/hr/equipment-and-materials-exit-permit': 'pages.hr.exitPermit.listTitle',
   '/hr/equipment-and-materials-exit-permit/new': 'pages.hr.exitPermit.new',
 };
@@ -1149,6 +1150,17 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname === '/hr/evaluations/inbox') {
+    return {
+      titleKey: 'nav.hr.evaluationInbox',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('nav.hr.evaluationInbox') },
+      ],
+    };
+  }
+
   if (pathname === '/hr/evaluations/templates') {
     return {
       titleKey: 'nav.hr.evaluationTemplates',
@@ -1176,6 +1188,7 @@ function resolveRouteMetaCore(
   if (
     pathname.startsWith('/hr/evaluations/') &&
     pathname !== '/hr/evaluations/cycles' &&
+    pathname !== '/hr/evaluations/inbox' &&
     !pathname.startsWith('/hr/evaluations/templates')
   ) {
     return {

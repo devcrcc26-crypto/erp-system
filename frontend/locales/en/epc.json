@@ -94,6 +94,7 @@
       "evaluations": "All Evaluations",
       "evaluationCycles": "Evaluation Cycles",
       "evaluationTemplates": "Evaluation Templates",
+      "evaluationInbox": "My Evaluation Inbox",
       "employeeContract": "Employee Contracts",
       "equipmentAndMaterialsExitPermit": "Exit Permit"
     }
@@ -1900,6 +1901,7 @@
     "favoritesFull": "You can pin up to {{max}} modules",
     "allProjects": "All projects",
     "badgePendingApprovals": "{{count}} pending approvals",
+    "badgePendingEvaluations": "{{count}} evaluations need your action",
     "loadingNavigation": "Loading navigation"
   },
   "placeholder": {

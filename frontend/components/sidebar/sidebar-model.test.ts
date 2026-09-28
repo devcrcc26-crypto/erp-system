@@ -109,7 +109,7 @@ describe('sidebar permissions and filtering', () => {
       ...withProjects(),
     });
     expect(ids(model.primary)).toEqual(['dashboard', 'new-request']);
-    expect(ids(model.utility)).toEqual(['approvals', 'my-profile']);
+    expect(ids(model.utility)).toEqual(['approvals', 'evaluation-inbox', 'my-profile']);
   });
 
   it('hides Project Management for non-admins, even with full project access', () => {

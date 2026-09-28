@@ -52,6 +52,7 @@ const FAVORITES_GROUP_ID = 'favorites';
 
 const BADGE_LABEL_KEYS: Record<SidebarBadgeSource, string> = {
   pendingApprovals: 'shell.badgePendingApprovals',
+  pendingEvaluationActions: 'shell.badgePendingEvaluations',
 };
 
 type Surface = 'desktop' | 'drawer';

@@ -56,6 +56,9 @@ export function resolveSidebarPermissions(
   grant('settings.manage', caps.canManageRoles || caps.canEditRoles);
   grant('users.manage', caps.canManageUsers);
 
+  // Evaluation inbox for non-HR leads (HR users get it under Performance).
+  grant('evaluation.inbox', !hr);
+
   // Human resources — self-service entries widen beyond hr.view
   grant('hr.view', hr);
   grant('leave.access', hr || caps.canViewLeave || caps.canCreateLeave);

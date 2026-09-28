@@ -275,6 +275,46 @@ export class EvaluationService {
   }
 
   /**
+   * Evaluations where the user must act as Discipline Lead or Team Lead.
+   */
+  async getPendingMyAction(
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const [asDl, asTl] = await Promise.all([
+      this.listEvaluations(companyId, { disciplineLeadId: userId }),
+      this.listEvaluations(companyId, { teamLeadId: userId }),
+    ]);
+
+    type EvaluationRow = {
+      id: string;
+      status: EvaluationStatus;
+      disciplineLeadId: string | null;
+      teamLeadId: string | null;
+    };
+
+    const all = [...(asDl as EvaluationRow[]), ...(asTl as EvaluationRow[])].filter(
+      (ev, idx, arr) => arr.findIndex((e) => e.id === ev.id) === idx,
+    );
+
+    return all.filter((ev) => {
+      const isDl = ev.disciplineLeadId === userId;
+      const isTl = ev.teamLeadId === userId;
+
+      if (isDl) {
+        return (
+          ev.status === EvaluationStatus.TEAM_LEAD_ASSESSED ||
+          ev.status === EvaluationStatus.DISPUTED
+        );
+      }
+      if (isTl) {
+        return ev.status === EvaluationStatus.SELF_ASSESSED;
+      }
+      return false;
+    });
+  }
+
+  /**
    * Returns a single evaluation by id (visibility filtering done at controller).
    */
   async getEvaluationById(

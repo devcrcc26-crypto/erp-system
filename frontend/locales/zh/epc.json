@@ -93,6 +93,7 @@
       "evaluations": "全部考核",
       "evaluationCycles": "考核周期",
       "evaluationTemplates": "考核模板",
+      "evaluationInbox": "我的考核收件箱",
       "companyAssets": "公司资产",
       "employeeContract": "劳动合同",
       "equipmentAndMaterialsExitPermit": "设备和材料退出许可"
@@ -1900,6 +1901,7 @@
     "favoritesFull": "最多可收藏 {{max}} 个模块",
     "allProjects": "全部项目",
     "badgePendingApprovals": "{{count}} 项待审批",
+    "badgePendingEvaluations": "{{count}} 项考核待处理",
     "loadingNavigation": "正在加载导航"
   },
   "placeholder": {

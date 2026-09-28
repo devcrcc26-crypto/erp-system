@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Post,
@@ -11,6 +12,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
@@ -33,20 +35,62 @@ import { EvaluationService } from '../../application/services/evaluation.service
 )
 @Controller('evaluation/evaluations')
 export class EvaluationController {
-  constructor(private readonly evaluationService: EvaluationService) {}
+  constructor(
+    private readonly evaluationService: EvaluationService,
+    private readonly permissionService: PermissionService,
+  ) {}
 
   @Get()
+  @DelegatePermissionCheck()
   @ApiOperation({ summary: 'List evaluations' })
-  listEvaluations(
+  async listEvaluations(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query('cycleId') cycleId?: string,
     @Query('employeeId') employeeId?: string,
     @Query('status') status?: string,
+    @Query('disciplineLeadId') disciplineLeadId?: string,
+    @Query('teamLeadId') teamLeadId?: string,
   ): Promise<unknown> {
+    const resolvedEmployeeId =
+      employeeId === 'me' ? user.userId : employeeId;
+    const resolvedDisciplineLeadId =
+      disciplineLeadId === 'me' ? user.userId : disciplineLeadId;
+    const resolvedTeamLeadId =
+      teamLeadId === 'me' ? user.userId : teamLeadId;
+
+    const selfScoped =
+      resolvedEmployeeId === user.userId ||
+      resolvedDisciplineLeadId === user.userId ||
+      resolvedTeamLeadId === user.userId;
+
+    if (!selfScoped) {
+      const hasHr =
+        (await this.permissionService.hasPermission(
+          user.userId,
+          companyId,
+          'hr',
+          'view',
+        )) ||
+        (await this.permissionService.hasPermission(
+          user.userId,
+          companyId,
+          'hr',
+          'create',
+        ));
+      if (!hasHr) {
+        throw new ForbiddenException(
+          'Missing permission to list company evaluations',
+        );
+      }
+    }
+
     return this.evaluationService.listEvaluations(companyId, {
       cycleId,
-      employeeId,
+      employeeId: resolvedEmployeeId,
       status,
+      disciplineLeadId: resolvedDisciplineLeadId,
+      teamLeadId: resolvedTeamLeadId,
     });
   }
 
@@ -65,15 +109,17 @@ export class EvaluationController {
   @Get('pending-my-action')
   @DelegatePermissionCheck()
   @ApiOperation({
-    summary: 'List evaluations pending Discipline Lead action for current user',
+    summary:
+      'List evaluations pending Discipline Lead or Team Lead action for current user',
   })
   getPendingMyAction(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
   ): Promise<unknown> {
-    return this.evaluationService.listEvaluations(companyId, {
-      disciplineLeadId: user.userId,
-    });
+    return this.evaluationService.getPendingMyAction(
+      companyId,
+      user.userId,
+    );
   }
 
   @Get('contract/:contractId/history')

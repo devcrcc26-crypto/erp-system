@@ -20,6 +20,7 @@ import {
   isProjectNavReady,
 } from '@/lib/navigation/project-nav-visibility';
 import { usePendingMyActionCount } from '@/lib/query/approvals';
+import { usePendingMyAction } from '@/lib/query/evaluation';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
@@ -57,8 +58,18 @@ export function useSidebarBadgeCounts(): Partial<Record<SidebarBadgeSource, numb
   const ready = useAuthStore((state) => state.capabilitiesReady);
   const pending = usePendingMyActionCount(userId, ready && Boolean(userId));
   const pendingApprovals = pending.data ?? 0;
+  const pendingEvaluations = usePendingMyAction({
+    enabled: ready && Boolean(userId),
+  });
+  const pendingEvaluationActions = pendingEvaluations.data?.length ?? 0;
 
-  return useMemo(() => ({ pendingApprovals }), [pendingApprovals]);
+  return useMemo(
+    () => ({
+      pendingApprovals,
+      pendingEvaluationActions,
+    }),
+    [pendingApprovals, pendingEvaluationActions],
+  );
 }
 
 export interface SidebarProjectInput {

@@ -17,6 +17,7 @@ export type SidebarPermission =
   | 'settings.manage'
   | 'users.manage'
   | 'hr.view'
+  | 'evaluation.inbox'
   | 'leave.access'
   | 'overtime.access'
   | 'flight.access'
@@ -46,7 +47,7 @@ export type SidebarPermission =
   | 'pm.correspondence';
 
 /** Live counters a link can display. Resolved in `use-sidebar-data.ts`. */
-export type SidebarBadgeSource = 'pendingApprovals';
+export type SidebarBadgeSource = 'pendingApprovals' | 'pendingEvaluationActions';
 
 interface SidebarLinkBase {
   readonly kind: 'link';
@@ -140,7 +141,13 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
   // Staff without hr.view get a self-service sidebar only.
   limitedNavigation: {
     unlessGranted: 'hr.view',
-    entryIds: ['dashboard', 'new-request', 'approvals', 'my-profile'],
+    entryIds: [
+      'dashboard',
+      'new-request',
+      'approvals',
+      'evaluation-inbox',
+      'my-profile',
+    ],
   },
   primary: [
     {
@@ -227,6 +234,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           id: 'hr-performance',
           labelKey: 'nav.sections.performance',
           items: [
+            { kind: 'link', id: 'evaluation-inbox-hr', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: HR, badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
             { kind: 'link', id: 'evaluations', labelKey: 'nav.hr.evaluations', icon: 'hr-employee-evaluation', href: '/hr/evaluations', requires: HR, activePaths: ['/hr/employee-evaluation'], keywords: ['performance', 'appraisal', 'review'] },
             { kind: 'link', id: 'evaluation-cycles', labelKey: 'nav.hr.evaluationCycles', icon: 'hr-employee-evaluation', href: '/hr/evaluations/cycles', requires: HR, keywords: ['quarter', 'cycle'] },
             { kind: 'link', id: 'evaluation-templates', labelKey: 'nav.hr.evaluationTemplates', icon: 'hr-employee-evaluation', href: '/hr/evaluations/templates', requires: HR, keywords: ['form', 'template', 'criteria'] },
@@ -315,6 +323,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
   ],
   utility: [
     { kind: 'link', id: 'approvals', labelKey: 'nav.approvals', icon: 'approvals', href: '/approvals', requires: ['approvals.view'], badge: 'pendingApprovals', keywords: ['inbox', 'pending'] },
+    // Visible to non-HR leads via limitedNavigation + evaluation.inbox token.
+    { kind: 'link', id: 'evaluation-inbox', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: ['evaluation.inbox'], badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
     // Every signed-in user can open their own profile — no permission.
     { kind: 'link', id: 'my-profile', labelKey: 'nav.myProfile', icon: 'my-profile', href: '/profile', activePaths: ['/hr/leave-history/me', '/hr/overtime-history/me'], keywords: ['account', 'password', 'personal', 'me'] },
     { kind: 'link', id: 'audit-logs', labelKey: 'nav.auditLogs', shortLabelKey: 'nav.short.auditLogs', icon: 'audit-logs', href: '/audit-logs', requires: ['audit.view'], keywords: ['history'] },
