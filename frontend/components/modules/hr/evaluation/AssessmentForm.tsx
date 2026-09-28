@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Input, message } from 'antd';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import ScoreInput from './ScoreInput';
 import type {
   EvaluationAssessment,
@@ -12,7 +13,7 @@ import type {
 
 export interface AssessmentScoreState {
   criteriaId: string;
-  score: number | null;
+  score: number | null | undefined;
   comment: string;
 }
 
@@ -27,6 +28,7 @@ interface AssessmentFormProps {
   disabled?: boolean;
   readOnly?: boolean;
   label?: string;
+  hideTitle?: boolean;
 }
 
 const STAGE_LABELS: Record<EvaluationStage, string> = {
@@ -44,6 +46,7 @@ export default function AssessmentForm({
   disabled,
   readOnly,
   label,
+  hideTitle = false,
 }: AssessmentFormProps): React.ReactNode {
   const [submitting, setSubmitting] = useState(false);
   const [overallComment, setOverallComment] = useState(
@@ -59,14 +62,23 @@ export default function AssessmentForm({
         );
         return {
           criteriaId: criterion.id,
-          score: existing?.score ?? null,
+          score: existing ? (existing.score ?? null) : undefined,
           comment: existing?.comment ?? '',
         };
       }),
     ),
   );
 
-  function updateScore(criteriaId: string, score: number | null): void {
+  const totalCriteria = scores.length;
+  const scoredCount = useMemo(
+    () => scores.filter((s) => s.score !== undefined).length,
+    [scores],
+  );
+
+  function updateScore(
+    criteriaId: string,
+    score: number | null | undefined,
+  ): void {
     setScores((prev) =>
       prev.map((s) => (s.criteriaId === criteriaId ? { ...s, score } : s)),
     );
@@ -83,7 +95,13 @@ export default function AssessmentForm({
   async function handleSubmit(): Promise<void> {
     setSubmitting(true);
     try {
-      await onSubmit(scores, overallComment);
+      await onSubmit(
+        scores.map((s) => ({
+          ...s,
+          score: s.score === undefined ? null : s.score,
+        })),
+        overallComment,
+      );
       void messageApi.success('Assessment submitted successfully');
     } catch {
       void messageApi.error('Failed to submit assessment');
@@ -95,191 +113,186 @@ export default function AssessmentForm({
   function getSectionAvg(criteria: EvaluationCriteria[]): number | null {
     const criteriaScores = scores.filter(
       (s) =>
-        criteria.some((c) => c.id === s.criteriaId) && s.score !== null,
+        criteria.some((c) => c.id === s.criteriaId) &&
+        typeof s.score === 'number',
     );
     if (criteriaScores.length === 0) {
       return null;
     }
-    const sum = criteriaScores.reduce((acc, s) => acc + (s.score ?? 0), 0);
+    const sum = criteriaScores.reduce(
+      (acc, s) => acc + (typeof s.score === 'number' ? s.score : 0),
+      0,
+    );
     return Math.round((sum / criteriaScores.length) * 10) / 10;
   }
 
+  const isLocked = Boolean(disabled || readOnly);
+  const submittedAt = existingAssessment?.submittedAt;
+
   return (
-    <div>
+    <div className="erp-assessment-form">
       {contextHolder}
-      <div style={{ marginBottom: 8 }}>
-        <h3 style={{ margin: 0 }}>{label ?? STAGE_LABELS[stage]}</h3>
-        {existingAssessment?.submittedAt && (
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-            Submitted:{' '}
-            {new Date(existingAssessment.submittedAt).toLocaleDateString()}
+
+      {!hideTitle ? (
+        <div className="erp-assessment-form-head">
+          <h3 className="erp-assessment-form-title">
+            {label ?? STAGE_LABELS[stage]}
+          </h3>
+          {submittedAt ? (
+            <span className="erp-users-email">
+              Submitted {new Date(submittedAt).toLocaleDateString()}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isLocked ? (
+        <div className="erp-assessment-banner">
+          {submittedAt ? (
+            <>
+              <StatusBadge label="Submitted" variant="success" />
+              <span className="erp-users-email">
+                Submitted {new Date(submittedAt).toLocaleDateString()}. This
+                stage is view-only.
+              </span>
+            </>
+          ) : (
+            <>
+              <StatusBadge label="View only" variant="default" />
+              <span className="erp-users-email">
+                This stage is not editable for your role or the current status.
+              </span>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="erp-assessment-banner erp-assessment-banner--action">
+          <StatusBadge label="Your turn" variant="info" />
+          <span className="erp-users-email">
+            Rate each criterion (1–5 or N/A). {scoredCount}/{totalCriteria}{' '}
+            answered.
           </span>
-        )}
+        </div>
+      )}
+
+      <div className="erp-assessment-sections">
+        {sections.map((section) => {
+          const sectionAvg = getSectionAvg(section.criteria);
+          return (
+            <div key={section.id} className="erp-evaluation-section-card">
+              <div className="erp-evaluation-section-header">
+                <div className="min-w-0">
+                  <span className="erp-users-cell-strong">{section.name}</span>
+                  {section.nameZh ? (
+                    <span className="erp-users-email ml-2">
+                      {section.nameZh}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <StatusBadge
+                    label={`${Number(section.weight)}% weight`}
+                    variant="info"
+                  />
+                  {sectionAvg !== null ? (
+                    <span className="erp-assessment-section-avg">
+                      Avg {sectionAvg.toFixed(1)}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="erp-assessment-criteria-list">
+                {section.criteria.map((criterion) => {
+                  const scoreState = scores.find(
+                    (s) => s.criteriaId === criterion.id,
+                  );
+                  return (
+                    <div
+                      key={criterion.id}
+                      className="erp-assessment-criteria-item"
+                    >
+                      <div className="erp-assessment-criteria-main">
+                        <div className="min-w-0 flex-1">
+                          <p className="erp-assessment-criteria-name">
+                            {criterion.name}
+                            {criterion.nameZh ? (
+                              <span className="erp-users-email ml-1.5 text-[12px]">
+                                {criterion.nameZh}
+                              </span>
+                            ) : null}
+                          </p>
+                          {criterion.description ? (
+                            <p className="erp-assessment-criteria-desc">
+                              {criterion.description}
+                            </p>
+                          ) : null}
+                        </div>
+                        <ScoreInput
+                          value={scoreState?.score}
+                          onChange={(val) => updateScore(criterion.id, val)}
+                          disabled={isLocked}
+                        />
+                      </div>
+                      {!readOnly ? (
+                        <Input
+                          placeholder="Comment (optional)"
+                          value={scoreState?.comment}
+                          onChange={(e) =>
+                            updateCriteriaComment(
+                              criterion.id,
+                              e.target.value,
+                            )
+                          }
+                          size="small"
+                          className="erp-assessment-criteria-comment"
+                          disabled={disabled}
+                        />
+                      ) : scoreState?.comment ? (
+                        <p className="erp-assessment-criteria-comment-ro">
+                          {scoreState.comment}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {sections.map((section) => {
-        const sectionAvg = getSectionAvg(section.criteria);
-        return (
-          <div
-            key={section.id}
-            style={{
-              background: 'var(--color-bg-secondary)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 8,
-              padding: 16,
-              marginBottom: 12,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 12,
-              }}
-            >
-              <div>
-                <span style={{ fontWeight: 600 }}>{section.name}</span>
-                {section.nameZh && (
-                  <span
-                    style={{
-                      marginLeft: 8,
-                      fontSize: 12,
-                      color: 'var(--color-text-tertiary)',
-                    }}
-                  >
-                    {section.nameZh}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--color-text-tertiary)',
-                  }}
-                >
-                  Weight: {Number(section.weight)}%
-                </span>
-                {sectionAvg !== null && (
-                  <span
-                    style={{
-                      fontWeight: 600,
-                      fontSize: 14,
-                      color:
-                        sectionAvg >= 4
-                          ? '#52c41a'
-                          : sectionAvg >= 3
-                            ? '#1677ff'
-                            : '#fa8c16',
-                    }}
-                  >
-                    Avg: {sectionAvg}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {section.criteria.map((criterion) => {
-                const scoreState = scores.find(
-                  (s) => s.criteriaId === criterion.id,
-                );
-                return (
-                  <div key={criterion.id}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: 12,
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 500, fontSize: 13 }}>
-                          {criterion.name}
-                          {criterion.nameZh && (
-                            <span
-                              style={{
-                                marginLeft: 6,
-                                fontSize: 11,
-                                color: 'var(--color-text-tertiary)',
-                              }}
-                            >
-                              {criterion.nameZh}
-                            </span>
-                          )}
-                        </div>
-                        {criterion.description && (
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: 'var(--color-text-tertiary)',
-                              marginTop: 2,
-                            }}
-                          >
-                            {criterion.description}
-                          </div>
-                        )}
-                      </div>
-                      <ScoreInput
-                        value={scoreState?.score}
-                        onChange={(val) => updateScore(criterion.id, val)}
-                        disabled={disabled || readOnly}
-                      />
-                    </div>
-                    {!readOnly && (
-                      <Input
-                        placeholder="Comment (optional)"
-                        value={scoreState?.comment}
-                        onChange={(e) =>
-                          updateCriteriaComment(criterion.id, e.target.value)
-                        }
-                        size="small"
-                        style={{ marginTop: 6 }}
-                        disabled={disabled}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-
-      <div style={{ marginBottom: 16 }}>
-        <label
-          style={{
-            display: 'block',
-            marginBottom: 6,
-            fontSize: 13,
-            fontWeight: 500,
-          }}
-        >
+      <div className="erp-assessment-overall">
+        <label className="erp-assessment-overall-label" htmlFor={`overall-${stage}`}>
           Overall Comment
         </label>
         <Input.TextArea
+          id={`overall-${stage}`}
           rows={3}
           value={overallComment}
           onChange={(e) => setOverallComment(e.target.value)}
           placeholder="Overall comments about this employee's performance..."
-          disabled={disabled || readOnly}
+          disabled={isLocked}
           maxLength={1000}
           showCount
         />
       </div>
 
-      {!readOnly && (
-        <Button
-          type="primary"
-          onClick={() => void handleSubmit()}
-          loading={submitting}
-          disabled={disabled}
-        >
-          Submit Assessment
-        </Button>
-      )}
+      {!readOnly ? (
+        <div className="erp-assessment-footer">
+          <span className="erp-users-email">
+            {scoredCount}/{totalCriteria} criteria answered
+          </span>
+          <Button
+            type="primary"
+            onClick={() => void handleSubmit()}
+            loading={submitting}
+            disabled={disabled}
+          >
+            Submit Assessment
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

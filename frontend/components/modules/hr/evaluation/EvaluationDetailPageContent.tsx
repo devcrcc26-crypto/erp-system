@@ -19,6 +19,7 @@ import {
   EVALUATION_STATUS_BADGE,
   EVALUATION_STATUS_LABELS,
   getQuarterLabel,
+  getQuarterPeriodLabel,
   getScoreColor,
   getScoreLabel,
 } from '@/lib/utils/evaluation-status';
@@ -39,6 +40,9 @@ const RESULT_STATUSES: EvaluationStatus[] = [
   'HR_DECIDED',
   'LOCKED',
 ];
+
+const STAGE_ORDER = ['SELF', 'TEAM_LEAD', 'DISCIPLINE_LEAD'] as const;
+const STAGE_LABELS = ['Self', 'Team Lead', 'DL'] as const;
 
 export default function EvaluationDetailPageContent({
   evaluationId,
@@ -84,7 +88,9 @@ export default function EvaluationDetailPageContent({
 
   const selfAssessment = assessments.find((a) => a.stage === 'SELF');
   const teamLeadAssessment = assessments.find((a) => a.stage === 'TEAM_LEAD');
-  const dlAssessment = assessments.find((a) => a.stage === 'DISCIPLINE_LEAD');
+  const dlAssessment = assessments.find(
+    (a) => a.stage === 'DISCIPLINE_LEAD',
+  );
 
   const finalScore = evaluation.adjustedScore ?? evaluation.finalScore;
 
@@ -121,6 +127,7 @@ export default function EvaluationDetailPageContent({
           sections={sections}
           stage="SELF"
           existingAssessment={selfAssessment}
+          hideTitle
           onSubmit={async (scores, comment) => {
             await submitSelf.mutateAsync({ scores, comment });
           }}
@@ -144,6 +151,7 @@ export default function EvaluationDetailPageContent({
           sections={sections}
           stage="TEAM_LEAD"
           existingAssessment={teamLeadAssessment}
+          hideTitle
           onSubmit={async (scores, comment) => {
             await submitTeamLead.mutateAsync({ scores, comment });
           }}
@@ -165,6 +173,7 @@ export default function EvaluationDetailPageContent({
           sections={sections}
           stage="DISCIPLINE_LEAD"
           existingAssessment={dlAssessment}
+          hideTitle
           onSubmit={async (scores, comment) => {
             await submitDL.mutateAsync({ scores, comment });
           }}
@@ -190,12 +199,39 @@ export default function EvaluationDetailPageContent({
     });
   }
 
+  let defaultTab = tabs[0]?.key;
+  if (
+    isEmployee &&
+    (evaluation.status === 'PENDING' ||
+      evaluation.status === 'SELF_ASSESSED') &&
+    tabs.some((t) => t.key === 'self')
+  ) {
+    defaultTab = 'self';
+  } else if (
+    isTeamLead &&
+    evaluation.status === 'SELF_ASSESSED' &&
+    tabs.some((t) => t.key === 'team-lead')
+  ) {
+    defaultTab = 'team-lead';
+  } else if (
+    isDisciplineLead &&
+    evaluation.status === 'TEAM_LEAD_ASSESSED' &&
+    tabs.some((t) => t.key === 'discipline-lead')
+  ) {
+    defaultTab = 'discipline-lead';
+  } else if (
+    RESULT_STATUSES.includes(evaluation.status) &&
+    tabs.some((t) => t.key === 'result')
+  ) {
+    defaultTab = 'result';
+  }
+
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page">
       {contextHolder}
 
       <div className="erp-evaluation-detail-hero">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <h2 className="m-0 text-[20px] font-semibold text-[#111827]">
               {evaluation.employee.firstName} {evaluation.employee.lastName}
@@ -210,8 +246,59 @@ export default function EvaluationDetailPageContent({
           </div>
           <p className="erp-users-email m-0">
             {getQuarterLabel(evaluation.cycle.quarter, evaluation.cycle.year)}{' '}
-            Evaluation
+            Evaluation ·{' '}
+            {getQuarterPeriodLabel(
+              evaluation.cycle.quarter,
+              evaluation.cycle.year,
+            )}
           </p>
+          <div className="erp-evaluation-detail-meta">
+            {evaluation.teamLead ? (
+              <span>
+                Team Lead:{' '}
+                <strong>
+                  {evaluation.teamLead.firstName}{' '}
+                  {evaluation.teamLead.lastName}
+                </strong>
+              </span>
+            ) : null}
+            {evaluation.disciplineLead ? (
+              <span>
+                Discipline Lead:{' '}
+                <strong>
+                  {evaluation.disciplineLead.firstName}{' '}
+                  {evaluation.disciplineLead.lastName}
+                </strong>
+              </span>
+            ) : null}
+            {evaluation.cycle.template?.name ? (
+              <span>
+                Template: <strong>{evaluation.cycle.template.name}</strong>
+              </span>
+            ) : null}
+          </div>
+          <div className="erp-evaluation-detail-stages mt-3">
+            <div className="erp-evaluation-stage-bar">
+              {STAGE_ORDER.map((stage) => {
+                const done = assessments.some(
+                  (a) => a.stage === stage && a.submittedAt !== null,
+                );
+                return (
+                  <div
+                    key={stage}
+                    className={`erp-evaluation-stage-seg${
+                      done ? ' erp-evaluation-stage-seg--done' : ''
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            <div className="erp-evaluation-stage-labels">
+              {STAGE_LABELS.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -231,6 +318,7 @@ export default function EvaluationDetailPageContent({
 
           {isDisciplineLead && evaluation.status === 'DISCIPLINE_ASSESSED' ? (
             <Button
+              type="primary"
               icon={<ShareAltOutlined />}
               onClick={() => void handleShareResult()}
               loading={shareResult.isPending}
@@ -254,7 +342,7 @@ export default function EvaluationDetailPageContent({
         </div>
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-evaluation-detail-card">
         {sections.length === 0 ? (
           <div className="p-6">
             <p className="erp-users-email m-0">
@@ -264,8 +352,8 @@ export default function EvaluationDetailPageContent({
         ) : (
           <Tabs
             items={tabs}
-            defaultActiveKey={tabs[0]?.key}
-            className="px-4 pt-2"
+            defaultActiveKey={defaultTab}
+            className="erp-evaluation-detail-tabs"
           />
         )}
       </div>

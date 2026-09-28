@@ -237,7 +237,7 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
           <Progress
             percent={Math.round((completed / total) * 100)}
             strokeColor="#1D9E75"
-            trailColor="#E8EBEF"
+            railColor="#E8EBEF"
             format={(p) => `${p}% complete`}
           />
         </div>

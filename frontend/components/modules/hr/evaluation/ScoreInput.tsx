@@ -2,7 +2,7 @@
 
 interface ScoreInputProps {
   value?: number | null;
-  onChange?: (value: number | null) => void;
+  onChange?: (value: number | null | undefined) => void;
   disabled?: boolean;
 }
 
@@ -14,14 +14,6 @@ const SCORE_OPTIONS = [
   { value: 5, label: '5', tooltip: 'Outstanding' },
 ] as const;
 
-const SCORE_COLORS: Record<number, string> = {
-  1: '#f5222d',
-  2: '#fa8c16',
-  3: '#faad14',
-  4: '#1677ff',
-  5: '#52c41a',
-};
-
 export default function ScoreInput({
   value,
   onChange,
@@ -30,7 +22,7 @@ export default function ScoreInput({
   const isNaSelected = value === null;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div className="erp-score-input" role="group" aria-label="Score">
       {SCORE_OPTIONS.map((opt) => {
         const selected = value === opt.value;
         return (
@@ -39,22 +31,11 @@ export default function ScoreInput({
             type="button"
             disabled={disabled}
             title={opt.tooltip}
-            onClick={() => onChange?.(selected ? null : opt.value)}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              border: `2px solid ${
-                selected ? SCORE_COLORS[opt.value] : 'var(--color-border)'
-              }`,
-              background: selected ? SCORE_COLORS[opt.value] : 'transparent',
-              color: selected ? '#fff' : 'var(--color-text-primary)',
-              fontWeight: 600,
-              fontSize: 13,
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              opacity: disabled ? 0.6 : 1,
-              transition: 'all 0.15s',
-            }}
+            aria-pressed={selected}
+            className={`erp-score-btn erp-score-btn--${opt.value}${
+              selected ? ' erp-score-btn--selected' : ''
+            }`}
+            onClick={() => onChange?.(selected ? undefined : opt.value)}
           >
             {opt.label}
           </button>
@@ -64,23 +45,11 @@ export default function ScoreInput({
         type="button"
         disabled={disabled}
         title="Not Applicable"
-        onClick={() => onChange?.(null)}
-        style={{
-          padding: '0 10px',
-          height: 32,
-          borderRadius: 16,
-          border: `2px solid ${
-            isNaSelected
-              ? 'var(--color-text-tertiary)'
-              : 'var(--color-border)'
-          }`,
-          background: 'transparent',
-          color: 'var(--color-text-tertiary)',
-          fontSize: 11,
-          fontWeight: 500,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.6 : 1,
-        }}
+        aria-pressed={isNaSelected}
+        className={`erp-score-btn erp-score-btn--na${
+          isNaSelected ? ' erp-score-btn--selected' : ''
+        }`}
+        onClick={() => onChange?.(isNaSelected ? undefined : null)}
       >
         N/A
       </button>

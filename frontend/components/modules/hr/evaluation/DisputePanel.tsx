@@ -18,6 +18,7 @@ import {
   useHRDecideDispute,
 } from '@/lib/query/evaluation';
 import type { EmployeeEvaluation } from '@/lib/api/evaluation.types';
+import { getScoreColor, getScoreLabel } from '@/lib/utils/evaluation-status';
 
 interface DisputePanelProps {
   evaluation: EmployeeEvaluation;
@@ -108,7 +109,7 @@ export default function DisputePanel({
           decision === 'ESCALATED' ? escalationReason : undefined,
       });
       void messageApi.success(
-        decision === 'ACCEPTED' ? 'Result accepted' : 'Escalated to HR',
+        decision === 'ACCEPTED' ? 'Decision accepted' : 'Escalated to HR',
       );
     } catch {
       void messageApi.error('Failed to submit response');
@@ -134,54 +135,39 @@ export default function DisputePanel({
   }
 
   return (
-    <div>
+    <div className="erp-dispute-panel">
       {contextHolder}
 
-      {finalScore != null && (
-        <Alert
-          type={
-            status === 'DISPUTED' || status === 'ESCALATED'
-              ? 'warning'
-              : 'success'
-          }
-          message={
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+      {finalScore != null ? (
+        <div className="erp-dispute-score-card">
+          <div>
+            <p className="erp-dispute-score-label">Final Score</p>
+            <p
+              className="erp-dispute-score-value"
+              style={{ color: getScoreColor(Number(finalScore)) }}
             >
-              <span>
-                Final Score:{' '}
-                <strong style={{ fontSize: 18 }}>
-                  {Number(finalScore).toFixed(1)} / 5.0
-                </strong>
-              </span>
-              {evaluation.employeeRespondBy && status === 'RESULT_SHARED' && (
-                <span style={{ fontSize: 12 }}>
-                  Respond by:{' '}
-                  {new Date(evaluation.employeeRespondBy).toLocaleDateString()}
-                </span>
-              )}
-            </div>
-          }
-          style={{ marginBottom: 16 }}
-        />
-      )}
+              {Number(finalScore).toFixed(1)}
+              <span className="erp-dispute-score-max"> / 5.0</span>
+            </p>
+            <p className="erp-users-email m-0 mt-1">
+              {getScoreLabel(Number(finalScore))}
+            </p>
+          </div>
+          {evaluation.employeeRespondBy && status === 'RESULT_SHARED' ? (
+            <p className="erp-users-email m-0">
+              Respond by{' '}
+              {new Date(evaluation.employeeRespondBy).toLocaleDateString()}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
-      {isEmployee && status === 'RESULT_SHARED' && (
-        <div
-          style={{
-            background: 'var(--color-bg-secondary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 16,
-          }}
-        >
-          <h4 style={{ margin: '0 0 12px' }}>Do you agree with this result?</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {isEmployee && status === 'RESULT_SHARED' ? (
+        <div className="erp-dispute-action-card">
+          <h4 className="erp-dispute-action-title">
+            Do you agree with this result?
+          </h4>
+          <div className="erp-dispute-action-body">
             <Button
               type="primary"
               onClick={() => void handleAccept()}
@@ -195,7 +181,7 @@ export default function DisputePanel({
                 placeholder="Reason for dispute (required)"
                 value={disputeReason}
                 onChange={(e) => setDisputeReason(e.target.value)}
-                style={{ marginBottom: 8 }}
+                className="mb-2"
               />
               <Button
                 danger
@@ -207,109 +193,87 @@ export default function DisputePanel({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {isEmployee &&
-        (status === 'DL_UPHELD' || status === 'DL_ADJUSTED') && (
-          <div
-            style={{
-              background: 'var(--color-bg-secondary)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 8,
-              padding: 16,
-              marginBottom: 16,
-            }}
-          >
-            <h4 style={{ margin: '0 0 8px' }}>
-              Discipline Lead has responded to your dispute
-            </h4>
-            {activeDispute && (
-              <Alert
-                type={
-                  activeDispute.dlDecision === 'ADJUSTED' ? 'info' : 'warning'
-                }
-                message={
-                  activeDispute.dlDecision === 'ADJUSTED'
-                    ? `Score adjusted to ${
-                        activeDispute.dlAdjustedScore != null
-                          ? Number(activeDispute.dlAdjustedScore).toFixed(1)
-                          : '—'
-                      }`
-                    : 'Score upheld — no change'
-                }
-                description={activeDispute.dlComment}
-                style={{ marginBottom: 12 }}
+      (status === 'DL_UPHELD' || status === 'DL_ADJUSTED') ? (
+        <div className="erp-dispute-action-card">
+          <h4 className="erp-dispute-action-title">
+            Discipline Lead has responded to your dispute
+          </h4>
+          {activeDispute ? (
+            <Alert
+              type={
+                activeDispute.dlDecision === 'ADJUSTED' ? 'info' : 'warning'
+              }
+              message={
+                activeDispute.dlDecision === 'ADJUSTED'
+                  ? `Score adjusted to ${
+                      activeDispute.dlAdjustedScore != null
+                        ? Number(activeDispute.dlAdjustedScore).toFixed(1)
+                        : '—'
+                    }`
+                  : 'Score upheld — no change'
+              }
+              description={activeDispute.dlComment}
+              className="mb-3"
+            />
+          ) : null}
+          <div className="erp-dispute-action-body">
+            <Button
+              type="primary"
+              onClick={() => void handleEmployeeRespond('ACCEPTED')}
+              loading={employeeRespondMutation.isPending}
+            >
+              Accept Decision
+            </Button>
+            <div>
+              <Input.TextArea
+                rows={2}
+                placeholder="Reason for escalation to HR (required)"
+                value={escalationReason}
+                onChange={(e) => setEscalationReason(e.target.value)}
+                className="mb-2"
               />
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <Button
-                type="primary"
-                onClick={() => void handleEmployeeRespond('ACCEPTED')}
+                danger
+                onClick={() => void handleEmployeeRespond('ESCALATED')}
                 loading={employeeRespondMutation.isPending}
               >
-                Accept Decision
+                Escalate to HR
               </Button>
-              <div>
-                <Input.TextArea
-                  rows={2}
-                  placeholder="Reason for escalation to HR (required)"
-                  value={escalationReason}
-                  onChange={(e) => setEscalationReason(e.target.value)}
-                  style={{ marginBottom: 8 }}
-                />
-                <Button
-                  danger
-                  onClick={() => void handleEmployeeRespond('ESCALATED')}
-                  loading={employeeRespondMutation.isPending}
-                >
-                  Escalate to HR
-                </Button>
-              </div>
             </div>
           </div>
-        )}
+        </div>
+      ) : null}
 
-      {isDisciplineLead && status === 'DISPUTED' && (
-        <div
-          style={{
-            background: 'var(--color-bg-secondary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 16,
-          }}
-        >
-          <h4 style={{ margin: '0 0 12px' }}>Respond to Dispute</h4>
-          {activeDispute && (
+      {isDisciplineLead && status === 'DISPUTED' ? (
+        <div className="erp-dispute-action-card">
+          <h4 className="erp-dispute-action-title">Respond to Dispute</h4>
+          {activeDispute ? (
             <Alert
               type="warning"
-              message="Employee's dispute reason:"
+              message="Employee's dispute reason"
               description={activeDispute.reason}
-              style={{ marginBottom: 12 }}
+              className="mb-3"
             />
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          ) : null}
+          <div className="erp-dispute-action-body">
             <div>
-              <label
-                style={{ fontSize: 13, display: 'block', marginBottom: 6 }}
-              >
-                Decision
-              </label>
+              <label className="erp-dispute-field-label">Decision</label>
               <Select
                 value={dlDecision}
                 onChange={(val) => setDlDecision(val)}
-                style={{ width: '100%' }}
+                className="w-full"
                 options={[
                   { value: 'UPHELD', label: 'Uphold original score' },
                   { value: 'ADJUSTED', label: 'Adjust score' },
                 ]}
               />
             </div>
-            {dlDecision === 'ADJUSTED' && (
+            {dlDecision === 'ADJUSTED' ? (
               <div>
-                <label
-                  style={{ fontSize: 13, display: 'block', marginBottom: 6 }}
-                >
+                <label className="erp-dispute-field-label">
                   New Score (1–5)
                 </label>
                 <InputNumber
@@ -318,14 +282,12 @@ export default function DisputePanel({
                   step={0.1}
                   value={dlScore}
                   onChange={(val) => setDlScore(val)}
-                  style={{ width: '100%' }}
+                  className="w-full"
                 />
               </div>
-            )}
+            ) : null}
             <div>
-              <label
-                style={{ fontSize: 13, display: 'block', marginBottom: 6 }}
-              >
+              <label className="erp-dispute-field-label">
                 Comment (required)
               </label>
               <Input.TextArea
@@ -344,41 +306,27 @@ export default function DisputePanel({
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {isHR && status === 'ESCALATED' && (
-        <div
-          style={{
-            background: 'var(--color-bg-secondary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 16,
-          }}
-        >
-          <h4 style={{ margin: '0 0 12px' }}>HR Final Decision</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {isHR && status === 'ESCALATED' ? (
+        <div className="erp-dispute-action-card">
+          <h4 className="erp-dispute-action-title">HR Final Decision</h4>
+          <div className="erp-dispute-action-body">
             <div>
-              <label
-                style={{ fontSize: 13, display: 'block', marginBottom: 6 }}
-              >
-                Decision
-              </label>
+              <label className="erp-dispute-field-label">Decision</label>
               <Select
                 value={hrDecision}
                 onChange={(val) => setHrDecision(val)}
-                style={{ width: '100%' }}
+                className="w-full"
                 options={[
                   { value: 'UPHELD', label: 'Uphold existing score' },
                   { value: 'ADJUSTED', label: 'Adjust final score' },
                 ]}
               />
             </div>
-            {hrDecision === 'ADJUSTED' && (
+            {hrDecision === 'ADJUSTED' ? (
               <div>
-                <label
-                  style={{ fontSize: 13, display: 'block', marginBottom: 6 }}
-                >
+                <label className="erp-dispute-field-label">
                   Final Score (1–5)
                 </label>
                 <InputNumber
@@ -387,14 +335,12 @@ export default function DisputePanel({
                   step={0.1}
                   value={hrScore}
                   onChange={(val) => setHrScore(val)}
-                  style={{ width: '100%' }}
+                  className="w-full"
                 />
               </div>
-            )}
+            ) : null}
             <div>
-              <label
-                style={{ fontSize: 13, display: 'block', marginBottom: 6 }}
-              >
+              <label className="erp-dispute-field-label">
                 Comment (required)
               </label>
               <Input.TextArea
@@ -413,28 +359,23 @@ export default function DisputePanel({
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {disputes.length > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <h4 style={{ marginBottom: 12 }}>Dispute History</h4>
+      {disputes.length > 0 ? (
+        <div className="erp-dispute-history">
+          <h4 className="erp-dispute-action-title">Dispute History</h4>
           <Timeline
             items={[
               {
                 color: 'red',
                 children: (
                   <div>
-                    <div style={{ fontWeight: 500 }}>
+                    <p className="erp-users-cell-strong m-0">
                       Employee disputed result
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: 'var(--color-text-tertiary)',
-                      }}
-                    >
+                    </p>
+                    <p className="erp-users-email m-0 mt-0.5">
                       {activeDispute?.reason}
-                    </div>
+                    </p>
                   </div>
                 ),
               },
@@ -447,20 +388,15 @@ export default function DisputePanel({
                           : 'orange',
                       children: (
                         <div>
-                          <div style={{ fontWeight: 500 }}>
+                          <p className="erp-users-cell-strong m-0">
                             Discipline Lead{' '}
                             {activeDispute.dlDecision === 'ADJUSTED'
                               ? 'adjusted score'
                               : 'upheld original score'}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: 'var(--color-text-tertiary)',
-                            }}
-                          >
+                          </p>
+                          <p className="erp-users-email m-0 mt-0.5">
                             {activeDispute.dlComment}
-                          </div>
+                          </p>
                         </div>
                       ),
                     },
@@ -472,7 +408,7 @@ export default function DisputePanel({
                       color: 'green',
                       children: (
                         <div>
-                          <div style={{ fontWeight: 500 }}>
+                          <p className="erp-users-cell-strong m-0">
                             HR final decision:{' '}
                             {activeDispute.hrDecision === 'ADJUSTED'
                               ? `Score adjusted to ${
@@ -483,15 +419,10 @@ export default function DisputePanel({
                                     : '—'
                                 }`
                               : 'Score upheld'}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: 'var(--color-text-tertiary)',
-                            }}
-                          >
+                          </p>
+                          <p className="erp-users-email m-0 mt-0.5">
                             {activeDispute.hrComment}
-                          </div>
+                          </p>
                         </div>
                       ),
                     },
@@ -500,7 +431,7 @@ export default function DisputePanel({
             ]}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

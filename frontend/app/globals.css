@@ -3808,6 +3808,334 @@ main::-webkit-scrollbar,
   min-width: 88px;
 }
 
+.erp-evaluation-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.erp-evaluation-detail-meta strong {
+  color: #374151;
+  font-weight: 600;
+}
+
+.erp-evaluation-detail-stages {
+  max-width: 220px;
+}
+
+.erp-evaluation-detail-card .erp-evaluation-detail-tabs.ant-tabs {
+  padding: 0;
+}
+
+.erp-evaluation-detail-card .erp-list-tabs > .ant-tabs-nav {
+  padding: 0 16px;
+  margin: 0;
+}
+
+.erp-evaluation-detail-card .erp-list-tabs .ant-tabs-content-holder {
+  padding: 16px 20px 20px;
+}
+
+.erp-assessment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.erp-assessment-form-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.erp-assessment-form-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.erp-assessment-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e8ebef;
+  border-radius: 10px;
+}
+
+.erp-assessment-banner--action {
+  background: #e6f1fb;
+  border-color: #c5ddf5;
+}
+
+.erp-assessment-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erp-assessment-section-avg {
+  font-size: 13px;
+  font-weight: 700;
+  color: #185fa5;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-assessment-criteria-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 8px 8px;
+}
+
+.erp-assessment-criteria-item {
+  padding: 14px 8px;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.erp-assessment-criteria-item:last-child {
+  border-bottom: none;
+}
+
+.erp-assessment-criteria-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.erp-assessment-criteria-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.erp-assessment-criteria-desc {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+.erp-assessment-criteria-comment {
+  margin-top: 8px;
+  max-width: 420px;
+}
+
+.erp-assessment-criteria-comment-ro {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.erp-assessment-overall {
+  padding-top: 4px;
+}
+
+.erp-assessment-overall-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.erp-assessment-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #eef1f4;
+}
+
+.erp-score-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.erp-score-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.erp-score-btn:hover:not(:disabled) {
+  border-color: #94a3b8;
+}
+
+.erp-score-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.erp-score-btn--na {
+  width: auto;
+  min-width: 40px;
+  padding: 0 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.erp-score-btn--selected.erp-score-btn--1 {
+  background: #f5222d;
+  border-color: #f5222d;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(245, 34, 45, 0.18);
+}
+
+.erp-score-btn--selected.erp-score-btn--2 {
+  background: #fa8c16;
+  border-color: #fa8c16;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.18);
+}
+
+.erp-score-btn--selected.erp-score-btn--3 {
+  background: #d48806;
+  border-color: #d48806;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(212, 136, 6, 0.18);
+}
+
+.erp-score-btn--selected.erp-score-btn--4 {
+  background: #185fa5;
+  border-color: #185fa5;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(24, 95, 165, 0.18);
+}
+
+.erp-score-btn--selected.erp-score-btn--5 {
+  background: #1d9e75;
+  border-color: #1d9e75;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(29, 158, 117, 0.18);
+}
+
+.erp-score-btn--selected.erp-score-btn--na {
+  background: #f1f3f5;
+  border-color: #64748b;
+  color: #334155;
+}
+
+.erp-dispute-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.erp-dispute-score-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+}
+
+.erp-dispute-score-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.erp-dispute-score-value {
+  margin: 4px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.erp-dispute-score-max {
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.erp-dispute-action-card {
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+}
+
+.erp-dispute-action-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.erp-dispute-action-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.erp-dispute-field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.erp-dispute-history {
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #e8ebef;
+  border-radius: 12px;
+}
+
+@media (max-width: 720px) {
+  .erp-assessment-criteria-main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .erp-score-input {
+    justify-content: flex-start;
+  }
+}
+
 .erp-evaluation-section-card {
   border: 1px solid #e8ebef;
   border-radius: 12px;
