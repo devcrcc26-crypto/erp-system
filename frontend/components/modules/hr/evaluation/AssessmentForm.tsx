@@ -29,6 +29,9 @@ interface AssessmentFormProps {
   readOnly?: boolean;
   label?: string;
   hideTitle?: boolean;
+  /** Allow editing/resubmitting even if an assessment was previously submitted. */
+  allowResubmit?: boolean;
+  submitLabel?: string;
 }
 
 const STAGE_LABELS: Record<EvaluationStage, string> = {
@@ -47,8 +50,13 @@ export default function AssessmentForm({
   readOnly,
   label,
   hideTitle = false,
+  allowResubmit = false,
+  submitLabel,
 }: AssessmentFormProps): React.ReactNode {
   const [submitting, setSubmitting] = useState(false);
+  const [submittedLocally, setSubmittedLocally] = useState(
+    allowResubmit ? false : Boolean(existingAssessment?.submittedAt),
+  );
   const [overallComment, setOverallComment] = useState(
     existingAssessment?.comment ?? '',
   );
@@ -102,6 +110,7 @@ export default function AssessmentForm({
         })),
         overallComment,
       );
+      setSubmittedLocally(true);
       void messageApi.success('Assessment submitted successfully');
     } catch {
       void messageApi.error('Failed to submit assessment');
@@ -126,8 +135,11 @@ export default function AssessmentForm({
     return Math.round((sum / criteriaScores.length) * 10) / 10;
   }
 
-  const isLocked = Boolean(disabled || readOnly);
   const submittedAt = existingAssessment?.submittedAt;
+  const isSubmitted = allowResubmit
+    ? submittedLocally
+    : submittedLocally || Boolean(submittedAt);
+  const isLocked = Boolean(disabled || readOnly || isSubmitted);
 
   return (
     <div className="erp-assessment-form">
@@ -146,14 +158,16 @@ export default function AssessmentForm({
         </div>
       ) : null}
 
-      {isLocked ? (
+      {isLocked || isSubmitted ? (
         <div className="erp-assessment-banner">
-          {submittedAt ? (
+          {isSubmitted ? (
             <>
               <StatusBadge label="Submitted" variant="success" />
               <span className="erp-users-email">
-                Submitted {new Date(submittedAt).toLocaleDateString()}. This
-                stage is view-only.
+                {submittedAt
+                  ? `Submitted ${new Date(submittedAt).toLocaleDateString()}. `
+                  : ''}
+                This stage is view-only.
               </span>
             </>
           ) : (
@@ -164,6 +178,14 @@ export default function AssessmentForm({
               </span>
             </>
           )}
+        </div>
+      ) : allowResubmit ? (
+        <div className="erp-assessment-banner erp-assessment-banner--action">
+          <StatusBadge label="Re-assess" variant="warning" />
+          <span className="erp-users-email">
+            Review and update scores after the dispute, then resubmit.{' '}
+            {scoredCount}/{totalCriteria} answered.
+          </span>
         </div>
       ) : (
         <div className="erp-assessment-banner erp-assessment-banner--action">
@@ -213,7 +235,7 @@ export default function AssessmentForm({
                       className="erp-assessment-criteria-item"
                     >
                       <div className="erp-assessment-criteria-main">
-                        <div className="min-w-0 flex-1">
+                        <div className="erp-assessment-criteria-text">
                           <p className="erp-assessment-criteria-name">
                             {criterion.name}
                             {criterion.nameZh ? (
@@ -278,7 +300,7 @@ export default function AssessmentForm({
         />
       </div>
 
-      {!readOnly ? (
+      {!readOnly && !isSubmitted ? (
         <div className="erp-assessment-footer">
           <span className="erp-users-email">
             {scoredCount}/{totalCriteria} criteria answered
@@ -289,7 +311,7 @@ export default function AssessmentForm({
             loading={submitting}
             disabled={disabled}
           >
-            Submit Assessment
+            {submitLabel ?? 'Submit Assessment'}
           </Button>
         </div>
       ) : null}

@@ -635,6 +635,7 @@ export class EvaluationService {
 
   /**
    * Submits Discipline Lead assessment and consolidates the final score.
+   * When status is DISPUTED, resubmission adjusts the score and resolves the dispute.
    */
   async submitDisciplineLeadAssessment(
     evaluationId: string,
@@ -649,9 +650,14 @@ export class EvaluationService {
       );
     }
 
-    if (evaluation.status !== EvaluationStatus.TEAM_LEAD_ASSESSED) {
+    const isDisputeAdjustment =
+      evaluation.status === EvaluationStatus.DISPUTED;
+    const isInitialSubmit =
+      evaluation.status === EvaluationStatus.TEAM_LEAD_ASSESSED;
+
+    if (!isInitialSubmit && !isDisputeAdjustment) {
       throw new BadRequestException(
-        `Discipline Lead assessment requires TEAM_LEAD_ASSESSED status. Current: ${evaluation.status}`,
+        `Discipline Lead assessment requires TEAM_LEAD_ASSESSED or DISPUTED status. Current: ${evaluation.status}`,
       );
     }
 
@@ -675,6 +681,46 @@ export class EvaluationService {
 
     const updatedEval = await this.getEvaluation(evaluationId, ctx.companyId);
     const finalScore = this.calculateFinalScore(updatedEval.assessments);
+
+    if (isDisputeAdjustment) {
+      const activeDispute = evaluation.disputes.find(
+        (d) => d.stage === EvaluationDisputeStage.SUBMITTED_TO_DL,
+      );
+      if (!activeDispute) {
+        throw new NotFoundException('Active dispute not found');
+      }
+
+      const now = new Date();
+      const employeeAdjRespondBy = this.addDays(now, DISPUTE_DEADLINE_DAYS);
+
+      await this.prisma.evaluationDispute.update({
+        where: { id: activeDispute.id },
+        data: {
+          dlRespondedAt: now,
+          dlRespondedBy: ctx.userId,
+          dlDecision: 'ADJUSTED',
+          dlComment: dto.comment ?? 'Score adjusted after re-assessment',
+          dlAdjustedScore:
+            finalScore !== null ? new Decimal(finalScore) : null,
+          stage: EvaluationDisputeStage.DL_RESPONDED,
+        },
+      });
+
+      await this.prisma.employeeEvaluation.update({
+        where: { id: evaluationId },
+        data: {
+          status: EvaluationStatus.DL_ADJUSTED,
+          finalScore: finalScore !== null ? new Decimal(finalScore) : null,
+          adjustedScore:
+            finalScore !== null ? new Decimal(finalScore) : null,
+          dlAdjustedAt: now,
+          employeeAdjRespondBy,
+          updatedBy: ctx.userId,
+        },
+      });
+
+      return this.getEvaluation(evaluationId, ctx.companyId);
+    }
 
     await this.prisma.employeeEvaluation.update({
       where: { id: evaluationId },

@@ -138,7 +138,7 @@ export default function EvaluationDetailPageContent({
     });
   }
 
-  if (isTeamLead || isDisciplineLead || isHR) {
+  if (isEmployee || isTeamLead || isDisciplineLead || isHR) {
     const teamLeadEditable =
       isTeamLead &&
       (evaluation.status === 'SELF_ASSESSED' ||
@@ -162,9 +162,11 @@ export default function EvaluationDetailPageContent({
     });
   }
 
-  if (isDisciplineLead || isHR) {
+  if (isEmployee || isDisciplineLead || isHR) {
     const dlEditable =
-      isDisciplineLead && evaluation.status === 'TEAM_LEAD_ASSESSED';
+      isDisciplineLead &&
+      (evaluation.status === 'TEAM_LEAD_ASSESSED' ||
+        evaluation.status === 'DISPUTED');
     tabs.push({
       key: 'discipline-lead',
       label: 'Discipline Lead Assessment',
@@ -174,6 +176,12 @@ export default function EvaluationDetailPageContent({
           stage="DISCIPLINE_LEAD"
           existingAssessment={dlAssessment}
           hideTitle
+          allowResubmit={evaluation.status === 'DISPUTED'}
+          submitLabel={
+            evaluation.status === 'DISPUTED'
+              ? 'Resubmit Adjusted Assessment'
+              : undefined
+          }
           onSubmit={async (scores, comment) => {
             await submitDL.mutateAsync({ scores, comment });
           }}
@@ -215,7 +223,8 @@ export default function EvaluationDetailPageContent({
     defaultTab = 'team-lead';
   } else if (
     isDisciplineLead &&
-    evaluation.status === 'TEAM_LEAD_ASSESSED' &&
+    (evaluation.status === 'TEAM_LEAD_ASSESSED' ||
+      evaluation.status === 'DISPUTED') &&
     tabs.some((t) => t.key === 'discipline-lead')
   ) {
     defaultTab = 'discipline-lead';

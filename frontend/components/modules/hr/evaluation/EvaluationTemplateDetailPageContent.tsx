@@ -38,7 +38,7 @@ export default function EvaluationTemplateDetailPageContent({
 
   if (templateQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page flex justify-center p-12">
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page flex justify-center p-12">
         <Spin size="large" />
       </div>
     );
@@ -46,7 +46,13 @@ export default function EvaluationTemplateDetailPageContent({
 
   const template = templateQuery.data;
   if (!template) {
-    return null;
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page">
+        <div className="erp-pro-card p-6">
+          <p className="m-0 text-[#6B7280]">Template not found.</p>
+        </div>
+      </div>
+    );
   }
 
   async function handleAddCriteria(sectionId: string): Promise<void> {
@@ -97,11 +103,11 @@ export default function EvaluationTemplateDetailPageContent({
   );
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page erp-evaluation-template-detail">
       {contextHolder}
 
       <div className="erp-evaluation-detail-hero">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <h2 className="m-0 text-[20px] font-semibold text-[#111827]">
               {template.name}
@@ -116,14 +122,24 @@ export default function EvaluationTemplateDetailPageContent({
           {template.description ? (
             <p className="erp-users-email m-0 mb-1">{template.description}</p>
           ) : null}
-          <p className="erp-users-email m-0">
-            Created {new Date(template.createdAt).toLocaleDateString()} ·{' '}
-            {template.sections.length} sections · {criteriaCount} criteria
-          </p>
+          <div className="erp-evaluation-detail-meta">
+            <span>
+              Created{' '}
+              <strong>
+                {new Date(template.createdAt).toLocaleDateString()}
+              </strong>
+            </span>
+            <span>
+              Sections: <strong>{template.sections.length}</strong>
+            </span>
+            <span>
+              Criteria: <strong>{criteriaCount}</strong>
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="erp-assessment-sections">
         {[...template.sections]
           .sort((a, b) => a.sortOrder - b.sortOrder)
           .map((section) => (
@@ -138,41 +154,41 @@ export default function EvaluationTemplateDetailPageContent({
                   ) : null}
                 </div>
                 <StatusBadge
-                  label={`${section.weight}% weight`}
+                  label={`${Number(section.weight)}% weight`}
                   variant="info"
                 />
               </div>
 
-              <div className="flex flex-col gap-2 p-4">
+              <div className="erp-assessment-criteria-list">
                 {[...section.criteria]
                   .sort((a, b) => a.sortOrder - b.sortOrder)
                   .map((criterion) => (
                     <div
                       key={criterion.id}
-                      className={`erp-evaluation-criteria-row${
+                      className={`erp-assessment-criteria-item${
                         criterion.isActive
                           ? ''
                           : ' erp-evaluation-criteria-row--inactive'
                       }`}
                     >
-                      <div className="min-w-0">
-                        <span className="text-[13px] font-medium text-[#111827]">
+                      <div className="erp-assessment-criteria-text">
+                        <p className="erp-assessment-criteria-name">
                           {criterion.name}
-                        </span>
-                        {criterion.nameZh ? (
-                          <span className="erp-users-email ml-2 text-[11px]">
-                            {criterion.nameZh}
-                          </span>
-                        ) : null}
+                          {criterion.nameZh ? (
+                            <span className="erp-users-email ml-1.5 text-[12px]">
+                              {criterion.nameZh}
+                            </span>
+                          ) : null}
+                        </p>
                         {criterion.description ? (
-                          <div className="erp-users-email mt-0.5 text-[11px]">
+                          <p className="erp-assessment-criteria-desc">
                             {criterion.description}
-                          </div>
+                          </p>
                         ) : null}
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <span className="erp-users-id-chip">
-                          {criterion.weight}%
+                          {Number(criterion.weight)}%
                         </span>
                         <Tooltip
                           title={
@@ -192,70 +208,70 @@ export default function EvaluationTemplateDetailPageContent({
                       </div>
                     </div>
                   ))}
-
-                {addingToSection === section.id ? (
-                  <div className="mt-2 rounded-lg border border-dashed border-[#e8ebef] p-3">
-                    <div className="mb-2 flex flex-wrap gap-2">
-                      <Input
-                        placeholder="Criterion name (EN) *"
-                        value={newCriteriaName}
-                        onChange={(e) => setNewCriteriaName(e.target.value)}
-                        size="small"
-                        className="min-w-[160px] flex-[2]"
-                      />
-                      <Input
-                        placeholder="名称 (ZH)"
-                        value={newCriteriaZh}
-                        onChange={(e) => setNewCriteriaZh(e.target.value)}
-                        size="small"
-                        className="min-w-[100px] flex-1"
-                      />
-                      <InputNumber
-                        placeholder="Weight %"
-                        value={newCriteriaWeight}
-                        onChange={(val) => setNewCriteriaWeight(val ?? 0)}
-                        min={0}
-                        max={100}
-                        size="small"
-                        className="w-[90px]"
-                      />
-                    </div>
-                    <Input
-                      placeholder="Description (optional)"
-                      value={newCriteriaDesc}
-                      onChange={(e) => setNewCriteriaDesc(e.target.value)}
-                      size="small"
-                      className="mb-2"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        type="primary"
-                        size="small"
-                        loading={addCriteria.isPending}
-                        onClick={() => void handleAddCriteria(section.id)}
-                      >
-                        Add
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => setAddingToSection(null)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    type="dashed"
-                    size="small"
-                    icon={<PlusOutlined />}
-                    onClick={() => setAddingToSection(section.id)}
-                    className="mt-1 self-start"
-                  >
-                    Add Criterion
-                  </Button>
-                )}
               </div>
+
+              {addingToSection === section.id ? (
+                <div className="erp-assessment-add rounded-lg border border-dashed border-[#e8ebef] p-3">
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    <Input
+                      placeholder="Criterion name (EN) *"
+                      value={newCriteriaName}
+                      onChange={(e) => setNewCriteriaName(e.target.value)}
+                      size="small"
+                      className="min-w-[160px] flex-[2]"
+                    />
+                    <Input
+                      placeholder="名称 (ZH)"
+                      value={newCriteriaZh}
+                      onChange={(e) => setNewCriteriaZh(e.target.value)}
+                      size="small"
+                      className="min-w-[100px] flex-1"
+                    />
+                    <InputNumber
+                      placeholder="Weight %"
+                      value={newCriteriaWeight}
+                      onChange={(val) => setNewCriteriaWeight(val ?? 0)}
+                      min={0}
+                      max={100}
+                      size="small"
+                      className="w-[90px]"
+                    />
+                  </div>
+                  <Input
+                    placeholder="Description (optional)"
+                    value={newCriteriaDesc}
+                    onChange={(e) => setNewCriteriaDesc(e.target.value)}
+                    size="small"
+                    className="mb-2"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      type="primary"
+                      size="small"
+                      loading={addCriteria.isPending}
+                      onClick={() => void handleAddCriteria(section.id)}
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      size="small"
+                      onClick={() => setAddingToSection(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  type="dashed"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => setAddingToSection(section.id)}
+                  className="erp-assessment-add self-start"
+                >
+                  Add Criterion
+                </Button>
+              )}
             </div>
           ))}
       </div>

@@ -767,7 +767,7 @@ main::-webkit-scrollbar,
   background: transparent;
 }
 
- re/* Tables sit under card toolbars — never round the top corners */
+/* Tables sit under card toolbars — never round the top corners */
 .erp-pro-table-card-body .ant-table-container,
 .erp-pro-table-card-body .ant-table-container::before,
 .erp-pro-table-card-body .ant-table-container::after,
@@ -3686,6 +3686,32 @@ main::-webkit-scrollbar,
   margin-bottom: 16px;
 }
 
+.erp-evaluation-page .erp-pro-card,
+.erp-evaluation-page .erp-evaluation-detail-hero,
+.erp-evaluation-page .erp-users-stat-bar,
+.erp-evaluation-page .erp-evaluation-section-card,
+.erp-evaluation-page .erp-assessment-overall,
+.erp-evaluation-page .erp-assessment-banner,
+.erp-evaluation-page .erp-dispute-score-card,
+.erp-evaluation-page .erp-dispute-action-card,
+.erp-evaluation-page .erp-dispute-history,
+.erp-evaluation-page .erp-evaluation-card {
+  border-radius: 0;
+}
+
+.erp-evaluation-page .erp-pro-table.ant-table-wrapper,
+.erp-evaluation-page .erp-pro-table .ant-table,
+.erp-evaluation-page .erp-pro-table .ant-table-container,
+.erp-evaluation-page .erp-pro-table .ant-table-content {
+  width: 100%;
+  border-radius: 0 !important;
+}
+
+.erp-evaluation-page .erp-pro-table-card-body {
+  width: 100%;
+  padding: 0;
+}
+
 .erp-evaluation-inbox-page .erp-evaluation-inbox-stats {
   grid-template-columns: repeat(6, 1fr);
 }
@@ -3791,28 +3817,28 @@ main::-webkit-scrollbar,
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  padding: 20px;
+  padding: 18px 20px;
   background: #fff;
   border: 1px solid #e8ebef;
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .erp-evaluation-detail-score {
   text-align: center;
-  padding: 10px 18px;
+  padding: 10px 16px;
   background: #f8fafc;
   border: 1px solid #e8ebef;
   border-radius: 10px;
-  min-width: 88px;
+  min-width: 84px;
 }
 
 .erp-evaluation-detail-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-top: 10px;
+  gap: 6px 14px;
+  margin-top: 8px;
   font-size: 12px;
   color: #6b7280;
 }
@@ -3824,6 +3850,57 @@ main::-webkit-scrollbar,
 
 .erp-evaluation-detail-stages {
   max-width: 220px;
+}
+
+.erp-evaluation-detail-page.erp-pro-list-page {
+  gap: 16px;
+}
+
+.erp-evaluation-detail-card {
+  overflow: hidden;
+}
+
+.erp-evaluation-detail-tabs.ant-tabs {
+  overflow: visible;
+}
+
+.erp-evaluation-detail-tabs.ant-tabs > .ant-tabs-nav {
+  margin: 0 !important;
+  padding: 0 8px;
+  background: #fff;
+}
+
+.erp-evaluation-detail-tabs.ant-tabs > .ant-tabs-nav::before {
+  border-bottom: 1px solid #e8ebef !important;
+}
+
+.erp-evaluation-detail-tabs .ant-tabs-tab {
+  margin: 0 4px !important;
+  padding: 14px 14px !important;
+}
+
+.erp-evaluation-detail-tabs .ant-tabs-tab .ant-tabs-tab-btn {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.erp-evaluation-detail-tabs .ant-tabs-tab:hover .ant-tabs-tab-btn {
+  color: #111827;
+}
+
+.erp-evaluation-detail-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #0f766e !important;
+  font-weight: 600;
+}
+
+.erp-evaluation-detail-tabs .ant-tabs-ink-bar {
+  height: 2px !important;
+  background: #0f766e !important;
+}
+
+.erp-evaluation-detail-tabs .ant-tabs-content-holder {
+  padding: 16px 20px 20px;
 }
 
 .erp-evaluation-detail-card .erp-evaluation-detail-tabs.ant-tabs {
@@ -3842,7 +3919,10 @@ main::-webkit-scrollbar,
 .erp-assessment-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  padding: 0;
+  width: 100%;
+  max-width: none;
 }
 
 .erp-assessment-form-head {
@@ -3879,7 +3959,7 @@ main::-webkit-scrollbar,
 .erp-assessment-sections {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .erp-assessment-section-avg {
@@ -3893,11 +3973,11 @@ main::-webkit-scrollbar,
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 4px 8px 8px;
+  padding: 0 16px;
 }
 
 .erp-assessment-criteria-item {
-  padding: 14px 8px;
+  padding: 12px 0;
   border-bottom: 1px solid #eef1f4;
 }
 
@@ -3907,9 +3987,16 @@ main::-webkit-scrollbar,
 
 .erp-assessment-criteria-main {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+}
+
+.erp-assessment-criteria-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
 }
 
 .erp-assessment-criteria-name {
@@ -3940,7 +4027,11 @@ main::-webkit-scrollbar,
 }
 
 .erp-assessment-overall {
-  padding-top: 4px;
+  padding: 14px 16px 20px;
+  background: #ffffff;
+  border: 1px solid #e8ebef;
+  border-radius: 0;
+  margin-bottom: 8px;
 }
 
 .erp-assessment-overall-label {
@@ -3957,8 +4048,26 @@ main::-webkit-scrollbar,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 8px;
-  border-top: 1px solid #eef1f4;
+  padding: 12px 16px 16px;
+}
+
+.erp-evaluation-template-detail .erp-assessment-criteria-list {
+  padding-bottom: 12px;
+}
+
+.erp-evaluation-template-detail .erp-assessment-criteria-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.erp-evaluation-template-detail .erp-assessment-add {
+  margin: 0 16px 14px;
+}
+
+.erp-evaluation-section-header .erp-users-cell-strong {
+  font-size: 14px;
 }
 
 .erp-score-input {
@@ -4053,18 +4162,20 @@ main::-webkit-scrollbar,
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: 100%;
 }
 
-.erp-dispute-score-card {
+.erp-dispute-score-body {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px;
-  background: #f8fafc;
-  border: 1px solid #e8ebef;
-  border-radius: 12px;
+  gap: 16px;
+  padding: 16px;
+}
+
+.erp-dispute-score-main {
+  min-width: 0;
 }
 
 .erp-dispute-score-label {
@@ -4077,8 +4188,8 @@ main::-webkit-scrollbar,
 }
 
 .erp-dispute-score-value {
-  margin: 4px 0 0;
-  font-size: 28px;
+  margin: 6px 0 0;
+  font-size: 32px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -4090,24 +4201,94 @@ main::-webkit-scrollbar,
   color: #94a3b8;
 }
 
-.erp-dispute-action-card {
-  padding: 16px 18px;
-  background: #fff;
-  border: 1px solid #e8ebef;
-  border-radius: 12px;
+.erp-dispute-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 13px;
 }
 
-.erp-dispute-action-title {
-  margin: 0 0 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
+.erp-dispute-deadline strong {
+  font-weight: 650;
 }
 
 .erp-dispute-action-body {
   display: flex;
   flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+.erp-dispute-action-body > .ant-alert {
+  margin: 16px 16px 0;
+}
+
+.erp-dispute-path {
+  padding: 16px;
+}
+
+.erp-dispute-path-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 650;
+  color: #111827;
+}
+
+.erp-dispute-path-desc {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+.erp-dispute-path--accept {
+  background: #f0fdf9;
+}
+
+.erp-dispute-path--dispute {
+  background: #fff;
+}
+
+.erp-dispute-path-divider {
+  display: flex;
+  align-items: center;
   gap: 12px;
+  padding: 0 16px;
+  background: #fff;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.erp-dispute-path-divider::before,
+.erp-dispute-path-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #eef1f4;
+}
+
+.erp-dispute-textarea {
+  margin-bottom: 12px !important;
+}
+
+.erp-dispute-path-btn {
+  min-width: 160px;
+}
+
+.erp-dispute-field {
+  padding: 0 16px;
+  margin-bottom: 14px;
+}
+
+.erp-dispute-field:first-child {
+  padding-top: 16px;
 }
 
 .erp-dispute-field-label {
@@ -4118,11 +4299,48 @@ main::-webkit-scrollbar,
   color: #374151;
 }
 
+.erp-dispute-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 4px 16px 16px;
+}
+
+.erp-dispute-history-body {
+  padding: 16px 16px 8px;
+}
+
+.erp-dispute-score-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px solid #e8ebef;
+  border-radius: 0;
+}
+
+.erp-dispute-action-card {
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #e8ebef;
+  border-radius: 0;
+}
+
+.erp-dispute-action-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
 .erp-dispute-history {
   padding: 16px 18px;
   background: #fff;
   border: 1px solid #e8ebef;
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 @media (max-width: 720px) {
@@ -4131,27 +4349,34 @@ main::-webkit-scrollbar,
     align-items: stretch;
   }
 
+  .erp-assessment-criteria-text {
+    max-width: none;
+  }
+
   .erp-score-input {
     justify-content: flex-start;
+  }
+
+  .erp-evaluation-detail-tabs .ant-tabs-content-holder {
+    padding: 14px 14px 16px;
   }
 }
 
 .erp-evaluation-section-card {
+  background: #ffffff;
   border: 1px solid #e8ebef;
-  border-radius: 12px;
+  border-radius: 0;
   overflow: hidden;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .erp-evaluation-section-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 8px;
   padding: 12px 16px;
   background: #f8fafc;
-  border-bottom: 1px solid #eef1f4;
+  border-bottom: 1px solid #e8ebef;
 }
 
 .erp-evaluation-criteria-row {
