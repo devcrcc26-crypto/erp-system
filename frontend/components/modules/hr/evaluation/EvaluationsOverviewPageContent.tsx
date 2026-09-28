@@ -1,10 +1,27 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button, Input, Progress, Select, Table, Tag, message } from 'antd';
+import {
+  Button,
+  Input,
+  Progress,
+  Select,
+  Table,
+  Tooltip,
+  message,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TeamOutlined,
+} from '@ant-design/icons';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import type { EmployeeEvaluation } from '@/lib/api/evaluation.types';
 import {
@@ -13,12 +30,13 @@ import {
   useTriggerEvaluationAutoResolve,
 } from '@/lib/query/evaluation';
 import {
-  EVALUATION_STATUS_COLORS,
+  EVALUATION_STATUS_BADGE,
   EVALUATION_STATUS_LABELS,
   getQuarterLabel,
   getScoreColor,
   getScoreLabel,
 } from '@/lib/utils/evaluation-status';
+import EvaluationStat from './EvaluationStat';
 
 export default function EvaluationsOverviewPageContent(): React.ReactNode {
   const router = useRouter();
@@ -86,55 +104,55 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
       title: 'Employee',
       key: 'employee',
       render: (_value, row) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>
+        <div className="min-w-0">
+          <p className="erp-users-cell-strong m-0">
             {row.employee.firstName} {row.employee.lastName}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+          </p>
+          <p className="erp-users-email m-0 mt-0.5">
             {row.employee.employeeId ?? '—'}
-          </div>
+          </p>
         </div>
       ),
     },
     {
       title: 'Cycle',
       key: 'cycle',
-      render: (_value, row) =>
-        getQuarterLabel(row.cycle.quarter, row.cycle.year),
+      width: 120,
+      render: (_value, row) => (
+        <span className="erp-users-id-chip">
+          {getQuarterLabel(row.cycle.quarter, row.cycle.year)}
+        </span>
+      ),
     },
     {
       title: 'Status',
       key: 'status',
+      width: 150,
       render: (_value, row) => (
-        <Tag color={EVALUATION_STATUS_COLORS[row.status]}>
-          {EVALUATION_STATUS_LABELS[row.status]}
-        </Tag>
+        <StatusBadge
+          label={EVALUATION_STATUS_LABELS[row.status]}
+          variant={EVALUATION_STATUS_BADGE[row.status]}
+        />
       ),
     },
     {
       title: 'Final Score',
       key: 'score',
+      width: 160,
       render: (_value, row) => {
         const score = row.adjustedScore ?? row.finalScore;
         if (score == null) {
-          return (
-            <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-          );
+          return <span className="erp-users-cell-sub">—</span>;
         }
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="flex items-center gap-2">
             <span
-              style={{
-                fontWeight: 600,
-                color: getScoreColor(score),
-                fontSize: 16,
-              }}
+              className="erp-evaluation-score"
+              style={{ fontSize: 16, color: getScoreColor(Number(score)) }}
             >
               {Number(score).toFixed(1)}
             </span>
-            <span
-              style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}
-            >
+            <span className="erp-users-cell-sub">
               {getScoreLabel(Number(score))}
             </span>
           </div>
@@ -144,34 +162,37 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
     {
       title: 'Team Lead',
       key: 'teamLead',
+      responsive: ['lg'],
       render: (_value, row) =>
         row.teamLead ? (
-          `${row.teamLead.firstName} ${row.teamLead.lastName}`
-        ) : (
-          <span style={{ color: 'var(--color-text-tertiary)' }}>
-            Not assigned
+          <span className="erp-users-cell-strong">
+            {row.teamLead.firstName} {row.teamLead.lastName}
           </span>
+        ) : (
+          <span className="erp-users-cell-sub">Not assigned</span>
         ),
     },
     {
       title: 'Discipline Lead',
       key: 'disciplineLead',
+      responsive: ['xl'],
       render: (_value, row) =>
         row.disciplineLead ? (
-          `${row.disciplineLead.firstName} ${row.disciplineLead.lastName}`
-        ) : (
-          <span style={{ color: 'var(--color-text-tertiary)' }}>
-            Not assigned
+          <span className="erp-users-cell-strong">
+            {row.disciplineLead.firstName} {row.disciplineLead.lastName}
           </span>
+        ) : (
+          <span className="erp-users-cell-sub">Not assigned</span>
         ),
     },
     {
       title: '',
       key: 'action',
+      width: 72,
       render: (_value, row) => (
         <Link
           href={`/hr/evaluations/${row.id}`}
-          style={{ fontSize: 13 }}
+          className="text-[13px] font-medium text-[#185FA5]"
           onClick={(event) => event.stopPropagation()}
         >
           View
@@ -181,116 +202,113 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
   ];
 
   return (
-    <div className="erp-pro-list-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
       {contextHolder}
-      <div
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: 12,
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>Employee Evaluations</h2>
-          <p
-            style={{
-              margin: 0,
-              color: 'var(--color-text-tertiary)',
-              fontSize: 13,
-            }}
-          >
-            Overview of all employee evaluations
-          </p>
-        </div>
-        {canViewHr ? (
-          <Button
-            size="small"
-            onClick={() => void handleManualAutoResolve()}
-            loading={autoResolve.isPending}
-            style={{ fontSize: 12 }}
-          >
-            Run Auto-Resolve
-          </Button>
-        ) : null}
+
+      <div className="erp-users-stat-bar">
+        <EvaluationStat
+          label="Total"
+          value={total}
+          accent="slate"
+          icon={<TeamOutlined />}
+        />
+        <EvaluationStat
+          label="Completed"
+          value={completed}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+        />
+        <EvaluationStat
+          label="Disputed"
+          value={disputed}
+          accent="amber"
+          icon={<ExclamationCircleOutlined />}
+        />
+        <EvaluationStat
+          label="Pending"
+          value={pending}
+          accent="blue"
+          icon={<ClockCircleOutlined />}
+        />
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        {[
-          { label: 'Total', value: total, color: 'var(--color-text-primary)' },
-          { label: 'Completed', value: completed, color: '#52c41a' },
-          { label: 'Disputed', value: disputed, color: '#fa8c16' },
-          {
-            label: 'Pending',
-            value: pending,
-            color: 'var(--color-text-tertiary)',
-          },
-        ].map((item) => (
-          <div
-            key={item.label}
-            style={{
-              background: 'var(--color-bg-secondary)',
-              borderRadius: 8,
-              padding: '12px 16px',
-              border: '1px solid var(--color-border)',
-            }}
-          >
-            <div style={{ fontSize: 24, fontWeight: 700, color: item.color }}>
-              {item.value}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-              {item.label}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {total > 0 && (
-        <div style={{ marginBottom: 16 }}>
+      {total > 0 ? (
+        <div className="mb-4 px-1">
           <Progress
             percent={Math.round((completed / total) * 100)}
-            strokeColor="#52c41a"
+            strokeColor="#1D9E75"
+            trailColor="#E8EBEF"
             format={(p) => `${p}% complete`}
           />
         </div>
-      )}
+      ) : null}
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-        <Input.Search
-          placeholder="Search by name or employee ID"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 280 }}
-          allowClear
-        />
-        <Select
-          value={selectedCycleId}
-          onChange={setSelectedCycleId}
-          options={cycleOptions}
-          style={{ width: 160 }}
-          placeholder="Filter by cycle"
-        />
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">Employee Evaluations</h3>
+            <span className="erp-users-count-pill">
+              {total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title="Refresh">
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={
+                  evaluationsQuery.isFetching && !evaluationsQuery.isLoading
+                }
+                onClick={() => void evaluationsQuery.refetch()}
+                aria-label="Refresh"
+              />
+            </Tooltip>
+            {canViewHr ? (
+              <Button
+                size="small"
+                onClick={() => void handleManualAutoResolve()}
+                loading={autoResolve.isPending}
+              >
+                Run Auto-Resolve
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
+            allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder="Search by name or employee ID"
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <span className="erp-users-filter-spacer" aria-hidden />
+          <Select
+            value={selectedCycleId}
+            onChange={setSelectedCycleId}
+            options={cycleOptions}
+            className="erp-users-filter-select"
+            placeholder="Filter by cycle"
+          />
+        </div>
+
+        <div className="erp-pro-table-card-body">
+          <Table
+            dataSource={filtered}
+            columns={columns}
+            rowKey="id"
+            loading={evaluationsQuery.isLoading}
+            pagination={{ pageSize: 20 }}
+            className="erp-pro-table erp-users-table"
+            onRow={(row) => ({
+              onClick: () => router.push(`/hr/evaluations/${row.id}`),
+              style: { cursor: 'pointer' },
+            })}
+          />
+        </div>
       </div>
-
-      <Table
-        dataSource={filtered}
-        columns={columns}
-        rowKey="id"
-        loading={evaluationsQuery.isLoading}
-        pagination={{ pageSize: 20 }}
-        onRow={(row) => ({
-          onClick: () => router.push(`/hr/evaluations/${row.id}`),
-          style: { cursor: 'pointer' },
-        })}
-      />
     </div>
   );
 }

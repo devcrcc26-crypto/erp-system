@@ -2,6 +2,7 @@ import type {
   EvaluationCycleStatus,
   EvaluationStatus,
 } from '@/lib/api/evaluation.types';
+import type { StatusBadgeVariant } from '@/components/ui/StatusBadge/StatusBadge';
 
 export const EVALUATION_STATUS_LABELS: Record<EvaluationStatus, string> = {
   PENDING: 'Pending',
@@ -33,6 +34,24 @@ export const EVALUATION_STATUS_COLORS: Record<EvaluationStatus, string> = {
   LOCKED: 'default',
 };
 
+export const EVALUATION_STATUS_BADGE: Record<
+  EvaluationStatus,
+  StatusBadgeVariant
+> = {
+  PENDING: 'default',
+  SELF_ASSESSED: 'info',
+  TEAM_LEAD_ASSESSED: 'cyan',
+  DISCIPLINE_ASSESSED: 'info',
+  RESULT_SHARED: 'warning',
+  ACCEPTED: 'success',
+  DISPUTED: 'warning',
+  DL_UPHELD: 'orange',
+  DL_ADJUSTED: 'orange',
+  ESCALATED: 'error',
+  HR_DECIDED: 'success',
+  LOCKED: 'default',
+};
+
 export const CYCLE_STATUS_LABELS: Record<EvaluationCycleStatus, string> = {
   DRAFT: 'Draft',
   ACTIVE: 'Active',
@@ -40,6 +59,15 @@ export const CYCLE_STATUS_LABELS: Record<EvaluationCycleStatus, string> = {
 };
 
 export const CYCLE_STATUS_COLORS: Record<EvaluationCycleStatus, string> = {
+  DRAFT: 'default',
+  ACTIVE: 'success',
+  CLOSED: 'default',
+};
+
+export const CYCLE_STATUS_BADGE: Record<
+  EvaluationCycleStatus,
+  StatusBadgeVariant
+> = {
   DRAFT: 'default',
   ACTIVE: 'success',
   CLOSED: 'default',

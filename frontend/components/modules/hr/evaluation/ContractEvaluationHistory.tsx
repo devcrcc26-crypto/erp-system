@@ -288,19 +288,13 @@ export default function ContractEvaluationHistory({
 
   return (
     <div>
-      <div
-        style={{
-          background: 'var(--color-bg-secondary)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 8,
-          padding: 16,
-          marginBottom: 16,
-        }}
-      >
-        <h4 style={{ margin: '0 0 12px' }}>
-          Performance Trend — {employeeName}
-        </h4>
-        <EvaluationTrendChart evaluations={evaluations} />
+      <div className="erp-pro-card erp-evaluation-trend-card">
+        <div className="erp-pro-card-body">
+          <h4 className="mb-3 mt-0 text-[13px] font-semibold text-[#374151]">
+            Performance Trend — {employeeName}
+          </h4>
+          <EvaluationTrendChart evaluations={evaluations} />
+        </div>
       </div>
 
       <Collapse
@@ -310,31 +304,19 @@ export default function ContractEvaluationHistory({
           return {
             key: ev.id,
             label: (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  width: '100%',
-                  paddingRight: 8,
-                }}
-              >
-                <span style={{ fontWeight: 500 }}>
+              <div className="flex w-full items-center justify-between gap-3 pr-2">
+                <span className="erp-users-cell-strong">
                   {getQuarterLabel(ev.cycle.quarter, ev.cycle.year)}
                 </span>
-                <div
-                  style={{ display: 'flex', gap: 8, alignItems: 'center' }}
-                >
-                  {score != null && (
+                <div className="flex items-center gap-2">
+                  {score != null ? (
                     <span
-                      style={{
-                        fontWeight: 700,
-                        color: getScoreColor(Number(score)),
-                      }}
+                      className="font-bold"
+                      style={{ color: getScoreColor(Number(score)) }}
                     >
                       {Number(score).toFixed(1)}
                     </span>
-                  )}
+                  ) : null}
                   <Tag
                     color={EVALUATION_STATUS_COLORS[ev.status]}
                     style={{ margin: 0 }}

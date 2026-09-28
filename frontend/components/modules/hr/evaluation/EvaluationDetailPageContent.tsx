@@ -1,8 +1,9 @@
 'use client';
 
-import { Button, Spin, Tabs, Tag, message } from 'antd';
+import { Button, Spin, Tabs, message } from 'antd';
 import type { TabsProps } from 'antd';
 import { LockOutlined, ShareAltOutlined } from '@ant-design/icons';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useCurrentUser } from '@/lib/query/profile';
 import {
@@ -15,7 +16,7 @@ import {
 } from '@/lib/query/evaluation';
 import type { EvaluationStatus } from '@/lib/api/evaluation.types';
 import {
-  EVALUATION_STATUS_COLORS,
+  EVALUATION_STATUS_BADGE,
   EVALUATION_STATUS_LABELS,
   getQuarterLabel,
   getScoreColor,
@@ -55,7 +56,7 @@ export default function EvaluationDetailPageContent({
 
   if (evaluationQuery.isLoading || currentUser.isLoading) {
     return (
-      <div style={{ padding: 48, textAlign: 'center' }}>
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page flex justify-center p-12">
         <Spin size="large" />
       </div>
     );
@@ -64,8 +65,10 @@ export default function EvaluationDetailPageContent({
   const evaluation = evaluationQuery.data;
   if (!evaluation) {
     return (
-      <div style={{ padding: 24 }}>
-        <p>Evaluation not found.</p>
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
+        <div className="erp-pro-card p-6">
+          <p className="m-0 text-[#6B7280]">Evaluation not found.</p>
+        </div>
       </div>
     );
   }
@@ -188,105 +191,84 @@ export default function EvaluationDetailPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
       {contextHolder}
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 20,
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h2 style={{ margin: 0 }}>
+      <div className="erp-evaluation-detail-hero">
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <h2 className="m-0 text-[20px] font-semibold text-[#111827]">
               {evaluation.employee.firstName} {evaluation.employee.lastName}
             </h2>
-            <Tag style={{ margin: 0 }}>
+            <span className="erp-users-id-chip">
               {evaluation.employee.employeeId ?? '—'}
-            </Tag>
-            <Tag color={EVALUATION_STATUS_COLORS[evaluation.status]}>
-              {EVALUATION_STATUS_LABELS[evaluation.status]}
-            </Tag>
+            </span>
+            <StatusBadge
+              label={EVALUATION_STATUS_LABELS[evaluation.status]}
+              variant={EVALUATION_STATUS_BADGE[evaluation.status]}
+            />
           </div>
-          <div
-            style={{
-              fontSize: 13,
-              color: 'var(--color-text-tertiary)',
-              marginTop: 4,
-            }}
-          >
+          <p className="erp-users-email m-0">
             {getQuarterLabel(evaluation.cycle.quarter, evaluation.cycle.year)}{' '}
             Evaluation
-          </div>
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {finalScore != null && (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '8px 16px',
-                background: 'var(--color-bg-secondary)',
-                borderRadius: 8,
-                border: '1px solid var(--color-border)',
-              }}
-            >
+        <div className="flex flex-wrap items-center gap-2">
+          {finalScore != null ? (
+            <div className="erp-evaluation-detail-score">
               <div
-                style={{
-                  fontSize: 24,
-                  fontWeight: 700,
-                  color: getScoreColor(Number(finalScore)),
-                }}
+                className="erp-evaluation-score"
+                style={{ color: getScoreColor(Number(finalScore)) }}
               >
                 {Number(finalScore).toFixed(1)}
               </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: 'var(--color-text-tertiary)',
-                }}
-              >
+              <div className="erp-evaluation-score-label">
                 {getScoreLabel(Number(finalScore))}
               </div>
             </div>
-          )}
+          ) : null}
 
-          {isDisciplineLead &&
-            evaluation.status === 'DISCIPLINE_ASSESSED' && (
-              <Button
-                icon={<ShareAltOutlined />}
-                onClick={() => void handleShareResult()}
-                loading={shareResult.isPending}
-              >
-                Share Result with Employee
-              </Button>
-            )}
+          {isDisciplineLead && evaluation.status === 'DISCIPLINE_ASSESSED' ? (
+            <Button
+              icon={<ShareAltOutlined />}
+              onClick={() => void handleShareResult()}
+              loading={shareResult.isPending}
+            >
+              Share Result
+            </Button>
+          ) : null}
 
           {isHR &&
-            (evaluation.status === 'ACCEPTED' ||
-              evaluation.status === 'HR_DECIDED') && (
-              <Button
-                type="primary"
-                icon={<LockOutlined />}
-                onClick={() => void handleLock()}
-                loading={lockEval.isPending}
-              >
-                Lock & File
-              </Button>
-            )}
+          (evaluation.status === 'ACCEPTED' ||
+            evaluation.status === 'HR_DECIDED') ? (
+            <Button
+              type="primary"
+              icon={<LockOutlined />}
+              onClick={() => void handleLock()}
+              loading={lockEval.isPending}
+            >
+              Lock & File
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      {sections.length === 0 ? (
-        <p style={{ color: 'var(--color-text-tertiary)' }}>
-          Evaluation template sections are not available for this cycle.
-        </p>
-      ) : (
-        <Tabs items={tabs} defaultActiveKey={tabs[0]?.key} />
-      )}
+      <div className="erp-pro-card">
+        {sections.length === 0 ? (
+          <div className="p-6">
+            <p className="erp-users-email m-0">
+              Evaluation template sections are not available for this cycle.
+            </p>
+          </div>
+        ) : (
+          <Tabs
+            items={tabs}
+            defaultActiveKey={tabs[0]?.key}
+            className="px-4 pt-2"
+          />
+        )}
+      </div>
     </div>
   );
 }

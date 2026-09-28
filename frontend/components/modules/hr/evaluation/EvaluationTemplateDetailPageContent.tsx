@@ -1,8 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, InputNumber, Spin, Switch, Tag, Tooltip, message } from 'antd';
+import {
+  Button,
+  Input,
+  InputNumber,
+  Spin,
+  Switch,
+  Tooltip,
+  message,
+} from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import {
   useAddEvaluationCriteria,
   useEvaluationTemplate,
@@ -29,7 +38,7 @@ export default function EvaluationTemplateDetailPageContent({
 
   if (templateQuery.isLoading) {
     return (
-      <div style={{ padding: 48, textAlign: 'center' }}>
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page flex justify-center p-12">
         <Spin size="large" />
       </div>
     );
@@ -82,204 +91,124 @@ export default function EvaluationTemplateDetailPageContent({
     }
   }
 
+  const criteriaCount = template.sections.reduce(
+    (sum, s) => sum + s.criteria.length,
+    0,
+  );
+
   return (
-    <div className="erp-pro-list-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
       {contextHolder}
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 24,
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h2 style={{ margin: 0 }}>{template.name}</h2>
-            <Tag>v{template.version}</Tag>
-            {template.isActive ? <Tag color="success">Active</Tag> : null}
+      <div className="erp-evaluation-detail-hero">
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <h2 className="m-0 text-[20px] font-semibold text-[#111827]">
+              {template.name}
+            </h2>
+            <span className="erp-users-id-chip">v{template.version}</span>
+            {template.isActive ? (
+              <StatusBadge label="Active" variant="success" />
+            ) : (
+              <StatusBadge label="Inactive" variant="default" />
+            )}
           </div>
           {template.description ? (
-            <p
-              style={{
-                margin: '4px 0 0',
-                color: 'var(--color-text-tertiary)',
-                fontSize: 13,
-              }}
-            >
-              {template.description}
-            </p>
+            <p className="erp-users-email m-0 mb-1">{template.description}</p>
           ) : null}
-          <p
-            style={{
-              margin: '4px 0 0',
-              fontSize: 12,
-              color: 'var(--color-text-tertiary)',
-            }}
-          >
+          <p className="erp-users-email m-0">
             Created {new Date(template.createdAt).toLocaleDateString()} ·{' '}
-            {template.sections.length} sections ·{' '}
-            {template.sections.reduce(
-              (sum, s) => sum + s.criteria.length,
-              0,
-            )}{' '}
-            criteria
+            {template.sections.length} sections · {criteriaCount} criteria
           </p>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="flex flex-col gap-4">
         {[...template.sections]
           .sort((a, b) => a.sortOrder - b.sortOrder)
           .map((section) => (
-            <div
-              key={section.id}
-              style={{
-                border: '1px solid var(--color-border)',
-                borderRadius: 8,
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  background: 'var(--color-bg-secondary)',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  borderBottom: '1px solid var(--color-border)',
-                }}
-              >
-                <div>
-                  <span style={{ fontWeight: 600 }}>{section.name}</span>
+            <div key={section.id} className="erp-evaluation-section-card">
+              <div className="erp-evaluation-section-header">
+                <div className="min-w-0">
+                  <span className="erp-users-cell-strong">{section.name}</span>
                   {section.nameZh ? (
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        fontSize: 12,
-                        color: 'var(--color-text-tertiary)',
-                      }}
-                    >
+                    <span className="erp-users-email ml-2">
                       {section.nameZh}
                     </span>
                   ) : null}
                 </div>
-                <Tag color="blue">{section.weight}% weight</Tag>
+                <StatusBadge
+                  label={`${section.weight}% weight`}
+                  variant="info"
+                />
               </div>
 
-              <div style={{ padding: 16 }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                  }}
-                >
-                  {[...section.criteria]
-                    .sort((a, b) => a.sortOrder - b.sortOrder)
-                    .map((criterion) => (
-                      <div
-                        key={criterion.id}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '8px 12px',
-                          background: criterion.isActive
-                            ? 'var(--color-bg-tertiary)'
-                            : 'var(--color-bg-disabled)',
-                          borderRadius: 6,
-                          opacity: criterion.isActive ? 1 : 0.6,
-                        }}
-                      >
-                        <div>
-                          <span style={{ fontWeight: 500, fontSize: 13 }}>
-                            {criterion.name}
+              <div className="flex flex-col gap-2 p-4">
+                {[...section.criteria]
+                  .sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map((criterion) => (
+                    <div
+                      key={criterion.id}
+                      className={`erp-evaluation-criteria-row${
+                        criterion.isActive
+                          ? ''
+                          : ' erp-evaluation-criteria-row--inactive'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[13px] font-medium text-[#111827]">
+                          {criterion.name}
+                        </span>
+                        {criterion.nameZh ? (
+                          <span className="erp-users-email ml-2 text-[11px]">
+                            {criterion.nameZh}
                           </span>
-                          {criterion.nameZh ? (
-                            <span
-                              style={{
-                                marginLeft: 8,
-                                fontSize: 11,
-                                color: 'var(--color-text-tertiary)',
-                              }}
-                            >
-                              {criterion.nameZh}
-                            </span>
-                          ) : null}
-                          {criterion.description ? (
-                            <div
-                              style={{
-                                fontSize: 11,
-                                color: 'var(--color-text-tertiary)',
-                                marginTop: 2,
-                              }}
-                            >
-                              {criterion.description}
-                            </div>
-                          ) : null}
-                        </div>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                          }}
-                        >
-                          <Tag>{criterion.weight}%</Tag>
-                          <Tooltip
-                            title={
-                              criterion.isActive
-                                ? 'Deactivate criterion'
-                                : 'Activate criterion'
-                            }
-                          >
-                            <Switch
-                              size="small"
-                              checked={criterion.isActive}
-                              onChange={(checked) =>
-                                void handleToggleCriteria(
-                                  criterion.id,
-                                  checked,
-                                )
-                              }
-                            />
-                          </Tooltip>
-                        </div>
+                        ) : null}
+                        {criterion.description ? (
+                          <div className="erp-users-email mt-0.5 text-[11px]">
+                            {criterion.description}
+                          </div>
+                        ) : null}
                       </div>
-                    ))}
-                </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="erp-users-id-chip">
+                          {criterion.weight}%
+                        </span>
+                        <Tooltip
+                          title={
+                            criterion.isActive
+                              ? 'Deactivate criterion'
+                              : 'Activate criterion'
+                          }
+                        >
+                          <Switch
+                            size="small"
+                            checked={criterion.isActive}
+                            onChange={(checked) =>
+                              void handleToggleCriteria(criterion.id, checked)
+                            }
+                          />
+                        </Tooltip>
+                      </div>
+                    </div>
+                  ))}
 
                 {addingToSection === section.id ? (
-                  <div
-                    style={{
-                      marginTop: 12,
-                      padding: 12,
-                      border: '1px dashed var(--color-border)',
-                      borderRadius: 6,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: 8,
-                        marginBottom: 8,
-                      }}
-                    >
+                  <div className="mt-2 rounded-lg border border-dashed border-[#e8ebef] p-3">
+                    <div className="mb-2 flex flex-wrap gap-2">
                       <Input
                         placeholder="Criterion name (EN) *"
                         value={newCriteriaName}
                         onChange={(e) => setNewCriteriaName(e.target.value)}
                         size="small"
-                        style={{ flex: 2 }}
+                        className="min-w-[160px] flex-[2]"
                       />
                       <Input
                         placeholder="名称 (ZH)"
                         value={newCriteriaZh}
                         onChange={(e) => setNewCriteriaZh(e.target.value)}
                         size="small"
-                        style={{ flex: 1 }}
+                        className="min-w-[100px] flex-1"
                       />
                       <InputNumber
                         placeholder="Weight %"
@@ -288,7 +217,7 @@ export default function EvaluationTemplateDetailPageContent({
                         min={0}
                         max={100}
                         size="small"
-                        style={{ width: 90 }}
+                        className="w-[90px]"
                       />
                     </div>
                     <Input
@@ -296,9 +225,9 @@ export default function EvaluationTemplateDetailPageContent({
                       value={newCriteriaDesc}
                       onChange={(e) => setNewCriteriaDesc(e.target.value)}
                       size="small"
-                      style={{ marginBottom: 8 }}
+                      className="mb-2"
                     />
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="flex gap-2">
                       <Button
                         type="primary"
                         size="small"
@@ -321,7 +250,7 @@ export default function EvaluationTemplateDetailPageContent({
                     size="small"
                     icon={<PlusOutlined />}
                     onClick={() => setAddingToSection(section.id)}
-                    style={{ marginTop: 12 }}
+                    className="mt-1 self-start"
                   >
                     Add Criterion
                   </Button>

@@ -1,22 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Button,
   Modal,
   Select,
   Table,
-  Tag,
   Tooltip,
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   CheckCircleOutlined,
+  ClockCircleOutlined,
+  FileTextOutlined,
   LockOutlined,
   PlusOutlined,
+  ReloadOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { EvaluationCycle } from '@/lib/api/evaluation.types';
 import {
   useActivateCycle,
@@ -26,11 +29,12 @@ import {
   useEvaluationCycles,
 } from '@/lib/query/evaluation';
 import {
-  CYCLE_STATUS_COLORS,
+  CYCLE_STATUS_BADGE,
   CYCLE_STATUS_LABELS,
   getQuarterLabel,
   getQuarterPeriodLabel,
 } from '@/lib/utils/evaluation-status';
+import EvaluationStat from './EvaluationStat';
 
 export default function EvaluationCyclesPageContent(): React.ReactNode {
   const [createOpen, setCreateOpen] = useState(false);
@@ -44,6 +48,17 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
   const activateCycle = useActivateCycle();
   const closeCycle = useCloseCycle();
   const bulkCreate = useBulkCreateEvaluations();
+
+  const cycles = cyclesQuery.data ?? [];
+  const stats = useMemo(
+    () => ({
+      total: cycles.length,
+      active: cycles.filter((c) => c.status === 'ACTIVE').length,
+      draft: cycles.filter((c) => c.status === 'DRAFT').length,
+      closed: cycles.filter((c) => c.status === 'CLOSED').length,
+    }),
+    [cycles],
+  );
 
   async function handleCreate(): Promise<void> {
     setCreating(true);
@@ -108,45 +123,54 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
       title: 'Cycle',
       key: 'cycle',
       render: (_value, row) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>
+        <div className="min-w-0">
+          <p className="erp-users-cell-strong m-0">
             {getQuarterLabel(row.quarter, row.year)}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+          </p>
+          <p className="erp-users-email m-0 mt-0.5">
             {getQuarterPeriodLabel(row.quarter, row.year)}
-          </div>
+          </p>
         </div>
       ),
     },
     {
       title: 'Status',
       key: 'status',
+      width: 120,
       render: (_value, row) => (
-        <Tag color={CYCLE_STATUS_COLORS[row.status]}>
-          {CYCLE_STATUS_LABELS[row.status]}
-        </Tag>
+        <StatusBadge
+          label={CYCLE_STATUS_LABELS[row.status]}
+          variant={CYCLE_STATUS_BADGE[row.status]}
+        />
       ),
     },
     {
       title: 'Template',
       key: 'template',
-      render: (_value, row) => row.template?.name ?? '—',
+      render: (_value, row) =>
+        row.template?.name ? (
+          <span className="erp-users-cell-strong">{row.template.name}</span>
+        ) : (
+          <span className="erp-users-cell-sub">—</span>
+        ),
     },
     {
       title: 'Evaluations',
       key: 'evaluations',
+      width: 130,
       render: (_value, row) => (
-        <Tag icon={<TeamOutlined />} color="blue">
+        <span className="erp-users-id-chip">
+          <TeamOutlined className="mr-1" />
           {row._count?.evaluations ?? 0}
-        </Tag>
+        </span>
       ),
     },
     {
       title: 'Actions',
       key: 'actions',
       render: (_value, row) => (
-        <div style={{ display: 'flex', gap: 8 }}>
-          {row.status === 'DRAFT' && (
+        <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+          {row.status === 'DRAFT' ? (
             <Button
               size="small"
               type="primary"
@@ -155,8 +179,8 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
             >
               Activate
             </Button>
-          )}
-          {row.status === 'ACTIVE' && (
+          ) : null}
+          {row.status === 'ACTIVE' ? (
             <>
               <Tooltip title="Create evaluations for all active employees">
                 <Button
@@ -164,7 +188,7 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
                   icon={<TeamOutlined />}
                   onClick={() => void handleBulkCreate(row.id)}
                 >
-                  Generate Evaluations
+                  Generate
                 </Button>
               </Tooltip>
               <Button
@@ -173,54 +197,85 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
                 icon={<LockOutlined />}
                 onClick={() => handleClose(row.id)}
               >
-                Close Cycle
+                Close
               </Button>
             </>
-          )}
+          ) : null}
         </div>
       ),
     },
   ];
 
   return (
-    <div className="erp-pro-list-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
       {contextHolder}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 16,
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>Evaluation Cycles</h2>
-          <p
-            style={{
-              margin: 0,
-              color: 'var(--color-text-tertiary)',
-              fontSize: 13,
-            }}
-          >
-            Manage quarterly evaluation cycles
-          </p>
-        </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setCreateOpen(true)}
-        >
-          New Cycle
-        </Button>
+
+      <div className="erp-users-stat-bar">
+        <EvaluationStat
+          label="Total"
+          value={stats.total}
+          accent="slate"
+          icon={<FileTextOutlined />}
+        />
+        <EvaluationStat
+          label="Active"
+          value={stats.active}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+        />
+        <EvaluationStat
+          label="Draft"
+          value={stats.draft}
+          accent="amber"
+          icon={<ClockCircleOutlined />}
+        />
+        <EvaluationStat
+          label="Closed"
+          value={stats.closed}
+          accent="slate"
+          icon={<LockOutlined />}
+        />
       </div>
 
-      <Table
-        dataSource={cyclesQuery.data ?? []}
-        columns={columns}
-        rowKey="id"
-        loading={cyclesQuery.isLoading}
-        pagination={false}
-      />
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">Evaluation Cycles</h3>
+            <span className="erp-users-count-pill">
+              {stats.total.toLocaleString()}
+            </span>
+          </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title="Refresh">
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={cyclesQuery.isFetching && !cyclesQuery.isLoading}
+                onClick={() => void cyclesQuery.refetch()}
+                aria-label="Refresh"
+              />
+            </Tooltip>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setCreateOpen(true)}
+            >
+              New Cycle
+            </Button>
+          </div>
+        </div>
+
+        <div className="erp-pro-table-card-body">
+          <Table
+            dataSource={cycles}
+            columns={columns}
+            rowKey="id"
+            loading={cyclesQuery.isLoading}
+            pagination={false}
+            className="erp-pro-table erp-users-table"
+          />
+        </div>
+      </div>
 
       <Modal
         title="Create Evaluation Cycle"
@@ -230,38 +285,27 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
         confirmLoading={creating}
         okText="Create"
       >
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-            padding: '16px 0',
-          }}
-        >
+        <div className="flex flex-col gap-4 py-4">
           <div>
-            <label
-              style={{ display: 'block', marginBottom: 6, fontSize: 13 }}
-            >
+            <label className="mb-1.5 block text-[13px] font-medium text-[#374151]">
               Quarter
             </label>
             <Select
               value={newQuarter}
               onChange={setNewQuarter}
               options={quarterOptions}
-              style={{ width: '100%' }}
+              className="w-full"
             />
           </div>
           <div>
-            <label
-              style={{ display: 'block', marginBottom: 6, fontSize: 13 }}
-            >
+            <label className="mb-1.5 block text-[13px] font-medium text-[#374151]">
               Year
             </label>
             <Select
               value={newYear}
               onChange={setNewYear}
               options={yearOptions}
-              style={{ width: '100%' }}
+              className="w-full"
             />
           </div>
         </div>

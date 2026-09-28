@@ -1,20 +1,30 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Badge, Empty, Table, Tag, Tabs } from 'antd';
+import { Badge, Empty, Table, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
+  TeamOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
+import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type { EmployeeEvaluation } from '@/lib/api/evaluation.types';
 import { useEvaluations } from '@/lib/query/evaluation';
 import {
-  EVALUATION_STATUS_COLORS,
+  EVALUATION_STATUS_BADGE,
   EVALUATION_STATUS_LABELS,
   getQuarterLabel,
   getScoreColor,
 } from '@/lib/utils/evaluation-status';
+import EvaluationStat from './EvaluationStat';
 
 export default function DisciplineLeadInboxPageContent(): React.ReactNode {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState('needs-action');
 
   const dlEvaluationsQuery = useEvaluations({ disciplineLeadId: 'me' });
   const tlEvaluationsQuery = useEvaluations({ teamLeadId: 'me' });
@@ -37,7 +47,6 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
 
   const dlByStatus = useMemo(
     () => ({
-      needsAction: needsDLAction,
       inProgress: dlEvaluations.filter((ev) =>
         ['PENDING', 'SELF_ASSESSED'].includes(ev.status),
       ),
@@ -49,51 +58,61 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
         ['ACCEPTED', 'HR_DECIDED', 'LOCKED'].includes(ev.status),
       ),
     }),
-    [dlEvaluations, needsDLAction],
+    [dlEvaluations],
   );
+
+  const totalNeedsAction = needsDLAction.length + needsTLAction.length;
 
   const columns: ColumnsType<EmployeeEvaluation> = [
     {
       title: 'Employee',
       key: 'employee',
       render: (_value, row) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>
+        <div className="min-w-0">
+          <p className="erp-users-cell-strong m-0">
             {row.employee.firstName} {row.employee.lastName}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-            {row.employee.employeeId}
-          </div>
+          </p>
+          <p className="erp-users-email m-0 mt-0.5">
+            {row.employee.employeeId ?? '—'}
+          </p>
         </div>
       ),
     },
     {
       title: 'Cycle',
       key: 'cycle',
-      render: (_value, row) =>
-        getQuarterLabel(row.cycle.quarter, row.cycle.year),
+      width: 120,
+      render: (_value, row) => (
+        <span className="erp-users-id-chip">
+          {getQuarterLabel(row.cycle.quarter, row.cycle.year)}
+        </span>
+      ),
     },
     {
       title: 'Status',
       key: 'status',
+      width: 150,
       render: (_value, row) => (
-        <Tag color={EVALUATION_STATUS_COLORS[row.status]}>
-          {EVALUATION_STATUS_LABELS[row.status]}
-        </Tag>
+        <StatusBadge
+          label={EVALUATION_STATUS_LABELS[row.status]}
+          variant={EVALUATION_STATUS_BADGE[row.status]}
+        />
       ),
     },
     {
       title: 'Final Score',
       key: 'score',
+      width: 110,
       render: (_value, row) => {
         const score = row.adjustedScore ?? row.finalScore;
         if (score == null) {
-          return (
-            <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-          );
+          return <span className="erp-users-cell-sub">—</span>;
         }
         return (
-          <span style={{ fontWeight: 600, color: getScoreColor(score) }}>
+          <span
+            className="font-semibold"
+            style={{ color: getScoreColor(Number(score)) }}
+          >
             {Number(score).toFixed(1)}
           </span>
         );
@@ -102,225 +121,208 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
     {
       title: 'Disputes',
       key: 'disputes',
+      width: 110,
       render: (_value, row) =>
         (row._count?.disputes ?? 0) > 0 ? (
-          <Tag color="warning">{row._count?.disputes} dispute(s)</Tag>
-        ) : null,
+          <StatusBadge
+            label={`${row._count?.disputes} dispute(s)`}
+            variant="warning"
+          />
+        ) : (
+          <span className="erp-users-cell-sub">—</span>
+        ),
     },
   ];
 
-  const tlColumns: ColumnsType<EmployeeEvaluation> = [
-    {
-      title: 'Employee',
-      key: 'employee',
-      render: (_value, row) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>
-            {row.employee.firstName} {row.employee.lastName}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-            {row.employee.employeeId}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Cycle',
-      key: 'cycle',
-      render: (_value, row) =>
-        getQuarterLabel(row.cycle.quarter, row.cycle.year),
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      render: (_value, row) => (
-        <Tag color={EVALUATION_STATUS_COLORS[row.status]}>
-          {EVALUATION_STATUS_LABELS[row.status]}
-        </Tag>
-      ),
-    },
-  ];
+  const tlColumns: ColumnsType<EmployeeEvaluation> = columns.slice(0, 3);
 
   function openEvaluation(row: EmployeeEvaluation): void {
     router.push(`/hr/evaluations/${row.id}`);
+  }
+
+  function renderTable(
+    data: EmployeeEvaluation[],
+    cols: ColumnsType<EmployeeEvaluation>,
+    loading: boolean,
+    empty: string,
+    paginate = false,
+  ): React.ReactNode {
+    if (!loading && data.length === 0) {
+      return (
+        <div className="px-4 py-10">
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={empty} />
+        </div>
+      );
+    }
+    return (
+      <div className="erp-pro-table-card-body">
+        <Table
+          dataSource={data}
+          columns={cols}
+          rowKey="id"
+          loading={loading}
+          pagination={paginate ? { pageSize: 20 } : false}
+          className="erp-pro-table erp-users-table"
+          onRow={(row) => ({
+            onClick: () => openEvaluation(row),
+            style: { cursor: 'pointer' },
+          })}
+        />
+      </div>
+    );
   }
 
   const tabItems = [
     {
       key: 'needs-action',
       label: (
-        <span>
+        <span className="inline-flex items-center gap-1.5">
           Needs My Action
           {needsDLAction.length > 0 ? (
-            <Badge count={needsDLAction.length} style={{ marginLeft: 6 }} />
+            <Badge count={needsDLAction.length} size="small" />
           ) : null}
         </span>
       ),
-      children:
-        needsDLAction.length === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="No evaluations need your action"
-          />
-        ) : (
-          <Table
-            dataSource={needsDLAction}
-            columns={columns}
-            rowKey="id"
-            loading={dlEvaluationsQuery.isLoading}
-            pagination={false}
-            onRow={(row) => ({
-              onClick: () => openEvaluation(row),
-              style: { cursor: 'pointer' },
-            })}
-          />
-        ),
+      children: renderTable(
+        needsDLAction,
+        columns,
+        dlEvaluationsQuery.isLoading,
+        'No evaluations need your action',
+      ),
     },
     {
       key: 'team-lead',
       label: (
-        <span>
+        <span className="inline-flex items-center gap-1.5">
           As Team Lead
           {needsTLAction.length > 0 ? (
-            <Badge count={needsTLAction.length} style={{ marginLeft: 6 }} />
+            <Badge count={needsTLAction.length} size="small" />
           ) : null}
         </span>
       ),
-      children:
-        tlEvaluations.length === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="No evaluations assigned to you as Team Lead"
-          />
-        ) : (
-          <Table
-            dataSource={tlEvaluations}
-            columns={tlColumns}
-            rowKey="id"
-            loading={tlEvaluationsQuery.isLoading}
-            pagination={false}
-            onRow={(row) => ({
-              onClick: () => openEvaluation(row),
-              style: { cursor: 'pointer' },
-            })}
-          />
-        ),
+      children: renderTable(
+        tlEvaluations,
+        tlColumns,
+        tlEvaluationsQuery.isLoading,
+        'No evaluations assigned to you as Team Lead',
+      ),
     },
     {
       key: 'awaiting-employee',
-      label: `Awaiting Employee (${dlByStatus.awaitingEmployee.length})`,
-      children:
-        dlByStatus.awaitingEmployee.length === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="No evaluations awaiting employee response"
-          />
-        ) : (
-          <Table
-            dataSource={dlByStatus.awaitingEmployee}
-            columns={columns}
-            rowKey="id"
-            pagination={false}
-            onRow={(row) => ({
-              onClick: () => openEvaluation(row),
-              style: { cursor: 'pointer' },
-            })}
-          />
-        ),
+      label: `Awaiting (${dlByStatus.awaitingEmployee.length})`,
+      children: renderTable(
+        dlByStatus.awaitingEmployee,
+        columns,
+        false,
+        'No evaluations awaiting employee response',
+      ),
     },
     {
       key: 'escalated',
       label: (
-        <span>
-          Escalated to HR
+        <span className="inline-flex items-center gap-1.5">
+          Escalated
           {dlByStatus.escalated.length > 0 ? (
             <Badge
               count={dlByStatus.escalated.length}
               color="red"
-              style={{ marginLeft: 6 }}
+              size="small"
             />
           ) : null}
         </span>
       ),
-      children:
-        dlByStatus.escalated.length === 0 ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="No escalated evaluations"
-          />
-        ) : (
-          <Table
-            dataSource={dlByStatus.escalated}
-            columns={columns}
-            rowKey="id"
-            pagination={false}
-            onRow={(row) => ({
-              onClick: () => openEvaluation(row),
-              style: { cursor: 'pointer' },
-            })}
-          />
-        ),
+      children: renderTable(
+        dlByStatus.escalated,
+        columns,
+        false,
+        'No escalated evaluations',
+      ),
     },
     {
       key: 'in-progress',
       label: `In Progress (${dlByStatus.inProgress.length})`,
-      children: (
-        <Table
-          dataSource={dlByStatus.inProgress}
-          columns={columns}
-          rowKey="id"
-          pagination={false}
-          onRow={(row) => ({
-            onClick: () => openEvaluation(row),
-            style: { cursor: 'pointer' },
-          })}
-        />
+      children: renderTable(
+        dlByStatus.inProgress,
+        columns,
+        false,
+        'No in-progress evaluations',
       ),
     },
     {
       key: 'completed',
       label: `Completed (${dlByStatus.completed.length})`,
-      children: (
-        <Table
-          dataSource={dlByStatus.completed}
-          columns={columns}
-          rowKey="id"
-          pagination={{ pageSize: 20 }}
-          onRow={(row) => ({
-            onClick: () => openEvaluation(row),
-            style: { cursor: 'pointer' },
-          })}
-        />
+      children: renderTable(
+        dlByStatus.completed,
+        columns,
+        false,
+        'No completed evaluations',
+        true,
       ),
     },
   ];
 
-  const totalNeedsAction = needsDLAction.length + needsTLAction.length;
-
   return (
-    <div className="erp-pro-list-page">
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <h2 style={{ margin: 0 }}>My Evaluation Inbox</h2>
-          {totalNeedsAction > 0 ? (
-            <Badge
-              count={totalNeedsAction}
-              title={`${totalNeedsAction} evaluation(s) need your action`}
-            />
-          ) : null}
-        </div>
-        <p
-          style={{
-            margin: 0,
-            color: 'var(--color-text-tertiary)',
-            fontSize: 13,
-          }}
-        >
-          Evaluations assigned to you as Discipline Lead or Team Lead
-        </p>
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
+      <div className="erp-users-stat-bar">
+        <EvaluationStat
+          label="Needs Action"
+          value={totalNeedsAction}
+          accent="amber"
+          icon={<ExclamationCircleOutlined />}
+          active={activeTab === 'needs-action'}
+          onClick={() => setActiveTab('needs-action')}
+        />
+        <EvaluationStat
+          label="Team Lead Queue"
+          value={needsTLAction.length}
+          accent="blue"
+          icon={<TeamOutlined />}
+          active={activeTab === 'team-lead'}
+          onClick={() => setActiveTab('team-lead')}
+        />
+        <EvaluationStat
+          label="Escalated"
+          value={dlByStatus.escalated.length}
+          accent="red"
+          icon={<WarningOutlined />}
+          active={activeTab === 'escalated'}
+          onClick={() => setActiveTab('escalated')}
+        />
+        <EvaluationStat
+          label="Completed"
+          value={dlByStatus.completed.length}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={activeTab === 'completed'}
+          onClick={() => setActiveTab('completed')}
+        />
       </div>
 
-      <Tabs items={tabItems} defaultActiveKey="needs-action" />
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">My Evaluation Inbox</h3>
+            {totalNeedsAction > 0 ? (
+              <span className="erp-users-count-pill">
+                {totalNeedsAction} action
+                {totalNeedsAction === 1 ? '' : 's'}
+              </span>
+            ) : (
+              <span className="erp-users-count-pill">
+                <ClockCircleOutlined className="mr-1" />
+                Up to date
+              </span>
+            )}
+          </div>
+        </div>
+
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={tabItems}
+          className="erp-evaluation-inbox-tabs px-4 pt-2"
+        />
+      </div>
     </div>
   );
 }
