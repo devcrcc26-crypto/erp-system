@@ -5928,3 +5928,27 @@ model PayrollEntry {
   @@index([employeeId], map: "idx_payroll_entry_employee")
   @@map("payroll_entry")
  }
+
+ model PayrollSalaryPeriod{
+  id            String           @id @default(uuid())
+  entryId       String           @map("entry_id")
+  contractId    String           @map("contract_id")
+  periodStart   DateTime         @map("period_start") @db.Date
+  periodEnd     DateTime         @map("period_end") @db.Date
+  days          Decimal          @db.Decimal(5, 2)
+  basicSalary   Decimal          @map("basic_salary") @db.Decimal(14, 2)
+  earnedSalary  Decimal          @map("earned_salary") @db.Decimal(14, 2)
+  createdAt     DateTime         @default(now()) @map("created_at")
+  createdBy     String           @map("created_by")
+  updatedAt     DateTime         @default(now()) @updatedAt   @map("updated_at")
+  updatedBy     String           @map("updated_by")
+
+  entry         PayrollEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  contract      EmplyeeContract  @relation(fields: [contractId], references: [id])
+  creator       User             @relation("PayrollSalaryPeriodCreator", fields: [createdBy], references: [id])
+  updter        User             @relation("PayrollSalaryPeriodUpdater", fields: [updatedBy], references: [id])
+
+
+  @@index([entryId], map: "idx_payroll_salary_period_entry")
+  @@map("payroll_salary_period") 
+ }
