@@ -652,7 +652,8 @@ function projectAdministratorPermissionFlags(
     module === 'hr' ||
     module === 'leave' ||
     module === 'overtime' ||
-    module === 'employee-contract'
+    module === 'employee-contract' ||
+    module === 'payroll'
   ) {
     return null;
   }
@@ -1446,7 +1447,7 @@ async function main(): Promise<void> {
       module: 'per-diem',
       flags: viewApproveExportFlags(),
     },
-    { roleName: 'General Manager', module: 'payroll', flags: viewOnlyFlags() },
+    { roleName: 'General Manager', module: 'payroll', flags: viewApproveExportFlags() },
     {
       roleName: 'General Manager',
       module: 'approvals',
@@ -2040,6 +2041,9 @@ async function main(): Promise<void> {
     update: {
       passwordHash,
       emailVerifiedAt: new Date(),
+      isActive: true,
+      deletedAt: null,
+      deletedBy: null,
       updatedBy: SYSTEM_USER_ID,
     },
     create: {

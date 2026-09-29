@@ -884,12 +884,31 @@ async function resolveActorUserId(
       where: { id: explicitActorId, deletedAt: null },
       select: { id: true },
     });
-    if (!actor) {
-      throw new Error(
-        `Approval category seed actor user ${explicitActorId} not found.`,
-      );
+    if (actor) {
+      return actor.id;
     }
-    return actor.id;
+
+    // Revive soft-deleted seed actor if the unique row still exists
+    const softDeleted = await prisma.user.findFirst({
+      where: { id: explicitActorId },
+      select: { id: true, deletedAt: true },
+    });
+    if (softDeleted?.deletedAt) {
+      await prisma.user.update({
+        where: { id: softDeleted.id },
+        data: {
+          deletedAt: null,
+          deletedBy: null,
+          isActive: true,
+          updatedBy: softDeleted.id,
+        },
+      });
+      return softDeleted.id;
+    }
+
+    console.warn(
+      `Approval category seed actor ${explicitActorId} not found; falling back to system/company user.`,
+    );
   }
 
   const systemUser = await prisma.user.findFirst({
