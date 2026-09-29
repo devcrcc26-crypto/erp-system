@@ -5824,3 +5824,107 @@ model PayrollRun{
   @@index([companyId], map: "idx_payroll_run_company")
   @@map("payroll_run")
 }
+
+
+model PayrollEntry {
+  id                        String             @id @default(uuid())
+  companyId                 String             @map("company_id")
+  runId                     String             @map("run_id")
+  employeeId                String             @map("employee_id")
+  contractId                String?            @map("contract_id")
+  attendanceRecordId        String?            @map("attendance_record_id")
+  overtimeSheetId           String?            @map("overtime_sheet_id")
+
+
+  // Attendance-based 
+  scheduledDays            Int                @default(0) @map("scheduled_days")
+  presentDays              Decimal            @default(0) @map("present_days") db.Decimal(5, 2)
+  absentDays               Decimal            @default(0) @map("absent_days") db.Decimal(5, 2)
+  payrollDays              Decimal            @default(0) @map("payroll_days") db.Decimal(5, 2)
+
+  // Contract Values (snapshot at time of run)
+  basicSalary              Decimal            @default(0) @map("basic_salary") @db.Decimal(14 , 2)
+  transportAllowance       Decimal            @default(0) @map("transport_allowance") @db.Decimal(14, 2)
+  monthlyBonus             Decimal            @default(0) @map("monthly_bonus") @db.Decimal(14 , 2)
+
+
+  // Earned salary 
+  earnedSalary             Decimal             @default(0) @map("earned_salary") @db.Decimal(14,2)
+
+  // Overtime (hours)
+
+  normalOtHours            Decimal             @default(0) @map("normal_ot_hours") @db.Decimal(6,2)
+  eveningOtHours           Decimal             @default(0) @map("evening_ot_hours") @db.Decimal(6,2)
+  sundayOtHours            Decimal             @default(0) @map("sunday_ot_hours") @db.Decimal(6,2)
+  holidayOtHours           Decimal             @default(0) @map("holiday_ot_hours") @db.Decimal(6,2)
+
+  // Overtime pay amounts
+  normalOtPay              Decimal             @default(0) @map("normal_ot_pay")  @db.Decimal(14, 2)
+  eveningOtPay             Decimal             @default(0) @map("evening_ot_pay")  @db.Decimal(14, 2)
+  sundayOtPay              Decimal             @default(0) @map("sunday_ot_pay")  @db.Decimal(14, 2)
+  holidayOtPay             Decimal             @default(0) @map("holiday_ot_pay")  @db.Decimal(14, 2)
+  totalOtPay               Decimal             @default(0) @map("total_ot_pay")    @db.Decimal(14, 2)
+
+  // Transport 
+  taxableTransport         Decimal             @default(0) @map("taxable_transport") @db.Decimal(14, 2)
+  nonTaxableTransport      Decimal             @default(0) @map("non_taxable_transport") @db.Decimal(14, 2)
+
+  // Totals 
+  grossIncome              Decimal             @default(0) @map("gross_income") @db.Decimal(14, 2)
+  taxableIncome            Decimal             @default(0) @map("taxable_income") @db.Decimal(14,2)
+
+  // Deductions
+  pensionEmployee          Decimal             @default(0) @map("pension_employee") @db.Decimal(14, 2)
+  pensionEmployer          Decimal             @default(0) @map("pension_employer") @db.Decimal(14, 2)
+  incomeTax                Decimal             @default(0) @map("income_tax") @db.Decimal(14, 2)
+  totalDeductions          Decimal             @default(0) @map("total_deductions") @db.Decimal(14, 2)
+
+
+  // Net Pay
+  netPay                   Decimal             @default(0) @map("net_pay") @db.Decimal(14, 2)
+
+  // Bonus top-up 
+  bonusTopUp               Decimal             @default(0) @map("bonus_top_up") @db.Decimal(14, 2)
+  bonusTopUpReason         String?             @map("bonus_top_up_reason")
+
+
+  // Flags and overrides 
+  flag                     PayrollEntryFlag   @default(NONE)
+  flagNote                 String?            @map("flag_note")
+  isManualOverride         Boolean            @default(false) @map("is_manual_override")
+  overrideReason           String?            @map("override_reason")
+  overrideBy               String?            @map("override_by")
+  overrideAt               DateTime?          @map("override_at")
+
+
+  // Bank details (snapshot at time of run )
+
+  bankName                 String?            @map("bank_name")
+  bankAccountNumber        String?            @map("bank_account_number")
+
+
+  notes                    String?
+  createdAt                DateTime           @default(now()) @map("created_at")
+  createdBy                String             @map("created_by")
+  updaetdAt                DateTime           @default(now()) @updatedAt @map("updated_at")
+  updatedBy                String             @map("updated_by")
+
+
+  company                  Company            @relation(fields: [companyId], references: [id])
+  run                      PayrollRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employee                 User               @relation("PayrollEntryEmployee", fields:[employeeId], references: [id] )
+  contract                 EmployeeContract?  @relation(fields: [contractId], references: [id])
+  attendanceRecord         AttendanceRecord?  @relation(fields: [attendanceRecordId], references: [id])
+  overtimeSheet            OvertimeSheet?     @relation(fields: [overtimeSheetId], references: [id])
+  overrider                User?              @relation("PayrollEntryOverrider", fields: [overrideBy], references: [id])
+  creator                  User               @relation("PayrollEntryCreator", fields: [createdBy], references: [id])
+  updater                  User               @realtion("PayrollEntryUpdater", fields: [updatedBy], references: [id])
+  salaryPeriods            PayrollSalaryPeriod[]
+
+
+  @@unique([runId, employeeId], map: "uq_payroll_entry_run_employee")
+  @@index([companyId], map:"idx_payroll_entry_company")
+  @@index([runId], map: "idx_payroll_entry_run")
+  @@index([employeeId], map: "idx_payroll_entry_employee")
+  @@map("payroll_entry")
+ }
