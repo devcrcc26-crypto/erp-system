@@ -5952,3 +5952,39 @@ model PayrollEntry {
   @@index([entryId], map: "idx_payroll_salary_period_entry")
   @@map("payroll_salary_period") 
  }
+
+
+ model PayrollPayslip {
+  id            String              @id @default(uuid())
+  companyId     String              @map("company_id")
+  entryId       String              @unique @map("entry_id")
+  employeeId    String              @map("emplyee_id")
+  runId         String              @map("run_id")
+  documentId    String?             @unique @map("document_id")
+  generatedAt   DateTime?           @map("generated_at")
+  generatedBy   String?             @map("generated_by")
+  releasedAt    DateTime?           @map("released_at")
+  releasedBy    String?             @map("released_by")
+  downloadedAt  DateTime?           @map("downloaded_at")
+  createdAt     DateTime?           @default(now()) @updatedAt  @map("created_at")
+  createdBy     String              @map("created_by")
+  updatedAt     DateTime            @default(now()) @updatedAt @map("updated_at")
+  updatedBy     String              @map("updated_by")
+
+
+  company      Company              @relation(fields: [companyId], references: [id])
+  entry        PayrollEntry         @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  employee     User                 @relation("PayrollPayslipEmplyee", fields: [employeeId], references: [id])
+  run          PayrollRun           @relation(fields: [runId], references: [id])
+  document     Document             @relation(fields: [documentId], references: [id])
+  generator    User?                @relation("PayrollPayslipGenerator", fields: [generatedBy], references: [id])
+  releaser     User?                @relation("PayrollPayslipsReleaser", fields: [releasedBy], references: [id])
+  creator      User                 @relation("PayrollPayslipCreator", fields: [createdBy], references: [id])
+  updater      User                 @relation("PayrollPayslipUpdater", fields: [updatedBy], references: [id])
+
+
+  @@index([companyId], map: "idx_payroll_payslip_company")
+  @@index([employeeId], map: "idx_payroll_payslip_employee")
+  @@index([runId], map: "idx_payroll_payslip_employee")
+  @@map("payroll_payslip")
+ }
