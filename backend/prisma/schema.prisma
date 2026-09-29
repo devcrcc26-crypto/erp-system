@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 
@@ -306,6 +305,9 @@ model Company {
   evaluationTemplates        EvaluationTemplate[]
   evaluationCycles           EvaluationCycle[]
   employeeEvaluations        EmployeeEvaluation[]
+  payrollRuns                PayrollRun[]
+  payrollEntries             PayrollEntry[]
+  payrollPayslips            PayrollPayslip[]
 
   @@index([deletedAt], map: "idx_company_deleted_at")
   @@map("company")
@@ -824,6 +826,26 @@ model User {
   evaluationDisputesHRResponded EvaluationDispute[]         @relation("EvaluationDisputeHRResponder")
   ledDisciplinesLocal           Discipline[]                @relation("DisciplineLocalLeader")
 
+
+  payrollRunCreated                  PayrollRun[]                @relation("PayrollRunCreator")  
+  payrollRunUpdated                  PayrollRun[]                @relation("PayrollRunUpdater")
+  payrollRunsSubmitted               PayrollRun[]                @relation("PayrollRunSubmitter")
+  payrollRunsApproved                PayrollRun[]                @relation("PayrollRunApprover")
+  payrollRunsGMApproved              PayrollRun[]                @relation("PayrollRunGMApprover")
+  payrollRunsPaid                    PayrollRun[]                @relation("PayrollRunPayer")
+  payrollEntriesAsEmplyee            PayrollEntry[]              @relation("PayrollEntryEmployee")
+  payrollEntriesOverridden           PayrollEntry[]              @relation("PayrollEntryOverrider")
+  payrollEntriesCreated              PayrollEntry[]              @relation("PayrollEntryCreator")
+  parollEntriesUpdated               PayrollEntry[]              @relation("PayrollEntryUpdater")
+  payrollSalaryPeriodsCreated        PayrollSalaryPeriod[]       @relation("PayrollSalaryPeriodCreator")
+  payrollSalaryPeriodsUpdated        PayrollSalaryPeriod[]       @relation("PayrollSalaryPeriodUpdater")
+  payrollPayslips                    PayrollPayslip[]            @relation("PayrollPayslipEmployee")
+  payrollPayslipsGenearted           PayrollPayslip[]            @relation("PayrollPayslipGenerator")
+  payrollPayslipsReleased            PayrollPayslip[]            @relation("PayrollPayslipReleaser")
+  payrollPayslipsCreated             PayrollPayslip[]            @relation("PayrollPayslipCreator")
+  payrollPayslipsUpdated             PayrollPayslip[]            @relation("PayrollPayslipUpdater")
+  
+
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([leavePolicyId], map: "idx_user_leave_policy")
   @@index([workScheduleId], map: "idx_user_work_schedule")
@@ -1213,6 +1235,7 @@ model Document {
   companyVehiclePhotos       CompanyVehicle[] @relation("CompanyVehiclePhotoDocument")
   userPhotos                 User[]         @relation("UserPhotoDocument")
   exitPermitItemDocument      ExitPermitItem[]       @relation("ExitPermitItemDocument")
+  payrollPayslip             PayrollPayslip?
 
   @@index([companyId], map: "idx_document_company_id")
   @@index([companyId, deletedAt], map: "idx_document_company_deleted")
@@ -3910,6 +3933,7 @@ model OvertimeSheet {
   attachmentFolder DocumentFolder?  @relation(fields: [attachmentFolderId], references: [id])
   creator          User             @relation("OvertimeCreator", fields: [createdBy], references: [id])
   entries          OvertimeEntry[]
+  payrollEntries   PayrollEntry[]
 
   @@unique([companyId, sheetNumber])
   @@unique([companyId, employeeId, month, year], map: "overtime_sheet_company_employee_month_year_key")
@@ -4045,6 +4069,7 @@ model AttendanceRecord {
   employee    User                  @relation("AttendanceEmployee", fields: [employeeId], references: [id])
   importBatch AttendanceImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
   dailyLogs   AttendanceDailyLog[]
+  payrollEntries PayrollEntry[]
 
   @@unique([companyId, employeeId, month, year])
   @@index([companyId, month, year], map: "idx_attendance_record_company_period")
@@ -5253,6 +5278,8 @@ model EmployeeContract{
   creator                   User                          @relation("EmployeeContractCreator", fields: [createdBy], references: [id])
   attachmentFolder          DocumentFolder?               @relation(fields: [attachmentFolderId], references: [id])
   evaluations               EmployeeEvaluation[]
+  payrollEntries            PayrollEntry[]
+  payrollSalaryPeriods      PayrollSalaryPeriod[]
 
   @@unique([companyId, contractNumber], map: "uq_employee_contract_company_number")
   @@index([companyId], map:"idx_employee_contract_company")
@@ -5781,7 +5808,7 @@ enum PayrollEntryFlag{
 
 model PayrollRun{
   id                      String                              @id @default(uuid())
-  companyId               String                              @map("company_ud)
+  companyId               String                              @map("company_id")
   runNumber               String                              @map("run_number")
   month                   Int
   year                    Int
@@ -5802,9 +5829,9 @@ model PayrollRun{
   gmApprovedBy            String?                             @map("gm_approved_by")
   paidAt                  DateTime?                           @map("paid_at")
   paidBy                  String?                             @map("paid_by")
-  createdAt               DateTime                            @default(now()) @updatedAt    @map("updated_at")
+  createdAt               DateTime                            @default(now())  @map("created_at")
   createdBy               String                              @map("created_by")
-  updatedAt               DateTime                            @default(now()) @updatedAt   @map("updated_at")
+  updatedAt               DateTime                            @default(now()) @updatedAt @map("updated_at")
   updatedBy               String                              @map("updated_by")
   deletedAt               DateTime?                           @map("deleted_at")
   deletedBy               String?                             @map("deleted_by")
@@ -5814,10 +5841,11 @@ model PayrollRun{
   creator                 User                                @relation("PayrollRunCreator", fields: [createdBy], references: [id])
   updater                 User                                @relation("PayrollRunUpdater", fields: [updatedBy], references: [id])
   submitter               User?                               @relation("PayrollRunSubmitter", fields: [submittedBy], references: [id])
-  approver                User?                               @relation("PayrollRunApprover", fields: [ApprovedBy], references: [id])
+  approver                User?                               @relation("PayrollRunApprover", fields: [approvedBy], references: [id])
   gmApprover              User?                               @relation("PayrollRunGMApprover", fields: [gmApprovedBy], references: [id])
   payer                   User?                               @relation("PayrollRunPayer", fields: [paidBy], references: [id])
   entries                 PayrollEntry[]
+  payslips                PayrollPayslip[]
 
 
   @@unique([companyId, month, year], map: "uq_payroll_run_company_month_year")
@@ -5838,9 +5866,9 @@ model PayrollEntry {
 
   // Attendance-based 
   scheduledDays            Int                @default(0) @map("scheduled_days")
-  presentDays              Decimal            @default(0) @map("present_days") db.Decimal(5, 2)
-  absentDays               Decimal            @default(0) @map("absent_days") db.Decimal(5, 2)
-  payrollDays              Decimal            @default(0) @map("payroll_days") db.Decimal(5, 2)
+  presentDays              Decimal            @default(0) @map("present_days") @db.Decimal(5, 2)
+  absentDays               Decimal            @default(0) @map("absent_days") @db.Decimal(5, 2)
+  payrollDays              Decimal            @default(0) @map("payroll_days") @db.Decimal(5, 2)
 
   // Contract Values (snapshot at time of run)
   basicSalary              Decimal            @default(0) @map("basic_salary") @db.Decimal(14 , 2)
@@ -5906,7 +5934,7 @@ model PayrollEntry {
   notes                    String?
   createdAt                DateTime           @default(now()) @map("created_at")
   createdBy                String             @map("created_by")
-  updaetdAt                DateTime           @default(now()) @updatedAt @map("updated_at")
+  updatedAt                DateTime           @default(now()) @updatedAt @map("updated_at")
   updatedBy                String             @map("updated_by")
 
 
@@ -5918,8 +5946,9 @@ model PayrollEntry {
   overtimeSheet            OvertimeSheet?     @relation(fields: [overtimeSheetId], references: [id])
   overrider                User?              @relation("PayrollEntryOverrider", fields: [overrideBy], references: [id])
   creator                  User               @relation("PayrollEntryCreator", fields: [createdBy], references: [id])
-  updater                  User               @realtion("PayrollEntryUpdater", fields: [updatedBy], references: [id])
+  updater                  User               @relation("PayrollEntryUpdater", fields: [updatedBy], references: [id])
   salaryPeriods            PayrollSalaryPeriod[]
+  payslip                  PayrollPayslip?
 
 
   @@unique([runId, employeeId], map: "uq_payroll_entry_run_employee")
@@ -5944,9 +5973,9 @@ model PayrollEntry {
   updatedBy     String           @map("updated_by")
 
   entry         PayrollEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  contract      EmplyeeContract  @relation(fields: [contractId], references: [id])
+  contract      EmployeeContract  @relation(fields: [contractId], references: [id])
   creator       User             @relation("PayrollSalaryPeriodCreator", fields: [createdBy], references: [id])
-  updter        User             @relation("PayrollSalaryPeriodUpdater", fields: [updatedBy], references: [id])
+  updater        User             @relation("PayrollSalaryPeriodUpdater", fields: [updatedBy], references: [id])
 
 
   @@index([entryId], map: "idx_payroll_salary_period_entry")
@@ -5958,7 +5987,7 @@ model PayrollEntry {
   id            String              @id @default(uuid())
   companyId     String              @map("company_id")
   entryId       String              @unique @map("entry_id")
-  employeeId    String              @map("emplyee_id")
+  employeeId    String              @map("employee_id")
   runId         String              @map("run_id")
   documentId    String?             @unique @map("document_id")
   generatedAt   DateTime?           @map("generated_at")
@@ -5966,7 +5995,7 @@ model PayrollEntry {
   releasedAt    DateTime?           @map("released_at")
   releasedBy    String?             @map("released_by")
   downloadedAt  DateTime?           @map("downloaded_at")
-  createdAt     DateTime?           @default(now()) @updatedAt  @map("created_at")
+  createdAt     DateTime?           @default(now())  @map("created_at")
   createdBy     String              @map("created_by")
   updatedAt     DateTime            @default(now()) @updatedAt @map("updated_at")
   updatedBy     String              @map("updated_by")
@@ -5974,17 +6003,17 @@ model PayrollEntry {
 
   company      Company              @relation(fields: [companyId], references: [id])
   entry        PayrollEntry         @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  employee     User                 @relation("PayrollPayslipEmplyee", fields: [employeeId], references: [id])
+  employee     User                 @relation("PayrollPayslipEmployee", fields: [employeeId], references: [id])
   run          PayrollRun           @relation(fields: [runId], references: [id])
-  document     Document             @relation(fields: [documentId], references: [id])
+  document     Document?            @relation(fields: [documentId], references: [id])
   generator    User?                @relation("PayrollPayslipGenerator", fields: [generatedBy], references: [id])
-  releaser     User?                @relation("PayrollPayslipsReleaser", fields: [releasedBy], references: [id])
+  releaser     User?                @relation("PayrollPayslipReleaser", fields: [releasedBy], references: [id])
   creator      User                 @relation("PayrollPayslipCreator", fields: [createdBy], references: [id])
   updater      User                 @relation("PayrollPayslipUpdater", fields: [updatedBy], references: [id])
 
 
   @@index([companyId], map: "idx_payroll_payslip_company")
   @@index([employeeId], map: "idx_payroll_payslip_employee")
-  @@index([runId], map: "idx_payroll_payslip_employee")
+  @@index([runId], map: "idx_payroll_payslip_run")
   @@map("payroll_payslip")
  }
