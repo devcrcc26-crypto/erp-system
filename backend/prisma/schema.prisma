@@ -5779,3 +5779,48 @@ enum PayrollEntryFlag{
 }
 
 
+model PayrollRun{
+  id                      String                              @id @default(uuid())
+  companyId               String                              @map("company_ud)
+  runNumber               String                              @map("run_number")
+  month                   Int
+  year                    Int
+  status                  PayrollRunStatus                    @default(DRAFT)
+  totalEmployees          Int                                 @default(0) @map("total_employees")
+  totalGross              Decimal                             @default(0) @map("total_gross") @db.Decimal(14, 2)
+  totalNetPay             Decimal                             @default(0) @map("total_net_pay") @db.Decimal(14, 2)
+  totalPensionEmp         Decimal                             @default(0) @map("total_pension_emp") @db.Decimal(14, 2)
+  totalPensionEmr         Decimal                             @default(0) @map("total_pension_emr") @db.Decimal(14, 2)
+  totalTax                Decimal                             @default(0) @map("total_tax") @db.Decimal(14, 2)
+  taxableThreshold        Decimal                             @default(2200) @map("taxable_threshold") @db.Decimal(10, 2)
+  notes                   String?
+  submittedAt             DateTime?                           @map("submitted_at")
+  submittedBy             String?                             @map("submitted_by")
+  approvedAt              DateTime?                           @map("approved_at")
+  approvedBy              String?                             @map("approved_by")
+  gmApprovedAt            DateTime?                           @map("gm_approved_at")
+  gmApprovedBy            String?                             @map("gm_approved_by")
+  paidAt                  DateTime?                           @map("paid_at")
+  paidBy                  String?                             @map("paid_by")
+  createdAt               DateTime                            @default(now()) @updatedAt    @map("updated_at")
+  createdBy               String                              @map("created_by")
+  updatedAt               DateTime                            @default(now()) @updatedAt   @map("updated_at")
+  updatedBy               String                              @map("updated_by")
+  deletedAt               DateTime?                           @map("deleted_at")
+  deletedBy               String?                             @map("deleted_by")
+ 
+
+  company                 Company                             @relation(fields: [companyId], references: [id])
+  creator                 User                                @relation("PayrollRunCreator", fields: [createdBy], references: [id])
+  updater                 User                                @relation("PayrollRunUpdater", fields: [updatedBy], references: [id])
+  submitter               User?                               @relation("PayrollRunSubmitter", fields: [submittedBy], references: [id])
+  approver                User?                               @relation("PayrollRunApprover", fields: [ApprovedBy], references: [id])
+  gmApprover              User?                               @relation("PayrollRunGMApprover", fields: [gmApprovedBy], references: [id])
+  payer                   User?                               @relation("PayrollRunPayer", fields: [paidBy], references: [id])
+  entries                 PayrollEntry[]
+
+
+  @@unique([companyId, month, year], map: "uq_payroll_run_company_month_year")
+  @@index([companyId], map: "idx_payroll_run_company")
+  @@map("payroll_run")
+}
