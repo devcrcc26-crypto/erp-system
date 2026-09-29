@@ -5751,3 +5751,31 @@ model EvaluationDispute {
   @@index([evaluationId], map: "idx_eval_dispute_evaluation")
   @@map("evaluation_dispute")
 }
+
+
+// ------------------- Payroll ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+enum PayrollRunStatus {
+  DRAFT
+  REVIEWED
+  SUBMITTED
+  APPROVED
+  GM_APPROVED
+  PAID
+  CANCELLED
+
+  @@map("payroll_run_status")
+}
+
+enum PayrollEntryFlag{
+  NONE
+  MISSING_ATTENDANCE
+  MISSING_CONTRACT
+  MISSING_OVERTIME_APPROVAL
+  ZERO_SALARY
+  MANUAL_OVERRIDE
+
+  @@map("payroll_entry_flag")
+}
+
+
