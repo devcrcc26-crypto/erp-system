@@ -122,7 +122,7 @@ export class PayrollRunService {
                 isActive: true,
                 deletedAt:null,
             },
-            select: {id: true, fistName: true, lastName:true, employeeId: true},
+            select: {id: true, firstName: true, lastName:true, employeeId: true},
         })
 
         let created = 0
