@@ -658,7 +658,14 @@ function projectAdministratorPermissionFlags(
     return null;
   }
 
-  return fullPermissionFlags();
+  return {
+    canView: true,
+    canCreate: false,
+    canEdit: true,
+    canDelete: false,
+    canApprove: false,
+    canExport: true,
+  }
 }
 
 function pmPermissionFlags(
