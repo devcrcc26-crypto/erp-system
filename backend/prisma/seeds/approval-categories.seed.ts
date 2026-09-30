@@ -695,6 +695,32 @@ const CATEGORIES: CategorySeedDef[] = [
       },
     ],
   },
+  {
+    code: 'PAYROLL_RUN',
+    name: 'Payroll Run Approval',
+    description: 'Monthly payroll approval - prepared by Local HR Manager, approved by HR Manager then General Manager.',
+    module: 'HR',
+    numberPrefix: 'PR',
+    icon: 'dollar-circle',
+    sortOrder: 160,
+    formSchema: {
+      fields:[
+        {name: 'month', label: 'Month', type: 'number', required: true},
+        {name: 'year', label: 'Year', type:'number', required: true},
+        {name: 'totalEmployees', label: 'Total Employees', type: 'number', required: true},
+        {name: 'totalNetPay', label: 'Total Net Pay (ETB)', type: 'number', required: true},
+      ],
+    },
+    approvalRules: [
+      {
+        name: 'Default',
+        tiers: [
+          tier('HR Manager', 'HR', 1),
+          tier('General Manager', 'GENERAL_MANAGER', 2),
+        ],
+      },
+    ],
+  },
 ];
 
 /** Maps short aliases in category rules to seeded Role.name values. */
@@ -981,3 +1007,4 @@ async function ensureApproverRoleAssignments(
     });
   }
 }
+
