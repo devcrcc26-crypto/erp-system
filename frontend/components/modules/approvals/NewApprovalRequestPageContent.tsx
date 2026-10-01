@@ -28,6 +28,7 @@ import {
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import NewRequestCategoryPicker from './NewRequestCategoryPicker';
 
 const CATEGORY_ROUTES: Record<string, string> = {
   LEAVE_REQUEST: '/approvals/new/leave-request',
@@ -158,52 +159,11 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
 
   if (!selectedCategory) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-approvals-new-page flex flex-col gap-4">
-        <div className="flex shrink-0 items-center justify-end">
-          <Button onClick={() => router.push('/approvals')}>
-            {t('common.cancel')}
-          </Button>
-        </div>
-
-        {categories.length === 0 ? (
-          <ErpNotice
-            tone="info"
-            title={t('pages.approvals.noCategories')}
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => handleSelectCategory(category)}
-                className="overflow-hidden rounded-xl border border-[#e8ebef] bg-white p-4 text-left shadow-sm transition-colors hover:border-[#f47b20] hover:bg-[#fef0e6]"
-              >
-                <div
-                  className="text-sm font-semibold"
-                  style={{ color: tokens.colorTextPrimary }}
-                >
-                  {formatApprovalCategoryName(
-                    category.code,
-                    t,
-                    category.name,
-                  )}
-                </div>
-                <div
-                  className="mt-1 text-xs leading-relaxed"
-                  style={{ color: tokens.colorTextSecondary }}
-                >
-                  {formatApprovalCategoryDescription(
-                    category.code,
-                    t,
-                    category.description,
-                  ) || category.code}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <NewRequestCategoryPicker
+        categories={categories}
+        onSelect={handleSelectCategory}
+        onCancel={() => router.push('/approvals')}
+      />
     );
   }
 

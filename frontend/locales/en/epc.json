@@ -161,6 +161,20 @@
       "listDescriptionAdmin": "Your actions, your submissions, and company-wide approval requests.",
       "newRequest": "New Request",
       "newDescription": "Select a category to continue.",
+      "picker": {
+        "title": "What would you like to request?",
+        "searchPlaceholder": "Search request types",
+        "noMatches": "No request types match \"{{query}}\".",
+        "groups": {
+          "time": "Time & attendance",
+          "travel": "Travel",
+          "expenses": "Expenses & allowances",
+          "materials": "Procurement & materials",
+          "vehicles": "Vehicles & equipment",
+          "seals": "Seals & documents",
+          "other": "Other requests"
+        }
+      },
       "categories": {
         "LEAVE_REQUEST": {
           "name": "Leave Request",

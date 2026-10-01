@@ -161,6 +161,20 @@
       "listDescriptionAdmin": "您的待办、您的申请以及全公司审批请求。",
       "newRequest": "新建申请",
       "newDescription": "请选择类别继续。",
+      "picker": {
+        "title": "您想提交什么申请？",
+        "searchPlaceholder": "搜索申请类型",
+        "noMatches": "没有与“{{query}}”匹配的申请类型。",
+        "groups": {
+          "time": "考勤与工时",
+          "travel": "差旅",
+          "expenses": "费用与补贴",
+          "materials": "采购与物资",
+          "vehicles": "车辆与设备",
+          "seals": "印章与文件",
+          "other": "其他申请"
+        }
+      },
       "categories": {
         "LEAVE_REQUEST": {
           "name": "请假申请",
