@@ -604,25 +604,24 @@ main::-webkit-scrollbar,
 }
 
 /*
- * Header v2 — floating panel matching the sidebar (`.erp-sidebar-v2`) and the
- * dashboard cards. The sticky <header> is a page-coloured strip; the panel
- * inside it is white, 16px radius, soft shadow, no border. Its side insets
- * match the content padding below (12 / 16 / 24px) so it lines up with cards.
+ * Header v2 — flush with the shell (no floating panel). Stays fixed at the top
+ * while scrolling; the panel fills the header edge-to-edge (no inset card).
  */
 .erp-shell-header.erp-header-v2 {
-  padding: 8px 12px 0;
-  border-bottom: 0;
-  background: var(--color-page-bg);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 0;
+  border-bottom: 1px solid var(--color-sidebar-border, #e8ebef);
+  background: #ffffff;
   box-shadow: none;
 }
 
 .erp-header-v2 .erp-header-v2-panel {
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 0;
   background: #ffffff;
-  box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 4px 16px rgba(16, 24, 40, 0.06);
+  box-shadow: none;
 }
 
 .erp-header-v2 .erp-shell-header-main {
@@ -667,13 +666,13 @@ main::-webkit-scrollbar,
 
 @media (min-width: 640px) {
   .erp-shell-header.erp-header-v2 {
-    padding: 12px 16px 0;
+    padding: 0;
   }
 }
 
 @media (min-width: 1024px) {
   .erp-shell-header.erp-header-v2 {
-    padding: 12px 24px 0;
+    padding: 0;
   }
 
   .erp-header-v2 .erp-shell-header-main {
@@ -5899,33 +5898,56 @@ main::-webkit-scrollbar,
   transition: width 0.3s ease;
 }
 
-/* ── New Request picker (/approvals/new) ── */
+/* ── New Request catalogue (/approvals/new) — v2 floating panels ── */
 
+/*
+ * Same panel language as the dashboard, header and sidebar: white, 16px
+ * radius, soft shadow, no borders. Each group is one panel; request types are
+ * borderless tiles inside it that tint with their group colour on hover.
+ * Text: name #0F172A, description/muted #4B5563 (7.6:1 on white).
+ */
 .erp-request-picker {
-  gap: 24px;
+  --rp-radius: 16px;
+  --rp-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --rp-muted: #4b5563;
+  --rp-strong: #0f172a;
+  --rp-subtle: #f4f6f8;
+
+  gap: 20px;
 }
+
+.erp-request-picker :is(a, button):focus-visible {
+  outline: 2px solid #1d9e75;
+  outline-offset: 2px;
+}
+
+/* ── Hero: title, search, cancel, group chips ── */
 
 .erp-request-picker-hero {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, #ffffff 0%, #e1f5ee 100%);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
+  gap: 16px 24px;
+  padding: 24px;
+  border-radius: var(--rp-radius);
+  background: #ffffff;
+  box-shadow: var(--rp-shadow);
 }
 
 .erp-request-picker-title {
   margin: 0;
-  font-size: 20px;
+  color: var(--rp-strong) !important;
+  font-size: 22px;
   font-weight: 600;
   line-height: 1.3;
 }
 
 .erp-request-picker-subtitle {
   margin: 4px 0 0;
+  color: var(--rp-muted) !important;
   font-size: 14px;
 }
 
@@ -5942,10 +5964,98 @@ main::-webkit-scrollbar,
   min-width: 0;
 }
 
+.erp-request-picker-search.ant-input-affix-wrapper {
+  border-color: transparent;
+  border-radius: 999px;
+  background: #f2f4f7;
+}
+
+.erp-request-picker-search.ant-input-affix-wrapper:hover {
+  border-color: transparent;
+  background: #eceff3;
+}
+
+.erp-request-picker-search.ant-input-affix-wrapper-focused,
+.erp-request-picker-search.ant-input-affix-wrapper:focus-within {
+  border-color: #1d9e75;
+  background: #ffffff;
+}
+
+.erp-request-picker-search .ant-input {
+  background: transparent;
+}
+
+.erp-request-picker-actions .ant-btn {
+  border-radius: 999px;
+}
+
+.erp-request-picker-chips {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.erp-request-picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 6px 4px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--rp-subtle);
+  color: #1f2937;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.erp-request-picker-chip:hover {
+  background: #e9edf1;
+}
+
+.erp-request-picker-chip[aria-pressed='true'] {
+  background: rgba(29, 158, 117, 0.1);
+  color: #0f6e56;
+}
+
+.erp-request-picker-chip-dot {
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 999px;
+}
+
+.erp-request-picker-chip-count {
+  min-width: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--rp-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 22px;
+  text-align: center;
+}
+
+.erp-request-picker-chip[aria-pressed='true'] .erp-request-picker-chip-count {
+  color: #0f6e56;
+}
+
+/* ── Group panels ── */
+
 .erp-request-picker-group {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 18px 16px 16px;
+  border-radius: var(--rp-radius);
+  background: #ffffff;
+  box-shadow: var(--rp-shadow);
 }
 
 .erp-request-picker-group-title {
@@ -5953,9 +6063,11 @@ main::-webkit-scrollbar,
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 13px;
+  padding: 0 8px;
+  color: var(--rp-muted) !important;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -5968,16 +6080,18 @@ main::-webkit-scrollbar,
 .erp-request-picker-group-count {
   padding: 0 8px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--rp-subtle);
+  color: var(--rp-muted);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 20px;
 }
 
 .erp-request-picker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 4px 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -5987,57 +6101,55 @@ main::-webkit-scrollbar,
   display: flex;
 }
 
+/* ── Request tiles ── */
+
 .erp-request-card {
+  position: relative;
   display: flex;
   flex: 1;
   align-items: flex-start;
   gap: 14px;
   width: 100%;
-  padding: 16px;
-  text-align: left;
-  background: #fff;
-  border: 1px solid #e8ebef;
+  padding: 12px;
+  border: 0;
   border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  background: transparent;
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
+  text-align: left;
+  transition: background-color 120ms ease;
 }
 
 .erp-request-card:hover {
-  border-color: var(--req-accent);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-  transform: translateY(-2px);
-}
-
-.erp-request-card:focus-visible {
-  outline: 2px solid var(--req-accent);
-  outline-offset: 2px;
+  background: var(--req-tint);
 }
 
 .erp-request-card-icon {
   display: flex;
+  width: 42px;
+  height: 42px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  color: var(--req-accent);
+  border-radius: 12px;
   background: var(--req-tint);
+  color: var(--req-accent);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.erp-request-card:hover .erp-request-card-icon {
+  background: #ffffff;
 }
 
 .erp-request-card-body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
 .erp-request-card-name {
+  color: var(--rp-strong) !important;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
@@ -6046,7 +6158,8 @@ main::-webkit-scrollbar,
 .erp-request-card-description {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 12px;
+  color: var(--rp-muted) !important;
+  font-size: 13px;
   line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -6055,25 +6168,52 @@ main::-webkit-scrollbar,
 .erp-request-card-arrow {
   flex-shrink: 0;
   align-self: center;
-  color: rgba(0, 0, 0, 0.3);
+  color: #9aa4b2;
+  opacity: 0;
+  transform: translateX(-4px);
   transition:
-    color 0.15s ease,
-    transform 0.15s ease;
+    opacity 120ms ease,
+    transform 120ms ease;
 }
 
 .erp-request-card:hover .erp-request-card-arrow,
 .erp-request-card:focus-visible .erp-request-card-arrow {
   color: var(--req-accent);
-  transform: translateX(2px);
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Touch screens have no hover: keep the arrow visible as the affordance. */
+@media (hover: none) {
+  .erp-request-card-arrow {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 640px) {
   .erp-request-picker-hero {
-    padding: 16px;
+    padding: 18px;
+  }
+
+  .erp-request-picker-title {
+    font-size: 19px;
   }
 
   .erp-request-picker-actions {
     max-width: none;
+  }
+
+  .erp-request-picker-chips {
+    flex-wrap: nowrap;
+    margin: 0 -18px;
+    padding: 0 18px 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .erp-request-picker-group {
+    padding: 14px 8px 8px;
   }
 
   .erp-request-picker-grid {
@@ -6083,11 +6223,13 @@ main::-webkit-scrollbar,
 
 @media (prefers-reduced-motion: reduce) {
   .erp-request-card,
-  .erp-request-card-arrow {
+  .erp-request-card-icon,
+  .erp-request-card-arrow,
+  .erp-request-picker-chip {
     transition: none;
   }
 
-  .erp-request-card:hover {
+  .erp-request-card-arrow {
     transform: none;
   }
 }

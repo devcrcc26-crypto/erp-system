@@ -232,6 +232,57 @@
   height: 6px;
 }
 
+/* Name cell second line: employee ID chip + email on one row. */
+.erp-employees-v2 .erp-users-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.erp-employees-v2 .erp-users-meta .erp-users-id-chip {
+  flex-shrink: 0;
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.erp-employees-v2 .erp-users-avatar {
+  font-weight: 600;
+}
+
+/* Row actions: shown on row hover or keyboard focus, always on touch. */
+.erp-employees-v2 .erp-table-row-actions .ant-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.erp-employees-v2 .ant-table-tbody > tr:hover .erp-table-row-actions .ant-btn,
+.erp-employees-v2 .ant-table-tbody > tr:focus-within .erp-table-row-actions .ant-btn,
+.erp-employees-v2 .erp-table-row-actions .ant-btn:focus-visible,
+.erp-employees-v2 .erp-table-row-actions .ant-btn.ant-dropdown-open {
+  opacity: 1;
+}
+
+.erp-employees-v2 .erp-table-row-actions .ant-btn:hover {
+  background: #e9edf1 !important;
+}
+
+@media (hover: none) {
+  .erp-employees-v2 .erp-table-row-actions .ant-btn {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-employees-v2 .erp-table-row-actions .ant-btn {
+    transition: none;
+  }
+}
+
 .erp-employees-v2 .ant-table-pagination.ant-pagination {
   margin: 0 !important;
   padding: 14px 20px;

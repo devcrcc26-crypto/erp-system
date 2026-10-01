@@ -78,7 +78,6 @@ import {
   userStatusLabel,
   userStatusVariant,
 } from '@/lib/utils/user-status';
-import { tokens } from '@/lib/theme/tokens';
 
 const COLUMN_SORT_FIELD: Record<string, UsersListSortField> = {
   name: 'name',
@@ -103,10 +102,32 @@ function isPendingActivation(user: User): boolean {
   return Boolean(user.isActive && user.email && !user.emailVerifiedAt);
 }
 
+/**
+ * Soft initials tints from the app palette, picked per user so the list is
+ * easier to scan. Each text colour is ≥ 4.5:1 on its tint.
+ */
+const AVATAR_TINTS: ReadonlyArray<{ bg: string; fg: string }> = [
+  { bg: '#E1F5EE', fg: '#0F6E56' },
+  { bg: '#E6F1FB', fg: '#1A4A7A' },
+  { bg: '#FAEEDA', fg: '#7A4D0F' },
+  { bg: '#FAECE7', fg: '#9A3B1C' },
+  { bg: '#EAF3DE', fg: '#4A7319' },
+  { bg: '#ECFEFF', fg: '#0E7490' },
+];
+
+function avatarTint(userId: string): { bg: string; fg: string } {
+  let hash = 0;
+  for (let index = 0; index < userId.length; index += 1) {
+    hash = (hash * 31 + userId.charCodeAt(index)) >>> 0;
+  }
+  return AVATAR_TINTS[hash % AVATAR_TINTS.length];
+}
+
 function UserListAvatar({ user }: { user: User }): React.ReactNode {
   const photoQuery = useUserPhotoUrl(user.id, user.photoDocumentId);
   const initials =
     `${user.firstName?.charAt(0) ?? ''}${user.lastName?.charAt(0) ?? ''}`.toUpperCase();
+  const tint = avatarTint(user.id);
 
   return (
     <ImagePreviewTrigger
@@ -121,10 +142,8 @@ function UserListAvatar({ user }: { user: User }): React.ReactNode {
         src={photoQuery.data?.url}
         icon={!photoQuery.data?.url && !initials ? <UserOutlined /> : undefined}
         style={{
-          backgroundColor: photoQuery.data?.url
-            ? undefined
-            : tokens.colorPrimaryLight,
-          color: tokens.colorPrimary,
+          backgroundColor: photoQuery.data?.url ? undefined : tint.bg,
+          color: tint.fg,
           fontSize: 13,
           fontWeight: 600,
         }}
@@ -823,7 +842,7 @@ export default function UsersPageContent(): React.ReactNode {
             className="erp-pro-table erp-users-table"
             size={isCompact ? 'small' : 'middle'}
             dataSource={users}
-            scroll={{ x: isCompact ? 720 : 1128 }}
+            scroll={{ x: isCompact ? 720 : 1088 }}
             pagination={
               pagination
                 ? {
@@ -858,7 +877,7 @@ export default function UsersPageContent(): React.ReactNode {
                 key: 'name',
                 sorter: true,
                 fixed: isCompact ? undefined : 'left',
-                width: isCompact ? 220 : 300,
+                width: isCompact ? 240 : 320,
                 render: (_, record) => {
                   const fullName = `${record.firstName} ${record.lastName}`.trim();
 
@@ -878,33 +897,28 @@ export default function UsersPageContent(): React.ReactNode {
                             />
                           ) : null}
                         </div>
-                        {record.email ? (
-                          <TruncateText
-                            value={record.email}
-                            className="erp-users-email mt-0.5"
-                          />
-                        ) : (
-                          <p className="erp-users-email m-0 mt-0.5">
-                            {t('users.noEmailNoLogin')}
-                          </p>
-                        )}
+                        {/* Employee ID sits with the email: one less column to scan. */}
+                        <div className="erp-users-meta mt-0.5">
+                          {record.employeeId ? (
+                            <span className="erp-users-id-chip">
+                              {record.employeeId}
+                            </span>
+                          ) : null}
+                          {record.email ? (
+                            <TruncateText
+                              value={record.email}
+                              className="erp-users-email min-w-0"
+                            />
+                          ) : (
+                            <span className="erp-users-email">
+                              {t('users.noEmailNoLogin')}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
                 },
-              },
-              {
-                title: 'ID',
-                dataIndex: 'employeeId',
-                key: 'employeeId',
-                width: 120,
-                responsive: ['sm'],
-                render: (id: string | null | undefined) =>
-                  id ? (
-                    <span className="erp-users-id-chip">{id}</span>
-                  ) : (
-                    <span className="erp-users-dash">-</span>
-                  ),
               },
               {
                 title: t('common.position'),
@@ -945,7 +959,7 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: t('common.department'),
                 key: 'department',
-                width: 170,
+                width: 230,
                 sorter: true,
                 responsive: ['md'],
                 render: (_, record) =>

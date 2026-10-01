@@ -929,7 +929,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════
- * Sidebar v2 — floating panel look. Everything below is scoped under
+ * Sidebar v2 — docked flush look. Everything below is scoped under
  * `.erp-sidebar-v2` (desktop <nav>, drawer root and drawer <nav>), so the
  * rules above remain the base and nothing leaks outside the sidebar.
  *
@@ -952,28 +952,30 @@
     0 4px 16px rgba(16, 24, 40, 0.06);
 }
 
-/* ── Floating panels (desktop only: the desktop <nav> carries data-mode) ── */
+/* ── Docked panels (desktop only: the desktop <nav> carries data-mode) ── */
 
 .erp-sidebar-v2.sb-theme[data-mode] {
-  padding: 12px 0 12px 12px;
-  background: transparent;
+  padding: 0;
+  background: var(--sb-bg);
 }
 
 .erp-sidebar-v2.sb-theme[data-mode] .sb-rail {
   overflow: hidden;
   border: 0;
-  border-radius: var(--sb-radius);
+  border-right: 1px solid var(--sb-border);
+  border-radius: 0;
   background: var(--sb-bg);
-  box-shadow: var(--sb-panel-shadow);
+  box-shadow: none;
 }
 
 .erp-sidebar-v2.sb-theme[data-mode] .sb-panel {
-  margin-left: 12px;
+  margin-left: 0;
   overflow: hidden;
   border: 0;
-  border-radius: var(--sb-radius);
+  border-right: 1px solid var(--sb-border);
+  border-radius: 0;
   background: var(--sb-bg);
-  box-shadow: var(--sb-panel-shadow);
+  box-shadow: none;
 }
 
 .erp-sidebar-v2 .sb-panel-header {
@@ -1160,13 +1162,13 @@
     0 0 0 4px var(--sb-active-text);
 }
 
-/* ── Mobile drawer: same panel look ── */
+/* ── Mobile drawer: flush with the edge (no floating panel) ── */
 
 .erp-sidebar-v2.sb-drawer .ant-drawer-content-wrapper,
 .erp-sidebar-v2.sb-drawer .ant-drawer-section {
   overflow: hidden;
-  border-radius: 0 var(--sb-radius) var(--sb-radius) 0;
-  box-shadow: var(--sb-panel-shadow);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .erp-sidebar-v2.sb-drawer .ant-drawer-header {

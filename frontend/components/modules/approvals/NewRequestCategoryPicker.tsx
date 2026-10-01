@@ -135,6 +135,7 @@ export default function NewRequestCategoryPicker({
 }: Props): React.ReactNode {
   const { t } = useEpcTranslation();
   const [query, setQuery] = useState('');
+  const [activeGroup, setActiveGroup] = useState<string>('all');
 
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -177,6 +178,16 @@ export default function NewRequestCategoryPicker({
       });
   }, [categories, query, t]);
 
+  const totalCards = groups.reduce((sum, entry) => sum + entry.cards.length, 0);
+  // A chip whose group no longer matches the search falls back to "All".
+  const selectedGroup = groups.some(({ group }) => group.key === activeGroup)
+    ? activeGroup
+    : 'all';
+  const visibleGroups =
+    selectedGroup === 'all'
+      ? groups
+      : groups.filter(({ group }) => group.key === selectedGroup);
+
   return (
     <div className="erp-pro-list-page erp-users-page erp-approvals-new-page erp-request-picker">
       <div className="erp-request-picker-hero">
@@ -215,6 +226,42 @@ export default function NewRequestCategoryPicker({
             {t('common.cancel')}
           </Button>
         </div>
+
+        {groups.length > 1 ? (
+          <div
+            role="group"
+            aria-label={t('pages.approvals.picker.filterGroups')}
+            className="erp-request-picker-chips"
+          >
+            {[
+              { key: 'all', label: t('pages.approvals.picker.allGroups'), count: totalCards, accent: null },
+              ...groups.map(({ group, cards }) => ({
+                key: group.key,
+                label: t(`pages.approvals.picker.groups.${group.key}`),
+                count: cards.length,
+                accent: group.accent,
+              })),
+            ].map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                aria-pressed={selectedGroup === chip.key}
+                className="erp-request-picker-chip"
+                onClick={() => setActiveGroup(chip.key)}
+              >
+                {chip.accent ? (
+                  <span
+                    aria-hidden
+                    className="erp-request-picker-chip-dot"
+                    style={{ background: chip.accent }}
+                  />
+                ) : null}
+                {chip.label}
+                <span className="erp-request-picker-chip-count">{chip.count}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {categories.length === 0 ? (
@@ -225,7 +272,7 @@ export default function NewRequestCategoryPicker({
           title={t('pages.approvals.picker.noMatches', { query: query.trim() })}
         />
       ) : (
-        groups.map(({ group, cards }) => {
+        visibleGroups.map(({ group, cards }) => {
           const headingId = `request-group-${group.key}`;
           return (
             <section

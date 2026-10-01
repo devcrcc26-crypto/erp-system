@@ -165,6 +165,8 @@
         "title": "您想提交什么申请？",
         "searchPlaceholder": "搜索申请类型",
         "noMatches": "没有与“{{query}}”匹配的申请类型。",
+        "allGroups": "全部",
+        "filterGroups": "按类别筛选申请类型",
         "groups": {
           "time": "考勤与工时",
           "travel": "差旅",

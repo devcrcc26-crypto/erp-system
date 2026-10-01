@@ -165,6 +165,8 @@
         "title": "What would you like to request?",
         "searchPlaceholder": "Search request types",
         "noMatches": "No request types match \"{{query}}\".",
+        "allGroups": "All",
+        "filterGroups": "Filter request types by group",
         "groups": {
           "time": "Time & attendance",
           "travel": "Travel",
