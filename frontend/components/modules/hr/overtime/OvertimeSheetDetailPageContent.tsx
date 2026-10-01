@@ -9,6 +9,7 @@ import {
   Grid,
   Skeleton,
   Space,
+  Tag,
   Tooltip,
   Typography,
 } from 'antd';
@@ -23,12 +24,12 @@ import {
   StopOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
 import OvertimeEntryFormDrawer from '@/components/modules/hr/overtime/OvertimeEntryFormDrawer';
-import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
@@ -67,7 +68,6 @@ import {
 } from '@/lib/utils/overtime-display';
 import { exportOvertimeSheetEntriesExcel } from '@/lib/utils/overtime-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatProjectDate } from '@/lib/utils/project-display';
 
 function DetailSection({
   title,
@@ -335,99 +335,77 @@ export default function OvertimeSheetDetailPageContent({
         title: t('hr.table.date'),
         dataIndex: 'date',
         key: 'date',
-        width: 110,
-        render: (v: string) => (
-          <span className="erp-users-cell-strong">{formatProjectDate(v)}</span>
+        width: 120,
+        render: (date: string) => (
+          <div style={{ fontWeight: 500, fontSize: 13 }}>
+            {dayjs(date).format('ddd DD MMM')}
+          </div>
         ),
       },
       {
-        title: t('hr.form.startTime'),
-        dataIndex: 'startTime',
-        key: 'startTime',
-        width: 80,
-        render: (v: string) => <span className="erp-users-cell-sub">{v}</span>,
-      },
-      {
-        title: t('hr.form.endTime'),
-        dataIndex: 'endTime',
-        key: 'endTime',
-        width: 80,
-        render: (v: string) => <span className="erp-users-cell-sub">{v}</span>,
-      },
-      {
-        title: t('hr.overtimeCategory.holiday'),
-        dataIndex: 'isHoliday',
-        key: 'isHoliday',
-        width: 80,
-        render: (v: boolean) => (
-          <span className="erp-users-cell-sub">
-            {v ? t('hr.labels.yes') : '—'}
+        title: t('pages.hr.overtime.timeRange'),
+        key: 'time',
+        width: 130,
+        render: (_: unknown, row: OvertimeEntry) => (
+          <span style={{ fontFamily: 'monospace', fontSize: 13 }}>
+            {row.startTime} – {row.endTime}
           </span>
         ),
       },
       {
-        title: t('hr.overtimeCategory.regular'),
-        dataIndex: 'regularHours',
-        key: 'regularHours',
-        width: 80,
-        align: 'right' as const,
-        render: (v: number) => (
-          <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
-        ),
-      },
-      {
-        title: t('hr.overtimeCategory.night'),
-        dataIndex: 'nightHours',
-        key: 'nightHours',
-        width: 80,
-        align: 'right' as const,
-        render: (v: number) => (
-          <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
-        ),
-      },
-      {
-        title: t('hr.overtimeCategory.weekend'),
-        dataIndex: 'weekendHours',
-        key: 'weekendHours',
-        width: 90,
-        align: 'right' as const,
-        render: (v: number) => (
-          <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
-        ),
-      },
-      {
-        title: t('hr.table.holidayHours'),
-        dataIndex: 'holidayHours',
-        key: 'holidayHours',
-        width: 100,
-        align: 'right' as const,
-        render: (v: number, row: OvertimeEntry) => {
-          const hours = (
-            <span className="erp-users-cell-sub">{formatOvertimeHours(v)}</span>
-          );
-          if (!row.holidayName) {
-            return hours;
-          }
-          return <Tooltip title={row.holidayName}>{hours}</Tooltip>;
-        },
-      },
-      {
-        title: t('hr.overtimeCategory.total'),
-        dataIndex: 'totalHours',
-        key: 'totalHours',
-        width: 80,
-        align: 'right' as const,
-        render: (v: number) => (
-          <span className="erp-users-cell-strong">{formatOvertimeHours(v)}</span>
+        title: t('pages.hr.overtime.hoursBreakdown'),
+        key: 'hoursBreakdown',
+        width: 280,
+        render: (_: unknown, row: OvertimeEntry) => (
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {Number(row.regularHours) > 0 ? (
+              <Tag color="blue" style={{ margin: 0 }}>
+                {formatOvertimeHours(row.regularHours)}h{' '}
+                {t('hr.overtimeCategory.regular')}
+              </Tag>
+            ) : null}
+            {Number(row.nightHours) > 0 ? (
+              <Tag color="purple" style={{ margin: 0 }}>
+                {formatOvertimeHours(row.nightHours)}h{' '}
+                {t('hr.overtimeCategory.night')}
+              </Tag>
+            ) : null}
+            {Number(row.weekendHours) > 0 ? (
+              <Tag color="orange" style={{ margin: 0 }}>
+                {formatOvertimeHours(row.weekendHours)}h{' '}
+                {t('hr.overtimeCategory.weekend')}
+              </Tag>
+            ) : null}
+            {Number(row.holidayHours) > 0 ? (
+              <Tooltip title={row.holidayName ?? undefined}>
+                <Tag color="red" style={{ margin: 0 }}>
+                  {formatOvertimeHours(row.holidayHours)}h{' '}
+                  {t('hr.overtimeCategory.holiday')}
+                </Tag>
+              </Tooltip>
+            ) : null}
+          </div>
         ),
       },
       {
         title: t('hr.labels.taskDescription'),
         dataIndex: 'taskDescription',
         key: 'taskDescription',
-        ellipsis: true,
-        render: (v: string) => (
-          <span className="erp-users-cell-sub">{v || '—'}</span>
+        render: (text: string) => (
+          <span
+            style={{
+              fontSize: 12,
+              color: 'var(--color-text-secondary)',
+              display: 'block',
+              maxWidth: 200,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={text}
+          >
+            {text || '—'}
+          </span>
         ),
       },
       ...(canEdit
@@ -610,57 +588,84 @@ export default function OvertimeSheetDetailPageContent({
         </div>
       </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.overtimeCategory.regular')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {formatOvertimeHours(sheet.totalRegularHours)}
-            </p>
+      <div
+        style={{
+          display: 'flex',
+          gap: 0,
+          border: '1px solid var(--color-border, #e8ebef)',
+          borderRadius: 10,
+          overflow: 'hidden',
+          marginBottom: 20,
+        }}
+      >
+        {(
+          [
+            {
+              label: t('hr.overtimeCategory.regular'),
+              value: sheet.totalRegularHours,
+              color: '#1677ff',
+            },
+            {
+              label: t('hr.overtimeCategory.night'),
+              value: sheet.totalNightHours,
+              color: '#722ed1',
+            },
+            {
+              label: t('hr.overtimeCategory.weekend'),
+              value: sheet.totalWeekendHours,
+              color: '#fa8c16',
+            },
+            {
+              label: t('hr.overtimeCategory.holiday'),
+              value: sheet.totalHolidayHours,
+              color: '#f5222d',
+            },
+            {
+              label: t('hr.overtimeCategory.total'),
+              value: sheet.totalHours,
+              color: 'var(--color-teal-600)',
+              bold: true,
+            },
+          ] as const
+        ).map((item, i) => (
+          <div
+            key={item.label}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              borderLeft:
+                i > 0 ? '1px solid var(--color-border, #e8ebef)' : 'none',
+              background: 'var(--color-bg-secondary, #fafafa)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--color-text-tertiary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                marginBottom: 4,
+              }}
+            >
+              {item.label}
+            </div>
+            <div
+              style={{
+                fontSize: 'bold' in item && item.bold ? 22 : 18,
+                fontWeight: 'bold' in item && item.bold ? 700 : 600,
+                color:
+                  Number(item.value) > 0
+                    ? item.color
+                    : 'var(--color-text-tertiary)',
+              }}
+            >
+              {Number(item.value) > 0
+                ? `${formatOvertimeHours(Number(item.value))}h`
+                : '—'}
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.overtimeCategory.night')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {formatOvertimeHours(sheet.totalNightHours)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.overtimeCategory.weekend')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {formatOvertimeHours(sheet.totalWeekendHours)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.overtimeCategory.holiday')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {formatOvertimeHours(sheet.totalHolidayHours)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.overtimeCategory.total')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {formatOvertimeHours(sheet.totalHours)}
-            </p>
-          </div>
-        </div>
+        ))}
       </div>
 
       {unregisteredHolidayDates.length > 0 ? (
@@ -720,7 +725,7 @@ export default function OvertimeSheetDetailPageContent({
                 columns={columns}
                 dataSource={sheet.entries ?? []}
                 pagination={false}
-                scroll={{ x: 1100 }}
+                scroll={{ x: 720 }}
                 expandable={{
                   expandedRowRender: (entry) => (
                     <div className="space-y-2 py-1">
@@ -763,29 +768,34 @@ export default function OvertimeSheetDetailPageContent({
                 }}
               />
             </DetailSection>
-
-            <DetailSection title={t('hr.section.requestDetails')}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <MetaItem label={t('hr.labels.employee')}>
-                  {employeeName}
-                </MetaItem>
-                <MetaItem label={t('hr.table.period')}>{periodLabel}</MetaItem>
-                <MetaItem label={t('hr.table.sheetNumber')}>
-                  <span className="erp-users-id-chip">{sheet.sheetNumber}</span>
-                </MetaItem>
-                <MetaItem label={t('hr.table.status')}>
-                  <StatusBadge
-                    label={formatOvertimeStatus(sheet.status, t)}
-                    variant={overtimeStatusVariant(sheet.status)}
-                  />
-                </MetaItem>
-              </div>
-            </DetailSection>
           </div>
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
-          {approvalRequest ? (
+          {sheet.status === 'DRAFT' ? (
+            <div className="erp-pro-card">
+              <DetailSection title={t('hr.section.approvalChain')}>
+                <div
+                  style={{
+                    padding: '16px',
+                    background: 'var(--color-bg-secondary, #fafafa)',
+                    borderRadius: 8,
+                    border: '1px solid var(--color-border, #e8ebef)',
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13,
+                      color: 'var(--color-text-tertiary)',
+                    }}
+                  >
+                    {t('pages.hr.overtime.submitToStartApproval')}
+                  </p>
+                </div>
+              </DetailSection>
+            </div>
+          ) : approvalRequest ? (
             <ApprovalTierTimeline
               tiers={tiers}
               currentTier={approvalRequest.currentTier ?? 0}

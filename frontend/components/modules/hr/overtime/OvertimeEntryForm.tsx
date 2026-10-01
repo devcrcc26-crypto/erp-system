@@ -1,6 +1,6 @@
 'use client';
 
-import { Checkbox, DatePicker, Form, Input, Spin, TimePicker } from 'antd';
+import { Checkbox, DatePicker, Form, Input, Spin, Tag, TimePicker } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -201,6 +201,58 @@ export default function OvertimeEntryForm({
               <Checkbox>{t('hr.dateRules.overnight')}</Checkbox>
             </Form.Item>
           </div>
+
+          {watchedStart && watchedEnd ? (
+            <div
+              style={{
+                padding: '10px 14px',
+                background: 'var(--color-bg-secondary, #fafafa)',
+                borderRadius: 8,
+                border: '1px solid var(--color-border, #e8ebef)',
+                marginTop: 8,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  marginBottom: 6,
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                {t('pages.hr.overtime.classificationPreview')}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {preview && Number(preview.regularHours) > 0 ? (
+                  <Tag color="blue">{t('pages.hr.overtime.rateRegular')}</Tag>
+                ) : null}
+                {preview && Number(preview.nightHours) > 0 ? (
+                  <Tag color="purple">{t('pages.hr.overtime.rateNight')}</Tag>
+                ) : null}
+                {preview && Number(preview.weekendHours) > 0 ? (
+                  <Tag color="orange">{t('pages.hr.overtime.rateWeekend')}</Tag>
+                ) : null}
+                {preview && Number(preview.holidayHours) > 0 ? (
+                  <Tag color="red">{t('pages.hr.overtime.rateHoliday')}</Tag>
+                ) : null}
+                {!preview && !previewLoading ? (
+                  <>
+                    <Tag color="blue">{t('pages.hr.overtime.rateRegular')}</Tag>
+                    <Tag color="purple">{t('pages.hr.overtime.rateNight')}</Tag>
+                  </>
+                ) : null}
+              </div>
+              <p
+                style={{
+                  margin: '6px 0 0',
+                  fontSize: 11,
+                  color: 'var(--color-text-tertiary)',
+                }}
+              >
+                {t('pages.hr.overtime.classificationPreviewHint')}
+              </p>
+            </div>
+          ) : null}
         </DrawerSection>
 
         <DrawerSection title={t('hr.section.hoursPreview')}>

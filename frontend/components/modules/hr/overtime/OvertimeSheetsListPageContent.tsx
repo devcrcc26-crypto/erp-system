@@ -57,6 +57,27 @@ import {
   formatOvertimeStatus,
   overtimeStatusVariant,
 } from '@/lib/utils/overtime-display';
+
+function renderHoursCell(
+  value: number,
+  options?: { emphasize?: boolean },
+): React.ReactNode {
+  const amount = Number(value);
+  if (!(amount > 0)) {
+    return (
+      <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+    );
+  }
+  const label = `${formatOvertimeHours(amount)}h`;
+  if (options?.emphasize) {
+    return (
+      <span style={{ fontWeight: 600, color: 'var(--color-teal-600)' }}>
+        {label}
+      </span>
+    );
+  }
+  return <span style={{ fontWeight: 500 }}>{label}</span>;
+}
 import {
   filterOvertimeSheets,
   statusesForOvertimeMode,
@@ -342,57 +363,45 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
         title: t('hr.table.regularHours'),
         dataIndex: 'totalRegularHours',
         key: 'totalRegularHours',
-        width: 90,
+        width: 120,
         align: 'right',
         responsive: ['lg'],
-        render: (value: number) => (
-          <span className="erp-users-cell-sub">{formatOvertimeHours(value)}</span>
-        ),
+        render: (value: number) => renderHoursCell(value),
       },
       {
         title: t('hr.table.nightHours'),
         dataIndex: 'totalNightHours',
         key: 'totalNightHours',
-        width: 90,
+        width: 120,
         align: 'right',
         responsive: ['lg'],
-        render: (value: number) => (
-          <span className="erp-users-cell-sub">{formatOvertimeHours(value)}</span>
-        ),
+        render: (value: number) => renderHoursCell(value),
       },
       {
         title: t('hr.table.weekendHours'),
         dataIndex: 'totalWeekendHours',
         key: 'totalWeekendHours',
-        width: 90,
+        width: 120,
         align: 'right',
         responsive: ['xl'],
-        render: (value: number) => (
-          <span className="erp-users-cell-sub">{formatOvertimeHours(value)}</span>
-        ),
+        render: (value: number) => renderHoursCell(value),
       },
       {
         title: t('hr.table.holidayHours'),
         dataIndex: 'totalHolidayHours',
         key: 'totalHolidayHours',
-        width: 90,
+        width: 120,
         align: 'right',
         responsive: ['xl'],
-        render: (value: number) => (
-          <span className="erp-users-cell-sub">{formatOvertimeHours(value)}</span>
-        ),
+        render: (value: number) => renderHoursCell(value),
       },
       {
-        title: t('hr.table.total'),
+        title: t('hr.table.totalHours'),
         dataIndex: 'totalHours',
         key: 'totalHours',
-        width: 90,
+        width: 100,
         align: 'right',
-        render: (value: number) => (
-          <span className="erp-users-cell-strong">
-            {formatOvertimeHours(value)}
-          </span>
-        ),
+        render: (value: number) => renderHoursCell(value, { emphasize: true }),
       },
       {
         title: t('hr.table.status'),
@@ -404,19 +413,6 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
             label={formatOvertimeStatus(value, t)}
             variant={overtimeStatusVariant(value)}
           />
-        ),
-      },
-      {
-        title: t('hr.table.currentTier'),
-        key: 'tier',
-        width: 80,
-        responsive: ['lg'],
-        render: (_: unknown, row: OvertimeSheetListItem) => (
-          <span className="erp-users-cell-sub">
-            {row.approvalRequest?.currentTier != null
-              ? String(row.approvalRequest.currentTier)
-              : '—'}
-          </span>
         ),
       },
       {
