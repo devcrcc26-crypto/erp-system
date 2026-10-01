@@ -55,8 +55,8 @@ import {
   Package,
   PackageMinus,
   PackageOpen,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Pin,
+  PinOff,
   Plane,
   Receipt,
   Search,
@@ -180,8 +180,8 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   // Sidebar chrome
   favorites: lucideNavIcon(Star),
   search: lucideNavIcon(Search),
-  'sidebar-collapse': lucideNavIcon(PanelLeftClose),
-  'sidebar-expand': lucideNavIcon(PanelLeftOpen),
+  'sidebar-pin': lucideNavIcon(Pin),
+  'sidebar-unpin': lucideNavIcon(PinOff),
 };
 
 /** Shared icon sizing for main rail and context sidebar links. */

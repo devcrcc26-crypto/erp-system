@@ -135,10 +135,11 @@ export const SIDEBAR_DRAWER_WIDTH = 304;
 export const SIDEBAR_MAX_FAVORITES = 5;
 
 export const SIDEBAR_STORAGE_KEYS = {
-  /** Legacy shared key — fallback for users who have no per-user value yet. */
-  mode: 'sidebar:mode',
-  /** Expanded/compact preference, per user: `sidebar:mode:<userId>`. */
-  modePrefix: 'sidebar:mode:',
+  /**
+   * Pinned module panel ("1" / "0"), per user: `erp.sidebar.pinned:<userId>`.
+   * Unpinned (the default) shows the panel as a hover/click flyout.
+   */
+  pinnedPrefix: 'erp.sidebar.pinned:',
   collapsedGroups: 'sidebar:collapsed-groups',
   favoritesPrefix: 'sidebar:favorites:',
 } as const;

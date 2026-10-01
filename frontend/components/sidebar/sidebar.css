@@ -1174,3 +1174,60 @@
 .erp-sidebar-v2.sb-drawer .ant-drawer-header {
   border-bottom-color: var(--sb-border);
 }
+
+/* ── Unpinned flyout: module panel as an overlay beside the rail ── */
+
+/*
+ * Absolutely positioned against the desktop <nav> (whose width is the rail
+ * only), so opening it never reflows the page. It stays mounted while
+ * closing: `inert` + visibility keep it out of the tab order and the
+ * accessibility tree, and the visibility delay lets the fade finish.
+ */
+.erp-sidebar-v2 {
+  --sb-flyout-shadow:
+    1px 0 0 rgba(16, 24, 40, 0.04),
+    8px 0 24px -6px rgba(16, 24, 40, 0.14);
+}
+
+.erp-sidebar-v2 .sb-flyout {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  z-index: 1;
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-8px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    visibility 0s linear 160ms;
+}
+
+.erp-sidebar-v2 .sb-flyout[data-open='true'] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    visibility 0s;
+}
+
+.erp-sidebar-v2.sb-theme[data-mode] .sb-flyout .sb-panel {
+  height: 100%;
+  margin-left: 0;
+  background: var(--sb-bg);
+  box-shadow: var(--sb-flyout-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-sidebar-v2 .sb-flyout,
+  .erp-sidebar-v2 .sb-flyout[data-open='true'] {
+    transform: none;
+    transition: none;
+  }
+}

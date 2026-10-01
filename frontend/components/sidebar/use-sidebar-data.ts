@@ -1,6 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import {
+  FLYOUT_CLOSED,
+  SidebarFlyoutController,
+  type SidebarFlyoutState,
+} from '@/components/sidebar/sidebar-flyout';
 import {
   SIDEBAR_MAX_FAVORITES,
   SIDEBAR_STORAGE_KEYS,
@@ -25,7 +30,6 @@ import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
 
-export type SidebarMode = 'expanded' | 'compact';
 
 /** Permission tokens for the signed-in session (empty until loaded). */
 export function useSidebarPermissions(): {
@@ -214,8 +218,9 @@ function parseBooleanRecord(raw: string | null): Record<string, boolean> {
 }
 
 export interface SidebarPreferences {
-  readonly mode: SidebarMode;
-  readonly setMode: (mode: SidebarMode) => void;
+  /** Module panel pinned open beside the rail (default: false → flyout). */
+  readonly pinned: boolean;
+  readonly setPinned: (pinned: boolean) => void;
   /** Explicit per-group state; absent ids fall back to the group default. */
   readonly collapsedGroups: Readonly<Record<string, boolean>>;
   readonly setGroupCollapsed: (groupId: string, collapsed: boolean) => void;
@@ -224,34 +229,34 @@ export interface SidebarPreferences {
 }
 
 /**
- * Persisted sidebar preferences. Labels are visible by default: compact mode
- * is opt-in. Mode and favorites are stored per user.
+ * Persisted sidebar preferences. The module panel is unpinned (a hover/click
+ * flyout) by default. Pin state and favorites are stored per user.
  */
 export function useSidebarPreferences(): SidebarPreferences {
   const userId = useAuthStore((state) => state.user?.id ?? null);
   const favoritesKey = userId
     ? `${SIDEBAR_STORAGE_KEYS.favoritesPrefix}${userId}`
     : null;
+  const pinnedKey = userId ? `${SIDEBAR_STORAGE_KEYS.pinnedPrefix}${userId}` : null;
 
-  const modeKey = userId ? `${SIDEBAR_STORAGE_KEYS.modePrefix}${userId}` : null;
-  const rawUserMode = useStoredString(modeKey);
-  const rawLegacyMode = useStoredString(SIDEBAR_STORAGE_KEYS.mode);
-  const rawMode = rawUserMode ?? rawLegacyMode;
+  const rawPinned = useStoredString(pinnedKey);
   const rawCollapsed = useStoredString(SIDEBAR_STORAGE_KEYS.collapsedGroups);
   const rawFavorites = useStoredString(favoritesKey);
 
-  const mode: SidebarMode = rawMode === 'compact' ? 'compact' : 'expanded';
+  const pinned = rawPinned === '1';
   const collapsedGroups = useMemo(() => parseBooleanRecord(rawCollapsed), [rawCollapsed]);
   const favoriteIds = useMemo(
     () => parseStringArray(rawFavorites).slice(0, SIDEBAR_MAX_FAVORITES),
     [rawFavorites],
   );
 
-  const setMode = useCallback(
-    (next: SidebarMode): void => {
-      writeStored(modeKey ?? SIDEBAR_STORAGE_KEYS.mode, next);
+  const setPinned = useCallback(
+    (next: boolean): void => {
+      if (pinnedKey) {
+        writeStored(pinnedKey, next ? '1' : '0');
+      }
     },
-    [modeKey],
+    [pinnedKey],
   );
 
   const setGroupCollapsed = useCallback((groupId: string, collapsed: boolean): void => {
@@ -285,11 +290,26 @@ export function useSidebarPreferences(): SidebarPreferences {
   );
 
   return {
-    mode,
-    setMode,
+    pinned,
+    setPinned,
     collapsedGroups,
     setGroupCollapsed,
     favoriteIds,
     toggleFavorite,
   };
+}
+
+/**
+ * React binding for the unpinned flyout's hover-intent controller
+ * (`sidebar-flyout.ts`). The controller is created once per mount and its
+ * timers are cleared on unmount.
+ */
+export function useSidebarFlyout(): {
+  readonly state: SidebarFlyoutState;
+  readonly controller: SidebarFlyoutController;
+} {
+  const [state, setState] = useState<SidebarFlyoutState>(FLYOUT_CLOSED);
+  const [controller] = useState(() => new SidebarFlyoutController(setState));
+  useEffect(() => () => controller.dispose(), [controller]);
+  return { state, controller };
 }

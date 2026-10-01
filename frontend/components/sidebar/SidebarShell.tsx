@@ -19,10 +19,10 @@ import {
   SIDEBAR_COMPACT_WIDTH,
   SIDEBAR_CONFIG,
   SIDEBAR_DRAWER_WIDTH,
-  SIDEBAR_EXPANDED_WIDTH,
   SIDEBAR_MAX_FAVORITES,
   type SidebarBadgeSource,
 } from '@/components/sidebar/sidebar.config';
+import { nextOpenPanel, panelWhenPinning } from '@/components/sidebar/sidebar-flyout';
 import {
   buildSidebarModel,
   flattenSidebarModel,
@@ -37,6 +37,7 @@ import {
 } from '@/components/sidebar/sidebar-model';
 import {
   useSidebarBadgeCounts,
+  useSidebarFlyout,
   useSidebarPermissions,
   useSidebarPreferences,
   useSidebarProjectContext,
@@ -49,6 +50,7 @@ import { useIsLgUp } from '@/hooks/useMediaQuery';
 /** Pseudo panel ids for the compact rail's search and favorites panels. */
 const SEARCH_PANEL = 'search';
 const FAVORITES_PANEL = 'favorites';
+const TRANSIENT_PANELS = [SEARCH_PANEL, FAVORITES_PANEL] as const;
 const FAVORITES_GROUP_ID = 'favorites';
 
 const BADGE_LABEL_KEYS: Record<SidebarBadgeSource, string> = {
@@ -77,50 +79,18 @@ function focusSoon(elementId: string, select = false): void {
   );
 }
 
-interface PanelSyncInput {
-  readonly current: string | null;
-  readonly compact: boolean;
-  readonly becameCompact: boolean;
-  readonly navigated: boolean;
-  readonly folderChanged: boolean;
-  readonly activeFolderId: string | null;
-  readonly projectFolderId: string | null;
-}
-
-/**
- * Which panel should be open after a route or mode change.
- * Expanded: follow the route's folder. Compact: close panels the route has
- * left and never auto-open — except a project's own navigation.
- */
-function nextOpenPanel(input: PanelSyncInput): string | null {
-  const { current, compact, activeFolderId, projectFolderId } = input;
-  const isProjectFolder = activeFolderId !== null && activeFolderId === projectFolderId;
-
-  if (input.becameCompact) {
-    return current !== null && current === activeFolderId && isProjectFolder ? current : null;
-  }
-  if (!compact) {
-    return input.folderChanged ? activeFolderId : current;
-  }
-  if (current === SEARCH_PANEL || current === FAVORITES_PANEL) {
-    return input.navigated ? null : current;
-  }
-  if (current !== null && current !== activeFolderId) {
-    return null;
-  }
-  if (input.folderChanged && isProjectFolder) {
-    return activeFolderId;
-  }
-  return current;
-}
-
 /**
  * The application sidebar: one `<nav>` holding every destination.
  *
- * Desktop (lg+): expanded (labels, folders open inline) or compact (icon +
- * caption rail, folders open a docked panel). Below lg: the expanded tree in
- * a drawer with a visible close button. Everything rendered comes from
- * `sidebar.config.ts` filtered by the session's permissions.
+ * Desktop (lg+): an icon rail. A module's panel is either
+ * - unpinned (default): a flyout OVERLAY beside the rail, opened by hover
+ *   intent or click (`sidebar-flyout.ts`), closed by leaving it, Escape, an
+ *   outside click or navigating — the page never reflows; or
+ * - pinned: docked beside the rail, following the current module and pushing
+ *   the content right (the previous fixed layout).
+ * The footer toggle switches between the two; the choice is stored per user.
+ * Below lg: the labelled tree in a drawer with a visible close button.
+ * Everything rendered comes from `sidebar.config.ts` filtered by permissions.
  */
 export default function SidebarShell({
   mobileOpen,
@@ -164,13 +134,21 @@ export default function SidebarShell({
   const activeLinkId = active?.link.id ?? null;
   const activeFolderId = active?.folderId ?? null;
   const activeGroupId = active?.groupId ?? null;
-  const projectFolderId =
-    model.primary.find(
-      (entry): entry is SidebarFolder => entry.kind === 'folder' && entry.project !== null,
-    )?.id ?? null;
 
-  const compact = prefs.mode === 'compact';
+  const pinned = prefs.pinned;
+  // Docked panel (pinned desktop) and the drawer's open folder.
   const [openPanel, setOpenPanel] = useState<string | null>(null);
+  // Unpinned desktop flyout (hover intent / click).
+  const flyout = useSidebarFlyout();
+  const flyoutController = flyout.controller;
+  const flyoutOpenId = pinned ? null : flyout.state.openId;
+  const desktopPanel = pinned ? openPanel : flyoutOpenId;
+  // Keep the last flyout content mounted while it animates closed.
+  const [lastFlyoutId, setLastFlyoutId] = useState<string | null>(null);
+  if (flyoutOpenId !== null && flyoutOpenId !== lastFlyoutId) {
+    setLastFlyoutId(flyoutOpenId);
+  }
+  const navRef = useRef<HTMLElement>(null);
   const [query, setQuery] = useState('');
   const results = useMemo(() => searchSidebar(links, query, t), [links, query, t]);
 
@@ -182,35 +160,72 @@ export default function SidebarShell({
     [prefs.favoriteIds, links],
   );
 
-  // ── Route / mode sync (adjusted during render, not in an effect) ──
+  // ── Route sync (adjusted during render, not in an effect) ──
   const [synced, setSynced] = useState<{
     pathname: string | null;
     folderId: string | null | undefined;
-    compact: boolean;
-  }>({ pathname: null, folderId: undefined, compact });
+  }>({ pathname: null, folderId: undefined });
 
-  if (
-    synced.pathname !== pathname ||
-    synced.folderId !== activeFolderId ||
-    synced.compact !== compact
-  ) {
+  if (synced.pathname !== pathname || synced.folderId !== activeFolderId) {
     const navigated = synced.pathname !== null && synced.pathname !== pathname;
-    setSynced({ pathname, folderId: activeFolderId, compact });
+    setSynced({ pathname, folderId: activeFolderId });
     if (navigated && query !== '') {
       setQuery('');
     }
     setOpenPanel(
       nextOpenPanel({
         current: openPanel,
-        compact,
-        becameCompact: compact && !synced.compact,
         navigated,
         folderChanged: synced.folderId !== activeFolderId,
         activeFolderId,
-        projectFolderId,
+        transientIds: TRANSIENT_PANELS,
       }),
     );
   }
+
+  // Any navigation closes the flyout (links also close it on click).
+  useEffect(() => {
+    flyoutController.close();
+  }, [pathname, flyoutController]);
+
+  // While the flyout is open: Escape closes it (focus returns to its rail
+  // item when focus was in the sidebar); a pointer press outside closes it.
+  const flyoutIsOpen = flyoutOpenId !== null;
+  const onFlyoutKeyDown = useEffectEvent((event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || flyoutOpenId === null) {
+      return;
+    }
+    const id = flyoutOpenId;
+    const focusInSidebar = navRef.current?.contains(document.activeElement) ?? false;
+    flyoutController.close();
+    if (focusInSidebar) {
+      focusSoon(folderButtonId(id));
+    }
+  });
+  const onPointerDownOutside = useEffectEvent((event: PointerEvent): void => {
+    const target = event.target;
+    if (target instanceof Node && navRef.current?.contains(target)) {
+      return;
+    }
+    flyoutController.close();
+  });
+  useEffect(() => {
+    if (!flyoutIsOpen) {
+      return undefined;
+    }
+    function handleKeyDown(event: KeyboardEvent): void {
+      onFlyoutKeyDown(event);
+    }
+    function handlePointerDown(event: PointerEvent): void {
+      onPointerDownOutside(event);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
+  }, [flyoutIsOpen]);
 
   // Keep the current page's group open when the page changes, without
   // overriding the user's stored choice for later.
@@ -235,8 +250,10 @@ export default function SidebarShell({
       }
       return;
     }
-    if (compact) {
+    if (pinned) {
       setOpenPanel(SEARCH_PANEL);
+    } else {
+      flyoutController.open(SEARCH_PANEL);
     }
     focusSoon(searchInputId('desktop'), true);
   }
@@ -262,34 +279,69 @@ export default function SidebarShell({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // ── Panel + mode actions ──
+  // ── Panel + pin actions ──
+  function focusIntoPanel(id: string): void {
+    focusSoon(
+      id === SEARCH_PANEL ? searchInputId('desktop') : `${panelId('desktop', id)}-heading`,
+    );
+  }
+
+  /** Click / Enter / Space on a folder. Opening moves focus into the panel. */
   function toggleFolder(id: string, surface: Surface): void {
+    if (surface === 'desktop' && !pinned) {
+      if (flyoutController.toggle(id)) {
+        focusIntoPanel(id);
+      }
+      return;
+    }
     const opening = openPanel !== id;
     setOpenPanel(opening ? id : null);
-    if (opening && compact && surface === 'desktop') {
-      focusSoon(
-        id === SEARCH_PANEL
-          ? searchInputId('desktop')
-          : `${panelId('desktop', id)}-heading`,
-      );
+    if (opening && surface === 'desktop') {
+      focusIntoPanel(id);
     }
   }
 
-  function closeDockedPanel(id: string): void {
-    setOpenPanel(null);
+  /** Panel close button / Escape: close and return focus to the rail item. */
+  function closeDesktopPanel(id: string): void {
+    if (pinned) {
+      setOpenPanel(null);
+    } else {
+      flyoutController.close();
+    }
     focusSoon(folderButtonId(id));
   }
 
-  function toggleMode(): void {
-    if (compact) {
-      prefs.setMode('expanded');
-      if (openPanel === SEARCH_PANEL || openPanel === FAVORITES_PANEL) {
-        setOpenPanel(null);
-      }
-    } else {
-      prefs.setMode('compact');
-      setOpenPanel(null);
+  function closeFlyout(): void {
+    flyoutController.close();
+  }
+
+  function togglePin(): void {
+    if (pinned) {
+      prefs.setPinned(false);
+      return;
     }
+    setOpenPanel(panelWhenPinning(flyout.state.openId, activeFolderId));
+    flyoutController.close();
+    prefs.setPinned(true);
+  }
+
+  /** Hover intent on rail items that own a panel (unpinned only, not touch). */
+  function flyoutHover(id: string): React.HTMLAttributes<HTMLLIElement> {
+    if (pinned) {
+      return {};
+    }
+    return {
+      onPointerEnter: (event) => {
+        if (event.pointerType !== 'touch') {
+          flyoutController.enterTrigger(id);
+        }
+      },
+      onPointerLeave: (event) => {
+        if (event.pointerType !== 'touch') {
+          flyoutController.leaveTrigger();
+        }
+      },
+    };
   }
 
   const closeDrawer = useCallback(
@@ -442,9 +494,9 @@ export default function SidebarShell({
     }
 
     const controlsId = panelId(surface, entry.id);
-    const open = openPanel === entry.id;
+    const open = (surface === 'desktop' ? desktopPanel : openPanel) === entry.id;
     return (
-      <li key={entry.id}>
+      <li key={entry.id} {...(surface === 'desktop' ? flyoutHover(entry.id) : {})}>
         <SidebarRailItem
           kind="folder"
           icon={entry.icon}
@@ -507,11 +559,11 @@ export default function SidebarShell({
           modeToggle={
             surface === 'desktop'
               ? {
-                  icon: isCompact ? 'sidebar-expand' : 'sidebar-collapse',
-                  label: isCompact
-                    ? t('shell.expandSidebar')
-                    : t('shell.collapseSidebar'),
-                  onClick: toggleMode,
+                  icon: pinned ? 'sidebar-unpin' : 'sidebar-pin',
+                  label: t('shell.pinSidebar'),
+                  tooltip: pinned ? t('shell.unpinSidebar') : t('shell.pinSidebar'),
+                  pressed: pinned,
+                  onClick: togglePin,
                 }
               : undefined
           }
@@ -529,7 +581,7 @@ export default function SidebarShell({
     );
   }
 
-  /** Expanded desktop sidebar and the mobile drawer share this tree. */
+  /** The labelled tree — used by the mobile drawer (desktop uses the rail). */
   function renderExpandedTree(surface: Surface, onNavigate?: () => void): React.ReactNode {
     const searching = query.trim().length > 0;
     const favoritesCollapsed = collapsedGroups[FAVORITES_GROUP_ID] ?? false;
@@ -555,10 +607,6 @@ export default function SidebarShell({
                   </SidebarModuleGroup>
                 </div>
               ) : null}
-              {/* The drawer's own title already reads "Menu". */}
-              {surface === 'desktop' ? (
-                <p className="sb-section-label">{t('shell.menu')}</p>
-              ) : null}
               <ul className="sb-list">
                 {model.primary.map((entry) => renderEntry(entry, surface, false, onNavigate))}
               </ul>
@@ -574,28 +622,28 @@ export default function SidebarShell({
     return (
       <>
         <ul className="sb-list sb-compact-tools shrink-0 px-2 pt-2">
-          <li>
+          <li {...flyoutHover(SEARCH_PANEL)}>
             <SidebarRailItem
               kind="folder"
               icon="search"
               label={t('shell.search')}
               compact
               active={false}
-              open={openPanel === SEARCH_PANEL}
+              open={desktopPanel === SEARCH_PANEL}
               controlsId={panelId('desktop', SEARCH_PANEL)}
               onToggle={() => toggleFolder(SEARCH_PANEL, 'desktop')}
               buttonId={folderButtonId(SEARCH_PANEL)}
             />
           </li>
           {favoriteLinks.length > 0 ? (
-            <li>
+            <li {...flyoutHover(FAVORITES_PANEL)}>
               <SidebarRailItem
                 kind="folder"
                 icon="favorites"
                 label={t('shell.favorites')}
                 compact
                 active={false}
-                open={openPanel === FAVORITES_PANEL}
+                open={desktopPanel === FAVORITES_PANEL}
                 controlsId={panelId('desktop', FAVORITES_PANEL)}
                 onToggle={() => toggleFolder(FAVORITES_PANEL, 'desktop')}
                 buttonId={folderButtonId(FAVORITES_PANEL)}
@@ -608,22 +656,22 @@ export default function SidebarShell({
             <RailSkeleton compact label={t('shell.loadingNavigation')} />
           ) : (
             <ul className="sb-list">
-              {model.primary.map((entry) => renderEntry(entry, 'desktop', true))}
+              {model.primary.map((entry) => renderEntry(entry, 'desktop', true, closeFlyout))}
             </ul>
           )}
         </div>
-        {renderFooter('desktop', true)}
+        {renderFooter('desktop', true, closeFlyout)}
       </>
     );
   }
 
-  function renderDockedPanel(): React.ReactNode {
-    if (!compact || openPanel === null) {
-      return null;
-    }
-    const panel = openPanel;
-    const bindings = bindingsFor('desktop');
-    const close = (): void => closeDockedPanel(panel);
+  /**
+   * A desktop panel (docked when pinned, inside the flyout when not).
+   * `onNavigate` closes the flyout when one of its links is followed.
+   */
+  function renderDesktopPanel(panel: string, onNavigate?: () => void): React.ReactNode {
+    const bindings = bindingsFor('desktop', onNavigate);
+    const close = (): void => closeDesktopPanel(panel);
 
     if (panel === SEARCH_PANEL) {
       return (
@@ -634,9 +682,9 @@ export default function SidebarShell({
           bindings={bindings}
           onClose={close}
         >
-          <div className="px-1 pb-2">{renderSearchField('desktop', undefined, close)}</div>
+          <div className="px-1 pb-2">{renderSearchField('desktop', onNavigate, close)}</div>
           {query.trim() ? (
-            renderResults('desktop')
+            renderResults('desktop', onNavigate)
           ) : (
             <p className="sb-empty">{t('shell.searchHint')}</p>
           )}
@@ -656,7 +704,9 @@ export default function SidebarShell({
           bindings={bindings}
           onClose={close}
         >
-          <ul className="sb-list">{favoriteLinks.map((link) => renderItem(link))}</ul>
+          <ul className="sb-list">
+            {favoriteLinks.map((link) => renderItem(link, onNavigate))}
+          </ul>
         </SidebarModulePanel>
       );
     }
@@ -684,16 +734,18 @@ export default function SidebarShell({
   return (
     <>
       <nav
+        ref={navRef}
         aria-label={t('shell.mainNavigation')}
         className="sb-theme erp-sidebar-v2 relative z-40 hidden h-full shrink-0 lg:flex"
-        data-mode={prefs.mode}
+        data-mode="compact"
+        data-pinned={pinned ? 'true' : 'false'}
       >
         <div
           className="sb-rail flex h-full min-h-0 flex-col"
-          style={{ width: compact ? SIDEBAR_COMPACT_WIDTH : SIDEBAR_EXPANDED_WIDTH }}
+          style={{ width: SIDEBAR_COMPACT_WIDTH }}
         >
           <div
-            className={`flex shrink-0 items-center px-4 ${compact ? 'justify-center' : ''}`}
+            className="flex shrink-0 items-center justify-center px-4"
             style={{
               height: SHELL_TOP_HEADER_HEIGHT,
               borderBottom: '1px solid var(--sb-border)',
@@ -702,20 +754,39 @@ export default function SidebarShell({
             <Link
               href="/"
               aria-label={t('shell.brandWorkspace')}
+              onClick={closeFlyout}
               className="inline-flex items-center gap-2.5 rounded-md"
             >
               <BrandLogo size={28} />
-              {compact ? null : (
-                <span className="sb-brand-title">{t('shell.brandTitle')}</span>
-              )}
             </Link>
           </div>
 
-          {compact ? renderCompactRail() : renderExpandedTree('desktop')}
-
+          {renderCompactRail()}
         </div>
 
-        {renderDockedPanel()}
+        {pinned ? (
+          openPanel !== null ? renderDesktopPanel(openPanel) : null
+        ) : (
+          // Overlay beside the rail: absolutely positioned, so the page never
+          // reflows. Kept mounted (inert + hidden) while animating closed.
+          <div
+            className="sb-flyout"
+            data-open={flyoutOpenId !== null ? 'true' : 'false'}
+            inert={flyoutOpenId === null}
+            onPointerEnter={(event) => {
+              if (event.pointerType !== 'touch') {
+                flyoutController.enterPanel();
+              }
+            }}
+            onPointerLeave={(event) => {
+              if (event.pointerType !== 'touch') {
+                flyoutController.leavePanel();
+              }
+            }}
+          >
+            {lastFlyoutId !== null ? renderDesktopPanel(lastFlyoutId, closeFlyout) : null}
+          </div>
+        )}
       </nav>
 
       <Drawer

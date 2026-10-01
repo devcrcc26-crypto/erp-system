@@ -13,7 +13,7 @@ interface RailItemBase {
   caption?: string;
   /** Compact rail: icon over a caption, full label in a hover/focus tooltip. */
   compact: boolean;
-  /** Current page lives here (link) or inside this closed folder. */
+  /** Current page lives here (link) or inside this folder — highlighted even while its panel is open. */
   active: boolean;
   badgeCount?: number;
   badgeLabel?: string;
@@ -101,7 +101,7 @@ export default function SidebarRailItem(props: SidebarRailItemProps): React.Reac
         aria-expanded={props.open}
         aria-haspopup="true"
         aria-controls={props.controlsId}
-        data-active={active && !props.open ? 'true' : undefined}
+        data-active={active ? 'true' : undefined}
         onClick={props.onToggle}
       >
         {content}
@@ -115,9 +115,13 @@ export default function SidebarRailItem(props: SidebarRailItemProps): React.Reac
 
   // The span gives the tooltip a DOM anchor; focus events bubble to it from
   // the control, so the tooltip opens on keyboard focus as well as hover.
+  // While a folder's panel is open the tooltip is suppressed so it never
+  // covers the panel's items.
+  const panelOpen = props.kind === 'folder' && props.open;
   return (
     <Tooltip
       title={label}
+      open={panelOpen ? false : undefined}
       placement="right"
       trigger={['hover', 'focus']}
       mouseEnterDelay={0.3}

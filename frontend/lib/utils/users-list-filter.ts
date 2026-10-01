@@ -2,6 +2,7 @@ import type { User } from '@/lib/api/types';
 
 export type UsersListSortField =
   | 'name'
+  | 'employeeId'
   | 'email'
   | 'department'
   | 'position'
@@ -20,6 +21,19 @@ export interface UsersListFilterInput {
 
 function compareText(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: 'base' });
+}
+
+const naturalCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: 'base',
+});
+
+/**
+ * Natural order for employee IDs: digit runs compare as numbers, so
+ * "EM-2" < "EM-10" < "EM-045" < "EM-103" (leading zeros don't matter).
+ */
+export function compareEmployeeIds(a: string, b: string): number {
+  return naturalCollator.compare(a, b);
 }
 
 function matchesSearch(user: User, search: string): boolean {
@@ -53,6 +67,8 @@ function sortValue(user: User, field: UsersListSortField): string | number {
       return user.position?.title ?? '';
     case 'status':
       return user.isActive ? 1 : 0;
+    case 'employeeId':
+      return user.employeeId ?? '';
     case 'name':
     default:
       return `${user.lastName} ${user.firstName}`;
@@ -104,6 +120,19 @@ export function filterAndSortUsers(input: UsersListFilterInput): User[] {
   }
 
   const direction = sortOrder === 'desc' ? -1 : 1;
+
+  if (sortBy === 'employeeId') {
+    // Employees without an ID stay at the end in both directions.
+    return filtered.sort((a, b) => {
+      const left = a.employeeId?.trim() ?? '';
+      const right = b.employeeId?.trim() ?? '';
+      if (!left || !right) {
+        return Number(!left) - Number(!right);
+      }
+      return compareEmployeeIds(left, right) * direction;
+    });
+  }
+
   return filtered.sort((a, b) => {
     const left = sortValue(a, sortBy);
     const right = sortValue(b, sortBy);

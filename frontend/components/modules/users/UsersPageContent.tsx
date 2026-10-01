@@ -81,6 +81,7 @@ import {
 
 const COLUMN_SORT_FIELD: Record<string, UsersListSortField> = {
   name: 'name',
+  employeeId: 'employeeId',
   email: 'email',
   department: 'department',
   position: 'position',
@@ -842,7 +843,7 @@ export default function UsersPageContent(): React.ReactNode {
             className="erp-pro-table erp-users-table"
             size={isCompact ? 'small' : 'middle'}
             dataSource={users}
-            scroll={{ x: isCompact ? 720 : 1088 }}
+            scroll={{ x: isCompact ? 720 : 966 }}
             pagination={
               pagination
                 ? {
@@ -877,7 +878,7 @@ export default function UsersPageContent(): React.ReactNode {
                 key: 'name',
                 sorter: true,
                 fixed: isCompact ? undefined : 'left',
-                width: isCompact ? 240 : 320,
+                width: isCompact ? 240 : 250,
                 render: (_, record) => {
                   const fullName = `${record.firstName} ${record.lastName}`.trim();
 
@@ -897,33 +898,38 @@ export default function UsersPageContent(): React.ReactNode {
                             />
                           ) : null}
                         </div>
-                        {/* Employee ID sits with the email: one less column to scan. */}
-                        <div className="erp-users-meta mt-0.5">
-                          {record.employeeId ? (
-                            <span className="erp-users-id-chip">
-                              {record.employeeId}
-                            </span>
-                          ) : null}
-                          {record.email ? (
-                            <TruncateText
-                              value={record.email}
-                              className="erp-users-email min-w-0"
-                            />
-                          ) : (
-                            <span className="erp-users-email">
-                              {t('users.noEmailNoLogin')}
-                            </span>
-                          )}
-                        </div>
+                        {record.email ? (
+                          <TruncateText
+                            value={record.email}
+                            className="erp-users-email mt-0.5"
+                          />
+                        ) : (
+                          <p className="erp-users-email m-0 mt-0.5">
+                            {t('users.noEmailNoLogin')}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
                 },
               },
               {
+                title: t('users.employeeIdColumn'),
+                dataIndex: 'employeeId',
+                key: 'employeeId',
+                width: 104,
+                sorter: true,
+                render: (id: string | null | undefined) =>
+                  id ? (
+                    <span className="erp-users-id-chip">{id}</span>
+                  ) : (
+                    <span className="erp-users-dash">-</span>
+                  ),
+              },
+              {
                 title: t('common.position'),
                 key: 'position',
-                width: 190,
+                width: 156,
                 sorter: true,
                 responsive: ['lg'],
                 render: (_, record) => {
@@ -959,7 +965,7 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: t('common.department'),
                 key: 'department',
-                width: 230,
+                width: 156,
                 sorter: true,
                 responsive: ['md'],
                 render: (_, record) =>
@@ -975,7 +981,7 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: t('common.role'),
                 key: 'roles',
-                width: 170,
+                width: 148,
                 ellipsis: true,
                 responsive: ['md'],
                 render: (_, record) => {
@@ -1025,7 +1031,7 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: t('common.status'),
                 key: 'status',
-                width: isCompact ? 100 : 130,
+                width: isCompact ? 100 : 108,
                 sorter: true,
                 render: (_, record) => (
                   <UserStatusIndicator user={record} t={t} />
@@ -1034,7 +1040,7 @@ export default function UsersPageContent(): React.ReactNode {
               {
                 title: '',
                 key: 'actions',
-                width: 52,
+                width: 44,
                 align: 'right',
                 fixed: isCompact ? undefined : 'right',
                 render: (_, record) => (

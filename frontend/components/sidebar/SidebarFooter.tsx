@@ -13,7 +13,12 @@ type TooltipSide = 'top' | 'right';
 
 export interface SidebarModeToggleProps {
   icon: string;
+  /** Accessible name; keep it constant when `pressed` conveys the state. */
   label: string;
+  /** Visible tooltip text (defaults to `label`). */
+  tooltip?: string;
+  /** Toggle state for `aria-pressed` (e.g. sidebar pinned). */
+  pressed?: boolean;
   onClick: () => void;
   tooltipPlacement?: TooltipSide;
 }
@@ -277,12 +282,14 @@ function AccountAvatarLink({
 function SidebarModeToggle({
   icon,
   label,
+  tooltip,
+  pressed,
   onClick,
   tooltipPlacement = 'top',
 }: SidebarModeToggleProps): React.ReactNode {
   return (
     <Tooltip
-      title={label}
+      title={tooltip ?? label}
       placement={tooltipPlacement}
       trigger={['hover', 'focus']}
       mouseEnterDelay={0.3}
@@ -291,6 +298,7 @@ function SidebarModeToggle({
         type="button"
         className="sb-mode-toggle"
         aria-label={label}
+        aria-pressed={pressed}
         onClick={onClick}
       >
         <span className="sb-icon">{getNavIcon(icon)}</span>
