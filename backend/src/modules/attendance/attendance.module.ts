@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '../../shared/prisma/prisma.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
@@ -12,7 +12,12 @@ import { AttendanceController } from './presentation/attendance.controller';
  * Attendance import and reporting for Deli e+ monthly exports.
  */
 @Module({
-  imports: [PrismaModule, WorkScheduleModule, ApprovalsModule, HrSharedModule],
+  imports: [
+    PrismaModule,
+    forwardRef(() => WorkScheduleModule),
+    ApprovalsModule,
+    HrSharedModule,
+  ],
   controllers: [AttendanceController],
   providers: [
     AttendanceService,

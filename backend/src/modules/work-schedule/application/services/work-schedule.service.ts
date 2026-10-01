@@ -24,6 +24,7 @@ import {
 } from '../dtos/create-work-schedule.dto';
 import { PreviewDaysDto } from '../dtos/preview-days.dto';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import { AttendanceService } from '../../../attendance/application/services/attendance.service';
 import {
   addUtcDays,
   computeAndValidateDayHours,
@@ -93,6 +94,8 @@ export class WorkScheduleService {
     private readonly permissionService: PermissionService,
     @Inject(forwardRef(() => OnBehalfService))
     private readonly onBehalfService: OnBehalfService,
+    @Inject(forwardRef(() => AttendanceService))
+    private readonly attendanceService: AttendanceService,
   ) {}
 
   /**
@@ -605,7 +608,52 @@ export class WorkScheduleService {
       });
 
       const assignedCount = await this.countAssignedEmployees(id, companyId);
-      return this.mapSchedule(updated, assignedCount);
+      const mapped = this.mapSchedule(updated, assignedCount);
+
+      let attendanceRecalc: {
+        employeesUpdated: number;
+        updatedRecords: number;
+        updatedDays: number;
+        skippedLockedMonths: number;
+      } | null = null;
+
+      if (dto.recalculateAttendance && days) {
+        const from = dto.recalculateFrom
+          ? parseDateOnly(dto.recalculateFrom)
+          : todayUtc();
+        const employeeIds = await this.listAssignedEmployeeIds(id, companyId);
+        let updatedRecords = 0;
+        let updatedDays = 0;
+        let skippedLockedMonths = 0;
+        let employeesUpdated = 0;
+
+        for (const employeeId of employeeIds) {
+          const result =
+            await this.attendanceService.recalculateEmployeeAttendanceFromDate(
+              employeeId,
+              companyId,
+              from,
+            );
+          if (result.updatedRecords > 0 || result.updatedDays > 0) {
+            employeesUpdated += 1;
+          }
+          updatedRecords += result.updatedRecords;
+          updatedDays += result.updatedDays;
+          skippedLockedMonths += result.skippedLockedMonths;
+        }
+
+        attendanceRecalc = {
+          employeesUpdated,
+          updatedRecords,
+          updatedDays,
+          skippedLockedMonths,
+        };
+      }
+
+      return {
+        ...mapped,
+        attendanceRecalc,
+      };
     } catch (error: unknown) {
       this.throwIfUniqueName(error);
       throw error;
@@ -816,11 +864,11 @@ export class WorkScheduleService {
       orderBy: { effectiveFrom: 'desc' },
     });
 
-    if (current && current.effectiveFrom.getTime() >= effectiveFrom.getTime()) {
-      throw new BadRequestException(
-        'New assignment must start after the current assignment effective-from date',
-      );
-    }
+    // if (current && current.effectiveFrom.getTime() >= effectiveFrom.getTime()) {
+    //   throw new BadRequestException(
+    //     'New assignment must start after the current assignment effective-from date',
+    //   );
+    // }
 
     const created = await this.prisma.$transaction(async (tx) => {
       if (current && (current.effectiveTo === null || current.effectiveTo.getTime() >= effectiveFrom.getTime())) {
@@ -862,7 +910,25 @@ export class WorkScheduleService {
       return assignment;
     });
 
-    return this.mapAssignment(created);
+    let attendanceRecalc: {
+      updatedRecords: number;
+      updatedDays: number;
+      skippedLockedMonths: number;
+    } | null = null;
+
+    if (dto.recalculateAttendance) {
+      attendanceRecalc =
+        await this.attendanceService.recalculateEmployeeAttendanceFromDate(
+          dto.employeeId,
+          companyId,
+          effectiveFrom,
+        );
+    }
+
+    return {
+      ...this.mapAssignment(created),
+      attendanceRecalc,
+    };
   }
 
   /**
@@ -1291,8 +1357,19 @@ export class WorkScheduleService {
     scheduleId: string,
     companyId: string,
   ): Promise<number> {
+    const ids = await this.listAssignedEmployeeIds(scheduleId, companyId);
+    return ids.length;
+  }
+
+  /**
+   * Employee ids currently on this schedule (open assignment or user FK).
+   */
+  private async listAssignedEmployeeIds(
+    scheduleId: string,
+    companyId: string,
+  ): Promise<string[]> {
     const today = todayUtc();
-    const [fromAssignments, fromUserFk] = await Promise.all([
+    const [fromAssignments, fromUsers] = await Promise.all([
       this.prisma.employeeScheduleAssignment.findMany({
         where: {
           companyId,
@@ -1303,12 +1380,19 @@ export class WorkScheduleService {
         select: { employeeId: true },
         distinct: ['employeeId'],
       }),
-      this.prisma.user.count({
+      this.prisma.user.findMany({
         where: { companyId, workScheduleId: scheduleId, deletedAt: null },
+        select: { id: true },
       }),
     ]);
-    const ids = new Set(fromAssignments.map((row) => row.employeeId));
-    return Math.max(ids.size, fromUserFk);
+    const ids = new Set<string>();
+    for (const row of fromAssignments) {
+      ids.add(row.employeeId);
+    }
+    for (const row of fromUsers) {
+      ids.add(row.id);
+    }
+    return [...ids];
   }
 
   private mapSchedule(

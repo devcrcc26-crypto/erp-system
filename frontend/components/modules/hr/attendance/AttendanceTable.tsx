@@ -157,24 +157,96 @@ export default function AttendanceTable({
       {
         title: t('pages.hr.attendance.columns.absentDays'),
         key: 'absentDays',
-        width: 110,
+        width: 120,
         align: 'right',
-        sorter: (a, b) => toNumber(a.absentDays) - toNumber(b.absentDays),
+        sorter: (a, b) =>
+          toNumber(a.adjustedAbsentDays ?? a.absentDays) -
+          toNumber(b.adjustedAbsentDays ?? b.absentDays),
         render: (_: unknown, row: AttendanceRecord) => {
-          const value = toNumber(row.absentDays);
+          const absent = toNumber(row.absentDays);
+          const leaveDays = row.leaveDaysThisMonth ?? 0;
+          const adjusted = row.adjustedAbsentDays ?? absent;
+
+          if (absent === 0) {
+            return (
+              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+            );
+          }
+
           return (
-            <span
-              style={{
-                fontWeight: value > 0 ? 600 : 400,
-                color:
-                  value > 0
-                    ? 'var(--color-red-400)'
-                    : 'var(--color-text-tertiary)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {value > 0 ? formatNumber(row.absentDays) : '—'}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {leaveDays > 0 ? (
+                <>
+                  <Tooltip
+                    title={`${leaveDays} day(s) covered by approved leave`}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        color: '#52c41a',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {adjusted > 0 ? formatNumber(adjusted) : '✓'}
+                    </span>
+                  </Tooltip>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--color-text-tertiary)',
+                    }}
+                  >
+                    {leaveDays}d on leave
+                  </span>
+                </>
+              ) : (
+                <span
+                  style={{
+                    fontWeight: 500,
+                    color:
+                      absent > 0
+                        ? 'var(--color-red-400)'
+                        : 'inherit',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {formatNumber(absent)}
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        title: 'Leave',
+        key: 'leave',
+        width: 150,
+        render: (_: unknown, row: AttendanceRecord) => {
+          const leaves = row.approvedLeave ?? [];
+          if (leaves.length === 0) {
+            return (
+              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+            );
+          }
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {leaves.map((leave) => (
+                <Tooltip
+                  key={leave.id}
+                  title={leave.periods
+                    .map(
+                      (period) =>
+                        `${new Date(period.startDate).toLocaleDateString()} – ${new Date(period.endDate).toLocaleDateString()} (${period.days}d)`,
+                    )
+                    .join(', ')}
+                >
+                  <Tag color="green" style={{ margin: 0, fontSize: 11 }}>
+                    {leave.leaveType.replace(/_/g, ' ')} · {leave.days}d
+                  </Tag>
+                </Tooltip>
+              ))}
+            </div>
           );
         },
       },
@@ -315,7 +387,7 @@ export default function AttendanceTable({
       columns={columns}
       dataSource={records}
       loading={loading}
-      scroll={{ x: 1200 }}
+      scroll={{ x: 1350 }}
       locale={emptyText ? { emptyText } : undefined}
       pagination={{
         current: pagination.current,

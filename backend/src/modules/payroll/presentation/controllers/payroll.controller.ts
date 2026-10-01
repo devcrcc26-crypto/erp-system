@@ -32,7 +32,7 @@ export class PayrollController {
     ){
         return this.payrollRunService.createRun(
             dto.month, dto.year, {
-                userId: user.id,
+                userId: user.userId,
                 companyId: user.companyId
             }
         )
@@ -41,7 +41,7 @@ export class PayrollController {
     @Post('runs/:id/generate')
     generateEntries(@Param('id') id: string, @CurrentUser() user: any){
         return this.payrollRunService.generateEntries(id, {
-            userId: user.id,
+            userId: user.userId,
             companyId: user.companyId,
         })
     }
@@ -51,7 +51,7 @@ export class PayrollController {
         @Param('id') id: string, @CurrentUser() user: any
     ){
         return this.payrollRunService.recalculate(id, {
-            userId: user.id,
+            userId: user.userId,
             companyId: user.companyId,
         })
     }
@@ -59,7 +59,7 @@ export class PayrollController {
     @Post('runs/:id/submit')
     submitRun(@Param('id') id: string, @CurrentUser() user: any){
         return this.payrollRunService.approveRun(id, {
-            userId: user.id,
+            userId: user.userId,
             companyId: user.companyId
         })
     }
@@ -67,7 +67,7 @@ export class PayrollController {
     @Post('runs/:id/approve')
     approveRun(@Param('id') id: string, @CurrentUser() user: any){
         return this.payrollRunService.approveRun(id, {
-            userId: user.id,
+            userId: user.userId,
             companyId: user.companyId
         })
     }
@@ -75,7 +75,7 @@ export class PayrollController {
     @Post('runs/:id/gm-approve')
     getApproveRun(@Param('id') id: string, @CurrentUser() user: any){
         return this.payrollRunService.gmApproveRun(id, {
-            userId: user.id,
+            userId: user.userId,
             companyId: user.companyId
         })
     }
@@ -83,7 +83,7 @@ export class PayrollController {
     @Post('runs/:id/mark-paid')
     markPaid(@Param('id') id: string, @CurrentUser() user: any){
         return this.payrollRunService.markPaid(id, {
-            userId: user.id,
+            userId: user.userId,
             companyId: user.companyId
         })
     }
@@ -91,7 +91,7 @@ export class PayrollController {
     @Post('runs/:id/cancel')
     cancelRun(@Param('id') id: string, @CurrentUser() user: any){
         return this.payrollRunService.cancelRun(id, {
-            userId: user.id,
+            userId: user.userId,
             companyId: user.companyId,
         })
     }
@@ -103,7 +103,7 @@ export class PayrollController {
         @CurrentUser() user: any
     ){
         return this.payrollRunService.updateEntry(id, dto, {
-            userId: user.id,
+            userId: user.userId,
             companyId: user.companyId,
         })
     }

@@ -2,6 +2,8 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -257,6 +259,7 @@ export class AttendanceService
   constructor(
     private readonly prisma: PrismaService,
     private readonly matchingService: AttendanceMatchingService,
+    @Inject(forwardRef(() => WorkScheduleService))
     private readonly workScheduleService: WorkScheduleService,
     private readonly permissionService: PermissionService,
     private readonly previewCache: AttendancePreviewCache,
@@ -1072,11 +1075,74 @@ export class AttendanceService
       this.prisma.attendanceRecord.count({ where }),
     ]);
 
-    const data = rows.map((record) => ({
-      ...record,
-    }));
+    const recordsWithLeave = await Promise.all(
+      rows.map(async (record) => {
+        const monthStart = new Date(record.year, record.month - 1, 1);
+        const monthEnd = new Date(record.year, record.month, 0);
 
-    return buildPaginatedResult(data, total, page, limit);
+        const approvedLeaves = await this.prisma.leaveRequest.findMany({
+          where: {
+            employeeId: record.employeeId,
+            companyId: record.companyId,
+            status: 'APPROVED',
+            deletedAt: null,
+            periods: {
+              some: {
+                startDate: { lte: monthEnd },
+                endDate: { gte: monthStart },
+              },
+            },
+          },
+          select: {
+            id: true,
+            leaveType: true,
+            days: true,
+            periods: {
+              where: {
+                startDate: { lte: monthEnd },
+                endDate: { gte: monthStart },
+              },
+              select: {
+                startDate: true,
+                endDate: true,
+                days: true,
+              },
+            },
+          },
+        });
+
+        const leaveDaysThisMonth = approvedLeaves.reduce(
+          (sum, leave) =>
+            sum +
+            leave.periods.reduce(
+              (periodSum, period) => periodSum + Number(period.days),
+              0,
+            ),
+          0,
+        );
+
+        return {
+          ...record,
+          approvedLeave: approvedLeaves.map((leave) => ({
+            id: leave.id,
+            leaveType: leave.leaveType,
+            days: Number(leave.days ?? 0),
+            periods: leave.periods.map((period) => ({
+              startDate: period.startDate,
+              endDate: period.endDate,
+              days: Number(period.days),
+            })),
+          })),
+          leaveDaysThisMonth,
+          adjustedAbsentDays: Math.max(
+            0,
+            Number(record.absentDays) - leaveDaysThisMonth,
+          ),
+        };
+      }),
+    );
+
+    return buildPaginatedResult(recordsWithLeave, total, page, limit);
   }
 
   /**
@@ -2715,4 +2781,270 @@ export class AttendanceService
     const scheduledMins = (scheduledHour ?? 0) * 60 + (scheduledMinute ?? 0);
     return Math.max(0, scheduledMins - actualMins);
   }
+
+  /**
+   * Recomputes attendance daily logs and month summaries for an employee from
+   * a given date onward, using each day's active work schedule. Skips months
+   * locked as APPROVED. Preserves HR corrections and field-movement links.
+   */
+  async recalculateEmployeeAttendanceFromDate(
+    employeeId: string,
+    companyId: string,
+    fromDate: Date,
+  ): Promise<{
+    updatedRecords: number;
+    updatedDays: number;
+    skippedLockedMonths: number;
+  }> {
+    const from = toUtcDateOnlySafe(fromDate);
+    const fromYear = from.getUTCFullYear();
+    const fromMonth = from.getUTCMonth() + 1;
+
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { id: true, nationality: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const holidays = await this.prisma.publicHoliday.findMany({
+      where: {
+        companyId,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        name: true,
+        date: true,
+        isRecurring: true,
+        appliesToNationality: true,
+      },
+    });
+    const applicableHolidays = holidays.filter((holiday) =>
+      holidayAppliesToNationality(
+        holiday.appliesToNationality,
+        employee.nationality,
+      ),
+    );
+
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: {
+        companyId,
+        employeeId,
+        OR: [
+          { year: { gt: fromYear } },
+          { year: fromYear, month: { gte: fromMonth } },
+        ],
+      },
+      include: {
+        dailyLogs: { orderBy: { date: 'asc' } },
+        importBatch: {
+          include: { monthlyApproval: { select: { status: true } } },
+        },
+      },
+      orderBy: [{ year: 'asc' }, { month: 'asc' }],
+    });
+
+    let updatedRecords = 0;
+    let updatedDays = 0;
+    let skippedLockedMonths = 0;
+
+    const scheduleCache = new Map<string, ScheduleDayLike[]>();
+
+    for (const record of records) {
+      const status = record.importBatch.monthlyApproval?.status;
+      if (status === 'APPROVED') {
+        skippedLockedMonths += 1;
+        continue;
+      }
+
+      let lastExportDate: Date | null = null;
+      for (const log of record.dailyLogs) {
+        if (!lastExportDate || log.date.getTime() > lastExportDate.getTime()) {
+          lastExportDate = log.date;
+        }
+      }
+      const exportDayKey = lastExportDate
+        ? lastExportDate.toISOString().slice(0, 10)
+        : null;
+
+      let daysChanged = 0;
+
+      for (const log of record.dailyLogs) {
+        const logDay = toUtcDateOnlySafe(log.date);
+        if (logDay.getTime() < from.getTime()) {
+          continue;
+        }
+
+        const scheduleDays = await this.resolveScheduleDaysCached(
+          scheduleCache,
+          employeeId,
+          companyId,
+          logDay,
+        );
+        const dayOfWeek = logDay.getUTCDay();
+        const scheduleDay = scheduleDays.find(
+          (row) => row.dayOfWeek === dayOfWeek,
+        );
+
+        const matchedHoliday = applicableHolidays.find((holiday) =>
+          holidayFallsOnDate(holiday.date, holiday.isRecurring, logDay),
+        );
+        const isHoliday = Boolean(matchedHoliday);
+        const wouldBeWorkingDay = scheduleDay?.isWorkingDay ?? false;
+        const isWeekend = !wouldBeWorkingDay;
+        const isDutyDay = !isHoliday && wouldBeWorkingDay;
+        const isHalfDay = isDutyDay ? (scheduleDay?.isHalfDay ?? false) : false;
+        const weekdayHours = Number(scheduleDay?.totalHours ?? 0);
+        const scheduledHours = isDutyDay ? weekdayHours : 0;
+
+        const clockIn =
+          log.correctedClockInLocal ?? log.clockInLocal;
+        const clockOut =
+          log.correctedClockOutLocal ?? log.clockOutLocal;
+        const wasPresent = Boolean(clockIn);
+
+        let recordedHours: number | null = null;
+        if (clockIn && clockOut) {
+          recordedHours = calculateHoursBetween(clockIn, clockOut);
+        }
+
+        let isLate = false;
+        let lateMinutes = 0;
+        if (
+          wasPresent &&
+          isDutyDay &&
+          scheduleDay?.morningStart &&
+          clockIn
+        ) {
+          isLate = isAfterTime(clockIn, scheduleDay.morningStart);
+          if (isLate) {
+            lateMinutes = minutesBetween(scheduleDay.morningStart, clockIn);
+          }
+        }
+
+        const missingClockIn =
+          isDutyDay && !wasPresent && Boolean(clockOut);
+        const isLastExportDay =
+          exportDayKey != null &&
+          logDay.toISOString().slice(0, 10) === exportDayKey;
+        const missingClockOut =
+          isDutyDay && wasPresent && !clockOut && !isLastExportDay;
+
+        const flag = resolveAttendanceDayFlag({
+          isHoliday,
+          isWeekend,
+          clockIn,
+          clockOut,
+          isLastExportDay,
+          scheduledEnd: scheduledEndForDay(scheduleDay),
+        });
+
+        const flagResolved =
+          flag === AttendanceDayFlag.NONE
+            ? true
+            : log.flagResolved;
+
+        await this.prisma.attendanceDailyLog.update({
+          where: { id: log.id },
+          data: {
+            isHoliday,
+            holidayName: matchedHoliday?.name ?? null,
+            isWeekend,
+            isHalfDay,
+            wasPresent,
+            scheduledHours,
+            recordedHours,
+            isLate,
+            lateMinutes,
+            missingClockIn,
+            missingClockOut,
+            flag,
+            flagResolved,
+            flagResolvedAt:
+              flag === AttendanceDayFlag.NONE
+                ? (log.flagResolvedAt ?? new Date())
+                : log.flagResolved
+                  ? log.flagResolvedAt
+                  : null,
+            isLastExportDay,
+          },
+        });
+        daysChanged += 1;
+      }
+
+      if (daysChanged > 0) {
+        await this.prisma.$transaction(async (tx) => {
+          await this.recalculateAttendanceRecord(
+            tx,
+            employeeId,
+            companyId,
+            record.month,
+            record.year,
+          );
+        });
+        updatedRecords += 1;
+        updatedDays += daysChanged;
+      }
+    }
+
+    this.logger.log(
+      `[Attendance] Recalculated from ${from.toISOString().slice(0, 10)} for ${employeeId}: ${updatedRecords} record(s), ${updatedDays} day(s), ${skippedLockedMonths} locked month(s) skipped`,
+    );
+
+    return { updatedRecords, updatedDays, skippedLockedMonths };
+  }
+
+  /**
+   * Loads and caches weekday schedule rows for a calendar day.
+   */
+  private async resolveScheduleDaysCached(
+    cache: Map<string, ScheduleDayLike[]>,
+    employeeId: string,
+    companyId: string,
+    date: Date,
+  ): Promise<ScheduleDayLike[]> {
+    try {
+      const schedule = await this.workScheduleService.getActiveSchedule(
+        employeeId,
+        companyId,
+        date,
+      );
+      const cacheKey = schedule.id;
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+      const days: ScheduleDayLike[] = schedule.days.map((day) => ({
+        dayOfWeek: day.dayOfWeek,
+        isWorkingDay: day.isWorkingDay,
+        isHalfDay: day.isHalfDay,
+        morningStart: day.morningStart,
+        morningEnd: day.morningEnd,
+        afternoonEnd: day.afternoonEnd,
+        totalHours: day.totalHours,
+      }));
+      cache.set(cacheKey, days);
+      return days;
+    } catch {
+      const fallbackKey = '__fallback__';
+      const cached = cache.get(fallbackKey);
+      if (cached) {
+        return cached;
+      }
+      const fallback = this.fallbackWeekdaySchedule();
+      cache.set(fallbackKey, fallback);
+      return fallback;
+    }
+  }
+}
+
+/**
+ * Normalizes a Date to UTC midnight for date-only comparisons.
+ */
+function toUtcDateOnlySafe(value: Date): Date {
+  return new Date(
+    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
+  );
 }

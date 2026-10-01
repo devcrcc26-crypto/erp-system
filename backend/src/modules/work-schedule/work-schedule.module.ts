@@ -1,4 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { AttendanceModule } from '../attendance/attendance.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
 import { PublicHolidayService } from './application/services/public-holiday.service';
 import { WorkScheduleCronService } from './application/services/work-schedule-cron.service';
@@ -7,7 +8,10 @@ import { PublicHolidayController } from './presentation/public-holiday.controlle
 import { WorkScheduleController } from './presentation/work-schedule.controller';
 
 @Module({
-  imports: [forwardRef(() => HrSharedModule)],
+  imports: [
+    forwardRef(() => HrSharedModule),
+    forwardRef(() => AttendanceModule),
+  ],
   controllers: [WorkScheduleController, PublicHolidayController],
   providers: [
     WorkScheduleService,

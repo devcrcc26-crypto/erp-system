@@ -1,11 +1,14 @@
 'use client';
 
-import { Button, Spin } from 'antd';
+import { useState } from 'react';
+import { Button, DatePicker, Spin } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import WorkScheduleForm, {
   buildWorkSchedulePayload,
   type WorkScheduleFormValues,
 } from '@/components/modules/hr/work-schedule/WorkScheduleForm';
+import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -22,6 +25,7 @@ const LIST_PATH = '/hr/work-schedules';
 
 /**
  * Create / edit work schedule — cancel + form.
+ * On edit, asks whether to recalculate attendance from a chosen date.
  */
 export default function WorkScheduleFormPageContent({
   scheduleId,
@@ -37,14 +41,46 @@ export default function WorkScheduleFormPageContent({
   const updateMutation = useUpdateWorkSchedule(scheduleId ?? '');
   const saving = createMutation.isPending || updateMutation.isPending;
 
+  const [pendingValues, setPendingValues] =
+    useState<WorkScheduleFormValues | null>(null);
+  const [recalcConfirmOpen, setRecalcConfirmOpen] = useState(false);
+  const [recalcFrom, setRecalcFrom] = useState<Dayjs>(dayjs());
+
   useSetHeaderExtra(null);
 
-  async function handleSubmit(values: WorkScheduleFormValues): Promise<void> {
+  async function saveSchedule(
+    values: WorkScheduleFormValues,
+    recalculateAttendance: boolean,
+  ): Promise<void> {
     const payload = buildWorkSchedulePayload(values);
     try {
       if (isEdit && scheduleId) {
-        await updateMutation.mutateAsync(payload);
+        const result = await updateMutation.mutateAsync({
+          ...payload,
+          recalculateAttendance,
+          recalculateFrom: recalculateAttendance
+            ? recalcFrom.format('YYYY-MM-DD')
+            : undefined,
+        });
         messageApi.success(t('hr.workSchedule.updated'));
+        if (recalculateAttendance && result.attendanceRecalc) {
+          const recalc = result.attendanceRecalc as {
+            employeesUpdated: number;
+            updatedRecords: number;
+            updatedDays: number;
+            skippedLockedMonths: number;
+          };
+          messageApi.info(
+            t('hr.workSchedule.attendanceRecalcBulkResult', {
+              employees: recalc.employeesUpdated,
+              records: recalc.updatedRecords,
+              days: recalc.updatedDays,
+              skipped: recalc.skippedLockedMonths,
+            }),
+          );
+        }
+        setRecalcConfirmOpen(false);
+        setPendingValues(null);
         router.push(`${LIST_PATH}/${scheduleId}`);
       } else {
         const created = await createMutation.mutateAsync(payload);
@@ -54,6 +90,16 @@ export default function WorkScheduleFormPageContent({
     } catch (error: unknown) {
       notifyApiError(error, t('hr.workSchedule.saveFailed'), messageApi);
     }
+  }
+
+  async function handleSubmit(values: WorkScheduleFormValues): Promise<void> {
+    if (isEdit) {
+      setPendingValues(values);
+      setRecalcFrom(dayjs());
+      setRecalcConfirmOpen(true);
+      return;
+    }
+    await saveSchedule(values, false);
   }
 
   if (isEdit && scheduleQuery.isLoading && !scheduleQuery.data) {
@@ -99,6 +145,44 @@ export default function WorkScheduleFormPageContent({
         submitLabel={t('common.save')}
         onSubmit={handleSubmit}
       />
+
+      <ConfirmDialog
+        open={recalcConfirmOpen}
+        title={t('hr.workSchedule.recalcAttendanceTitle')}
+        description={t('hr.workSchedule.recalcAttendanceEditDescription')}
+        confirmLabel={t('hr.workSchedule.recalcAttendanceYes')}
+        cancelLabel={t('hr.workSchedule.recalcAttendanceSaveOnly')}
+        confirmLoading={updateMutation.isPending}
+        onConfirm={() => {
+          if (pendingValues) {
+            void saveSchedule(pendingValues, true);
+          }
+        }}
+        onCancel={() => {
+          if (pendingValues) {
+            void saveSchedule(pendingValues, false);
+          }
+        }}
+      >
+        <div style={{ marginTop: 12 }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: 6,
+              fontSize: 13,
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            {t('hr.workSchedule.effectiveFrom')}
+          </label>
+          <DatePicker
+            className="w-full"
+            value={recalcFrom}
+            onChange={(value) => setRecalcFrom(value ?? dayjs())}
+            disabled={updateMutation.isPending}
+          />
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

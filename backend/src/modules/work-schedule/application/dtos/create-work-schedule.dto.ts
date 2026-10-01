@@ -123,6 +123,22 @@ export class UpdateWorkScheduleDto {
   @ValidateNested({ each: true })
   @Type(() => WorkScheduleDayDto)
   days?: WorkScheduleDayDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'When true and days are updated, recalculate attendance for assigned employees from recalculateFrom',
+  })
+  @IsOptional()
+  @IsBoolean()
+  recalculateAttendance?: boolean;
+
+  @ApiPropertyOptional({
+    example: '2026-09-01',
+    description: 'Start date for attendance recalculation when recalculateAttendance is true',
+  })
+  @IsOptional()
+  @IsDateString()
+  recalculateFrom?: string;
 }
 
 export class AssignScheduleDto {
@@ -139,4 +155,12 @@ export class AssignScheduleDto {
   @IsString()
   @MaxLength(2000)
   notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, recalculate attendance daily logs and month summaries from effectiveFrom onward',
+  })
+  @IsOptional()
+  @IsBoolean()
+  recalculateAttendance?: boolean;
 }

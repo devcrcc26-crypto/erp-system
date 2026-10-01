@@ -8,6 +8,8 @@ import {
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api/client';
 import type {
   AssignSchedulePayload,
+  AssignScheduleResult,
+  AttendanceRecalcResult,
   CreatePublicHolidayPayload,
   CreateWorkSchedulePayload,
   DeleteWorkScheduleResult,
@@ -133,9 +135,13 @@ export function useUpdateWorkSchedule(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: UpdateWorkSchedulePayload) =>
-      apiPatch<WorkSchedule>(`${SCHEDULE_PATH}/${id}`, payload),
+      apiPatch<WorkSchedule & { attendanceRecalc?: AttendanceRecalcResult | null }>(
+        `${SCHEDULE_PATH}/${id}`,
+        payload,
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: workScheduleKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ['attendance'] });
     },
   });
 }
@@ -182,12 +188,16 @@ export function useAssignWorkSchedule() {
       scheduleId,
       ...payload
     }: AssignSchedulePayload & { scheduleId: string }) =>
-      apiPost<unknown>(`${SCHEDULE_PATH}/${scheduleId}/assign`, payload),
+      apiPost<AssignScheduleResult>(
+        `${SCHEDULE_PATH}/${scheduleId}/assign`,
+        payload,
+      ),
     onSuccess: (_data, payload) => {
       void queryClient.invalidateQueries({ queryKey: workScheduleKeys.all });
       void queryClient.invalidateQueries({
         queryKey: workScheduleKeys.employee(payload.employeeId),
       });
+      void queryClient.invalidateQueries({ queryKey: ['attendance'] });
     },
   });
 }

@@ -195,6 +195,10 @@ export default function AttendanceReviewPageContent({
       employeesWithFlags,
       totalFlagged,
       totalResolved,
+      totalLeaveDays: records.reduce(
+        (sum, row) => sum + toNumber(row.leaveDaysThisMonth),
+        0,
+      ),
     };
   }, [records]);
 
@@ -296,23 +300,91 @@ export default function AttendanceReviewPageContent({
       {
         title: t('pages.hr.attendance.columns.absentDays'),
         key: 'absentDays',
-        width: 110,
+        width: 120,
         align: 'right',
         render: (_: unknown, row: AttendanceRecord) => {
-          const value = toNumber(row.absentDays);
+          const absent = toNumber(row.absentDays);
+          const leaveDays = row.leaveDaysThisMonth ?? 0;
+          const adjusted = row.adjustedAbsentDays ?? absent;
+
+          if (absent === 0) {
+            return (
+              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+            );
+          }
+
           return (
-            <span
-              style={{
-                fontWeight: value > 0 ? 600 : 400,
-                color:
-                  value > 0
-                    ? 'var(--color-red-400)'
-                    : 'var(--color-text-tertiary)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {value > 0 ? formatNumber(row.absentDays) : '—'}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {leaveDays > 0 ? (
+                <>
+                  <Tooltip
+                    title={`${leaveDays} day(s) covered by approved leave`}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        color: '#52c41a',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {adjusted > 0 ? formatNumber(adjusted) : '✓'}
+                    </span>
+                  </Tooltip>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--color-text-tertiary)',
+                    }}
+                  >
+                    {leaveDays}d on leave
+                  </span>
+                </>
+              ) : (
+                <span
+                  style={{
+                    fontWeight: 500,
+                    color:
+                      absent > 0 ? 'var(--color-red-400)' : 'inherit',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {formatNumber(absent)}
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        title: 'Leave',
+        key: 'leave',
+        width: 150,
+        render: (_: unknown, row: AttendanceRecord) => {
+          const leaves = row.approvedLeave ?? [];
+          if (leaves.length === 0) {
+            return (
+              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+            );
+          }
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {leaves.map((leave) => (
+                <Tooltip
+                  key={leave.id}
+                  title={leave.periods
+                    .map(
+                      (period) =>
+                        `${new Date(period.startDate).toLocaleDateString()} – ${new Date(period.endDate).toLocaleDateString()} (${period.days}d)`,
+                    )
+                    .join(', ')}
+                >
+                  <Tag color="green" style={{ margin: 0, fontSize: 11 }}>
+                    {leave.leaveType.replace(/_/g, ' ')} · {leave.days}d
+                  </Tag>
+                </Tooltip>
+              ))}
+            </div>
           );
         },
       },
@@ -837,6 +909,32 @@ export default function AttendanceReviewPageContent({
             </p>
           </div>
         </div>
+        <div className="erp-users-stat">
+          <span
+            className="erp-users-stat-chip"
+            style={{
+              background: '#f6ffed',
+              color: '#52c41a',
+            }}
+          >
+            <CalendarOutlined />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="erp-users-stat-label">On Leave</p>
+            <p className="erp-users-stat-value">
+              {formatNumber(summary.totalLeaveDays)}
+            </p>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 11,
+                color: 'var(--color-text-tertiary)',
+              }}
+            >
+              Approved leave days this month
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="erp-pro-card">
@@ -847,7 +945,7 @@ export default function AttendanceReviewPageContent({
             columns={columns}
             dataSource={records}
             loading={listQuery.isFetching}
-            scroll={{ x: 1100 }}
+            scroll={{ x: 1250 }}
             locale={{
               emptyText: (
                 <TableEmptyState

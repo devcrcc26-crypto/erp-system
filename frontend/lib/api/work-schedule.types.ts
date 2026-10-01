@@ -48,7 +48,10 @@ export interface CreateWorkSchedulePayload {
   days: WorkScheduleDayInput[];
 }
 
-export type UpdateWorkSchedulePayload = Partial<CreateWorkSchedulePayload>;
+export type UpdateWorkSchedulePayload = Partial<CreateWorkSchedulePayload> & {
+  recalculateAttendance?: boolean;
+  recalculateFrom?: string;
+};
 
 /** Returned by DELETE /hr/work-schedules/:id — who was moved, and where to. */
 export interface DeleteWorkScheduleResult {
@@ -61,6 +64,19 @@ export interface AssignSchedulePayload {
   employeeId: string;
   effectiveFrom: string;
   notes?: string;
+  /** When true, recalculate attendance from effectiveFrom onward. */
+  recalculateAttendance?: boolean;
+}
+
+export interface AttendanceRecalcResult {
+  updatedRecords: number;
+  updatedDays: number;
+  skippedLockedMonths: number;
+}
+
+export interface AssignScheduleResult {
+  id: string;
+  attendanceRecalc?: AttendanceRecalcResult | null;
 }
 
 export interface ScheduleAssignmentHistoryItem {

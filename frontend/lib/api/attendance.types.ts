@@ -114,6 +114,18 @@ export interface AttendanceRecord {
     importedAt: string;
   };
   dailyLogs?: AttendanceDailyLog[];
+  approvedLeave?: Array<{
+    id: string;
+    leaveType: string;
+    days: number;
+    periods: Array<{
+      startDate: string;
+      endDate: string;
+      days: number;
+    }>;
+  }>;
+  leaveDaysThisMonth?: number;
+  adjustedAbsentDays?: number;
 }
 
 export interface AttendanceListParams {
