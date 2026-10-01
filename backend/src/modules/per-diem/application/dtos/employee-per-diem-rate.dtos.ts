@@ -1,13 +1,11 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
-  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
   Min,
 } from 'class-validator';
-import { SupportedCurrency } from '@prisma/client';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
 
 export class ListEmployeePerDiemRatesQueryDto extends PaginationQueryDto {
@@ -53,12 +51,4 @@ export class UpsertEmployeePerDiemRateDto {
   @IsOptional()
   @IsBoolean()
   internationalActive?: boolean;
-
-  @ApiPropertyOptional({
-    enum: SupportedCurrency,
-    default: SupportedCurrency.ETB,
-  })
-  @IsOptional()
-  @IsEnum(SupportedCurrency)
-  currency?: SupportedCurrency;
 }

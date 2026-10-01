@@ -123,6 +123,7 @@ export class SessionCapabilitiesService {
       canViewNotifications: true,
       canViewAuditLogs: audit.canView,
       canViewHr: hr.canView,
+      canEditHr: hr.canEdit,
       canViewLeave: leave.canView,
       canCreateLeave: leave.canCreate,
       canViewOvertime: overtime.canView,

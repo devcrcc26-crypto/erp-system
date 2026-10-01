@@ -9,6 +9,7 @@ import {
   Input,
   Select,
   Spin,
+  Tabs,
   Tooltip,
 } from 'antd';
 import {
@@ -23,6 +24,7 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
+import PerDiemSettlementsList from '@/components/modules/hr/per-diem/PerDiemSettlementsList';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -129,6 +131,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
     [Dayjs | null, Dayjs | null] | null
   >(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [listTab, setListTab] = useState<'advances' | 'settlements'>('advances');
 
   const listQuery = usePerDiemRequestsAll(true);
 
@@ -276,6 +279,18 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         ),
       },
       {
+        title: t('pages.hr.perDiem.settled'),
+        key: 'settled',
+        width: 140,
+        responsive: ['lg'],
+        render: (_: unknown, row: PerDiemRequestListItem) =>
+          row.settlement?.requestNumber ? (
+            <span className="erp-users-id-chip">{row.settlement.requestNumber}</span>
+          ) : (
+            <span className="erp-users-cell-sub">—</span>
+          ),
+      },
+      {
         title: t('hr.table.status'),
         dataIndex: 'status',
         key: 'status',
@@ -319,9 +334,30 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
     ? t('pages.hr.perDiem.listDescription')
     : t('pages.hr.perDiem.myListDescription');
 
+  const listTabs = (
+    <Tabs
+      activeKey={listTab}
+      onChange={(key) => setListTab(key as 'advances' | 'settlements')}
+      items={[
+        { key: 'advances', label: t('pages.hr.perDiem.advancesTab') },
+        { key: 'settlements', label: t('pages.hr.perDiem.settlementsTab') },
+      ]}
+    />
+  );
+
+  if (listTab === 'settlements') {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-per-diem-page">
+        {listTabs}
+        <PerDiemSettlementsList />
+      </div>
+    );
+  }
+
   if (listQuery.isLoading && !listQuery.data) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-per-diem-page">
+        {listTabs}
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -331,6 +367,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-per-diem-page">
+      {listTabs}
       {importOpen ? (
         <HrImportModal
           entity="perDiemRequests"

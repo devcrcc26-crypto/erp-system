@@ -721,6 +721,46 @@ const CATEGORIES: CategorySeedDef[] = [
       },
     ],
   },
+  {
+    code: 'PER_DIEM',
+    name: 'Per Diem Request',
+    description:
+      'Daily allowance advance for domestic, regional, or international travel, paid in ETB.',
+    module: 'HR',
+    numberPrefix: 'PD',
+    icon: 'WalletOutlined',
+    sortOrder: 75,
+    formSchema: { fields: [] },
+    approvalRules: [
+      {
+        name: 'Default',
+        tiers: [
+          tier('Discipline Lead', 'DEPARTMENT_HEAD', 1),
+          tier('HR Manager', 'HR_MANAGER', 2),
+        ],
+      },
+    ],
+  },
+  {
+    code: 'PER_DIEM_SETTLEMENT',
+    name: 'Per Diem Settlement',
+    description:
+      'Settle approved per diem advances against the actual days travelled. Balance is in ETB.',
+    module: 'HR',
+    numberPrefix: 'PS',
+    icon: 'WalletOutlined',
+    sortOrder: 76,
+    formSchema: { fields: [] },
+    approvalRules: [
+      {
+        name: 'Default',
+        tiers: [
+          tier('Discipline Lead', 'DEPARTMENT_HEAD', 1),
+          tier('HR Manager', 'HR_MANAGER', 2),
+        ],
+      },
+    ],
+  },
 ];
 
 /** Maps short aliases in category rules to seeded Role.name values. */
@@ -824,6 +864,10 @@ async function clearCompanyApprovalCategories(
   await prisma.businessTrip.updateMany({ where: unlinkWhere, data: unlinkData });
   await prisma.expenseClaim.updateMany({ where: unlinkWhere, data: unlinkData });
   await prisma.perDiemRequest.updateMany({
+    where: unlinkWhere,
+    data: unlinkData,
+  });
+  await prisma.perDiemSettlement.updateMany({
     where: unlinkWhere,
     data: unlinkData,
   });

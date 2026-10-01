@@ -570,6 +570,7 @@ export interface AuthCapabilities {
   canViewNotifications: boolean;
   canViewAuditLogs: boolean;
   canViewHr: boolean;
+  canEditHr: boolean;
   canViewLeave: boolean;
   canCreateLeave: boolean;
   canViewOvertime: boolean;
@@ -629,6 +630,7 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canViewNotifications: true,
   canViewAuditLogs: false,
   canViewHr: false,
+  canEditHr: false,
   canViewLeave: false,
   canCreateLeave: false,
   canViewOvertime: false,

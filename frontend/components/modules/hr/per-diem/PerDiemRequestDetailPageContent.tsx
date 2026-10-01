@@ -19,10 +19,7 @@ import {
   usePerDiemRequest,
 } from '@/lib/query/per-diem';
 import { useCurrentUser } from '@/lib/query/profile';
-import {
-  formatCurrencyAmount,
-  formatEtbAmount,
-} from '@/lib/utils/expense-claim-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import {
   formatPerDiemEmployeeName,
   formatPerDiemStatus,
@@ -79,6 +76,7 @@ export default function PerDiemRequestDetailPageContent({
     Boolean(request) && request?.employeeId === currentUser.data?.id;
   const canCancel =
     isOwner &&
+    !request?.settlementId &&
     (request?.status === 'DRAFT' || request?.status === 'SUBMITTED');
 
   const tiers = useMemo(
@@ -238,7 +236,7 @@ export default function PerDiemRequestDetailPageContent({
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('hr.labels.dailyRate')}</p>
             <p className="erp-employee-meta-value">
-              {formatCurrencyAmount(request.dailyRate, request.currency)}
+              {formatEtbAmount(request.dailyRate)}
             </p>
           </div>
         </div>
@@ -268,8 +266,48 @@ export default function PerDiemRequestDetailPageContent({
                 <MetaItem label={t('hr.labels.days')}>
                   <span className="erp-users-cell-strong">{request.days}</span>
                 </MetaItem>
+                <MetaItem label={t('hr.form.tripType')}>
+                  {request.tripType === 'SITE_DEPLOYMENT'
+                    ? t('hr.form.tripTypeSiteDeployment')
+                    : t('hr.form.tripTypeTravel')}
+                </MetaItem>
+                <MetaItem label={t('hr.form.departureTime')}>
+                  {request.departureTime ?? '—'}
+                </MetaItem>
+                <MetaItem label={t('hr.form.returnTime')}>
+                  {request.returnTime ?? '—'}
+                </MetaItem>
                 <MetaItem label={t('hr.labels.dailyRate')}>
-                  {formatCurrencyAmount(request.dailyRate, request.currency)}
+                  {formatEtbAmount(request.dailyRate)}
+                </MetaItem>
+                <MetaItem label={t('pages.hr.perDiem.pvNumber')}>
+                  {request.pvNumber ? (
+                    <span className="erp-users-id-chip">{request.pvNumber}</span>
+                  ) : (
+                    '—'
+                  )}
+                </MetaItem>
+                <MetaItem label={t('pages.hr.perDiem.pvDate')}>
+                  {request.pvDate ? formatProjectDate(request.pvDate) : '—'}
+                </MetaItem>
+                <MetaItem label={t('pages.hr.perDiem.settled')}>
+                  {request.settlement?.requestNumber ? (
+                    <button
+                      type="button"
+                      className="erp-users-id-chip"
+                      onClick={() =>
+                        router.push(
+                          `/hr/per-diem/settlements/${request.settlement?.id}`,
+                        )
+                      }
+                    >
+                      {t('pages.hr.perDiem.settledIn', {
+                        number: request.settlement.requestNumber,
+                      })}
+                    </button>
+                  ) : (
+                    '—'
+                  )}
                 </MetaItem>
                 <MetaItem label={t('hr.table.employee')}>
                   {employeeName}
@@ -301,10 +339,10 @@ export default function PerDiemRequestDetailPageContent({
                 <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4">
                   <span className="erp-users-cell-sub text-sm">
                     {t('hr.labels.days')} ×{' '}
-                    {formatCurrencyAmount(request.dailyRate, request.currency)}
+                    {formatEtbAmount(request.dailyRate)}
                   </span>
                   <span className="erp-users-cell-strong tabular-nums text-sm">
-                    {formatCurrencyAmount(request.totalAmount, request.currency)}
+                    {formatEtbAmount(request.totalAmount)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-secondary)] px-3 py-3 sm:px-4">

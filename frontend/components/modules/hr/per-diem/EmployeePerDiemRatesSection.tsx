@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Alert, Button, Form, InputNumber, Select, Space, Spin, Switch } from 'antd';
+import { useEffect } from 'react';
+import { Button, Form, InputNumber, Space, Spin, Switch } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { Wallet } from 'lucide-react';
 import {
@@ -9,31 +9,21 @@ import {
   PER_DIEM_DESTINATION_CATEGORIES,
   type PerDiemDestinationCategory,
 } from '@/lib/constants/per-diem-destination-categories';
-import type { SupportedCurrency } from '@/lib/api/per-diem.types';
 import {
   useEmployeePerDiemRate,
   useMyEmployeePerDiemRate,
   useUpsertEmployeePerDiemRate,
 } from '@/lib/query/per-diem';
-import { useCurrencyRates } from '@/lib/query/currency';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
-import {
-  convertCurrencyAmount,
-  roundCurrencyAmount,
-} from '@/lib/utils/currency-convert';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 
-type FormValues = {
-  currency: SupportedCurrency;
-} & Record<string, number | boolean | null | undefined>;
+const ETB = 'ETB';
 
-const RATE_FIELDS = PER_DIEM_DESTINATION_CATEGORIES.map(
-  (category) => PER_DIEM_CATEGORY_FIELDS[category].rate,
-);
+type FormValues = Record<string, number | boolean | null | undefined>;
 
 const CATEGORY_ACCENT: Record<PerDiemDestinationCategory, string> = {
   Domestic: '#1d9e75',
@@ -150,7 +140,7 @@ function PerDiemRateCard({
         </Space.Compact>
       ) : (
         <p className="erp-per-diem-rate-value">
-          {rateValue != null ? formatCurrencyAmount(rateValue, currency) : '-'}
+          {rateValue != null ? formatEtbAmount(rateValue) : '-'}
         </p>
       )}
 
@@ -187,72 +177,24 @@ export default function EmployeePerDiemRatesSection({
   const selfRateQuery = useMyEmployeePerDiemRate(Boolean(employeeId) && isSelf);
   const rateQuery = isSelf ? selfRateQuery : hrRateQuery;
   const saveMutation = useUpsertEmployeePerDiemRate(employeeId);
-  const ratesQuery = useCurrencyRates(editable);
-  const currency =
-    Form.useWatch('currency', form) ?? rateQuery.data?.currency ?? 'ETB';
-  const previousCurrencyRef = useRef<SupportedCurrency | null>(null);
 
   useEffect(() => {
     if (!rateQuery.data) {
       return;
     }
     const row = rateQuery.data;
-    const values: FormValues = { currency: row.currency };
+    const values: FormValues = {};
     for (const category of PER_DIEM_DESTINATION_CATEGORIES) {
       const { rate, active } = PER_DIEM_CATEGORY_FIELDS[category];
       values[rate] = toNumber(row[rate]);
       values[active] = row[active];
     }
     form.setFieldsValue(values);
-    previousCurrencyRef.current = row.currency;
   }, [form, rateQuery.data]);
-
-  function convertRatesToCurrency(next: SupportedCurrency): void {
-    const previous = previousCurrencyRef.current;
-    if (!previous || previous === next) {
-      previousCurrencyRef.current = next;
-      return;
-    }
-
-    if (!ratesQuery.data) {
-      messageApi.warning(t('hr.messages.currencyRatesUnavailable'));
-      previousCurrencyRef.current = next;
-      return;
-    }
-
-    const updates: Partial<FormValues> = {};
-    let convertedCount = 0;
-
-    for (const field of RATE_FIELDS) {
-      const current = toNumber(form.getFieldValue(field));
-      if (current == null) {
-        continue;
-      }
-      const converted = convertCurrencyAmount(
-        current,
-        previous,
-        next,
-        ratesQuery.data,
-      );
-      if (converted == null) {
-        messageApi.warning(t('hr.messages.currencyRatesUnavailable'));
-        previousCurrencyRef.current = next;
-        return;
-      }
-      updates[field] = roundCurrencyAmount(converted);
-      convertedCount += 1;
-    }
-
-    if (convertedCount > 0) {
-      form.setFieldsValue(updates);
-    }
-    previousCurrencyRef.current = next;
-  }
 
   async function handleSave(values: FormValues): Promise<void> {
     try {
       await saveMutation.mutateAsync({
-        currency: values.currency,
         domesticRate: toNumber(values.domesticRate),
         regionalRate: toNumber(values.regionalRate),
         internationalRate: toNumber(values.internationalRate),
@@ -306,16 +248,6 @@ export default function EmployeePerDiemRatesSection({
     return toNumber(row[PER_DIEM_CATEGORY_FIELDS[category].rate]) != null;
   });
 
-  const usdRate = ratesQuery.data?.USD;
-  const cnyRate = ratesQuery.data?.CNY;
-  const rateHint =
-    usdRate != null && cnyRate != null
-      ? t('hr.messages.currencyRatesHint', {
-          usd: usdRate.toFixed(4),
-          cny: cnyRate.toFixed(4),
-        })
-      : null;
-
   const headerAction = editable ? (
     <Button
       type="primary"
@@ -326,7 +258,7 @@ export default function EmployeePerDiemRatesSection({
       {t('common.save')}
     </Button>
   ) : (
-    <span className="erp-users-id-chip">{row?.currency ?? 'ETB'}</span>
+    <span className="erp-users-id-chip">{ETB}</span>
   );
 
   const formContent = (
@@ -339,40 +271,6 @@ export default function EmployeePerDiemRatesSection({
       <p className="erp-per-diem-desc">
         {t('hr.section.employeePerDiemRatesDescription')}
       </p>
-
-      {editable ? (
-        <div className="erp-per-diem-toolbar">
-          <Form.Item
-            name="currency"
-            label={t('hr.form.currency')}
-            className="mb-0"
-            rules={[{ required: true }]}
-            extra={rateHint}
-          >
-            <Select
-              className="erp-per-diem-currency-select"
-              loading={ratesQuery.isLoading}
-              disabled={ratesQuery.isLoading || ratesQuery.isError}
-              options={[
-                { value: 'ETB', label: 'ETB' },
-                { value: 'USD', label: 'USD' },
-                { value: 'CNY', label: 'CNY' },
-              ]}
-              onChange={(value: SupportedCurrency) => {
-                convertRatesToCurrency(value);
-              }}
-            />
-          </Form.Item>
-        </div>
-      ) : null}
-
-      {editable && ratesQuery.isError ? (
-        <Alert
-          type="warning"
-          showIcon
-          title={t('hr.messages.currencyRatesUnavailable')}
-        />
-      ) : null}
 
       {!hasAnyRate && !editable ? (
         <div className="erp-per-diem-empty">
@@ -397,7 +295,7 @@ export default function EmployeePerDiemRatesSection({
                 rateField={rate}
                 activeField={active}
                 accent={CATEGORY_ACCENT[category]}
-                currency={currency}
+                currency={ETB}
                 editable={editable}
                 rateValue={row ? toNumber(row[rate]) : null}
                 activeValue={row ? row[active] : true}

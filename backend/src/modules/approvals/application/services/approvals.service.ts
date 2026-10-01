@@ -97,6 +97,7 @@ const REQUEST_DETAIL_INCLUDE = {
   businessTrip: { select: { id: true } },
   expenseClaim: { select: { id: true } },
   perDiemRequest: { select: { id: true } },
+  perDiemSettlement: { select: { id: true } },
   purchaseRequest: { select: { id: true } },
   materialRequisition: { select: { id: true } },
   consumablesRequisition: { select: { id: true } },
@@ -348,6 +349,7 @@ export class ApprovalsService {
       request.overtimeSheet?.id ??
       request.expenseClaim?.id ??
       request.perDiemRequest?.id ??
+      request.perDiemSettlement?.id ??
       request.purchaseRequest?.id ??
       request.materialRequisition?.id ??
       request.consumablesRequisition?.id ??
@@ -369,6 +371,7 @@ export class ApprovalsService {
       businessTrip: undefined,
       expenseClaim: undefined,
       perDiemRequest: undefined,
+      perDiemSettlement: undefined,
       purchaseRequest: undefined,
       materialRequisition: undefined,
       consumablesRequisition: undefined,
@@ -1273,6 +1276,7 @@ export class ApprovalsService {
         businessTrip: true,
         expenseClaim: true,
         perDiemRequest: true,
+        perDiemSettlement: true,
         purchaseRequest: true,
         materialRequisition: true,
         consumablesRequisition: true,
@@ -1411,6 +1415,17 @@ export class ApprovalsService {
         if (request.perDiemRequest) {
           await tx.perDiemRequest.update({
             where: { id: request.perDiemRequest.id },
+            data: {
+              status: PerDiemStatus.SUBMITTED,
+              completedAt: null,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (request.perDiemSettlement) {
+          await tx.perDiemSettlement.update({
+            where: { id: request.perDiemSettlement.id },
             data: {
               status: PerDiemStatus.SUBMITTED,
               completedAt: null,

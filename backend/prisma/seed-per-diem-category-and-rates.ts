@@ -66,6 +66,40 @@ async function main(): Promise<void> {
       },
     });
     console.log('  PER_DIEM approval category upserted');
+
+    await prisma.approvalCategory.upsert({
+      where: { companyId_code: { companyId, code: 'PER_DIEM_SETTLEMENT' } },
+      create: {
+        companyId,
+        code: 'PER_DIEM_SETTLEMENT',
+        name: 'Per Diem Settlement',
+        description:
+          'Settle approved per diem advances against the actual days travelled. Balance is in ETB.',
+        module: 'HR',
+        numberPrefix: 'PS',
+        icon: 'WalletOutlined',
+        sortOrder: 76,
+        formSchema: { fields: [] },
+        approvalRules: [],
+        isActive: true,
+        createdBy: actorUserId,
+        updatedBy: actorUserId,
+      },
+      update: {
+        name: 'Per Diem Settlement',
+        description:
+          'Settle approved per diem advances against the actual days travelled. Balance is in ETB.',
+        module: 'HR',
+        numberPrefix: 'PS',
+        icon: 'WalletOutlined',
+        sortOrder: 76,
+        isActive: true,
+        deletedAt: null,
+        deletedBy: null,
+        updatedBy: actorUserId,
+      },
+    });
+    console.log('  PER_DIEM_SETTLEMENT approval category upserted');
   } finally {
     await prisma.$disconnect();
   }

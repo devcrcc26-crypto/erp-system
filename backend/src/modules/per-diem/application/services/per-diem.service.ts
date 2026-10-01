@@ -7,12 +7,19 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { ApprovalRequestStatus, PerDiemStatus, Prisma } from '@prisma/client';
+import {
+  ApprovalRequestStatus,
+  PerDiemStatus,
+  PerDiemTripType,
+  Prisma,
+  SupportedCurrency,
+} from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import {
   calendarDaysInclusive,
   parseLocalDateOnly,
+  startOfToday,
 } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
@@ -21,7 +28,6 @@ import {
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
-import { CurrencyService } from '../../../../shared/currency/currency.service';
 import { ApprovalDecisionRegistry } from '../../../approvals/application/services/approval-decision-registry.service';
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import type {
@@ -52,6 +58,9 @@ const REQUEST_DETAIL_INCLUDE = {
   linkedTrip: {
     select: { id: true, tripNumber: true, destinationCity: true, destinationCountry: true },
   },
+  settlement: {
+    select: { id: true, requestNumber: true, status: true },
+  },
   approvalRequest: {
     include: {
       tiers: {
@@ -78,7 +87,6 @@ export class PerDiemService
     private readonly onBehalfService: OnBehalfService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly permissionService: PermissionService,
-    private readonly currencyService: CurrencyService,
     private readonly employeePerDiemRateService: EmployeePerDiemRateService,
   ) {}
 
@@ -153,14 +161,25 @@ export class PerDiemService
     if (endDate.getTime() < startDate.getTime()) {
       throw new BadRequestException('endDate must be on or after startDate');
     }
-    const totalDays = calendarDaysInclusive(startDate, endDate);
-    const days = totalDays;
+    const calendarSpan = calendarDaysInclusive(startDate, endDate);
+    if (dto.days > calendarSpan) {
+      throw new BadRequestException(
+        `days must be between 1 and ${calendarSpan} (inclusive calendar days from startDate to endDate)`,
+      );
+    }
+    const days = dto.days;
+    const totalDays = days;
+    const tripType = dto.tripType ?? PerDiemTripType.TRAVEL;
+    const destinationCategory =
+      tripType === PerDiemTripType.SITE_DEPLOYMENT
+        ? 'Domestic'
+        : dto.destinationCategory;
 
     const resolvedRate =
       await this.employeePerDiemRateService.resolveRateForSubmission(
         companyId,
         employeeId,
-        dto.destinationCategory,
+        destinationCategory,
         actorUserId,
       );
 
@@ -196,16 +215,9 @@ export class PerDiemService
     }
 
     const dailyRate = resolvedRate.dailyRate;
-    const totalAmount = dailyRate * totalDays;
-    const exchangeRate =
-      resolvedRate.currency === 'ETB'
-        ? 1
-        : await this.currencyService.getRate(
-            resolvedRate.currency,
-            'ETB',
-            companyId,
-          );
-    const totalAmountEtb = totalAmount * exchangeRate;
+    const totalAmount = dailyRate * days;
+    const exchangeRate = 1;
+    const totalAmountEtb = totalAmount;
 
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       employeeId,
@@ -218,10 +230,13 @@ export class PerDiemService
         categoryCode: 'PER_DIEM',
         title: `Per diem — ${dto.destination} (${dto.startDate} to ${dto.endDate})`,
         formData: {
-          destinationCategory: dto.destinationCategory,
+          tripType,
+          destinationCategory,
           destination: dto.destination,
           startDate: dto.startDate,
           endDate: dto.endDate,
+          departureTime: dto.departureTime ?? null,
+          returnTime: dto.returnTime ?? null,
           days,
           totalDays,
           totalAmountEtb,
@@ -249,14 +264,17 @@ export class PerDiemService
           requestNumber: approval.requestNumber,
           employeeId,
           employeePerDiemRateId: resolvedRate.employeePerDiemRateId,
-          destinationCategory: dto.destinationCategory,
+          destinationCategory,
           destination: dto.destination.trim(),
+          tripType,
           startDate,
           endDate,
+          departureTime: dto.departureTime ?? null,
+          returnTime: dto.returnTime ?? null,
           days,
           totalDays,
           dailyRate: new Prisma.Decimal(dailyRate),
-          currency: resolvedRate.currency,
+          currency: SupportedCurrency.ETB,
           totalAmount: new Prisma.Decimal(totalAmount),
           totalAmountEtb: new Prisma.Decimal(totalAmountEtb),
           exchangeRate: new Prisma.Decimal(exchangeRate),
@@ -389,6 +407,9 @@ export class PerDiemService
         orderBy: { createdAt: 'desc' },
         include: {
           employee: { select: USER_SELECT },
+          settlement: {
+            select: { id: true, requestNumber: true, status: true },
+          },
           approvalRequest: {
             select: {
               id: true,
@@ -422,6 +443,11 @@ export class PerDiemService
     }
     if (request.employeeId !== userId) {
       throw new ForbiddenException('Only the requester can cancel this request');
+    }
+    if (request.settlementId) {
+      throw new BadRequestException(
+        'This advance is included in a settlement and cannot be cancelled or edited',
+      );
     }
     if (
       request.status !== PerDiemStatus.DRAFT &&
@@ -486,14 +512,37 @@ export class PerDiemService
           ? PerDiemStatus.REJECTED
           : PerDiemStatus.RETURNED;
 
+    const pvNumber =
+      decision === 'APPROVED' && !request.pvNumber
+        ? await this.nextPvNumber()
+        : request.pvNumber;
+
     await this.prisma.perDiemRequest.update({
       where: { id: request.id },
       data: {
         status: nextStatus,
         completedAt: decision === 'RETURNED' ? null : now,
         updatedBy: request.employeeId,
+        ...(decision === 'APPROVED' && pvNumber
+          ? {
+              pvNumber,
+              pvDate: request.pvDate ?? startOfToday(),
+            }
+          : {}),
       },
     });
+  }
+
+  /**
+   * Next payment-voucher number. Uses the same PostgreSQL sequence pattern
+   * as leave (`LR-`) and overtime (`OT-`) request numbers.
+   */
+  private async nextPvNumber(): Promise<string> {
+    const result = await this.prisma.$queryRaw<Array<{ nextval: bigint }>>`
+      SELECT nextval('per_diem_pv_number_seq')
+    `;
+    const seq = Number(result[0]?.nextval ?? 1);
+    return `PV-${String(seq).padStart(4, '0')}`;
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────

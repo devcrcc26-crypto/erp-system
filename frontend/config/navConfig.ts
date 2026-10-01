@@ -116,6 +116,11 @@ const APPROVAL_NEW_ROUTE_META: Record<
     listHref: '/hr/per-diem',
     listLabelKey: 'nav.hr.perDiem',
   },
+  '/approvals/new/per-diem-settlement': {
+    titleKey: 'pages.hr.perDiemSettlement.new',
+    listHref: '/hr/per-diem',
+    listLabelKey: 'nav.hr.perDiem',
+  },
   '/approvals/new/purchase-request': {
     titleKey: 'pages.hr.purchaseRequest.new',
     listHref: '/hr/purchase-requests',
@@ -226,6 +231,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/approvals/new/equipment-and-materials-exit-permit': 'pages.hr.exitPermit.formDescription',
   '/approvals/new/consumables': 'pages.hr.consumables.formDescription',
   '/approvals/new/per-diem': 'pages.hr.perDiem.formDescription',
+  '/approvals/new/per-diem-settlement': 'pages.hr.perDiemSettlement.formDescription',
   '/approvals/new/vehicle-application': 'pages.hr.vehicleApplication.formDescription',
   '/approvals/new/vehicle-refueling': 'pages.hr.vehicleRefueling.formDescription',
   '/approvals/new/inspection-repair': 'pages.hr.inspectionRepair.formDescription',
@@ -1015,6 +1021,16 @@ function resolveRouteMetaCore(
     };
   }
 
+  if (pathname.startsWith('/hr/per-diem/settlements/')) {
+    return {
+      titleKey: 'pages.hr.perDiemSettlement.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.perDiem'), href: '/hr/per-diem' },
+        { label: t('pages.hr.perDiemSettlement.detail') },
+      ],
+    };
+  }
   if (pathname.startsWith('/hr/per-diem/')) {
     return {
       titleKey: 'pages.hr.perDiem.detail',

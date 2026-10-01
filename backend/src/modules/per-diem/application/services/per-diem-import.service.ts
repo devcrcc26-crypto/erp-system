@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import {
+  calendarDaysInclusive,
+  parseLocalDateOnly,
+} from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
 import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
@@ -200,6 +204,10 @@ export class PerDiemImportService {
           destination: row.destination,
           startDate: row.startDate,
           endDate: row.endDate,
+          days: calendarDaysInclusive(
+            parseLocalDateOnly(row.startDate),
+            parseLocalDateOnly(row.endDate),
+          ),
           notes: row.notes,
           linkedFlightId: row.linkedFlightId,
           linkedBusinessTripId: row.linkedBusinessTripId,

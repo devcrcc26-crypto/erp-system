@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Alert, DatePicker, Form, Input, Select } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, DatePicker, Form, Input, InputNumber, Radio, Select, TimePicker } from 'antd';
 import dayjs from 'dayjs';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import {
@@ -12,10 +12,9 @@ import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import type { PerDiemRequestDetail } from '@/lib/api/per-diem.types';
+import type { PerDiemRequestDetail, PerDiemTripType } from '@/lib/api/per-diem.types';
 import { PER_DIEM_CATEGORY_FIELDS } from '@/lib/constants/per-diem-destination-categories';
 import { useBusinessTrips } from '@/lib/query/business-trip';
-import { useCurrencyRates } from '@/lib/query/currency';
 import { useFlightApplications } from '@/lib/query/flight';
 import {
   useActiveEmployeePerDiemCategories,
@@ -23,16 +22,17 @@ import {
 } from '@/lib/query/per-diem';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
-import {
-  formatCurrencyAmount,
-  formatEtbAmount,
-} from '@/lib/utils/expense-claim-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface PerDiemFormValues {
+  tripType?: PerDiemTripType;
   destinationCategory?: string;
   destination?: string;
   dateRange?: [dayjs.Dayjs, dayjs.Dayjs];
+  departureTime?: dayjs.Dayjs;
+  returnTime?: dayjs.Dayjs;
+  days?: number;
   linkedTravel?: string;
   notes?: string;
 }
@@ -41,8 +41,8 @@ interface PerDiemRequestFormProps {
   onSuccess: (result: PerDiemRequestDetail) => void;
 }
 
-const DESTINATION_FIELDS = ['destinationCategory', 'destination'] as const;
-const DATES_FIELDS = ['dateRange'] as const;
+const DESTINATION_FIELDS = ['tripType', 'destinationCategory', 'destination'] as const;
+const DATES_FIELDS = ['dateRange', 'departureTime', 'returnTime', 'days'] as const;
 
 function calcInclusiveCalendarDays(
   start: dayjs.Dayjs,
@@ -65,7 +65,6 @@ export default function PerDiemRequestForm({
   const [formError, setFormError] = useState<string | null>(null);
 
   const ratesQuery = useActiveEmployeePerDiemCategories(onBehalf.employeeId);
-  const ratesFxQuery = useCurrencyRates(true);
   const flightsQuery = useFlightApplications(
     { status: 'APPROVED', limit: 50 },
     true,
@@ -74,8 +73,18 @@ export default function PerDiemRequestForm({
   const submitMutation = useSubmitPerDiemRequest();
 
   const formValues = Form.useWatch([], form) as PerDiemFormValues | undefined;
-  const destinationCategory = formValues?.destinationCategory;
+  const tripType = formValues?.tripType ?? 'TRAVEL';
+  const isSiteDeployment = tripType === 'SITE_DEPLOYMENT';
+  const destinationCategory = isSiteDeployment
+    ? 'Domestic'
+    : formValues?.destinationCategory;
   const dateRange = formValues?.dateRange;
+
+  useEffect(() => {
+    if (isSiteDeployment) {
+      form.setFieldValue('destinationCategory', 'Domestic');
+    }
+  }, [form, isSiteDeployment]);
 
   const selectedRate = useMemo(
     () =>
@@ -85,20 +94,19 @@ export default function PerDiemRequestForm({
     [ratesQuery.data, destinationCategory],
   );
 
-  const days = useMemo(() => {
+  const calendarSpan = useMemo(() => {
     if (!dateRange?.[0] || !dateRange?.[1]) {
       return 0;
     }
     return calcInclusiveCalendarDays(dateRange[0], dateRange[1]);
   }, [dateRange]);
 
+  const days =
+    formValues?.days != null && formValues.days > 0
+      ? formValues.days
+      : calendarSpan;
+
   const totalAmount = selectedRate ? Number(selectedRate.dailyRate) * days : 0;
-  const totalAmountEtb =
-    selectedRate && days > 0
-      ? selectedRate.currency === 'ETB'
-        ? totalAmount
-        : totalAmount * (ratesFxQuery.data?.[selectedRate.currency] ?? 0)
-      : 0;
 
   const travelOptions = useMemo(
     () => [
@@ -154,7 +162,7 @@ export default function PerDiemRequestForm({
         const label = labelKey ? t(labelKey) : entry.destinationCategory;
         return {
           value: entry.destinationCategory,
-          label: `${label} — ${formatCurrencyAmount(entry.dailyRate, entry.currency)}/day`,
+          label: `${label} — ${formatEtbAmount(entry.dailyRate)}`,
         };
       }),
     [ratesQuery.data, t],
@@ -211,6 +219,7 @@ export default function PerDiemRequestForm({
         const start = dayjs(flight.departureDate);
         const end = flight.returnDate ? dayjs(flight.returnDate) : start;
         form.setFieldValue('dateRange', [start, end]);
+        form.setFieldValue('days', calcInclusiveCalendarDays(start, end));
       }
       return;
     }
@@ -234,6 +243,7 @@ export default function PerDiemRequestForm({
         const start = dayjs(trip.departureDate);
         const end = trip.returnDate ? dayjs(trip.returnDate) : start;
         form.setFieldValue('dateRange', [start, end]);
+        form.setFieldValue('days', calcInclusiveCalendarDays(start, end));
       }
     }
   }
@@ -285,12 +295,29 @@ export default function PerDiemRequestForm({
 
     setSubmitting(true);
     try {
+      const span = calcInclusiveCalendarDays(
+        values.dateRange[0],
+        values.dateRange[1],
+      );
+      if (!values.days || values.days < 1 || values.days > span) {
+        messageApi.warning(
+          t('hr.validation.perDiemDaysRange', { max: span }),
+        );
+        return;
+      }
       const created = await submitMutation.mutateAsync({
         ...onBehalf.payload,
-        destinationCategory: values.destinationCategory,
+        tripType: values.tripType ?? 'TRAVEL',
+        destinationCategory:
+          values.tripType === 'SITE_DEPLOYMENT'
+            ? 'Domestic'
+            : values.destinationCategory,
         destination: values.destination.trim(),
         startDate: values.dateRange[0].format('YYYY-MM-DD'),
         endDate: values.dateRange[1].format('YYYY-MM-DD'),
+        departureTime: values.departureTime?.format('HH:mm'),
+        returnTime: values.returnTime?.format('HH:mm'),
+        days: values.days,
         linkedFlightId: kind === 'flight' ? id : undefined,
         linkedBusinessTripId: kind === 'trip' ? id : undefined,
         notes: values.notes?.trim() || undefined,
@@ -317,19 +344,12 @@ export default function PerDiemRequestForm({
         />
         <EstimateItem
           label={t('hr.form.dailyRate')}
-          value={formatCurrencyAmount(
-            selectedRate.dailyRate,
-            selectedRate.currency,
-          )}
+          value={formatEtbAmount(selectedRate.dailyRate)}
         />
         <EstimateItem
           label={t('hr.form.totalAmount')}
-          value={formatCurrencyAmount(totalAmount, selectedRate.currency)}
+          value={formatEtbAmount(totalAmount)}
           emphasize
-        />
-        <EstimateItem
-          label={t('hr.form.etbEquivalent')}
-          value={formatEtbAmount(totalAmountEtb)}
         />
       </div>
     ) : null;
@@ -347,6 +367,24 @@ export default function PerDiemRequestForm({
               title={t('hr.form.destinationCategory')}
               description={t('pages.hr.perDiem.destinationStepDescription')}
             >
+              <Form.Item
+                name="tripType"
+                label={t('hr.form.tripType')}
+                initialValue="TRAVEL"
+                rules={[{ required: true, message: t('hr.validation.selectTripType') }]}
+              >
+                <Radio.Group
+                  optionType="button"
+                  options={[
+                    { value: 'TRAVEL', label: t('hr.form.tripTypeTravel') },
+                    {
+                      value: 'SITE_DEPLOYMENT',
+                      label: t('hr.form.tripTypeSiteDeployment'),
+                    },
+                  ]}
+                />
+              </Form.Item>
+
               <Form.Item
                 name="linkedTravel"
                 label={t('hr.form.linkedTravel')}
@@ -393,10 +431,15 @@ export default function PerDiemRequestForm({
                         'hr.placeholder.selectDestinationCategory',
                       )}
                       options={categoryOptions}
-                      disabled={noActiveRates}
+                      disabled={noActiveRates || isSiteDeployment}
                     />
                   </Form.Item>
                 )}
+                {isSiteDeployment ? (
+                  <p className="erp-users-cell-sub m-0 mb-3">
+                    {t('hr.messages.siteDeploymentDomesticLocked')}
+                  </p>
+                ) : null}
                 <Form.Item
                   name="destination"
                   label={t('hr.form.specificDestination')}
@@ -445,7 +488,60 @@ export default function PerDiemRequestForm({
                 className="w-full"
                 picker="date"
                 format="YYYY-MM-DD"
+                onChange={(range) => {
+                  if (range?.[0] && range?.[1]) {
+                    form.setFieldValue(
+                      'days',
+                      calcInclusiveCalendarDays(range[0], range[1]),
+                    );
+                  }
+                }}
               />
+            </Form.Item>
+
+            <div className="erp-form-grid-2">
+              <Form.Item
+                name="departureTime"
+                label={t('hr.form.departureTime')}
+                rules={[{ required: true, message: t('hr.validation.selectDepartureTime') }]}
+              >
+                <TimePicker className="w-full" format="HH:mm" needConfirm={false} />
+              </Form.Item>
+              <Form.Item
+                name="returnTime"
+                label={t('hr.form.returnTime')}
+                rules={[{ required: true, message: t('hr.validation.selectReturnTime') }]}
+              >
+                <TimePicker className="w-full" format="HH:mm" needConfirm={false} />
+              </Form.Item>
+            </div>
+
+            <Form.Item
+              name="days"
+              label={t('hr.form.perDiemDays')}
+              rules={[
+                { required: true, message: t('hr.validation.enterPerDiemDays') },
+                {
+                  validator: async (_, value: number | null | undefined) => {
+                    if (value == null || !dateRange?.[0] || !dateRange?.[1]) {
+                      return;
+                    }
+                    const span = calcInclusiveCalendarDays(dateRange[0], dateRange[1]);
+                    if (value < 1 || value > span) {
+                      throw new Error(
+                        t('hr.validation.perDiemDaysRange', { max: span }),
+                      );
+                    }
+                  },
+                },
+              ]}
+              extra={
+                calendarSpan > 0
+                  ? t('hr.form.perDiemDaysHint', { max: calendarSpan })
+                  : undefined
+              }
+            >
+              <InputNumber min={1} precision={0} className="w-full" />
             </Form.Item>
 
             <Form.Item name="notes" label={t('hr.form.notes')}>
@@ -471,6 +567,14 @@ export default function PerDiemRequestForm({
           >
             <div className="erp-form-grid-2">
               <ReviewItem
+                label={t('hr.form.tripType')}
+                value={
+                  tripType === 'SITE_DEPLOYMENT'
+                    ? t('hr.form.tripTypeSiteDeployment')
+                    : t('hr.form.tripTypeTravel')
+                }
+              />
+              <ReviewItem
                 label={t('hr.form.destinationCategory')}
                 value={categoryLabel}
               />
@@ -495,26 +599,25 @@ export default function PerDiemRequestForm({
                 }
               />
               <ReviewItem
-                label={t('hr.form.totalDays')}
+                label={t('hr.form.departureTime')}
+                value={formValues?.departureTime?.format('HH:mm') ?? '—'}
+              />
+              <ReviewItem
+                label={t('hr.form.returnTime')}
+                value={formValues?.returnTime?.format('HH:mm') ?? '—'}
+              />
+              <ReviewItem
+                label={t('hr.form.perDiemDays')}
                 value={days > 0 ? String(days) : '—'}
               />
               <ReviewItem
                 label={t('hr.form.dailyRate')}
-                value={
-                  selectedRate
-                    ? formatCurrencyAmount(
-                        selectedRate.dailyRate,
-                        selectedRate.currency,
-                      )
-                    : '—'
-                }
+                value={selectedRate ? formatEtbAmount(selectedRate.dailyRate) : '—'}
               />
               <ReviewItem
                 label={t('hr.form.totalAmount')}
                 value={
-                  selectedRate && days > 0
-                    ? formatCurrencyAmount(totalAmount, selectedRate.currency)
-                    : '—'
+                  selectedRate && days > 0 ? formatEtbAmount(totalAmount) : '—'
                 }
               />
               <ReviewItem
@@ -546,6 +649,9 @@ export default function PerDiemRequestForm({
       dateRange,
       linkedTravelLabel,
       linkedKind,
+      isSiteDeployment,
+      tripType,
+      calendarSpan,
       days,
       selectedRate,
       totalAmount,

@@ -8,7 +8,7 @@ import {
 } from '@/components/modules/hr/shared/hr-page-chrome';
 import { ApiRequestError } from '@/lib/api/errors';
 import { usePerDiemRequest } from '@/lib/query/per-diem';
-import { formatCurrencyAmount, formatEtbAmount } from '@/lib/utils/expense-claim-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 /**
@@ -59,7 +59,7 @@ export default function PerDiemDetail({
           { label: 'Days', value: String(request.days) },
           {
             label: 'Daily Rate',
-            value: formatCurrencyAmount(request.dailyRate, request.currency),
+            value: formatEtbAmount(request.dailyRate),
           },
           {
             label: 'Total (ETB)',
@@ -71,8 +71,17 @@ export default function PerDiemDetail({
 
       <SectionCard title="Request Details" bodyClassName="px-3 py-4 sm:px-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+          <MetaItem label="Trip type">
+            {request.tripType === 'SITE_DEPLOYMENT' ? 'Site deployment' : 'Travel'}
+          </MetaItem>
           <MetaItem label="Destination Category">
             {request.destinationCategory}
+          </MetaItem>
+          <MetaItem label="Departure time">{request.departureTime ?? '—'}</MetaItem>
+          <MetaItem label="Return time">{request.returnTime ?? '—'}</MetaItem>
+          <MetaItem label="PV number">{request.pvNumber ?? '—'}</MetaItem>
+          <MetaItem label="PV date">
+            {request.pvDate ? formatProjectDate(request.pvDate) : '—'}
           </MetaItem>
           <MetaItem label="Dates">
             {formatProjectDate(request.startDate)}  - {formatProjectDate(request.endDate)}

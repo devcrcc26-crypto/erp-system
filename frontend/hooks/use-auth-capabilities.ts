@@ -17,6 +17,13 @@ export function useCanViewHr(): boolean {
 }
 
 /**
+ * True when the session can edit Human Resources records (hr.edit).
+ */
+export function useCanEditHr(): boolean {
+  return useAuthStore((state) => state.capabilities.canEditHr);
+}
+
+/**
  * True when the session can open HR leave pages (view, create, or full HR).
  */
 export function useCanAccessLeave(): boolean {

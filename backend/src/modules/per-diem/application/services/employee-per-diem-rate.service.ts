@@ -316,9 +316,7 @@ export class EmployeePerDiemRateService {
       }
     }
 
-    if (dto.currency !== undefined) {
-      data.currency = dto.currency;
-    }
+    data.currency = SupportedCurrency.ETB;
 
     return data;
   }

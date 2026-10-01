@@ -38,7 +38,7 @@ import ImportModal from '@/components/modules/hr/import-export/ImportModal';
 import { useEmployeePerDiemRatesAll } from '@/lib/query/per-diem';
 import { buildEmployeePerDiemRateExportSheets } from '@/lib/utils/per-diem-export';
 import { employeePerDiemRateImportSchema } from '@/lib/utils/hr-import-configs';
-import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
+import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 import {
   countActivePerDiemCategories,
   filterEmployeePerDiemRates,
@@ -194,16 +194,26 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
             if (amount == null) {
               return <span className="erp-users-cell-sub">—</span>;
             }
+            const lowEtb =
+              (category === 'Regional' || category === 'International') &&
+              amount < 1000;
             return (
-              <span
-                className={
-                  isActive
-                    ? 'erp-users-cell-strong text-sm'
-                    : 'erp-users-cell-sub text-sm'
-                }
-                title={isActive ? undefined : t('hr.table.inactiveCategory')}
-              >
-                {formatCurrencyAmount(amount, rateRow.currency)}
+              <span className="inline-flex flex-col items-end">
+                <span
+                  className={
+                    isActive
+                      ? 'erp-users-cell-strong text-sm'
+                      : 'erp-users-cell-sub text-sm'
+                  }
+                  title={isActive ? undefined : t('hr.table.inactiveCategory')}
+                >
+                  {formatEtbAmount(amount)}
+                </span>
+                {lowEtb ? (
+                  <span className="mt-0.5 max-w-[140px] text-left text-[11px] leading-snug text-[#BA7517]">
+                    {t('pages.hr.employeePerDiemRates.lowEtbWarning')}
+                  </span>
+                ) : null}
               </span>
             );
           },
@@ -231,7 +241,6 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
             ) : null}
             <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
               {row.employee.department?.name ?? '—'}
-              {row.rate?.currency ? ` · ${row.rate.currency}` : ''}
             </p>
           </div>
         ),
@@ -246,18 +255,6 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
             {row.employee.department?.name ?? '—'}
           </span>
         ),
-      },
-      {
-        title: t('hr.form.currency'),
-        key: 'currency',
-        width: 90,
-        responsive: ['md'],
-        render: (_: unknown, row: EmployeePerDiemRateListItem) =>
-          row.rate?.currency ? (
-            <span className="erp-users-role-tag">{row.rate.currency}</span>
-          ) : (
-            <span className="erp-users-cell-sub">—</span>
-          ),
       },
       {
         title: t('pages.hr.employeePerDiemRates.stats.activeCategories'),

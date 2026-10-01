@@ -117,8 +117,8 @@ export default function EmployeePerDiemRatesDetailPageContent({
         <div className="erp-employee-hero erp-contract-hero">
           <div className="erp-employee-hero-copy min-w-0 flex-1">
             <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              {rate?.currency ? (
-                <span className="erp-users-id-chip">{rate.currency}</span>
+              {rate ? (
+                <span className="erp-users-id-chip">ETB</span>
               ) : (
                 <span className="erp-users-role-tag">
                   {t('pages.hr.employeePerDiemRates.notConfigured')}
@@ -153,9 +153,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
         <div className="erp-users-stat">
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('hr.form.currency')}</p>
-            <p className="erp-employee-meta-value">
-              {rate?.currency ?? '—'}
-            </p>
+            <p className="erp-employee-meta-value">{rate ? 'ETB' : '—'}</p>
           </div>
         </div>
         <div className="erp-users-stat">

@@ -20,6 +20,7 @@ import FlightApplicationDetail from '@/components/modules/approvals/detail/Fligh
 import LeaveRequestDetail from '@/components/modules/approvals/detail/LeaveRequestDetail';
 import OvertimeRequestDetail from '@/components/modules/approvals/detail/OvertimeRequestDetail';
 import PerDiemDetail from '@/components/modules/approvals/detail/PerDiemDetail';
+import PerDiemSettlementDetail from '@/components/modules/approvals/detail/PerDiemSettlementDetail';
 import PurchaseRequestDetail from '@/components/modules/approvals/detail/PurchaseRequestDetail';
 import MaterialRequisitionDetail from '@/components/modules/approvals/detail/MaterialRequisitionDetail';
 import ConsumablesRequisitionDetail from '@/components/modules/approvals/detail/ConsumablesRequisitionDetail';
@@ -131,6 +132,16 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
       }
       return (
         <PerDiemDetail approvalRequestId={request.id} sourceId={sourceId} />
+      );
+    case 'PER_DIEM_SETTLEMENT':
+      if (!sourceId) {
+        return <GenericApprovalDetail request={request} />;
+      }
+      return (
+        <PerDiemSettlementDetail
+          approvalRequestId={request.id}
+          sourceId={sourceId}
+        />
       );
     case 'PURCHASE_REQUEST':
       if (!sourceId) {

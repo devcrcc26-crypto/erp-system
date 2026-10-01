@@ -36,6 +36,7 @@ const CATEGORY_ROUTES: Record<string, string> = {
   BUSINESS_TRIP: '/approvals/new/business-trip',
   EXPENSE_CLAIM: '/approvals/new/expense-claim',
   PER_DIEM: '/approvals/new/per-diem',
+  PER_DIEM_SETTLEMENT: '/approvals/new/per-diem-settlement',
   PURCHASE_REQUEST: '/approvals/new/purchase-request',
   MATERIAL_REQUISITION: '/approvals/new/material-requisition',
   EXIT_PERMIT: '/approvals/new/equipment-and-materials-exit-permit',

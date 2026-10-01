@@ -1,6 +1,10 @@
 import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 export type SupportedCurrency = 'ETB' | 'USD' | 'CNY';
 
+export type PerDiemTripType = 'TRAVEL' | 'SITE_DEPLOYMENT';
+
+export type PerDiemBalanceDirection = 'TO_COMPANY' | 'TO_EMPLOYEE' | 'NONE';
+
 export type PerDiemStatus =
   | 'DRAFT'
   | 'SUBMITTED'
@@ -46,7 +50,6 @@ export interface UpsertEmployeePerDiemRatePayload {
   domesticActive?: boolean;
   regionalActive?: boolean;
   internationalActive?: boolean;
-  currency?: SupportedCurrency;
 }
 
 export interface EmployeePerDiemRateListEmployee {
@@ -78,8 +81,11 @@ export interface PerDiemRequestListItem {
   employeeId: string;
   destinationCategory: string;
   destination: string;
+  tripType?: PerDiemTripType;
   startDate: string;
   endDate: string;
+  departureTime?: string | null;
+  returnTime?: string | null;
   days: number;
   totalDays?: number | null;
   dailyRate: number | string;
@@ -87,6 +93,14 @@ export interface PerDiemRequestListItem {
   totalAmount: number | string;
   totalAmountEtb: number | string;
   status: PerDiemStatus;
+  pvNumber?: string | null;
+  pvDate?: string | null;
+  settlementId?: string | null;
+  settlement?: {
+    id: string;
+    requestNumber: string;
+    status?: PerDiemStatus;
+  } | null;
   approvalRequestId?: string | null;
   employee?: PerDiemUserSummary;
   createdAt: string;
@@ -125,13 +139,86 @@ export interface PerDiemRequestDetail extends PerDiemRequestListItem {
 }
 
 export interface SubmitPerDiemRequestPayload extends OnBehalfPayload {
+  tripType: PerDiemTripType;
   destinationCategory: string;
   destination: string;
   startDate: string;
   endDate: string;
+  departureTime?: string;
+  returnTime?: string;
+  days: number;
   linkedFlightId?: string;
   linkedBusinessTripId?: string;
   notes?: string;
+}
+
+export interface PerDiemAdvanceSummary {
+  id: string;
+  requestNumber: string;
+  pvNumber?: string | null;
+  pvDate?: string | null;
+  destination: string;
+  destinationCategory: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  totalAmount: number | string;
+  totalAmountEtb: number | string;
+  currency: SupportedCurrency;
+  status: PerDiemStatus;
+}
+
+export interface PerDiemSettlementListItem {
+  id: string;
+  companyId: string;
+  requestNumber: string;
+  employeeId: string;
+  destination: string;
+  destinationCategory: string;
+  actualDepartureDate: string;
+  actualReturnDate: string;
+  actualDays: number;
+  dailyRate: number | string;
+  perDiemEarned: number | string;
+  totalAdvances: number | string;
+  balance: number | string;
+  balanceDirection: PerDiemBalanceDirection;
+  status: PerDiemStatus;
+  employee?: PerDiemUserSummary;
+  createdAt: string;
+}
+
+export interface PerDiemSettlementDetail extends PerDiemSettlementListItem {
+  actualDepartureTime: string;
+  actualReturnTime: string;
+  vehicleUsed: boolean;
+  kmDeparture?: number | null;
+  kmReturn?: number | null;
+  cashReturnedReceiptNo?: string | null;
+  cashReturnedDate?: string | null;
+  notes?: string | null;
+  approvalRequestId?: string | null;
+  advances: PerDiemAdvanceSummary[];
+  approvalRequest?: PerDiemRequestDetail['approvalRequest'];
+}
+
+export interface SubmitPerDiemSettlementPayload {
+  destination: string;
+  actualDepartureDate: string;
+  actualDepartureTime: string;
+  actualReturnDate: string;
+  actualReturnTime: string;
+  actualDays: number;
+  advanceIds: string[];
+  vehicleUsed?: boolean;
+  kmDeparture?: number;
+  kmReturn?: number;
+  notes?: string;
+}
+
+export interface RecordCashReturnedPayload {
+  cashReturnedReceiptNo: string;
+  cashReturnedDate: string;
 }
 
 export interface ListPerDiemRequestsParams {

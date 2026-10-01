@@ -281,6 +281,7 @@ model Company {
   employeePerDiemRates     EmployeePerDiemRate[]
   expenseClaims            ExpenseClaim[]
   perDiemRequests          PerDiemRequest[]
+  perDiemSettlements       PerDiemSettlement[]
   purchaseRequests         PurchaseRequest[]
   materialRequisitions     MaterialRequisition[]
   consumablesRequisitions  ConsumablesRequisition[]
@@ -737,6 +738,9 @@ model User {
   perDiemRequestsAsEmployee   PerDiemRequest[]    @relation("PerDiemEmployee")
   perDiemRequestsCreated      PerDiemRequest[]    @relation("PerDiemCreator")
   perDiemRequestsUpdated      PerDiemRequest[]    @relation("PerDiemUpdater")
+  perDiemSettlementsAsEmployee PerDiemSettlement[] @relation("PerDiemSettlementEmployee")
+  perDiemSettlementsCreated    PerDiemSettlement[] @relation("PerDiemSettlementCreator")
+  perDiemSettlementsUpdated    PerDiemSettlement[] @relation("PerDiemSettlementUpdater")
   employeePerDiemRate         EmployeePerDiemRate? @relation("EmployeePerDiemRateEmployee")
   employeePerDiemRatesCreated EmployeePerDiemRate[] @relation("EmployeePerDiemRateCreator")
   employeePerDiemRatesUpdated EmployeePerDiemRate[] @relation("EmployeePerDiemRateUpdater")
@@ -3575,6 +3579,7 @@ model ApprovalRequest {
   businessTrip       BusinessTrip?
   expenseClaim       ExpenseClaim?
   perDiemRequest     PerDiemRequest?
+  perDiemSettlement  PerDiemSettlement?
   purchaseRequest      PurchaseRequest?
   materialRequisition  MaterialRequisition?
   consumablesRequisition ConsumablesRequisition?
@@ -4569,6 +4574,17 @@ enum PerDiemStatus {
   CANCELLED
 }
 
+enum PerDiemTripType {
+  TRAVEL
+  SITE_DEPLOYMENT
+}
+
+enum PerDiemBalanceDirection {
+  TO_COMPANY
+  TO_EMPLOYEE
+  NONE
+}
+
 model PerDiemRequest {
   id                   String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   companyId            String            @map("company_id")
@@ -4577,8 +4593,11 @@ model PerDiemRequest {
   employeePerDiemRateId   String?           @map("employee_per_diem_rate_id")
   destinationCategory     String            @map("destination_category")
   destination          String
+  tripType             PerDiemTripType   @default(TRAVEL) @map("trip_type")
   startDate            DateTime          @map("start_date")
   endDate              DateTime          @map("end_date")
+  departureTime        String?           @map("departure_time")
+  returnTime           String?           @map("return_time")
   days                 Int
   totalDays            Int?              @map("total_days")
   dailyRate            Decimal           @map("daily_rate") @db.Decimal(12, 2)
@@ -4589,6 +4608,9 @@ model PerDiemRequest {
   linkedFlightId       String?           @map("linked_flight_id")
   linkedBusinessTripId String?           @map("linked_business_trip_id")
   notes                String?
+  pvNumber             String?           @map("pv_number")
+  pvDate               DateTime?         @map("pv_date") @db.Date
+  settlementId         String?           @map("settlement_id")
   status               PerDiemStatus     @default(DRAFT)
   approvalRequestId    String?           @unique @map("approval_request_id")
   attachmentFolderId   String?           @map("attachment_folder_id")
@@ -4608,14 +4630,66 @@ model PerDiemRequest {
   linkedTrip      BusinessTrip?      @relation(fields: [linkedBusinessTripId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   approvalRequest ApprovalRequest?   @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   attachmentFolder DocumentFolder?   @relation(fields: [attachmentFolderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  settlement       PerDiemSettlement? @relation(fields: [settlementId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   creator         User               @relation("PerDiemCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   updater          User               @relation("PerDiemUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([companyId, requestNumber])
+  @@unique([companyId, pvNumber], map: "uq_per_diem_company_pv_number")
   @@index([companyId], map: "idx_per_diem_company")
   @@index([employeeId], map: "idx_per_diem_employee")
   @@index([status], map: "idx_per_diem_status")
+  @@index([settlementId], map: "idx_per_diem_settlement")
   @@map("per_diem_request")
+}
+
+model PerDiemSettlement {
+  id                    String                  @id @default(dbgenerated("(gen_random_uuid())::text"))
+  companyId             String                  @map("company_id")
+  requestNumber         String                  @map("request_number")
+  employeeId            String                  @map("employee_id")
+  destination           String
+  destinationCategory   String                  @map("destination_category")
+  actualDepartureDate   DateTime                @map("actual_departure_date") @db.Date
+  actualDepartureTime   String                  @map("actual_departure_time")
+  actualReturnDate      DateTime                @map("actual_return_date") @db.Date
+  actualReturnTime      String                  @map("actual_return_time")
+  actualDays            Int                     @map("actual_days")
+  dailyRate             Decimal                 @map("daily_rate") @db.Decimal(12, 2)
+  perDiemEarned         Decimal                 @map("per_diem_earned") @db.Decimal(14, 2)
+  totalAdvances         Decimal                 @map("total_advances") @db.Decimal(14, 2)
+  balance               Decimal                 @db.Decimal(14, 2)
+  balanceDirection      PerDiemBalanceDirection @map("balance_direction")
+  vehicleUsed           Boolean                 @default(false) @map("vehicle_used")
+  kmDeparture           Int?                    @map("km_departure")
+  kmReturn              Int?                    @map("km_return")
+  cashReturnedReceiptNo String?                 @map("cash_returned_receipt_no")
+  cashReturnedDate      DateTime?               @map("cash_returned_date") @db.Date
+  notes                 String?
+  status                PerDiemStatus           @default(DRAFT)
+  approvalRequestId     String?                 @unique @map("approval_request_id")
+  submittedAt           DateTime?               @map("submitted_at")
+  completedAt           DateTime?               @map("completed_at")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  createdBy             String                  @map("created_by")
+  updatedAt             DateTime                @default(now()) @updatedAt @map("updated_at")
+  updatedBy             String                  @map("updated_by")
+  deletedAt             DateTime?               @map("deleted_at")
+  deletedBy             String?                 @map("deleted_by")
+
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employee        User             @relation("PerDiemSettlementEmployee", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvalRequest ApprovalRequest? @relation(fields: [approvalRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator         User             @relation("PerDiemSettlementCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater         User             @relation("PerDiemSettlementUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  advances        PerDiemRequest[]
+
+  @@unique([companyId, requestNumber])
+  @@index([companyId], map: "idx_per_diem_settlement_company")
+  @@index([companyId, deletedAt], map: "idx_per_diem_settlement_company_deleted")
+  @@index([employeeId], map: "idx_per_diem_settlement_employee")
+  @@index([status], map: "idx_per_diem_settlement_status")
+  @@map("per_diem_settlement")
 }
 
 model BusinessTripDocument {

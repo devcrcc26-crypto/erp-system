@@ -1,22 +1,32 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PerDiemTripType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   Min,
 } from 'class-validator';
 
 import { OnBehalfSubmissionDto } from '../../../on-behalf/on-behalf-submission.dto';
+
+const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
 function emptyToUndefined(value: unknown): unknown {
   return value === '' || value === null ? undefined : value;
 }
 
 export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
+  @ApiProperty({ enum: PerDiemTripType, default: PerDiemTripType.TRAVEL })
+  @IsOptional()
+  @IsEnum(PerDiemTripType)
+  tripType?: PerDiemTripType;
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
@@ -28,6 +38,26 @@ export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
   @IsNotEmpty()
   @MaxLength(200)
   destination!: string;
+
+  @ApiPropertyOptional({ example: '08:00', description: '24-hour departure time' })
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_OF_DAY, { message: 'departureTime must be HH:mm' })
+  departureTime?: string;
+
+  @ApiPropertyOptional({ example: '18:00', description: '24-hour return time' })
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_OF_DAY, { message: 'returnTime must be HH:mm' })
+  returnTime?: string;
+
+  @ApiProperty({
+    description:
+      'Employee-entered per diem days. Must be at least 1 and no more than the inclusive calendar span.',
+  })
+  @IsInt()
+  @Min(1)
+  days!: number;
 
   @ApiProperty({
     example: '2026-09-01',

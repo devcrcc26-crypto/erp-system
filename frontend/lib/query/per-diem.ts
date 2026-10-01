@@ -20,9 +20,14 @@ import type {
   EmployeePerDiemRateListItem,
   ListEmployeePerDiemRatesParams,
   ListPerDiemRequestsParams,
+  PerDiemAdvanceSummary,
   PerDiemRequestDetail,
   PerDiemRequestListItem,
+  PerDiemSettlementDetail,
+  PerDiemSettlementListItem,
+  RecordCashReturnedPayload,
   SubmitPerDiemRequestPayload,
+  SubmitPerDiemSettlementPayload,
   UpsertEmployeePerDiemRatePayload,
 } from '@/lib/api/per-diem.types';
 import type {
@@ -37,6 +42,7 @@ type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
 const EMPLOYEE_RATES_PATH = '/hr/employee-per-diem-rates';
 const REQUESTS_PATH = '/hr/per-diem';
+const SETTLEMENTS_PATH = '/hr/per-diem/settlements';
 
 export const employeePerDiemRateKeys = {
   all: ['employee-per-diem-rate'] as const,
@@ -58,6 +64,14 @@ export const perDiemKeys = {
     [...perDiemKeys.lists(), params] as const,
   details: () => [...perDiemKeys.all, 'detail'] as const,
   detail: (id: string) => [...perDiemKeys.details(), id] as const,
+};
+
+export const perDiemSettlementKeys = {
+  all: ['per-diem-settlement'] as const,
+  lists: () => [...perDiemSettlementKeys.all, 'list'] as const,
+  details: () => [...perDiemSettlementKeys.all, 'detail'] as const,
+  detail: (id: string) => [...perDiemSettlementKeys.details(), id] as const,
+  unsettled: () => [...perDiemSettlementKeys.all, 'unsettled'] as const,
 };
 
 /**
@@ -371,4 +385,121 @@ export async function downloadPerDiemRequestImportTemplate(): Promise<void> {
     `${REQUESTS_PATH}/import/template`,
     'per-diem-import-template.xlsx',
   );
+}
+
+async function fetchAllSettlementPages(): Promise<PerDiemSettlementListItem[]> {
+  const first = await apiGetPaginated<PerDiemSettlementListItem>(
+    `${SETTLEMENTS_PATH}${buildListQuery({ page: 1, limit: FETCH_PAGE_SIZE })}`,
+  );
+  const all = [...first.data];
+  const pages = first.meta.pages ?? 1;
+  if (pages <= 1) {
+    return all;
+  }
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) =>
+      apiGetPaginated<PerDiemSettlementListItem>(
+        `${SETTLEMENTS_PATH}${buildListQuery({
+          page: index + 2,
+          limit: FETCH_PAGE_SIZE,
+        })}`,
+      ),
+    ),
+  );
+  for (const page of rest) {
+    all.push(...page.data);
+  }
+  return all;
+}
+
+/** Approved unsettled advances belonging to the current user. */
+export function useUnsettledPerDiemAdvances(enabled = true) {
+  return useQuery({
+    queryKey: perDiemSettlementKeys.unsettled(),
+    queryFn: () =>
+      apiGet<PerDiemAdvanceSummary[]>(`${SETTLEMENTS_PATH}/unsettled-advances`),
+    enabled,
+    retry: false,
+  });
+}
+
+/** All per diem settlements for the list tab. */
+export function usePerDiemSettlementsAll(enabled = true) {
+  return useQuery({
+    queryKey: [...perDiemSettlementKeys.lists(), 'all'] as const,
+    queryFn: () => fetchAllSettlementPages(),
+    enabled,
+    retry: false,
+  });
+}
+
+/** Single per diem settlement with advances and approval tiers. */
+export function usePerDiemSettlement(id: string, enabled = true) {
+  return useQuery({
+    queryKey: perDiemSettlementKeys.detail(id),
+    queryFn: () =>
+      apiGet<PerDiemSettlementDetail>(`${SETTLEMENTS_PATH}/${id}`),
+    enabled: Boolean(id) && enabled,
+    retry: false,
+  });
+}
+
+/** Submits a per diem settlement. */
+export function useSubmitPerDiemSettlement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: SubmitPerDiemSettlementPayload) =>
+      apiPost<PerDiemSettlementDetail>(SETTLEMENTS_PATH, payload),
+    onSuccess: (created) => {
+      void queryClient.invalidateQueries({
+        queryKey: perDiemSettlementKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: perDiemSettlementKeys.unsettled(),
+      });
+      void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
+      void queryClient.setQueryData(
+        perDiemSettlementKeys.detail(created.id),
+        created,
+      );
+    },
+  });
+}
+
+/** Cancels a settlement and releases its advances. */
+export function useCancelPerDiemSettlement(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiPatch<PerDiemSettlementDetail>(`${SETTLEMENTS_PATH}/${id}/cancel`),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({
+        queryKey: perDiemSettlementKeys.lists(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: perDiemSettlementKeys.unsettled(),
+      });
+      void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+      void queryClient.setQueryData(perDiemSettlementKeys.detail(id), updated);
+    },
+  });
+}
+
+/** HR records the cash-returned receipt on an approved settlement. */
+export function useRecordPerDiemCashReturned(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: RecordCashReturnedPayload) =>
+      apiPatch<PerDiemSettlementDetail>(
+        `${SETTLEMENTS_PATH}/${id}/cash-returned`,
+        payload,
+      ),
+    onSuccess: (updated) => {
+      void queryClient.setQueryData(perDiemSettlementKeys.detail(id), updated);
+      void queryClient.invalidateQueries({
+        queryKey: perDiemSettlementKeys.lists(),
+      });
+    },
+  });
 }

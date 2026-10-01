@@ -152,6 +152,9 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can access the Human Resources module (hr.view)' })
   canViewHr!: boolean;
 
+  @ApiProperty({ description: 'Can edit Human Resources records (hr.edit)' })
+  canEditHr!: boolean;
+
   @ApiProperty({ description: 'Can view leave requests (leave.view)' })
   canViewLeave!: boolean;
 
