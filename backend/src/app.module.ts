@@ -52,6 +52,7 @@ import { EmployeeContractModule } from './modules/employee-contract/employee-con
 import { ExitPermitModule } from './modules/exit-permit/exit-permit.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { EvaluationModule } from './modules/evaluation/evaluation.module';
+import {PayrollModule} from './modules/payroll/payroll.module';
 
 @Module({
   imports: [
@@ -109,6 +110,7 @@ import { EvaluationModule } from './modules/evaluation/evaluation.module';
     ExitPermitModule,
     AttendanceModule,
     EvaluationModule,
+    PayrollModule,
   ],
   controllers: [AppController],
   providers: [
