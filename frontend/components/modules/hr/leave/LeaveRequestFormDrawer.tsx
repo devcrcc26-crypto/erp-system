@@ -23,7 +23,6 @@ import {
   useSubmitLeaveRequest,
 } from '@/lib/query/leave';
 import {
-  calculateLeaveDays,
   formatLeaveType,
   resolveBalanceLeaveType,
 } from '@/lib/utils/leave-display';
@@ -77,9 +76,6 @@ export default function LeaveRequestFormDrawer({
   const submitMutation = useSubmitLeaveRequest();
 
   const leaveType = Form.useWatch('leaveType', form) as LeaveType | undefined;
-  const dateRange = Form.useWatch('dateRange', form) as
-    | [Dayjs, Dayjs]
-    | undefined;
 
   const leaveTypeOptions = useMemo(
     () => [
@@ -108,22 +104,8 @@ export default function LeaveRequestFormDrawer({
     if (!open) {
       return;
     }
-    form.resetFields();
-    form.setFieldsValue({ days: 1 });
+      form.resetFields();
   }, [form, open]);
-
-  useEffect(() => {
-    if (!dateRange?.[0] || !dateRange?.[1]) {
-      return;
-    }
-    const days = calculateLeaveDays(
-      dateRange[0].format('YYYY-MM-DD'),
-      dateRange[1].format('YYYY-MM-DD'),
-    );
-    if (days !== undefined) {
-      form.setFieldValue('days', days);
-    }
-  }, [dateRange, form]);
 
   async function handleSubmit(values: LeaveFormValues): Promise<void> {
     try {
@@ -219,10 +201,9 @@ export default function LeaveRequestFormDrawer({
             <Form.Item
               name="days"
               label={t('hr.form.days')}
-              extra="Auto-calculated from dates; edit for half-days."
               rules={[
-                { required: true, message: 'Enter days' },
-                { type: 'number', min: 0.5, message: 'Minimum 0.5 day' },
+                { required: true, message: t('hr.validation.enterDays') },
+                { type: 'number', min: 0.5, message: t('hr.validation.minHalfDay') },
               ]}
             >
               <InputNumber

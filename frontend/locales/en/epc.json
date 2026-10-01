@@ -3936,6 +3936,7 @@
     },
     "validation": {
       "selectDate": "Select date",
+      "selectMonth": "Select a month",
       "selectUrgency": "Select urgency",
       "required": "Required",
       "selectEmployee": "Select an employee",

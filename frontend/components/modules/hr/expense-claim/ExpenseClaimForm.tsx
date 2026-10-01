@@ -194,7 +194,7 @@ export default function ExpenseClaimForm({
   function openAddItem(): void {
     setEditingKey(null);
     itemForm.resetFields();
-    itemForm.setFieldsValue({ currency: 'ETB', expenseDate: dayjs() });
+    itemForm.setFieldsValue({ currency: 'ETB' });
     setReceiptFile(null);
     setShowItemForm(true);
   }

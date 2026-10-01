@@ -3936,6 +3936,7 @@
     },
     "validation": {
       "selectDate": "请选择日期",
+      "selectMonth": "请选择月份",
       "selectUrgency": "请选择紧急程度",
       "required": "必填",
       "selectEmployee": "请选择员工",

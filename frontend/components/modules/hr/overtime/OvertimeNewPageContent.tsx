@@ -51,10 +51,10 @@ export default function OvertimeNewPageContent(): React.ReactNode {
   const hasOnBehalfAccess = (eligibleQuery.data?.length ?? 0) > 0;
 
   const openMutation = useOpenOvertimeSheet();
-  const [month, setMonth] = useState(() => dayjs().startOf('month'));
+  const [month, setMonth] = useState<dayjs.Dayjs | null>(null);
 
-  const selectedMonth = month.month() + 1;
-  const selectedYear = month.year();
+  const selectedMonth = month ? month.month() + 1 : undefined;
+  const selectedYear = month ? month.year() : undefined;
   // Scope to the person this sheet belongs to. Without this, hr.view users
   // hit the company-wide list and get a false "already have a sheet" alert
   // for someone else's month before picking an on-behalf employee.
@@ -65,11 +65,14 @@ export default function OvertimeNewPageContent(): React.ReactNode {
     {
       page: 1,
       limit: 1,
-      month: selectedMonth,
-      year: selectedYear,
+      ...(selectedMonth != null ? { month: selectedMonth } : {}),
+      ...(selectedYear != null ? { year: selectedYear } : {}),
       ...(targetEmployeeId ? { employeeId: targetEmployeeId } : {}),
     },
-    eligibleResolved && Boolean(targetEmployeeId),
+    eligibleResolved &&
+      Boolean(targetEmployeeId) &&
+      selectedMonth != null &&
+      selectedYear != null,
   );
 
   const existingSheet = useMemo(() => {
@@ -96,6 +99,10 @@ export default function OvertimeNewPageContent(): React.ReactNode {
   useSetHeaderExtra(null);
 
   async function handleOpen(): Promise<void> {
+    if (!month || selectedMonth == null || selectedYear == null) {
+      messageApi.warning(t('hr.validation.selectMonth'));
+      return;
+    }
     try {
       const sheet = await openMutation.mutateAsync({
         ...onBehalf.payload,
@@ -121,7 +128,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
       })
     : t('pages.hr.overtime.new');
 
-  const periodLabel = month.format('MMMM YYYY');
+  const periodLabel = month ? month.format('MMMM YYYY') : '—';
 
   const opening = (
     <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
@@ -171,13 +178,11 @@ export default function OvertimeNewPageContent(): React.ReactNode {
                 </Typography.Text>
                 <DatePicker
                   picker="month"
-                  allowClear={false}
+                  allowClear
                   disabledDate={disableFutureMonths}
                   value={month}
                   onChange={(value) => {
-                    if (value) {
-                      setMonth(value.startOf('month'));
-                    }
+                    setMonth(value ? value.startOf('month') : null);
                   }}
                 />
               </div>
@@ -193,6 +198,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
                 <Button
                   type="primary"
                   loading={openMutation.isPending}
+                  disabled={!month}
                   onClick={() => void handleOpen()}
                 >
                   {t('hr.onBehalf.openSheet')}

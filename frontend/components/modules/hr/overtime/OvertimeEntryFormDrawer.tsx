@@ -25,24 +25,6 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 const PREVIEW_DEBOUNCE_MS = 300;
 
 /**
- * Default date for a new entry: today on the current month's sheet, the last day
- * of a past month's sheet, otherwise the first day of the sheet's month.
- */
-function defaultEntryDate(sheetMonth: number, sheetYear: number): Dayjs {
-  const today = dayjs().startOf('day');
-  const sheetStart = dayjs(
-    `${sheetYear}-${String(sheetMonth).padStart(2, '0')}-01`,
-  );
-  if (today.isSame(sheetStart, 'month')) {
-    return today;
-  }
-  if (sheetStart.isBefore(today, 'month')) {
-    return sheetStart.endOf('month').startOf('day');
-  }
-  return sheetStart;
-}
-
-/**
  * Drawer to add or edit an overtime sheet entry without shifting page layout.
  */
 export default function OvertimeEntryFormDrawer({
@@ -116,7 +98,6 @@ export default function OvertimeEntryFormDrawer({
     } else {
       form.resetFields();
       form.setFieldsValue({
-        date: defaultEntryDate(sheetMonth, sheetYear),
         isOvernight: false,
       });
       setPreview(null);

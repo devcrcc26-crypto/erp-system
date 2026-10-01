@@ -16,7 +16,7 @@ import {
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { ArrowRight, Calendar } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { type Dayjs } from 'dayjs';
+import { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import FormLayout, { PageLoadingSkeleton } from '@/components/ui/FormLayout/FormLayout';
@@ -208,7 +208,7 @@ export function DailyLogFormDrawer({
         form={form}
         layout="vertical"
         className="erp-drawer-form"
-        initialValues={{ logDate: dayjs() }}
+        initialValues={{}}
         onFinish={(values: DailyLogFormValues) => void handleSubmit(values)}
       >
         {showProjectSelector && (

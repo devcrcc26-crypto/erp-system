@@ -18,7 +18,6 @@ import {
   EditOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import LocalFileImageThumb from '@/components/ui/DocumentImageThumb/LocalFileImageThumb';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
@@ -74,7 +73,7 @@ interface ExitPermitFormProps {
   onSuccess: (result: ExitPermitDetail) => void;
 }
 
-const DETAILS_FIELDS = ['direction'] as const;
+const DETAILS_FIELDS = ['direction', 'date'] as const;
 const EXIT_PERMIT_PATH = '/hr/exit-permits';
 
 let keyCounter = 0;
@@ -388,7 +387,16 @@ export default function ExitPermitForm({
                     placeholder={t('hr.placeholder.selectDirection')}
                   />
                 </Form.Item>
-                <Form.Item name="date" label={t('hr.form.date')}>
+                <Form.Item
+                  name="date"
+                  label={t('hr.form.date')}
+                  rules={[
+                    {
+                      required: true,
+                      message: t('hr.validation.dateRequired'),
+                    },
+                  ]}
+                >
                   <DatePicker
                     className="w-full"
                     placeholder={t('hr.placeholder.selectDate')}
@@ -651,7 +659,7 @@ export default function ExitPermitForm({
       layout="vertical"
       requiredMark={false}
       preserve
-      initialValues={{ direction: 'EXIT', date: dayjs() }}
+      initialValues={{ direction: 'EXIT' }}
       className="flex min-h-0 flex-1 flex-col"
     >
       {formError ? (

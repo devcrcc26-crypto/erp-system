@@ -488,14 +488,6 @@ export default function PerDiemRequestForm({
                 className="w-full"
                 picker="date"
                 format="YYYY-MM-DD"
-                onChange={(range) => {
-                  if (range?.[0] && range?.[1]) {
-                    form.setFieldValue(
-                      'days',
-                      calcInclusiveCalendarDays(range[0], range[1]),
-                    );
-                  }
-                }}
               />
             </Form.Item>
 

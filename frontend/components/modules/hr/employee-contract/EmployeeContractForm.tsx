@@ -134,7 +134,7 @@ function CurrencyInputNumber({
 
 function valuesFromContract(
   contract: EmployeeContractDetail,
-): EmployeeContractFormValues {
+): Partial<EmployeeContractFormValues> {
   const toDay = (value: string | null | undefined): dayjs.Dayjs | undefined => {
     if (!value) {
       return undefined;
@@ -156,8 +156,8 @@ function valuesFromContract(
   return {
     employeeId: contract.employeeId,
     contractType: contract.contractType,
-    signedAt: toDay(contract.signedAt) ?? dayjs(),
-    startDate: toDay(contract.startDate) ?? dayjs(),
+    signedAt: toDay(contract.signedAt),
+    startDate: toDay(contract.startDate),
     endDate: toDay(contract.endDate),
     notes: contract.notes ?? undefined,
     currency: contract.currency ?? 'ETB',
@@ -281,7 +281,7 @@ export default function EmployeeContractForm({
     const values = valuesFromContract(contract);
     form.setFieldsValue(values);
     setDetailsSnapshot(values);
-    previousCurrencyRef.current = values.currency;
+    previousCurrencyRef.current = values.currency ?? 'ETB';
     setExistingDocuments(contract.attachmentFolder?.documents ?? []);
   }, [contract, form]);
 
@@ -355,7 +355,7 @@ export default function EmployeeContractForm({
       const values = valuesFromContract(contract);
       form.setFieldsValue(values);
       setDetailsSnapshot(values);
-      previousCurrencyRef.current = values.currency;
+      previousCurrencyRef.current = values.currency ?? 'ETB';
     } else {
       form.resetFields();
       form.setFieldsValue(defaultValues());

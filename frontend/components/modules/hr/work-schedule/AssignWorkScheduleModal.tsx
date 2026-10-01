@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Button, DatePicker, Form, Input, Modal, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
 import { UserPlus } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
@@ -168,7 +167,7 @@ export default function AssignWorkScheduleModal({
         afterOpenChange={(visible) => {
           if (visible) {
             form.setFieldsValue({
-              effectiveFrom: dayjs(),
+              effectiveFrom: undefined,
               employeeId: employeeId,
               scheduleId: schedule?.id,
               notes: undefined,

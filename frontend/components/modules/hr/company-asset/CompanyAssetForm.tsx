@@ -163,7 +163,6 @@ export default function CompanyAssetForm({
       setDetailsSnapshot(values);
     } else {
       form.resetFields();
-      form.setFieldsValue({ year: new Date().getFullYear() });
       setDetailsSnapshot({});
     }
     setPhotoFile(null);
@@ -668,11 +667,6 @@ export default function CompanyAssetForm({
       requiredMark={false}
       preserve
       className="flex min-h-0 flex-1 flex-col"
-      initialValues={
-        asset
-          ? undefined
-          : { year: new Date().getFullYear() }
-      }
     >
       {formError ? (
         <ErpNotice

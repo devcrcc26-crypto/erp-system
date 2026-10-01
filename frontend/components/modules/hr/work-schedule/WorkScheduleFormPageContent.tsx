@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button, DatePicker, Spin } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+import { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import WorkScheduleForm, {
   buildWorkSchedulePayload,
@@ -44,7 +44,7 @@ export default function WorkScheduleFormPageContent({
   const [pendingValues, setPendingValues] =
     useState<WorkScheduleFormValues | null>(null);
   const [recalcConfirmOpen, setRecalcConfirmOpen] = useState(false);
-  const [recalcFrom, setRecalcFrom] = useState<Dayjs>(dayjs());
+  const [recalcFrom, setRecalcFrom] = useState<Dayjs | null>(null);
 
   useSetHeaderExtra(null);
 
@@ -59,7 +59,7 @@ export default function WorkScheduleFormPageContent({
           ...payload,
           recalculateAttendance,
           recalculateFrom: recalculateAttendance
-            ? recalcFrom.format('YYYY-MM-DD')
+            ? recalcFrom?.format('YYYY-MM-DD')
             : undefined,
         });
         messageApi.success(t('hr.workSchedule.updated'));
@@ -95,7 +95,7 @@ export default function WorkScheduleFormPageContent({
   async function handleSubmit(values: WorkScheduleFormValues): Promise<void> {
     if (isEdit) {
       setPendingValues(values);
-      setRecalcFrom(dayjs());
+      setRecalcFrom(null);
       setRecalcConfirmOpen(true);
       return;
     }
@@ -154,9 +154,14 @@ export default function WorkScheduleFormPageContent({
         cancelLabel={t('hr.workSchedule.recalcAttendanceSaveOnly')}
         confirmLoading={updateMutation.isPending}
         onConfirm={() => {
-          if (pendingValues) {
-            void saveSchedule(pendingValues, true);
+          if (!pendingValues) {
+            return;
           }
+          if (!recalcFrom) {
+            messageApi.warning(t('hr.workSchedule.effectiveFromRequired'));
+            return;
+          }
+          void saveSchedule(pendingValues, true);
         }}
         onCancel={() => {
           if (pendingValues) {
@@ -178,7 +183,7 @@ export default function WorkScheduleFormPageContent({
           <DatePicker
             className="w-full"
             value={recalcFrom}
-            onChange={(value) => setRecalcFrom(value ?? dayjs())}
+            onChange={(value) => setRecalcFrom(value)}
             disabled={updateMutation.isPending}
           />
         </div>

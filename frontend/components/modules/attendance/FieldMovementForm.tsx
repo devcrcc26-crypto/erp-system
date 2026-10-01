@@ -161,17 +161,10 @@ type DayEntry = {
   filledViaBulk: boolean;
 };
 
-function previousMonthDefault(): { month: number; year: number } {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-  if (month <= 1) {
-    return { month: 12, year: year - 1 };
+function monthName(month: number | null): string {
+  if (month == null) {
+    return '—';
   }
-  return { month: month - 1, year };
-}
-
-function monthName(month: number): string {
   return MONTH_OPTIONS.find((o) => o.value === month)?.label ?? String(month);
 }
 
@@ -509,10 +502,9 @@ export default function FieldMovementForm(): React.ReactNode {
   const createMutation = useCreateFieldMovementLog();
   const submitMutation = useSubmitFieldMovementLog();
   const cancelMutation = useCancelFieldMovementLog();
-  const defaults = previousMonthDefault();
 
-  const [month, setMonth] = useState(defaults.month);
-  const [year, setYear] = useState(defaults.year);
+  const [month, setMonth] = useState<number | null>(null);
+  const [year, setYear] = useState<number | null>(null);
   const [fetchState, setFetchState] = useState<FetchState>('idle');
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [dayEntries, setDayEntries] = useState<DayEntry[]>([]);
@@ -562,7 +554,8 @@ export default function FieldMovementForm(): React.ReactNode {
   const someSelected =
     selectableDays.some((day) => day.selected) && !allSelected;
   const anySelected = selectedCount > 0;
-  const periodLabel = `${monthName(month)} ${year}`;
+  const periodLabel =
+    month != null && year != null ? `${monthName(month)} ${year}` : '—';
   const pendingRequestNumbers = useMemo(() => {
     return [
       ...new Set(
@@ -797,6 +790,11 @@ export default function FieldMovementForm(): React.ReactNode {
   async function handleCheckFlaggedDays(): Promise<void> {
     setStepOneError(null);
     setFetchError(null);
+    if (month == null || year == null) {
+      setStepOneError('Select a valid month and year.');
+      setFetchState('idle');
+      return;
+    }
     setFetchState('loading');
     clearBulkFields();
     try {
@@ -833,7 +831,14 @@ export default function FieldMovementForm(): React.ReactNode {
   }
 
   function validateStep1(): boolean {
-    if (month < 1 || month > 12 || year < 2020 || year > new Date().getFullYear()) {
+    if (
+      month == null ||
+      year == null ||
+      month < 1 ||
+      month > 12 ||
+      year < 2020 ||
+      year > new Date().getFullYear()
+    ) {
       setStepOneError('Select a valid month and year.');
       return false;
     }
@@ -1024,9 +1029,8 @@ export default function FieldMovementForm(): React.ReactNode {
   }
 
   function resetToStep1(): void {
-    const next = previousMonthDefault();
-    setMonth(next.month);
-    setYear(next.year);
+    setMonth(null);
+    setYear(null);
     setFetchState('idle');
     setFetchError(null);
     setDayEntries([]);
@@ -1126,10 +1130,12 @@ export default function FieldMovementForm(): React.ReactNode {
                   <Select
                     {...a11y}
                     size="large"
-                    value={month}
+                    allowClear
+                    placeholder="Select month"
+                    value={month ?? undefined}
                     options={MONTH_OPTIONS}
-                    onChange={(value: number) => {
-                      setMonth(value);
+                    onChange={(value: number | null) => {
+                      setMonth(value ?? null);
                       setFetchState('idle');
                       setDayEntries([]);
                       setStepOneError(null);
@@ -1143,14 +1149,12 @@ export default function FieldMovementForm(): React.ReactNode {
                     {...a11y}
                     size="large"
                     style={{ width: '100%' }}
-                    value={year}
+                    value={year ?? undefined}
                     min={2020}
                     max={new Date().getFullYear()}
+                    placeholder="Select year"
                     onChange={(value) => {
-                      if (value == null) {
-                        return;
-                      }
-                      setYear(value);
+                      setYear(value == null ? null : value);
                       setFetchState('idle');
                       setDayEntries([]);
                       setStepOneError(null);

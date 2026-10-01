@@ -106,7 +106,7 @@ export default function ExpenseClaimItemModal({
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ currency: 'ETB', expenseDate: dayjs() });
+      form.setFieldsValue({ currency: 'ETB' });
     }
     setSelectedFiles([]);
   }, [open, editingItem, form]);

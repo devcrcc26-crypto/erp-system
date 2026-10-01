@@ -246,12 +246,6 @@ export default function PerDiemSettlementForm({
                 <DatePicker
                   className="w-full"
                   format="YYYY-MM-DD"
-                  onChange={(date) => {
-                    const end = form.getFieldValue('returnDate') as dayjs.Dayjs | undefined;
-                    if (date && end) {
-                      form.setFieldValue('actualDays', inclusiveDays(date, end));
-                    }
-                  }}
                 />
               </Form.Item>
               <Form.Item
@@ -269,14 +263,6 @@ export default function PerDiemSettlementForm({
                 <DatePicker
                   className="w-full"
                   format="YYYY-MM-DD"
-                  onChange={(date) => {
-                    const start = form.getFieldValue('departureDate') as
-                      | dayjs.Dayjs
-                      | undefined;
-                    if (start && date) {
-                      form.setFieldValue('actualDays', inclusiveDays(start, date));
-                    }
-                  }}
                 />
               </Form.Item>
               <Form.Item

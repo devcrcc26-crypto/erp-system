@@ -39,8 +39,8 @@ import EvaluationStat from './EvaluationStat';
 export default function EvaluationCyclesPageContent(): React.ReactNode {
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newQuarter, setNewQuarter] = useState<number>(1);
-  const [newYear, setNewYear] = useState<number>(new Date().getFullYear());
+  const [newQuarter, setNewQuarter] = useState<number | undefined>(undefined);
+  const [newYear, setNewYear] = useState<number | undefined>(undefined);
   const [messageApi, contextHolder] = message.useMessage();
 
   const cyclesQuery = useEvaluationCycles();
@@ -61,10 +61,16 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
   );
 
   async function handleCreate(): Promise<void> {
+    if (newQuarter == null || newYear == null) {
+      void messageApi.warning('Select a quarter and year');
+      return;
+    }
     setCreating(true);
     try {
       await createCycle.mutateAsync({ quarter: newQuarter, year: newYear });
       setCreateOpen(false);
+      setNewQuarter(undefined);
+      setNewYear(undefined);
       void messageApi.success('Evaluation cycle created');
     } catch {
       void messageApi.error('Failed to create cycle');
@@ -295,6 +301,8 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
               onChange={setNewQuarter}
               options={quarterOptions}
               className="w-full"
+              allowClear
+              placeholder="Select quarter"
             />
           </div>
           <div>
@@ -306,6 +314,8 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
               onChange={setNewYear}
               options={yearOptions}
               className="w-full"
+              allowClear
+              placeholder="Select year"
             />
           </div>
         </div>

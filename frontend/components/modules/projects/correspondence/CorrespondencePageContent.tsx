@@ -16,7 +16,7 @@ import {
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { Mail } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs, { type Dayjs } from 'dayjs';
+import { type Dayjs } from 'dayjs';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ListSearchInput from '@/components/ui/ListSearchInput/ListSearchInput';
 import ListStatusTabs, {
@@ -327,7 +327,6 @@ export function CorrespondenceFormDrawer({
           initialValues={{
             direction: defaultDirection,
             correspondenceType: 'LETTER',
-            correspondenceDate: dayjs(),
             parentId: initialParentId,
             ...directionDefaults(
               defaultDirection,
