@@ -71,6 +71,11 @@ interface SidebarLinkBase {
   readonly keywords?: readonly string[];
   /** Temporarily hidden from everyone (kept in config so it is easy to restore). */
   readonly hidden?: boolean;
+  /**
+   * Utility only: render as the signed-in user's account card (avatar, name,
+   * email) above the footer icon bar instead of as an icon button.
+   */
+  readonly accountCard?: boolean;
 }
 
 export type SidebarLinkConfig = SidebarLinkBase &
@@ -326,7 +331,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
     // Visible to non-HR leads via limitedNavigation + evaluation.inbox token.
     { kind: 'link', id: 'evaluation-inbox', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: ['evaluation.inbox'], badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
     // Every signed-in user can open their own profile — no permission.
-    { kind: 'link', id: 'my-profile', labelKey: 'nav.myProfile', icon: 'my-profile', href: '/profile', activePaths: ['/hr/leave-history/me', '/hr/overtime-history/me'], keywords: ['account', 'password', 'personal', 'me'] },
+    { kind: 'link', id: 'my-profile', labelKey: 'nav.myProfile', icon: 'my-profile', href: '/profile', accountCard: true, activePaths: ['/hr/leave-history/me', '/hr/overtime-history/me'], keywords: ['account', 'password', 'personal', 'me'] },
     { kind: 'link', id: 'audit-logs', labelKey: 'nav.auditLogs', shortLabelKey: 'nav.short.auditLogs', icon: 'audit-logs', href: '/audit-logs', requires: ['audit.view'], keywords: ['history'] },
     { kind: 'link', id: 'settings', labelKey: 'nav.settings', icon: 'settings', href: '/settings', requires: ['settings.manage'], keywords: ['roles', 'permissions'] },
   ],

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } fro
 import { Drawer } from 'antd';
 import { X } from 'lucide-react';
 import BrandLogo from '@/components/ui/BrandLogo/BrandLogo';
+import SidebarFooter from '@/components/sidebar/SidebarFooter';
 import SidebarModuleGroup from '@/components/sidebar/SidebarModuleGroup';
 import SidebarModuleItem from '@/components/sidebar/SidebarModuleItem';
 import SidebarModulePanel, {
@@ -471,20 +472,60 @@ export default function SidebarShell({
     );
   }
 
-  function renderUtility(
+  /**
+   * Footer: utility links as icon buttons, the account card (avatar when
+   * compact) and, on desktop, the collapse/expand toggle. Utility folders
+   * (none today) keep the regular row/tile layout above it.
+   */
+  function renderFooter(
     surface: Surface,
     isCompact: boolean,
     onNavigate?: () => void,
   ): React.ReactNode {
-    if (model.utility.length === 0) {
-      return null;
-    }
+    const footerLinks = model.utility.filter(
+      (entry): entry is SidebarLink => entry.kind === 'link' && !entry.accountCard,
+    );
+    const account =
+      model.utility.find(
+        (entry): entry is SidebarLink => entry.kind === 'link' && entry.accountCard,
+      ) ?? null;
+    const folders = model.utility.filter((entry) => entry.kind === 'folder');
     return (
-      <div className="sb-divider shrink-0 px-2 py-2">
-        <ul className="sb-list">
-          {model.utility.map((entry) => renderEntry(entry, surface, isCompact, onNavigate))}
-        </ul>
-      </div>
+      <>
+        {folders.length > 0 ? (
+          <div className="sb-divider shrink-0 px-2 py-2">
+            <ul className="sb-list">
+              {folders.map((entry) => renderEntry(entry, surface, isCompact, onNavigate))}
+            </ul>
+          </div>
+        ) : null}
+        <SidebarFooter
+          links={footerLinks}
+          account={account}
+          compact={isCompact}
+          onNavigate={onNavigate}
+          modeToggle={
+            surface === 'desktop'
+              ? {
+                  icon: isCompact ? 'sidebar-expand' : 'sidebar-collapse',
+                  label: isCompact
+                    ? t('shell.expandSidebar')
+                    : t('shell.collapseSidebar'),
+                  onClick: toggleMode,
+                }
+              : undefined
+          }
+          stateFor={(link) => {
+            const badge = badgeFor(link);
+            return {
+              label: t(link.labelKey),
+              active: activeLinkId === link.id,
+              badgeCount: badge.count,
+              badgeLabel: badge.label,
+            };
+          }}
+        />
+      </>
     );
   }
 
@@ -514,13 +555,17 @@ export default function SidebarShell({
                   </SidebarModuleGroup>
                 </div>
               ) : null}
+              {/* The drawer's own title already reads "Menu". */}
+              {surface === 'desktop' ? (
+                <p className="sb-section-label">{t('shell.menu')}</p>
+              ) : null}
               <ul className="sb-list">
                 {model.primary.map((entry) => renderEntry(entry, surface, false, onNavigate))}
               </ul>
             </>
           )}
         </div>
-        {renderUtility(surface, false, onNavigate)}
+        {renderFooter(surface, false, onNavigate)}
       </>
     );
   }
@@ -528,7 +573,7 @@ export default function SidebarShell({
   function renderCompactRail(): React.ReactNode {
     return (
       <>
-        <ul className="sb-list shrink-0 px-2 pt-2">
+        <ul className="sb-list sb-compact-tools shrink-0 px-2 pt-2">
           <li>
             <SidebarRailItem
               kind="folder"
@@ -567,7 +612,7 @@ export default function SidebarShell({
             </ul>
           )}
         </div>
-        {renderUtility('desktop', true)}
+        {renderFooter('desktop', true)}
       </>
     );
   }
@@ -659,28 +704,15 @@ export default function SidebarShell({
               aria-label={t('shell.brandWorkspace')}
               className="inline-flex items-center gap-2.5 rounded-md"
             >
-              <BrandLogo size={24} onDark />
+              <BrandLogo size={28} />
               {compact ? null : (
-                <span className="text-[15px] font-semibold text-white">
-                  {t('shell.brandTitle')}
-                </span>
+                <span className="sb-brand-title">{t('shell.brandTitle')}</span>
               )}
             </Link>
           </div>
 
           {compact ? renderCompactRail() : renderExpandedTree('desktop')}
 
-          <div className="sb-divider shrink-0 px-2 py-2">
-            <SidebarRailItem
-              kind="action"
-              icon={compact ? 'sidebar-expand' : 'sidebar-collapse'}
-              label={compact ? t('shell.expandSidebar') : t('shell.collapseSidebar')}
-              caption={compact ? t('shell.expandShort') : undefined}
-              compact={compact}
-              active={false}
-              onClick={toggleMode}
-            />
-          </div>
         </div>
 
         {renderDockedPanel()}

@@ -29,7 +29,9 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
 - **Expanded (default, 272px):** icon + label rows, always on one line. Folders expand in place, one at a time.
 - **Compact (opt-in, 84px):** icon over a caption; the full label is in a tooltip on hover
   *and* keyboard focus. Folders open a docked 272px panel with a heading and a close button.
-- The **Collapse sidebar / Expand sidebar** button at the bottom always changes the layout,
+- The **Collapse sidebar / Expand sidebar** button always changes the layout. Expanded, it
+  is a square icon button beside the account card in the footer. Compact, it sits alone at
+  the bottom of the rail. Both have a hover/focus tooltip. It works on
   whatever page you are on. The choice is saved in `localStorage` (`sidebar:mode`).
 - A folder panel closes when you click its folder again, press its close button, press Esc
   (docked), or navigate to a page outside it. Navigating into a folder's page opens it in
@@ -39,6 +41,13 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
   requests are tracked under **Approvals**.
 - **My Profile** sits in the utility section (after Approvals) with no permission requirement,
   so every signed-in user can reach `/profile`.
+- **Footer (expanded and drawer):** utility links render as a row of icon buttons
+  (`SidebarFooter.tsx`) with hover/focus tooltips and floating badges. The link flagged
+  `accountCard: true` in the config (My Profile) renders as an account card below them,
+  with the user's initials, name and email. In compact mode the same links stack vertically
+  as icon buttons, the account becomes an initials avatar, and every item has a right-side
+  hover/focus tooltip. The compact rail uses a grey surface (`--sb-rail-bg`) with white icon
+  tiles, so docked panels read as a separate layer.
 - **Limited navigation:** users without `hr.view` see only Dashboard, New Request, Approvals
   and My Profile. Users with `hr.view` get the full sidebar (see "How permissions control visibility").
 - **Project pages** (`/projects/:id/...`) show the project's workspace navigation inside the
@@ -144,7 +153,9 @@ Hiding a link is not security. Every page and API must still enforce its own per
 
 There is exactly one "you are here" treatment, defined once in `sidebar.css`:
 
-- lighter background (`--sb-active-bg`), white text, semibold,
+- teal-tinted background (`--sb-active-bg`), dark teal text and icon (`--sb-active-text`), semibold,
+- on top-level entries (rail rows and compact tiles), the icon tile turns solid
+  `--sb-accent` with a white icon,
 - a 3px accent bar (`--sb-accent`) on the left edge.
 
 It applies to any `.sb-selectable` element with `aria-current="page"` (links) or
@@ -156,8 +167,9 @@ The active link is the visible link whose `href` (or an `activePaths` entry) is 
 longest prefix of the current route. `/` matches only the dashboard. Do not add
 per-component active logic; add `activePaths` in the config instead.
 
-To theme the sidebar for a light surface, redefine the `--sb-*` variables on `.sb-theme`.
-The rules themselves do not change.
+The sidebar uses a light surface that matches the app tokens. To re-theme it, redefine
+the `--sb-*` variables on `.sb-theme, .sb-drawer` (the mobile drawer renders outside
+`.sb-theme`). The rules themselves do not change.
 
 ## Accessibility requirements (every item must meet these)
 

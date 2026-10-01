@@ -35,15 +35,7 @@ interface RailFolderProps extends RailItemBase {
   buttonId?: string;
 }
 
-interface RailActionProps extends RailItemBase {
-  kind: 'action';
-  onClick: () => void;
-  /** e.g. "Control+K" — exposed via aria-keyshortcuts. */
-  keyShortcuts?: string;
-  buttonId?: string;
-}
-
-export type SidebarRailItemProps = RailLinkProps | RailFolderProps | RailActionProps;
+export type SidebarRailItemProps = RailLinkProps | RailFolderProps;
 
 /**
  * One top-level sidebar entry. Links navigate; folders are disclosure buttons
@@ -52,13 +44,13 @@ export type SidebarRailItemProps = RailLinkProps | RailFolderProps | RailActionP
  */
 export default function SidebarRailItem(props: SidebarRailItemProps): React.ReactNode {
   const { icon, label, caption, compact, active, badgeCount = 0, badgeLabel = '' } = props;
-  const className = `sb-selectable ${compact ? 'sb-tile' : 'sb-row'}`;
+  const className = `sb-selectable ${compact ? 'sb-tile' : 'sb-row'} sb-rail-item`;
   const isFolder = props.kind === 'folder';
   const shortCaption = caption && caption !== label ? caption : null;
 
   const content = (
     <>
-      <span className="sb-icon">{getNavIcon(icon)}</span>
+      <span className="sb-icon sb-icon-tile">{getNavIcon(icon)}</span>
       {compact ? (
         <span className="sb-tile-caption">
           {shortCaption ? (
@@ -100,7 +92,7 @@ export default function SidebarRailItem(props: SidebarRailItemProps): React.Reac
         {content}
       </Link>
     );
-  } else if (props.kind === 'folder') {
+  } else {
     control = (
       <button
         id={props.buttonId}
@@ -111,18 +103,6 @@ export default function SidebarRailItem(props: SidebarRailItemProps): React.Reac
         aria-controls={props.controlsId}
         data-active={active && !props.open ? 'true' : undefined}
         onClick={props.onToggle}
-      >
-        {content}
-      </button>
-    );
-  } else {
-    control = (
-      <button
-        id={props.buttonId}
-        type="button"
-        className={className}
-        aria-keyshortcuts={props.keyShortcuts}
-        onClick={props.onClick}
       >
         {content}
       </button>

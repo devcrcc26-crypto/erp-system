@@ -1,27 +1,69 @@
 /*
- * Main sidebar theme. Every colour the sidebar uses is a variable here so the
- * single selected state, focus ring and contrast ratios are defined once.
- * Contrast on --sb-bg (#1C2B3A): text 12.9:1, muted 7.1:1, accent bar 7.6:1,
- * focus ring 9.8:1.
+ * Main sidebar theme — light surface with teal selection, matching the app
+ * tokens (lib/theme/tokens.ts). Every colour the sidebar uses is a variable
+ * here so the single selected state, focus ring and contrast ratios are
+ * defined once. The drawer shares the variables because it renders outside
+ * `.sb-theme`.
+ * Contrast on --sb-bg (#FFFFFF): text 14.7:1, muted 7.6:1, icon 4.8:1,
+ * focus ring 3.4:1. Active text on --sb-active-bg: 5.5:1; accent bar 5.5:1.
  */
-.sb-theme {
-  --sb-bg: #1c2b3a;
-  --sb-border: rgba(255, 255, 255, 0.1);
-  --sb-text: #e6edf3;
-  --sb-text-strong: #ffffff;
-  --sb-text-muted: #a9b8c7;
-  --sb-icon: #b4c2d0;
-  --sb-hover: rgba(255, 255, 255, 0.07);
-  --sb-active-bg: rgba(255, 255, 255, 0.13);
-  --sb-accent: #3dd6a8;
-  --sb-focus: #7fe7cc;
+.sb-theme,
+.sb-drawer {
+  --sb-bg: #ffffff;
+  --sb-border: #e8ebef;
+  --sb-text: #1f2937;
+  --sb-text-strong: #0f172a;
+  --sb-text-muted: #4b5563;
+  --sb-icon: #64748b;
+  --sb-hover: rgba(15, 23, 42, 0.05);
+  --sb-active-bg: #e1f5ee;
+  --sb-active-text: #0f6e56;
+  --sb-accent: #0f6e56;
+  --sb-focus: #1d9e75;
   --sb-badge-bg: #c43d3c;
-  --sb-field-bg: rgba(255, 255, 255, 0.06);
-  --sb-field-border: rgba(255, 255, 255, 0.22);
+  --sb-field-bg: #f6f8fa;
+  --sb-field-border: #d0d7de;
+  --sb-skeleton: rgba(15, 23, 42, 0.06);
+  --sb-scrollbar: rgba(15, 23, 42, 0.18);
+  --sb-shadow: 4px 0 16px rgba(15, 23, 42, 0.06);
+  --sb-tile-bg: #f1f4f7;
+  --sb-tile-hover: #d9f0e7;
+  --sb-tile-active-text: #ffffff;
+  --sb-panel-bg: #f6f8fa;
+}
 
+.sb-theme {
   background: var(--sb-bg);
   color: var(--sb-text);
   font-family: var(--font-sans);
+}
+
+/* Separate the light rail and docked panel from the light page. */
+.sb-rail {
+  border-right: 1px solid var(--sb-border);
+}
+
+.sb-panel {
+  border-right: 1px solid var(--sb-border);
+  background: var(--sb-bg);
+  box-shadow: var(--sb-shadow);
+}
+
+.sb-brand-title {
+  color: var(--sb-text-strong);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* Caption above the main list ("Menu"). Sentence case, never all-caps. */
+.sb-section-label {
+  margin: 4px 0 6px;
+  padding: 0 12px;
+  color: var(--sb-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 /* One focus ring for every sidebar control (WCAG 2.4.7). */
@@ -38,7 +80,7 @@
 .sb-scroll {
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: var(--sb-scrollbar) transparent;
 }
 
 .sb-divider {
@@ -76,7 +118,7 @@
 .sb-selectable[aria-current='page'],
 .sb-selectable[data-active='true'] {
   background: var(--sb-active-bg);
-  color: var(--sb-text-strong);
+  color: var(--sb-active-text);
   font-weight: 600;
 }
 
@@ -85,17 +127,20 @@
   content: '';
   position: absolute;
   left: 0;
-  top: 6px;
-  bottom: 6px;
+  top: 8px;
+  bottom: 8px;
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: var(--sb-accent);
 }
 
-.sb-selectable[aria-current='page'] .sb-icon,
-.sb-selectable[data-active='true'] .sb-icon,
 .sb-selectable:hover .sb-icon {
   color: var(--sb-text-strong);
+}
+
+.sb-selectable[aria-current='page'] .sb-icon,
+.sb-selectable[data-active='true'] .sb-icon {
+  color: var(--sb-active-text);
 }
 
 .sb-row {
@@ -105,7 +150,7 @@
   align-items: center;
   gap: 10px;
   padding: 6px 10px 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   line-height: 1.3;
@@ -150,13 +195,13 @@
 .sb-tile {
   display: flex;
   width: 100%;
-  min-height: 58px;
+  min-height: 64px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 5px;
   padding: 8px 4px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
@@ -202,7 +247,7 @@
 /* Folder mark sits level with the icon on every tile. */
 .sb-tile-folder-mark {
   position: absolute;
-  top: 19px;
+  top: 24px;
   right: 6px;
   display: inline-flex;
   transform: translateY(-50%);
@@ -212,6 +257,45 @@
 .sb-selectable[aria-expanded='true'] {
   background: var(--sb-hover);
   color: var(--sb-text-strong);
+}
+
+/*
+ * Top-level entries (rail rows and compact tiles) carry their icon in a
+ * rounded tile. The tile is part of THE selected state above: the current
+ * page's tile turns solid accent with a white icon (6.3:1).
+ */
+.sb-row.sb-rail-item {
+  min-height: 42px;
+  gap: 12px;
+  padding: 5px 10px 5px 8px;
+}
+
+.sb-icon-tile {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--sb-tile-bg);
+  font-size: 16px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.sb-tile .sb-icon-tile {
+  width: 36px;
+  height: 32px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.sb-selectable:hover .sb-icon-tile,
+.sb-selectable[aria-expanded='true'] .sb-icon-tile {
+  background: var(--sb-tile-hover);
+  color: var(--sb-active-text);
+}
+
+.sb-selectable[aria-current='page'] .sb-icon-tile,
+.sb-selectable[data-active='true'] .sb-icon-tile {
+  background: var(--sb-accent);
+  color: var(--sb-tile-active-text);
 }
 
 /* ── Groups inside a module panel ── */
@@ -274,11 +358,13 @@
   list-style: none;
 }
 
-/* Inline (expanded) panel hangs under its folder row with a guide line. */
+/* Inline (expanded) panel: a soft card under its folder row. */
 .sb-inline-panel {
-  margin: 2px 0 6px 14px;
-  padding-left: 2px;
-  border-left: 1px solid var(--sb-border);
+  margin: 4px 0 8px;
+  padding: 6px;
+  border: 1px solid var(--sb-border);
+  border-radius: 12px;
+  background: var(--sb-panel-bg);
 }
 
 .sb-panel-header {
@@ -347,7 +433,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--sb-border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--sb-text);
   cursor: pointer;
@@ -435,8 +521,8 @@
 /* Anchored to the icon's top-right corner, centred on the tile. */
 .sb-badge--floating {
   position: absolute;
-  top: 5px;
-  left: calc(50% + 3px);
+  top: 4px;
+  left: calc(50% + 8px);
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
@@ -461,7 +547,7 @@
 .sb-search-icon {
   position: absolute;
   top: 50%;
-  left: 10px;
+  left: 12px;
   transform: translateY(-50%);
   color: var(--sb-text-muted);
   pointer-events: none;
@@ -469,13 +555,23 @@
 
 .sb-search-input {
   width: 100%;
-  height: 36px;
-  padding: 0 52px 0 32px;
+  height: 38px;
+  padding: 0 52px 0 34px;
   border: 1px solid var(--sb-field-border);
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--sb-field-bg);
   color: var(--sb-text-strong);
   font-size: 14px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.sb-search-input:hover {
+  border-color: var(--sb-icon);
+}
+
+.sb-search-input:focus-visible {
+  border-color: var(--sb-focus);
+  background: var(--sb-bg);
 }
 
 .sb-search-input::placeholder {
@@ -490,11 +586,12 @@
 .sb-kbd {
   position: absolute;
   top: 50%;
-  right: 8px;
+  right: 10px;
   transform: translateY(-50%);
-  padding: 1px 5px;
+  padding: 1px 6px;
   border: 1px solid var(--sb-field-border);
-  border-radius: 4px;
+  border-radius: 6px;
+  background: var(--sb-bg);
   color: var(--sb-text-muted);
   font-family: var(--font-sans);
   font-size: 12px;
@@ -510,8 +607,8 @@
 }
 
 .sb-skeleton {
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: var(--sb-skeleton);
   animation: sb-pulse 1.4s ease-in-out infinite;
 }
 
@@ -531,6 +628,8 @@
   .sb-panel,
   .sb-chevron,
   .sb-selectable,
+  .sb-icon-tile,
+  .sb-search-input,
   .sb-pin,
   .sb-skeleton {
     transition: none;
@@ -542,7 +641,7 @@
 
 .sb-drawer .ant-drawer-section,
 .sb-drawer .ant-drawer-content {
-  background: #1c2b3a;
+  background: var(--sb-bg);
 }
 
 /* Never wider than the phone: always leave a strip of page to tap out. */
@@ -552,30 +651,278 @@
 }
 
 .sb-drawer .ant-drawer-header {
-  background: #1c2b3a;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--sb-bg);
+  border-bottom: 1px solid var(--sb-border);
 }
 
 .sb-drawer .ant-drawer-title {
-  color: #ffffff;
+  color: var(--sb-text-strong);
   font-size: 15px;
   font-weight: 600;
 }
 
 .sb-drawer .ant-drawer-close {
-  color: #e6edf3;
+  color: var(--sb-text);
 }
 
 .sb-drawer .ant-drawer-close:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.07);
+  color: var(--sb-text-strong);
+  background: var(--sb-hover);
 }
 
 .sb-drawer .ant-drawer-close:focus-visible {
-  outline: 2px solid #7fe7cc;
+  outline: 2px solid var(--sb-focus);
   outline-offset: 2px;
 }
 
 .sb-drawer .ant-drawer-body {
   padding: 0;
+}
+
+/* ── Expanded footer: utility icon bar + account card ── */
+
+.sb-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 8px;
+}
+
+.sb-utility-bar {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-utility-button {
+  display: flex;
+  width: 100%;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.sb-utility-button .sb-icon {
+  width: 20px;
+  font-size: 18px;
+}
+
+/* Same selected treatment; the accent bar sits under an icon-only button. */
+.sb-utility-button[aria-current='page']::before {
+  top: auto;
+  right: 10px;
+  bottom: 0;
+  left: 10px;
+  width: auto;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+
+.sb-utility-button .sb-badge--floating {
+  top: 2px;
+  left: calc(50% + 4px);
+}
+
+.sb-account-card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--sb-border);
+  border-radius: 12px;
+  background: var(--sb-panel-bg);
+  text-align: left;
+}
+
+.sb-avatar {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--sb-accent);
+  color: var(--sb-tile-active-text);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.sb-account-text {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.sb-account-name,
+.sb-account-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-account-name {
+  color: var(--sb-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.sb-account-card[aria-current='page'] .sb-account-name {
+  color: var(--sb-active-text);
+}
+
+.sb-account-meta {
+  color: var(--sb-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.sb-account-chevron {
+  flex-shrink: 0;
+  color: var(--sb-text-muted);
+}
+
+/* Account card and the collapse control share one footer row. */
+.sb-account-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.sb-account-row > .sb-account-card {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Collapse (expanded) / expand (compact) toggle: square, quieter than destinations. */
+.sb-mode-toggle {
+  display: inline-flex;
+  width: 40px;
+  min-height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--sb-border);
+  border-radius: 12px;
+  background: var(--sb-bg);
+  color: var(--sb-text-muted);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.sb-mode-toggle:hover {
+  border-color: var(--sb-tile-hover);
+  background: var(--sb-tile-hover);
+  color: var(--sb-active-text);
+}
+
+.sb-mode-toggle .sb-icon {
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-mode-toggle {
+    transition: none;
+  }
+}
+
+/* ── Compact rail ── */
+
+/*
+ * The compact rail sits on a light grey surface so docked panels (white)
+ * read as a separate layer. Icon tiles turn white to stay visible on it.
+ * Muted text on --sb-rail-bg: 7.1:1.
+ */
+.sb-theme {
+  --sb-rail-bg: #f5f7f9;
+}
+
+.sb-theme[data-mode='compact'] .sb-rail {
+  background: var(--sb-rail-bg);
+}
+
+.sb-theme[data-mode='compact'] .sb-icon-tile {
+  background: var(--sb-bg);
+  box-shadow:
+    inset 0 0 0 1px var(--sb-border),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.sb-theme[data-mode='compact'] .sb-selectable:hover .sb-icon-tile,
+.sb-theme[data-mode='compact'] .sb-selectable[aria-expanded='true'] .sb-icon-tile {
+  background: var(--sb-tile-hover);
+  box-shadow: none;
+}
+
+.sb-theme[data-mode='compact'] .sb-selectable[aria-current='page'] .sb-icon-tile,
+.sb-theme[data-mode='compact'] .sb-selectable[data-active='true'] .sb-icon-tile {
+  background: var(--sb-accent);
+  box-shadow: none;
+}
+
+/* Search / Favorites sit apart from the destinations. */
+.sb-compact-tools {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--sb-border);
+}
+
+.sb-footer--compact {
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+}
+
+.sb-utility-stack {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-footer--compact .sb-utility-button {
+  height: 42px;
+}
+
+/* In the vertical stack the accent bar goes back to the left edge. */
+.sb-footer--compact .sb-utility-button[aria-current='page']::before {
+  top: 10px;
+  right: auto;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  height: auto;
+  border-radius: 0 3px 3px 0;
+}
+
+.sb-account-avatar-link {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+  border-radius: 12px;
+}
+
+.sb-account-avatar-link .sb-avatar {
+  width: 36px;
+  height: 36px;
+}
+
+.sb-account-avatar-link[aria-current='page'] .sb-avatar {
+  box-shadow:
+    0 0 0 2px var(--sb-active-bg),
+    0 0 0 4px var(--sb-accent);
 }

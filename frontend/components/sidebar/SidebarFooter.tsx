@@ -1,0 +1,288 @@
+'use client';
+
+import Link from 'next/link';
+import { Tooltip } from 'antd';
+import { ChevronRight } from 'lucide-react';
+import SidebarBadge from '@/components/sidebar/SidebarBadge';
+import type { SidebarLink } from '@/components/sidebar/sidebar-model';
+import { getNavIcon } from '@/lib/navigation/nav-icons';
+import { useAuthStore } from '@/stores/auth.store';
+
+type TooltipSide = 'top' | 'right';
+
+export interface SidebarModeToggleProps {
+  icon: string;
+  label: string;
+  onClick: () => void;
+  tooltipPlacement?: TooltipSide;
+}
+
+interface FooterLinkState {
+  readonly label: string;
+  readonly active: boolean;
+  readonly badgeCount: number;
+  readonly badgeLabel: string;
+}
+
+/**
+ * Sidebar footer. Utility links (Approvals, Audit Log, Settings, …) are icon
+ * buttons; the link flagged `accountCard` (My Profile) is the account card.
+ *
+ * - Expanded: a row of icon buttons, then the card beside the collapse toggle.
+ * - Compact: a vertical stack of icon buttons, an initials avatar for the
+ *   account, then the expand toggle. Tooltips open to the right.
+ *
+ * Which links appear is decided by the config and permission filtering; this
+ * component only lays them out.
+ */
+export default function SidebarFooter({
+  links,
+  account,
+  stateFor,
+  onNavigate,
+  modeToggle,
+  compact = false,
+}: {
+  /** Icon-bar links, in config order. */
+  links: readonly SidebarLink[];
+  /** The account-card link, or null when the session cannot see it. */
+  account: SidebarLink | null;
+  stateFor: (link: SidebarLink) => FooterLinkState;
+  onNavigate?: () => void;
+  /** Desktop only — the drawer has no collapsed mode. */
+  modeToggle?: SidebarModeToggleProps;
+  compact?: boolean;
+}): React.ReactNode {
+  if (links.length === 0 && account === null && !modeToggle) {
+    return null;
+  }
+
+  if (compact) {
+    return (
+      <div className="sb-divider sb-footer sb-footer--compact shrink-0">
+        {links.length > 0 ? (
+          <ul className="sb-utility-stack">
+            {links.map((link) => (
+              <li key={link.id}>
+                <UtilityButton
+                  link={link}
+                  state={stateFor(link)}
+                  onNavigate={onNavigate}
+                  tooltipSide="right"
+                />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {account ? (
+          <AccountAvatarLink
+            link={account}
+            state={stateFor(account)}
+            onNavigate={onNavigate}
+          />
+        ) : null}
+        {modeToggle ? (
+          <SidebarModeToggle {...modeToggle} tooltipPlacement="right" />
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="sb-divider sb-footer shrink-0">
+      {links.length > 0 ? (
+        <ul className="sb-utility-bar">
+          {links.map((link) => (
+            <li key={link.id}>
+              <UtilityButton
+                link={link}
+                state={stateFor(link)}
+                onNavigate={onNavigate}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {account || modeToggle ? (
+        <div className="sb-account-row">
+          {account ? (
+            <AccountCard
+              link={account}
+              state={stateFor(account)}
+              onNavigate={onNavigate}
+            />
+          ) : (
+            <span className="flex-1" />
+          )}
+          {modeToggle ? <SidebarModeToggle {...modeToggle} /> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function UtilityButton({
+  link,
+  state,
+  onNavigate,
+  tooltipSide = 'top',
+}: {
+  link: SidebarLink;
+  state: FooterLinkState;
+  onNavigate?: () => void;
+  tooltipSide?: TooltipSide;
+}): React.ReactNode {
+  if (link.href === null) {
+    return null;
+  }
+  // The span gives the tooltip a DOM anchor; focus bubbles to it, so the
+  // label shows on keyboard focus as well as hover.
+  return (
+    <Tooltip
+      title={state.label}
+      placement={tooltipSide}
+      trigger={['hover', 'focus']}
+      mouseEnterDelay={0.3}
+    >
+      <span className="block">
+        <Link
+          href={link.href}
+          onClick={onNavigate}
+          aria-current={state.active ? 'page' : undefined}
+          className="sb-selectable sb-utility-button"
+        >
+          <span className="sb-icon">{getNavIcon(link.icon)}</span>
+          <span className="sr-only">{state.label}</span>
+          <SidebarBadge
+            count={state.badgeCount}
+            label={state.badgeLabel}
+            floating
+          />
+        </Link>
+      </span>
+    </Tooltip>
+  );
+}
+
+/** Signed-in user's display name and initials for the account card/avatar. */
+function useAccountIdentity(): {
+  email: string | null;
+  name: string;
+  initials: string;
+} {
+  const user = useAuthStore((s) => s.user);
+  if (!user) {
+    return { email: null, name: '', initials: '' };
+  }
+  const name = `${user.firstName} ${user.lastName}`.trim();
+  const initials =
+    `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() ||
+    user.email.charAt(0).toUpperCase();
+  return { email: user.email || null, name, initials };
+}
+
+function AccountCard({
+  link,
+  state,
+  onNavigate,
+}: {
+  link: SidebarLink;
+  state: FooterLinkState;
+  onNavigate?: () => void;
+}): React.ReactNode {
+  const { email, name, initials } = useAccountIdentity();
+  if (link.href === null) {
+    return null;
+  }
+
+  return (
+    <Link
+      href={link.href}
+      onClick={onNavigate}
+      aria-current={state.active ? 'page' : undefined}
+      className="sb-selectable sb-account-card"
+    >
+      <span className="sb-avatar" aria-hidden>
+        {initials || getNavIcon(link.icon)}
+      </span>
+      <span className="sb-account-text">
+        <span className="sb-account-name">{name || state.label}</span>
+        {email ? <span className="sb-account-meta">{email}</span> : null}
+      </span>
+      {/* Visible text first (WCAG 2.5.3), then the destination. */}
+      {name ? <span className="sr-only">{`, ${state.label}`}</span> : null}
+      <ChevronRight
+        aria-hidden
+        size={16}
+        strokeWidth={2}
+        className="sb-account-chevron"
+      />
+    </Link>
+  );
+}
+
+/** Compact rail: the account as an initials avatar with a hover/focus tooltip. */
+function AccountAvatarLink({
+  link,
+  state,
+  onNavigate,
+}: {
+  link: SidebarLink;
+  state: FooterLinkState;
+  onNavigate?: () => void;
+}): React.ReactNode {
+  const { name, initials } = useAccountIdentity();
+  if (link.href === null) {
+    return null;
+  }
+  const tooltip = name ? `${name} · ${state.label}` : state.label;
+
+  return (
+    <Tooltip
+      title={tooltip}
+      placement="right"
+      trigger={['hover', 'focus']}
+      mouseEnterDelay={0.3}
+    >
+      <span className="block w-full">
+        <Link
+          href={link.href}
+          onClick={onNavigate}
+          aria-current={state.active ? 'page' : undefined}
+          className="sb-selectable sb-account-avatar-link"
+        >
+          <span className="sb-avatar" aria-hidden>
+            {initials || getNavIcon(link.icon)}
+          </span>
+          <span className="sr-only">{tooltip}</span>
+        </Link>
+      </span>
+    </Tooltip>
+  );
+}
+
+/** Square icon button that collapses or expands the sidebar. */
+function SidebarModeToggle({
+  icon,
+  label,
+  onClick,
+  tooltipPlacement = 'top',
+}: SidebarModeToggleProps): React.ReactNode {
+  return (
+    <Tooltip
+      title={label}
+      placement={tooltipPlacement}
+      trigger={['hover', 'focus']}
+      mouseEnterDelay={0.3}
+    >
+      <button
+        type="button"
+        className="sb-mode-toggle"
+        aria-label={label}
+        onClick={onClick}
+      >
+        <span className="sb-icon">{getNavIcon(icon)}</span>
+      </button>
+    </Tooltip>
+  );
+}

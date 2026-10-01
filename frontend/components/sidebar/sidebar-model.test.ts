@@ -66,6 +66,13 @@ describe('sidebar permissions and filtering', () => {
     expect(ids(modelFor({ canViewHr: true }).utility)).toContain('my-profile');
   });
 
+  it('marks only My Profile as the footer account card', () => {
+    const accountIds = modelFor({ canViewHr: true, canViewAuditLogs: true })
+      .utility.filter((entry) => entry.kind === 'link' && entry.accountCard)
+      .map((entry) => entry.id);
+    expect(accountIds).toEqual(['my-profile']);
+  });
+
   it('keeps New Request as a direct link to the request picker', () => {
     const entry = modelFor({ canViewHr: true }).primary.find(
       (item) => item.id === 'new-request',

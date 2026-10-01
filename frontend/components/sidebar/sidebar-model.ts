@@ -27,6 +27,8 @@ export interface SidebarLink {
   readonly badge?: SidebarBadgeSource;
   /** Config links can be pinned; per-project links cannot. */
   readonly pinnable: boolean;
+  /** Shown as the account card in the sidebar footer. */
+  readonly accountCard: boolean;
 }
 
 export interface SidebarGroup {
@@ -103,6 +105,7 @@ function toLink(config: SidebarLinkConfig): SidebarLink {
     keywords: config.keywords ?? [],
     badge: config.badge,
     pinnable: config.comingSoon !== true,
+    accountCard: config.accountCard === true,
   };
 }
 
@@ -217,6 +220,7 @@ export function buildProjectContextGroups(
           activePaths: [],
           keywords: [],
           pinnable: false,
+          accountCard: false,
         }),
       ),
     }));
