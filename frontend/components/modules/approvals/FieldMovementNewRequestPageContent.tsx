@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Select, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import FieldMovementForm from '@/components/modules/profile/FieldMovementForm';
@@ -28,7 +28,7 @@ export default function FieldMovementNewRequestPageContent(): React.ReactNode {
   const [selectedPeriod, setSelectedPeriod] = useState<{
     month: number;
     year: number;
-  }>(current);
+  } | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
   const profileQuery = useCurrentUser();
@@ -62,29 +62,14 @@ export default function FieldMovementNewRequestPageContent(): React.ReactNode {
     previousFlags.data,
   ]);
 
-  useEffect(() => {
-    if (periodsWithFlags.length === 0) {
-      return;
-    }
-    const match = periodsWithFlags.find(
-      (period) =>
-        period.month === selectedPeriod.month &&
-        period.year === selectedPeriod.year,
-    );
-    if (!match) {
-      setSelectedPeriod({
-        month: periodsWithFlags[0]!.month,
-        year: periodsWithFlags[0]!.year,
-      });
-    }
-  }, [periodsWithFlags, selectedPeriod.month, selectedPeriod.year]);
-
   const activeFlags =
-    periodsWithFlags.find(
-      (period) =>
-        period.month === selectedPeriod.month &&
-        period.year === selectedPeriod.year,
-    )?.days ?? [];
+    selectedPeriod == null
+      ? []
+      : (periodsWithFlags.find(
+          (period) =>
+            period.month === selectedPeriod.month &&
+            period.year === selectedPeriod.year,
+        )?.days ?? []);
 
   const loading =
     currentFlags.isLoading ||
@@ -134,12 +119,23 @@ export default function FieldMovementNewRequestPageContent(): React.ReactNode {
       <div className="flex flex-wrap items-center gap-3">
         <Select
           style={{ minWidth: 200 }}
-          value={`${selectedPeriod.year}-${selectedPeriod.month}`}
+          allowClear
+          placeholder="Select month"
+          value={
+            selectedPeriod
+              ? `${selectedPeriod.year}-${selectedPeriod.month}`
+              : undefined
+          }
           options={periodsWithFlags.map((period) => ({
             value: `${period.year}-${period.month}`,
             label: `${new Date(period.year, period.month - 1, 1).toLocaleString('en', { month: 'long' })} ${period.year} (${period.days.length})`,
           }))}
           onChange={(value) => {
+            if (!value) {
+              setSelectedPeriod(null);
+              setFormOpen(false);
+              return;
+            }
             const [yearPart, monthPart] = value.split('-');
             setSelectedPeriod({
               year: Number(yearPart),
@@ -149,14 +145,16 @@ export default function FieldMovementNewRequestPageContent(): React.ReactNode {
         />
         <Button
           type="primary"
-          disabled={activeFlags.length === 0 || !employeeId}
+          disabled={
+            selectedPeriod == null || activeFlags.length === 0 || !employeeId
+          }
           onClick={() => setFormOpen(true)}
         >
           Submit Explanation
         </Button>
       </div>
 
-      {employeeId ? (
+      {employeeId && selectedPeriod ? (
         <FieldMovementForm
           open={formOpen}
           onClose={() => setFormOpen(false)}
