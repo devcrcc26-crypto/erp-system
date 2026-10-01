@@ -225,7 +225,7 @@ export interface SidebarPreferences {
 
 /**
  * Persisted sidebar preferences. Labels are visible by default: compact mode
- * is opt-in. Favorites are stored per user.
+ * is opt-in. Mode and favorites are stored per user.
  */
 export function useSidebarPreferences(): SidebarPreferences {
   const userId = useAuthStore((state) => state.user?.id ?? null);
@@ -233,7 +233,10 @@ export function useSidebarPreferences(): SidebarPreferences {
     ? `${SIDEBAR_STORAGE_KEYS.favoritesPrefix}${userId}`
     : null;
 
-  const rawMode = useStoredString(SIDEBAR_STORAGE_KEYS.mode);
+  const modeKey = userId ? `${SIDEBAR_STORAGE_KEYS.modePrefix}${userId}` : null;
+  const rawUserMode = useStoredString(modeKey);
+  const rawLegacyMode = useStoredString(SIDEBAR_STORAGE_KEYS.mode);
+  const rawMode = rawUserMode ?? rawLegacyMode;
   const rawCollapsed = useStoredString(SIDEBAR_STORAGE_KEYS.collapsedGroups);
   const rawFavorites = useStoredString(favoritesKey);
 
@@ -244,9 +247,12 @@ export function useSidebarPreferences(): SidebarPreferences {
     [rawFavorites],
   );
 
-  const setMode = useCallback((next: SidebarMode): void => {
-    writeStored(SIDEBAR_STORAGE_KEYS.mode, next);
-  }, []);
+  const setMode = useCallback(
+    (next: SidebarMode): void => {
+      writeStored(modeKey ?? SIDEBAR_STORAGE_KEYS.mode, next);
+    },
+    [modeKey],
+  );
 
   const setGroupCollapsed = useCallback((groupId: string, collapsed: boolean): void => {
     const current = parseBooleanRecord(readStored(SIDEBAR_STORAGE_KEYS.collapsedGroups));

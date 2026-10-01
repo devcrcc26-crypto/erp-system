@@ -1,5 +1,7 @@
 'use client';
 
+import './employees-v2.css';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -209,7 +211,7 @@ function UserStatusIndicator({
   const label = userStatusLabel(user, t);
 
   return (
-    <span className="erp-users-status">
+    <span className="erp-users-status" data-variant={variant}>
       <span
         aria-hidden
         className="erp-users-status-dot"
@@ -421,7 +423,7 @@ export default function UsersPageContent(): React.ReactNode {
 
   if (usersQuery.isLoading && !usersQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2">
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -551,7 +553,7 @@ export default function UsersPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className="erp-pro-list-page erp-users-page">
+    <div className="erp-pro-list-page erp-users-page erp-employees-v2">
       {importOpen ? (
         <UserImportModal
           onClose={() => setImportOpen(false)}

@@ -91,10 +91,7 @@ export default function SidebarModulePanel({
       role="group"
       aria-labelledby={headingId}
       className="sb-panel flex h-full shrink-0 flex-col"
-      style={{
-        width: SIDEBAR_PANEL_WIDTH,
-        borderLeft: '1px solid var(--sb-border)',
-      }}
+      style={{ width: SIDEBAR_PANEL_WIDTH }}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && onClose) {
           event.preventDefault();

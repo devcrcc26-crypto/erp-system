@@ -1299,6 +1299,96 @@
       }
     },
     "dashboard": {
+      "home": {
+        "quickActions": "快捷操作",
+        "actions": {
+          "newLeave": "申请休假",
+          "newOvertime": "申请加班",
+          "newPerDiem": "申请出差补贴",
+          "newFlight": "申请机票",
+          "approvalsInbox": "审批中心",
+          "myProfile": "我的资料"
+        },
+        "viewAll": "查看全部",
+        "loading": "加载中",
+        "loadFailed": "此组件加载失败。",
+        "retry": "重试",
+        "pendingApprovals": {
+          "title": "待我审批",
+          "countLabel": "等待我决定",
+          "empty": "暂无等待您审批的事项。",
+          "waitingToday": "今天",
+          "waitingDays": "已等待 {{count}} 天"
+        },
+        "myRequests": {
+          "title": "我的申请",
+          "empty": "您还没有提交任何申请。"
+        },
+        "leaveBalance": {
+          "title": "假期余额",
+          "daysLeft": "剩余 {{days}} 天",
+          "empty": "{{year}} 年暂无假期余额。"
+        },
+        "attendance": {
+          "title": "本月考勤",
+          "present": "出勤",
+          "absent": "缺勤",
+          "holidays": "节假日",
+          "rate": "应出勤 {{scheduled}} 天，实际出勤 {{present}} 天",
+          "latest": "本月考勤尚未导入，显示 {{period}}。",
+          "empty": "尚未导入您的考勤记录。"
+        },
+        "overtime": {
+          "title": "本月加班",
+          "hours": "总时长",
+          "status": "加班单状态",
+          "openSheet": "打开本月加班单",
+          "empty": "本月暂无加班单。"
+        },
+        "evaluation": {
+          "title": "我的考核",
+          "cycle": "{{year}} 年第 {{quarter}} 季度",
+          "actionNeeded": "需要您处理。",
+          "noAction": "暂无需要您处理的事项。",
+          "open": "打开考核",
+          "empty": "您当前没有进行中的考核。",
+          "status": {
+            "PENDING": "待处理",
+            "SELF_ASSESSED": "已自评",
+            "TEAM_LEAD_ASSESSED": "组长已评",
+            "DISCIPLINE_ASSESSED": "专业负责人已评",
+            "RESULT_SHARED": "结果已发布",
+            "ACCEPTED": "已接受",
+            "DISPUTED": "有异议",
+            "DL_UPHELD": "专业负责人维持",
+            "DL_ADJUSTED": "专业负责人调整",
+            "ESCALATED": "已提交人力资源",
+            "HR_DECIDED": "人力资源已裁定",
+            "LOCKED": "已锁定"
+          }
+        },
+        "evaluationInbox": {
+          "title": "考核待办",
+          "countLabel": "需要我处理",
+          "empty": "暂无需要您处理的考核。"
+        },
+        "contracts": {
+          "title": "即将到期的合同",
+          "countLabel": "90 天内到期",
+          "daysLeft": "剩余 {{count}} 天",
+          "endsToday": "今天到期",
+          "empty": "未来 90 天内没有合同到期。"
+        },
+        "attendanceReview": {
+          "title": "考勤审核",
+          "import": "导入",
+          "imported": "{{date}} 已导入 · 匹配 {{rows}} 行",
+          "notImported": "尚未导入",
+          "approval": "审批",
+          "noApproval": "未开始",
+          "open": "打开审核"
+        }
+      },
       "gm": {
         "pmOverview": "项目概览",
         "hrOverview": "人力资源概览"

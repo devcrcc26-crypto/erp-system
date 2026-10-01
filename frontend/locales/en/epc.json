@@ -1299,6 +1299,96 @@
       }
     },
     "dashboard": {
+      "home": {
+        "quickActions": "Quick actions",
+        "actions": {
+          "newLeave": "New leave",
+          "newOvertime": "New overtime",
+          "newPerDiem": "New per diem",
+          "newFlight": "New flight",
+          "approvalsInbox": "Approvals inbox",
+          "myProfile": "My profile"
+        },
+        "viewAll": "View all",
+        "loading": "Loading",
+        "loadFailed": "This widget couldn't load.",
+        "retry": "Retry",
+        "pendingApprovals": {
+          "title": "My pending approvals",
+          "countLabel": "Awaiting my decision",
+          "empty": "Nothing is waiting for your decision.",
+          "waitingToday": "Today",
+          "waitingDays": "{{count}} d waiting"
+        },
+        "myRequests": {
+          "title": "My requests",
+          "empty": "You haven't submitted any requests yet."
+        },
+        "leaveBalance": {
+          "title": "Leave balance",
+          "daysLeft": "{{days}} days left",
+          "empty": "No leave balance for {{year}}."
+        },
+        "attendance": {
+          "title": "This month's attendance",
+          "present": "Present",
+          "absent": "Absent",
+          "holidays": "Holidays",
+          "rate": "{{present}} of {{scheduled}} scheduled days present",
+          "latest": "This month isn't imported yet. Showing {{period}}.",
+          "empty": "No attendance has been imported for you yet."
+        },
+        "overtime": {
+          "title": "Overtime this month",
+          "hours": "Total hours",
+          "status": "Sheet status",
+          "openSheet": "Open this month's sheet",
+          "empty": "No overtime sheet for this month."
+        },
+        "evaluation": {
+          "title": "My evaluation",
+          "cycle": "Q{{quarter}} {{year}}",
+          "actionNeeded": "Your action is needed.",
+          "noAction": "Nothing is waiting on you.",
+          "open": "Open evaluation",
+          "empty": "You have no evaluation in progress.",
+          "status": {
+            "PENDING": "Pending",
+            "SELF_ASSESSED": "Self-assessed",
+            "TEAM_LEAD_ASSESSED": "Team lead assessed",
+            "DISCIPLINE_ASSESSED": "Discipline lead assessed",
+            "RESULT_SHARED": "Result shared",
+            "ACCEPTED": "Accepted",
+            "DISPUTED": "Disputed",
+            "DL_UPHELD": "Discipline lead upheld",
+            "DL_ADJUSTED": "Discipline lead adjusted",
+            "ESCALATED": "Escalated to HR",
+            "HR_DECIDED": "HR decided",
+            "LOCKED": "Locked"
+          }
+        },
+        "evaluationInbox": {
+          "title": "Evaluation inbox",
+          "countLabel": "Need my action",
+          "empty": "No evaluations need your action."
+        },
+        "contracts": {
+          "title": "Contracts expiring",
+          "countLabel": "Ending within 90 days",
+          "daysLeft": "{{count}} days left",
+          "endsToday": "Ends today",
+          "empty": "No contracts end in the next 90 days."
+        },
+        "attendanceReview": {
+          "title": "Attendance review",
+          "import": "Import",
+          "imported": "Imported {{date}} · {{rows}} matched rows",
+          "notImported": "Not imported yet",
+          "approval": "Approval",
+          "noApproval": "Not started",
+          "open": "Open review"
+        }
+      },
       "gm": {
         "pmOverview": "PM Overview",
         "hrOverview": "HR Overview"

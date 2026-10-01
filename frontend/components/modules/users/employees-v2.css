@@ -1,0 +1,283 @@
+/*
+ * Employees list (v2) — floating panels matching the sidebar, header and
+ * dashboard. Scoped under `.erp-employees-v2` (UsersPageContent root only);
+ * selectors repeat the global table chain so they win without new !important
+ * except where the global rule already uses it.
+ *
+ * Contrast on white: muted text #4B5563 7.6:1 (was #94A3B8, 2.6:1);
+ * primary-strong #0F6E56 on the 10% primary tint 5.3:1.
+ */
+.erp-employees-v2 {
+  --ev2-radius: 16px;
+  --ev2-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --ev2-muted: #4b5563;
+  --ev2-strong: #0f172a;
+  --ev2-divider: #eef1f4;
+  --ev2-subtle: #f7f8fa;
+  --ev2-tint: rgba(29, 158, 117, 0.1);
+  --ev2-primary-strong: #0f6e56;
+
+  gap: 20px;
+}
+
+/* ── Stat tiles: four separate floating cards ── */
+
+.erp-employees-v2 .erp-users-stat-bar {
+  gap: 16px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.erp-employees-v2 .erp-users-stat {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: var(--ev2-radius);
+  background: #ffffff;
+  box-shadow: var(--ev2-shadow);
+}
+
+.erp-employees-v2 .erp-users-stat-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.erp-employees-v2 .erp-users-stat-label {
+  color: var(--ev2-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.erp-employees-v2 .erp-users-stat-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+/* ── Main card ── */
+
+.erp-employees-v2 .erp-pro-card {
+  border: 0;
+  border-radius: var(--ev2-radius);
+  box-shadow: var(--ev2-shadow);
+}
+
+.erp-employees-v2 .erp-users-toolbar {
+  padding: 18px 20px 14px;
+  border-bottom: 0;
+}
+
+.erp-employees-v2 .erp-pro-card-toolbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ev2-strong);
+}
+
+.erp-employees-v2 .erp-users-count-pill {
+  padding: 2px 10px;
+  background: var(--ev2-tint);
+  color: var(--ev2-primary-strong);
+}
+
+/* Filters: one quiet row, nothing wraps mid-label. */
+.erp-employees-v2 .erp-users-filter-bar {
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 0 20px 16px;
+  overflow: visible;
+  border-bottom: 1px solid var(--ev2-divider);
+  background: transparent;
+}
+
+.erp-employees-v2 .erp-users-search-input {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.erp-employees-v2 .erp-users-filter-spacer {
+  display: none;
+}
+
+.erp-employees-v2 .erp-users-filter-select {
+  width: auto;
+  min-width: 180px;
+  flex: 0 1 200px;
+}
+
+.erp-employees-v2 .erp-users-filter-bar .ant-checkbox-wrapper {
+  white-space: nowrap;
+}
+
+.erp-employees-v2 .erp-users-search-input.ant-input-affix-wrapper,
+.erp-employees-v2 .erp-users-filter-bar .ant-select-selector,
+.erp-employees-v2 .erp-users-filter-bar .ant-btn {
+  border-radius: 10px !important;
+}
+
+/* ── Table ── */
+
+/* Ant Design's measure row lives in <tbody>; keep it collapsed (the global
+   fix only targets <thead>). */
+.erp-employees-v2 .erp-pro-table .ant-table-tbody > tr.ant-table-measure-row,
+.erp-employees-v2 .erp-pro-table .ant-table-tbody > tr.ant-table-measure-row > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0 !important;
+}
+
+.erp-employees-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr:not(.ant-table-measure-row)
+  > th,
+.erp-employees-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr:not(.ant-table-measure-row)
+  > th.ant-table-cell {
+  background: var(--ev2-subtle) !important;
+  color: var(--ev2-muted) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.06em !important;
+  border-bottom: 1px solid var(--ev2-divider) !important;
+}
+
+.erp-employees-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:not(.ant-table-measure-row)
+  > td {
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+  border-bottom-color: var(--ev2-divider) !important;
+}
+
+.erp-employees-v2 .erp-data-table.erp-pro-table.erp-users-table .ant-table-tbody > tr:hover > td {
+  background: var(--ev2-subtle) !important;
+}
+
+.erp-employees-v2 .erp-users-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 12px !important;
+  box-shadow: none;
+  line-height: 36px !important;
+}
+
+.erp-employees-v2 .erp-users-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.erp-employees-v2 .erp-users-name-alt,
+.erp-employees-v2 .erp-users-email,
+.erp-employees-v2 .erp-users-cell-sub {
+  color: var(--ev2-muted);
+}
+
+.erp-employees-v2 .erp-users-cell-strong {
+  color: #1f2937;
+}
+
+.erp-employees-v2 .erp-users-dash {
+  color: #6b7280;
+}
+
+.erp-employees-v2 .erp-users-id-chip {
+  border: 0;
+  border-radius: 8px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 12px;
+}
+
+.erp-employees-v2 .erp-users-role-chip.ant-tag {
+  border: 0;
+  border-radius: 999px;
+  padding-inline: 10px;
+}
+
+/* Status: tinted pill per variant instead of a bare dot + text. */
+.erp-employees-v2 .erp-users-status {
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.erp-employees-v2 .erp-users-status[data-variant='success'] {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.erp-employees-v2 .erp-users-status[data-variant='warning'] {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.erp-employees-v2 .erp-users-status-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.erp-employees-v2 .ant-table-pagination.ant-pagination {
+  margin: 0 !important;
+  padding: 14px 20px;
+}
+
+@media (max-width: 900px) {
+  .erp-employees-v2 .erp-users-stat-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .erp-employees-v2 .erp-users-stat {
+    border: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .erp-employees-v2 .erp-users-stat {
+    padding: 14px 16px;
+  }
+
+  .erp-employees-v2 .erp-users-stat {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .erp-employees-v2 .erp-users-stat-chip {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  /* Let long labels ("Pending activation", Chinese) wrap instead of truncating. */
+  .erp-employees-v2 .erp-users-stat-label {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  .erp-employees-v2 .erp-users-stat-value {
+    font-size: 22px;
+  }
+
+  .erp-employees-v2 .erp-users-filter-select {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+}

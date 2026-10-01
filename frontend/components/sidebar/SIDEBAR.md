@@ -26,13 +26,19 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
 
 ## How it behaves
 
+- **Look (v2, `.erp-sidebar-v2`):** the desktop rail and any docked panel are floating
+  white panels, inset 12px from the screen edges, 16px radius, soft shadow, no border.
+  The mobile drawer gets the same rounded, shadowed panel.
 - **Expanded (default, 272px):** icon + label rows, always on one line. Folders expand in place, one at a time.
-- **Compact (opt-in, 84px):** icon over a caption; the full label is in a tooltip on hover
-  *and* keyboard focus. Folders open a docked 272px panel with a heading and a close button.
+- **Compact (opt-in, 72px):** an icon-only rail. The caption stays in the accessible name
+  but is visually hidden; the full label is in a tooltip on hover *and* keyboard focus.
+  Badges sit as a small count on the icon. Folders open a docked 272px panel with a heading
+  and a close button.
 - The **Collapse sidebar / Expand sidebar** button always changes the layout. Expanded, it
   is a square icon button beside the account card in the footer. Compact, it sits alone at
   the bottom of the rail. Both have a hover/focus tooltip. It works on
-  whatever page you are on. The choice is saved in `localStorage` (`sidebar:mode`).
+  whatever page you are on. The choice is saved per user in `localStorage`
+  (`sidebar:mode:<userId>`); the old shared `sidebar:mode` key is only read as a fallback.
 - A folder panel closes when you click its folder again, press its close button, press Esc
   (docked), or navigate to a page outside it. Navigating into a folder's page opens it in
   expanded mode.
@@ -52,7 +58,8 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
   and My Profile. Users with `hr.view` get the full sidebar (see "How permissions control visibility").
 - **Project pages** (`/projects/:id/...`) show the project's workspace navigation inside the
   Project Management folder, above the portfolio groups (which start collapsed). There is no
-  separate project column. Widest case: compact rail + docked panel = 356px.
+  separate project column. Widest case: 12px inset + 72px compact rail + 12px gap +
+  272px docked panel = 368px.
 - **Mobile (< 1024px):** the expanded tree in a left drawer with a visible header and close button.
 
 ## Add a new module
@@ -153,10 +160,12 @@ Hiding a link is not security. Every page and API must still enforce its own per
 
 There is exactly one "you are here" treatment, defined once in `sidebar.css`:
 
-- teal-tinted background (`--sb-active-bg`), dark teal text and icon (`--sb-active-text`), semibold,
-- on top-level entries (rail rows and compact tiles), the icon tile turns solid
-  `--sb-accent` with a white icon,
-- a 3px accent bar (`--sb-accent`) on the left edge.
+- a soft pill tinted with the primary colour at 10% (`--sb-active-bg`),
+- primary-coloured text and icon (`--sb-active-text`, the primary-hover shade #0F6E56,
+  5.3:1 on the tint), medium weight (500).
+
+The base rules earlier in `sidebar.css` (icon tiles, left accent bar) are overridden by
+the `.erp-sidebar-v2` block at the end of the file; v2 has no accent bar and no icon tiles.
 
 It applies to any `.sb-selectable` element with `aria-current="page"` (links) or
 `data-active="true"` (a **closed** folder containing the current page). Rail rows,
@@ -183,7 +192,8 @@ the `--sb-*` variables on `.sb-theme, .sb-drawer` (the mobile drawer renders out
 - **Skip link:** `AppShell` renders "Skip to main content" as the first focusable element,
   targeting `<main id="main-content">`. Keep it first.
 - **Text size and contrast:** nothing under 12px. Inside a panel there are two levels:
-  group titles use `erp-sidebar-group-title` (12px / 600 / 0.04em, muted, never all-caps)
+  group titles use `erp-sidebar-group-title` (12px / 600 / 0.06em, muted, uppercase in
+  v2 by product decision, 2026-10-01; Chinese labels are unaffected)
   and module links use `erp-sidebar-module-link` (13px / 400, 500 when active). Hierarchy
   comes from weight, tracking and colour, not a size drop. Group titles are 7:1 on the
   sidebar background. Keep new colours at ≥ 4.5:1

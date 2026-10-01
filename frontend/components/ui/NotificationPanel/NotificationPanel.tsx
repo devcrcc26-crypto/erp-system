@@ -66,47 +66,29 @@ export default function NotificationPanel(): React.ReactNode {
 
   const dropdownContent = (
     <div
-      className="flex w-[min(380px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+      className="erp-header-dropdown-v2 flex w-[min(400px,calc(100vw-24px))] flex-col"
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="border-b border-[rgba(0,0,0,0.06)] px-4 pb-3 pt-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-lg"
-                style={{
-                  backgroundColor: tokens.colorPrimaryLight,
-                  color: tokens.colorPrimary,
-                }}
-              >
-                <BellOutlined style={{ fontSize: 15 }} />
-              </div>
-              <div>
-                <h3
-                  className="m-0 text-[14px] font-semibold leading-tight"
-                  style={{ color: tokens.colorTextPrimary }}
-                >
-                  {t('nav.notifications')}
-                </h3>
-                {allowed && unreadCount > 0 ? (
-                  <p
-                    className="m-0 mt-0.5 text-[11px]"
-                    style={{ color: tokens.colorTextTertiary }}
-                  >
-                    {t('pages.notifications.unreadBadge', { count: unreadCount })}
-                  </p>
-                ) : null}
-              </div>
+      <div className="erp-hd-head px-5 pb-3 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="erp-hd-icon" aria-hidden>
+              <BellOutlined style={{ fontSize: 16 }} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="erp-hd-title">{t('nav.notifications')}</h3>
+              {allowed && unreadCount > 0 ? (
+                <p className="erp-hd-sub">
+                  {t('pages.notifications.unreadBadge', { count: unreadCount })}
+                </p>
+              ) : null}
             </div>
           </div>
           {allowed && unreadCount > 0 ? (
             <Button
-              type="link"
               size="small"
               loading={markAllRead.isPending}
-              className="!h-auto !px-0 !text-[12px] !font-medium"
-              style={{ color: tokens.colorPrimary }}
+              className="erp-hd-pill-button"
               onClick={() => void markAllRead.mutateAsync()}
             >
               {t('pages.notifications.markAllRead')}
@@ -142,27 +124,18 @@ export default function NotificationPanel(): React.ReactNode {
         </div>
       ) : notifications.length === 0 ? (
         <div className="flex flex-col items-center px-6 py-10 text-center">
-          <div
-            className="mb-3 flex h-12 w-12 items-center justify-center rounded-full"
-            style={{
-              backgroundColor: tokens.colorGray50,
-              color: tokens.colorTextTertiary,
-            }}
-          >
+          <div className="erp-hd-empty-icon" aria-hidden>
             <BellOutlined style={{ fontSize: 20 }} />
           </div>
-          <p
-            className="m-0 text-sm font-medium"
-            style={{ color: tokens.colorTextPrimary }}
-          >
+          <p className="erp-hd-empty-text">
             {filter === 'unread'
               ? t('pages.notifications.emptyUnread')
               : t('pages.notifications.empty')}
           </p>
         </div>
       ) : (
-        <div className="max-h-[min(420px,60vh)] overflow-y-auto">
-          <div className="divide-y divide-[rgba(0,0,0,0.05)]">
+        <div className="erp-hd-list max-h-[min(440px,60vh)] overflow-y-auto">
+          <div className="divide-y divide-[#eef1f4]">
             {notifications.map((notification) => (
               <NotificationInboxItem
                 key={notification.id}
@@ -181,12 +154,11 @@ export default function NotificationPanel(): React.ReactNode {
         </div>
       )}
 
-      <div className="border-t border-[rgba(0,0,0,0.06)] p-2">
+      <div className="erp-hd-foot p-2">
         <Button
           type="text"
           block
-          className="!flex !h-9 !items-center !justify-center !gap-1.5 !text-[13px] !font-medium"
-          style={{ color: tokens.colorPrimary }}
+          className="erp-hd-foot-button"
           onClick={() => {
             setOpen(false);
             router.push('/notifications');
@@ -206,8 +178,10 @@ export default function NotificationPanel(): React.ReactNode {
       popupRender={() => dropdownContent}
       trigger={['click']}
       placement="bottomRight"
+      rootClassName="erp-hd-dropdown-root"
     >
-      <Tooltip title={t('nav.notifications')}>
+      {/* Hide the tooltip while the panel is open — it covered "Mark all read". */}
+      <Tooltip title={t('nav.notifications')} open={open ? false : undefined}>
         <button
           type="button"
           className={[

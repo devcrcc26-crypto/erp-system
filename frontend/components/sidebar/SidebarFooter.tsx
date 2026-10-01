@@ -6,6 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import SidebarBadge from '@/components/sidebar/SidebarBadge';
 import type { SidebarLink } from '@/components/sidebar/sidebar-model';
 import { getNavIcon } from '@/lib/navigation/nav-icons';
+import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
 
 type TooltipSide = 'top' | 'right';
@@ -164,21 +165,32 @@ function UtilityButton({
   );
 }
 
-/** Signed-in user's display name and initials for the account card/avatar. */
+/**
+ * Signed-in user's display name, initials and second line for the account
+ * card/avatar. The second line is the primary role from `/auth/me`, falling
+ * back to the email while the profile loads or when no role is assigned.
+ */
 function useAccountIdentity(): {
-  email: string | null;
+  subtitle: string | null;
   name: string;
   initials: string;
 } {
   const user = useAuthStore((s) => s.user);
+  const { data: profile } = useCurrentUser();
   if (!user) {
-    return { email: null, name: '', initials: '' };
+    return { subtitle: null, name: '', initials: '' };
   }
   const name = `${user.firstName} ${user.lastName}`.trim();
   const initials =
     `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() ||
     user.email.charAt(0).toUpperCase();
-  return { email: user.email || null, name, initials };
+  const roles = profile?.roles ?? [];
+  const primaryRole = roles.find((role) => role.isPrimary) ?? roles[0];
+  return {
+    subtitle: primaryRole?.name || user.email || null,
+    name,
+    initials,
+  };
 }
 
 function AccountCard({
@@ -190,7 +202,7 @@ function AccountCard({
   state: FooterLinkState;
   onNavigate?: () => void;
 }): React.ReactNode {
-  const { email, name, initials } = useAccountIdentity();
+  const { subtitle, name, initials } = useAccountIdentity();
   if (link.href === null) {
     return null;
   }
@@ -207,7 +219,7 @@ function AccountCard({
       </span>
       <span className="sb-account-text">
         <span className="sb-account-name">{name || state.label}</span>
-        {email ? <span className="sb-account-meta">{email}</span> : null}
+        {subtitle ? <span className="sb-account-meta">{subtitle}</span> : null}
       </span>
       {/* Visible text first (WCAG 2.5.3), then the destination. */}
       {name ? <span className="sr-only">{`, ${state.label}`}</span> : null}

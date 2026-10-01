@@ -48,46 +48,50 @@ export default function MainContentHeader({
   }
 
   return (
-    <header className="erp-shell-header sticky top-0 z-30 shrink-0">
-      <div
-        className="erp-shell-header-main"
-        style={{ minHeight: SHELL_TOP_HEADER_HEIGHT }}
-      >
-        <div className="erp-shell-header-leading">
-          {onOpenMobileNav ? (
-            <button
-              type="button"
-              onClick={onOpenMobileNav}
-              onKeyDown={handleMobileNavKeyDown}
-              className="erp-shell-header-menu-btn"
-              aria-label={t('shell.openNavigation')}
-            >
-              <MenuOutlined style={{ fontSize: 15 }} />
-            </button>
+    <header className="erp-shell-header erp-header-v2 sticky top-0 z-30 shrink-0">
+      {/* v2: the header is a floating panel; the <header> itself is the page-coloured
+          strip around it, so scrolled content never shows through the gap. */}
+      <div className="erp-header-v2-panel">
+        <div
+          className="erp-shell-header-main"
+          style={{ minHeight: SHELL_TOP_HEADER_HEIGHT }}
+        >
+          <div className="erp-shell-header-leading">
+            {onOpenMobileNav ? (
+              <button
+                type="button"
+                onClick={onOpenMobileNav}
+                onKeyDown={handleMobileNavKeyDown}
+                className="erp-shell-header-menu-btn"
+                aria-label={t('shell.openNavigation')}
+              >
+                <MenuOutlined style={{ fontSize: 15 }} />
+              </button>
+            ) : null}
+
+            <div className="erp-shell-header-titles min-w-0 flex-1">
+              <h1 className="erp-shell-header-title">{pageTitle}</h1>
+              {pageSubtitle ? (
+                <p className="erp-shell-header-subtitle">{pageSubtitle}</p>
+              ) : null}
+            </div>
+          </div>
+
+          {headerExtra ? (
+            <div className="erp-shell-header-extra">{headerExtra}</div>
           ) : null}
 
-          <div className="erp-shell-header-titles min-w-0 flex-1">
-            <h1 className="erp-shell-header-title">{pageTitle}</h1>
-            {pageSubtitle ? (
-              <p className="erp-shell-header-subtitle">{pageSubtitle}</p>
-            ) : null}
+          <div className="erp-shell-header-trailing">
+            <HeaderActions />
           </div>
         </div>
 
-        {headerExtra ? (
-          <div className="erp-shell-header-extra">{headerExtra}</div>
+        {showBreadcrumbs ? (
+          <div className="erp-shell-breadcrumb-bar">
+            <Breadcrumbs segments={resolvedBreadcrumbs} />
+          </div>
         ) : null}
-
-        <div className="erp-shell-header-trailing">
-          <HeaderActions />
-        </div>
       </div>
-
-      {showBreadcrumbs ? (
-        <div className="erp-shell-breadcrumb-bar">
-          <Breadcrumbs segments={resolvedBreadcrumbs} />
-        </div>
-      ) : null}
     </header>
   );
 }

@@ -685,7 +685,7 @@ export default function SidebarShell({
     <>
       <nav
         aria-label={t('shell.mainNavigation')}
-        className="sb-theme relative z-40 hidden h-full shrink-0 lg:flex"
+        className="sb-theme erp-sidebar-v2 relative z-40 hidden h-full shrink-0 lg:flex"
         data-mode={prefs.mode}
       >
         <div
@@ -728,7 +728,7 @@ export default function SidebarShell({
           closeIcon: <X aria-hidden size={18} strokeWidth={2} />,
           'aria-label': t('shell.closeMenu'),
         }}
-        rootClassName="sb-drawer lg:hidden"
+        rootClassName="sb-drawer erp-sidebar-v2 lg:hidden"
         destroyOnHidden
         afterOpenChange={(open) => {
           if (open && drawerFocusPending.current) {
@@ -740,7 +740,7 @@ export default function SidebarShell({
       >
         <nav
           aria-label={t('shell.mainNavigation')}
-          className="sb-theme flex h-full min-h-0 flex-col"
+          className="sb-theme erp-sidebar-v2 flex h-full min-h-0 flex-col"
         >
           {renderExpandedTree('drawer', closeDrawer)}
         </nav>

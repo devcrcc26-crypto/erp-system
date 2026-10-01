@@ -128,14 +128,17 @@ export interface SidebarConfig {
 
 /** Widths (px). Compact + docked panel stays under the 400px budget. */
 export const SIDEBAR_EXPANDED_WIDTH = 272;
-export const SIDEBAR_COMPACT_WIDTH = 84;
+export const SIDEBAR_COMPACT_WIDTH = 72;
 export const SIDEBAR_PANEL_WIDTH = 272;
 export const SIDEBAR_DRAWER_WIDTH = 304;
 
 export const SIDEBAR_MAX_FAVORITES = 5;
 
 export const SIDEBAR_STORAGE_KEYS = {
+  /** Legacy shared key — fallback for users who have no per-user value yet. */
   mode: 'sidebar:mode',
+  /** Expanded/compact preference, per user: `sidebar:mode:<userId>`. */
+  modePrefix: 'sidebar:mode:',
   collapsedGroups: 'sidebar:collapsed-groups',
   favoritesPrefix: 'sidebar:favorites:',
 } as const;

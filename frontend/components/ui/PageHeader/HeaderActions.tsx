@@ -12,7 +12,6 @@ import {
 import NotificationPanel from '@/components/ui/NotificationPanel/NotificationPanel';
 import FontSizeControl from '@/components/ui/FontSizeControl/FontSizeControl';
 import LanguageControl from '@/components/ui/LanguageControl/LanguageControl';
-import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAuthStore } from '@/stores/auth.store';
 import { useLogout } from '@/lib/query/auth';
@@ -44,7 +43,7 @@ function ProfileMenuRow({
   const content = (
     <>
       <div
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[14px]"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[14px]"
         style={{ backgroundColor: iconBg, color: iconColor }}
       >
         {icon}
@@ -58,14 +57,14 @@ function ProfileMenuRow({
       {href ? (
         <RightOutlined
           className="shrink-0 text-[11px]"
-          style={{ color: tokens.colorTextTertiary }}
+          style={{ color: tokens.colorTextSecondary }}
         />
       ) : null}
     </>
   );
 
   const className =
-    'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left no-underline transition-colors hover:bg-[var(--color-surface-secondary)]';
+    'erp-hd-menu-row flex w-full items-center gap-3 rounded-[10px] px-2 py-2 text-left no-underline transition-colors';
 
   if (href) {
     return (
@@ -140,8 +139,8 @@ export default function HeaderActions({
         style={{
           backgroundColor: photoQuery.data?.url
             ? undefined
-            : tokens.colorBlue50,
-          color: tokens.colorBlue800,
+            : tokens.colorPrimaryLight,
+          color: tokens.colorTeal600,
           fontWeight: 600,
           fontSize: 12,
           border: menuOpen
@@ -159,8 +158,8 @@ export default function HeaderActions({
           {displayName}
         </p>
         <p
-          className="m-0 max-w-[140px] truncate text-[10px] font-normal leading-[1.4]"
-          style={{ color: tokens.colorTextTertiary }}
+          className="m-0 max-w-[140px] truncate text-[12px] font-normal leading-[1.4]"
+          style={{ color: tokens.colorTextSecondary }}
         >
           {roleName}
         </p>
@@ -170,44 +169,30 @@ export default function HeaderActions({
 
   const dropdownContent = (
     <div
-      className="flex w-[min(320px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-[rgba(0,0,0,0.08)] bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+      className="erp-header-dropdown-v2 flex w-[min(320px,calc(100vw-24px))] flex-col"
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="border-b border-[rgba(0,0,0,0.06)] px-4 py-4">
-        <div className="flex items-start gap-3">
+      <div className="erp-hd-head px-4 py-4">
+        <div className="flex items-center gap-3">
           <Avatar
-            size={44}
+            size={48}
             src={photoQuery.data?.url}
             style={{
               backgroundColor: photoQuery.data?.url
                 ? undefined
-                : tokens.colorBlue50,
-              color: tokens.colorBlue800,
+                : tokens.colorTeal600,
+              color: '#ffffff',
               fontWeight: 600,
-              fontSize: 16,
+              fontSize: 17,
               flexShrink: 0,
             }}
           >
             {avatarInitial}
           </Avatar>
-          <div className="min-w-0 flex-1 pt-0.5">
-            <p
-              className="m-0 truncate text-[14px] font-semibold leading-tight"
-              style={{ color: tokens.colorTextPrimary }}
-            >
-              {displayName}
-            </p>
-            <div className="mt-1.5">
-              <StatusBadge label={roleName} variant="info" />
-            </div>
-            {email ? (
-              <p
-                className="m-0 mt-2 truncate text-[12px]"
-                style={{ color: tokens.colorTextTertiary }}
-              >
-                {email}
-              </p>
-            ) : null}
+          <div className="min-w-0 flex-1">
+            <p className="erp-hd-title truncate">{displayName}</p>
+            {email ? <p className="erp-hd-sub truncate">{email}</p> : null}
+            <span className="erp-hd-role">{roleName}</span>
           </div>
         </div>
       </div>
@@ -220,38 +205,21 @@ export default function HeaderActions({
         />
       </div>
 
-      <div className="mx-3 border-t border-[rgba(0,0,0,0.06)]" />
-
-      <div className="px-4 py-3">
-        <p
-          className="m-0 mb-2 text-[11px] font-semibold uppercase tracking-wide"
-          style={{ color: tokens.colorTextTertiary }}
-        >
-          {t('common.preferences')}
-        </p>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3 rounded-lg bg-[var(--color-surface-secondary)] px-3 py-2.5">
-            <span
-              className="text-[12px] font-medium"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {t('common.language')}
-            </span>
+      <div className="erp-hd-section px-4 pb-3 pt-3">
+        <p className="erp-hd-section-label">{t('common.preferences')}</p>
+        <div className="flex flex-col gap-1.5">
+          <div className="erp-hd-pref-row">
+            <span className="erp-hd-pref-label">{t('common.language')}</span>
             <LanguageControl compact />
           </div>
-          <div className="flex items-center justify-between gap-3 rounded-lg bg-[var(--color-surface-secondary)] px-3 py-2.5">
-            <span
-              className="text-[12px] font-medium"
-              style={{ color: tokens.colorTextSecondary }}
-            >
-              {t('common.fontSize')}
-            </span>
+          <div className="erp-hd-pref-row">
+            <span className="erp-hd-pref-label">{t('common.fontSize')}</span>
             <FontSizeControl compact />
           </div>
         </div>
       </div>
 
-      <div className="border-t border-[rgba(0,0,0,0.06)] p-2">
+      <div className="erp-hd-foot p-2">
         <ProfileMenuRow
           icon={<LogoutOutlined />}
           label={logout.isPending ? t('nav.signingOut') : t('nav.logout')}
@@ -277,6 +245,7 @@ export default function HeaderActions({
         onOpenChange={setMenuOpen}
         trigger={['click']}
         placement="bottomRight"
+        rootClassName="erp-hd-dropdown-root"
         popupRender={() => dropdownContent}
       >
         {profileTrigger}

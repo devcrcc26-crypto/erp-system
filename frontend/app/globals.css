@@ -603,6 +603,286 @@ main::-webkit-scrollbar,
   }
 }
 
+/*
+ * Header v2 — floating panel matching the sidebar (`.erp-sidebar-v2`) and the
+ * dashboard cards. The sticky <header> is a page-coloured strip; the panel
+ * inside it is white, 16px radius, soft shadow, no border. Its side insets
+ * match the content padding below (12 / 16 / 24px) so it lines up with cards.
+ */
+.erp-shell-header.erp-header-v2 {
+  padding: 8px 12px 0;
+  border-bottom: 0;
+  background: var(--color-page-bg);
+  box-shadow: none;
+}
+
+.erp-header-v2 .erp-header-v2-panel {
+  overflow: hidden;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+}
+
+.erp-header-v2 .erp-shell-header-main {
+  background: transparent;
+}
+
+.erp-header-v2 .erp-shell-header-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-header-v2 .erp-shell-header-subtitle {
+  color: #4b5563;
+}
+
+.erp-header-v2 .erp-shell-header-menu-btn {
+  border-color: transparent;
+  background: #f2f4f7;
+  color: #4b5563;
+}
+
+.erp-header-v2 .erp-shell-header-menu-btn:hover {
+  border-color: transparent;
+  background: rgba(29, 158, 117, 0.1);
+  color: #0f6e56;
+}
+
+.erp-header-v2 .erp-shell-header-menu-btn:focus-visible,
+.erp-header-v2 .erp-shell-profile-trigger:focus-visible {
+  outline: 2px solid #1d9e75;
+  outline-offset: 2px;
+}
+
+.erp-header-v2 .erp-shell-profile-trigger {
+  border-radius: 12px;
+}
+
+.erp-header-v2 .erp-shell-breadcrumb-bar {
+  background: transparent;
+  border-top-color: #eef1f4;
+}
+
+@media (min-width: 640px) {
+  .erp-shell-header.erp-header-v2 {
+    padding: 12px 16px 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .erp-shell-header.erp-header-v2 {
+    padding: 12px 24px 0;
+  }
+
+  .erp-header-v2 .erp-shell-header-main {
+    padding: 0 20px;
+  }
+
+  .erp-header-v2 .erp-shell-breadcrumb-bar {
+    padding: 7px 20px 9px;
+  }
+}
+
+/*
+ * Header dropdowns v2 — notifications and profile menus. They render in a
+ * portal (outside `.erp-header-v2`), so they carry their own scope class.
+ * Same panel language as the header: white, 16px radius, soft shadow, a
+ * hairline ring instead of a border, 8px below the trigger.
+ * Tertiary text is redefined for contrast: #4B5563 is 7.6:1 on white
+ * (the global tertiary, 45% black, is ~3.4:1).
+ */
+.erp-header-dropdown-v2 {
+  --color-text-tertiary: #4b5563;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(16, 24, 40, 0.05),
+    0 4px 8px -2px rgba(16, 24, 40, 0.06),
+    0 16px 36px -6px rgba(16, 24, 40, 0.14);
+}
+
+.erp-header-dropdown-v2 :is(a, button):focus-visible {
+  outline: 2px solid #1d9e75;
+  outline-offset: 2px;
+}
+
+.erp-header-dropdown-v2 .erp-hd-head {
+  border-bottom: 1px solid #eef1f4;
+}
+
+.erp-header-dropdown-v2 .erp-hd-icon {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(29, 158, 117, 0.1);
+  color: #0f6e56;
+}
+
+.erp-header-dropdown-v2 .erp-hd-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.erp-header-dropdown-v2 .erp-hd-sub {
+  margin: 2px 0 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.erp-header-dropdown-v2 .erp-hd-role {
+  display: inline-flex;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 2px 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(29, 158, 117, 0.1);
+  color: #0f6e56;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.erp-header-dropdown-v2 .erp-hd-pill-button.ant-btn {
+  height: 28px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(29, 158, 117, 0.1);
+  box-shadow: none;
+  color: #0f6e56;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.erp-header-dropdown-v2 .erp-hd-pill-button.ant-btn:hover {
+  background: rgba(29, 158, 117, 0.16) !important;
+  color: #0f6e56 !important;
+}
+
+.erp-header-dropdown-v2 .ant-segmented {
+  padding: 3px;
+  border-radius: 10px;
+  background: #f2f4f7;
+}
+
+.erp-header-dropdown-v2 .ant-segmented-item {
+  border-radius: 8px;
+}
+
+.erp-header-dropdown-v2 .ant-segmented-item-label {
+  min-height: 26px;
+  font-size: 13px;
+  line-height: 26px;
+}
+
+.erp-header-dropdown-v2 .ant-segmented-item-selected {
+  color: #0f6e56;
+  font-weight: 500;
+}
+
+.erp-header-dropdown-v2 .erp-hd-empty-icon {
+  display: flex;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #4b5563;
+}
+
+.erp-header-dropdown-v2 .erp-hd-empty-text {
+  margin: 0;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.erp-header-dropdown-v2 .erp-hd-foot {
+  border-top: 1px solid #eef1f4;
+}
+
+.erp-header-dropdown-v2 .erp-hd-foot-button.ant-btn {
+  display: flex;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 10px;
+  color: #0f6e56;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-header-dropdown-v2 .erp-hd-foot-button.ant-btn:hover {
+  background: rgba(29, 158, 117, 0.08) !important;
+  color: #0f6e56 !important;
+}
+
+.erp-header-dropdown-v2 .erp-hd-menu-row:hover {
+  background: #f4f6f8;
+}
+
+.erp-header-dropdown-v2 .erp-hd-section {
+  border-top: 1px solid #eef1f4;
+}
+
+.erp-header-dropdown-v2 .erp-hd-section-label {
+  margin: 0 0 8px;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-header-dropdown-v2 .erp-hd-pref-row {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 10px;
+  background: #f7f8fa;
+}
+
+.erp-header-dropdown-v2 .erp-hd-pref-label {
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Phones: anchored to the trigger's right edge, the notification panel ran
+   off the left of the screen. Pin both dropdowns 12px from each edge. */
+@media (max-width: 480px) {
+  .erp-hd-dropdown-root.ant-dropdown {
+    right: 12px !important;
+    left: 12px !important;
+  }
+
+  .erp-hd-dropdown-root .erp-header-dropdown-v2 {
+    width: 100%;
+  }
+}
+
 /* Shell breadcrumb - Ant Design trail in main header */
 .shell-breadcrumb.ant-breadcrumb {
   font-size: calc(12px * var(--erp-font-scale));

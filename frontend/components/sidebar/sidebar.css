@@ -44,6 +44,7 @@
 }
 
 .sb-panel {
+  border-left: 1px solid var(--sb-border);
   border-right: 1px solid var(--sb-border);
   background: var(--sb-bg);
   box-shadow: var(--sb-shadow);
@@ -925,4 +926,249 @@
   box-shadow:
     0 0 0 2px var(--sb-active-bg),
     0 0 0 4px var(--sb-accent);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+ * Sidebar v2 — floating panel look. Everything below is scoped under
+ * `.erp-sidebar-v2` (desktop <nav>, drawer root and drawer <nav>), so the
+ * rules above remain the base and nothing leaks outside the sidebar.
+ *
+ * Contrast on white: text 14.7:1, muted 7.6:1, icon 4.8:1. Selected text and
+ * icon (#0F6E56, the app's primary-hover token) on the 10% primary tint:
+ * 5.3:1. Focus ring (#1D9E75) on white: 3.4:1.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+.erp-sidebar-v2 {
+  --sb-border: #eef1f4;
+  --sb-hover: rgba(16, 24, 40, 0.04);
+  --sb-active-bg: rgba(29, 158, 117, 0.1);
+  --sb-active-text: #0f6e56;
+  --sb-field-bg: #f2f4f7;
+  --sb-field-border: transparent;
+  --sb-panel-bg: #f7f8fa;
+  --sb-radius: 16px;
+  --sb-panel-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+}
+
+/* ── Floating panels (desktop only: the desktop <nav> carries data-mode) ── */
+
+.erp-sidebar-v2.sb-theme[data-mode] {
+  padding: 12px 0 12px 12px;
+  background: transparent;
+}
+
+.erp-sidebar-v2.sb-theme[data-mode] .sb-rail {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--sb-radius);
+  background: var(--sb-bg);
+  box-shadow: var(--sb-panel-shadow);
+}
+
+.erp-sidebar-v2.sb-theme[data-mode] .sb-panel {
+  margin-left: 12px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--sb-radius);
+  background: var(--sb-bg);
+  box-shadow: var(--sb-panel-shadow);
+}
+
+.erp-sidebar-v2 .sb-panel-header {
+  border-bottom-color: var(--sb-border);
+}
+
+/* ── One selected state: soft tinted pill, primary text and icon ── */
+
+.erp-sidebar-v2 .sb-row,
+.erp-sidebar-v2 .sb-tile {
+  border-radius: 10px;
+}
+
+.erp-sidebar-v2 .sb-selectable[aria-current='page'],
+.erp-sidebar-v2 .sb-selectable[data-active='true'] {
+  background: var(--sb-active-bg);
+  color: var(--sb-active-text);
+  font-weight: 500;
+}
+
+.erp-sidebar-v2 .sb-selectable[aria-current='page']::before,
+.erp-sidebar-v2 .sb-selectable[data-active='true']::before {
+  display: none;
+}
+
+.erp-sidebar-v2 .sb-selectable[aria-expanded='true'] {
+  background: var(--sb-hover);
+}
+
+/* Icons sit bare on the row — no tile — in both modes. */
+.erp-sidebar-v2 .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-icon-tile,
+.erp-sidebar-v2 .sb-selectable:hover .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable:hover .sb-icon-tile,
+.erp-sidebar-v2 .sb-selectable[aria-expanded='true'] .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable[aria-expanded='true'] .sb-icon-tile {
+  background: transparent;
+  box-shadow: none;
+}
+
+.erp-sidebar-v2 .sb-row .sb-icon-tile {
+  width: 22px;
+  height: 22px;
+  font-size: 17px;
+}
+
+.erp-sidebar-v2 .sb-selectable:hover .sb-icon,
+.erp-sidebar-v2 .sb-selectable[aria-expanded='true'] .sb-icon {
+  color: var(--sb-text-strong);
+}
+
+.erp-sidebar-v2 .sb-selectable[aria-current='page'] .sb-icon,
+.erp-sidebar-v2 .sb-selectable[data-active='true'] .sb-icon,
+.erp-sidebar-v2 .sb-selectable[aria-current='page'] .sb-icon-tile,
+.erp-sidebar-v2 .sb-selectable[data-active='true'] .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable[aria-current='page'] .sb-icon-tile,
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-selectable[data-active='true'] .sb-icon-tile {
+  background: transparent;
+  color: var(--sb-active-text);
+}
+
+.erp-sidebar-v2 .sb-row.sb-rail-item {
+  min-height: 40px;
+  gap: 10px;
+  padding: 6px 10px 6px 12px;
+}
+
+/* ── Section headers: small uppercase muted (expanded) ── */
+
+.erp-sidebar-v2 .erp-sidebar-group-title,
+.erp-sidebar-v2 .sb-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-sidebar-v2 .sb-section-label {
+  margin: 8px 0 6px;
+}
+
+.erp-sidebar-v2 .sb-group + .sb-group {
+  margin-top: 10px;
+}
+
+/* Open folder: indented list, no card or guide line. */
+.erp-sidebar-v2 .sb-inline-panel {
+  margin: 2px 0 6px;
+  padding: 2px 0 4px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* ── Fields and footer ── */
+
+.erp-sidebar-v2 .sb-search-input {
+  border-color: var(--sb-field-border);
+}
+
+.erp-sidebar-v2 .sb-search-input:hover {
+  border-color: transparent;
+  background: #eceff3;
+}
+
+.erp-sidebar-v2 .sb-search-input:focus-visible {
+  border-color: var(--sb-focus);
+  background: var(--sb-bg);
+}
+
+.erp-sidebar-v2 .sb-kbd {
+  border-color: #dfe3e8;
+}
+
+.erp-sidebar-v2 .sb-footer {
+  border-top-color: var(--sb-border);
+}
+
+.erp-sidebar-v2 .sb-account-card {
+  border: 0;
+  background: var(--sb-panel-bg);
+}
+
+.erp-sidebar-v2 .sb-mode-toggle {
+  border-color: transparent;
+  background: var(--sb-field-bg);
+}
+
+.erp-sidebar-v2 .sb-mode-toggle:hover {
+  border-color: transparent;
+  background: var(--sb-active-bg);
+}
+
+/* ── Compact: icon-only rail (~72px), labels in hover/focus tooltips ── */
+
+.erp-sidebar-v2.sb-theme[data-mode='compact'] .sb-rail {
+  background: var(--sb-bg);
+}
+
+.erp-sidebar-v2 .sb-tile {
+  min-height: 44px;
+  gap: 0;
+  padding: 10px 0;
+}
+
+/* Caption stays in the accessible name; the tooltip shows it visually. */
+.erp-sidebar-v2 .sb-tile-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.erp-sidebar-v2 .sb-tile-folder-mark {
+  top: 50%;
+  right: 3px;
+}
+
+.erp-sidebar-v2 .sb-tile .sb-badge--floating,
+.erp-sidebar-v2 .sb-footer--compact .sb-utility-button .sb-badge--floating {
+  top: 2px;
+  left: calc(50% + 4px);
+}
+
+/* Thin dividers between sections replace headers in compact mode. */
+.erp-sidebar-v2 .sb-compact-tools {
+  margin: 0 8px;
+  padding: 8px 0;
+}
+
+.erp-sidebar-v2 .sb-footer--compact {
+  padding: 8px 6px;
+}
+
+.erp-sidebar-v2 .sb-account-avatar-link .sb-avatar {
+  box-shadow: none;
+}
+
+.erp-sidebar-v2 .sb-account-avatar-link[aria-current='page'] .sb-avatar {
+  box-shadow:
+    0 0 0 2px var(--sb-bg),
+    0 0 0 4px var(--sb-active-text);
+}
+
+/* ── Mobile drawer: same panel look ── */
+
+.erp-sidebar-v2.sb-drawer .ant-drawer-content-wrapper,
+.erp-sidebar-v2.sb-drawer .ant-drawer-section {
+  overflow: hidden;
+  border-radius: 0 var(--sb-radius) var(--sb-radius) 0;
+  box-shadow: var(--sb-panel-shadow);
+}
+
+.erp-sidebar-v2.sb-drawer .ant-drawer-header {
+  border-bottom-color: var(--sb-border);
 }
