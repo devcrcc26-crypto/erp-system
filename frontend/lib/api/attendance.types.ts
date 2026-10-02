@@ -125,6 +125,7 @@ export interface AttendanceRecord {
     }>;
   }>;
   leaveDaysThisMonth?: number;
+  coveredDates?: string[];
   adjustedAbsentDays?: number;
 }
 

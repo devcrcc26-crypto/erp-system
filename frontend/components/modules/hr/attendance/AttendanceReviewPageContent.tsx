@@ -305,7 +305,12 @@ export default function AttendanceReviewPageContent({
         render: (_: unknown, row: AttendanceRecord) => {
           const absent = toNumber(row.absentDays);
           const leaveDays = row.leaveDaysThisMonth ?? 0;
+          const coveredDates = row.coveredDates ?? [];
           const adjusted = row.adjustedAbsentDays ?? absent;
+          const leaveTooltip =
+            coveredDates.length > 0
+              ? `${leaveDays} absent day(s) covered by approved leave: ${coveredDates.join(', ')}`
+              : `${leaveDays} absent day(s) covered by approved leave`;
 
           if (absent === 0) {
             return (
@@ -317,9 +322,7 @@ export default function AttendanceReviewPageContent({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {leaveDays > 0 ? (
                 <>
-                  <Tooltip
-                    title={`${leaveDays} day(s) covered by approved leave`}
-                  >
+                  <Tooltip title={leaveTooltip}>
                     <span
                       style={{
                         fontWeight: 600,

@@ -42,6 +42,7 @@ import {
   holidayFallsOnDate,
 } from '../../../work-schedule/application/services/work-schedule.dates';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
+import { getLeaveCoveredAbsencesForEmployees } from './attendance-leave.util';
 import type { AttendanceDailyRaw } from '../../utils/attendance-excel.parser';
 import { parseAttendanceExcel } from '../../utils/attendance-excel.parser';
 import {
@@ -1075,72 +1076,44 @@ export class AttendanceService
       this.prisma.attendanceRecord.count({ where }),
     ]);
 
-    const recordsWithLeave = await Promise.all(
-      rows.map(async (record) => {
-        const monthStart = new Date(record.year, record.month - 1, 1);
-        const monthEnd = new Date(record.year, record.month, 0);
-
-        const approvedLeaves = await this.prisma.leaveRequest.findMany({
-          where: {
-            employeeId: record.employeeId,
-            companyId: record.companyId,
-            status: 'APPROVED',
-            deletedAt: null,
-            periods: {
-              some: {
-                startDate: { lte: monthEnd },
-                endDate: { gte: monthStart },
-              },
-            },
-          },
-          select: {
-            id: true,
-            leaveType: true,
-            days: true,
-            periods: {
-              where: {
-                startDate: { lte: monthEnd },
-                endDate: { gte: monthStart },
-              },
-              select: {
-                startDate: true,
-                endDate: true,
-                days: true,
-              },
-            },
-          },
-        });
-
-        const leaveDaysThisMonth = approvedLeaves.reduce(
-          (sum, leave) =>
-            sum +
-            leave.periods.reduce(
-              (periodSum, period) => periodSum + Number(period.days),
-              0,
-            ),
-          0,
-        );
-
-        return {
-          ...record,
-          approvedLeave: approvedLeaves.map((leave) => ({
-            id: leave.id,
-            leaveType: leave.leaveType,
-            days: Number(leave.days ?? 0),
-            periods: leave.periods.map((period) => ({
-              startDate: period.startDate,
-              endDate: period.endDate,
-              days: Number(period.days),
-            })),
-          })),
-          leaveDaysThisMonth,
-          adjustedAbsentDays: Math.max(
-            0,
-            Number(record.absentDays) - leaveDaysThisMonth,
-          ),
-        };
-      }),
+    const employeeIds = rows.map((record) => record.employeeId);
+    const leaveCoverageByEmployee = await getLeaveCoveredAbsencesForEmployees(
+      this.prisma,
+      companyId,
+      employeeIds,
+      month,
+      year,
+      this.logger,
     );
+
+    const recordsWithLeave = rows.map((record) => {
+      const coverage =
+        leaveCoverageByEmployee.get(record.employeeId) ?? {
+          coveredDays: 0,
+          coveredDates: [],
+          leaves: [],
+        };
+
+      return {
+        ...record,
+        approvedLeave: coverage.leaves.map((leave) => ({
+          id: leave.id,
+          leaveType: leave.leaveType,
+          days: leave.periods.reduce((sum, period) => sum + period.days, 0),
+          periods: leave.periods.map((period) => ({
+            startDate: period.startDate,
+            endDate: period.endDate,
+            days: period.days,
+          })),
+        })),
+        leaveDaysThisMonth: coverage.coveredDays,
+        coveredDates: coverage.coveredDates,
+        adjustedAbsentDays: Math.max(
+          0,
+          Number(record.absentDays) - coverage.coveredDays,
+        ),
+      };
+    });
 
     return buildPaginatedResult(recordsWithLeave, total, page, limit);
   }

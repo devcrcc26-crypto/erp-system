@@ -6,6 +6,7 @@ import {
     PayrollCalculationService,
     type OvertimeHours,
 } from './payroll-calculation.service'
+import { getLeaveCoveredAbsences } from '../../../attendance/application/services/attendance-leave.util'
 
 
 interface ServiceContext {
@@ -208,14 +209,21 @@ export class PayrollRunService {
         const scheduledDays = this.toNumber(attendance?.scheduledDays)
         const presentDays = this.toNumber(attendance?.presentDays)
 
-        // Count approved leave days that cover absences this month
-        const approvedLeaveDays = attendance
-            ? await this.countApprovedLeaveDays(employeeId, ctx.companyId, month, year)
-            : 0
+        const leaveCoverage = attendance
+            ? await getLeaveCoveredAbsences(
+                  this.prisma,
+                  ctx.companyId,
+                  employeeId,
+                  month,
+                  year,
+                  this.logger,
+              )
+            : { coveredDays: 0, coveredDates: [], leaves: [] }
 
-        // Adjusted absent days — approved leave days are paid
-        // Priority: if attendance already marks day as present, leave is ignored
-        const adjustedAbsentDays = Math.max(0, absentDays - approvedLeaveDays)
+        const adjustedAbsentDays = Math.max(
+            0,
+            absentDays - leaveCoverage.coveredDays,
+        )
 
         const run = await this.prisma.payrollRun.findFirstOrThrow({
             where: {id: runId},
@@ -297,9 +305,10 @@ export class PayrollRunService {
                 flag,
                 flagNote,
 
-                notes: approvedLeaveDays > 0
-                    ? `${approvedLeaveDays} absent day(s) covered by approved leave`
-                    : null,
+                notes:
+                    leaveCoverage.coveredDays > 0
+                        ? `${leaveCoverage.coveredDays} absent working day(s) covered by approved leave: ${leaveCoverage.coveredDates.join(', ')}`
+                        : null,
 
                 createdBy: ctx.userId,
                 updatedBy: ctx.userId,
@@ -307,65 +316,6 @@ export class PayrollRunService {
         })
 
         return entry
-    }
-
-    /**
-     * Counts unique calendar days in the given month covered by APPROVED leave
-     * request periods for the employee. Used to treat leave-covered absences as paid.
-     */
-    private async countApprovedLeaveDays(
-        employeeId: string,
-        companyId: string,
-        month: number,
-        year: number,
-    ): Promise<number> {
-        const monthStart = new Date(year, month - 1, 1)
-        const monthEnd = new Date(year, month, 0)
-
-        const approvedLeaves = await this.prisma.leaveRequest.findMany({
-            where: {
-                employeeId,
-                companyId,
-                status: 'APPROVED',
-                deletedAt: null,
-                periods: {
-                    some: {
-                        startDate: { lte: monthEnd },
-                        endDate: { gte: monthStart },
-                    },
-                },
-            },
-            include: {
-                periods: {
-                    where: {
-                        startDate: { lte: monthEnd },
-                        endDate: { gte: monthStart },
-                    },
-                },
-            },
-        })
-
-        if (approvedLeaves.length === 0) return 0
-
-        const coveredDays = new Set<string>()
-
-        for (const leave of approvedLeaves) {
-            for (const period of leave.periods) {
-                const start = new Date(
-                    Math.max(period.startDate.getTime(), monthStart.getTime()),
-                )
-                const end = new Date(
-                    Math.min(period.endDate.getTime(), monthEnd.getTime()),
-                )
-                const current = new Date(start)
-                while (current <= end) {
-                    coveredDays.add(current.toISOString().split('T')[0])
-                    current.setDate(current.getDate() + 1)
-                }
-            }
-        }
-
-        return coveredDays.size
     }
 
     async recalculate(runId: string,ctx: ServiceContext){
