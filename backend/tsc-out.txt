@@ -1,0 +1,7 @@
+﻿src/modules/employee-contract/application/services/employee-contract.service.spec.ts(14,19): error TS2554: Expected 4 arguments, but got 3.
+src/modules/project-management/application/services/__tests__/closure-chain.service.spec.ts(329,17): error TS2554: Expected 7 arguments, but got 5.
+src/modules/project-management/application/services/__tests__/closure-chain.service.spec.ts(473,17): error TS2554: Expected 7 arguments, but got 5.
+src/modules/project-management/application/services/__tests__/closure-chain.service.spec.ts(574,17): error TS2554: Expected 5 arguments, but got 4.
+src/modules/project-management/application/services/__tests__/schedule-transitions.service.spec.ts(74,15): error TS2554: Expected 7 arguments, but got 5.
+src/modules/project-management/application/services/tests/source-entity-links.service.spec.ts(198,23): error TS2554: Expected 6-7 arguments, but got 4.
+src/modules/project-management/application/services/tests/source-entity-links.service.spec.ts(209,7): error TS2554: Expected 3 arguments, but got 4.

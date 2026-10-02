@@ -610,6 +610,20 @@ export default function EmployeeDetailPageContent({
                   </div>
                 </DetailSection>
 
+                <DetailSection title={t('users.sectionPayrollDetails')}>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <MetaItem label={t('users.form.bankName')}>
+                      {displayValue(user.bankName)}
+                    </MetaItem>
+                    <MetaItem label={t('users.form.bankBranch')}>
+                      {displayValue(user.bankBranch)}
+                    </MetaItem>
+                    <MetaItem label={t('users.form.bankAccountNumber')}>
+                      {displayValue(user.bankAccountNumber)}
+                    </MetaItem>
+                  </div>
+                </DetailSection>
+
                 <DetailSection
                   title={t('users.sectionOrganizationAssignment')}
                 >

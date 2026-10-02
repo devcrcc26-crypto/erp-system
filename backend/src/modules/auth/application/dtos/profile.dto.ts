@@ -147,6 +147,18 @@ export class ProfileResponseDto {
 
   @ApiProperty({ type: [ProfileEmergencyContactDto] })
   emergencyContacts!: ProfileEmergencyContactDto[];
+
+  @ApiProperty({ nullable: true, description: 'Payroll bank name' })
+  bankName!: string | null;
+
+  @ApiProperty({ nullable: true, description: 'Payroll bank branch' })
+  bankBranch!: string | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: 'Full account number (own profile only)',
+  })
+  bankAccountNumber!: string | null;
 }
 
 export class UpdateProfileDto {

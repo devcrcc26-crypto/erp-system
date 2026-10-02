@@ -8,8 +8,21 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "@/shared/prisma/prisma.service";
 import { activeOnly } from "@/shared/prisma/soft-delete.util";
-import { CreateEmployeeContractDto, ListEmployeeContractsDto, TerminateEmployeeContractDto, UpdateEmployeeContractDto } from "../dtos/employee-contract.dtos";
-import { EmployeeContractStatus, EmployeeContractType, FolderContextType, Prisma } from "@prisma/client";
+import {
+  CreateEmployeeContractDto,
+  ListEmployeeContractsDto,
+  SalaryPreviewDto,
+  TerminateEmployeeContractDto,
+  UpdateEmployeeContractDto,
+} from "../dtos/employee-contract.dtos";
+import {
+  EmployeeContractStatus,
+  EmployeeContractType,
+  FolderContextType,
+  Prisma,
+  SalaryBasis,
+  SupportedCurrency,
+} from "@prisma/client";
 import { randomUUID } from "crypto";
 import { PermissionService } from "@/shared/permissions/permission.service";
 import {
@@ -19,6 +32,7 @@ import {
 } from "@/shared/storage/storage.constants";
 import type { IStorageService } from "@/shared/storage/storage.interface";
 import { buildPrismaPagination, PaginatedResult, buildPaginatedResult } from "@/shared/utils/pagination.util";
+import { PayrollCalculationService } from "@/modules/payroll/application/services/payroll-calculation.service";
 
 type UploadedFile = {
   originalname: string;
@@ -26,6 +40,8 @@ type UploadedFile = {
   size: number;
   buffer: Buffer;
 };
+
+const DEFAULT_TAXABLE_THRESHOLD = 2200;
 
 const USER_SELECT ={
     id: true,
@@ -86,6 +102,13 @@ function toDateOnly(value: Date): string {
     return value.toISOString().slice(0, 10);
 }
 
+/** Subtract one calendar day from a @db.Date value (UTC). */
+function dayBefore(date: Date): Date {
+    const next = new Date(date.getTime());
+    next.setUTCDate(next.getUTCDate() - 1);
+    return next;
+}
+
 const EXPIRING_SOON_DAYS = 90;
 
 const TERMINAL_STATUSES: EmployeeContractStatus[] = [
@@ -94,12 +117,20 @@ const TERMINAL_STATUSES: EmployeeContractStatus[] = [
     EmployeeContractStatus.SUPERSEDED,
 ];
 
+const ZERO_OT = {
+    normalHours: 0,
+    eveningHours: 0,
+    sundayHours: 0,
+    holidayHours: 0,
+};
+
 @Injectable()
 export class EmployeeContractService {
     private readonly logger = new Logger(EmployeeContractService.name);
     constructor(
         private readonly prisma: PrismaService,
         private readonly permissionService: PermissionService,
+        private readonly payrollCalc: PayrollCalculationService,
         @Inject(STORAGE_SERVICE)
         private readonly storage: IStorageService,
     ){}
@@ -126,48 +157,79 @@ export class EmployeeContractService {
 
         this.validateContractDates(dto.contractType, signedAt, startDate, endDate);
 
+        const salary = this.resolveSalaryFields({
+            salaryBasis: dto.salaryBasis ?? SalaryBasis.GROSS,
+            basicSalary: dto.basicSalary ?? 0,
+            transportationAllowance: dto.transportationAllowance ?? 0,
+            monthlyBonus: dto.monthlyBonus ?? 0,
+            netSalary: dto.netSalary,
+            pensionApplicable: dto.pensionApplicable ?? true,
+            taxApplicable: dto.taxApplicable ?? true,
+        });
+
         const activeExisting = await this.prisma.employeeContract.findFirst({
             where: activeOnly({
                 companyId,
                 employeeId: dto.employeeId,
                 status: EmployeeContractStatus.ACTIVE,
             }),
-            select: {id: true, contractNumber: true},
+            select: {id: true, contractNumber: true, startDate: true},
         })
-        if(activeExisting){
-            throw new BadRequestException(
-                `Employee already has an active contract (${activeExisting.contractNumber}). Terminate or supersede it first.`,
-            )
+
+        if (activeExisting) {
+            if (startDate.getTime() <= activeExisting.startDate.getTime()) {
+                throw new BadRequestException(
+                    `New contract start date must be after the active contract's start date (${toDateOnly(activeExisting.startDate)})`,
+                );
+            }
         }
 
         const contractNumber = await this.nextContractNumber();
         const id = randomUUID();
 
-        await this.prisma.employeeContract.create({
-            data: {
-                id,
-                companyId,
-                contractNumber,
-                employeeId: dto.employeeId,
-                contractType: dto.contractType,
-                status: EmployeeContractStatus.ACTIVE,
-                signedAt,
-                startDate,
-                endDate,
-                notes: dto.notes?.trim() || null,
-                currency: dto.currency ?? 'ETB',
-                basicSalary: this.toDecimal(dto.basicSalary),
-                transportationAllowance: this.toDecimal(dto.transportationAllowance),
-                monthlyBonus: this.toDecimal(dto.monthlyBonus),
-                netSalary: this.toDecimal(dto.netSalary),
-                probationEndDate: dto.probationEndDate
-                    ? this.parseDateOnly(dto.probationEndDate)
-                    : null,
-                governedBy: dto.governedBy?.trim() || null,
-                createdBy: userId,
-                updatedBy: userId,
+        await this.prisma.$transaction(async (tx) => {
+            if (activeExisting) {
+                await tx.employeeContract.update({
+                    where: { id: activeExisting.id },
+                    data: {
+                        status: EmployeeContractStatus.SUPERSEDED,
+                        endDate: dayBefore(startDate),
+                        updatedBy: userId,
+                    },
+                });
             }
-        })
+
+            await tx.employeeContract.create({
+                data: {
+                    id,
+                    companyId,
+                    contractNumber,
+                    employeeId: dto.employeeId,
+                    contractType: dto.contractType,
+                    status: EmployeeContractStatus.ACTIVE,
+                    signedAt,
+                    startDate,
+                    endDate,
+                    notes: dto.notes?.trim() || null,
+                    currency: SupportedCurrency.ETB,
+                    salaryBasis: salary.salaryBasis,
+                    pensionApplicable: salary.pensionApplicable,
+                    taxApplicable: salary.taxApplicable,
+                    basicSalary: this.toDecimal(salary.basicSalary),
+                    transportationAllowance: this.toDecimal(
+                        salary.transportationAllowance,
+                    ),
+                    monthlyBonus: this.toDecimal(salary.monthlyBonus),
+                    netSalary: this.toDecimal(salary.netSalary),
+                    probationEndDate: dto.probationEndDate
+                        ? this.parseDateOnly(dto.probationEndDate)
+                        : null,
+                    governedBy: dto.governedBy?.trim() || null,
+                    createdBy: userId,
+                    updatedBy: userId,
+                },
+            });
+        });
 
         if (files.length > 0) {
             await this.attachFiles(id, companyId, userId, files);
@@ -175,6 +237,78 @@ export class EmployeeContractService {
 
         this.logger.log(`Created employee contract ${contractNumber}`);
         return this.getContract(id, companyId, userId);
+    }
+
+    /**
+     * Live salary preview for the contract form (GROSS or NET).
+     */
+    async previewSalary(
+        dto: SalaryPreviewDto,
+        companyId: string,
+        userId: string,
+    ): Promise<Record<string, unknown>> {
+        await this.assertCanManage(companyId, userId);
+        void companyId;
+
+        const threshold = dto.taxableThreshold ?? DEFAULT_TAXABLE_THRESHOLD;
+        const pensionApplicable = dto.pensionApplicable ?? true;
+        const taxApplicable = dto.taxApplicable ?? true;
+        const basicSalary = dto.basicSalary;
+        const transportationAllowance = dto.transportationAllowance ?? 0;
+
+        let monthlyBonus = dto.monthlyBonus ?? 0;
+        let agreedNet = dto.netSalary ?? null;
+
+        if (dto.salaryBasis === SalaryBasis.NET) {
+            if (dto.netSalary == null) {
+                throw new BadRequestException(
+                    'netSalary is required for NET salary basis',
+                );
+            }
+            agreedNet = dto.netSalary;
+            monthlyBonus = this.payrollCalc.solveBonusForNet({
+                basicSalary,
+                transportAllowance: transportationAllowance,
+                targetNet: dto.netSalary,
+                taxableThreshold: threshold,
+                pensionApplicable,
+                taxApplicable,
+            });
+        }
+
+        const result = this.payrollCalc.calculate({
+            basicSalary,
+            transportAllowance: transportationAllowance,
+            monthlyBonus,
+            bonusTopUp: 0,
+            absentDays: 0,
+            overtimeHours: ZERO_OT,
+            taxableThreshold: threshold,
+            pensionApplicable,
+            taxApplicable,
+        });
+
+        return {
+            salaryBasis: dto.salaryBasis,
+            basicSalary,
+            transportationAllowance,
+            monthlyBonus,
+            netSalary: agreedNet ?? result.netPay,
+            pensionApplicable,
+            taxApplicable,
+            taxableThreshold: threshold,
+            earnedSalary: result.earnedSalary,
+            taxableTransport: result.taxableTransport,
+            nonTaxableTransport: result.nonTaxableTransport,
+            taxableIncome: result.taxableIncome,
+            grossIncome: result.grossIncome,
+            incomeTax: result.incomeTax,
+            pensionEmployee: result.pensionEmployee,
+            pensionEmployer: result.pensionEmployer,
+            totalDeductions: result.totalDeductions,
+            netPay: result.netPay,
+            solvedBonus: monthlyBonus,
+        };
     }
 
     /**
@@ -355,6 +489,42 @@ export class EmployeeContractService {
 
         this.validateContractDates(contractType, signedAt, startDate, endDate);
 
+        const salaryBasis =
+            dto.salaryBasis ?? contract.salaryBasis ?? SalaryBasis.GROSS;
+        const salaryTouched =
+            dto.salaryBasis !== undefined ||
+            dto.basicSalary !== undefined ||
+            dto.transportationAllowance !== undefined ||
+            dto.monthlyBonus !== undefined ||
+            dto.netSalary !== undefined ||
+            dto.pensionApplicable !== undefined ||
+            dto.taxApplicable !== undefined;
+
+        const salary = salaryTouched
+            ? this.resolveSalaryFields({
+                  salaryBasis,
+                  basicSalary:
+                      dto.basicSalary ??
+                      this.payrollCalc.toNumber(contract.basicSalary),
+                  transportationAllowance:
+                      dto.transportationAllowance ??
+                      this.payrollCalc.toNumber(
+                          contract.transportationAllowance,
+                      ),
+                  monthlyBonus:
+                      dto.monthlyBonus ??
+                      this.payrollCalc.toNumber(contract.monthlyBonus),
+                  netSalary:
+                      dto.netSalary !== undefined
+                          ? dto.netSalary
+                          : this.payrollCalc.toNumber(contract.netSalary) ||
+                            undefined,
+                  pensionApplicable:
+                      dto.pensionApplicable ?? contract.pensionApplicable,
+                  taxApplicable: dto.taxApplicable ?? contract.taxApplicable,
+              })
+            : null;
+
         await this.prisma.employeeContract.update({
             where: {id},
             data : {
@@ -365,18 +535,19 @@ export class EmployeeContractService {
                 ...(dto.notes !== undefined
                     ? { notes: dto.notes == null ? null : dto.notes.trim() || null }
                     : {}),
-                ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
-                ...(dto.basicSalary !== undefined
-                    ? { basicSalary: this.toDecimal(dto.basicSalary) }
-                    : {}),
-                ...(dto.transportationAllowance !== undefined
-                    ? { transportationAllowance: this.toDecimal(dto.transportationAllowance) }
-                    : {}),
-                ...(dto.monthlyBonus !== undefined
-                    ? { monthlyBonus: this.toDecimal(dto.monthlyBonus) }
-                    : {}),
-                ...(dto.netSalary !== undefined
-                    ? { netSalary: this.toDecimal(dto.netSalary) }
+                currency: SupportedCurrency.ETB,
+                ...(salary
+                    ? {
+                          salaryBasis: salary.salaryBasis,
+                          pensionApplicable: salary.pensionApplicable,
+                          taxApplicable: salary.taxApplicable,
+                          basicSalary: this.toDecimal(salary.basicSalary),
+                          transportationAllowance: this.toDecimal(
+                              salary.transportationAllowance,
+                          ),
+                          monthlyBonus: this.toDecimal(salary.monthlyBonus),
+                          netSalary: this.toDecimal(salary.netSalary),
+                      }
                     : {}),
                 ...(dto.probationEndDate !== undefined
                     ? {
@@ -872,5 +1043,80 @@ export class EmployeeContractService {
         if(!canManage){
             throw new ForbiddenException('You do not have permission to manage employee contracts');
         }
+    }
+
+    /**
+     * Resolves stored pay fields from GROSS or NET inputs. Always ETB.
+     * NET ignores client monthlyBonus and solves it; GROSS computes netSalary.
+     */
+    private resolveSalaryFields(input: {
+        salaryBasis: SalaryBasis;
+        basicSalary: number;
+        transportationAllowance: number;
+        monthlyBonus: number;
+        netSalary?: number;
+        pensionApplicable: boolean;
+        taxApplicable: boolean;
+    }): {
+        salaryBasis: SalaryBasis;
+        basicSalary: number;
+        transportationAllowance: number;
+        monthlyBonus: number;
+        netSalary: number;
+        pensionApplicable: boolean;
+        taxApplicable: boolean;
+    } {
+        const pensionApplicable = input.pensionApplicable;
+        const taxApplicable = input.taxApplicable;
+        const basicSalary = input.basicSalary;
+        const transportationAllowance = input.transportationAllowance;
+
+        if (input.salaryBasis === SalaryBasis.NET) {
+            if (input.netSalary == null || !(input.netSalary > 0)) {
+                throw new BadRequestException(
+                    'netSalary is required for NET salary basis',
+                );
+            }
+            const monthlyBonus = this.payrollCalc.solveBonusForNet({
+                basicSalary,
+                transportAllowance: transportationAllowance,
+                targetNet: input.netSalary,
+                taxableThreshold: DEFAULT_TAXABLE_THRESHOLD,
+                pensionApplicable,
+                taxApplicable,
+            });
+            return {
+                salaryBasis: SalaryBasis.NET,
+                basicSalary,
+                transportationAllowance,
+                monthlyBonus,
+                netSalary: input.netSalary,
+                pensionApplicable,
+                taxApplicable,
+            };
+        }
+
+        const monthlyBonus = input.monthlyBonus ?? 0;
+        const result = this.payrollCalc.calculate({
+            basicSalary,
+            transportAllowance: transportationAllowance,
+            monthlyBonus,
+            bonusTopUp: 0,
+            absentDays: 0,
+            overtimeHours: ZERO_OT,
+            taxableThreshold: DEFAULT_TAXABLE_THRESHOLD,
+            pensionApplicable,
+            taxApplicable,
+        });
+
+        return {
+            salaryBasis: SalaryBasis.GROSS,
+            basicSalary,
+            transportationAllowance,
+            monthlyBonus,
+            netSalary: result.netPay,
+            pensionApplicable,
+            taxApplicable,
+        };
     }
 }

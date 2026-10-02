@@ -141,6 +141,9 @@ export interface UserProfile {
   addressWoreda?: string | null;
   addressHouseNumber?: string | null;
   emergencyContacts?: ProfileEmergencyContact[];
+  bankName?: string | null;
+  bankBranch?: string | null;
+  bankAccountNumber?: string | null;
 }
 
 export interface ProfileEmergencyContact {
@@ -255,6 +258,9 @@ export interface User {
   preferredLanguage: string | null;
   preferredTimezone: string | null;
   preferredDateFormat: string | null;
+  bankName?: string | null;
+  bankBranch?: string | null;
+  bankAccountNumber?: string | null;
   isActive: boolean;
   mfaEnabled: boolean;
   emailVerifiedAt: string | null;
@@ -326,6 +332,9 @@ export interface CreateUserRequest {
   emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
   workScheduleId?: string;
+  bankName?: string;
+  bankBranch?: string;
+  bankAccountNumber?: string;
 }
 
 export interface UpdateUserRequest {
@@ -362,6 +371,9 @@ export interface UpdateUserRequest {
   fieldOfStudy?: string;
   experienceStartDate?: string;
   emergencyContacts?: EmergencyContact[];
+  bankName?: string;
+  bankBranch?: string;
+  bankAccountNumber?: string;
 }
 
 export interface AssignUserRoleRequest {

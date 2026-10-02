@@ -236,6 +236,20 @@ export default function ProfileAccountDetails({
           </div>
         )}
       </ProfileSection>
+
+      <ProfileSection title={t('profile.sectionPayrollDetails')}>
+        <div className={PROFILE_FIELD_GRID}>
+          <ProfileField label={t('users.form.bankName')}>
+            {displayText(profile.bankName)}
+          </ProfileField>
+          <ProfileField label={t('users.form.bankBranch')}>
+            {displayText(profile.bankBranch)}
+          </ProfileField>
+          <ProfileField label={t('users.form.bankAccountNumber')}>
+            {displayText(profile.bankAccountNumber)}
+          </ProfileField>
+        </div>
+      </ProfileSection>
     </div>
   );
 }

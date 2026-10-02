@@ -16,6 +16,7 @@ import {
   SYSTEM_ADMINISTRATOR_ROLE,
 } from '../../../../shared/constants/protected-accounts';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
@@ -39,6 +40,20 @@ import { UserProvisioningService } from './user-provisioning.service';
 
 type AuditContext = { companyId: string; userId: string };
 
+/** Masks account numbers for viewers without hr.view (and not the employee). */
+function maskBankAccountNumber(
+  account: string | null | undefined,
+): string | null {
+  if (account == null || account.trim() === '') {
+    return null;
+  }
+  const trimmed = account.trim();
+  if (trimmed.length <= 4) {
+    return '••••';
+  }
+  return `••••${trimmed.slice(-4)}`;
+}
+
 interface UploadedFile {
   originalname: string;
   mimetype: string;
@@ -55,6 +70,7 @@ export class UserManagementService {
     private readonly documentService: DocumentService,
     private readonly leavePolicyService: LeavePolicyService,
     private readonly workScheduleService: WorkScheduleService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   async listUsers(
@@ -92,8 +108,11 @@ export class UserManagementService {
       }),
       this.prisma.user.count({ where }),
     ]);
+    const canViewBank = await this.canViewFullBankDetails(ctx, null);
     return buildPaginatedResult(
-      data.map((row) => this.mapUserResponse(row)),
+      data.map((row) =>
+        this.applyBankVisibility(this.mapUserResponse(row), canViewBank, false),
+      ),
       total,
       query.page,
       query.limit,
@@ -141,7 +160,9 @@ export class UserManagementService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return this.mapUserResponse(user);
+    const mapped = this.mapUserResponse(user);
+    const canViewBank = await this.canViewFullBankDetails(ctx, id);
+    return this.applyBankVisibility(mapped, canViewBank, id === ctx.userId);
   }
 
   async createUser(ctx: AuditContext, dto: CreateUserDto): Promise<unknown> {
@@ -360,7 +381,11 @@ export class UserManagementService {
           })
         : updated;
 
-    return this.mapUserResponse(withSchedule);
+    return this.applyBankVisibility(
+      this.mapUserResponse(withSchedule),
+      await this.canViewFullBankDetails(ctx, id),
+      id === ctx.userId,
+    );
   }
 
   async deleteUser(ctx: AuditContext, id: string): Promise<void> {
@@ -996,6 +1021,9 @@ export class UserManagementService {
       preferredLanguage: true,
       preferredTimezone: true,
       preferredDateFormat: true,
+      bankName: true,
+      bankBranch: true,
+      bankAccountNumber: true,
       isActive: true,
       mfaEnabled: true,
       emailVerifiedAt: true,
@@ -1064,6 +1092,9 @@ export class UserManagementService {
     emergencyContacts?: CreateUserDto['emergencyContacts'];
     leavePolicyId?: string;
     workScheduleId?: string;
+    bankName?: string;
+    bankBranch?: string;
+    bankAccountNumber?: string;
   }> {
     return {
       middleName: dto.middleName,
@@ -1084,6 +1115,9 @@ export class UserManagementService {
       emergencyContacts: dto.emergencyContacts,
       leavePolicyId: dto.leavePolicyId,
       workScheduleId: dto.workScheduleId,
+      bankName: dto.bankName,
+      bankBranch: dto.bankBranch,
+      bankAccountNumber: dto.bankAccountNumber,
     };
   }
 
@@ -1112,6 +1146,9 @@ export class UserManagementService {
       emergencyContacts?: CreateUserDto['emergencyContacts'];
       leavePolicyId?: string;
       workScheduleId?: string;
+      bankName?: string;
+      bankBranch?: string;
+      bankAccountNumber?: string;
     }>,
   ): Promise<void> {
     const employeeId =
@@ -1166,6 +1203,9 @@ export class UserManagementService {
           : null,
         emergencyContacts: this.normalizeEmergencyContacts(profileInput.emergencyContacts),
         leavePolicyId: profileInput.leavePolicyId ?? null,
+        bankName: profileInput.bankName?.trim() || null,
+        bankBranch: profileInput.bankBranch?.trim() || null,
+        bankAccountNumber: profileInput.bankAccountNumber?.trim() || null,
         updatedBy: ctx.userId,
       },
     });
@@ -1252,6 +1292,9 @@ export class UserManagementService {
         | 'experienceStartDate'
         | 'emergencyContacts'
         | 'leavePolicyId'
+        | 'bankName'
+        | 'bankBranch'
+        | 'bankAccountNumber'
       >
     >,
   ): Prisma.UserUncheckedUpdateInput {
@@ -1311,6 +1354,15 @@ export class UserManagementService {
     }
     if (rest.leavePolicyId !== undefined) {
       data.leavePolicyId = rest.leavePolicyId || null;
+    }
+    if (rest.bankName !== undefined) {
+      data.bankName = rest.bankName?.trim() || null;
+    }
+    if (rest.bankBranch !== undefined) {
+      data.bankBranch = rest.bankBranch?.trim() || null;
+    }
+    if (rest.bankAccountNumber !== undefined) {
+      data.bankAccountNumber = rest.bankAccountNumber?.trim() || null;
     }
 
     return data;
@@ -1486,6 +1538,47 @@ export class UserManagementService {
       yearsOfExperience: this.computeYearsOfExperience(
         user.experienceStartDate ?? null,
       ),
+    };
+  }
+
+  /**
+   * Full bank account numbers only for hr.view or the employee themself.
+   */
+  private async canViewFullBankDetails(
+    ctx: AuditContext,
+    targetUserId: string | null,
+  ): Promise<boolean> {
+    if (targetUserId != null && targetUserId === ctx.userId) {
+      return true;
+    }
+    return this.permissionService.hasPermission(
+      ctx.userId,
+      ctx.companyId,
+      'hr',
+      'view',
+    );
+  }
+
+  private applyBankVisibility<
+    T extends {
+      bankName?: string | null;
+      bankBranch?: string | null;
+      bankAccountNumber?: string | null;
+    } | null,
+  >(
+    user: T,
+    canViewFull: boolean,
+    isSelf: boolean,
+  ): T {
+    if (!user) {
+      return user;
+    }
+    if (canViewFull || isSelf) {
+      return user;
+    }
+    return {
+      ...user,
+      bankAccountNumber: maskBankAccountNumber(user.bankAccountNumber),
     };
   }
 

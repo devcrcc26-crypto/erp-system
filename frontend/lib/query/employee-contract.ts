@@ -5,6 +5,8 @@ import {
   EmployeeContractListItem,
   ListEmployeeContractsParams,
   MyActiveContract,
+  SalaryPreviewRequest,
+  SalaryPreviewResult,
   TerminateEmployeeContractPayload,
   UpdateEmployeeContractPayload,
 } from "../api/employee-contract.types";
@@ -13,6 +15,7 @@ import { PaginatedResult } from "../api/types";
 import {
   apiGet,
   apiGetPaginated,
+  apiPost,
   apiPostForm,
   apiPatch,
   apiDelete,
@@ -183,8 +186,8 @@ export function useCreateEmployeeContract() {
       if (payload.notes) {
         formData.append('notes', payload.notes);
       }
-      if (payload.currency) {
-        formData.append('currency', payload.currency);
+      if (payload.salaryBasis) {
+        formData.append('salaryBasis', payload.salaryBasis);
       }
       if (payload.basicSalary != null) {
         formData.append('basicSalary', String(payload.basicSalary));
@@ -200,6 +203,12 @@ export function useCreateEmployeeContract() {
       }
       if (payload.netSalary != null) {
         formData.append('netSalary', String(payload.netSalary));
+      }
+      if (payload.pensionApplicable != null) {
+        formData.append('pensionApplicable', String(payload.pensionApplicable));
+      }
+      if (payload.taxApplicable != null) {
+        formData.append('taxApplicable', String(payload.taxApplicable));
       }
       if (payload.probationEndDate) {
         formData.append('probationEndDate', payload.probationEndDate);
@@ -395,4 +404,25 @@ export async function downloadEmployeeContractImportTemplate(): Promise<void> {
     `${CONTRACT_PATH}/import/template`,
     "employee-contract-import-template.xlsx",
   );
+}
+
+/**
+ * Live salary preview (GROSS forward / NET bonus solve) for the contract form.
+ */
+export async function previewEmployeeContractSalary(
+  payload: SalaryPreviewRequest,
+): Promise<SalaryPreviewResult> {
+  return apiPost<SalaryPreviewResult>(
+    `${CONTRACT_PATH}/salary-preview`,
+    payload,
+  );
+}
+
+/**
+ * Mutation wrapper around salary preview (prefer debounced direct call for live UI).
+ */
+export function useSalaryPreview() {
+  return useMutation({
+    mutationFn: previewEmployeeContractSalary,
+  });
 }

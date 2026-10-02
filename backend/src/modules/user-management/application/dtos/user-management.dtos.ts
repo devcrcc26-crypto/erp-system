@@ -208,6 +208,30 @@ export class CreateUserDto {
   @IsString()
   preferredDateFormat?: string;
 
+  @ApiPropertyOptional({ maxLength: 120 })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(120)
+  bankName?: string;
+
+  @ApiPropertyOptional({ maxLength: 120 })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(120)
+  bankBranch?: string;
+
+  @ApiPropertyOptional({ maxLength: 64 })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(64)
+  bankAccountNumber?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()

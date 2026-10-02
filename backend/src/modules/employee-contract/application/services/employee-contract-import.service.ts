@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   EmployeeContractStatus,
   EmployeeContractType,
-  SupportedCurrency,
+  SalaryBasis,
 } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -29,7 +29,7 @@ const ALLOWED_MIME_TYPES = new Set([
 ]);
 
 const CONTRACT_TYPE_VALUES = Object.values(EmployeeContractType);
-const CURRENCY_VALUES = Object.values(SupportedCurrency);
+const SALARY_BASIS_VALUES = Object.values(SalaryBasis);
 
 const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   employeeemail: 'employeeEmail',
@@ -51,7 +51,9 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   enddate: 'endDate',
   'end date': 'endDate',
   end_date: 'endDate',
-  currency: 'currency',
+  salarybasis: 'salaryBasis',
+  'salary basis': 'salaryBasis',
+  salary_basis: 'salaryBasis',
   basicsalary: 'basicSalary',
   'basic salary': 'basicSalary',
   basic_salary: 'basicSalary',
@@ -64,6 +66,12 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   netsalary: 'netSalary',
   'net salary': 'netSalary',
   net_salary: 'netSalary',
+  pensionapplicable: 'pensionApplicable',
+  'pension applicable': 'pensionApplicable',
+  pension_applicable: 'pensionApplicable',
+  taxapplicable: 'taxApplicable',
+  'tax applicable': 'taxApplicable',
+  tax_applicable: 'taxApplicable',
   probationenddate: 'probationEndDate',
   'probation end date': 'probationEndDate',
   probation_end_date: 'probationEndDate',
@@ -81,11 +89,13 @@ interface ParsedImportRow {
   signedAt: string;
   startDate: string;
   endDate: string;
-  currency: string;
+  salaryBasis: string;
   basicSalary: string;
   transportationAllowance: string;
   monthlyBonus: string;
   netSalary: string;
+  pensionApplicable: string;
+  taxApplicable: string;
   probationEndDate: string;
   governedBy: string;
   notes: string;
@@ -122,7 +132,7 @@ export class EmployeeContractImportService {
       { header: 'signedAt', key: 'signedAt', width: 12 },
       { header: 'startDate', key: 'startDate', width: 12 },
       { header: 'endDate', key: 'endDate', width: 12 },
-      { header: 'currency', key: 'currency', width: 10 },
+      { header: 'salaryBasis', key: 'salaryBasis', width: 12 },
       { header: 'basicSalary', key: 'basicSalary', width: 12 },
       {
         header: 'transportationAllowance',
@@ -131,6 +141,8 @@ export class EmployeeContractImportService {
       },
       { header: 'monthlyBonus', key: 'monthlyBonus', width: 12 },
       { header: 'netSalary', key: 'netSalary', width: 12 },
+      { header: 'pensionApplicable', key: 'pensionApplicable', width: 16 },
+      { header: 'taxApplicable', key: 'taxApplicable', width: 14 },
       { header: 'probationEndDate', key: 'probationEndDate', width: 16 },
       { header: 'governedBy', key: 'governedBy', width: 36 },
       { header: 'notes', key: 'notes', width: 24 },
@@ -143,11 +155,13 @@ export class EmployeeContractImportService {
       signedAt: '2026-01-15',
       startDate: '2026-02-01',
       endDate: '2027-01-31',
-      currency: 'ETB',
+      salaryBasis: 'GROSS',
       basicSalary: 25000,
       transportationAllowance: 3000,
       monthlyBonus: 2000,
-      netSalary: 30000,
+      netSalary: '',
+      pensionApplicable: true,
+      taxApplicable: true,
       probationEndDate: '',
       governedBy: 'Ethiopian Labor Proclamation 1156/2019',
       notes: 'Sample import row',
@@ -177,11 +191,29 @@ export class EmployeeContractImportService {
       'Conditional',
       'Required for FIXED_TERM, PROBATION, RENEWAL',
     ]);
-    instructions.addRow(['currency', 'No', 'ETB | USD | CNY (default ETB)']);
-    instructions.addRow(['basicSalary', 'No', 'Number']);
-    instructions.addRow(['transportationAllowance', 'No', 'Number']);
-    instructions.addRow(['monthlyBonus', 'No', 'Number']);
-    instructions.addRow(['netSalary', 'No', 'Number']);
+    instructions.addRow([
+      'salaryBasis',
+      'No',
+      'GROSS | NET (default GROSS). Currency is always ETB.',
+    ]);
+    instructions.addRow(['basicSalary', 'No', 'Number (ETB)']);
+    instructions.addRow(['transportationAllowance', 'No', 'Number (ETB)']);
+    instructions.addRow([
+      'monthlyBonus',
+      'No',
+      'Used for GROSS; ignored for NET (solved server-side)',
+    ]);
+    instructions.addRow([
+      'netSalary',
+      'Conditional',
+      'Required when salaryBasis is NET (agreed take-home)',
+    ]);
+    instructions.addRow([
+      'pensionApplicable',
+      'No',
+      'true | false (default true)',
+    ]);
+    instructions.addRow(['taxApplicable', 'No', 'true | false (default true)']);
     instructions.addRow(['probationEndDate', 'No', 'YYYY-MM-DD']);
     instructions.addRow(['governedBy', 'No', 'Governing law / proclamation']);
     instructions.addRow(['notes', 'No', 'Optional notes']);
@@ -224,7 +256,7 @@ export class EmployeeContractImportService {
         contractType: EmployeeContractType;
         signedAt: string;
         startDate: string;
-        currency: SupportedCurrency;
+        salaryBasis: SalaryBasis;
       } => row.status === 'ok' && Boolean(row.employeeId) && Boolean(row.contractType),
     );
     const skipped = preview.rows.length - validRows.length;
@@ -239,11 +271,13 @@ export class EmployeeContractImportService {
           signedAt: row.signedAt,
           startDate: row.startDate,
           endDate: row.endDate,
-          currency: row.currency,
+          salaryBasis: row.salaryBasis,
           basicSalary: row.basicSalary,
           transportationAllowance: row.transportationAllowance,
           monthlyBonus: row.monthlyBonus,
           netSalary: row.netSalary,
+          pensionApplicable: row.pensionApplicable,
+          taxApplicable: row.taxApplicable,
           probationEndDate: row.probationEndDate,
           governedBy: row.governedBy,
           notes: row.notes,
@@ -317,11 +351,13 @@ export class EmployeeContractImportService {
         signedAt: '',
         startDate: '',
         endDate: '',
-        currency: '',
+        salaryBasis: '',
         basicSalary: '',
         transportationAllowance: '',
         monthlyBonus: '',
         netSalary: '',
+        pensionApplicable: '',
+        taxApplicable: '',
         probationEndDate: '',
         governedBy: '',
         notes: '',
@@ -454,14 +490,14 @@ export class EmployeeContractImportService {
       };
     }
 
-    const currencyResult = this.parseEnumField(
-      row.currency || 'ETB',
-      CURRENCY_VALUES,
-      'currency',
+    const salaryBasisResult = this.parseEnumField(
+      row.salaryBasis || 'GROSS',
+      SALARY_BASIS_VALUES,
+      'salaryBasis',
       true,
     );
-    if (!currencyResult.ok) {
-      return { ...base, status: 'error', message: currencyResult.message };
+    if (!salaryBasisResult.ok) {
+      return { ...base, status: 'error', message: salaryBasisResult.message };
     }
 
     const basicSalary = this.parseOptionalNumber(row.basicSalary, 'basicSalary');
@@ -486,6 +522,34 @@ export class EmployeeContractImportService {
     const netSalary = this.parseOptionalNumber(row.netSalary, 'netSalary');
     if (!netSalary.ok) {
       return { ...base, status: 'error', message: netSalary.message };
+    }
+
+    if (
+      salaryBasisResult.value === SalaryBasis.NET &&
+      (netSalary.value == null || netSalary.value <= 0)
+    ) {
+      return {
+        ...base,
+        status: 'error',
+        message: 'netSalary is required when salaryBasis is NET',
+      };
+    }
+
+    const pensionApplicable = this.parseOptionalBoolean(
+      row.pensionApplicable,
+      'pensionApplicable',
+      true,
+    );
+    if (!pensionApplicable.ok) {
+      return { ...base, status: 'error', message: pensionApplicable.message };
+    }
+    const taxApplicable = this.parseOptionalBoolean(
+      row.taxApplicable,
+      'taxApplicable',
+      true,
+    );
+    if (!taxApplicable.ok) {
+      return { ...base, status: 'error', message: taxApplicable.message };
     }
 
     const probationEndDateResult = this.parseImportDate(
@@ -518,7 +582,7 @@ export class EmployeeContractImportService {
         signedAt: signedAtResult.value,
         startDate: startDateResult.value,
         endDate: endDateResult.value,
-        currency: currencyResult.value,
+        salaryBasis: salaryBasisResult.value,
       };
     }
 
@@ -529,11 +593,13 @@ export class EmployeeContractImportService {
       signedAt: signedAtResult.value,
       startDate: startDateResult.value,
       endDate: endDateResult.value,
-      currency: currencyResult.value,
+      salaryBasis: salaryBasisResult.value,
       basicSalary: basicSalary.value,
       transportationAllowance: transportationAllowance.value,
       monthlyBonus: monthlyBonus.value,
       netSalary: netSalary.value,
+      pensionApplicable: pensionApplicable.value,
+      taxApplicable: taxApplicable.value,
       probationEndDate: probationEndDateResult.value,
       governedBy: row.governedBy.trim() || undefined,
       notes: row.notes.trim() || undefined,
@@ -660,6 +726,29 @@ export class EmployeeContractImportService {
       return { ok: false, message: `Invalid ${fieldLabel}: must be a number` };
     }
     return { ok: true, value: num };
+  }
+
+  private parseOptionalBoolean(
+    value: string,
+    fieldLabel: string,
+    defaultValue: boolean,
+  ):
+    | { ok: true; value: boolean }
+    | { ok: false; message: string } {
+    if (!value.trim()) {
+      return { ok: true, value: defaultValue };
+    }
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'y'].includes(normalized)) {
+      return { ok: true, value: true };
+    }
+    if (['false', '0', 'no', 'n'].includes(normalized)) {
+      return { ok: true, value: false };
+    }
+    return {
+      ok: false,
+      message: `Invalid ${fieldLabel}: use true or false`,
+    };
   }
 
   private async loadWorkbookFromBuffer(

@@ -1,4 +1,5 @@
 import { HrSharedModule } from "../hr-shared/hr-shared.module";
+import { PayrollModule } from "../payroll/payroll.module";
 import { EmployeeContractCronService } from "./application/services/employee-contract-cron.service";
 import { EmployeeContractImportService } from "./application/services/employee-contract-import.service";
 import { EmployeeContractService } from "./application/services/employee-contract.service";
@@ -8,7 +9,7 @@ import { Global, Module } from "@nestjs/common";
 
 @Global()
 @Module({
-    imports: [HrSharedModule],
+    imports: [HrSharedModule, PayrollModule],
     controllers: [EmployeeContractImportController, EmployeeContractController],
     providers: [
         EmployeeContractService,

@@ -15,6 +15,7 @@ describe('EmployeeContractService.getMyActiveContract', () => {
     prisma as never,
     {} as never,
     {} as never,
+    {} as never,
   );
 
   beforeEach(() => {

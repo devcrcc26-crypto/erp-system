@@ -169,6 +169,18 @@ export class PayrollRunService {
             orderBy: { startDate: 'desc'}
         })
 
+        const employee = await this.prisma.user.findFirst({
+            where: {
+                id: employeeId,
+                companyId: ctx.companyId,
+                deletedAt: null,
+            },
+            select: {
+                bankName: true,
+                bankAccountNumber: true,
+            },
+        })
+
         const attendance = await this.prisma.attendanceRecord.findFirst({
             where: {
                 employeeId,
@@ -205,6 +217,8 @@ export class PayrollRunService {
         const basicSalary = this.toNumber(contract?.basicSalary)
         const transportAllowance = this.toNumber(contract?.transportationAllowance)
         const monthlyBonus = this.toNumber(contract?.monthlyBonus)
+        const pensionApplicable = contract?.pensionApplicable ?? true
+        const taxApplicable = contract?.taxApplicable ?? true
         const absentDays = this.toNumber(attendance?.absentDays)
         const scheduledDays = this.toNumber(attendance?.scheduledDays)
         const presentDays = this.toNumber(attendance?.presentDays)
@@ -245,6 +259,8 @@ export class PayrollRunService {
             absentDays: adjustedAbsentDays,
             overtimeHours,
             taxableThreshold: this.toNumber(run.taxableThreshold),
+            pensionApplicable,
+            taxApplicable,
         })
     
         const entry = await this.prisma.payrollEntry.create({
@@ -304,6 +320,10 @@ export class PayrollRunService {
                 // Flags
                 flag,
                 flagNote,
+
+                // Bank snapshot
+                bankName: employee?.bankName ?? null,
+                bankAccountNumber: employee?.bankAccountNumber ?? null,
 
                 notes:
                     leaveCoverage.coveredDays > 0

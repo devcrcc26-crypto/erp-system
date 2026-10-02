@@ -7,7 +7,7 @@ import {
 } from '../../../hr-shared/application/dtos/hr-import.dtos';
 import {
   EmployeeContractType,
-  SupportedCurrency,
+  SalaryBasis,
 } from '@prisma/client';
 
 export type {
@@ -25,11 +25,13 @@ export class EmployeeContractImportRowPreviewDto extends ImportRowPreviewDto {
   signedAt?: string;
   startDate?: string;
   endDate?: string;
-  currency?: SupportedCurrency;
+  salaryBasis?: SalaryBasis;
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
   netSalary?: number;
+  pensionApplicable?: boolean;
+  taxApplicable?: boolean;
   probationEndDate?: string;
   governedBy?: string;
   notes?: string;

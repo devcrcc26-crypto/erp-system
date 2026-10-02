@@ -618,6 +618,9 @@ model User {
   preferredLanguage   String?   @map("preferred_language")
   preferredTimezone   String?   @map("preferred_timezone")
   preferredDateFormat String?   @map("preferred_date_format")
+  bankName            String?   @map("bank_name")
+  bankBranch          String?   @map("bank_branch")
+  bankAccountNumber   String?   @map("bank_account_number")
   isActive            Boolean   @default(true) @map("is_active")
   mfaEnabled          Boolean   @default(false) @map("mfa_enabled")
   emailVerifiedAt     DateTime? @map("email_verified_at")
@@ -5316,6 +5319,11 @@ enum EmployeeContractType{
     RENEWAL
 }
 
+enum SalaryBasis {
+  GROSS
+  NET
+}
+
 
 model EmployeeContract{
   id                        String                        @id @default(uuid())
@@ -5331,6 +5339,9 @@ model EmployeeContract{
   terminationReason         String?                       @map("termination_reason")
   notes                     String?
   currency                  SupportedCurrency             @default(ETB)
+  salaryBasis               SalaryBasis                   @default(GROSS) @map("salary_basis")
+  pensionApplicable         Boolean                       @default(true) @map("pension_applicable")
+  taxApplicable             Boolean                       @default(true) @map("tax_applicable")
   basicSalary               Decimal?                      @map("basic_salary") @db.Decimal(14, 2)
   transportationAllowance   Decimal?                      @map("transportation_allowance") @db.Decimal(14, 2)
   monthlyBonus              Decimal?                      @map("monthly_bonus") @db.Decimal(14, 2)

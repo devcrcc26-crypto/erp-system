@@ -20,6 +20,7 @@ import { validate } from "class-validator";
 import {
     CreateEmployeeContractDto,
     ListEmployeeContractsDto,
+    SalaryPreviewDto,
     TerminateEmployeeContractDto,
     UpdateEmployeeContractDto,
 } from "../../application/dtos/employee-contract.dtos";
@@ -84,11 +85,13 @@ export class EmployeeContractController {
                 startDate: { type: 'string', format: 'date' },
                 endDate: { type: 'string', format: 'date' },
                 notes: { type: 'string' },
-                currency: { type: 'string' },
+                salaryBasis: { type: 'string', enum: ['GROSS', 'NET'] },
                 basicSalary: { type: 'number' },
                 transportationAllowance: { type: 'number' },
                 monthlyBonus: { type: 'number' },
                 netSalary: { type: 'number' },
+                pensionApplicable: { type: 'boolean' },
+                taxApplicable: { type: 'boolean' },
                 probationEndDate: { type: 'string', format: 'date' },
                 governedBy: { type: 'string' },
                 files: {
@@ -113,6 +116,26 @@ export class EmployeeContractController {
             companyId,
             user.userId,
             files ?? [],
+        );
+    }
+
+    @Post('salary-preview')
+    @DelegatePermissionCheck()
+    @RequireAnyPermission(
+        { module: 'hr', action: 'view' },
+        { module: 'employee-contract', action: 'create' },
+    )
+    @ApiOperation({ summary: 'Preview GROSS/NET salary breakdown (HR)' })
+    async salaryPreview(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Body() body: Record<string, unknown>,
+    ): Promise<unknown> {
+        const dto = await parseDto(SalaryPreviewDto, body);
+        return this.employeeContractService.previewSalary(
+            dto,
+            companyId,
+            user.userId,
         );
     }
 

@@ -514,6 +514,9 @@ export class ProfileService {
       addressWoreda: user.addressWoreda,
       addressHouseNumber: user.addressHouseNumber,
       emergencyContacts: normalizeEmergencyContacts(user.emergencyContacts),
+      bankName: user.bankName,
+      bankBranch: user.bankBranch,
+      bankAccountNumber: user.bankAccountNumber,
     };
   }
 }

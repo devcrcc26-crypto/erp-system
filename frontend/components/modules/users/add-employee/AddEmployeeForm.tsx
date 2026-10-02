@@ -522,7 +522,7 @@ export default function AddEmployeeForm({
           <div className="erp-employee-form-sections">
             <EmployeeProfileFormFields
               mode={profileMode}
-              sections={['employment']}
+              sections={['employment', 'payroll']}
               layout="sections"
               employeeIdReadOnly={isEdit}
             />

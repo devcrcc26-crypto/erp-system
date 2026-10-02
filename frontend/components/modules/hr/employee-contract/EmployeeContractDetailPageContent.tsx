@@ -105,7 +105,7 @@ export default function EmployeeContractDetailPageContent({
     canViewHr &&
     (contract?.status === 'ACTIVE' || contract?.status === 'DRAFT');
   const canTerminate = canViewHr && contract?.status === 'ACTIVE';
-  const currency = contract?.currency ?? 'ETB';
+  const ETB = 'ETB';
 
   async function handleTerminate(): Promise<void> {
     const values = await terminateForm.validateFields();
@@ -178,7 +178,8 @@ export default function EmployeeContractDetailPageContent({
     contract.basicSalary != null ||
     contract.transportationAllowance != null ||
     contract.monthlyBonus != null ||
-    contract.netSalary != null;
+    contract.netSalary != null ||
+    contract.salaryBasis != null;
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page">
@@ -378,20 +379,42 @@ export default function EmployeeContractDetailPageContent({
           {hasCompensation ? (
             <DetailSection title={t('hr.section.compensation')}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <MetaItem label={t('hr.form.currency')}>
-                  {currency}
+                <MetaItem label={t('hr.labels.salaryBasis')}>
+                  {(contract.salaryBasis ?? 'GROSS') === 'NET'
+                    ? t('hr.labels.salaryBasisNet')
+                    : t('hr.labels.salaryBasisGross')}
                 </MetaItem>
+                <MetaItem label={t('hr.form.currency')}>
+                  {ETB}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.pensionApplicable')}>
+                  {(contract.pensionApplicable ?? true)
+                    ? t('common.yes')
+                    : t('common.no')}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.taxApplicable')}>
+                  {(contract.taxApplicable ?? true)
+                    ? t('common.yes')
+                    : t('common.no')}
+                </MetaItem>
+              </div>
+            </DetailSection>
+          ) : null}
+
+          {hasCompensation ? (
+            <DetailSection title={t('hr.section.payrollDetails')}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <MetaItem label={t('hr.labels.basicSalary')}>
-                  {formatMoney(contract.basicSalary, currency)}
+                  {formatMoney(contract.basicSalary, ETB)}
                 </MetaItem>
                 <MetaItem label={t('hr.labels.transportationAllowance')}>
-                  {formatMoney(contract.transportationAllowance, currency)}
+                  {formatMoney(contract.transportationAllowance, ETB)}
                 </MetaItem>
                 <MetaItem label={t('hr.labels.monthlyBonus')}>
-                  {formatMoney(contract.monthlyBonus, currency)}
+                  {formatMoney(contract.monthlyBonus, ETB)}
                 </MetaItem>
                 <MetaItem label={t('hr.labels.netSalary')}>
-                  {formatMoney(contract.netSalary, currency)}
+                  {formatMoney(contract.netSalary, ETB)}
                 </MetaItem>
               </div>
             </DetailSection>

@@ -52,6 +52,9 @@ export interface EmployeeProfileFormValues {
   emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
   workScheduleId?: string;
+  bankName?: string;
+  bankBranch?: string;
+  bankAccountNumber?: string;
 }
 
 export const GENDER_OPTIONS: Gender[] = ['MALE', 'FEMALE'];
@@ -72,7 +75,8 @@ export type EmployeeProfileSection =
   | 'emergency'
   | 'employment'
   | 'education'
-  | 'leave';
+  | 'leave'
+  | 'payroll';
 
 interface EmployeeProfileFormFieldsProps {
   mode: 'create' | 'edit';
@@ -392,6 +396,33 @@ export function EmployeeProfileFormFields({
           </div>
         </SectionShell>
       ) : null}
+
+      {show('payroll') ? (
+        <SectionShell
+          titleKey="users.sectionPayrollDetails"
+          layout={layout}
+          showSectionTitles={showSectionTitles}
+          t={t}
+        >
+          <p className="erp-users-cell-sub mb-3 mt-0">
+            {t('users.form.payrollDetailsHint')}
+          </p>
+          <div className="erp-form-grid-3">
+            <Form.Item label={t('users.form.bankName')} name="bankName">
+              <Input maxLength={120} />
+            </Form.Item>
+            <Form.Item label={t('users.form.bankBranch')} name="bankBranch">
+              <Input maxLength={120} />
+            </Form.Item>
+            <Form.Item
+              label={t('users.form.bankAccountNumber')}
+              name="bankAccountNumber"
+            >
+              <Input maxLength={64} autoComplete="off" />
+            </Form.Item>
+          </div>
+        </SectionShell>
+      ) : null}
     </>
   );
 
@@ -444,6 +475,9 @@ export function buildEmployeeProfilePayload(
   | 'emergencyContacts'
   | 'leavePolicyId'
   | 'workScheduleId'
+  | 'bankName'
+  | 'bankBranch'
+  | 'bankAccountNumber'
 > {
   return {
     employeeId: values.employeeId?.trim() || undefined,
@@ -465,6 +499,9 @@ export function buildEmployeeProfilePayload(
     emergencyContacts: normalizeEmergencyContacts(values.emergencyContacts),
     leavePolicyId: values.leavePolicyId,
     workScheduleId: values.workScheduleId,
+    bankName: values.bankName?.trim() || undefined,
+    bankBranch: values.bankBranch?.trim() || undefined,
+    bankAccountNumber: values.bankAccountNumber?.trim() || undefined,
   };
 }
 
@@ -508,6 +545,9 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     emergencyContacts: parseEmergencyContacts(user.emergencyContacts),
     leavePolicyId: user.leavePolicyId ?? undefined,
     workScheduleId: user.workScheduleId ?? undefined,
+    bankName: user.bankName ?? undefined,
+    bankBranch: user.bankBranch ?? undefined,
+    bankAccountNumber: user.bankAccountNumber ?? undefined,
   };
 }
 

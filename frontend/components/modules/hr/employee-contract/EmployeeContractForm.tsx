@@ -1,15 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Checkbox,
   DatePicker,
   Form,
   Input,
   InputNumber,
+  Segmented,
   Select,
   Space,
+  Spin,
   Tooltip,
   type InputNumberProps,
 } from 'antd';
@@ -24,19 +27,19 @@ import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon'
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
-  EmployeeContractCurrency,
   EmployeeContractDetail,
   EmployeeContractDocument,
   EmployeeContractType,
+  SalaryBasis,
+  SalaryPreviewResult,
 } from '@/lib/api/employee-contract.types';
-import type { SupportedCurrency } from '@/lib/api/per-diem.types';
 import {
+  previewEmployeeContractSalary,
   useAttachEmployeeContractFiles,
   useCreateEmployeeContract,
   useRemoveEmployeeContractAttachment,
   useUpdateEmployeeContract,
 } from '@/lib/query/employee-contract';
-import { useCurrencyRates } from '@/lib/query/currency';
 import { useUser } from '@/lib/query/users';
 import {
   EMPLOYEE_CONTRACT_TYPE_OPTIONS,
@@ -44,10 +47,6 @@ import {
   formatEmployeeContractEmployeeName,
   formatEmployeeContractType,
 } from '@/lib/utils/employee-contract-display';
-import {
-  convertCurrencyAmount,
-  roundCurrencyAmount,
-} from '@/lib/utils/currency-convert';
 import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -57,15 +56,17 @@ import { tokens } from '@/lib/theme/tokens';
 export interface EmployeeContractFormValues {
   employeeId: string;
   contractType: EmployeeContractType;
-  signedAt: dayjs.Dayjs;
-  startDate: dayjs.Dayjs;
+  signedAt?: dayjs.Dayjs;
+  startDate?: dayjs.Dayjs;
   endDate?: dayjs.Dayjs | null;
   notes?: string;
-  currency: EmployeeContractCurrency;
+  salaryBasis: SalaryBasis;
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
   netSalary?: number;
+  pensionApplicable: boolean;
+  taxApplicable: boolean;
   probationEndDate?: dayjs.Dayjs | null;
   governedBy?: string;
 }
@@ -88,30 +89,22 @@ const DETAILS_FIELDS = [
 ] as const;
 
 const COMPENSATION_FIELDS = [
-  'currency',
+  'salaryBasis',
   'basicSalary',
   'transportationAllowance',
   'monthlyBonus',
   'netSalary',
+  'pensionApplicable',
+  'taxApplicable',
 ] as const;
 
-const COMPENSATION_AMOUNT_FIELDS = [
-  'basicSalary',
-  'transportationAllowance',
-  'monthlyBonus',
-  'netSalary',
-] as const;
-
-const CURRENCY_OPTIONS: Array<{ value: SupportedCurrency; label: string }> = [
-  { value: 'ETB', label: 'ETB' },
-  { value: 'USD', label: 'USD' },
-  { value: 'CNY', label: 'CNY' },
-];
+const ETB = 'ETB';
+const PREVIEW_DEBOUNCE_MS = 400;
 
 function CurrencyInputNumber({
   value,
   onChange,
-  currencySuffix = 'ETB',
+  currencySuffix = ETB,
   ...rest
 }: InputNumberProps & { currencySuffix?: string }): React.ReactNode {
   return (
@@ -160,18 +153,29 @@ function valuesFromContract(
     startDate: toDay(contract.startDate),
     endDate: toDay(contract.endDate),
     notes: contract.notes ?? undefined,
-    currency: contract.currency ?? 'ETB',
+    salaryBasis: contract.salaryBasis ?? 'GROSS',
     basicSalary: toAmount(contract.basicSalary),
     transportationAllowance: toAmount(contract.transportationAllowance),
     monthlyBonus: toAmount(contract.monthlyBonus),
     netSalary: toAmount(contract.netSalary),
+    pensionApplicable: contract.pensionApplicable ?? true,
+    taxApplicable: contract.taxApplicable ?? true,
     probationEndDate: toDay(contract.probationEndDate),
     governedBy: contract.governedBy ?? undefined,
   };
 }
 
 function defaultValues(): Partial<EmployeeContractFormValues> {
-  return { contractType: 'FIXED_TERM', currency: 'ETB' };
+  return {
+    contractType: 'FIXED_TERM',
+    salaryBasis: 'GROSS',
+    pensionApplicable: true,
+    taxApplicable: true,
+  };
+}
+
+function formatEtb(value: number | string | null | undefined): string {
+  return formatCurrencyAmount(value, ETB);
 }
 
 function ReviewItem({
@@ -199,6 +203,33 @@ function ReviewItem({
   );
 }
 
+function PreviewRow({
+  label,
+  value,
+  emphasize = false,
+}: {
+  label: string;
+  value: string;
+  emphasize?: boolean;
+}): React.ReactNode {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span
+        className="text-xs"
+        style={{ color: tokens.colorTextSecondary }}
+      >
+        {label}
+      </span>
+      <span
+        className={emphasize ? 'text-sm font-semibold' : 'text-sm'}
+        style={{ color: tokens.colorTextPrimary }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 /**
  * Employee contract create/edit - StepperForm chrome like Add Employee.
  */
@@ -220,7 +251,11 @@ export default function EmployeeContractForm({
     useState<EmployeeContractDocument | null>(null);
   const [detailsSnapshot, setDetailsSnapshot] =
     useState<Partial<EmployeeContractFormValues>>(defaultValues());
-  const previousCurrencyRef = useRef<SupportedCurrency | null>(null);
+  const [salaryPreview, setSalaryPreview] = useState<SalaryPreviewResult | null>(
+    null,
+  );
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const createMutation = useCreateEmployeeContract();
   const updateMutation = useUpdateEmployeeContract(contract?.id ?? '');
@@ -228,21 +263,22 @@ export default function EmployeeContractForm({
   const removeAttachmentMutation = useRemoveEmployeeContractAttachment(
     contract?.id ?? '',
   );
-  const ratesQuery = useCurrencyRates(true);
 
   const contractType =
     Form.useWatch('contractType', form) ??
     detailsSnapshot.contractType ??
     contract?.contractType ??
     'FIXED_TERM';
-  const currency =
-    (Form.useWatch('currency', form) as SupportedCurrency | undefined) ??
-    detailsSnapshot.currency ??
-    contract?.currency ??
-    'ETB';
+  const salaryBasis =
+    (Form.useWatch('salaryBasis', form) as SalaryBasis | undefined) ??
+    detailsSnapshot.salaryBasis ??
+    'GROSS';
   const basicSalary = Form.useWatch('basicSalary', form);
   const transportationAllowance = Form.useWatch('transportationAllowance', form);
   const monthlyBonus = Form.useWatch('monthlyBonus', form);
+  const netSalary = Form.useWatch('netSalary', form);
+  const pensionApplicable = Form.useWatch('pensionApplicable', form);
+  const taxApplicable = Form.useWatch('taxApplicable', form);
   const employeeId = Form.useWatch('employeeId', form) ?? detailsSnapshot.employeeId;
   const formValues = Form.useWatch([], form) as
     | EmployeeContractFormValues
@@ -250,18 +286,6 @@ export default function EmployeeContractForm({
   const requiresEndDate = contractTypeRequiresEndDate(contractType);
 
   const selectedEmployeeQuery = useUser(employeeId ?? '', Boolean(employeeId));
-
-  const rateHint =
-    ratesQuery.data?.USD != null && ratesQuery.data?.CNY != null
-      ? t('hr.messages.currencyRatesHint', {
-          usd: ratesQuery.data.USD.toLocaleString(undefined, {
-            maximumFractionDigits: 4,
-          }),
-          cny: ratesQuery.data.CNY.toLocaleString(undefined, {
-            maximumFractionDigits: 4,
-          }),
-        })
-      : undefined;
 
   const typeOptions = useMemo(
     () =>
@@ -272,18 +296,120 @@ export default function EmployeeContractForm({
     [t],
   );
 
+  const salaryBasisOptions = useMemo(
+    () => [
+      { value: 'GROSS' as const, label: t('hr.labels.salaryBasisGross') },
+      { value: 'NET' as const, label: t('hr.labels.salaryBasisNet') },
+    ],
+    [t],
+  );
+
   useEffect(() => {
     if (!contract) {
-      previousCurrencyRef.current = 'ETB';
       setExistingDocuments([]);
       return;
     }
     const values = valuesFromContract(contract);
     form.setFieldsValue(values);
     setDetailsSnapshot(values);
-    previousCurrencyRef.current = values.currency ?? 'ETB';
     setExistingDocuments(contract.attachmentFolder?.documents ?? []);
   }, [contract, form]);
+
+  useEffect(() => {
+    const basis = salaryBasis ?? 'GROSS';
+    const basic =
+      typeof basicSalary === 'number' && Number.isFinite(basicSalary)
+        ? basicSalary
+        : undefined;
+    const transport =
+      typeof transportationAllowance === 'number' &&
+      Number.isFinite(transportationAllowance)
+        ? transportationAllowance
+        : 0;
+    const bonus =
+      typeof monthlyBonus === 'number' && Number.isFinite(monthlyBonus)
+        ? monthlyBonus
+        : undefined;
+    const net =
+      typeof netSalary === 'number' && Number.isFinite(netSalary)
+        ? netSalary
+        : undefined;
+
+    if (basic == null) {
+      setSalaryPreview(null);
+      setPreviewError(null);
+      setPreviewLoading(false);
+      return;
+    }
+    if (basis === 'NET' && net == null) {
+      setSalaryPreview(null);
+      setPreviewError(null);
+      setPreviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setPreviewLoading(true);
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await previewEmployeeContractSalary({
+            salaryBasis: basis,
+            basicSalary: basic,
+            transportationAllowance: transport,
+            monthlyBonus: basis === 'GROSS' ? (bonus ?? 0) : undefined,
+            netSalary: basis === 'NET' ? net : undefined,
+            pensionApplicable: pensionApplicable ?? true,
+            taxApplicable: taxApplicable ?? true,
+          });
+          if (cancelled) {
+            return;
+          }
+          setSalaryPreview(result);
+          setPreviewError(null);
+          if (basis === 'NET') {
+            const currentBonus = form.getFieldValue('monthlyBonus') as
+              | number
+              | undefined;
+            if (currentBonus !== result.monthlyBonus) {
+              form.setFieldValue('monthlyBonus', result.monthlyBonus);
+            }
+          }
+        } catch (error: unknown) {
+          if (cancelled) {
+            return;
+          }
+          setSalaryPreview(null);
+          setPreviewError(
+            error instanceof Error
+              ? error.message
+              : t('hr.messages.salaryPreviewFailed'),
+          );
+        } finally {
+          if (!cancelled) {
+            setPreviewLoading(false);
+          }
+        }
+      })();
+    }, PREVIEW_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+    // Intentionally gate monthlyBonus/netSalary by salaryBasis to avoid NET preview loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- basis-gated salary inputs
+  }, [
+    salaryBasis,
+    basicSalary,
+    transportationAllowance,
+    salaryBasis === 'GROSS' ? monthlyBonus : undefined,
+    salaryBasis === 'NET' ? netSalary : undefined,
+    pensionApplicable,
+    taxApplicable,
+    form,
+    t,
+  ]);
 
   async function confirmRemoveAttachment(): Promise<void> {
     if (!pendingRemoveDoc || !contract) {
@@ -311,59 +437,20 @@ export default function EmployeeContractForm({
     return values;
   }
 
-  function convertCompensationToCurrency(next: SupportedCurrency): void {
-    const previous = previousCurrencyRef.current;
-    if (!previous || previous === next) {
-      previousCurrencyRef.current = next;
-      return;
-    }
-    if (!ratesQuery.data) {
-      messageApi.warning(t('hr.messages.currencyRatesUnavailable'));
-      previousCurrencyRef.current = next;
-      return;
-    }
-
-    const updates: Partial<
-      Record<(typeof COMPENSATION_AMOUNT_FIELDS)[number], number>
-    > = {};
-    for (const field of COMPENSATION_AMOUNT_FIELDS) {
-      const current = form.getFieldValue(field) as number | undefined;
-      if (current == null || !Number.isFinite(current)) {
-        continue;
-      }
-      const converted = convertCurrencyAmount(
-        current,
-        previous,
-        next,
-        ratesQuery.data,
-      );
-      if (converted == null) {
-        messageApi.warning(t('hr.messages.currencyRatesUnavailable'));
-        previousCurrencyRef.current = next;
-        return;
-      }
-      updates[field] = roundCurrencyAmount(converted);
-    }
-    if (Object.keys(updates).length > 0) {
-      form.setFieldsValue(updates);
-    }
-    previousCurrencyRef.current = next;
-  }
-
   function resetForm(): void {
     if (mode === 'edit' && contract) {
       const values = valuesFromContract(contract);
       form.setFieldsValue(values);
       setDetailsSnapshot(values);
-      previousCurrencyRef.current = values.currency ?? 'ETB';
     } else {
       form.resetFields();
       form.setFieldsValue(defaultValues());
       setDetailsSnapshot(defaultValues());
-      previousCurrencyRef.current = 'ETB';
     }
     setSelectedFiles([]);
     setFormError(null);
+    setSalaryPreview(null);
+    setPreviewError(null);
     if (mode === 'edit' && contract) {
       setExistingDocuments(contract.attachmentFolder?.documents ?? []);
     } else {
@@ -385,13 +472,18 @@ export default function EmployeeContractForm({
       await form.validateFields(fields);
 
       const values = form.getFieldsValue(true) as EmployeeContractFormValues;
-      if (values.startDate.isBefore(values.signedAt, 'day')) {
+      if (
+        values.signedAt &&
+        values.startDate &&
+        values.startDate.isBefore(values.signedAt, 'day')
+      ) {
         messageApi.error(t('hr.validation.startAfterSigned'));
         return false;
       }
       if (
         contractTypeRequiresEndDate(values.contractType) &&
         values.endDate &&
+        values.startDate &&
         values.endDate.isBefore(values.startDate, 'day')
       ) {
         messageApi.error(t('hr.validation.endAfterStart'));
@@ -407,7 +499,22 @@ export default function EmployeeContractForm({
 
   async function validateCompensationStep(): Promise<boolean> {
     try {
-      await form.validateFields([...COMPENSATION_FIELDS]);
+      const basis =
+        (form.getFieldValue('salaryBasis') as SalaryBasis | undefined) ??
+        'GROSS';
+      const fields: string[] = [
+        'salaryBasis',
+        'basicSalary',
+        'transportationAllowance',
+        'pensionApplicable',
+        'taxApplicable',
+      ];
+      if (basis === 'GROSS') {
+        fields.push('monthlyBonus');
+      } else {
+        fields.push('netSalary');
+      }
+      await form.validateFields(fields);
       captureSnapshot();
       return true;
     } catch {
@@ -424,12 +531,24 @@ export default function EmployeeContractForm({
     setFormError(null);
     let values: EmployeeContractFormValues;
     try {
+      const basis =
+        (form.getFieldValue('salaryBasis') as SalaryBasis | undefined) ??
+        'GROSS';
+      const compensationFields =
+        basis === 'GROSS'
+          ? COMPENSATION_FIELDS.filter((f) => f !== 'netSalary')
+          : COMPENSATION_FIELDS.filter((f) => f !== 'monthlyBonus');
       values = await form.validateFields([
         ...DETAILS_FIELDS,
-        ...COMPENSATION_FIELDS,
+        ...compensationFields,
       ]);
     } catch {
       messageApi.error(t('hr.validation.required'));
+      return;
+    }
+
+    if (!values.signedAt || !values.startDate) {
+      messageApi.error(t('hr.validation.selectDate'));
       return;
     }
 
@@ -456,20 +575,21 @@ export default function EmployeeContractForm({
       ? values.endDate?.format('YYYY-MM-DD')
       : undefined;
 
+    const basis = values.salaryBasis ?? 'GROSS';
     const salaryPayload = {
-      currency: values.currency ?? 'ETB',
+      salaryBasis: basis,
       basicSalary: values.basicSalary,
       transportationAllowance: values.transportationAllowance,
-      monthlyBonus: values.monthlyBonus,
+      monthlyBonus:
+        basis === 'GROSS'
+          ? values.monthlyBonus
+          : salaryPreview?.monthlyBonus,
       netSalary:
-        values.netSalary ??
-        (values.basicSalary != null &&
-        values.transportationAllowance != null &&
-        values.monthlyBonus != null
-          ? values.basicSalary +
-            values.transportationAllowance +
-            values.monthlyBonus
-          : undefined),
+        basis === 'NET'
+          ? values.netSalary
+          : salaryPreview?.netPay ?? values.netSalary,
+      pensionApplicable: values.pensionApplicable ?? true,
+      taxApplicable: values.taxApplicable ?? true,
       probationEndDate: values.probationEndDate
         ? values.probationEndDate.format('YYYY-MM-DD')
         : null,
@@ -499,11 +619,13 @@ export default function EmployeeContractForm({
           startDate: values.startDate.format('YYYY-MM-DD'),
           endDate,
           notes: values.notes?.trim() || undefined,
-          currency: salaryPayload.currency,
+          salaryBasis: salaryPayload.salaryBasis,
           basicSalary: salaryPayload.basicSalary,
           transportationAllowance: salaryPayload.transportationAllowance,
           monthlyBonus: salaryPayload.monthlyBonus,
           netSalary: salaryPayload.netSalary,
+          pensionApplicable: salaryPayload.pensionApplicable,
+          taxApplicable: salaryPayload.taxApplicable,
           probationEndDate: salaryPayload.probationEndDate ?? undefined,
           governedBy: salaryPayload.governedBy ?? undefined,
           files: selectedFiles.length > 0 ? selectedFiles : undefined,
@@ -539,15 +661,15 @@ export default function EmployeeContractForm({
       ? formatEmployeeContractEmployeeName(contract.employee)
       : reviewValues.employeeId || '-';
 
-  const computedNet =
-    reviewValues.netSalary ??
-    (reviewValues.basicSalary != null &&
-    reviewValues.transportationAllowance != null &&
-    reviewValues.monthlyBonus != null
-      ? reviewValues.basicSalary +
-        reviewValues.transportationAllowance +
-        reviewValues.monthlyBonus
-      : undefined);
+  const reviewBasis = reviewValues.salaryBasis ?? salaryBasis ?? 'GROSS';
+  const reviewNet =
+    reviewBasis === 'NET'
+      ? reviewValues.netSalary
+      : salaryPreview?.netPay ?? reviewValues.netSalary;
+  const reviewBonus =
+    reviewBasis === 'GROSS'
+      ? reviewValues.monthlyBonus
+      : salaryPreview?.monthlyBonus ?? reviewValues.monthlyBonus;
 
   const steps = useMemo(
     () => [
@@ -664,76 +786,148 @@ export default function EmployeeContractForm({
               'pages.hr.employeeContract.compensationStepDescription',
             )}
           >
-            <div className="mb-4 max-w-xs">
+            <div className="mb-4 max-w-md">
               <Form.Item
-                name="currency"
-                label={t('hr.form.currency')}
+                name="salaryBasis"
+                label={t('hr.labels.salaryBasis')}
                 rules={[{ required: true }]}
-                extra={rateHint}
                 className="mb-0"
               >
-                <Select
-                  className="erp-contract-currency-select"
-                  loading={ratesQuery.isLoading}
-                  options={CURRENCY_OPTIONS}
-                  onChange={(value: SupportedCurrency) => {
-                    convertCompensationToCurrency(value);
-                  }}
-                />
+                <Segmented options={salaryBasisOptions} block />
               </Form.Item>
             </div>
-            {ratesQuery.isError ? (
-              <Alert
-                type="warning"
-                showIcon
-                title={t('hr.messages.currencyRatesUnavailable')}
-                className="mb-4"
-              />
-            ) : null}
+
+            <div className="erp-form-grid-2 mb-4">
+              <Form.Item
+                name="pensionApplicable"
+                valuePropName="checked"
+                className="mb-0"
+              >
+                <Checkbox>{t('hr.labels.pensionApplicable')}</Checkbox>
+              </Form.Item>
+              <Form.Item
+                name="taxApplicable"
+                valuePropName="checked"
+                className="mb-0"
+              >
+                <Checkbox>{t('hr.labels.taxApplicable')}</Checkbox>
+              </Form.Item>
+            </div>
+            <p
+              className="mb-4 mt-0 text-xs"
+              style={{ color: tokens.colorTextSecondary }}
+            >
+              {t('hr.messages.pensionTaxExemptHint')}
+            </p>
+
             <div className="erp-form-grid-2">
               <Form.Item name="basicSalary" label={t('hr.labels.basicSalary')}>
-                <CurrencyInputNumber
-                  min={0}
-                  precision={2}
-                  currencySuffix={currency}
-                />
+                <CurrencyInputNumber min={0} precision={2} />
               </Form.Item>
               <Form.Item
                 name="transportationAllowance"
                 label={t('hr.labels.transportationAllowance')}
               >
-                <CurrencyInputNumber
-                  min={0}
-                  precision={2}
-                  currencySuffix={currency}
-                />
+                <CurrencyInputNumber min={0} precision={2} />
               </Form.Item>
-              <Form.Item
-                name="monthlyBonus"
-                label={t('hr.labels.monthlyBonus')}
-              >
-                <CurrencyInputNumber
-                  min={0}
-                  precision={2}
-                  currencySuffix={currency}
-                />
-              </Form.Item>
-              <Form.Item name="netSalary" label={t('hr.labels.netSalary')}>
-                <CurrencyInputNumber
-                  min={0}
-                  precision={2}
-                  currencySuffix={currency}
-                  placeholder={
-                    basicSalary != null &&
-                    transportationAllowance != null &&
-                    monthlyBonus != null
-                      ? String(
-                          basicSalary + transportationAllowance + monthlyBonus,
-                        )
-                      : undefined
-                  }
-                />
-              </Form.Item>
+              {salaryBasis === 'GROSS' ? (
+                <Form.Item
+                  name="monthlyBonus"
+                  label={t('hr.labels.monthlyBonus')}
+                >
+                  <CurrencyInputNumber min={0} precision={2} />
+                </Form.Item>
+              ) : (
+                <>
+                  <Form.Item
+                    name="netSalary"
+                    label={t('hr.labels.netSalary')}
+                    rules={[
+                      {
+                        required: true,
+                        message: t('hr.validation.required'),
+                      },
+                    ]}
+                  >
+                    <CurrencyInputNumber min={0} precision={2} />
+                  </Form.Item>
+                  <Form.Item
+                    name="monthlyBonus"
+                    label={t('hr.labels.monthlyBonus')}
+                  >
+                    <CurrencyInputNumber min={0} precision={2} disabled />
+                  </Form.Item>
+                </>
+              )}
+            </div>
+
+            <div
+              className="mt-4 rounded-xl border border-[#e8ebef] bg-[#f8f9fb] p-4"
+              aria-live="polite"
+            >
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h4
+                  className="m-0 text-sm font-semibold"
+                  style={{ color: tokens.colorTextPrimary }}
+                >
+                  {t('hr.labels.salaryPreview')}
+                </h4>
+                {previewLoading ? <Spin size="small" /> : null}
+              </div>
+              {previewError ? (
+                <Alert type="warning" showIcon title={previewError} />
+              ) : salaryPreview ? (
+                <div className="flex flex-col gap-2">
+                  {salaryBasis === 'GROSS' ? (
+                    <>
+                      <PreviewRow
+                        label={t('hr.labels.taxableIncome')}
+                        value={formatEtb(salaryPreview.taxableIncome)}
+                      />
+                      <PreviewRow
+                        label={t('hr.labels.incomeTax')}
+                        value={formatEtb(salaryPreview.incomeTax)}
+                      />
+                      <PreviewRow
+                        label={t('hr.labels.pensionEmployee')}
+                        value={formatEtb(salaryPreview.pensionEmployee)}
+                      />
+                      <PreviewRow
+                        label={t('hr.labels.estimatedNet')}
+                        value={formatEtb(salaryPreview.netPay)}
+                        emphasize
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <PreviewRow
+                        label={t('hr.labels.solvedBonus')}
+                        value={formatEtb(salaryPreview.monthlyBonus)}
+                        emphasize
+                      />
+                      <PreviewRow
+                        label={t('hr.labels.incomeTax')}
+                        value={formatEtb(salaryPreview.incomeTax)}
+                      />
+                      <PreviewRow
+                        label={t('hr.labels.pensionEmployee')}
+                        value={formatEtb(salaryPreview.pensionEmployee)}
+                      />
+                      <PreviewRow
+                        label={t('hr.labels.netSalary')}
+                        value={formatEtb(salaryPreview.netPay)}
+                      />
+                    </>
+                  )}
+                </div>
+              ) : (
+                <p
+                  className="m-0 text-xs"
+                  style={{ color: tokens.colorTextSecondary }}
+                >
+                  {t('hr.labels.salaryPreviewEmpty')}
+                </p>
+              )}
             </div>
           </FormLayout>
         ),
@@ -880,36 +1074,44 @@ export default function EmployeeContractForm({
             >
               <div className="erp-form-grid-2">
                 <ReviewItem
-                  label={t('hr.form.currency')}
-                  value={reviewValues.currency ?? currency}
+                  label={t('hr.labels.salaryBasis')}
+                  value={
+                    reviewBasis === 'NET'
+                      ? t('hr.labels.salaryBasisNet')
+                      : t('hr.labels.salaryBasisGross')
+                  }
+                />
+                <ReviewItem
+                  label={t('hr.labels.pensionApplicable')}
+                  value={
+                    (reviewValues.pensionApplicable ?? true)
+                      ? t('common.yes')
+                      : t('common.no')
+                  }
+                />
+                <ReviewItem
+                  label={t('hr.labels.taxApplicable')}
+                  value={
+                    (reviewValues.taxApplicable ?? true)
+                      ? t('common.yes')
+                      : t('common.no')
+                  }
                 />
                 <ReviewItem
                   label={t('hr.labels.basicSalary')}
-                  value={formatCurrencyAmount(
-                    reviewValues.basicSalary,
-                    reviewValues.currency ?? currency,
-                  )}
+                  value={formatEtb(reviewValues.basicSalary)}
                 />
                 <ReviewItem
                   label={t('hr.labels.transportationAllowance')}
-                  value={formatCurrencyAmount(
-                    reviewValues.transportationAllowance,
-                    reviewValues.currency ?? currency,
-                  )}
+                  value={formatEtb(reviewValues.transportationAllowance)}
                 />
                 <ReviewItem
                   label={t('hr.labels.monthlyBonus')}
-                  value={formatCurrencyAmount(
-                    reviewValues.monthlyBonus,
-                    reviewValues.currency ?? currency,
-                  )}
+                  value={formatEtb(reviewBonus)}
                 />
                 <ReviewItem
                   label={t('hr.labels.netSalary')}
-                  value={formatCurrencyAmount(
-                    computedNet,
-                    reviewValues.currency ?? currency,
-                  )}
+                  value={formatEtb(reviewNet)}
                 />
               </div>
             </FormLayout>
@@ -976,17 +1178,17 @@ export default function EmployeeContractForm({
       mode,
       existingDocuments,
       typeOptions,
+      salaryBasisOptions,
       requiresEndDate,
-      currency,
-      rateHint,
-      ratesQuery.isLoading,
-      ratesQuery.isError,
-      basicSalary,
-      transportationAllowance,
-      monthlyBonus,
+      salaryBasis,
+      salaryPreview,
+      previewLoading,
+      previewError,
       employeeLabel,
       reviewValues,
-      computedNet,
+      reviewBasis,
+      reviewBonus,
+      reviewNet,
       form,
       selectedFiles,
       submitting,
