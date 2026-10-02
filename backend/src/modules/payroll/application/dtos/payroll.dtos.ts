@@ -1,42 +1,62 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsInt, Min, Max, IsOptional, IsString, IsNumber,  } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsBoolean,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreatePayrollRunDto {
-    @ApiProperty({
-        description: 'Month (1 - 12)'
-    })
-    @IsInt()
-    @Min(1)
-    @Max(12)
-    month!: number;
+  @ApiProperty({ description: 'Month (1 - 12)' })
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month!: number;
 
-    @ApiProperty({
-        description: 'Year (e.g. 2026)'
-    })
-    @IsInt()
-    @Min(2020)
-    year!: number;
+  @ApiProperty({ description: 'Year (e.g. 2026)' })
+  @IsInt()
+  @Min(2020)
+  year!: number;
 
-    @ApiProperty()
-    @IsOptional()
-    @IsString()
-    notes?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
-export class UpdatePayrollEntryDto{
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
-    bonusTopUp?: number;
+export class SubmitPayrollRunDto {
+  @ApiPropertyOptional({
+    description:
+      'Required when the run has flagged entries; acknowledges HR has reviewed them',
+  })
+  @IsOptional()
+  @IsBoolean()
+  acknowledgeFlags?: boolean;
+}
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    bonusTopUpReason?: string;
+export class UpdatePayrollEntryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  bonusTopUp?: number;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    notes?: string;
+  @ApiPropertyOptional({
+    description: 'Required when bonusTopUp is non-zero',
+  })
+  @ValidateIf(
+    (dto: UpdatePayrollEntryDto) =>
+      dto.bonusTopUp != null && dto.bonusTopUp !== 0,
+  )
+  @IsString()
+  bonusTopUpReason?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }

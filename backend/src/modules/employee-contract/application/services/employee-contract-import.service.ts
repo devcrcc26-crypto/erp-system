@@ -321,10 +321,11 @@ export class EmployeeContractImportService {
 
       columnMap.forEach((field, colNumber) => {
         const raw = this.cellToString(row.getCell(colNumber).value);
+        const record = parsed as unknown as Record<string, string | number>;
         if (DATE_FIELDS.has(field)) {
-          parsed[field] = this.normalizeDateCell(raw);
+          record[field] = this.normalizeDateCell(raw);
         } else {
-          parsed[field] = raw;
+          record[field] = raw;
         }
       });
 

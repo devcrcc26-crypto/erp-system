@@ -106,6 +106,19 @@ describe('sidebar permissions and filtering', () => {
     ]);
   });
 
+  it('shows payroll when any payroll capability is granted', () => {
+    const permissions = resolveSidebarPermissions({
+      capabilities: capabilities({ canViewHr: true, canAccessPayroll: true }),
+      ready: true,
+      hasProjectAdministratorRole: false,
+    });
+    expect(permissions.has('payroll.access')).toBe(true);
+
+    const hrFolder = folder(modelFor({ canViewHr: true, canAccessPayroll: true }), 'hr');
+    const timeLeave = hrFolder?.groups.find((g) => g.id === 'hr-time-leave');
+    expect(timeLeave?.items.some((item) => item.id === 'payroll')).toBe(true);
+  });
+
   it('limits staff without hr.view to Dashboard, New Request and Approvals', () => {
     const model = modelFor({
       canCreateLeave: true,

@@ -63,6 +63,13 @@ export function resolveSidebarPermissions(
   grant('hr.view', hr);
   grant('leave.access', hr || caps.canViewLeave || caps.canCreateLeave);
   grant('overtime.access', hr || caps.canViewOvertime || caps.canCreateOvertime);
+  grant(
+    'payroll.access',
+    caps.canAccessPayroll ||
+      caps.canCreatePayroll ||
+      caps.canEditPayroll ||
+      caps.canApprovePayroll,
+  );
   // The /hr flight and business-trip LISTS are HR-only — app/(dashboard)/hr/layout.tsx
   // redirects everyone else. Employees submit these via the /approvals/new forms.
   grant('flight.access', hr);

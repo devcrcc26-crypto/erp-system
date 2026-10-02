@@ -621,6 +621,7 @@ model User {
   bankName            String?   @map("bank_name")
   bankBranch          String?   @map("bank_branch")
   bankAccountNumber   String?   @map("bank_account_number")
+  includeInPayroll    Boolean   @default(true) @map("include_in_payroll")
   isActive            Boolean   @default(true) @map("is_active")
   mfaEnabled          Boolean   @default(false) @map("mfa_enabled")
   emailVerifiedAt     DateTime? @map("email_verified_at")
@@ -5942,9 +5943,10 @@ model PayrollEntry {
 
 
   // Attendance-based 
-  scheduledDays            Int                @default(0) @map("scheduled_days")
+  scheduledDays            Decimal            @default(0) @map("scheduled_days") @db.Decimal(5, 2)
   presentDays              Decimal            @default(0) @map("present_days") @db.Decimal(5, 2)
   absentDays               Decimal            @default(0) @map("absent_days") @db.Decimal(5, 2)
+  employedDays             Decimal            @default(0) @map("employed_days") @db.Decimal(5, 2)
   payrollDays              Decimal            @default(0) @map("payroll_days") @db.Decimal(5, 2)
 
   // Contract Values (snapshot at time of run)

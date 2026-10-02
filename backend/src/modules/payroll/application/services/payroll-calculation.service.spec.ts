@@ -23,7 +23,7 @@ describe('PayrollCalculationService', () => {
         transportAllowance: 900,
         monthlyBonus: bonus,
         bonusTopUp: 0,
-        absentDays: 0,
+        payrollDays: 30,
         overtimeHours: {
           normalHours: 0,
           eveningHours: 0,
@@ -59,7 +59,7 @@ describe('PayrollCalculationService', () => {
         transportAllowance: 900,
         monthlyBonus: 0,
         bonusTopUp: 0,
-        absentDays: 0,
+        payrollDays: 30,
         overtimeHours: {
           normalHours: 0,
           eveningHours: 0,
@@ -80,7 +80,7 @@ describe('PayrollCalculationService', () => {
         transportAllowance: 900,
         monthlyBonus: 14630.77,
         bonusTopUp: 0,
-        absentDays: 0,
+        payrollDays: 30,
         overtimeHours: {
           normalHours: 0,
           eveningHours: 0,

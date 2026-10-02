@@ -261,6 +261,7 @@ export interface User {
   bankName?: string | null;
   bankBranch?: string | null;
   bankAccountNumber?: string | null;
+  includeInPayroll?: boolean;
   isActive: boolean;
   mfaEnabled: boolean;
   emailVerifiedAt: string | null;
@@ -335,6 +336,7 @@ export interface CreateUserRequest {
   bankName?: string;
   bankBranch?: string;
   bankAccountNumber?: string;
+  includeInPayroll?: boolean;
 }
 
 export interface UpdateUserRequest {
@@ -374,6 +376,7 @@ export interface UpdateUserRequest {
   bankName?: string;
   bankBranch?: string;
   bankAccountNumber?: string;
+  includeInPayroll?: boolean;
 }
 
 export interface AssignUserRoleRequest {
@@ -587,6 +590,10 @@ export interface AuthCapabilities {
   canCreateLeave: boolean;
   canViewOvertime: boolean;
   canCreateOvertime: boolean;
+  canAccessPayroll: boolean;
+  canCreatePayroll: boolean;
+  canEditPayroll: boolean;
+  canApprovePayroll: boolean;
   canViewFlight: boolean;
   canCreateFlight: boolean;
   canManageFlight: boolean;
@@ -647,6 +654,10 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canCreateLeave: false,
   canViewOvertime: false,
   canCreateOvertime: false,
+  canAccessPayroll: false,
+  canCreatePayroll: false,
+  canEditPayroll: false,
+  canApprovePayroll: false,
   canViewFlight: false,
   canCreateFlight: false,
   canManageFlight: false,

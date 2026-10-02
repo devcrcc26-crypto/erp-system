@@ -76,6 +76,28 @@ export function useCanCreateOvertime(): boolean {
 }
 
 /**
+ * True when the session can open payroll runs (any payroll module permission).
+ */
+export function useCanAccessPayroll(): boolean {
+  return useAuthStore((state) => state.capabilities.canAccessPayroll);
+}
+
+/** True when the session can create and process payroll runs. */
+export function useCanCreatePayroll(): boolean {
+  return useAuthStore((state) => state.capabilities.canCreatePayroll);
+}
+
+/** True when the session can edit payroll entry bonus top-ups and notes. */
+export function useCanEditPayroll(): boolean {
+  return useAuthStore((state) => state.capabilities.canEditPayroll);
+}
+
+/** True when the session can approve payroll runs (HR / GM). */
+export function useCanApprovePayroll(): boolean {
+  return useAuthStore((state) => state.capabilities.canApprovePayroll);
+}
+
+/**
  * True when the session can open HR flight pages (view, create, or full HR).
  */
 export function useCanAccessFlight(): boolean {

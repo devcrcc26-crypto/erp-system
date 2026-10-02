@@ -156,6 +156,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   'hr-work-schedules': lucideNavIcon(CalendarClock),
   'hr-public-holidays': lucideNavIcon(CalendarOff),
   'hr-overtime': lucideNavIcon(Timer),
+  'hr-payroll': lucideNavIcon(CircleDollarSign),
   'hr-employee-contract': lucideNavIcon(FileSignature),
   'hr-expense': lucideNavIcon(Receipt),
   'hr-purchase': lucideNavIcon(ShoppingCart),

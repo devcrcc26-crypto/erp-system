@@ -167,6 +167,21 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can submit overtime requests (overtime.create)' })
   canCreateOvertime!: boolean;
 
+  @ApiProperty({
+    description:
+      'Can open payroll runs (payroll.create OR payroll.edit OR payroll.approve)',
+  })
+  canAccessPayroll!: boolean;
+
+  @ApiProperty({ description: 'Can create and process payroll runs (payroll.create)' })
+  canCreatePayroll!: boolean;
+
+  @ApiProperty({ description: 'Can edit payroll entries (payroll.edit)' })
+  canEditPayroll!: boolean;
+
+  @ApiProperty({ description: 'Can approve payroll runs (payroll.approve)' })
+  canApprovePayroll!: boolean;
+
   @ApiProperty({ description: 'Can view flight applications (flight.view)' })
   canViewFlight!: boolean;
 

@@ -20,6 +20,7 @@ export type SidebarPermission =
   | 'evaluation.inbox'
   | 'leave.access'
   | 'overtime.access'
+  | 'payroll.access'
   | 'flight.access'
   | 'businessTrip.access'
   | 'expenseClaims.access'
@@ -255,6 +256,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           items: [
             { kind: 'link', id: 'leave-requests', labelKey: 'nav.hr.leaveRequests', icon: 'hr-leave', href: '/hr/leave-requests', requires: ['leave.access'], activePaths: ['/hr/leave-history'], keywords: ['vacation', 'annual leave', 'sick'] },
             { kind: 'link', id: 'overtime', labelKey: 'nav.hr.overtime', icon: 'hr-overtime', href: '/hr/overtime', requires: ['overtime.access'], activePaths: ['/hr/overtime-history'], keywords: ['extra hours'] },
+            { kind: 'link', id: 'payroll', labelKey: 'nav.hr.payroll', icon: 'hr-payroll', href: '/hr/payroll', requires: ['payroll.access'], keywords: ['salary', 'payslip', 'wages'] },
             { kind: 'link', id: 'attendance', labelKey: 'nav.hr.attendance', icon: 'hr-attendance', href: '/hr/attendance', requires: HR, keywords: ['clock in', 'deli', 'timesheet'] },
             { kind: 'link', id: 'field-movement-logs', labelKey: 'nav.hr.fieldMovementLogs', icon: 'hr-field-movement', href: '/hr/field-movement-logs', requires: HR, keywords: ['field visit', 'early departure', 'clock'] },
             { kind: 'link', id: 'work-schedules', labelKey: 'nav.hr.workSchedules', icon: 'hr-work-schedules', href: '/hr/work-schedules', requires: HR, keywords: ['shifts', 'roster'] },

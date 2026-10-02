@@ -16,6 +16,7 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   children,
+  className,
 }: {
   open: boolean;
   title: string;
@@ -28,7 +29,10 @@ export default function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
   children?: ReactNode;
+  /** Extra class on the modal root, e.g. `erp-confirm-dialog--v2` for the v2 look. */
+  className?: string;
 }): React.ReactNode {
+  const rootClassName = className ? `erp-confirm-dialog ${className}` : 'erp-confirm-dialog';
   return (
     <Modal
       open={open}
@@ -38,8 +42,8 @@ export default function ConfirmDialog({
       centered
       // Dialogs with inputs (e.g. an approval note) need room to write; plain confirms stay compact.
       width={children ? 560 : 420}
-      rootClassName="erp-confirm-dialog"
-      className="erp-confirm-dialog"
+      rootClassName={rootClassName}
+      className={rootClassName}
       classNames={{
         content: 'erp-confirm-dialog-content',
       }}

@@ -82,6 +82,7 @@ export class SessionCapabilitiesService {
       'overtime',
       'flight',
       'business-trip',
+      'payroll',
       'schedule',
       'engineering_documents',
       'review_sessions',
@@ -110,6 +111,7 @@ export class SessionCapabilitiesService {
     const overtime = permissionMap.overtime;
     const flight = permissionMap.flight;
     const businessTrip = permissionMap['business-trip'];
+    const payroll = permissionMap.payroll;
     const schedule = permissionMap.schedule;
     const engineeringDocuments = permissionMap.engineering_documents;
     const reviewSessions = permissionMap.review_sessions;
@@ -128,6 +130,11 @@ export class SessionCapabilitiesService {
       canCreateLeave: leave.canCreate,
       canViewOvertime: overtime.canView,
       canCreateOvertime: overtime.canCreate,
+      canAccessPayroll:
+        payroll.canCreate || payroll.canEdit || payroll.canApprove,
+      canCreatePayroll: payroll.canCreate,
+      canEditPayroll: payroll.canEdit,
+      canApprovePayroll: payroll.canApprove,
       canViewFlight: flight.canView,
       canCreateFlight: flight.canCreate,
       canManageFlight: flight.canEdit,

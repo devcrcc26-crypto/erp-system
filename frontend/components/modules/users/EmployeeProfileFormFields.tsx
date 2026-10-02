@@ -1,6 +1,7 @@
 'use client';
 
-import { DatePicker, Form, Input, Select } from 'antd';
+import { Checkbox, DatePicker, Form, Input, Select } from 'antd';
+import { useCanEditHr } from '@/hooks/use-auth-capabilities';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useMemo } from 'react';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -55,6 +56,7 @@ export interface EmployeeProfileFormValues {
   bankName?: string;
   bankBranch?: string;
   bankAccountNumber?: string;
+  includeInPayroll?: boolean;
 }
 
 export const GENDER_OPTIONS: Gender[] = ['MALE', 'FEMALE'];
@@ -121,6 +123,7 @@ export function EmployeeProfileFormFields({
   layout = 'default',
 }: EmployeeProfileFormFieldsProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const canEditHr = useCanEditHr();
   const leavePoliciesQuery = useLeavePolicies();
   const workSchedulesQuery = useWorkScheduleList();
   const experienceStartDate = Form.useWatch('experienceStartDate') as Dayjs | undefined;
@@ -407,6 +410,15 @@ export function EmployeeProfileFormFields({
           <p className="erp-users-cell-sub mb-3 mt-0">
             {t('users.form.payrollDetailsHint')}
           </p>
+          <Form.Item
+            name="includeInPayroll"
+            valuePropName="checked"
+            initialValue={true}
+          >
+            <Checkbox disabled={!canEditHr}>
+              {t('users.form.includeInPayroll')}
+            </Checkbox>
+          </Form.Item>
           <div className="erp-form-grid-3">
             <Form.Item label={t('users.form.bankName')} name="bankName">
               <Input maxLength={120} />
@@ -478,6 +490,7 @@ export function buildEmployeeProfilePayload(
   | 'bankName'
   | 'bankBranch'
   | 'bankAccountNumber'
+  | 'includeInPayroll'
 > {
   return {
     employeeId: values.employeeId?.trim() || undefined,
@@ -502,6 +515,7 @@ export function buildEmployeeProfilePayload(
     bankName: values.bankName?.trim() || undefined,
     bankBranch: values.bankBranch?.trim() || undefined,
     bankAccountNumber: values.bankAccountNumber?.trim() || undefined,
+    includeInPayroll: values.includeInPayroll ?? true,
   };
 }
 
@@ -521,7 +535,7 @@ function parseEmergencyContacts(value: User['emergencyContacts']): EmergencyCont
 
 export function employeeProfileInitialValues(user?: User | null): EmployeeProfileFormValues {
   if (!user) {
-    return { emergencyContacts: [] };
+    return { emergencyContacts: [], includeInPayroll: true };
   }
   return {
     employeeId: user.employeeId ?? undefined,
@@ -548,6 +562,7 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     bankName: user.bankName ?? undefined,
     bankBranch: user.bankBranch ?? undefined,
     bankAccountNumber: user.bankAccountNumber ?? undefined,
+    includeInPayroll: user.includeInPayroll ?? true,
   };
 }
 

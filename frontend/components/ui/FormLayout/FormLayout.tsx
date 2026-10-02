@@ -62,7 +62,7 @@ export default function FormLayout({
   return (
     <Card
       variant="borderless"
-      className={`erp-responsive-card ${className ?? ''}`}
+      className={`erp-responsive-card${isPro ? ' erp-form-layout-pro' : ''} ${className ?? ''}`}
       styles={{
         body: {
           padding:
@@ -83,7 +83,7 @@ export default function FormLayout({
     >
       {hasHeader && (
         <div
-          className={`flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 ${headerPad}`}
+          className={`${isPro ? 'erp-form-layout-pro-header ' : ''}flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 ${headerPad}`}
           style={{
             borderBottom: isPro
               ? '1px solid #eef1f4'

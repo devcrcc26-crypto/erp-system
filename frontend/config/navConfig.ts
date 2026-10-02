@@ -48,6 +48,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/leave-history/me': 'pages.hr.leaveHistory.myTitle',
   '/hr/overtime-history/me': 'pages.hr.overtimeHistory.myTitle',
   '/hr/overtime': 'nav.hr.overtime',
+  '/hr/payroll': 'nav.hr.payroll',
   '/hr/expense-claims': 'nav.hr.expenseClaims',
   '/hr/purchase-requests': 'nav.hr.purchaseRequests',
   '/hr/material-requisition': 'nav.hr.materialRequisition',
@@ -191,6 +192,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/leave-history/me': 'pages.hr.leaveHistory.myDescription',
   '/hr/overtime-history/me': 'pages.hr.overtimeHistory.myDescription',
   '/hr/overtime': 'pages.hr.overtime.listDescription',
+  '/hr/payroll': 'pages.hr.payroll.listDescription',
   '/hr/attendance': 'pages.hr.attendance.listDescription',
   '/hr/field-movement-logs': 'pages.hr.fieldMovementLogs.listDescription',
   '/hr/expense-claims': 'pages.hr.expenseClaim.listDescription',
@@ -731,6 +733,17 @@ function resolveRouteMetaCore(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.hr.overtime'), href: '/hr/overtime' },
         { label: t('pages.hr.overtime.detail') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/payroll/')) {
+    return {
+      titleKey: 'pages.hr.payroll.detail',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.hr.payroll'), href: '/hr/payroll' },
+        { label: t('pages.hr.payroll.detail') },
       ],
     };
   }

@@ -13,7 +13,13 @@ export interface PayrollCalculationInput {
   transportAllowance: number;
   monthlyBonus: number;
   bonusTopUp: number;
-  absentDays: number;
+  /** Paid days after absences/leave in the employed window (0–30). */
+  payrollDays: number;
+  /**
+   * Pre-computed earned salary (multi-contract months). When omitted,
+   * earned = basicSalary / 30 × payrollDays using month-end basic.
+   */
+  earnedSalary?: number;
   overtimeHours: OvertimeHours;
   taxableThreshold: number; // transport threshold, default 2200
   /** When false, employee and employer pension are 0. Defaults to true. */
@@ -81,15 +87,20 @@ export class PayrollCalculationService {
       transportAllowance,
       monthlyBonus,
       bonusTopUp,
-      absentDays,
+      payrollDays: payrollDaysInput,
+      earnedSalary: earnedSalaryOverride,
       overtimeHours,
       taxableThreshold,
       pensionApplicable = true,
       taxApplicable = true,
     } = input;
 
-    const payrollDays = this.round(30 - absentDays);
-    const earnedSalary = this.round((basicSalary / 30) * payrollDays);
+    const payrollDays = this.round(Math.max(0, payrollDaysInput));
+    const earnedSalary = this.round(
+      earnedSalaryOverride != null
+        ? earnedSalaryOverride
+        : (basicSalary / 30) * payrollDays,
+    );
 
     const hourlyBase = earnedSalary / 192;
 
@@ -181,7 +192,7 @@ export class PayrollCalculationService {
         transportAllowance,
         monthlyBonus: bonus,
         bonusTopUp: 0,
-        absentDays: 0,
+        payrollDays: 30,
         overtimeHours: ZERO_OT,
         taxableThreshold,
         pensionApplicable,

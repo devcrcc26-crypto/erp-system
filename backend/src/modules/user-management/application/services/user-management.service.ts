@@ -1024,6 +1024,7 @@ export class UserManagementService {
       bankName: true,
       bankBranch: true,
       bankAccountNumber: true,
+      includeInPayroll: true,
       isActive: true,
       mfaEnabled: true,
       emailVerifiedAt: true,
@@ -1095,6 +1096,7 @@ export class UserManagementService {
     bankName?: string;
     bankBranch?: string;
     bankAccountNumber?: string;
+    includeInPayroll?: boolean;
   }> {
     return {
       middleName: dto.middleName,
@@ -1118,6 +1120,7 @@ export class UserManagementService {
       bankName: dto.bankName,
       bankBranch: dto.bankBranch,
       bankAccountNumber: dto.bankAccountNumber,
+      includeInPayroll: dto.includeInPayroll,
     };
   }
 
@@ -1149,6 +1152,7 @@ export class UserManagementService {
       bankName?: string;
       bankBranch?: string;
       bankAccountNumber?: string;
+      includeInPayroll?: boolean;
     }>,
   ): Promise<void> {
     const employeeId =
@@ -1206,6 +1210,7 @@ export class UserManagementService {
         bankName: profileInput.bankName?.trim() || null,
         bankBranch: profileInput.bankBranch?.trim() || null,
         bankAccountNumber: profileInput.bankAccountNumber?.trim() || null,
+        includeInPayroll: profileInput.includeInPayroll ?? true,
         updatedBy: ctx.userId,
       },
     });
@@ -1295,6 +1300,7 @@ export class UserManagementService {
         | 'bankName'
         | 'bankBranch'
         | 'bankAccountNumber'
+        | 'includeInPayroll'
       >
     >,
   ): Prisma.UserUncheckedUpdateInput {
@@ -1363,6 +1369,9 @@ export class UserManagementService {
     }
     if (rest.bankAccountNumber !== undefined) {
       data.bankAccountNumber = rest.bankAccountNumber?.trim() || null;
+    }
+    if (rest.includeInPayroll !== undefined) {
+      data.includeInPayroll = rest.includeInPayroll;
     }
 
     return data;

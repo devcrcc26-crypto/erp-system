@@ -232,6 +232,14 @@ export class CreateUserDto {
   @MaxLength(64)
   bankAccountNumber?: string;
 
+  @ApiPropertyOptional({
+    description: 'When false, employee is excluded from payroll runs',
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  includeInPayroll?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()

@@ -258,7 +258,7 @@ export class EmployeeContractService {
             transportAllowance: transportationAllowance,
             monthlyBonus,
             bonusTopUp: 0,
-            absentDays: 0,
+            payrollDays: 30,
             overtimeHours: ZERO_OT,
             taxableThreshold: threshold,
             pensionApplicable,
