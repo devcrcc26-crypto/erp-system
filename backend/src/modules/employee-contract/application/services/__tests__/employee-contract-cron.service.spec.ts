@@ -27,7 +27,6 @@ describe('EmployeeContractCronService', () => {
     basicSalary: null,
     transportationAllowance: null,
     monthlyBonus: null,
-    netSalary: null,
     probationEndDate: null,
     governedBy: null,
     lastWarnedAt: null as Date | null,

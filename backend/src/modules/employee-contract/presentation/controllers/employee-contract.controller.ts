@@ -20,6 +20,7 @@ import { validate } from "class-validator";
 import {
     CreateEmployeeContractDto,
     ListEmployeeContractsDto,
+    BonusFromNetDto,
     SalaryPreviewDto,
     TerminateEmployeeContractDto,
     UpdateEmployeeContractDto,
@@ -85,11 +86,9 @@ export class EmployeeContractController {
                 startDate: { type: 'string', format: 'date' },
                 endDate: { type: 'string', format: 'date' },
                 notes: { type: 'string' },
-                salaryBasis: { type: 'string', enum: ['GROSS', 'NET'] },
                 basicSalary: { type: 'number' },
                 transportationAllowance: { type: 'number' },
                 monthlyBonus: { type: 'number' },
-                netSalary: { type: 'number' },
                 pensionApplicable: { type: 'boolean' },
                 taxApplicable: { type: 'boolean' },
                 probationEndDate: { type: 'string', format: 'date' },
@@ -125,7 +124,10 @@ export class EmployeeContractController {
         { module: 'hr', action: 'view' },
         { module: 'employee-contract', action: 'create' },
     )
-    @ApiOperation({ summary: 'Preview GROSS/NET salary breakdown (HR)' })
+    @ApiOperation({
+        summary:
+            'Preview estimated net for a normal month (gross inputs, no OT/absences)',
+    })
     async salaryPreview(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentCompany() companyId: string,
@@ -133,6 +135,29 @@ export class EmployeeContractController {
     ): Promise<unknown> {
         const dto = await parseDto(SalaryPreviewDto, body);
         return this.employeeContractService.previewSalary(
+            dto,
+            companyId,
+            user.userId,
+        );
+    }
+
+    @Post('bonus-from-net')
+    @DelegatePermissionCheck()
+    @RequireAnyPermission(
+        { module: 'hr', action: 'view' },
+        { module: 'employee-contract', action: 'create' },
+    )
+    @ApiOperation({
+        summary:
+            'Solve monthly bonus for a target net (calculator only — not stored)',
+    })
+    async bonusFromNet(
+        @CurrentUser() user: AuthenticatedUser,
+        @CurrentCompany() companyId: string,
+        @Body() body: Record<string, unknown>,
+    ): Promise<unknown> {
+        const dto = await parseDto(BonusFromNetDto, body);
+        return this.employeeContractService.bonusFromNet(
             dto,
             companyId,
             user.userId,

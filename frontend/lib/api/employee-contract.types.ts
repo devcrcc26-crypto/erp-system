@@ -13,8 +13,6 @@ export type EmployeeContractType =
 
 export type EmployeeContractCurrency = 'ETB' | 'USD' | 'CNY';
 
-export type SalaryBasis = 'GROSS' | 'NET';
-
 export interface EmployeeContractUserSummary {
   id: string;
   firstName: string;
@@ -43,13 +41,11 @@ export interface EmployeeContractListItem {
   terminatedAt?: string | null;
   notes?: string | null;
   currency?: EmployeeContractCurrency;
-  salaryBasis?: SalaryBasis;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
   basicSalary?: string | number | null;
   transportationAllowance?: string | number | null;
   monthlyBonus?: string | number | null;
-  netSalary?: string | number | null;
   probationEndDate?: string | null;
   governedBy?: string | null;
   lastWarnedAt?: string | null;
@@ -89,11 +85,9 @@ export interface CreateEmployeeContractPayload {
   startDate: string;
   endDate?: string;
   notes?: string;
-  salaryBasis?: SalaryBasis;
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
-  netSalary?: number;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
   probationEndDate?: string;
@@ -107,11 +101,9 @@ export interface UpdateEmployeeContractPayload {
   startDate?: string;
   endDate?: string | null;
   notes?: string | null;
-  salaryBasis?: SalaryBasis;
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
-  netSalary?: number;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
   probationEndDate?: string | null;
@@ -134,22 +126,18 @@ export interface ListEmployeeContractsParams {
 }
 
 export interface SalaryPreviewRequest {
-  salaryBasis: SalaryBasis;
   basicSalary: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
-  netSalary?: number;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
   taxableThreshold?: number;
 }
 
 export interface SalaryPreviewResult {
-  salaryBasis: SalaryBasis;
   basicSalary: number;
   transportationAllowance: number;
   monthlyBonus: number;
-  netSalary: number;
   pensionApplicable: boolean;
   taxApplicable: boolean;
   taxableThreshold: number;
@@ -161,4 +149,17 @@ export interface SalaryPreviewResult {
   grossIncome: number;
   totalDeductions: number;
   netPay: number;
+}
+
+export interface BonusFromNetRequest {
+  basicSalary: number;
+  transportationAllowance?: number;
+  targetNet: number;
+  pensionApplicable?: boolean;
+  taxApplicable?: boolean;
+  taxableThreshold?: number;
+}
+
+export interface BonusFromNetResult {
+  monthlyBonus: number;
 }

@@ -9,7 +9,6 @@ import {
   Input,
   Select,
   Spin,
-  Tag,
   Tooltip,
   type MenuProps,
 } from 'antd';
@@ -39,7 +38,6 @@ import { ApiRequestError } from '@/lib/api/errors';
 import type {
   EmployeeContractListItem,
   EmployeeContractType,
-  SalaryBasis,
 } from '@/lib/api/employee-contract.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import {
@@ -308,23 +306,6 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
             {formatEmployeeContractType(value, t)}
           </span>
         ),
-      },
-      {
-        title: t('hr.table.salaryBasis'),
-        dataIndex: 'salaryBasis',
-        key: 'salaryBasis',
-        width: 100,
-        responsive: ['lg'],
-        render: (value: SalaryBasis | undefined) => {
-          const basis = value ?? 'GROSS';
-          return (
-            <Tag color={basis === 'NET' ? 'blue' : 'green'}>
-              {basis === 'NET'
-                ? t('hr.labels.salaryBasisNet')
-                : t('hr.labels.salaryBasisGross')}
-            </Tag>
-          );
-        },
       },
       {
         title: t('hr.table.signedAt'),

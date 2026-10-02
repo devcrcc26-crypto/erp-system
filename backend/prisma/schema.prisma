@@ -5319,12 +5319,6 @@ enum EmployeeContractType{
     RENEWAL
 }
 
-enum SalaryBasis {
-  GROSS
-  NET
-}
-
-
 model EmployeeContract{
   id                        String                        @id @default(uuid())
   companyId                 String                        @map("company_id")
@@ -5339,13 +5333,11 @@ model EmployeeContract{
   terminationReason         String?                       @map("termination_reason")
   notes                     String?
   currency                  SupportedCurrency             @default(ETB)
-  salaryBasis               SalaryBasis                   @default(GROSS) @map("salary_basis")
   pensionApplicable         Boolean                       @default(true) @map("pension_applicable")
   taxApplicable             Boolean                       @default(true) @map("tax_applicable")
   basicSalary               Decimal?                      @map("basic_salary") @db.Decimal(14, 2)
   transportationAllowance   Decimal?                      @map("transportation_allowance") @db.Decimal(14, 2)
   monthlyBonus              Decimal?                      @map("monthly_bonus") @db.Decimal(14, 2)
-  netSalary                 Decimal?                      @map("net_salary") @db.Decimal(14, 2)
   probationEndDate          DateTime?                     @map("probation_end_date") @db.Date
   governedBy                String?                       @map("governed_by")
   lastWarnedAt              DateTime?                     @map("last_warned_at")

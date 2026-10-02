@@ -178,8 +178,8 @@ export default function EmployeeContractDetailPageContent({
     contract.basicSalary != null ||
     contract.transportationAllowance != null ||
     contract.monthlyBonus != null ||
-    contract.netSalary != null ||
-    contract.salaryBasis != null;
+    contract.pensionApplicable != null ||
+    contract.taxApplicable != null;
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page">
@@ -379,11 +379,6 @@ export default function EmployeeContractDetailPageContent({
           {hasCompensation ? (
             <DetailSection title={t('hr.section.compensation')}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <MetaItem label={t('hr.labels.salaryBasis')}>
-                  {(contract.salaryBasis ?? 'GROSS') === 'NET'
-                    ? t('hr.labels.salaryBasisNet')
-                    : t('hr.labels.salaryBasisGross')}
-                </MetaItem>
                 <MetaItem label={t('hr.form.currency')}>
                   {ETB}
                 </MetaItem>
@@ -412,9 +407,6 @@ export default function EmployeeContractDetailPageContent({
                 </MetaItem>
                 <MetaItem label={t('hr.labels.monthlyBonus')}>
                   {formatMoney(contract.monthlyBonus, ETB)}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.netSalary')}>
-                  {formatMoney(contract.netSalary, ETB)}
                 </MetaItem>
               </div>
             </DetailSection>

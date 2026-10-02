@@ -5,10 +5,7 @@ import {
   ImportRowPreviewDto,
   ImportRowStatus,
 } from '../../../hr-shared/application/dtos/hr-import.dtos';
-import {
-  EmployeeContractType,
-  SalaryBasis,
-} from '@prisma/client';
+import { EmployeeContractType } from '@prisma/client';
 
 export type {
   ImportRowStatus,
@@ -25,11 +22,9 @@ export class EmployeeContractImportRowPreviewDto extends ImportRowPreviewDto {
   signedAt?: string;
   startDate?: string;
   endDate?: string;
-  salaryBasis?: SalaryBasis;
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
-  netSalary?: number;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
   probationEndDate?: string;

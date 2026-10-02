@@ -11,6 +11,7 @@ import { activeOnly } from "@/shared/prisma/soft-delete.util";
 import {
   CreateEmployeeContractDto,
   ListEmployeeContractsDto,
+  BonusFromNetDto,
   SalaryPreviewDto,
   TerminateEmployeeContractDto,
   UpdateEmployeeContractDto,
@@ -20,7 +21,6 @@ import {
   EmployeeContractType,
   FolderContextType,
   Prisma,
-  SalaryBasis,
   SupportedCurrency,
 } from "@prisma/client";
 import { randomUUID } from "crypto";
@@ -71,8 +71,8 @@ const CONTRACT_DETAIL_INCLUDE = {
 
 /**
  * Self-service contract view. Whitelists display fields only — pay columns
- * (basicSalary, transportationAllowance, monthlyBonus, netSalary) are never
- * selected, so they cannot reach the client.
+ * (basicSalary, transportationAllowance, monthlyBonus) are never selected,
+ * so they cannot reach the client.
  */
 const MY_CONTRACT_SELECT = {
     id: true,
@@ -158,11 +158,9 @@ export class EmployeeContractService {
         this.validateContractDates(dto.contractType, signedAt, startDate, endDate);
 
         const salary = this.resolveSalaryFields({
-            salaryBasis: dto.salaryBasis ?? SalaryBasis.GROSS,
             basicSalary: dto.basicSalary ?? 0,
             transportationAllowance: dto.transportationAllowance ?? 0,
             monthlyBonus: dto.monthlyBonus ?? 0,
-            netSalary: dto.netSalary,
             pensionApplicable: dto.pensionApplicable ?? true,
             taxApplicable: dto.taxApplicable ?? true,
         });
@@ -212,7 +210,6 @@ export class EmployeeContractService {
                     endDate,
                     notes: dto.notes?.trim() || null,
                     currency: SupportedCurrency.ETB,
-                    salaryBasis: salary.salaryBasis,
                     pensionApplicable: salary.pensionApplicable,
                     taxApplicable: salary.taxApplicable,
                     basicSalary: this.toDecimal(salary.basicSalary),
@@ -220,7 +217,6 @@ export class EmployeeContractService {
                         salary.transportationAllowance,
                     ),
                     monthlyBonus: this.toDecimal(salary.monthlyBonus),
-                    netSalary: this.toDecimal(salary.netSalary),
                     probationEndDate: dto.probationEndDate
                         ? this.parseDateOnly(dto.probationEndDate)
                         : null,
@@ -240,7 +236,7 @@ export class EmployeeContractService {
     }
 
     /**
-     * Live salary preview for the contract form (GROSS or NET).
+     * Live salary preview for a normal month (gross inputs, 0 absent, 0 OT).
      */
     async previewSalary(
         dto: SalaryPreviewDto,
@@ -255,26 +251,7 @@ export class EmployeeContractService {
         const taxApplicable = dto.taxApplicable ?? true;
         const basicSalary = dto.basicSalary;
         const transportationAllowance = dto.transportationAllowance ?? 0;
-
-        let monthlyBonus = dto.monthlyBonus ?? 0;
-        let agreedNet = dto.netSalary ?? null;
-
-        if (dto.salaryBasis === SalaryBasis.NET) {
-            if (dto.netSalary == null) {
-                throw new BadRequestException(
-                    'netSalary is required for NET salary basis',
-                );
-            }
-            agreedNet = dto.netSalary;
-            monthlyBonus = this.payrollCalc.solveBonusForNet({
-                basicSalary,
-                transportAllowance: transportationAllowance,
-                targetNet: dto.netSalary,
-                taxableThreshold: threshold,
-                pensionApplicable,
-                taxApplicable,
-            });
-        }
+        const monthlyBonus = dto.monthlyBonus ?? 0;
 
         const result = this.payrollCalc.calculate({
             basicSalary,
@@ -289,11 +266,9 @@ export class EmployeeContractService {
         });
 
         return {
-            salaryBasis: dto.salaryBasis,
             basicSalary,
             transportationAllowance,
             monthlyBonus,
-            netSalary: agreedNet ?? result.netPay,
             pensionApplicable,
             taxApplicable,
             taxableThreshold: threshold,
@@ -307,8 +282,30 @@ export class EmployeeContractService {
             pensionEmployer: result.pensionEmployer,
             totalDeductions: result.totalDeductions,
             netPay: result.netPay,
-            solvedBonus: monthlyBonus,
         };
+    }
+
+    /**
+     * Solves monthly bonus for a target net. Calculator only — nothing is stored.
+     */
+    async bonusFromNet(
+        dto: BonusFromNetDto,
+        companyId: string,
+        userId: string,
+    ): Promise<{ monthlyBonus: number }> {
+        await this.assertCanManage(companyId, userId);
+        void companyId;
+
+        const monthlyBonus = this.payrollCalc.solveBonusForNet({
+            basicSalary: dto.basicSalary,
+            transportAllowance: dto.transportationAllowance ?? 0,
+            targetNet: dto.targetNet,
+            taxableThreshold: dto.taxableThreshold ?? DEFAULT_TAXABLE_THRESHOLD,
+            pensionApplicable: dto.pensionApplicable ?? true,
+            taxApplicable: dto.taxApplicable ?? true,
+        });
+
+        return { monthlyBonus };
     }
 
     /**
@@ -489,20 +486,15 @@ export class EmployeeContractService {
 
         this.validateContractDates(contractType, signedAt, startDate, endDate);
 
-        const salaryBasis =
-            dto.salaryBasis ?? contract.salaryBasis ?? SalaryBasis.GROSS;
         const salaryTouched =
-            dto.salaryBasis !== undefined ||
             dto.basicSalary !== undefined ||
             dto.transportationAllowance !== undefined ||
             dto.monthlyBonus !== undefined ||
-            dto.netSalary !== undefined ||
             dto.pensionApplicable !== undefined ||
             dto.taxApplicable !== undefined;
 
         const salary = salaryTouched
             ? this.resolveSalaryFields({
-                  salaryBasis,
                   basicSalary:
                       dto.basicSalary ??
                       this.payrollCalc.toNumber(contract.basicSalary),
@@ -514,11 +506,6 @@ export class EmployeeContractService {
                   monthlyBonus:
                       dto.monthlyBonus ??
                       this.payrollCalc.toNumber(contract.monthlyBonus),
-                  netSalary:
-                      dto.netSalary !== undefined
-                          ? dto.netSalary
-                          : this.payrollCalc.toNumber(contract.netSalary) ||
-                            undefined,
                   pensionApplicable:
                       dto.pensionApplicable ?? contract.pensionApplicable,
                   taxApplicable: dto.taxApplicable ?? contract.taxApplicable,
@@ -538,7 +525,6 @@ export class EmployeeContractService {
                 currency: SupportedCurrency.ETB,
                 ...(salary
                     ? {
-                          salaryBasis: salary.salaryBasis,
                           pensionApplicable: salary.pensionApplicable,
                           taxApplicable: salary.taxApplicable,
                           basicSalary: this.toDecimal(salary.basicSalary),
@@ -546,7 +532,6 @@ export class EmployeeContractService {
                               salary.transportationAllowance,
                           ),
                           monthlyBonus: this.toDecimal(salary.monthlyBonus),
-                          netSalary: this.toDecimal(salary.netSalary),
                       }
                     : {}),
                 ...(dto.probationEndDate !== undefined
@@ -850,7 +835,6 @@ export class EmployeeContractService {
             'basicSalary',
             'transportationAllowance',
             'monthlyBonus',
-            'netSalary',
         ] as const;
         const dateFields = [
             'signedAt',
@@ -1046,77 +1030,28 @@ export class EmployeeContractService {
     }
 
     /**
-     * Resolves stored pay fields from GROSS or NET inputs. Always ETB.
-     * NET ignores client monthlyBonus and solves it; GROSS computes netSalary.
+     * Normalises gross pay fields for storage. Bonus is always what HR enters
+     * (default 0). Net is never computed or stored on the contract.
      */
     private resolveSalaryFields(input: {
-        salaryBasis: SalaryBasis;
         basicSalary: number;
         transportationAllowance: number;
         monthlyBonus: number;
-        netSalary?: number;
         pensionApplicable: boolean;
         taxApplicable: boolean;
     }): {
-        salaryBasis: SalaryBasis;
         basicSalary: number;
         transportationAllowance: number;
         monthlyBonus: number;
-        netSalary: number;
         pensionApplicable: boolean;
         taxApplicable: boolean;
     } {
-        const pensionApplicable = input.pensionApplicable;
-        const taxApplicable = input.taxApplicable;
-        const basicSalary = input.basicSalary;
-        const transportationAllowance = input.transportationAllowance;
-
-        if (input.salaryBasis === SalaryBasis.NET) {
-            if (input.netSalary == null || !(input.netSalary > 0)) {
-                throw new BadRequestException(
-                    'netSalary is required for NET salary basis',
-                );
-            }
-            const monthlyBonus = this.payrollCalc.solveBonusForNet({
-                basicSalary,
-                transportAllowance: transportationAllowance,
-                targetNet: input.netSalary,
-                taxableThreshold: DEFAULT_TAXABLE_THRESHOLD,
-                pensionApplicable,
-                taxApplicable,
-            });
-            return {
-                salaryBasis: SalaryBasis.NET,
-                basicSalary,
-                transportationAllowance,
-                monthlyBonus,
-                netSalary: input.netSalary,
-                pensionApplicable,
-                taxApplicable,
-            };
-        }
-
-        const monthlyBonus = input.monthlyBonus ?? 0;
-        const result = this.payrollCalc.calculate({
-            basicSalary,
-            transportAllowance: transportationAllowance,
-            monthlyBonus,
-            bonusTopUp: 0,
-            absentDays: 0,
-            overtimeHours: ZERO_OT,
-            taxableThreshold: DEFAULT_TAXABLE_THRESHOLD,
-            pensionApplicable,
-            taxApplicable,
-        });
-
         return {
-            salaryBasis: SalaryBasis.GROSS,
-            basicSalary,
-            transportationAllowance,
-            monthlyBonus,
-            netSalary: result.netPay,
-            pensionApplicable,
-            taxApplicable,
+            basicSalary: input.basicSalary,
+            transportationAllowance: input.transportationAllowance,
+            monthlyBonus: input.monthlyBonus ?? 0,
+            pensionApplicable: input.pensionApplicable,
+            taxApplicable: input.taxApplicable,
         };
     }
 }

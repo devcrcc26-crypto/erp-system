@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   EmployeeContractStatus,
   EmployeeContractType,
-  SalaryBasis,
 } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -87,16 +86,6 @@ export class CreateEmployeeContractDto {
   @MaxLength(2000)
   notes?: string;
 
-  @ApiPropertyOptional({
-    enum: SalaryBasis,
-    default: SalaryBasis.GROSS,
-    description: 'GROSS = enter bonus; NET = enter take-home and solve bonus',
-  })
-  @Transform(emptyToUndefined)
-  @IsOptional()
-  @IsEnum(SalaryBasis)
-  salaryBasis?: SalaryBasis;
-
   @ApiPropertyOptional({ example: 25000 })
   @Transform(emptyToUndefined)
   @IsOptional()
@@ -113,26 +102,13 @@ export class CreateEmployeeContractDto {
 
   @ApiPropertyOptional({
     example: 2000,
-    description: 'Used for GROSS contracts; ignored for NET (solved server-side)',
+    description: 'Fixed monthly bonus entered by HR (default 0)',
   })
   @Transform(emptyToUndefined)
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   monthlyBonus?: number;
-
-  @ApiPropertyOptional({
-    example: 30000,
-    description: 'Required for NET contracts; informational for GROSS',
-  })
-  @Transform(emptyToUndefined)
-  @ValidateIf(
-    (dto: CreateEmployeeContractDto) =>
-      (dto.salaryBasis ?? SalaryBasis.GROSS) === SalaryBasis.NET,
-  )
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @IsNotEmpty()
-  netSalary?: number;
 
   @ApiPropertyOptional({ default: true })
   @Transform(optionalBoolean)
@@ -192,11 +168,6 @@ export class UpdateEmployeeContractDto {
   @MaxLength(2000)
   notes?: string;
 
-  @ApiPropertyOptional({ enum: SalaryBasis })
-  @IsOptional()
-  @IsEnum(SalaryBasis)
-  salaryBasis?: SalaryBasis;
-
   @ApiPropertyOptional({ example: 25000 })
   @IsOptional()
   @Type(() => Number)
@@ -214,12 +185,6 @@ export class UpdateEmployeeContractDto {
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   monthlyBonus?: number;
-
-  @ApiPropertyOptional({ example: 30000 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  netSalary?: number;
 
   @ApiPropertyOptional({ default: true })
   @Transform(optionalBoolean)
@@ -250,11 +215,8 @@ export class UpdateEmployeeContractDto {
   governedBy?: string;
 }
 
+/** Gross-only preview for a normal month (no OT, no absences). */
 export class SalaryPreviewDto {
-  @ApiProperty({ enum: SalaryBasis, default: SalaryBasis.GROSS })
-  @IsEnum(SalaryBasis)
-  salaryBasis!: SalaryBasis;
-
   @ApiProperty({ example: 13000 })
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -267,27 +229,54 @@ export class SalaryPreviewDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   transportationAllowance?: number;
 
-  @ApiPropertyOptional({
-    example: 2000,
-    description: 'Required when salaryBasis is GROSS',
-  })
+  @ApiPropertyOptional({ example: 2000, default: 0 })
   @Transform(emptyToUndefined)
-  @ValidateIf((dto: SalaryPreviewDto) => dto.salaryBasis === SalaryBasis.GROSS)
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   monthlyBonus?: number;
 
+  @ApiPropertyOptional({ default: true })
+  @Transform(optionalBoolean)
+  @IsOptional()
+  @IsBoolean()
+  pensionApplicable?: boolean;
+
+  @ApiPropertyOptional({ default: true })
+  @Transform(optionalBoolean)
+  @IsOptional()
+  @IsBoolean()
+  taxApplicable?: boolean;
+
   @ApiPropertyOptional({
-    example: 20000,
-    description: 'Required when salaryBasis is NET',
+    example: 2200,
+    description: 'Taxable transport threshold (default 2200)',
   })
   @Transform(emptyToUndefined)
-  @ValidateIf((dto: SalaryPreviewDto) => dto.salaryBasis === SalaryBasis.NET)
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
-  @IsNotEmpty()
-  netSalary?: number;
+  taxableThreshold?: number;
+}
+
+/** Solve bonus for an agreed take-home — calculator only, never stored. */
+export class BonusFromNetDto {
+  @ApiProperty({ example: 13000 })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  basicSalary!: number;
+
+  @ApiPropertyOptional({ example: 900, default: 0 })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  transportationAllowance?: number;
+
+  @ApiProperty({ example: 20000, description: 'Target take-home net pay' })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  targetNet!: number;
 
   @ApiPropertyOptional({ default: true })
   @Transform(optionalBoolean)
@@ -378,4 +367,4 @@ export class ListEmployeeContractsDto {
   expiringSoon?: boolean;
 }
 
-export { EmployeeContractStatus, EmployeeContractType, SalaryBasis };
+export { EmployeeContractStatus, EmployeeContractType };

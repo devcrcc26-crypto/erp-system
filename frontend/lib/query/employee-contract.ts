@@ -1,5 +1,7 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
+  BonusFromNetRequest,
+  BonusFromNetResult,
   CreateEmployeeContractPayload,
   EmployeeContractDetail,
   EmployeeContractListItem,
@@ -186,9 +188,6 @@ export function useCreateEmployeeContract() {
       if (payload.notes) {
         formData.append('notes', payload.notes);
       }
-      if (payload.salaryBasis) {
-        formData.append('salaryBasis', payload.salaryBasis);
-      }
       if (payload.basicSalary != null) {
         formData.append('basicSalary', String(payload.basicSalary));
       }
@@ -200,9 +199,6 @@ export function useCreateEmployeeContract() {
       }
       if (payload.monthlyBonus != null) {
         formData.append('monthlyBonus', String(payload.monthlyBonus));
-      }
-      if (payload.netSalary != null) {
-        formData.append('netSalary', String(payload.netSalary));
       }
       if (payload.pensionApplicable != null) {
         formData.append('pensionApplicable', String(payload.pensionApplicable));
@@ -407,7 +403,7 @@ export async function downloadEmployeeContractImportTemplate(): Promise<void> {
 }
 
 /**
- * Live salary preview (GROSS forward / NET bonus solve) for the contract form.
+ * Live gross salary preview for the contract form.
  */
 export async function previewEmployeeContractSalary(
   payload: SalaryPreviewRequest,
@@ -419,10 +415,31 @@ export async function previewEmployeeContractSalary(
 }
 
 /**
+ * Solve monthly bonus from a target net pay.
+ */
+export async function solveBonusFromNet(
+  payload: BonusFromNetRequest,
+): Promise<BonusFromNetResult> {
+  return apiPost<BonusFromNetResult>(
+    `${CONTRACT_PATH}/bonus-from-net`,
+    payload,
+  );
+}
+
+/**
  * Mutation wrapper around salary preview (prefer debounced direct call for live UI).
  */
 export function useSalaryPreview() {
   return useMutation({
     mutationFn: previewEmployeeContractSalary,
+  });
+}
+
+/**
+ * Mutation wrapper around bonus-from-net solve.
+ */
+export function useBonusFromNet() {
+  return useMutation({
+    mutationFn: solveBonusFromNet,
   });
 }

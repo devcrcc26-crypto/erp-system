@@ -5,7 +5,6 @@ const PAY_FIELDS = [
   'basicSalary',
   'transportationAllowance',
   'monthlyBonus',
-  'netSalary',
 ] as const;
 
 describe('EmployeeContractService.getMyActiveContract', () => {
@@ -61,7 +60,7 @@ describe('EmployeeContractService.getMyActiveContract', () => {
       probationEndDate: new Date('2026-04-10T00:00:00.000Z'),
       governedBy: 'Ethiopian Labour Proclamation 1156/2019',
       basicSalary: 50000,
-      netSalary: 42000,
+      monthlyBonus: 2000,
     });
 
     const result = await service.getMyActiveContract('company-1', 'user-1');
