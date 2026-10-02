@@ -12,7 +12,11 @@ export default function DashboardLayout({
   return (
     <DashboardProviders>
       <DashboardAuthGate>
-        <div className="flex h-screen min-h-0 flex-col overflow-hidden">
+        {/*
+          Fixed to the viewport so document scroll cannot leave empty space
+          under the shell (min-height chains / scrollIntoView side effects).
+        */}
+        <div className="fixed inset-0 flex flex-col overflow-hidden">
           <AppShell>{children}</AppShell>
         </div>
       </DashboardAuthGate>

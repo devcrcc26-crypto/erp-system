@@ -60,6 +60,7 @@
 html,
 body {
   height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -604,12 +605,12 @@ main::-webkit-scrollbar,
 }
 
 /*
- * Header v2 — flush with the shell (no floating panel). Stays fixed at the top
- * while scrolling; the panel fills the header edge-to-edge (no inset card).
+ * Header v2 — flush with the shell (no floating panel). Fixed at the top of
+ * the main column (outside the scrolling content pane).
  */
 .erp-shell-header.erp-header-v2 {
-  position: sticky;
-  top: 0;
+  position: relative;
+  top: auto;
   z-index: 30;
   padding: 0;
   border-bottom: 1px solid var(--color-sidebar-border, #e8ebef);
@@ -880,6 +881,121 @@ main::-webkit-scrollbar,
   .erp-hd-dropdown-root .erp-header-dropdown-v2 {
     width: 100%;
   }
+}
+
+/*
+ * Table row actions menu ("⋯" → Update / Delete / …). Dropdowns opt in with
+ * rootClassName="erp-row-actions-menu" (the popup renders in a portal, so it
+ * can't be scoped by the table). Same panel language as the header dropdowns;
+ * each item gets an icon tile, and destructive items sit below a divider.
+ * Text: #1F2937 on white 14.7:1; danger #B42318 6.5:1.
+ */
+.erp-row-actions-menu .ant-dropdown-menu {
+  min-width: 188px;
+  padding: 6px !important;
+  border-radius: 14px !important;
+  box-shadow:
+    0 0 0 1px rgba(16, 24, 40, 0.05),
+    0 4px 8px -2px rgba(16, 24, 40, 0.06),
+    0 16px 36px -6px rgba(16, 24, 40, 0.14) !important;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu .ant-dropdown-menu-item {
+  gap: 10px;
+  min-height: 38px;
+  padding: 5px 10px 5px 6px !important;
+  border-radius: 10px !important;
+  color: #1f2937;
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 500;
+}
+
+/* Icon tile: neutral for normal actions, red for destructive ones. */
+.erp-row-actions-menu .ant-dropdown-menu-item .ant-dropdown-menu-item-icon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  margin-inline-end: 0 !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #f2f4f7;
+  color: #475467;
+  font-size: 14px;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item:not(.ant-dropdown-menu-item-disabled):hover,
+.erp-row-actions-menu .ant-dropdown-menu-item-active:not(.ant-dropdown-menu-item-disabled) {
+  background: #f4f6f8 !important;
+  color: #0f172a;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item:not(.ant-dropdown-menu-item-danger):not(.ant-dropdown-menu-item-disabled):hover
+  .ant-dropdown-menu-item-icon {
+  background: rgba(29, 158, 117, 0.1);
+  color: #0f6e56;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item-danger:not(.ant-dropdown-menu-item-disabled) {
+  color: #b42318 !important;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item-danger .ant-dropdown-menu-item-icon {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item-danger:not(.ant-dropdown-menu-item-disabled):hover {
+  background: #fef3f2 !important;
+  color: #912018 !important;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item-danger:not(.ant-dropdown-menu-item-disabled):hover
+  .ant-dropdown-menu-item-icon {
+  background: #fee4e2;
+}
+
+/* Divider above the first destructive item that follows normal ones. */
+.erp-row-actions-menu
+  .ant-dropdown-menu-item:not(.ant-dropdown-menu-item-danger)
+  + .ant-dropdown-menu-item-danger {
+  position: relative;
+  margin-top: 9px;
+}
+
+.erp-row-actions-menu
+  .ant-dropdown-menu-item:not(.ant-dropdown-menu-item-danger)
+  + .ant-dropdown-menu-item-danger::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: 6px;
+  left: 6px;
+  height: 1px;
+  background: #eef1f4;
+  pointer-events: none;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item-disabled,
+.erp-row-actions-menu .ant-dropdown-menu-item-danger.ant-dropdown-menu-item-disabled {
+  color: #98a2b3 !important;
+  cursor: not-allowed;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item-disabled .ant-dropdown-menu-item-icon {
+  background: #f9fafb;
+  color: #98a2b3;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item:focus-visible {
+  outline: 2px solid #1d9e75;
+  outline-offset: -2px;
+}
+
+.erp-row-actions-menu .ant-dropdown-menu-item-divider {
+  margin: 4px 6px !important;
+  background: #eef1f4 !important;
 }
 
 /* Shell breadcrumb - Ant Design trail in main header */
@@ -3026,6 +3142,241 @@ main::-webkit-scrollbar,
   background: var(--color-teal-50);
   color: var(--color-teal-600);
   font-weight: 600;
+}
+
+/* ── My Profile — flush identity + underline tabs (scoped; HR detail unchanged) ── */
+
+.erp-profile-page {
+  gap: 12px;
+}
+
+.erp-profile-page .erp-pro-card {
+  border: 1px solid #e8ebef;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.erp-profile-page .erp-profile-identity {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.erp-profile-page .erp-profile-hero {
+  padding: 22px 22px 20px;
+}
+
+.erp-profile-page .erp-profile-hero-badges {
+  gap: 8px;
+}
+
+.erp-profile-page .erp-profile-meta {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid #eef1f4;
+  border-radius: 0;
+  background: #f8fafb;
+}
+
+.erp-profile-page .erp-profile-meta .erp-users-stat {
+  background: transparent;
+}
+
+.erp-profile-page .erp-profile-meta-empty {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.erp-profile-page .erp-profile-workspace {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.erp-profile-page .erp-profile-tabbar,
+.erp-profile-page .erp-employee-tabbar {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid #eef1f4;
+  border-radius: 0;
+  background: #fff;
+}
+
+.erp-profile-page .erp-profile-tabbar button,
+.erp-profile-page .erp-employee-tabbar button {
+  position: relative;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.erp-profile-page .erp-profile-tabbar button + button,
+.erp-profile-page .erp-employee-tabbar button + button {
+  border-left: 0;
+}
+
+.erp-profile-page .erp-profile-tabbar button:hover,
+.erp-profile-page .erp-employee-tabbar button:hover {
+  background: transparent;
+  color: #0f172a;
+}
+
+.erp-profile-page .erp-profile-tabbar button[aria-selected='true'],
+.erp-profile-page .erp-employee-tabbar button[aria-selected='true'],
+.erp-profile-page.erp-employee-detail-page .erp-employee-tabbar button[aria-selected='true'] {
+  background: transparent;
+  color: #0f6e56;
+  font-weight: 600;
+}
+
+.erp-profile-page .erp-profile-tabbar button[aria-selected='true']::after,
+.erp-profile-page .erp-employee-tabbar button[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  left: 12px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: #1d9e75;
+}
+
+.erp-profile-page .erp-profile-tabbar button:focus-visible,
+.erp-profile-page .erp-employee-tabbar button:focus-visible {
+  outline: 2px solid #1d9e75;
+  outline-offset: -2px;
+}
+
+/*
+ * My Profile tabs v2 — pill tabs (same language as the request catalogue
+ * chips). Scoped to `.erp-profile-tabbar`, so the HR employee detail page keeps
+ * its own tabs. Selected: 10% primary tint + #0F6E56 (5.3:1); idle text
+ * #4B5563 (7.6:1). The row scrolls sideways when the tabs don't fit.
+ */
+.erp-profile-page .erp-profile-tabbar.erp-employee-tabbar {
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef1f4;
+  background: #ffffff;
+  scroll-padding-inline: 12px;
+}
+
+.erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  gap: 8px;
+  border-radius: 999px;
+  color: #4b5563;
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button .anticon {
+  color: #64748b;
+  font-size: 15px;
+  transition: color 120ms ease;
+}
+
+.erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button:hover {
+  background: #f4f6f8;
+  color: #0f172a;
+}
+
+.erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button:hover .anticon {
+  color: #0f172a;
+}
+
+.erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button[aria-selected='true'] {
+  background: rgba(29, 158, 117, 0.1);
+  color: #0f6e56;
+  font-weight: 600;
+}
+
+.erp-profile-page
+  .erp-profile-tabbar.erp-employee-tabbar
+  button[aria-selected='true']
+  .anticon {
+  color: #0f6e56;
+}
+
+/* The pill replaces the underline marker. */
+.erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button[aria-selected='true']::after {
+  display: none;
+}
+
+.erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button:focus-visible {
+  outline: 2px solid #1d9e75;
+  outline-offset: 2px;
+}
+
+/* Phones/tablets: the row scrolls; fade the right edge as a scroll hint. */
+@media (max-width: 1023px) {
+  .erp-profile-page .erp-profile-tabbar.erp-employee-tabbar {
+    padding: 8px 10px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+
+  .erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button {
+    min-height: 34px;
+    padding: 0 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button,
+  .erp-profile-page .erp-profile-tabbar.erp-employee-tabbar button .anticon {
+    transition: none;
+  }
+}
+
+.erp-profile-page .erp-employee-tab-panel {
+  padding: 20px;
+  background: #fff;
+}
+
+.erp-profile-page .erp-employee-section {
+  border: 1px solid #eef1f4;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.erp-profile-page .erp-employee-section-header {
+  background: #fbfcfd;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.erp-profile-page .erp-employee-contact-card {
+  border-radius: 0;
+}
+
+@media (max-width: 767px) {
+  .erp-profile-page {
+    gap: 10px;
+  }
+
+  .erp-profile-page .erp-profile-hero {
+    padding: 16px 14px;
+  }
+
+  .erp-profile-page .erp-employee-tab-panel {
+    padding: 14px 12px;
+  }
+
+  .erp-profile-page .erp-profile-tabbar button[aria-selected='true']::after,
+  .erp-profile-page .erp-employee-tabbar button[aria-selected='true']::after {
+    right: 8px;
+    left: 8px;
+  }
 }
 
 /* ── ERP data table - design system ── */

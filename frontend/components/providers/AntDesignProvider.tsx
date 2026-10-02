@@ -68,7 +68,7 @@ export default function AntDesignProvider({
     <AntdRegistry>
       <ConfigProvider theme={theme} locale={antdLocale}>
         <FontScaleSync />
-        <App className="flex min-h-screen flex-1 flex-col">{children}</App>
+        <App className="flex h-full min-h-0 flex-1 flex-col">{children}</App>
       </ConfigProvider>
     </AntdRegistry>
   );

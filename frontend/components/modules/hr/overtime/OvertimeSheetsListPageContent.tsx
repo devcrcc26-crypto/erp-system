@@ -430,7 +430,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => event.stopPropagation()}
             >
-              <Dropdown menu={{ items }} trigger={['click']}>
+              <Dropdown menu={{ items }} trigger={['click']} rootClassName="erp-row-actions-menu">
                 <Button
                   size="small"
                   type="text"

@@ -1052,6 +1052,8 @@ export default function UsersPageContent(): React.ReactNode {
                     <Dropdown
                       menu={{ items: buildActionMenu(record) }}
                       trigger={['click']}
+                      placement="bottomRight"
+                      rootClassName="erp-row-actions-menu"
                       disabled={resendInvitation.isPending}
                     >
                       <Button

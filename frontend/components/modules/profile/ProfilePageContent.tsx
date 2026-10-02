@@ -1,5 +1,7 @@
 'use client';
 
+import './profile-v2.css';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Form, Input, Select, Spin } from 'antd';
 import {
@@ -90,7 +92,15 @@ function MetaStat({
     <div className="erp-users-stat">
       <div className="min-w-0">
         <p className="erp-users-stat-label">{label}</p>
-        <p className="erp-employee-meta-value">{value}</p>
+        <p
+          className={
+            value === '—'
+              ? 'erp-employee-meta-value erp-profile-meta-empty'
+              : 'erp-employee-meta-value'
+          }
+        >
+          {value}
+        </p>
       </div>
     </div>
   );
@@ -214,7 +224,7 @@ export default function ProfilePageContent(): React.ReactNode {
 
   if (profileQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className="erp-pro-list-page erp-users-page erp-profile-page erp-profile-v2">
         <div className="erp-pro-card flex justify-center p-12">
           <Spin />
         </div>
@@ -618,7 +628,7 @@ export default function ProfilePageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2">
       {!isEmailVerified && (
         <Alert
           type="warning"
@@ -643,8 +653,8 @@ export default function ProfilePageContent(): React.ReactNode {
         />
       )}
 
-      <div className="erp-pro-card">
-        <div className="erp-employee-hero">
+      <div className="erp-pro-card erp-profile-identity">
+        <div className="erp-employee-hero erp-profile-hero">
           <EmployeeProfilePhoto
             source="self"
             photoDocumentId={profile.photoDocumentId}
@@ -655,7 +665,7 @@ export default function ProfilePageContent(): React.ReactNode {
             variant="hero"
           />
           <div className="erp-employee-hero-copy min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <div className="erp-profile-hero-badges mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               {profile.employeeId ? (
                 <span className="erp-users-id-chip">{profile.employeeId}</span>
               ) : null}
@@ -690,26 +700,26 @@ export default function ProfilePageContent(): React.ReactNode {
             </p>
           </div>
         </div>
+
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-profile-meta">
+          <MetaStat label={t('common.department')} value={department} />
+          <MetaStat label={t('common.position')} value={position} />
+          <MetaStat
+            label={t('users.form.reportsTo')}
+            value={displayText(profile.reportsToName)}
+          />
+          <MetaStat label={t('profile.branch')} value={displayText(profile.branchName)} />
+          <MetaStat label={t('users.form.phone')} value={displayText(profile.phone)} />
+          <MetaStat
+            label={t('users.form.employeeType')}
+            value={
+              profile.employeeType ? t(`hr.employeeType.${profile.employeeType}`) : '—'
+            }
+          />
+        </div>
       </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar">
-        <MetaStat label={t('common.department')} value={department} />
-        <MetaStat label={t('common.position')} value={position} />
-        <MetaStat
-          label={t('users.form.reportsTo')}
-          value={displayText(profile.reportsToName)}
-        />
-        <MetaStat label={t('profile.branch')} value={displayText(profile.branchName)} />
-        <MetaStat label={t('users.form.phone')} value={displayText(profile.phone)} />
-        <MetaStat
-          label={t('users.form.employeeType')}
-          value={
-            profile.employeeType ? t(`hr.employeeType.${profile.employeeType}`) : '—'
-          }
-        />
-      </div>
-
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-profile-workspace">
         <div
           className="erp-profile-tabbar erp-employee-tabbar erp-employee-tabbar--scroll"
           role="tablist"

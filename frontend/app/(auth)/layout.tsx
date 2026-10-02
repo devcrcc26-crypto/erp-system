@@ -3,5 +3,5 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }): React.ReactNode {
-  return <div className="min-h-dvh w-full">{children}</div>;
+  return <div className="h-full w-full overflow-y-auto">{children}</div>;
 }

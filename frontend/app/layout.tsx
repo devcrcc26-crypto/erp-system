@@ -19,10 +19,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
-      <body className="flex min-h-screen flex-col" suppressHydrationWarning>
+      <body className="h-full overflow-hidden" suppressHydrationWarning>
         <AntDesignProvider>
           <QueryProvider>
-            <div className="flex min-h-screen flex-1 flex-col">{children}</div>
+            <div className="flex h-full flex-col">{children}</div>
           </QueryProvider>
         </AntDesignProvider>
       </body>

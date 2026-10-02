@@ -48,9 +48,8 @@ export default function MainContentHeader({
   }
 
   return (
-    <header className="erp-shell-header erp-header-v2 sticky top-0 z-30 shrink-0">
-      {/* v2: the header is a floating panel; the <header> itself is the page-coloured
-          strip around it, so scrolled content never shows through the gap. */}
+    <header className="erp-shell-header erp-header-v2 shrink-0">
+      {/* Flush with the shell; stays outside the scrolling content pane. */}
       <div className="erp-header-v2-panel">
         <div
           className="erp-shell-header-main"

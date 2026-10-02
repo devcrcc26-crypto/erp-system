@@ -434,7 +434,7 @@ export default function OvertimeSheetDetailPageContent({
                     className="erp-table-row-actions flex items-center justify-end"
                     onClick={(event) => event.stopPropagation()}
                   >
-                    <Dropdown menu={{ items }} trigger={['click']}>
+                    <Dropdown menu={{ items }} trigger={['click']} rootClassName="erp-row-actions-menu">
                       <Button
                         type="text"
                         size="small"

@@ -12,7 +12,8 @@ one data file, filtered by the signed-in user's permissions.
 | `sidebar-permissions.ts` | Maps session capabilities (`/auth/capabilities`) onto sidebar permission tokens. The only place backend flags meet navigation. |
 | `sidebar-model.ts` | Pure helpers: permission filtering, active-link resolution, module search, project-context groups. Unit-tested. |
 | `use-sidebar-data.ts` | Client hooks: permissions, badge counts, project workspace items, persisted preferences (mode, collapsed groups, favorites). |
-| `SidebarShell.tsx` | Outer shell: expanded/compact state, route sync, Cmd/Ctrl+K, docked panels, mobile drawer. |
+| `SidebarShell.tsx` | Outer shell: icon rail, pinned (docked) vs unpinned (flyout) panel, route sync, Cmd/Ctrl+K, mobile drawer. |
+| `sidebar-flyout.ts` | Hover-intent controller for the unpinned flyout, plus the pinned panel rules. Unit-tested. |
 | `SidebarRailItem.tsx` | A top-level entry: link, folder, or action. Folder vs link distinction and ARIA live here. |
 | `SidebarModulePanel.tsx` | A folder's contents, inline (expanded) or docked beside the rail (compact). |
 | `SidebarModuleGroup.tsx` | A collapsible group inside a panel (People, Time & Leave, …). |
@@ -26,40 +27,46 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
 
 ## How it behaves
 
-- **Look (v2, `.erp-sidebar-v2`):** the desktop rail and any docked panel are floating
-  white panels, inset 12px from the screen edges, 16px radius, soft shadow, no border.
-  The mobile drawer gets the same rounded, shadowed panel.
-- **Expanded (default, 272px):** icon + label rows, always on one line. Folders expand in place, one at a time.
-- **Compact (opt-in, 72px):** an icon-only rail. The caption stays in the accessible name
-  but is visually hidden; the full label is in a tooltip on hover *and* keyboard focus.
-  Badges sit as a small count on the icon. Folders open a docked 272px panel with a heading
-  and a close button.
-- The **Collapse sidebar / Expand sidebar** button always changes the layout. Expanded, it
-  is a square icon button beside the account card in the footer. Compact, it sits alone at
-  the bottom of the rail. Both have a hover/focus tooltip. It works on
-  whatever page you are on. The choice is saved per user in `localStorage`
-  (`sidebar:mode:<userId>`); the old shared `sidebar:mode` key is only read as a fallback.
-- A folder panel closes when you click its folder again, press its close button, press Esc
-  (docked), or navigate to a page outside it. Navigating into a folder's page opens it in
-  expanded mode.
+- **Look (v2, `.erp-sidebar-v2`):** light theme, docked flush to the left edge. Colours come
+  from the `--sb-*` variables in `sidebar.css`.
+- **Desktop = icon rail (72px) + module panel.** The caption stays in each item's accessible
+  name but is visually hidden; the full label is in a tooltip on hover *and* keyboard focus.
+  Badges sit as a small count on the icon. A folder's panel (272px) has a heading and a
+  close button. The labelled tree is only used in the mobile drawer.
+- **Unpinned (default): the panel is a flyout overlay.** It is absolutely positioned beside
+  the rail (`.sb-flyout`), so the page never reflows. Hover intent lives in
+  `sidebar-flyout.ts` (unit-tested): open after 150ms of hover; close 300ms after the pointer
+  leaves both the rail item and the panel; hovering another rail item while open switches the
+  content after 100ms with no close/reopen. A click (or Enter/Space) toggles it and makes it
+  stay open until a second click, Escape, a click outside, or navigation — this is the touch
+  path, since touch pointers never trigger hover. Opening by click/keyboard moves focus into
+  the panel; Escape returns focus to the rail item. Following a panel link closes it.
+- **Pinned: the panel is docked** beside the rail, follows the current page's module and
+  pushes the content right (the previous fixed layout). Pinning keeps whatever the flyout was
+  showing.
+- The **Pin sidebar** toggle (`aria-pressed`) sits at the bottom of the rail. The choice is
+  saved per user in `localStorage` under `erp.sidebar.pinned:<userId>` (`"1"` / `"0"`); there
+  is no backend store for UI preferences.
+- While a folder's panel is open its rail tooltip is suppressed, so it never covers panel
+  items. The current module's rail icon keeps its highlight in both modes, even while its
+  panel is open.
+- Panel open/close is a 160ms fade/slide, disabled under `prefers-reduced-motion`.
 - **New Request** (right under Dashboard) is a direct link to the request picker
   (`/approvals/new`). It stays highlighted on every `/approvals/new/*` form. Submitted
   requests are tracked under **Approvals**.
 - **My Profile** sits in the utility section (after Approvals) with no permission requirement,
   so every signed-in user can reach `/profile`.
-- **Footer (expanded and drawer):** utility links render as a row of icon buttons
+- **Footer (drawer):** utility links render as a row of icon buttons
   (`SidebarFooter.tsx`) with hover/focus tooltips and floating badges. The link flagged
   `accountCard: true` in the config (My Profile) renders as an account card below them,
   with the user's initials, name and email. In compact mode the same links stack vertically
   as icon buttons, the account becomes an initials avatar, and every item has a right-side
-  hover/focus tooltip. The compact rail uses a grey surface (`--sb-rail-bg`) with white icon
-  tiles, so docked panels read as a separate layer.
+  hover/focus tooltip.
 - **Limited navigation:** users without `hr.view` see only Dashboard, New Request, Approvals
   and My Profile. Users with `hr.view` get the full sidebar (see "How permissions control visibility").
 - **Project pages** (`/projects/:id/...`) show the project's workspace navigation inside the
   Project Management folder, above the portfolio groups (which start collapsed). There is no
-  separate project column. Widest case: 12px inset + 72px compact rail + 12px gap +
-  272px docked panel = 368px.
+  separate project column. Widest case (pinned): 72px rail + 272px docked panel = 344px.
 - **Mobile (< 1024px):** the expanded tree in a left drawer with a visible header and close button.
 
 ## Add a new module
@@ -168,9 +175,10 @@ The base rules earlier in `sidebar.css` (icon tiles, left accent bar) are overri
 the `.erp-sidebar-v2` block at the end of the file; v2 has no accent bar and no icon tiles.
 
 It applies to any `.sb-selectable` element with `aria-current="page"` (links) or
-`data-active="true"` (a **closed** folder containing the current page). Rail rows,
-compact tiles, panel items and project items all use it. When a folder is open, the
-highlight moves to the item inside it, so only one element is ever highlighted.
+`data-active="true"` (the rail folder containing the current page). Rail rows,
+compact tiles, panel items and project items all use it. The rail folder stays
+highlighted while its panel is open, so the current module is always visible on the
+rail; the page's own item inside the panel is highlighted too.
 
 The active link is the visible link whose `href` (or an `activePaths` entry) is the
 longest prefix of the current route. `/` matches only the dashboard. Do not add
@@ -204,8 +212,9 @@ the `--sb-*` variables on `.sb-theme, .sb-drawer` (the mobile drawer renders out
 - **Search:** has a real `<label>`, a visible focus ring, `aria-keyshortcuts`, and a polite live
   region announcing the result count.
 - **Mobile drawer:** keep the Ant Design header and close button visible.
-- **Keyboard:** everything reachable by Tab. Esc closes a docked panel and returns focus to its
-  folder. In search, ↓/↑ move through results and Enter opens the first match.
+- **Keyboard:** everything reachable by Tab. Enter/Space on a rail folder opens its panel
+  and moves focus into it; Esc closes the panel (docked or flyout) and returns focus to its
+  folder. A closed flyout is `inert`, so it is never in the tab order. In search, ↓/↑ move through results and Enter opens the first match.
 
 ## Search and favorites
 
