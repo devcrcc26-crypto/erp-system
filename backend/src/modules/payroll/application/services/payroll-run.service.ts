@@ -83,6 +83,7 @@ interface AttendanceSnapshot {
     isHoliday: boolean;
     isWeekend: boolean;
     wasPresent: boolean;
+    isHalfDay: boolean;
   }>;
 }
 
@@ -797,6 +798,7 @@ export class PayrollRunService {
                 isHoliday: true,
                 isWeekend: true,
                 wasPresent: true,
+                isHalfDay: true,
               },
             },
         },
@@ -830,58 +832,77 @@ export class PayrollRunService {
         monthStart,
         monthEnd,
       };
-      const leaveRows = await this.prisma.leaveRequest.findMany({
-        where: {
-          companyId: ctx.companyId,
-          employeeId: { in: attendanceEmployeeIds },
-          status: 'APPROVED',
-          deletedAt: null,
-          periods: {
-            some: {
-              startDate: { lte: leaveMonthEnd },
-              endDate: { gte: leaveMonthStart },
-            },
-          },
-        },
-        select: {
-          id: true,
-          employeeId: true,
-          leaveType: true,
-          periods: {
-            where: {
-              startDate: { lte: leaveMonthEnd },
-              endDate: { gte: leaveMonthStart },
-            },
-            select: {
-              startDate: true,
-              endDate: true,
-              days: true,
-            },
-          },
-        },
-      });
+      // Raw SQL so day_portion works before prisma generate refreshes the client.
+      const leaveRows = await this.prisma.$queryRawUnsafe<
+        Array<{
+          id: string;
+          employee_id: string;
+          leave_type: LeaveCoveredAbsencesResult['leaves'][number]['leaveType'];
+          start_date: Date;
+          end_date: Date;
+          days: number | string;
+          day_portion: string | null;
+        }>
+      >(
+        `
+        SELECT
+          lr.id,
+          lr.employee_id,
+          lr.leave_type,
+          lrp.start_date,
+          lrp.end_date,
+          lrp.days,
+          lrp.day_portion
+        FROM leave_request lr
+        INNER JOIN leave_request_period lrp ON lrp.leave_request_id = lr.id
+        WHERE lr.company_id = $1
+          AND lr.employee_id = ANY($2::text[])
+          AND lr.status = 'APPROVED'
+          AND lr.deleted_at IS NULL
+          AND lrp.start_date <= $3::date
+          AND lrp.end_date >= $4::date
+        `,
+        ctx.companyId,
+        attendanceEmployeeIds,
+        leaveMonthEnd,
+        leaveMonthStart,
+      );
 
       const leavesByEmployee = new Map<
         string,
         Array<{
           id: string;
-          leaveType: (typeof leaveRows)[number]['leaveType'];
-          periods: Array<{ startDate: Date; endDate: Date; days: number }>;
+          leaveType: LeaveCoveredAbsencesResult['leaves'][number]['leaveType'];
+          periods: Array<{
+            startDate: Date;
+            endDate: Date;
+            days: number;
+            dayPortion: 'FULL' | 'MORNING' | 'AFTERNOON';
+          }>;
         }>
       >();
       for (const row of leaveRows) {
-        const entry = {
-          id: row.id,
-          leaveType: row.leaveType,
-          periods: row.periods.map((period) => ({
-            startDate: period.startDate,
-            endDate: period.endDate,
-            days: Number(period.days),
-          })),
+        const period = {
+          startDate: new Date(row.start_date),
+          endDate: new Date(row.end_date),
+          days: Number(row.days),
+          dayPortion: (row.day_portion ?? 'FULL') as
+            | 'FULL'
+            | 'MORNING'
+            | 'AFTERNOON',
         };
-        const list = leavesByEmployee.get(row.employeeId) ?? [];
-        list.push(entry);
-        leavesByEmployee.set(row.employeeId, list);
+        const list = leavesByEmployee.get(row.employee_id) ?? [];
+        const existing = list.find((leave) => leave.id === row.id);
+        if (existing) {
+          existing.periods.push(period);
+        } else {
+          list.push({
+            id: row.id,
+            leaveType: row.leave_type,
+            periods: [period],
+          });
+          leavesByEmployee.set(row.employee_id, list);
+        }
       }
 
       for (const record of attendanceRecords) {
@@ -889,6 +910,9 @@ export class PayrollRunService {
           leaveByEmployee.set(record.employeeId, {
             coveredDays: 0,
             coveredDates: [],
+            leaveWeightsByDate: new Map(),
+            absenceWeightsByDate: new Map(),
+            restoredByDate: new Map(),
             leaves: [],
           });
           continue;
@@ -936,6 +960,9 @@ export class PayrollRunService {
       const leave = leaveByEmployee.get(employee.id) ?? {
         coveredDays: 0,
         coveredDates: [],
+        leaveWeightsByDate: new Map(),
+        absenceWeightsByDate: new Map(),
+        restoredByDate: new Map(),
         leaves: [],
       };
 
@@ -1044,15 +1071,26 @@ export class PayrollRunService {
       );
       absentInWindow = absentDates.length;
       const absentSet = new Set(absentDates);
-      leaveCoveredInWindow = leave.coveredDates.filter((d) =>
-        absentSet.has(d),
-      ).length;
+      // Restored days = min(absence weight, leave portion weight) per date in window.
+      leaveCoveredInWindow = 0;
+      const coveredInWindow: string[] = [];
+      for (const dateStr of leave.coveredDates) {
+        if (!absentSet.has(dateStr)) {
+          continue;
+        }
+        const restored =
+          leave.restoredByDate.get(dateStr) ??
+          Math.min(
+            leave.absenceWeightsByDate.get(dateStr) ?? 1,
+            leave.leaveWeightsByDate.get(dateStr) ?? 1,
+          );
+        leaveCoveredInWindow += restored;
+        coveredInWindow.push(dateStr);
+      }
+      leaveCoveredInWindow = this.round(leaveCoveredInWindow);
       if (leaveCoveredInWindow > 0) {
-        const coveredInWindow = leave.coveredDates.filter((d) =>
-          absentSet.has(d),
-        );
         noteParts.push(
-          `${leaveCoveredInWindow} absent working day(s) covered by approved leave: ${coveredInWindow.join(', ')}`,
+          `${leaveCoveredInWindow} absent day(s) covered by approved leave: ${coveredInWindow.join(', ')}`,
         );
       }
     } else if (attendance) {

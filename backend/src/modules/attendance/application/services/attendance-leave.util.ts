@@ -4,17 +4,29 @@ import type { LeaveType, Prisma, PrismaClient } from '@prisma/client';
 /** Prisma client or transaction client. */
 export type AttendanceLeavePrisma = PrismaClient | Prisma.TransactionClient;
 
+/** Mirrors Prisma LeaveDayPortion — local until client regenerate. */
+export type LeaveCoverageDayPortion = 'FULL' | 'MORNING' | 'AFTERNOON';
+
 export interface LeaveCoverageDailyLog {
   date: Date;
   isHoliday: boolean;
   isWeekend: boolean;
   wasPresent: boolean;
+  /** Schedule half-day (e.g. Saturday). Informational for payroll notes. */
+  isHalfDay?: boolean;
+  /**
+   * Payroll absence weight for this date. When omitted:
+   * non-working → 0, fully absent → 1, present → 0.
+   * Pass 0.5 for a partly attended day.
+   */
+  payrollAbsenceWeight?: number;
 }
 
 export interface LeaveCoveragePeriod {
   startDate: Date;
   endDate: Date;
   days: number;
+  dayPortion?: LeaveCoverageDayPortion;
 }
 
 export interface LeaveCoverageLeave {
@@ -24,12 +36,24 @@ export interface LeaveCoverageLeave {
 }
 
 export interface LeaveCoveredAbsencesResult {
+  /** Sum of restored days: Σ min(absenceWeight, leaveWeight). */
   coveredDays: number;
   coveredDates: string[];
+  /** Leave weight per covered date (after combining periods, before abs cap). */
+  leaveWeightsByDate: Map<string, number>;
+  /** Absence weight per covered date. */
+  absenceWeightsByDate: Map<string, number>;
+  /** Restored amount per covered date. */
+  restoredByDate: Map<string, number>;
   leaves: Array<{
     id: string;
     leaveType: LeaveType;
-    periods: Array<{ startDate: string; endDate: string; days: number }>;
+    periods: Array<{
+      startDate: string;
+      endDate: string;
+      days: number;
+      dayPortion: LeaveCoverageDayPortion;
+    }>;
   }>;
 }
 
@@ -65,28 +89,61 @@ function monthOverlapDateRange(
   };
 }
 
-function isScheduledWorkingDay(log: LeaveCoverageDailyLog): boolean {
-  return !log.isHoliday && !log.isWeekend;
+function roundDays(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
-function isAbsentWorkingDay(log: LeaveCoverageDailyLog): boolean {
-  return isScheduledWorkingDay(log) && !log.wasPresent;
+/**
+ * Leave coverage weight for one period on one calendar date.
+ * FULL covers the whole day (1), including Saturday half-day schedules.
+ * MORNING / AFTERNOON cover 0.5 each.
+ */
+export function leavePortionWeight(
+  dayPortion: LeaveCoverageDayPortion | null | undefined,
+): number {
+  if (dayPortion === 'MORNING' || dayPortion === 'AFTERNOON') {
+    return 0.5;
+  }
+  return 1;
 }
 
-function isDateCoveredByLeave(
+/**
+ * Payroll absence weight for a daily log.
+ * Fully missed scheduled day = 1 (including Saturday). Partly attended = 0.5.
+ */
+export function payrollAbsenceWeightForLog(
+  log: LeaveCoverageDailyLog,
+): number {
+  if (log.payrollAbsenceWeight != null) {
+    return log.payrollAbsenceWeight;
+  }
+  if (log.isHoliday || log.isWeekend) {
+    return 0;
+  }
+  if (!log.wasPresent) {
+    return 1;
+  }
+  return 0;
+}
+
+/**
+ * Combined leave weight for a date across all approved leave periods (capped at 1).
+ */
+export function combinedLeaveWeightForDate(
   dateStr: string,
-  leaves: LeaveCoverageLeave[],
-): boolean {
+  leaves: ReadonlyArray<LeaveCoverageLeave>,
+): number {
+  let total = 0;
   for (const leave of leaves) {
     for (const period of leave.periods) {
       const start = dateToYyyyMmDd(period.startDate);
       const end = dateToYyyyMmDd(period.endDate);
       if (dateStr >= start && dateStr <= end) {
-        return true;
+        total += leavePortionWeight(period.dayPortion);
       }
     }
   }
-  return false;
+  return roundDays(Math.min(1, total));
 }
 
 function mapLeavesForResponse(
@@ -99,13 +156,24 @@ function mapLeavesForResponse(
       startDate: dateToYyyyMmDd(period.startDate),
       endDate: dateToYyyyMmDd(period.endDate),
       days: period.days,
+      dayPortion: period.dayPortion ?? 'FULL',
     })),
   }));
 }
 
+const emptyCoverage = (): LeaveCoveredAbsencesResult => ({
+  coveredDays: 0,
+  coveredDates: [],
+  leaveWeightsByDate: new Map(),
+  absenceWeightsByDate: new Map(),
+  restoredByDate: new Map(),
+  leaves: [],
+});
+
 /**
- * Day-by-day leave coverage from daily logs and approved leave periods.
- * Present days never count; holidays and weekends never count.
+ * Day-by-day leave coverage for payroll (and attendance views).
+ * Restored per date = min(payroll absence weight, combined leave weight).
+ * Multiple leaves on the same date are combined, capped at 1 before the abs min.
  */
 export function computeLeaveCoveredAbsences(
   dailyLogs: LeaveCoverageDailyLog[],
@@ -115,28 +183,61 @@ export function computeLeaveCoveredAbsences(
 ): LeaveCoveredAbsencesResult {
   const { start: monthStart, end: monthEnd } = monthBoundsYyyyMmDd(month, year);
   const coveredDates: string[] = [];
+  const leaveWeightsByDate = new Map<string, number>();
+  const absenceWeightsByDate = new Map<string, number>();
+  const restoredByDate = new Map<string, number>();
+  let coveredDays = 0;
 
   for (const log of dailyLogs) {
     const dateStr = dateToYyyyMmDd(log.date);
     if (dateStr < monthStart || dateStr > monthEnd) {
       continue;
     }
-    if (!isAbsentWorkingDay(log)) {
+
+    const absenceWeight = payrollAbsenceWeightForLog(log);
+    if (absenceWeight <= 0) {
       continue;
     }
-    if (!isDateCoveredByLeave(dateStr, approvedLeaves)) {
+
+    const leaveWeight = combinedLeaveWeightForDate(dateStr, approvedLeaves);
+    if (leaveWeight <= 0) {
       continue;
     }
+
+    const restored = roundDays(Math.min(absenceWeight, leaveWeight));
+    if (restored <= 0) {
+      continue;
+    }
+
     coveredDates.push(dateStr);
+    absenceWeightsByDate.set(dateStr, absenceWeight);
+    leaveWeightsByDate.set(dateStr, leaveWeight);
+    restoredByDate.set(dateStr, restored);
+    coveredDays += restored;
   }
 
   coveredDates.sort();
 
   return {
-    coveredDays: coveredDates.length,
+    coveredDays: roundDays(coveredDays),
     coveredDates,
+    leaveWeightsByDate,
+    absenceWeightsByDate,
+    restoredByDate,
     leaves: mapLeavesForResponse(approvedLeaves),
   };
+}
+
+/**
+ * Net unpaid absence after leave restore for unit-test convenience.
+ */
+export function netAbsenceAfterLeave(
+  absenceWeight: number,
+  leaveWeight: number,
+): number {
+  return roundDays(
+    Math.max(0, absenceWeight - Math.min(absenceWeight, leaveWeight)),
+  );
 }
 
 async function fetchApprovedLeavesForMonth(
@@ -148,51 +249,67 @@ async function fetchApprovedLeavesForMonth(
 ): Promise<Map<string, LeaveCoverageLeave[]>> {
   const { monthStart, monthEnd } = monthOverlapDateRange(month, year);
 
-  const rows = await prisma.leaveRequest.findMany({
-    where: {
-      companyId,
-      employeeId: { in: employeeIds },
-      status: 'APPROVED',
-      deletedAt: null,
-      periods: {
-        some: {
-          startDate: { lte: monthEnd },
-          endDate: { gte: monthStart },
-        },
-      },
-    },
-    select: {
-      id: true,
-      employeeId: true,
-      leaveType: true,
-      periods: {
-        where: {
-          startDate: { lte: monthEnd },
-          endDate: { gte: monthStart },
-        },
-        select: {
-          startDate: true,
-          endDate: true,
-          days: true,
-        },
-      },
-    },
-  });
+  if (employeeIds.length === 0) {
+    return new Map();
+  }
+
+  // Raw SQL so day_portion is available even before prisma generate refreshes types.
+  const rows = await prisma.$queryRawUnsafe<
+    Array<{
+      id: string;
+      employee_id: string;
+      leave_type: LeaveType;
+      start_date: Date;
+      end_date: Date;
+      days: number | string;
+      day_portion: string | null;
+    }>
+  >(
+    `
+    SELECT
+      lr.id,
+      lr.employee_id,
+      lr.leave_type,
+      lrp.start_date,
+      lrp.end_date,
+      lrp.days,
+      lrp.day_portion
+    FROM leave_request lr
+    INNER JOIN leave_request_period lrp ON lrp.leave_request_id = lr.id
+    WHERE lr.company_id = $1
+      AND lr.employee_id = ANY($2::text[])
+      AND lr.status = 'APPROVED'
+      AND lr.deleted_at IS NULL
+      AND lrp.start_date <= $3::date
+      AND lrp.end_date >= $4::date
+    `,
+    companyId,
+    employeeIds,
+    monthEnd,
+    monthStart,
+  );
 
   const byEmployee = new Map<string, LeaveCoverageLeave[]>();
   for (const row of rows) {
-    const entry: LeaveCoverageLeave = {
-      id: row.id,
-      leaveType: row.leaveType,
-      periods: row.periods.map((period) => ({
-        startDate: period.startDate,
-        endDate: period.endDate,
-        days: Number(period.days),
-      })),
+    const dayPortion = (row.day_portion ?? 'FULL') as LeaveCoverageDayPortion;
+    const period = {
+      startDate: new Date(row.start_date),
+      endDate: new Date(row.end_date),
+      days: Number(row.days),
+      dayPortion,
     };
-    const list = byEmployee.get(row.employeeId) ?? [];
-    list.push(entry);
-    byEmployee.set(row.employeeId, list);
+    const list = byEmployee.get(row.employee_id) ?? [];
+    const existing = list.find((leave) => leave.id === row.id);
+    if (existing) {
+      existing.periods.push(period);
+    } else {
+      list.push({
+        id: row.id,
+        leaveType: row.leave_type,
+        periods: [period],
+      });
+      byEmployee.set(row.employee_id, list);
+    }
   }
 
   return byEmployee;
@@ -220,6 +337,7 @@ async function fetchDailyLogsByEmployee(
           isHoliday: true,
           isWeekend: true,
           wasPresent: true,
+          isHalfDay: true,
         },
       },
     },
@@ -231,12 +349,6 @@ async function fetchDailyLogsByEmployee(
   }
   return byEmployee;
 }
-
-const emptyCoverage = (): LeaveCoveredAbsencesResult => ({
-  coveredDays: 0,
-  coveredDates: [],
-  leaves: [],
-});
 
 /**
  * Leave-covered absences for one employee/month (payroll + attendance detail).
