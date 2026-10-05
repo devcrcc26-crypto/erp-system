@@ -4183,6 +4183,8 @@
         "MANUAL_OVERRIDE": "Manual override"
       },
       "list": {
+        "title": "Payroll runs",
+        "description": "Create monthly runs, review entries, and track approval through to payment.",
         "runNumber": "Run #",
         "period": "Period",
         "status": "Status",
@@ -4193,12 +4195,21 @@
         "flagged": "Flagged",
         "created": "Created",
         "newRun": "New run",
+        "newRunShort": "New",
         "statTotalRuns": "Total runs",
+        "statInProgress": "In progress",
+        "statPaid": "Paid",
+        "statFlagged": "Flagged",
         "statCurrentMonth": "This month",
         "statLastPaidNet": "Last paid net",
+        "summaryLine": "This month: {{current}} · Last paid net: {{lastPaid}} ETB",
         "noCurrentRun": "No run",
+        "searchPlaceholder": "Search by run # or period",
+        "loadError": "Failed to load payroll runs",
         "emptyTitle": "No payroll runs yet",
-        "emptyDescription": "Create a run for a month to generate entries from contracts, attendance, and overtime."
+        "emptyDescription": "Create a run for a month to generate entries from contracts, attendance, and overtime.",
+        "emptyFilteredTitle": "No runs match your filters",
+        "emptyFilteredDescription": "Try clearing search or status filters."
       },
       "create": {
         "title": "New payroll run",
@@ -4212,7 +4223,10 @@
       "detail": {
         "notFound": "Payroll run not found.",
         "flaggedBanner": "{{count}} flagged entries need review.",
-        "showFlaggedOnly": "Show flagged only"
+        "showFlaggedOnly": "Show flagged only",
+        "entriesTitle": "Entries",
+        "allRuns": "All payroll runs",
+        "createdOn": "Created {{date}}"
       },
       "summary": {
         "employees": "Employees",

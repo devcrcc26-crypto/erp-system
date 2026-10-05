@@ -4158,6 +4158,8 @@
         "MANUAL_OVERRIDE": "手工调整"
       },
       "list": {
+        "title": "薪资运行",
+        "description": "创建月度运行、复核明细，并跟踪审批至支付。",
         "runNumber": "运行编号",
         "period": "期间",
         "status": "状态",
@@ -4168,12 +4170,21 @@
         "flagged": "标记",
         "created": "创建",
         "newRun": "新建运行",
+        "newRunShort": "新建",
         "statTotalRuns": "运行总数",
+        "statInProgress": "进行中",
+        "statPaid": "已支付",
+        "statFlagged": "有标记",
         "statCurrentMonth": "本月",
         "statLastPaidNet": "最近实发",
+        "summaryLine": "本月：{{current}} · 最近实发：{{lastPaid}} 比尔",
         "noCurrentRun": "无运行",
+        "searchPlaceholder": "按运行编号或期间搜索",
+        "loadError": "加载薪资运行失败",
         "emptyTitle": "暂无薪资运行",
-        "emptyDescription": "选择月份创建运行，系统将根据合同、考勤和加班生成明细。"
+        "emptyDescription": "选择月份创建运行，系统将根据合同、考勤和加班生成明细。",
+        "emptyFilteredTitle": "没有符合筛选条件的运行",
+        "emptyFilteredDescription": "请尝试清除搜索或状态筛选。"
       },
       "create": {
         "title": "新建薪资运行",
@@ -4187,7 +4198,10 @@
       "detail": {
         "notFound": "未找到该薪资运行。",
         "flaggedBanner": "有 {{count}} 条标记记录需复核。",
-        "showFlaggedOnly": "仅显示标记"
+        "showFlaggedOnly": "仅显示标记",
+        "entriesTitle": "工资明细",
+        "allRuns": "全部薪资运行",
+        "createdOn": "创建于 {{date}}"
       },
       "summary": {
         "employees": "人数",

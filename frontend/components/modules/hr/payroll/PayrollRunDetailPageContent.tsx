@@ -1,18 +1,17 @@
 'use client';
 
+import './payroll-v2.css';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
   Button,
   Checkbox,
-  Descriptions,
   Form,
   Input,
   InputNumber,
   Modal,
   Select,
-  Space,
   Spin,
   Steps,
   Switch,
@@ -21,7 +20,21 @@ import {
   Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { FilePdfOutlined } from '@ant-design/icons';
+import {
+  DownloadOutlined,
+  FilePdfOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
+import {
+  ArrowLeft,
+  Banknote,
+  CalendarDays,
+  Landmark,
+  PiggyBank,
+  Receipt,
+  Users,
+  Wallet,
+} from 'lucide-react';
 import dayjs from 'dayjs';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -260,6 +273,19 @@ export default function PayrollRunDetailPageContent({
     });
   }, [run, search, departmentFilter, disciplineFilter, flaggedOnly]);
 
+  const hasEntryFilters =
+    Boolean(search.trim()) ||
+    departmentFilter !== undefined ||
+    disciplineFilter !== undefined ||
+    flaggedOnly;
+
+  function resetEntryFilters(): void {
+    setSearch('');
+    setDepartmentFilter(undefined);
+    setDisciplineFilter(undefined);
+    setFlaggedOnly(false);
+  }
+
   const totalsRow = useMemo(() => {
     if (filteredEntries.length === 0) {
       return null;
@@ -409,12 +435,12 @@ export default function PayrollRunDetailPageContent({
         width: 200,
         render: (_, row) => (
           <div className="min-w-[160px]">
-            <div className="font-medium">
+            <p className="erp-payroll-employee-name truncate">
               {row.employee.firstName} {row.employee.lastName}
-            </div>
-            <div className="erp-users-cell-sub text-xs">
+            </p>
+            <p className="erp-payroll-employee-id">
               {row.employee.employeeId ?? '—'}
-            </div>
+            </p>
           </div>
         ),
       },
@@ -512,7 +538,9 @@ export default function PayrollRunDetailPageContent({
             <span style={PAYROLL_MONEY_CELL_STYLE}>
               {formatPayrollMoney(total)}
               {topUp > 0 ? (
-                <span style={{ color: 'var(--color-teal-600)', marginLeft: 4 }}>*</span>
+                <Tooltip title={row.bonusTopUpReason || t('hr.payroll.entry.bonusTopUpAmount')}>
+                  <span className="erp-payroll-topup-mark">*</span>
+                </Tooltip>
               ) : null}
             </span>
           );
@@ -561,7 +589,7 @@ export default function PayrollRunDetailPageContent({
           flag === 'NONE' ? (
             '—'
           ) : (
-            <Tag color="warning" style={{ margin: 0 }}>
+            <Tag variant="filled" className="erp-payroll-flag">
               {t(payrollFlagLabelKey(flag))}
             </Tag>
           ),
@@ -602,67 +630,92 @@ export default function PayrollRunDetailPageContent({
       canEdit &&
       run &&
       (run.status === 'DRAFT' || run.status === 'REVIEWED');
+    const hasLinks = Boolean(
+      row.contractId || (row.attendanceRecordId && run) || row.overtimeSheetId,
+    );
     return (
-      <div className="grid gap-4 p-2 md:grid-cols-2">
-        <Descriptions size="small" column={1} bordered>
-          <Descriptions.Item label={t('hr.payroll.entry.department')}>
-            {row.employee.department?.name ?? '—'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('hr.payroll.entry.discipline')}>
-            {row.employee.engineeringDiscipline?.name ?? '—'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('hr.payroll.entry.bank')}>
-            {row.bankName ?? '—'}
-            {row.bankAccountNumber ? ` · ${row.bankAccountNumber}` : ''}
-          </Descriptions.Item>
+      <div className="erp-payroll-entry-detail">
+        <div className="erp-payroll-entry-facts">
           {row.flagNote ? (
-            <Descriptions.Item label={t('hr.payroll.entry.flagNote')}>
-              {row.flagNote}
-            </Descriptions.Item>
+            <div className="erp-payroll-fact erp-payroll-fact--wide erp-payroll-fact--warning">
+              <p className="erp-payroll-fact-label">{t('hr.payroll.entry.flagNote')}</p>
+              <p className="erp-payroll-fact-value">{row.flagNote}</p>
+            </div>
           ) : null}
+          <div className="erp-payroll-fact">
+            <p className="erp-payroll-fact-label">{t('hr.payroll.entry.department')}</p>
+            <p className="erp-payroll-fact-value">{row.employee.department?.name ?? '—'}</p>
+          </div>
+          <div className="erp-payroll-fact">
+            <p className="erp-payroll-fact-label">{t('hr.payroll.entry.discipline')}</p>
+            <p className="erp-payroll-fact-value">
+              {row.employee.engineeringDiscipline?.name ?? '—'}
+            </p>
+          </div>
+          <div className="erp-payroll-fact erp-payroll-fact--wide">
+            <p className="erp-payroll-fact-label">{t('hr.payroll.entry.bank')}</p>
+            <p className="erp-payroll-fact-value">
+              {row.bankName ?? '—'}
+              {row.bankAccountNumber ? ` · ${row.bankAccountNumber}` : ''}
+            </p>
+          </div>
           {row.notes ? (
-            <Descriptions.Item label={t('hr.payroll.entry.notes')}>
-              {row.notes}
-            </Descriptions.Item>
+            <div className="erp-payroll-fact erp-payroll-fact--wide">
+              <p className="erp-payroll-fact-label">{t('hr.payroll.entry.notes')}</p>
+              <p className="erp-payroll-fact-value">{row.notes}</p>
+            </div>
           ) : null}
-        </Descriptions>
-        <div>
-          <p className="mb-2 text-sm font-medium">{t('hr.payroll.entry.salaryPeriods')}</p>
+        </div>
+        <div className="erp-payroll-entry-side">
+          <p className="erp-payroll-fact-label">{t('hr.payroll.entry.salaryPeriods')}</p>
           {row.salaryPeriods.length === 0 ? (
-            <p className="text-sm text-[var(--color-text-tertiary)]">—</p>
+            <p className="erp-payroll-fact-value m-0">—</p>
           ) : (
-            <ul className="m-0 list-none space-y-1 p-0 text-sm">
+            <ul className="erp-payroll-entry-periods">
               {row.salaryPeriods.map((period) => (
                 <li key={period.id}>
-                  {dayjs(period.periodStart).format('YYYY-MM-DD')} –{' '}
-                  {dayjs(period.periodEnd).format('YYYY-MM-DD')}:{' '}
-                  {parsePayrollMoney(period.days)} {t('hr.payroll.entry.days')} ·{' '}
-                  {formatPayrollMoney(period.earnedSalary, { emptyZero: false })} ETB
+                  <span>
+                    {dayjs(period.periodStart).format('YYYY-MM-DD')} –{' '}
+                    {dayjs(period.periodEnd).format('YYYY-MM-DD')} ·{' '}
+                    {parsePayrollMoney(period.days)} {t('hr.payroll.entry.days')}
+                  </span>
+                  <span>
+                    {formatPayrollMoney(period.earnedSalary, { emptyZero: false })} ETB
+                  </span>
                 </li>
               ))}
             </ul>
           )}
-          <Space className="mt-3" wrap>
-            {row.contractId ? (
-              <Link href={`/hr/employee-contract/${row.contractId}`}>
-                {t('hr.payroll.entry.linkContract')}
-              </Link>
-            ) : null}
-            {row.attendanceRecordId && run ? (
-              <Link href={`/hr/attendance/review/${run.month}/${run.year}`}>
-                {t('hr.payroll.entry.linkAttendance')}
-              </Link>
-            ) : null}
-            {row.overtimeSheetId ? (
-              <Link href={`/hr/overtime/${row.overtimeSheetId}`}>
-                {t('hr.payroll.entry.linkOvertime')}
-              </Link>
-            ) : null}
-          </Space>
+          {hasLinks ? (
+            <div className="erp-payroll-entry-links">
+              {row.contractId ? (
+                <Link
+                  href={`/hr/employee-contract/${row.contractId}`}
+                  className="erp-payroll-entry-link"
+                >
+                  {t('hr.payroll.entry.linkContract')}
+                </Link>
+              ) : null}
+              {row.attendanceRecordId && run ? (
+                <Link
+                  href={`/hr/attendance/review/${run.month}/${run.year}`}
+                  className="erp-payroll-entry-link"
+                >
+                  {t('hr.payroll.entry.linkAttendance')}
+                </Link>
+              ) : null}
+              {row.overtimeSheetId ? (
+                <Link
+                  href={`/hr/overtime/${row.overtimeSheetId}`}
+                  className="erp-payroll-entry-link"
+                >
+                  {t('hr.payroll.entry.linkOvertime')}
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
           {canEditBonus ? (
             <Button
-              type="link"
-              className="mt-2 px-0"
               onClick={() => {
                 setBonusEntry(row);
                 bonusForm.setFieldsValue({
@@ -723,11 +776,17 @@ export default function PayrollRunDetailPageContent({
 
   function renderActionButtons(status: PayrollRunStatus): React.ReactNode {
     const buttons: React.ReactNode[] = [];
-    const add = (key: string, label: string, action: ConfirmAction, danger?: boolean) => {
+    const add = (
+      key: string,
+      label: string,
+      action: ConfirmAction,
+      variant: 'primary' | 'default' | 'danger' = 'default',
+    ) => {
       buttons.push(
         <Button
           key={key}
-          danger={danger}
+          type={variant === 'primary' ? 'primary' : 'default'}
+          danger={variant === 'danger'}
           onClick={() => {
             if (action === 'submit' && totalFlagged > 0) {
               setSubmitFlagCounts(
@@ -750,6 +809,7 @@ export default function PayrollRunDetailPageContent({
       buttons.push(
         <Button
           key="export"
+          icon={<DownloadOutlined />}
           loading={exporting}
           onClick={() => {
             void (async () => {
@@ -773,30 +833,31 @@ export default function PayrollRunDetailPageContent({
       );
     }
 
+    // Secondary actions first, the next workflow step last as the primary button.
     if (status === 'DRAFT' && canCreate) {
+      add('cancel', t('hr.payroll.actions.cancel'), 'cancel', 'danger');
       add('recalc', t('hr.payroll.actions.recalculate'), 'recalculate');
-      add('review', t('hr.payroll.actions.markReviewed'), 'markReviewed');
-      add('cancel', t('hr.payroll.actions.cancel'), 'cancel', true);
+      add('review', t('hr.payroll.actions.markReviewed'), 'markReviewed', 'primary');
     }
     if (status === 'REVIEWED' && canCreate) {
+      add('cancel', t('hr.payroll.actions.cancel'), 'cancel', 'danger');
       add('recalc', t('hr.payroll.actions.recalculate'), 'recalculate');
-      add('submit', t('hr.payroll.actions.submit'), 'submit');
-      add('cancel', t('hr.payroll.actions.cancel'), 'cancel', true);
+      add('submit', t('hr.payroll.actions.submit'), 'submit', 'primary');
     }
     if (status === 'SUBMITTED' && (canApprove || isSysAdmin)) {
-      add('approve', t('hr.payroll.actions.approve'), 'approve');
+      add('approve', t('hr.payroll.actions.approve'), 'approve', 'primary');
     }
     if (status === 'APPROVED' && (canApprove || isSysAdmin)) {
-      add('gm', t('hr.payroll.actions.gmApprove'), 'gmApprove');
+      add('gm', t('hr.payroll.actions.gmApprove'), 'gmApprove', 'primary');
     }
     if (status === 'GM_APPROVED' && canCreate) {
-      add('paid', t('hr.payroll.actions.markPaid'), 'markPaid');
+      add('paid', t('hr.payroll.actions.markPaid'), 'markPaid', 'primary');
     }
 
     if (buttons.length === 0) {
       return null;
     }
-    return <Space wrap>{buttons}</Space>;
+    return <div className="erp-payroll-hero-actions">{buttons}</div>;
   }
 
   const confirmLoading =
@@ -810,7 +871,7 @@ export default function PayrollRunDetailPageContent({
 
   if (!canAccess) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-payroll-page">
+      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -818,7 +879,7 @@ export default function PayrollRunDetailPageContent({
 
   if (detailQuery.isLoading && !run) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-payroll-page">
+      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -831,7 +892,7 @@ export default function PayrollRunDetailPageContent({
     (detailQuery.error.status === 403 || detailQuery.error.status === 404)
   ) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-payroll-page">
+      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -839,7 +900,7 @@ export default function PayrollRunDetailPageContent({
 
   if (!run) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-payroll-page">
+      <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2">
         <Alert type="error" showIcon title={t('hr.payroll.detail.notFound')} />
       </div>
     );
@@ -848,7 +909,7 @@ export default function PayrollRunDetailPageContent({
   const confirmMeta = confirmAction ? confirmCopy(confirmAction) : null;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-payroll-page flex flex-col gap-4">
+    <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2 erp-payroll-detail">
       <ConfirmDialog
         open={releaseOpen}
         title={t('hr.payroll.payslips.releaseTitle')}
@@ -896,24 +957,28 @@ export default function PayrollRunDetailPageContent({
         okButtonProps={{
           disabled: totalFlagged > 0 && !submitAcknowledge,
         }}
+        okText={t('hr.payroll.actions.submit')}
         confirmLoading={submitMutation.isPending}
+        className="erp-payroll-modal"
       >
-        <p>{t('hr.payroll.confirm.submitDescription')}</p>
+        <p className="erp-payroll-modal-hint">{t('hr.payroll.confirm.submitDescription')}</p>
         {submitFlagCounts && Object.keys(submitFlagCounts).length > 0 ? (
-          <ul className="mb-3 list-disc pl-5 text-sm">
+          <ul className="erp-payroll-flag-list">
             {Object.entries(submitFlagCounts).map(([flag, count]) => (
               <li key={flag}>
-                {t(payrollFlagLabelKey(flag as PayrollEntryFlag))}: {count}
+                <span>{t(payrollFlagLabelKey(flag as PayrollEntryFlag))}</span>
+                <strong>{count}</strong>
               </li>
             ))}
           </ul>
         ) : totalFlagged > 0 && flagCounts ? (
-          <ul className="mb-3 list-disc pl-5 text-sm">
+          <ul className="erp-payroll-flag-list">
             {Object.entries(flagCounts)
-              .filter(([k]) => k !== 'NONE')
+              .filter(([k, count]) => k !== 'NONE' && count > 0)
               .map(([flag, count]) => (
                 <li key={flag}>
-                  {t(payrollFlagLabelKey(flag as PayrollEntryFlag))}: {count}
+                  <span>{t(payrollFlagLabelKey(flag as PayrollEntryFlag))}</span>
+                  <strong>{count}</strong>
                 </li>
               ))}
           </ul>
@@ -938,6 +1003,7 @@ export default function PayrollRunDetailPageContent({
         onOk={() => void saveBonusTopUp()}
         confirmLoading={updateEntryMutation.isPending}
         destroyOnHidden
+        className="erp-payroll-modal"
       >
         <Form form={bonusForm} layout="vertical">
           <Form.Item
@@ -957,178 +1023,238 @@ export default function PayrollRunDetailPageContent({
         </Form>
       </Modal>
 
-      <div className="erp-pro-card p-4">
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="m-0 text-lg font-semibold">{run.runNumber}</h2>
+      <section className="erp-pro-card erp-payroll-hero">
+        <div className="erp-payroll-hero-top">
+          <div className="min-w-0">
+            <Link href="/hr/payroll" className="erp-payroll-back">
+              <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+              {t('hr.payroll.detail.allRuns')}
+            </Link>
+            <div className="erp-payroll-hero-title-row">
+              <h2 className="erp-payroll-hero-title">{run.runNumber}</h2>
               <Tag
-                bordered={false}
-                style={{
-                  margin: 0,
-                  borderRadius: 999,
-                  fontWeight: 500,
-                  ...payrollStatusTagStyle(run.status),
-                }}
+                variant="filled"
+                className="erp-payroll-status"
+                style={payrollStatusTagStyle(run.status)}
               >
                 {t(payrollStatusLabelKey(run.status))}
               </Tag>
             </div>
-            <p className="erp-users-cell-sub m-0 mt-1">
-              {formatPayrollPeriod(run.month, run.year)}
+            <p className="erp-payroll-hero-meta">
+              <span>
+                <CalendarDays size={14} strokeWidth={2} aria-hidden />
+                {formatPayrollPeriod(run.month, run.year)}
+              </span>
+              <span>
+                <Users size={14} strokeWidth={2} aria-hidden />
+                {t('hr.payroll.summary.employees')}: {run.totalEmployees}
+              </span>
+              <span>
+                {t('hr.payroll.detail.createdOn', {
+                  date: dayjs(run.createdAt).format('YYYY-MM-DD'),
+                })}
+              </span>
             </p>
           </div>
           {renderActionButtons(run.status)}
         </div>
 
-        <Steps
-          size="small"
-          current={stepIndex}
-          items={[
-            {
-              title: t('hr.payroll.steps.draft'),
-            },
-            {
-              title: t('hr.payroll.steps.reviewed'),
-            },
-            {
-              title: t('hr.payroll.steps.submitted'),
-              description: run.submittedAt
-                ? `${resolveUserLabel(run.submittedBy, userDirectory)} · ${dayjs(run.submittedAt).format('YYYY-MM-DD HH:mm')}`
-                : undefined,
-            },
-            {
-              title: t('hr.payroll.steps.hrApproved'),
-              description: run.approvedAt
-                ? `${resolveUserLabel(run.approvedBy, userDirectory)} · ${dayjs(run.approvedAt).format('YYYY-MM-DD HH:mm')}`
-                : undefined,
-            },
-            {
-              title: t('hr.payroll.steps.gmApproved'),
-              description: run.gmApprovedAt
-                ? `${resolveUserLabel(run.gmApprovedBy, userDirectory)} · ${dayjs(run.gmApprovedAt).format('YYYY-MM-DD HH:mm')}`
-                : undefined,
-            },
-            {
-              title: t('hr.payroll.steps.paid'),
-              description: run.paidAt
-                ? `${resolveUserLabel(run.paidBy, userDirectory)} · ${dayjs(run.paidAt).format('YYYY-MM-DD HH:mm')}`
-                : undefined,
-            },
-          ]}
-        />
-      </div>
+        <div className="erp-payroll-steps">
+          <Steps
+            size="small"
+            current={stepIndex}
+            status={
+              run.status === 'CANCELLED'
+                ? 'error'
+                : run.status === 'PAID'
+                  ? 'finish'
+                  : 'process'
+            }
+            items={[
+              {
+                title: t('hr.payroll.steps.draft'),
+              },
+              {
+                title: t('hr.payroll.steps.reviewed'),
+              },
+              {
+                title: t('hr.payroll.steps.submitted'),
+                description: run.submittedAt
+                  ? `${resolveUserLabel(run.submittedBy, userDirectory)} · ${dayjs(run.submittedAt).format('YYYY-MM-DD HH:mm')}`
+                  : undefined,
+              },
+              {
+                title: t('hr.payroll.steps.hrApproved'),
+                description: run.approvedAt
+                  ? `${resolveUserLabel(run.approvedBy, userDirectory)} · ${dayjs(run.approvedAt).format('YYYY-MM-DD HH:mm')}`
+                  : undefined,
+              },
+              {
+                title: t('hr.payroll.steps.gmApproved'),
+                description: run.gmApprovedAt
+                  ? `${resolveUserLabel(run.gmApprovedBy, userDirectory)} · ${dayjs(run.gmApprovedAt).format('YYYY-MM-DD HH:mm')}`
+                  : undefined,
+              },
+              {
+                title: t('hr.payroll.steps.paid'),
+                description: run.paidAt
+                  ? `${resolveUserLabel(run.paidBy, userDirectory)} · ${dayjs(run.paidAt).format('YYYY-MM-DD HH:mm')}`
+                  : undefined,
+              },
+            ]}
+          />
+        </div>
+      </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="erp-payroll-summary">
         {[
           {
+            key: 'employees',
             label: t('hr.payroll.summary.employees'),
             value: String(run.totalEmployees),
+            icon: <Users size={15} strokeWidth={2} />,
+            money: false,
           },
           {
+            key: 'gross',
             label: t('hr.payroll.summary.totalGross'),
-            value: `${formatPayrollMoney(run.totalGross, { emptyZero: false })} ETB`,
+            value: formatPayrollMoney(run.totalGross, { emptyZero: false }),
+            icon: <Wallet size={15} strokeWidth={2} />,
+            money: true,
           },
           {
+            key: 'pensionEmp',
             label: t('hr.payroll.summary.pensionEmp'),
-            value: `${formatPayrollMoney(run.totalPensionEmp, { emptyZero: false })} ETB`,
+            value: formatPayrollMoney(run.totalPensionEmp, { emptyZero: false }),
+            icon: <PiggyBank size={15} strokeWidth={2} />,
+            money: true,
           },
           {
+            key: 'pensionEmr',
             label: t('hr.payroll.summary.pensionEmr'),
-            value: `${formatPayrollMoney(run.totalPensionEmr, { emptyZero: false })} ETB`,
+            value: formatPayrollMoney(run.totalPensionEmr, { emptyZero: false }),
+            icon: <Landmark size={15} strokeWidth={2} />,
+            money: true,
           },
           {
+            key: 'tax',
             label: t('hr.payroll.summary.totalTax'),
-            value: `${formatPayrollMoney(run.totalTax, { emptyZero: false })} ETB`,
+            value: formatPayrollMoney(run.totalTax, { emptyZero: false }),
+            icon: <Receipt size={15} strokeWidth={2} />,
+            money: true,
           },
           {
+            key: 'net',
             label: t('hr.payroll.summary.totalNet'),
-            value: `${formatPayrollMoney(run.totalNetPay, { emptyZero: false })} ETB`,
+            value: formatPayrollMoney(run.totalNetPay, { emptyZero: false }),
+            icon: <Banknote size={15} strokeWidth={2} />,
+            money: true,
           },
         ].map((card) => (
-          <div key={card.label} className="erp-pro-card p-3">
-            <p className="erp-users-stat-label m-0">{card.label}</p>
-            <p className="erp-users-stat-value m-0 mt-1 text-base">{card.value}</p>
+          <div
+            key={card.key}
+            className={`erp-payroll-summary-tile${card.key === 'net' ? ' erp-payroll-summary-tile--net' : ''}`}
+          >
+            <p className="erp-payroll-summary-label">
+              <span className="erp-payroll-summary-chip" aria-hidden>
+                {card.icon}
+              </span>
+              <span className="truncate">{card.label}</span>
+            </p>
+            <p className="erp-payroll-summary-value" title={card.value}>
+              {card.value}
+              {card.money ? <span className="erp-payroll-summary-unit">ETB</span> : null}
+            </p>
           </div>
         ))}
-      </div>
+      </section>
 
       {canCreate && (run.status === 'GM_APPROVED' || run.status === 'PAID') ? (
-        <div className="erp-pro-card p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="m-0 text-base font-semibold">
-                {t('hr.payroll.payslips.title')}
-              </h3>
-              <p className="erp-users-cell-sub m-0 mt-1">
-                {t('hr.payroll.payslips.generated')}: {payslipCounts.generated}
-                {' · '}
-                {t('hr.payroll.payslips.released')}: {payslipCounts.released}
-                {' · '}
-                {t('hr.payroll.payslips.downloaded')}: {payslipCounts.downloaded}
-              </p>
+        <section className="erp-pro-card erp-payroll-payslips">
+          <div>
+            <h3 className="erp-payroll-payslips-title">
+              {t('hr.payroll.payslips.title')}
+            </h3>
+            <div className="erp-payroll-payslips-counts">
+              <span className="erp-payroll-count-chip">
+                {t('hr.payroll.payslips.generated')}
+                <strong>{payslipCounts.generated}</strong>
+              </span>
+              <span className="erp-payroll-count-chip">
+                {t('hr.payroll.payslips.released')}
+                <strong>{payslipCounts.released}</strong>
+              </span>
+              <span className="erp-payroll-count-chip">
+                {t('hr.payroll.payslips.downloaded')}
+                <strong>{payslipCounts.downloaded}</strong>
+              </span>
             </div>
-            <Space wrap>
-              <Button
-                loading={generatePayslipsMutation.isPending}
-                onClick={() => {
-                  void (async () => {
-                    try {
-                      const result = await generatePayslipsMutation.mutateAsync();
-                      messageApi.success(
-                        t('hr.payroll.payslips.generateSuccess', {
-                          created: result.created,
-                          updated: result.updated,
-                          skipped: result.skipped,
-                        }),
-                      );
-                    } catch (error) {
-                      notifyApiError(
-                        error,
-                        t('hr.payroll.payslips.generate'),
-                        messageApi,
-                        t,
-                      );
-                    }
-                  })();
-                }}
-              >
-                {t('hr.payroll.payslips.generate')}
-              </Button>
-              <Button onClick={() => setReleaseOpen(true)}>
-                {t('hr.payroll.payslips.release')}
-              </Button>
-              <Button
-                loading={zipping}
-                onClick={() => {
-                  void (async () => {
-                    const mm = String(run.month).padStart(2, '0');
-                    const safeRun = run.runNumber.replace(/[^\w.-]+/g, '_');
-                    setZipping(true);
-                    try {
-                      await downloadPayslipZip(
-                        run.id,
-                        `Payslips_${run.year}_${mm}_${safeRun}.zip`,
-                      );
-                      messageApi.success(t('hr.payroll.payslips.zipSuccess'));
-                    } catch (error) {
-                      notifyApiError(
-                        error,
-                        t('hr.payroll.payslips.downloadZip'),
-                        messageApi,
-                        t,
-                      );
-                    } finally {
-                      setZipping(false);
-                    }
-                  })();
-                }}
-              >
-                {t('hr.payroll.payslips.downloadZip')}
-              </Button>
-            </Space>
           </div>
-        </div>
+          <div className="erp-payroll-payslips-actions">
+            <Button
+              loading={generatePayslipsMutation.isPending}
+              onClick={() => {
+                void (async () => {
+                  try {
+                    const result = await generatePayslipsMutation.mutateAsync();
+                    messageApi.success(
+                      t('hr.payroll.payslips.generateSuccess', {
+                        created: result.created,
+                        updated: result.updated,
+                        skipped: result.skipped,
+                      }),
+                    );
+                  } catch (error) {
+                    notifyApiError(
+                      error,
+                      t('hr.payroll.payslips.generate'),
+                      messageApi,
+                      t,
+                    );
+                  }
+                })();
+              }}
+            >
+              {t('hr.payroll.payslips.generate')}
+            </Button>
+            <Button
+              type="primary"
+              disabled={payslipCounts.pendingRelease === 0}
+              onClick={() => setReleaseOpen(true)}
+            >
+              {t('hr.payroll.payslips.release')}
+            </Button>
+            <Button
+              icon={<DownloadOutlined />}
+              loading={zipping}
+              onClick={() => {
+                void (async () => {
+                  const mm = String(run.month).padStart(2, '0');
+                  const safeRun = run.runNumber.replace(/[^\w.-]+/g, '_');
+                  setZipping(true);
+                  try {
+                    await downloadPayslipZip(
+                      run.id,
+                      `Payslips_${run.year}_${mm}_${safeRun}.zip`,
+                    );
+                    messageApi.success(t('hr.payroll.payslips.zipSuccess'));
+                  } catch (error) {
+                    notifyApiError(
+                      error,
+                      t('hr.payroll.payslips.downloadZip'),
+                      messageApi,
+                      t,
+                    );
+                  } finally {
+                    setZipping(false);
+                  }
+                })();
+              }}
+            >
+              {t('hr.payroll.payslips.downloadZip')}
+            </Button>
+          </div>
+        </section>
       ) : null}
 
       {totalFlagged > 0 ? (
@@ -1137,25 +1263,40 @@ export default function PayrollRunDetailPageContent({
           showIcon
           title={t('hr.payroll.detail.flaggedBanner', { count: totalFlagged })}
           action={
-            <Button size="small" onClick={() => setFlaggedOnly(true)}>
-              {t('hr.payroll.detail.showFlaggedOnly')}
-            </Button>
+            flaggedOnly ? undefined : (
+              <Button size="small" onClick={() => setFlaggedOnly(true)}>
+                {t('hr.payroll.detail.showFlaggedOnly')}
+              </Button>
+            )
           }
         />
       ) : null}
 
-      <div className="erp-pro-card p-3">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Input.Search
+      <section className="erp-pro-card erp-payroll-entries overflow-hidden">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title m-0">
+              {t('hr.payroll.detail.entriesTitle')}
+            </h3>
+            <span className="erp-users-count-pill">
+              {filteredEntries.length.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
             allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
             placeholder={t('hr.payroll.entry.searchPlaceholder')}
-            onSearch={setSearch}
-            style={{ maxWidth: 240 }}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
           <Select
             allowClear
             placeholder={t('hr.payroll.entry.filterDepartment')}
-            style={{ minWidth: 160 }}
+            className="erp-users-filter-select"
             options={departments.map((d) => ({ value: d, label: d }))}
             value={departmentFilter}
             onChange={setDepartmentFilter}
@@ -1163,15 +1304,20 @@ export default function PayrollRunDetailPageContent({
           <Select
             allowClear
             placeholder={t('hr.payroll.entry.filterDiscipline')}
-            style={{ minWidth: 160 }}
+            className="erp-users-filter-select"
             options={disciplines.map((d) => ({ value: d, label: d }))}
             value={disciplineFilter}
             onChange={setDisciplineFilter}
           />
-          <span className="flex items-center gap-2 text-sm">
+          <label className="erp-payroll-switch">
             <Switch size="small" checked={flaggedOnly} onChange={setFlaggedOnly} />
             {t('hr.payroll.entry.flaggedOnly')}
-          </span>
+          </label>
+          {hasEntryFilters ? (
+            <Button type="link" onClick={resetEntryFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
         </div>
 
         <Table<PayrollEntryDetail>
@@ -1189,48 +1335,49 @@ export default function PayrollRunDetailPageContent({
             totalsRow ? (
               <Table.Summary fixed="bottom">
                 <Table.Summary.Row>
-                  <Table.Summary.Cell index={0}>
+                  <Table.Summary.Cell index={0} />
+                  <Table.Summary.Cell index={1}>
                     <strong>{t('hr.payroll.entry.totals')}</strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={1} />
-                  <Table.Summary.Cell index={2} align="right">
+                  <Table.Summary.Cell index={2} />
+                  <Table.Summary.Cell index={3} align="right">
                     <MoneyCell value={totalsRow.basicSalary} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={3} align="right">
+                  <Table.Summary.Cell index={4} align="right">
                     <MoneyCell value={totalsRow.earnedSalary} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={4} align="right">
+                  <Table.Summary.Cell index={5} align="right">
                     <MoneyCell value={totalsRow.totalOtPay} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={5} align="right">
+                  <Table.Summary.Cell index={6} align="right">
                     <MoneyCell value={totalsRow.transport} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={6} align="right">
+                  <Table.Summary.Cell index={7} align="right">
                     <MoneyCell value={totalsRow.bonus} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={7} align="right">
+                  <Table.Summary.Cell index={8} align="right">
                     <MoneyCell value={totalsRow.gross} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={8} align="right">
+                  <Table.Summary.Cell index={9} align="right">
                     <MoneyCell value={totalsRow.taxable} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={9} align="right">
+                  <Table.Summary.Cell index={10} align="right">
                     <MoneyCell value={totalsRow.pension} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={10} align="right">
+                  <Table.Summary.Cell index={11} align="right">
                     <MoneyCell value={totalsRow.tax} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={11} align="right">
+                  <Table.Summary.Cell index={12} align="right">
                     <MoneyCell value={totalsRow.net} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={12} />
-                  {showPayslipColumn ? <Table.Summary.Cell index={13} /> : null}
+                  <Table.Summary.Cell index={13} />
+                  {showPayslipColumn ? <Table.Summary.Cell index={14} /> : null}
                 </Table.Summary.Row>
               </Table.Summary>
             ) : null
           }
         />
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,8 +1,11 @@
 'use client';
 
+import './payroll-v2.css';
 import { useState } from 'react';
-import { Button, Drawer, Empty, Spin, Table, Tag } from 'antd';
+import { Button, Drawer, Spin, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { DownloadOutlined } from '@ant-design/icons';
+import { ReceiptText } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -26,14 +29,9 @@ function BreakdownRow({
   strong?: boolean;
 }): React.ReactNode {
   return (
-    <div className="flex items-start justify-between gap-4 py-1 text-sm">
-      <span className={strong ? 'font-medium' : undefined}>{label}</span>
-      <span
-        className="shrink-0 text-right"
-        style={{ fontVariantNumeric: 'tabular-nums', fontWeight: strong ? 600 : undefined }}
-      >
-        {amount}
-      </span>
+    <div className={`erp-payslip-row${strong ? ' erp-payslip-row--total' : ''}`}>
+      <span>{label}</span>
+      <span>{amount}</span>
     </div>
   );
 }
@@ -82,43 +80,62 @@ export default function EmployeePayslipsSection({
 
   const rows = query.data ?? [];
   if (rows.length === 0) {
-    return <Empty description={t('profile.payroll.empty')} />;
+    return (
+      <div className="erp-payslips-v2">
+        <div className="erp-payslips-empty">
+          <span className="erp-payslips-empty-icon" aria-hidden>
+            <ReceiptText size={22} strokeWidth={1.75} />
+          </span>
+          <p className="m-0">{t('profile.payroll.empty')}</p>
+        </div>
+      </div>
+    );
   }
 
   const columns: ColumnsType<EmployeePayslip> = [
     {
       title: t('profile.payroll.period'),
       key: 'period',
-      render: (_, row) => formatPayrollPeriod(row.month, row.year),
+      render: (_, row) => (
+        <span className="erp-payslip-period">{formatPayrollPeriod(row.month, row.year)}</span>
+      ),
     },
     {
       title: t('profile.payroll.netPay'),
       key: 'net',
       align: 'right',
-      render: (_, row) =>
-        `${formatPayrollMoney(row.netPay, { emptyZero: false })} ETB`,
+      render: (_, row) => (
+        <span className="erp-payslip-net">
+          {formatPayrollMoney(row.netPay, { emptyZero: false })}
+          <span>ETB</span>
+        </span>
+      ),
     },
     {
       title: t('profile.payroll.released'),
       key: 'released',
       render: (_, row) =>
         row.released && row.releasedAt ? (
-          dayjs(row.releasedAt).format('YYYY-MM-DD')
+          <span className="erp-payslip-state">
+            {dayjs(row.releasedAt).format('YYYY-MM-DD')}
+          </span>
         ) : (
-          <Tag>{t('profile.payroll.notReleased')}</Tag>
+          <span className="erp-payslip-state erp-payslip-state--pending">
+            {t('profile.payroll.notReleased')}
+          </span>
         ),
     },
     {
       title: '',
       key: 'actions',
       render: (_, row) => (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button type="link" className="px-0" onClick={() => setSelected(row)}>
+        <div className="erp-payslip-actions">
+          <Button size="small" onClick={() => setSelected(row)}>
             {t('profile.payroll.viewBreakdown')}
           </Button>
           <Button
-            type="link"
-            className="px-0"
+            size="small"
+            icon={<DownloadOutlined />}
             loading={downloadingId === row.id}
             onClick={() => void download(row.id)}
           >
@@ -130,15 +147,17 @@ export default function EmployeePayslipsSection({
   ];
 
   return (
-    <>
+    <div className="erp-payslips-v2">
       <Table<EmployeePayslip>
         rowKey="id"
         size="small"
         pagination={false}
         columns={columns}
         dataSource={rows}
+        scroll={{ x: 560 }}
       />
       <Drawer
+        rootClassName="erp-payslip-drawer"
         title={
           selected
             ? `${t('profile.payroll.breakdownTitle')} · ${formatPayrollPeriod(selected.month, selected.year)}`
@@ -150,7 +169,7 @@ export default function EmployeePayslipsSection({
       >
         {selected ? <PayslipBreakdown payslip={selected} /> : null}
       </Drawer>
-    </>
+    </div>
   );
 }
 
@@ -185,24 +204,36 @@ function PayslipBreakdown({ payslip }: { payslip: EmployeePayslip }): React.Reac
   ].filter((row) => row.hours > 0);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="text-sm">
-        <p className="m-0">
+    <div className="flex flex-col gap-3">
+      <div className="erp-payslip-hero">
+        <p className="erp-payslip-hero-label">{t('profile.payroll.net')}</p>
+        <p className="erp-payslip-hero-amount">
+          {money(payslip.netPay)}
+          <span>ETB</span>
+        </p>
+        <p className="erp-payslip-hero-who">
           {payslip.employeeName}
           {payslip.employeeCode ? ` · ${payslip.employeeCode}` : ''}
         </p>
-        <p className="m-0 mt-1 text-[var(--color-text-tertiary)]">
-          {t('profile.payroll.paidDays')}:{' '}
-          {t('profile.payroll.paidDaysOf', { days: parsePayrollMoney(payslip.paidDays) })}
-        </p>
-        <p className="m-0 mt-1 text-[var(--color-text-tertiary)]">
-          {t('profile.payroll.bank')}: {payslip.bankName || '—'} · {t('profile.payroll.account')}:{' '}
-          {payslip.bankAccountMasked || '—'}
-        </p>
       </div>
 
-      <div>
-        <p className="mb-1 font-medium">{t('profile.payroll.earnings')}</p>
+      <div className="erp-payslip-facts">
+        <div className="erp-payslip-fact">
+          <p>{t('profile.payroll.paidDays')}</p>
+          <p>{t('profile.payroll.paidDaysOf', { days: parsePayrollMoney(payslip.paidDays) })}</p>
+        </div>
+        <div className="erp-payslip-fact">
+          <p>{t('profile.payroll.bank')}</p>
+          <p>{payslip.bankName || '—'}</p>
+        </div>
+        <div className="erp-payslip-fact erp-payslip-fact--wide">
+          <p>{t('profile.payroll.account')}</p>
+          <p>{payslip.bankAccountMasked || '—'}</p>
+        </div>
+      </div>
+
+      <section className="erp-payslip-section">
+        <p className="erp-payslip-section-title">{t('profile.payroll.earnings')}</p>
         <BreakdownRow
           label={`${t('profile.payroll.basic')} (${t('profile.payroll.basicFormula', {
             basic: money(payslip.basicSalary),
@@ -211,7 +242,7 @@ function PayslipBreakdown({ payslip }: { payslip: EmployeePayslip }): React.Reac
           amount={money(payslip.earnedSalary)}
         />
         {overtime.length > 0 ? (
-          <p className="mb-0 mt-2 text-sm">{t('profile.payroll.overtime')}</p>
+          <p className="erp-payslip-subtitle">{t('profile.payroll.overtime')}</p>
         ) : null}
         {overtime.map((row) => (
           <BreakdownRow key={row.label} label={row.label} amount={money(row.amount)} />
@@ -232,10 +263,10 @@ function PayslipBreakdown({ payslip }: { payslip: EmployeePayslip }): React.Reac
           />
         ) : null}
         <BreakdownRow label={t('profile.payroll.gross')} amount={money(payslip.grossIncome)} strong />
-      </div>
+      </section>
 
-      <div>
-        <p className="mb-1 font-medium">{t('profile.payroll.deductions')}</p>
+      <section className="erp-payslip-section">
+        <p className="erp-payslip-section-title">{t('profile.payroll.deductions')}</p>
         <BreakdownRow
           label={t('profile.payroll.pension')}
           amount={
@@ -250,14 +281,9 @@ function PayslipBreakdown({ payslip }: { payslip: EmployeePayslip }): React.Reac
           amount={money(payslip.totalDeductions)}
           strong
         />
-      </div>
+      </section>
 
-      <BreakdownRow
-        label={t('profile.payroll.net')}
-        amount={`ETB ${money(payslip.netPay)}`}
-        strong
-      />
-      <p className="m-0 text-sm text-[var(--color-text-tertiary)]">
+      <p className="erp-payslip-note">
         {t('profile.payroll.employerPension')}:{' '}
         {payslip.pensionApplicable
           ? money(payslip.pensionEmployer)
