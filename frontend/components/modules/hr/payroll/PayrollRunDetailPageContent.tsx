@@ -29,10 +29,12 @@ import {
   useCanApprovePayroll,
   useCanCreatePayroll,
   useCanEditPayroll,
+  useCanExportPayroll,
   useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
+import { downloadPayrollRunExcel } from '@/lib/api/payroll';
 import type {
   PayrollEntryDetail,
   PayrollEntryFlag,
@@ -117,6 +119,7 @@ export default function PayrollRunDetailPageContent({
   const canCreate = useCanCreatePayroll();
   const canEdit = useCanEditPayroll();
   const canApprove = useCanApprovePayroll();
+  const canExport = useCanExportPayroll();
   const isSysAdmin = useIsSystemAdmin();
 
   const detailQuery = usePayrollRun(runId, canAccess);
@@ -141,6 +144,7 @@ export default function PayrollRunDetailPageContent({
   const [disciplineFilter, setDisciplineFilter] = useState<string | undefined>();
   const [bonusEntry, setBonusEntry] = useState<PayrollEntryDetail | null>(null);
   const [bonusForm] = Form.useForm<{ bonusTopUp: number; bonusTopUpReason: string }>();
+  const [exporting, setExporting] = useState(false);
 
   const userDirectory = useMemo(() => {
     const map = new Map<
@@ -670,6 +674,33 @@ export default function PayrollRunDetailPageContent({
         </Button>,
       );
     };
+
+    if (canExport && status !== 'CANCELLED' && run) {
+      buttons.push(
+        <Button
+          key="export"
+          loading={exporting}
+          onClick={() => {
+            void (async () => {
+              const mm = String(run.month).padStart(2, '0');
+              const safeRun = run.runNumber.replace(/[^\w.-]+/g, '_');
+              const filename = `Payroll_${run.year}_${mm}_${safeRun}.xlsx`;
+              setExporting(true);
+              try {
+                await downloadPayrollRunExcel(run.id, filename);
+                messageApi.success(t('hr.payroll.actions.exportExcelSuccess'));
+              } catch (error) {
+                notifyApiError(error, t('hr.payroll.actions.exportExcel'), messageApi, t);
+              } finally {
+                setExporting(false);
+              }
+            })();
+          }}
+        >
+          {t('hr.payroll.actions.exportExcel')}
+        </Button>,
+      );
+    }
 
     if (status === 'DRAFT' && canCreate) {
       add('recalc', t('hr.payroll.actions.recalculate'), 'recalculate');

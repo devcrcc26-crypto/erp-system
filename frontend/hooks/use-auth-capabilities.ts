@@ -97,6 +97,11 @@ export function useCanApprovePayroll(): boolean {
   return useAuthStore((state) => state.capabilities.canApprovePayroll);
 }
 
+/** True when the session can export payroll Excel / bank files. */
+export function useCanExportPayroll(): boolean {
+  return useAuthStore((state) => state.capabilities.canExportPayroll);
+}
+
 /**
  * True when the session can open HR flight pages (view, create, or full HR).
  */

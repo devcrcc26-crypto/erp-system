@@ -1,15 +1,18 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Patch,
   Post,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiProduces,
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
@@ -21,6 +24,7 @@ import {
   SubmitPayrollRunDto,
   UpdatePayrollEntryDto,
 } from '../../application/dtos/payroll.dtos';
+import { PayrollExcelExportService } from '../../application/services/payroll-excel-export.service';
 import { PayrollRunService } from '../../application/services/payroll-run.service';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 
@@ -31,6 +35,7 @@ import { PermissionService } from '../../../../shared/permissions/permission.ser
 export class PayrollController {
   constructor(
     private readonly payrollRunService: PayrollRunService,
+    private readonly payrollExcelExportService: PayrollExcelExportService,
     private readonly permissionService: PermissionService,
   ) {}
 
@@ -178,5 +183,54 @@ export class PayrollController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
     return this.payrollRunService.updateEntry(id, dto, this.ctx(user));
+  }
+
+  @Get('runs/:id/export/excel')
+  @RequireAnyPermission({ module: 'payroll', action: 'export' })
+  @ApiOperation({
+    summary:
+      'Download payroll run as Excel (HR salary sheet layout). Requires payroll.export plus run list access.',
+  })
+  @ApiProduces(
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  async exportExcel(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<StreamableFile> {
+    const [canCreate, canApprove, canEdit] = await Promise.all([
+      this.permissionService.hasPermission(
+        user.userId,
+        user.companyId,
+        'payroll',
+        'create',
+      ),
+      this.permissionService.hasPermission(
+        user.userId,
+        user.companyId,
+        'payroll',
+        'approve',
+      ),
+      this.permissionService.hasPermission(
+        user.userId,
+        user.companyId,
+        'payroll',
+        'edit',
+      ),
+    ]);
+    if (!canCreate && !canApprove && !canEdit) {
+      throw new ForbiddenException(
+        'Missing permission (any of): payroll.create, payroll.approve, payroll.edit',
+      );
+    }
+
+    const file = await this.payrollExcelExportService.exportRun(
+      id,
+      user.companyId,
+    );
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: `attachment; filename="${file.filename}"`,
+    });
   }
 }

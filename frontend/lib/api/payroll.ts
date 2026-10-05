@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiPost } from '@/lib/api/client';
+import { apiGet, apiPatch, apiPost, downloadApiFile } from '@/lib/api/client';
 import type {
   CreatePayrollRunPayload,
   PayrollEntryDetail,
@@ -78,4 +78,14 @@ export async function updatePayrollEntry(
   payload: UpdatePayrollEntryPayload,
 ): Promise<PayrollEntryDetail> {
   return apiPatch<PayrollEntryDetail>(`${BASE}/entries/${entryId}`, payload);
+}
+
+/**
+ * Downloads the payroll run Excel export (HR salary-sheet layout).
+ */
+export async function downloadPayrollRunExcel(
+  runId: string,
+  filename: string,
+): Promise<void> {
+  await downloadApiFile(`${BASE}/runs/${runId}/export/excel`, filename);
 }

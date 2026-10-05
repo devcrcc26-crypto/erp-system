@@ -182,6 +182,9 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can approve payroll runs (payroll.approve)' })
   canApprovePayroll!: boolean;
 
+  @ApiProperty({ description: 'Can export payroll Excel / bank files (payroll.export)' })
+  canExportPayroll!: boolean;
+
   @ApiProperty({ description: 'Can view flight applications (flight.view)' })
   canViewFlight!: boolean;
 

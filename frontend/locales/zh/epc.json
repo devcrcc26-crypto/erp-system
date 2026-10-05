@@ -4082,6 +4082,8 @@
         "gmApprove": "总经理批准",
         "markPaid": "标记已发放",
         "cancel": "取消运行",
+        "exportExcel": "导出 Excel",
+        "exportExcelSuccess": "Excel 已下载。",
         "recalculateSuccess": "已重新计算。",
         "markReviewedSuccess": "已标记为已复核。",
         "submitSuccess": "已提交审批。",

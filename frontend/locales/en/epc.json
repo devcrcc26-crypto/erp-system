@@ -4082,6 +4082,8 @@
         "gmApprove": "GM approve",
         "markPaid": "Mark as paid",
         "cancel": "Cancel run",
+        "exportExcel": "Export Excel",
+        "exportExcelSuccess": "Excel export downloaded.",
         "recalculateSuccess": "Entries recalculated.",
         "markReviewedSuccess": "Run marked as reviewed.",
         "submitSuccess": "Run submitted for approval.",

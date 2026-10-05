@@ -594,6 +594,7 @@ export interface AuthCapabilities {
   canCreatePayroll: boolean;
   canEditPayroll: boolean;
   canApprovePayroll: boolean;
+  canExportPayroll: boolean;
   canViewFlight: boolean;
   canCreateFlight: boolean;
   canManageFlight: boolean;
@@ -658,6 +659,7 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canCreatePayroll: false,
   canEditPayroll: false,
   canApprovePayroll: false,
+  canExportPayroll: false,
   canViewFlight: false,
   canCreateFlight: false,
   canManageFlight: false,

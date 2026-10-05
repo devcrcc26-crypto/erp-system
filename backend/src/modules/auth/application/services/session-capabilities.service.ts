@@ -135,6 +135,7 @@ export class SessionCapabilitiesService {
       canCreatePayroll: payroll.canCreate,
       canEditPayroll: payroll.canEdit,
       canApprovePayroll: payroll.canApprove,
+      canExportPayroll: payroll.canExport,
       canViewFlight: flight.canView,
       canCreateFlight: flight.canCreate,
       canManageFlight: flight.canEdit,
