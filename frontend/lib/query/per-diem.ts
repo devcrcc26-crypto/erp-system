@@ -20,6 +20,7 @@ import type {
   EmployeePerDiemRateListItem,
   ListEmployeePerDiemRatesParams,
   ListPerDiemRequestsParams,
+  MarkPerDiemPaidPayload,
   PerDiemAdvanceSummary,
   PerDiemRequestDetail,
   PerDiemRequestListItem,
@@ -335,6 +336,22 @@ export function useCancelPerDiemRequest(id: string) {
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
       void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+      void queryClient.setQueryData(perDiemKeys.detail(id), updated);
+    },
+  });
+}
+
+/** HR marks an approved advance as paid. */
+export function useMarkPerDiemPaid(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: MarkPerDiemPaidPayload = {}) =>
+      apiPost<PerDiemRequestDetail>(`${REQUESTS_PATH}/${id}/mark-paid`, payload),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: perDiemKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: perDiemSettlementKeys.unsettled(),
+      });
       void queryClient.setQueryData(perDiemKeys.detail(id), updated);
     },
   });

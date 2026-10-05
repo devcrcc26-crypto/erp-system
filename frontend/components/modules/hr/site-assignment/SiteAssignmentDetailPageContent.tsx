@@ -107,6 +107,37 @@ export default function SiteAssignmentDetailPageContent({
               ) : null}
             </div>
           </div>
+          <div className="erp-employee-section mt-4">
+            <div className="erp-employee-section-header">
+              <h3>{t('pages.hr.perDiem.linkedAdvances')}</h3>
+            </div>
+            <div className="erp-employee-section-body">
+              {(row.perDiemRequests?.length ?? 0) === 0 ? (
+                <p className="erp-users-cell-sub m-0">
+                  {t('pages.hr.perDiem.noLinkedAdvances')}
+                </p>
+              ) : (
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {(row.perDiemRequests ?? []).map((advance) => (
+                    <li key={advance.id}>
+                      <Button
+                        type="link"
+                        className="h-auto p-0"
+                        onClick={() => router.push(`/hr/per-diem/${advance.id}`)}
+                      >
+                        {advance.requestNumber} — {advance.destination} (
+                        {advance.status}
+                        {advance.paidAt
+                          ? ` · ${t('pages.hr.perDiem.paid')}`
+                          : ''}
+                        )
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
           {tiers.length > 0 ? (
             <ApprovalTierTimeline tiers={tiers} />
           ) : null}

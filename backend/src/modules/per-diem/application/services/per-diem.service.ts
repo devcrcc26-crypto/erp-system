@@ -12,6 +12,7 @@ import {
   PerDiemStatus,
   PerDiemTripType,
   Prisma,
+  SiteAssignmentStatus,
   SupportedCurrency,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -238,7 +239,7 @@ export class PerDiemService
           id: dto.siteAssignmentId,
           companyId,
           employeeId,
-          status: 'APPROVED',
+          status: SiteAssignmentStatus.APPROVED,
         }),
         select: { id: true },
       });

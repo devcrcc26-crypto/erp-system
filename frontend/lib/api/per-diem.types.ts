@@ -79,6 +79,7 @@ export interface PerDiemRequestListItem {
   companyId: string;
   requestNumber: string;
   employeeId: string;
+  createdBy?: string;
   destinationCategory: string;
   destination: string;
   tripType?: PerDiemTripType;
@@ -95,6 +96,11 @@ export interface PerDiemRequestListItem {
   status: PerDiemStatus;
   pvNumber?: string | null;
   pvDate?: string | null;
+  paidAt?: string | null;
+  paidBy?: string | null;
+  paidAmount?: number | string | null;
+  paymentReference?: string | null;
+  siteAssignmentId?: string | null;
   settlementId?: string | null;
   settlement?: {
     id: string;
@@ -122,6 +128,15 @@ export interface PerDiemRequestDetail extends PerDiemRequestListItem {
     destinationCity: string;
     destinationCountry: string;
   } | null;
+  siteAssignment?: {
+    id: string;
+    requestNumber: string;
+    siteName: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+  } | null;
+  payer?: PerDiemUserSummary | null;
   approvalRequest?: {
     id: string;
     status: string;
@@ -149,7 +164,13 @@ export interface SubmitPerDiemRequestPayload extends OnBehalfPayload {
   days: number;
   linkedFlightId?: string;
   linkedBusinessTripId?: string;
+  siteAssignmentId?: string;
   notes?: string;
+}
+
+export interface MarkPerDiemPaidPayload {
+  paidAmount?: number;
+  paymentReference?: string;
 }
 
 export interface PerDiemAdvanceSummary {
@@ -166,6 +187,9 @@ export interface PerDiemAdvanceSummary {
   totalAmountEtb: number | string;
   currency: SupportedCurrency;
   status: PerDiemStatus;
+  paidAt?: string | null;
+  paidAmount?: number | string | null;
+  paymentReference?: string | null;
 }
 
 export interface PerDiemSettlementListItem {

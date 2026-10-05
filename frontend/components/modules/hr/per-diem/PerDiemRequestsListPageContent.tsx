@@ -279,6 +279,24 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         ),
       },
       {
+        title: t('hr.table.paid'),
+        key: 'paid',
+        width: 110,
+        responsive: ['lg'],
+        render: (_: unknown, row: PerDiemRequestListItem) =>
+          row.paidAt ? (
+            <span className="erp-users-cell-strong">
+              {formatProjectDate(row.paidAt)}
+            </span>
+          ) : row.status === 'APPROVED' ? (
+            <span className="erp-users-cell-sub">
+              {t('pages.hr.perDiem.unpaid')}
+            </span>
+          ) : (
+            <span className="erp-users-cell-sub">—</span>
+          ),
+      },
+      {
         title: t('pages.hr.perDiem.settled'),
         key: 'settled',
         width: 140,

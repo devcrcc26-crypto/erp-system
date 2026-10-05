@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Alert, Button, Grid, Skeleton, Space } from 'antd';
+import { Alert, Button, Form, Grid, Input, InputNumber, Modal, Skeleton, Space } from 'antd';
 import { StopOutlined } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -10,12 +10,14 @@ import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { useCanEditHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import type { ApprovalTier } from '@/lib/api/approvals.types';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
   useCancelPerDiemRequest,
+  useMarkPerDiemPaid,
   usePerDiemRequest,
 } from '@/lib/query/per-diem';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -65,19 +67,33 @@ export default function PerDiemRequestDetailPageContent({
   const screens = Grid.useBreakpoint();
   const isNarrow = screens.sm === false;
   const currentUser = useCurrentUser();
+  const canEditHr = useCanEditHr();
   const detailQuery = usePerDiemRequest(requestId);
   const cancelMutation = useCancelPerDiemRequest(requestId);
+  const markPaidMutation = useMarkPerDiemPaid(requestId);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidForm] = Form.useForm<{
+    paidAmount?: number;
+    paymentReference?: string;
+  }>();
 
   useSetHeaderExtra(null);
 
   const request = detailQuery.data;
   const isOwner =
     Boolean(request) && request?.employeeId === currentUser.data?.id;
+  const isSubmitter =
+    Boolean(request) && request?.createdBy === currentUser.data?.id;
   const canCancel =
-    isOwner &&
+    (isOwner || isSubmitter) &&
     !request?.settlementId &&
     (request?.status === 'DRAFT' || request?.status === 'SUBMITTED');
+  const canMarkPaid =
+    canEditHr &&
+    request?.status === 'APPROVED' &&
+    !request.paidAt &&
+    !request.settlementId;
 
   const tiers = useMemo(
     () => (request?.approvalRequest?.tiers ?? []) as ApprovalTier[],
@@ -95,6 +111,24 @@ export default function PerDiemRequestDetailPageContent({
         t('hr.messages.failedToCancelPerDiemRequest'),
         messageApi,
       );
+    }
+  }
+
+  async function handleMarkPaid(): Promise<void> {
+    try {
+      const values = await markPaidForm.validateFields();
+      await markPaidMutation.mutateAsync({
+        paidAmount: values.paidAmount,
+        paymentReference: values.paymentReference?.trim() || undefined,
+      });
+      messageApi.success(t('pages.hr.perDiem.markPaidSuccess'));
+      setMarkPaidOpen(false);
+      markPaidForm.resetFields();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        return;
+      }
+      notifyApiError(error, t('pages.hr.perDiem.markPaidFailed'), messageApi);
     }
   }
 
@@ -161,6 +195,11 @@ export default function PerDiemRequestDetailPageContent({
                 {isNarrow
                   ? t('nav.approvals')
                   : t('hr.buttons.viewInApprovals')}
+              </Button>
+            ) : null}
+            {canMarkPaid ? (
+              <Button type="primary" onClick={() => setMarkPaidOpen(true)}>
+                {t('pages.hr.perDiem.markPaid')}
               </Button>
             ) : null}
             {canCancel ? (
@@ -290,6 +329,29 @@ export default function PerDiemRequestDetailPageContent({
                 <MetaItem label={t('pages.hr.perDiem.pvDate')}>
                   {request.pvDate ? formatProjectDate(request.pvDate) : '—'}
                 </MetaItem>
+                <MetaItem label={t('pages.hr.perDiem.paid')}>
+                  {request.paidAt ? (
+                    <span className="erp-users-cell-strong">
+                      {formatProjectDate(request.paidAt)}
+                    </span>
+                  ) : request.status === 'APPROVED' ? (
+                    t('pages.hr.perDiem.unpaid')
+                  ) : (
+                    '—'
+                  )}
+                </MetaItem>
+                {request.paidAt ? (
+                  <MetaItem label={t('pages.hr.perDiem.paidBy')}>
+                    {request.payer
+                      ? formatPerDiemEmployeeName(request.payer)
+                      : '—'}
+                  </MetaItem>
+                ) : null}
+                {request.paymentReference ? (
+                  <MetaItem label={t('pages.hr.perDiem.paymentReference')}>
+                    {request.paymentReference}
+                  </MetaItem>
+                ) : null}
                 <MetaItem label={t('pages.hr.perDiem.settled')}>
                   {request.settlement?.requestNumber ? (
                     <button
@@ -312,6 +374,24 @@ export default function PerDiemRequestDetailPageContent({
                 <MetaItem label={t('hr.table.employee')}>
                   {employeeName}
                 </MetaItem>
+                {request.siteAssignment ? (
+                  <div className="md:col-span-2">
+                    <MetaItem label={t('hr.form.linkedSiteAssignment')}>
+                      <button
+                        type="button"
+                        className="erp-users-id-chip"
+                        onClick={() =>
+                          router.push(
+                            `/hr/site-assignments/${request.siteAssignment?.id}`,
+                          )
+                        }
+                      >
+                        {request.siteAssignment.requestNumber} —{' '}
+                        {request.siteAssignment.siteName}
+                      </button>
+                    </MetaItem>
+                  </div>
+                ) : null}
                 {linkedTravel ? (
                   <div className="md:col-span-2">
                     <MetaItem label={t('hr.labels.linkedTravel')}>
@@ -375,6 +455,47 @@ export default function PerDiemRequestDetailPageContent({
           )}
         </aside>
       </div>
+
+      <Modal
+        open={markPaidOpen}
+        title={t('pages.hr.perDiem.markPaidTitle')}
+        onCancel={() => {
+          setMarkPaidOpen(false);
+          markPaidForm.resetFields();
+        }}
+        onOk={() => void handleMarkPaid()}
+        confirmLoading={markPaidMutation.isPending}
+        okText={t('pages.hr.perDiem.markPaid')}
+      >
+        <p className="erp-users-cell-sub mb-3">
+          {t('pages.hr.perDiem.markPaidDescription')}
+        </p>
+        <Form
+          form={markPaidForm}
+          layout="vertical"
+          initialValues={{
+            paidAmount: request.totalAmount
+              ? Number(request.totalAmount)
+              : undefined,
+          }}
+        >
+          <Form.Item
+            name="paidAmount"
+            label={t('pages.hr.perDiem.paidAmountLabel')}
+          >
+            <InputNumber min={0} precision={2} className="w-full" />
+          </Form.Item>
+          <Form.Item
+            name="paymentReference"
+            label={t('pages.hr.perDiem.paymentReference')}
+          >
+            <Input
+              maxLength={500}
+              placeholder={t('pages.hr.perDiem.paymentReferencePlaceholder')}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <ConfirmDialog
         open={confirmCancel}

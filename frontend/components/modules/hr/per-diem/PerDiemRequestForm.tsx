@@ -20,6 +20,7 @@ import {
   useActiveEmployeePerDiemCategories,
   useSubmitPerDiemRequest,
 } from '@/lib/query/per-diem';
+import { useEmployeeSiteAssignments } from '@/lib/query/site-assignment';
 import { tokens } from '@/lib/theme/tokens';
 import { formatDisplayDate } from '@/lib/utils/date-format';
 import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
@@ -34,6 +35,7 @@ interface PerDiemFormValues {
   returnTime?: dayjs.Dayjs;
   days?: number;
   linkedTravel?: string;
+  siteAssignmentId?: string;
   notes?: string;
 }
 
@@ -70,6 +72,10 @@ export default function PerDiemRequestForm({
     true,
   );
   const tripsQuery = useBusinessTrips({ status: 'APPROVED', limit: 50 }, true);
+  const siteAssignmentsQuery = useEmployeeSiteAssignments(
+    onBehalf.effectiveEmployeeId,
+    Boolean(onBehalf.effectiveEmployeeId),
+  );
   const submitMutation = useSubmitPerDiemRequest();
 
   const formValues = Form.useWatch([], form) as PerDiemFormValues | undefined;
@@ -83,8 +89,28 @@ export default function PerDiemRequestForm({
   useEffect(() => {
     if (isSiteDeployment) {
       form.setFieldValue('destinationCategory', 'Domestic');
+      form.setFieldValue('linkedTravel', undefined);
+    } else {
+      form.setFieldValue('siteAssignmentId', undefined);
     }
   }, [form, isSiteDeployment]);
+
+  const approvedSiteAssignments = useMemo(
+    () =>
+      (siteAssignmentsQuery.data ?? []).filter(
+        (row) => row.status === 'APPROVED',
+      ),
+    [siteAssignmentsQuery.data],
+  );
+
+  const siteAssignmentOptions = useMemo(
+    () =>
+      approvedSiteAssignments.map((row) => ({
+        value: row.id,
+        label: `${row.requestNumber} — ${row.siteName} (${formatDisplayDate(String(row.startDate).slice(0, 10))} – ${formatDisplayDate(String(row.endDate).slice(0, 10))})`,
+      })),
+    [approvedSiteAssignments],
+  );
 
   const selectedRate = useMemo(
     () =>
@@ -102,9 +128,7 @@ export default function PerDiemRequestForm({
   }, [dateRange]);
 
   const days =
-    formValues?.days != null && formValues.days > 0
-      ? formValues.days
-      : calendarSpan;
+    formValues?.days != null && formValues.days > 0 ? formValues.days : 0;
 
   const totalAmount = selectedRate ? Number(selectedRate.dailyRate) * days : 0;
 
@@ -193,6 +217,25 @@ export default function PerDiemRequestForm({
     onBehalf.reset();
     form.resetFields();
     setFormError(null);
+  }
+
+  function handleSiteAssignmentChange(val: string | null | undefined): void {
+    const assignmentId = val ?? '';
+    form.setFieldValue('siteAssignmentId', assignmentId || undefined);
+    if (!assignmentId) {
+      return;
+    }
+    const assignment = approvedSiteAssignments.find(
+      (row) => row.id === assignmentId,
+    );
+    if (!assignment) {
+      return;
+    }
+    form.setFieldValue('destinationCategory', 'Domestic');
+    form.setFieldValue('destination', assignment.siteName);
+    const start = dayjs(assignment.startDate);
+    const end = dayjs(assignment.endDate);
+    form.setFieldValue('dateRange', [start, end]);
   }
 
   function handleLinkedTravelChange(val: string | null | undefined): void {
@@ -320,6 +363,10 @@ export default function PerDiemRequestForm({
         days: values.days,
         linkedFlightId: kind === 'flight' ? id : undefined,
         linkedBusinessTripId: kind === 'trip' ? id : undefined,
+        siteAssignmentId:
+          values.tripType === 'SITE_DEPLOYMENT'
+            ? values.siteAssignmentId
+            : undefined,
         notes: values.notes?.trim() || undefined,
       });
       messageApi.success(t('hr.messages.perDiemSubmitted'));
@@ -385,22 +432,39 @@ export default function PerDiemRequestForm({
                 />
               </Form.Item>
 
-              <Form.Item
-                name="linkedTravel"
-                label={t('hr.form.linkedTravel')}
-                extra={t('hr.messages.linkedTravelHint')}
-                className="mb-4"
-              >
-                <Select
-                  allowClear
-                  placeholder={t('hr.placeholder.selectLinkedTravel')}
-                  options={travelOptions}
-                  onChange={handleLinkedTravelChange}
-                />
-              </Form.Item>
+              {isSiteDeployment ? (
+                <Form.Item
+                  name="siteAssignmentId"
+                  label={t('hr.form.linkedSiteAssignment')}
+                  extra={t('hr.messages.linkedSiteAssignmentHint')}
+                  className="mb-4"
+                >
+                  <Select
+                    allowClear
+                    loading={siteAssignmentsQuery.isLoading}
+                    placeholder={t('hr.placeholder.selectSiteAssignment')}
+                    options={siteAssignmentOptions}
+                    onChange={handleSiteAssignmentChange}
+                  />
+                </Form.Item>
+              ) : (
+                <Form.Item
+                  name="linkedTravel"
+                  label={t('hr.form.linkedTravel')}
+                  extra={t('hr.messages.linkedTravelHint')}
+                  className="mb-4"
+                >
+                  <Select
+                    allowClear
+                    placeholder={t('hr.placeholder.selectLinkedTravel')}
+                    options={travelOptions}
+                    onChange={handleLinkedTravelChange}
+                  />
+                </Form.Item>
+              )}
 
               <div className="erp-form-grid-2">
-                {linkedKind === 'domestic-flight' ? (
+                {linkedKind === 'domestic-flight' && !isSiteDeployment ? (
                   <>
                     <Form.Item name="destinationCategory" hidden>
                       <Input />
@@ -613,8 +677,18 @@ export default function PerDiemRequestForm({
                 }
               />
               <ReviewItem
-                label={t('hr.form.linkedTravel')}
-                value={linkedTravelLabel}
+                label={
+                  isSiteDeployment
+                    ? t('hr.form.linkedSiteAssignment')
+                    : t('hr.form.linkedTravel')
+                }
+                value={
+                  isSiteDeployment
+                    ? siteAssignmentOptions.find(
+                        (option) => option.value === formValues?.siteAssignmentId,
+                      )?.label ?? t('hr.labels.standalonePerDiem')
+                    : linkedTravelLabel
+                }
               />
               {formValues?.notes?.trim() ? (
                 <ReviewItem
@@ -632,9 +706,11 @@ export default function PerDiemRequestForm({
       onBehalf,
       t,
       ratesQuery.isLoading,
+      siteAssignmentsQuery.isLoading,
       categoryOptions,
       noActiveRates,
       travelOptions,
+      siteAssignmentOptions,
       estimateBlock,
       categoryLabel,
       formValues,

@@ -386,10 +386,12 @@ export default function PerDiemSettlementForm({
             ) : (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {advances.map((advance) => {
+                  const unpaid = !advance.paidAt;
                   const lockedOut =
-                    category != null &&
-                    !selectedIds.includes(advance.id) &&
-                    advance.destinationCategory !== category;
+                    unpaid ||
+                    (category != null &&
+                      !selectedIds.includes(advance.id) &&
+                      advance.destinationCategory !== category);
                   return (
                     <li
                       key={advance.id}
@@ -407,6 +409,11 @@ export default function PerDiemSettlementForm({
                           {advance.pvNumber ?? advance.requestNumber}
                           {' · '}
                           {formatEtbAmount(advance.totalAmount)}
+                          {unpaid ? (
+                            <span className="erp-users-cell-sub ml-2">
+                              {t('pages.hr.perDiemSettlement.awaitingPayment')}
+                            </span>
+                          ) : null}
                         </p>
                         <p className="erp-users-cell-sub m-0 mt-0.5">
                           {advance.pvDate

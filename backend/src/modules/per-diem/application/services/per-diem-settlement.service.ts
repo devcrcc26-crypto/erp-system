@@ -80,8 +80,8 @@ const SETTLEMENT_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Per diem settlement lifecycle. Links approved advances and uses the same
- * org approval chain as the advance.
+ * Per diem settlement lifecycle. Links paid approved advances and uses the
+ * HR Manager / Local HR Manager single-tier approval chain.
  */
 @Injectable()
 export class PerDiemSettlementService

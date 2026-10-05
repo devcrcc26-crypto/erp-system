@@ -41,11 +41,23 @@ export interface SiteAssignmentListItem {
   project: SiteAssignmentProject | null;
 }
 
+export interface SiteAssignmentLinkedPerDiem {
+  id: string;
+  requestNumber: string;
+  destination: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  totalAmountEtb: number | string;
+  paidAt?: string | null;
+}
+
 export interface SiteAssignmentDetail extends SiteAssignmentListItem {
   approvalRequestId: string | null;
   createdAt: string;
   employee: SiteAssignmentEmployee;
   creator: SiteAssignmentEmployee;
+  perDiemRequests?: SiteAssignmentLinkedPerDiem[];
   approvalRequest?: {
     id: string;
     status: string;
