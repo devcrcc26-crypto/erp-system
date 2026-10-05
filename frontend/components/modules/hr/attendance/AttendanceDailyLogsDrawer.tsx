@@ -53,13 +53,23 @@ const AVATAR_COLORS = [
   'var(--color-red-400)',
 ] as const;
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<
+  NonNullable<AttendanceDailyLog['dayStatus']>,
+  { color: string; labelKey: string }
+> = {
   PRESENT: { color: 'success', labelKey: 'PRESENT' },
   ABSENT: { color: 'error', labelKey: 'ABSENT' },
+  HALF_ABSENT: { color: 'warning', labelKey: 'HALF_ABSENT' },
+  SUNDAY: { color: 'default', labelKey: 'SUNDAY' },
   HOLIDAY: { color: 'processing', labelKey: 'HOLIDAY' },
-  ON_LEAVE: { color: 'purple', labelKey: 'ON_LEAVE' },
-  WEEKEND: { color: 'default', labelKey: 'WEEKEND' },
-} as const;
+  WORK_FROM_HOME: { color: 'cyan', labelKey: 'WORK_FROM_HOME' },
+  ON_SITE: { color: 'geekblue', labelKey: 'ON_SITE' },
+  LEAVE: { color: 'purple', labelKey: 'LEAVE' },
+  FIELD_MOVEMENT_PENDING: {
+    color: 'orange',
+    labelKey: 'FIELD_MOVEMENT_PENDING',
+  },
+};
 
 const FLAG_COLORS: Record<Exclude<AttendanceDayFlag, 'NONE'>, string> = {
   MISSING_CLOCK_IN: 'error',
@@ -104,14 +114,17 @@ function avatarColor(seed: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-function dayStatus(
+function resolveDayStatus(
   log: AttendanceDailyLog,
-): keyof typeof STATUS_CONFIG {
+): NonNullable<AttendanceDailyLog['dayStatus']> {
+  if (log.dayStatus) {
+    return log.dayStatus;
+  }
   if (log.isHoliday) {
     return 'HOLIDAY';
   }
   if (log.isWeekend) {
-    return 'WEEKEND';
+    return 'SUNDAY';
   }
   if (log.wasPresent || log.correctedClockInLocal || log.clockInLocal) {
     return 'PRESENT';
@@ -432,22 +445,40 @@ export default function AttendanceDailyLogsDrawer({
         key: 'status',
         width: 150,
         render: (_: unknown, row: AttendanceDailyLog) => {
-          const status = dayStatus(row);
+          const status = resolveDayStatus(row);
           const config = STATUS_CONFIG[status];
           return (
-            <Tag
-              color={config.color}
-              style={{ borderRadius: 999, fontWeight: 500 }}
-            >
-              {t(`pages.hr.attendance.review.dayStatus.${config.labelKey}`)}
-              {row.holidayName ? (
-                <span style={{ fontWeight: 400, marginLeft: 4 }}>
-                  ({row.holidayName})
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <Tag
+                color={config.color}
+                style={{ borderRadius: 999, fontWeight: 500, margin: 0 }}
+              >
+                {t(`pages.hr.attendance.review.dayStatus.${config.labelKey}`)}
+                {row.holidayName ? (
+                  <span style={{ fontWeight: 400, marginLeft: 4 }}>
+                    ({row.holidayName})
+                  </span>
+                ) : null}
+              </Tag>
+              {status === 'HALF_ABSENT' ? (
+                <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+                  No field movement log
                 </span>
               ) : null}
-            </Tag>
+            </div>
           );
         },
+      },
+      {
+        title: t('pages.hr.attendance.daily.deduction'),
+        key: 'deduction',
+        width: 90,
+        align: 'right',
+        render: (_: unknown, row: AttendanceDailyLog) => (
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {row.dayDeduction ?? 0}
+          </span>
+        ),
       },
       {
         title: t('pages.hr.attendance.review.clockInLocal'),

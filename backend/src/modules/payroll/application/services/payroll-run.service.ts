@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   type EmployeeContract,
+  type EmployeeType,
   type PayrollEntry,
   type PayrollEntryFlag,
   type PayrollRun,
@@ -15,11 +16,6 @@ import {
 import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
-import {
-  computeLeaveCoveredAbsences,
-  dateToYyyyMmDd,
-  type LeaveCoveredAbsencesResult,
-} from '../../../attendance/application/services/attendance-leave.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import {
   PayrollCalculationService,
@@ -68,6 +64,7 @@ interface EmployeeSnapshot {
   firstName: string;
   lastName: string;
   employeeId: string | null;
+  employeeType: EmployeeType | null;
   bankName: string | null;
   bankAccountNumber: string | null;
 }
@@ -78,13 +75,7 @@ interface AttendanceSnapshot {
   scheduledDays: Decimal;
   presentDays: Decimal;
   absentDays: Decimal;
-  dailyLogs: Array<{
-    date: Date;
-    isHoliday: boolean;
-    isWeekend: boolean;
-    wasPresent: boolean;
-    isHalfDay: boolean;
-  }>;
+  paidDays: Decimal;
 }
 
 interface OvertimeSnapshot {
@@ -729,6 +720,7 @@ export class PayrollRunService {
         firstName: true,
         lastName: true,
         employeeId: true,
+        employeeType: true,
         bankName: true,
         bankAccountNumber: true,
       },
@@ -792,15 +784,7 @@ export class PayrollRunService {
           scheduledDays: true,
           presentDays: true,
           absentDays: true,
-          dailyLogs: {
-              select: {
-                date: true,
-                isHoliday: true,
-                isWeekend: true,
-                wasPresent: true,
-                isHalfDay: true,
-              },
-            },
+          paidDays: true,
         },
       }),
       this.prisma.overtimeSheet.findMany({
@@ -821,113 +805,6 @@ export class PayrollRunService {
         },
       }),
     ]);
-
-    const attendanceEmployeeIds = [
-      ...new Set(attendanceRecords.map((r) => r.employeeId)),
-    ];
-
-    const leaveByEmployee = new Map<string, LeaveCoveredAbsencesResult>();
-    if (attendanceEmployeeIds.length > 0) {
-      const { monthStart: leaveMonthStart, monthEnd: leaveMonthEnd } = {
-        monthStart,
-        monthEnd,
-      };
-      // Raw SQL so day_portion works before prisma generate refreshes the client.
-      const leaveRows = await this.prisma.$queryRawUnsafe<
-        Array<{
-          id: string;
-          employee_id: string;
-          leave_type: LeaveCoveredAbsencesResult['leaves'][number]['leaveType'];
-          start_date: Date;
-          end_date: Date;
-          days: number | string;
-          day_portion: string | null;
-        }>
-      >(
-        `
-        SELECT
-          lr.id,
-          lr.employee_id,
-          lr.leave_type,
-          lrp.start_date,
-          lrp.end_date,
-          lrp.days,
-          lrp.day_portion
-        FROM leave_request lr
-        INNER JOIN leave_request_period lrp ON lrp.leave_request_id = lr.id
-        WHERE lr.company_id = $1
-          AND lr.employee_id = ANY($2::text[])
-          AND lr.status = 'APPROVED'
-          AND lr.deleted_at IS NULL
-          AND lrp.start_date <= $3::date
-          AND lrp.end_date >= $4::date
-        `,
-        ctx.companyId,
-        attendanceEmployeeIds,
-        leaveMonthEnd,
-        leaveMonthStart,
-      );
-
-      const leavesByEmployee = new Map<
-        string,
-        Array<{
-          id: string;
-          leaveType: LeaveCoveredAbsencesResult['leaves'][number]['leaveType'];
-          periods: Array<{
-            startDate: Date;
-            endDate: Date;
-            days: number;
-            dayPortion: 'FULL' | 'MORNING' | 'AFTERNOON';
-          }>;
-        }>
-      >();
-      for (const row of leaveRows) {
-        const period = {
-          startDate: new Date(row.start_date),
-          endDate: new Date(row.end_date),
-          days: Number(row.days),
-          dayPortion: (row.day_portion ?? 'FULL') as
-            | 'FULL'
-            | 'MORNING'
-            | 'AFTERNOON',
-        };
-        const list = leavesByEmployee.get(row.employee_id) ?? [];
-        const existing = list.find((leave) => leave.id === row.id);
-        if (existing) {
-          existing.periods.push(period);
-        } else {
-          list.push({
-            id: row.id,
-            leaveType: row.leave_type,
-            periods: [period],
-          });
-          leavesByEmployee.set(row.employee_id, list);
-        }
-      }
-
-      for (const record of attendanceRecords) {
-        if (record.dailyLogs.length === 0) {
-          leaveByEmployee.set(record.employeeId, {
-            coveredDays: 0,
-            coveredDates: [],
-            leaveWeightsByDate: new Map(),
-            absenceWeightsByDate: new Map(),
-            restoredByDate: new Map(),
-            leaves: [],
-          });
-          continue;
-        }
-        leaveByEmployee.set(
-          record.employeeId,
-          computeLeaveCoveredAbsences(
-            record.dailyLogs,
-            leavesByEmployee.get(record.employeeId) ?? [],
-            month,
-            year,
-          ),
-        );
-      }
-    }
 
     const contractsByEmployee = new Map<string, ContractSnapshot[]>();
     for (const contract of contracts) {
@@ -957,15 +834,6 @@ export class PayrollRunService {
         continue;
       }
 
-      const leave = leaveByEmployee.get(employee.id) ?? {
-        coveredDays: 0,
-        coveredDates: [],
-        leaveWeightsByDate: new Map(),
-        absenceWeightsByDate: new Map(),
-        restoredByDate: new Map(),
-        leaves: [],
-      };
-
       const topUp = capturedTopUps.get(employee.id);
       drafts.push(
         this.computeEntryDraft({
@@ -975,7 +843,6 @@ export class PayrollRunService {
           contracts: overlapping,
           attendance,
           overtime: overtimeByEmployee.get(employee.id),
-          leave,
           taxableThreshold,
           bonusTopUp: topUp?.bonusTopUp ?? 0,
           bonusTopUpReason: topUp?.bonusTopUpReason ?? null,
@@ -994,7 +861,6 @@ export class PayrollRunService {
     contracts: ContractSnapshot[];
     attendance: AttendanceSnapshot | undefined;
     overtime: OvertimeSnapshot | undefined;
-    leave: LeaveCoveredAbsencesResult;
     taxableThreshold: number;
     bonusTopUp: number;
     bonusTopUpReason: string | null;
@@ -1007,7 +873,6 @@ export class PayrollRunService {
       contracts,
       attendance,
       overtime,
-      leave,
       taxableThreshold,
       bonusTopUp,
       bonusTopUpReason,
@@ -1060,57 +925,13 @@ export class PayrollRunService {
     }
 
     let absentInWindow = 0;
-    let leaveCoveredInWindow = 0;
+    let payrollDays = totalEmployedDays;
     const noteParts: string[] = [];
 
-    if (attendance && attendance.dailyLogs.length > 0) {
-      // Each missed scheduled day counts as 1 (including half-day Saturdays).
-      const absentDates = this.countAbsentInWindow(
-        attendance.dailyLogs,
-        windows,
-      );
-      absentInWindow = absentDates.length;
-      const absentSet = new Set(absentDates);
-      // Restored days = min(absence weight, leave portion weight) per date in window.
-      leaveCoveredInWindow = 0;
-      const coveredInWindow: string[] = [];
-      for (const dateStr of leave.coveredDates) {
-        if (!absentSet.has(dateStr)) {
-          continue;
-        }
-        const restored =
-          leave.restoredByDate.get(dateStr) ??
-          Math.min(
-            leave.absenceWeightsByDate.get(dateStr) ?? 1,
-            leave.leaveWeightsByDate.get(dateStr) ?? 1,
-          );
-        leaveCoveredInWindow += restored;
-        coveredInWindow.push(dateStr);
-      }
-      leaveCoveredInWindow = this.round(leaveCoveredInWindow);
-      if (leaveCoveredInWindow > 0) {
-        noteParts.push(
-          `${leaveCoveredInWindow} absent day(s) covered by approved leave: ${coveredInWindow.join(', ')}`,
-        );
-      }
-    } else if (attendance) {
+    if (attendance) {
       absentInWindow = this.toNumber(attendance.absentDays);
-      leaveCoveredInWindow = Math.min(
-        leave.coveredDays,
-        absentInWindow,
-      );
-      noteParts.push('Absences from monthly summary (no daily logs)');
-      if (leaveCoveredInWindow > 0) {
-        noteParts.push(
-          `${leaveCoveredInWindow} absent day(s) covered by approved leave`,
-        );
-      }
+      payrollDays = this.toNumber(attendance.paidDays);
     }
-
-    const payrollDays = Math.max(
-      0,
-      totalEmployedDays - absentInWindow + leaveCoveredInWindow,
-    );
     // Absences reduce earned pay; scale multi-contract period earneds.
     const earnedScale =
       totalEmployedDays > 0 ? payrollDays / totalEmployedDays : 0;
@@ -1231,6 +1052,7 @@ export class PayrollRunService {
       flagNote: flagNote ?? null,
       bankName: employee.bankName,
       bankAccountNumber: employee.bankAccountNumber,
+      employeeCategory: employee.employeeType,
       notes,
       createdBy: ctx.userId,
       updatedBy: ctx.userId,
@@ -1395,39 +1217,6 @@ export class PayrollRunService {
 
   private round(value: number): number {
     return Math.round(value * 100) / 100;
-  }
-
-  /**
-   * Absent scheduled-day dates (YYYY-MM-DD) inside any employed window.
-   * Each missed day counts as 1, including half-day Saturdays.
-   */
-  private countAbsentInWindow(
-    logs: Array<{
-      date: Date;
-      isHoliday: boolean;
-      isWeekend: boolean;
-      wasPresent: boolean;
-    }>,
-    windows: DateWindow[],
-  ): string[] {
-    if (windows.length === 0) {
-      return [];
-    }
-
-    const absent: string[] = [];
-    for (const log of logs) {
-      if (log.isHoliday || log.isWeekend || log.wasPresent) {
-        continue;
-      }
-      const t = log.date.getTime();
-      const inWindow = windows.some(
-        (w) => t >= w.windowStart.getTime() && t <= w.windowEnd.getTime(),
-      );
-      if (inWindow) {
-        absent.push(dateToYyyyMmDd(log.date));
-      }
-    }
-    return absent;
   }
 
   private maskBankAccount(account: string | null): string | null {

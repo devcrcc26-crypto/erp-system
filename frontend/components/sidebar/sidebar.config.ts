@@ -261,6 +261,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
             { kind: 'link', id: 'field-movement-logs', labelKey: 'nav.hr.fieldMovementLogs', icon: 'hr-field-movement', href: '/hr/field-movement-logs', requires: HR, keywords: ['field visit', 'early departure', 'clock'] },
             { kind: 'link', id: 'work-schedules', labelKey: 'nav.hr.workSchedules', icon: 'hr-work-schedules', href: '/hr/work-schedules', requires: HR, keywords: ['shifts', 'roster'] },
             { kind: 'link', id: 'public-holidays', labelKey: 'nav.hr.publicHolidays', icon: 'hr-public-holidays', href: '/hr/public-holidays', requires: HR },
+            { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-attendance', href: '/hr/attendance/work-from-home', requires: HR },
             { kind: 'link', id: 'leave-policy', labelKey: 'nav.hr.leavePolicy', icon: 'hr-leave-policy', href: '/hr/leave-policy', requires: HR },
           ],
         },

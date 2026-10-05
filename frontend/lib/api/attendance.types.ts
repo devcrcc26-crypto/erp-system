@@ -75,6 +75,17 @@ export interface AttendanceDailyLog {
   correctedClockInLocal: string | null;
   correctedClockOutLocal: string | null;
   isLastExportDay: boolean;
+  dayStatus?:
+    | 'PRESENT'
+    | 'ABSENT'
+    | 'HALF_ABSENT'
+    | 'SUNDAY'
+    | 'HOLIDAY'
+    | 'WORK_FROM_HOME'
+    | 'ON_SITE'
+    | 'LEAVE'
+    | 'FIELD_MOVEMENT_PENDING';
+  dayDeduction?: number;
   corrections?: AttendanceDailyLogCorrection[];
   fieldMovementEntries?: AttendanceFieldMovementEntryLink[];
 }
@@ -89,6 +100,7 @@ export interface AttendanceRecord {
   scheduledDays: number;
   presentDays: number;
   absentDays: number;
+  paidDays?: number;
   holidayDays: number;
   lateDays: number;
   totalLateMinutes: number;
@@ -125,8 +137,6 @@ export interface AttendanceRecord {
     }>;
   }>;
   leaveDaysThisMonth?: number;
-  coveredDates?: string[];
-  adjustedAbsentDays?: number;
 }
 
 export interface AttendanceListParams {

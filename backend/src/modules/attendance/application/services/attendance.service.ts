@@ -42,8 +42,17 @@ import {
   holidayFallsOnDate,
 } from '../../../work-schedule/application/services/work-schedule.dates';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
-import { getLeaveCoveredAbsencesForEmployees } from './attendance-leave.util';
 import { summarizeAttendanceDays } from '../utils/attendance-absence.util';
+import {
+  buildDayDeductionContext,
+  dailyLogToDeductionInput,
+  loadDeductionDataForMonth,
+} from '../utils/attendance-day-deduction.context';
+import {
+  dayDeduction,
+  summarizeMonthAbsence,
+} from '../utils/day-deduction.util';
+import { dateToYyyyMmDd } from './attendance-leave.util';
 import type { AttendanceDailyRaw } from '../../utils/attendance-excel.parser';
 import { parseAttendanceExcel } from '../../utils/attendance-excel.parser';
 import {
@@ -935,6 +944,7 @@ export class AttendanceService
     );
 
     await this.createMonthlyApproval(batchId, companyId, userId);
+    await this.recalculateCompanyAttendanceMonth(companyId, month, year);
     await this.previewCache.del(dto.previewToken);
 
     return {
@@ -1070,46 +1080,28 @@ export class AttendanceService
       this.prisma.attendanceRecord.count({ where }),
     ]);
 
-    const employeeIds = rows.map((record) => record.employeeId);
-    const leaveCoverageByEmployee = await getLeaveCoveredAbsencesForEmployees(
-      this.prisma,
-      companyId,
-      employeeIds,
-      month,
-      year,
-      this.logger,
+    const recordIds = rows.map((row) => row.id);
+    const leaveGroups =
+      recordIds.length > 0
+        ? await this.prisma.attendanceDailyLog.groupBy({
+            by: ['attendanceRecordId'],
+            where: {
+              attendanceRecordId: { in: recordIds },
+              dayStatus: 'LEAVE',
+            },
+            _count: { _all: true },
+          })
+        : [];
+    const leaveDaysByRecord = new Map(
+      leaveGroups.map((g) => [g.attendanceRecordId, g._count._all]),
     );
 
-    const recordsWithLeave = rows.map((record) => {
-      const coverage =
-        leaveCoverageByEmployee.get(record.employeeId) ?? {
-          coveredDays: 0,
-          coveredDates: [],
-          leaves: [],
-        };
+    const enriched = rows.map((row) => ({
+      ...row,
+      leaveDaysThisMonth: leaveDaysByRecord.get(row.id) ?? 0,
+    }));
 
-      return {
-        ...record,
-        approvedLeave: coverage.leaves.map((leave) => ({
-          id: leave.id,
-          leaveType: leave.leaveType,
-          days: leave.periods.reduce((sum, period) => sum + period.days, 0),
-          periods: leave.periods.map((period) => ({
-            startDate: period.startDate,
-            endDate: period.endDate,
-            days: period.days,
-          })),
-        })),
-        leaveDaysThisMonth: coverage.coveredDays,
-        coveredDates: coverage.coveredDates,
-        adjustedAbsentDays: Math.max(
-          0,
-          Number(record.absentDays) - coverage.coveredDays,
-        ),
-      };
-    });
-
-    return buildPaginatedResult(recordsWithLeave, total, page, limit);
+    return buildPaginatedResult(enriched, total, page, limit);
   }
 
   /**
@@ -2627,7 +2619,7 @@ export class AttendanceService
   }
 
   /**
-   * Rebuilds AttendanceRecord summary counters from current daily logs.
+   * Rebuilds paid/absent days and per-log status from dayDeduction rules.
    */
   private async recalculateAttendanceRecord(
     tx: Prisma.TransactionClient,
@@ -2654,6 +2646,98 @@ export class AttendanceService
       return;
     }
 
+    const employee = await tx.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { id: true, departmentId: true, nationality: true },
+    });
+    if (!employee) {
+      return;
+    }
+
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const monthEnd = new Date(Date.UTC(year, month, 0));
+    const contracts = await tx.employeeContract.findMany({
+      where: {
+        companyId,
+        employeeId,
+        deletedAt: null,
+        startDate: { lte: monthEnd },
+        OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+      },
+      select: { startDate: true, endDate: true },
+      orderBy: { startDate: 'asc' },
+    });
+    const contractSegments =
+      contracts.length > 0
+        ? contracts.map((c) => ({
+            startDate: c.startDate,
+            endDate: c.endDate,
+          }))
+        : [{ startDate: monthStart, endDate: null }];
+
+    const dailyLogIdsByDate = new Map<string, string>();
+    const dailyLogsByDate = new Map<
+      string,
+      ReturnType<typeof dailyLogToDeductionInput>
+    >();
+    const scheduleEndByDate = new Map<string, string | null>();
+
+    for (const log of record.dailyLogs) {
+      const key = dateToYyyyMmDd(log.date);
+      dailyLogIdsByDate.set(key, log.id);
+      const scheduleDays = await this.resolveScheduleDaysCached(
+        new Map(),
+        employeeId,
+        companyId,
+        log.date,
+      );
+      const scheduleDay = scheduleDays.find(
+        (row) => row.dayOfWeek === log.date.getUTCDay(),
+      );
+      scheduleEndByDate.set(key, scheduledEndForDay(scheduleDay));
+      dailyLogsByDate.set(
+        key,
+        dailyLogToDeductionInput({
+          ...log,
+          scheduledEnd: scheduledEndForDay(scheduleDay),
+        }),
+      );
+    }
+
+    const deductionData = await loadDeductionDataForMonth(
+      tx,
+      companyId,
+      employee,
+      month,
+      year,
+      dailyLogIdsByDate,
+    );
+    const context = buildDayDeductionContext(employee, deductionData);
+
+    for (const log of record.dailyLogs) {
+      const key = dateToYyyyMmDd(log.date);
+      const input = dailyLogToDeductionInput({
+        ...log,
+        scheduledEnd: scheduleEndByDate.get(key) ?? null,
+      });
+      const { deduction, status } = dayDeduction(log.date, input, context);
+      await tx.attendanceDailyLog.update({
+        where: { id: log.id },
+        data: {
+          dayStatus: status,
+          dayDeduction: deduction,
+        },
+      });
+    }
+
+    const monthSummary = summarizeMonthAbsence({
+      month,
+      year,
+      contracts: contractSegments,
+      dailyLogsByDate,
+      context,
+    });
+
     const workingDayLogs = record.dailyLogs.filter(
       (log) => !log.isWeekend && !log.isHoliday,
     );
@@ -2661,7 +2745,8 @@ export class AttendanceService
     const daySummary = summarizeAttendanceDays(record.dailyLogs);
     const scheduledDays = daySummary.scheduledDays;
     const presentDays = daySummary.presentDays;
-    const absentDays = daySummary.absentDays;
+    const absentDays = monthSummary.absentDays;
+    const paidDays = monthSummary.paidDays;
     const holidayDays = holidayLogs.length;
     const lateDays = workingDayLogs.filter((log) => log.isLate).length;
     const totalLateMinutes = workingDayLogs.reduce(
@@ -2715,6 +2800,7 @@ export class AttendanceService
         scheduledDays,
         presentDays,
         absentDays,
+        paidDays,
         holidayDays,
         lateDays,
         totalLateMinutes,
@@ -2997,6 +3083,34 @@ export class AttendanceService
       cache.set(fallbackKey, fallback);
       return fallback;
     }
+  }
+
+  /**
+   * Recomputes dayDeduction summaries for every attendance record in a month.
+   */
+  async recalculateCompanyAttendanceMonth(
+    companyId: string,
+    month: number,
+    year: number,
+  ): Promise<{ updated: number }> {
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: { companyId, month, year },
+      select: { employeeId: true },
+    });
+    let updated = 0;
+    for (const record of records) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.recalculateAttendanceRecord(
+          tx,
+          record.employeeId,
+          companyId,
+          month,
+          year,
+        );
+      });
+      updated += 1;
+    }
+    return { updated };
   }
 }
 

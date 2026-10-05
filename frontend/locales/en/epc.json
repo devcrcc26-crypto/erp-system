@@ -86,6 +86,7 @@
       "leavePolicy": "Leave Policy",
       "workSchedules": "Work Schedules",
       "publicHolidays": "Public Holidays",
+      "workFromHome": "Work From Home",
       "noApprovalChain": "No approval chain required",
       "directApproved": "Approved directly - no approval required",
       "companyAssets": "Company Assets",
@@ -565,6 +566,8 @@
           "scheduledDays": "Scheduled Days",
           "presentDays": "Present Days",
           "absentDays": "Absent Days",
+          "paidDays": "Paid Days",
+          "leaveDays": "Leave Days",
           "attendanceRate": "Attendance %",
           "lateDays": "Late Days",
           "lateMinutes": "Late Minutes",
@@ -577,6 +580,7 @@
           "date": "Date",
           "day": "Day",
           "status": "Status",
+          "deduction": "Deduction",
           "holidayName": "Holiday",
           "clockIn": "Clock In",
           "clockOut": "Clock Out",
@@ -679,9 +683,13 @@
           "dayStatus": {
             "PRESENT": "Present",
             "ABSENT": "Absent",
+            "HALF_ABSENT": "Half absent",
+            "SUNDAY": "Sunday",
             "HOLIDAY": "Holiday",
-            "WEEKEND": "Weekend",
-            "ON_LEAVE": "On Leave"
+            "WORK_FROM_HOME": "Work from home",
+            "ON_SITE": "On site",
+            "LEAVE": "Leave",
+            "FIELD_MOVEMENT_PENDING": "Field movement pending"
           }
         },
         "importModal": {
@@ -733,6 +741,20 @@
           "rejectedListToggle": "Employees not imported ({{count}})",
           "rejectedFollowUp": "Set their employee ID in the Deli e+ app and re-import next month, or match them manually on the next import.",
           "importAnother": "Import Another Month"
+        }
+      },
+      "workFromHome": {
+        "title": "Work From Home Days",
+        "createTitle": "Add work-from-home day",
+        "columns": {
+          "date": "Date",
+          "reason": "Reason",
+          "scope": "Scope"
+        },
+        "fields": {
+          "date": "Date",
+          "reason": "Reason",
+          "scope": "Applies to"
         }
       },
       "fieldMovementLogs": {
@@ -4113,7 +4135,7 @@
       "entry": {
         "employee": "Employee",
         "paidDays": "Paid days",
-        "paidDaysTooltip": "Employed: {{employed}} · Absent: {{absent}} · Leave covered: {{leaveCovered}}",
+        "paidDaysTooltip": "Employed {{employed}} · Absent {{absent}} · Paid {{paid}}",
         "basic": "Basic",
         "earned": "Earned",
         "otPay": "OT pay",

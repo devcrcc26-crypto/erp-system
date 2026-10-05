@@ -5,6 +5,8 @@ import { PublicHolidayService } from './application/services/public-holiday.serv
 import { WorkScheduleCronService } from './application/services/work-schedule-cron.service';
 import { WorkScheduleService } from './application/services/work-schedule.service';
 import { PublicHolidayController } from './presentation/public-holiday.controller';
+import { WorkFromHomeDayController } from './presentation/work-from-home-day.controller';
+import { WorkFromHomeDayService } from './application/services/work-from-home-day.service';
 import { WorkScheduleController } from './presentation/work-schedule.controller';
 
 @Module({
@@ -12,12 +14,17 @@ import { WorkScheduleController } from './presentation/work-schedule.controller'
     forwardRef(() => HrSharedModule),
     forwardRef(() => AttendanceModule),
   ],
-  controllers: [WorkScheduleController, PublicHolidayController],
+  controllers: [
+    WorkScheduleController,
+    PublicHolidayController,
+    WorkFromHomeDayController,
+  ],
   providers: [
     WorkScheduleService,
     PublicHolidayService,
+    WorkFromHomeDayService,
     WorkScheduleCronService,
   ],
-  exports: [WorkScheduleService, PublicHolidayService],
+  exports: [WorkScheduleService, PublicHolidayService, WorkFromHomeDayService],
 })
 export class WorkScheduleModule {}

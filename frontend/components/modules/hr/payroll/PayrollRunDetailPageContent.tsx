@@ -53,7 +53,6 @@ import {
 } from '@/lib/query/payroll';
 import { useUsersDirectory } from '@/lib/query/users';
 import {
-  computeLeaveCoveredDays,
   countEntryFlags,
   formatPayrollMoney,
   formatPayrollPeriod,
@@ -379,13 +378,12 @@ export default function PayrollRunDetailPageContent({
         width: 88,
         align: 'right',
         render: (_, row) => {
-          const leaveCovered = computeLeaveCoveredDays(row);
           return (
             <Tooltip
               title={t('hr.payroll.entry.paidDaysTooltip', {
                 employed: parsePayrollMoney(row.employedDays),
                 absent: parsePayrollMoney(row.absentDays),
-                leaveCovered,
+                paid: parsePayrollMoney(row.payrollDays),
               })}
             >
               <span style={{ fontVariantNumeric: 'tabular-nums' }}>

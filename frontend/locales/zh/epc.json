@@ -565,6 +565,8 @@
           "scheduledDays": "应出勤天数",
           "presentDays": "出勤天数",
           "absentDays": "缺勤天数",
+          "paidDays": "计薪天数",
+          "leaveDays": "请假天数",
           "attendanceRate": "出勤率",
           "lateDays": "迟到天数",
           "lateMinutes": "迟到分钟",
@@ -4113,7 +4115,7 @@
       "entry": {
         "employee": "员工",
         "paidDays": "计薪天数",
-        "paidDaysTooltip": "在职：{{employed}} · 缺勤：{{absent}} · 请假抵扣：{{leaveCovered}}",
+        "paidDaysTooltip": "在职 {{employed}} · 缺勤 {{absent}} · 计薪 {{paid}}",
         "basic": "基本",
         "earned": "应得",
         "otPay": "加班费",
