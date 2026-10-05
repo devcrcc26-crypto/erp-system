@@ -119,12 +119,9 @@ export class PayrollCalculationService {
       normalOtPay + eveningOtPay + sundayOtPay + holidayOtPay,
     );
 
-    const taxableTransport = this.round(
-      Math.max(0, transportAllowance - taxableThreshold),
-    );
-    const nonTaxableTransport = this.round(
-      Math.min(transportAllowance, taxableThreshold),
-    );
+    // CCECC rule: transportation allowance is fully non-taxable (no taxable portion).
+    const taxableTransport = 0;
+    const nonTaxableTransport = this.round(transportAllowance);
 
     const totalBonus = this.round(monthlyBonus + bonusTopUp);
     const grossIncome = this.round(
