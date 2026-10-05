@@ -16,10 +16,13 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
-  dateToYyyyMmDd,
-  getLeaveCoveredAbsencesForEmployees,
+  computeLeaveCoveredAbsences,
   type LeaveCoveredAbsencesResult,
 } from '../../../attendance/application/services/attendance-leave.util';
+import {
+  countAbsentDaysInWindows,
+  sumLeaveCoveredAbsentWeight,
+} from '../../../attendance/application/utils/attendance-absence.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import {
   PayrollCalculationService,
@@ -29,6 +32,7 @@ import {
 import {
   employedCalendarWindow,
   employedPayrollDays,
+  PAYROLL_MONTH_DAYS,
 } from '../utils/payroll-days.util';
 
 interface ServiceContext {
@@ -83,6 +87,7 @@ interface AttendanceSnapshot {
     isHoliday: boolean;
     isWeekend: boolean;
     wasPresent: boolean;
+    isHalfDay: boolean;
   }>;
 }
 
@@ -739,95 +744,172 @@ export class PayrollRunService {
 
     const employeeIds = employees.map((e) => e.id);
 
-    const [contracts, attendanceRecords, overtimeSheets, leaveByEmployee] =
-      await Promise.all([
-        this.prisma.employeeContract.findMany({
-          where: {
-            companyId: ctx.companyId,
-            employeeId: { in: employeeIds },
-            deletedAt: null,
-            startDate: { lte: monthEnd },
-            AND: [
-              {
-                OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
-              },
-              {
-                OR: [
-                  { status: 'ACTIVE' },
-                  {
-                    status: { in: ['SUPERSEDED', 'TERMINATED', 'EXPIRED'] },
-                    endDate: {
-                      gte: monthStart,
-                      lte: monthEnd,
-                    },
+    const [contracts, attendanceRecords, overtimeSheets] = await Promise.all([
+      this.prisma.employeeContract.findMany({
+        where: {
+          companyId: ctx.companyId,
+          employeeId: { in: employeeIds },
+          deletedAt: null,
+          startDate: { lte: monthEnd },
+          AND: [
+            {
+              OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+            },
+            {
+              OR: [
+                { status: 'ACTIVE' },
+                {
+                  status: { in: ['SUPERSEDED', 'TERMINATED', 'EXPIRED'] },
+                  endDate: {
+                    gte: monthStart,
+                    lte: monthEnd,
                   },
-                ],
-              },
-            ],
-          },
-          select: {
-            id: true,
-            employeeId: true,
-            startDate: true,
-            endDate: true,
-            status: true,
-            basicSalary: true,
-            transportationAllowance: true,
-            monthlyBonus: true,
-            pensionApplicable: true,
-            taxApplicable: true,
-          },
-          orderBy: { startDate: 'asc' },
-        }),
-        this.prisma.attendanceRecord.findMany({
-          where: {
-            companyId: ctx.companyId,
-            employeeId: { in: employeeIds },
-            month,
-            year,
-          },
-          select: {
-            id: true,
-            employeeId: true,
-            scheduledDays: true,
-            presentDays: true,
-            absentDays: true,
-            dailyLogs: {
+                },
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          employeeId: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+          basicSalary: true,
+          transportationAllowance: true,
+          monthlyBonus: true,
+          pensionApplicable: true,
+          taxApplicable: true,
+        },
+        orderBy: { startDate: 'asc' },
+      }),
+      this.prisma.attendanceRecord.findMany({
+        where: {
+          companyId: ctx.companyId,
+          employeeId: { in: employeeIds },
+          month,
+          year,
+        },
+        select: {
+          id: true,
+          employeeId: true,
+          scheduledDays: true,
+          presentDays: true,
+          absentDays: true,
+          dailyLogs: {
               select: {
                 date: true,
                 isHoliday: true,
                 isWeekend: true,
                 wasPresent: true,
+                isHalfDay: true,
               },
             },
-          },
-        }),
-        this.prisma.overtimeSheet.findMany({
-          where: {
-            companyId: ctx.companyId,
-            employeeId: { in: employeeIds },
-            month,
-            year,
-            status: 'APPROVED',
-          },
-          select: {
-            id: true,
-            employeeId: true,
-            totalRegularHours: true,
-            totalNightHours: true,
-            totalWeekendHours: true,
-            totalHolidayHours: true,
-          },
-        }),
-        getLeaveCoveredAbsencesForEmployees(
-          this.prisma,
-          ctx.companyId,
-          employeeIds,
+        },
+      }),
+      this.prisma.overtimeSheet.findMany({
+        where: {
+          companyId: ctx.companyId,
+          employeeId: { in: employeeIds },
           month,
           year,
-          this.logger,
-        ),
-      ]);
+          status: 'APPROVED',
+        },
+        select: {
+          id: true,
+          employeeId: true,
+          totalRegularHours: true,
+          totalNightHours: true,
+          totalWeekendHours: true,
+          totalHolidayHours: true,
+        },
+      }),
+    ]);
+
+    const attendanceEmployeeIds = [
+      ...new Set(attendanceRecords.map((r) => r.employeeId)),
+    ];
+
+    const leaveByEmployee = new Map<string, LeaveCoveredAbsencesResult>();
+    if (attendanceEmployeeIds.length > 0) {
+      const { monthStart: leaveMonthStart, monthEnd: leaveMonthEnd } = {
+        monthStart,
+        monthEnd,
+      };
+      const leaveRows = await this.prisma.leaveRequest.findMany({
+        where: {
+          companyId: ctx.companyId,
+          employeeId: { in: attendanceEmployeeIds },
+          status: 'APPROVED',
+          deletedAt: null,
+          periods: {
+            some: {
+              startDate: { lte: leaveMonthEnd },
+              endDate: { gte: leaveMonthStart },
+            },
+          },
+        },
+        select: {
+          id: true,
+          employeeId: true,
+          leaveType: true,
+          periods: {
+            where: {
+              startDate: { lte: leaveMonthEnd },
+              endDate: { gte: leaveMonthStart },
+            },
+            select: {
+              startDate: true,
+              endDate: true,
+              days: true,
+            },
+          },
+        },
+      });
+
+      const leavesByEmployee = new Map<
+        string,
+        Array<{
+          id: string;
+          leaveType: (typeof leaveRows)[number]['leaveType'];
+          periods: Array<{ startDate: Date; endDate: Date; days: number }>;
+        }>
+      >();
+      for (const row of leaveRows) {
+        const entry = {
+          id: row.id,
+          leaveType: row.leaveType,
+          periods: row.periods.map((period) => ({
+            startDate: period.startDate,
+            endDate: period.endDate,
+            days: Number(period.days),
+          })),
+        };
+        const list = leavesByEmployee.get(row.employeeId) ?? [];
+        list.push(entry);
+        leavesByEmployee.set(row.employeeId, list);
+      }
+
+      for (const record of attendanceRecords) {
+        if (record.dailyLogs.length === 0) {
+          leaveByEmployee.set(record.employeeId, {
+            coveredDays: 0,
+            coveredDates: [],
+            leaves: [],
+          });
+          continue;
+        }
+        leaveByEmployee.set(
+          record.employeeId,
+          computeLeaveCoveredAbsences(
+            record.dailyLogs,
+            leavesByEmployee.get(record.employeeId) ?? [],
+            month,
+            year,
+          ),
+        );
+      }
+    }
 
     const contractsByEmployee = new Map<string, ContractSnapshot[]>();
     for (const contract of contracts) {
@@ -961,22 +1043,35 @@ export class PayrollRunService {
     const noteParts: string[] = [];
 
     if (attendance && attendance.dailyLogs.length > 0) {
-      const absentDates = this.countAbsentInWindow(
+      const absentResult = countAbsentDaysInWindows(
         attendance.dailyLogs,
         windows,
       );
-      absentInWindow = absentDates.length;
-      const absentSet = new Set(absentDates);
-      leaveCoveredInWindow = leave.coveredDates.filter((d) =>
-        absentSet.has(d),
-      ).length;
+      absentInWindow = absentResult.absentDays;
+      leaveCoveredInWindow = sumLeaveCoveredAbsentWeight(
+        leave.coveredDates,
+        absentResult.absentDateWeights,
+      );
       if (leaveCoveredInWindow > 0) {
         const coveredInWindow = leave.coveredDates.filter((d) =>
-          absentSet.has(d),
+          absentResult.absentDateWeights.has(d),
         );
         noteParts.push(
           `${leaveCoveredInWindow} absent working day(s) covered by approved leave: ${coveredInWindow.join(', ')}`,
         );
+      }
+
+      // Full-month employment: daily-log absences must match the monthly summary.
+      if (totalEmployedDays === PAYROLL_MONTH_DAYS) {
+        const summaryAbsent = this.toNumber(attendance.absentDays);
+        if (Math.abs(absentInWindow - summaryAbsent) > 0.001) {
+          noteParts.push(
+            `Absence mismatch: logs ${absentInWindow} vs summary ${summaryAbsent}`,
+          );
+          this.logger.warn(
+            `[PayrollRun] Absence mismatch for employee ${employee.id} in ${run.year}-${String(run.month).padStart(2, '0')}: logs ${absentInWindow} vs summary ${summaryAbsent}`,
+          );
+        }
       }
     } else if (attendance) {
       absentInWindow = this.toNumber(attendance.absentDays);
@@ -1280,38 +1375,6 @@ export class PayrollRunService {
 
   private round(value: number): number {
     return Math.round(value * 100) / 100;
-  }
-
-  /**
-   * Absent working-day dates (YYYY-MM-DD) that fall inside any employed window.
-   */
-  private countAbsentInWindow(
-    logs: Array<{
-      date: Date;
-      isHoliday: boolean;
-      isWeekend: boolean;
-      wasPresent: boolean;
-    }>,
-    windows: DateWindow[],
-  ): string[] {
-    if (windows.length === 0) {
-      return [];
-    }
-
-    const absent: string[] = [];
-    for (const log of logs) {
-      if (log.isHoliday || log.isWeekend || log.wasPresent) {
-        continue;
-      }
-      const t = log.date.getTime();
-      const inWindow = windows.some(
-        (w) => t >= w.windowStart.getTime() && t <= w.windowEnd.getTime(),
-      );
-      if (inWindow) {
-        absent.push(dateToYyyyMmDd(log.date));
-      }
-    }
-    return absent;
   }
 
   private maskBankAccount(account: string | null): string | null {

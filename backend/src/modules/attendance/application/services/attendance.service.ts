@@ -43,6 +43,7 @@ import {
 } from '../../../work-schedule/application/services/work-schedule.dates';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import { getLeaveCoveredAbsencesForEmployees } from './attendance-leave.util';
+import { summarizeAttendanceDays } from '../utils/attendance-absence.util';
 import type { AttendanceDailyRaw } from '../../utils/attendance-excel.parser';
 import { parseAttendanceExcel } from '../../utils/attendance-excel.parser';
 import {
@@ -518,19 +519,12 @@ export class AttendanceService
       (log) => !log.isHoliday && !log.isWeekend,
     );
     const holidayLogs = logs.filter((log) => log.isHoliday);
-
-    const scheduledDays = workingDayLogs.reduce(
-      (sum, log) => sum + (log.isHalfDay ? 0.5 : 1),
-      0,
-    );
-    const presentDays = workingDayLogs
-      .filter((log) => log.wasPresent)
-      .reduce((sum, log) => sum + (log.isHalfDay ? 0.5 : 1), 0);
+    const daySummary = summarizeAttendanceDays(logs);
 
     const summary: AttendanceDailySummary = {
-      scheduledDays,
-      presentDays,
-      absentDays: Math.max(0, scheduledDays - presentDays),
+      scheduledDays: daySummary.scheduledDays,
+      presentDays: daySummary.presentDays,
+      absentDays: daySummary.absentDays,
       holidayDays: holidayLogs.length,
       lateDays: workingDayLogs.filter((log) => log.isLate).length,
       totalLateMinutes: workingDayLogs.reduce(
@@ -2664,17 +2658,10 @@ export class AttendanceService
       (log) => !log.isWeekend && !log.isHoliday,
     );
     const holidayLogs = record.dailyLogs.filter((log) => log.isHoliday);
-
-    const scheduledDays = workingDayLogs.reduce(
-      (sum, log) => sum + (log.isHalfDay ? 0.5 : 1),
-      0,
-    );
-
-    const presentDays = workingDayLogs
-      .filter((log) => log.wasPresent)
-      .reduce((sum, log) => sum + (log.isHalfDay ? 0.5 : 1), 0);
-
-    const absentDays = Math.max(0, scheduledDays - presentDays);
+    const daySummary = summarizeAttendanceDays(record.dailyLogs);
+    const scheduledDays = daySummary.scheduledDays;
+    const presentDays = daySummary.presentDays;
+    const absentDays = daySummary.absentDays;
     const holidayDays = holidayLogs.length;
     const lateDays = workingDayLogs.filter((log) => log.isLate).length;
     const totalLateMinutes = workingDayLogs.reduce(
