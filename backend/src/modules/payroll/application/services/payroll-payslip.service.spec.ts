@@ -213,4 +213,67 @@ describe('PayrollPayslipService', () => {
     await service.getPdf('p1', { userId: 'hr-1', companyId: 'co-1' });
     expect(prisma.payrollPayslip.update).not.toHaveBeenCalled();
   });
+
+  it('builds a zip containing one named pdf per payslip', async () => {
+    const { service, prisma, pdf } = harness();
+    prisma.payrollRun.findFirst.mockResolvedValue({
+      id: 'run-1',
+      status: 'GM_APPROVED',
+      month: 10,
+      year: 2026,
+      runNumber: 'PR-2026-10',
+    });
+    prisma.payrollPayslip.findMany.mockResolvedValue([
+      {
+        id: 'p1',
+        employeeId: 'emp-1',
+        generatedAt: new Date('2026-10-05T00:00:00.000Z'),
+        releasedAt: null,
+        downloadedAt: null,
+        run: { id: 'run-1', runNumber: 'PR-2026-10', month: 10, year: 2026 },
+        employee: {
+          firstName: 'Armias',
+          lastName: 'Bekele',
+          chineseName: null,
+          employeeId: 'EMP-014',
+          department: null,
+          engineeringDiscipline: null,
+        },
+        entry: {
+          payrollDays: dec(30),
+          basicSalary: dec(1),
+          earnedSalary: dec(1),
+          normalOtHours: dec(0),
+          eveningOtHours: dec(0),
+          sundayOtHours: dec(0),
+          holidayOtHours: dec(0),
+          normalOtPay: dec(0),
+          eveningOtPay: dec(0),
+          sundayOtPay: dec(0),
+          holidayOtPay: dec(0),
+          transportAllowance: dec(0),
+          monthlyBonus: dec(0),
+          bonusTopUp: dec(0),
+          bonusTopUpReason: null,
+          grossIncome: dec(1),
+          pensionEmployee: dec(0),
+          pensionEmployer: dec(0),
+          incomeTax: dec(0),
+          totalDeductions: dec(0),
+          netPay: dec(1),
+          bankName: null,
+          bankAccountNumber: null,
+          contract: { pensionApplicable: false },
+        },
+      },
+    ]);
+    pdf.render.mockResolvedValue(Buffer.from('%PDF-payslip'));
+
+    const file = await service.getZip('run-1', ctx);
+    expect(file.filename).toBe('Payslips_2026_10_PR-2026-10.zip');
+    expect(file.buffer.subarray(0, 2).toString()).toBe('PK');
+    expect(file.buffer.toString('utf8')).toContain(
+      'Payslip_2026_10_EMP-014_Armias_Bekele.pdf',
+    );
+  });
 });
