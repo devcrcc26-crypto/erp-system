@@ -179,6 +179,156 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
       href: '/approvals/new',
       keywords: ['apply', 'submit', 'form'],
     },
+    // ── Daily work: the two inboxes sit right under New Request ──
+    { kind: 'link', id: 'approvals', labelKey: 'nav.approvals', icon: 'approvals', href: '/approvals', requires: ['approvals.view'], badge: 'pendingApprovals', keywords: ['inbox', 'pending'] },
+    // Non-HR discipline/team leads (limitedNavigation + evaluation.inbox).
+    // HR users get the same inbox inside People › Performance.
+    { kind: 'link', id: 'evaluation-inbox', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: ['evaluation.inbox'], badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
+    // ── Modules: one rail folder per domain, each panel short ──
+    {
+      kind: 'folder',
+      id: 'people',
+      labelKey: 'nav.groups.people',
+      shortLabelKey: 'nav.short.people',
+      icon: 'domain-hr',
+      groups: [
+        {
+          id: 'people-employees',
+          labelKey: 'nav.sections.employees',
+          items: [
+            { kind: 'link', id: 'users', labelKey: 'nav.users', icon: 'users', href: '/users', requires: ['users.manage'], keywords: ['employees', 'staff'] },
+            { kind: 'link', id: 'employee-contract', labelKey: 'nav.hr.employeeContract', icon: 'hr-employee-contract', href: '/hr/employee-contract', requires: HR },
+          ],
+        },
+        {
+          id: 'people-performance',
+          labelKey: 'nav.sections.performance',
+          items: [
+            { kind: 'link', id: 'evaluation-inbox-hr', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: HR, badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
+            { kind: 'link', id: 'evaluations', labelKey: 'nav.hr.evaluations', icon: 'hr-employee-evaluation', href: '/hr/evaluations', requires: HR, activePaths: ['/hr/employee-evaluation'], keywords: ['performance', 'appraisal', 'review'] },
+            { kind: 'link', id: 'evaluation-cycles', labelKey: 'nav.hr.evaluationCycles', icon: 'hr-employee-evaluation', href: '/hr/evaluations/cycles', requires: HR, keywords: ['quarter', 'cycle'] },
+            { kind: 'link', id: 'evaluation-templates', labelKey: 'nav.hr.evaluationTemplates', icon: 'hr-employee-evaluation', href: '/hr/evaluations/templates', requires: HR, keywords: ['form', 'template', 'criteria'] },
+          ],
+        },
+        {
+          id: 'people-structure',
+          labelKey: 'nav.sections.structure',
+          items: [
+            { kind: 'link', id: 'departments', labelKey: 'nav.departments', icon: 'departments', href: '/departments', requires: ['org.departments'] },
+            { kind: 'link', id: 'positions', labelKey: 'nav.positions', icon: 'positions', href: '/positions', requires: ['org.positions'], keywords: ['job titles'] },
+            { kind: 'link', id: 'disciplines', labelKey: 'nav.disciplinesCatalog', icon: 'disciplines-catalog', href: '/disciplines', requires: ['org.disciplines'] },
+          ],
+        },
+        {
+          id: 'people-reports',
+          labelKey: 'nav.sections.reports',
+          items: [
+            { kind: 'link', id: 'hr-reports', labelKey: 'nav.hr.reports', icon: 'hr-reports', href: '/hr/reports', requires: HR },
+          ],
+        },
+      ],
+    },
+    {
+      kind: 'folder',
+      id: 'time',
+      labelKey: 'nav.groups.timeAttendance',
+      shortLabelKey: 'nav.short.timeAttendance',
+      icon: 'domain-time',
+      groups: [
+        {
+          id: 'time-leave',
+          labelKey: 'nav.sections.leave',
+          items: [
+            { kind: 'link', id: 'leave-requests', labelKey: 'nav.hr.leaveRequests', icon: 'hr-leave', href: '/hr/leave-requests', requires: ['leave.access'], activePaths: ['/hr/leave-history'], keywords: ['vacation', 'annual leave', 'sick'] },
+            { kind: 'link', id: 'leave-policy', labelKey: 'nav.hr.leavePolicy', icon: 'hr-leave-policy', href: '/hr/leave-policy', requires: HR },
+            { kind: 'link', id: 'public-holidays', labelKey: 'nav.hr.publicHolidays', icon: 'hr-public-holidays', href: '/hr/public-holidays', requires: HR },
+          ],
+        },
+        {
+          id: 'time-attendance',
+          labelKey: 'nav.sections.attendance',
+          items: [
+            { kind: 'link', id: 'attendance', labelKey: 'nav.hr.attendance', icon: 'hr-attendance', href: '/hr/attendance', requires: HR, keywords: ['clock in', 'deli', 'timesheet'] },
+            { kind: 'link', id: 'field-movement-logs', labelKey: 'nav.hr.fieldMovementLogs', icon: 'hr-field-movement', href: '/hr/field-movement-logs', requires: HR, keywords: ['field visit', 'early departure', 'clock'] },
+            { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-attendance', href: '/hr/attendance/work-from-home', requires: HR },
+            { kind: 'link', id: 'site-assignments', labelKey: 'nav.hr.siteAssignments', icon: 'hr-field-movement', href: '/hr/site-assignments', requires: ['leave.access'], keywords: ['site', 'project site', 'remote work', 'Dire Dawa'] },
+          ],
+        },
+        {
+          id: 'time-schedules',
+          labelKey: 'nav.sections.schedulesOvertime',
+          items: [
+            { kind: 'link', id: 'work-schedules', labelKey: 'nav.hr.workSchedules', icon: 'hr-work-schedules', href: '/hr/work-schedules', requires: HR, keywords: ['shifts', 'roster'] },
+            { kind: 'link', id: 'overtime', labelKey: 'nav.hr.overtime', icon: 'hr-overtime', href: '/hr/overtime', requires: ['overtime.access'], activePaths: ['/hr/overtime-history'], keywords: ['extra hours'] },
+          ],
+        },
+      ],
+    },
+    {
+      kind: 'folder',
+      id: 'finance',
+      labelKey: 'nav.groups.payTravel',
+      shortLabelKey: 'nav.short.payTravel',
+      icon: 'domain-finance',
+      groups: [
+        {
+          id: 'finance-payroll',
+          labelKey: 'nav.sections.payrollExpenses',
+          items: [
+            { kind: 'link', id: 'payroll', labelKey: 'nav.hr.payroll', icon: 'hr-payroll', href: '/hr/payroll', requires: ['payroll.access'], keywords: ['salary', 'payslip', 'wages'] },
+            { kind: 'link', id: 'expense-claims', labelKey: 'nav.hr.expenseClaims', icon: 'hr-expense', href: '/hr/expense-claims', requires: ['expenseClaims.access'], keywords: ['reimbursement'] },
+          ],
+        },
+        {
+          id: 'finance-travel',
+          labelKey: 'nav.sections.travel',
+          items: [
+            { kind: 'link', id: 'flight-applications', labelKey: 'nav.hr.flightApplications', icon: 'hr-flight', href: '/hr/flight-applications', requires: ['flight.access'], keywords: ['ticket', 'air'] },
+            { kind: 'link', id: 'business-trips', labelKey: 'nav.hr.businessTrips', icon: 'hr-business-trip', href: '/hr/business-trips', requires: ['businessTrip.access'], keywords: ['travel'] },
+            { kind: 'link', id: 'per-diem', labelKey: 'nav.hr.perDiem', icon: 'hr-per-diem', href: '/hr/per-diem', requires: HR, keywords: ['allowance'] },
+            { kind: 'link', id: 'employee-per-diem-rates', labelKey: 'nav.hr.employeePerDiemRates', icon: 'hr-per-diem-rates', href: '/hr/employee-per-diem-rates', requires: ['perDiemRates.manage'] },
+          ],
+        },
+      ],
+    },
+    {
+      kind: 'folder',
+      id: 'operations',
+      labelKey: 'nav.groups.operations',
+      shortLabelKey: 'nav.short.operations',
+      icon: 'domain-operations',
+      groups: [
+        {
+          id: 'ops-procurement',
+          labelKey: 'nav.sections.procurement',
+          items: [
+            { kind: 'link', id: 'purchase-requests', labelKey: 'nav.hr.purchaseRequests', icon: 'hr-purchase', href: '/hr/purchase-requests', requires: ['procurement.access'], keywords: ['buy', 'order'] },
+            { kind: 'link', id: 'material-requisition', labelKey: 'nav.hr.materialRequisition', icon: 'hr-material', href: '/hr/material-requisition', requires: ['procurement.access'], keywords: ['store', 'stock'] },
+            { kind: 'link', id: 'consumables', labelKey: 'nav.hr.consumables', icon: 'hr-consumables', href: '/hr/consumables', requires: ['procurement.access'], keywords: ['supplies'] },
+          ],
+        },
+        {
+          id: 'ops-fleet-assets',
+          labelKey: 'nav.sections.fleetAssets',
+          items: [
+            { kind: 'link', id: 'vehicle-applications', labelKey: 'nav.hr.vehicleApplications', icon: 'hr-vehicle', href: '/hr/vehicle-applications', requires: ['fleet.access'], keywords: ['car'] },
+            { kind: 'link', id: 'vehicle-refueling', labelKey: 'nav.hr.vehicleRefueling', icon: 'hr-refueling', href: '/hr/vehicle-refueling', requires: ['fleet.access'], keywords: ['fuel'] },
+            { kind: 'link', id: 'inspection-repair', labelKey: 'nav.hr.inspectionRepair', icon: 'hr-inspection', href: '/hr/inspection-repair', requires: ['fleet.access'], keywords: ['maintenance'] },
+            { kind: 'link', id: 'company-vehicles', labelKey: 'nav.organization.vehicles', icon: 'hr-vehicle', href: '/organization/vehicles', requires: ['org.vehicles'] },
+            { kind: 'link', id: 'company-asset', labelKey: 'nav.hr.companyAssets', icon: 'hr-company-asset', href: '/hr/company-asset', requires: ['fleet.access'], keywords: ['equipment'] },
+          ],
+        },
+        {
+          id: 'ops-administration',
+          labelKey: 'nav.sections.admin',
+          items: [
+            { kind: 'link', id: 'official-seal', labelKey: 'nav.hr.officialSeal', icon: 'hr-official-seal', href: '/hr/official-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
+            { kind: 'link', id: 'project-seal', labelKey: 'nav.hr.projectSeal', icon: 'hr-project-seal', href: '/hr/project-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
+            { kind: 'link', id: 'exit-permit', labelKey: 'nav.hr.equipmentAndMaterialsExitPermit', icon: 'hr-equipment-and-materials-exit-permit', href: '/hr/equipment-and-materials-exit-permit', requires: ['administration.access'], keywords: ['gate pass'] },
+          ],
+        },
+      ],
+    },
     {
       kind: 'folder',
       id: 'pm',
@@ -225,119 +375,9 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
         },
       ],
     },
-    {
-      kind: 'folder',
-      id: 'hr',
-      labelKey: 'nav.groups.humanResources',
-      shortLabelKey: 'nav.short.humanResources',
-      icon: 'domain-hr',
-      groups: [
-        {
-          id: 'hr-people',
-          labelKey: 'nav.sections.people',
-          items: [
-            { kind: 'link', id: 'users', labelKey: 'nav.users', icon: 'users', href: '/users', requires: ['users.manage'], keywords: ['employees', 'staff'] },
-            { kind: 'link', id: 'employee-contract', labelKey: 'nav.hr.employeeContract', icon: 'hr-employee-contract', href: '/hr/employee-contract', requires: HR },
-          ],
-        },
-        {
-          id: 'hr-performance',
-          labelKey: 'nav.sections.performance',
-          items: [
-            { kind: 'link', id: 'evaluation-inbox-hr', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: HR, badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
-            { kind: 'link', id: 'evaluations', labelKey: 'nav.hr.evaluations', icon: 'hr-employee-evaluation', href: '/hr/evaluations', requires: HR, activePaths: ['/hr/employee-evaluation'], keywords: ['performance', 'appraisal', 'review'] },
-            { kind: 'link', id: 'evaluation-cycles', labelKey: 'nav.hr.evaluationCycles', icon: 'hr-employee-evaluation', href: '/hr/evaluations/cycles', requires: HR, keywords: ['quarter', 'cycle'] },
-            { kind: 'link', id: 'evaluation-templates', labelKey: 'nav.hr.evaluationTemplates', icon: 'hr-employee-evaluation', href: '/hr/evaluations/templates', requires: HR, keywords: ['form', 'template', 'criteria'] },
-          ],
-        },
-        {
-          id: 'hr-time-leave',
-          labelKey: 'nav.sections.timeOff',
-          items: [
-            { kind: 'link', id: 'leave-requests', labelKey: 'nav.hr.leaveRequests', icon: 'hr-leave', href: '/hr/leave-requests', requires: ['leave.access'], activePaths: ['/hr/leave-history'], keywords: ['vacation', 'annual leave', 'sick'] },
-            { kind: 'link', id: 'site-assignments', labelKey: 'nav.hr.siteAssignments', icon: 'hr-field-movement', href: '/hr/site-assignments', requires: ['leave.access'], keywords: ['site', 'project site', 'remote work', 'Dire Dawa'] },
-            { kind: 'link', id: 'overtime', labelKey: 'nav.hr.overtime', icon: 'hr-overtime', href: '/hr/overtime', requires: ['overtime.access'], activePaths: ['/hr/overtime-history'], keywords: ['extra hours'] },
-            { kind: 'link', id: 'payroll', labelKey: 'nav.hr.payroll', icon: 'hr-payroll', href: '/hr/payroll', requires: ['payroll.access'], keywords: ['salary', 'payslip', 'wages'] },
-            { kind: 'link', id: 'attendance', labelKey: 'nav.hr.attendance', icon: 'hr-attendance', href: '/hr/attendance', requires: HR, keywords: ['clock in', 'deli', 'timesheet'] },
-            { kind: 'link', id: 'field-movement-logs', labelKey: 'nav.hr.fieldMovementLogs', icon: 'hr-field-movement', href: '/hr/field-movement-logs', requires: HR, keywords: ['field visit', 'early departure', 'clock'] },
-            { kind: 'link', id: 'work-schedules', labelKey: 'nav.hr.workSchedules', icon: 'hr-work-schedules', href: '/hr/work-schedules', requires: HR, keywords: ['shifts', 'roster'] },
-            { kind: 'link', id: 'public-holidays', labelKey: 'nav.hr.publicHolidays', icon: 'hr-public-holidays', href: '/hr/public-holidays', requires: HR },
-            { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-attendance', href: '/hr/attendance/work-from-home', requires: HR },
-            { kind: 'link', id: 'leave-policy', labelKey: 'nav.hr.leavePolicy', icon: 'hr-leave-policy', href: '/hr/leave-policy', requires: HR },
-          ],
-        },
-        {
-          id: 'hr-travel-expenses',
-          labelKey: 'nav.sections.travelExpenses',
-          items: [
-            { kind: 'link', id: 'expense-claims', labelKey: 'nav.hr.expenseClaims', icon: 'hr-expense', href: '/hr/expense-claims', requires: ['expenseClaims.access'], keywords: ['reimbursement'] },
-            { kind: 'link', id: 'flight-applications', labelKey: 'nav.hr.flightApplications', icon: 'hr-flight', href: '/hr/flight-applications', requires: ['flight.access'], keywords: ['ticket', 'air'] },
-            { kind: 'link', id: 'business-trips', labelKey: 'nav.hr.businessTrips', icon: 'hr-business-trip', href: '/hr/business-trips', requires: ['businessTrip.access'], keywords: ['travel'] },
-            { kind: 'link', id: 'per-diem', labelKey: 'nav.hr.perDiem', icon: 'hr-per-diem', href: '/hr/per-diem', requires: HR, keywords: ['allowance'] },
-            { kind: 'link', id: 'employee-per-diem-rates', labelKey: 'nav.hr.employeePerDiemRates', icon: 'hr-per-diem-rates', href: '/hr/employee-per-diem-rates', requires: ['perDiemRates.manage'] },
-          ],
-        },
-        {
-          id: 'hr-procurement',
-          labelKey: 'nav.sections.procurement',
-          items: [
-            { kind: 'link', id: 'purchase-requests', labelKey: 'nav.hr.purchaseRequests', icon: 'hr-purchase', href: '/hr/purchase-requests', requires: ['procurement.access'], keywords: ['buy', 'order'] },
-            { kind: 'link', id: 'material-requisition', labelKey: 'nav.hr.materialRequisition', icon: 'hr-material', href: '/hr/material-requisition', requires: ['procurement.access'], keywords: ['store', 'stock'] },
-            { kind: 'link', id: 'consumables', labelKey: 'nav.hr.consumables', icon: 'hr-consumables', href: '/hr/consumables', requires: ['procurement.access'], keywords: ['supplies'] },
-          ],
-        },
-        {
-          id: 'hr-fleet-assets',
-          labelKey: 'nav.sections.fleetAssets',
-          items: [
-            { kind: 'link', id: 'vehicle-applications', labelKey: 'nav.hr.vehicleApplications', icon: 'hr-vehicle', href: '/hr/vehicle-applications', requires: ['fleet.access'], keywords: ['car'] },
-            { kind: 'link', id: 'vehicle-refueling', labelKey: 'nav.hr.vehicleRefueling', icon: 'hr-refueling', href: '/hr/vehicle-refueling', requires: ['fleet.access'], keywords: ['fuel'] },
-            { kind: 'link', id: 'inspection-repair', labelKey: 'nav.hr.inspectionRepair', icon: 'hr-inspection', href: '/hr/inspection-repair', requires: ['fleet.access'], keywords: ['maintenance'] },
-            { kind: 'link', id: 'company-asset', labelKey: 'nav.hr.companyAssets', icon: 'hr-company-asset', href: '/hr/company-asset', requires: ['fleet.access'], keywords: ['equipment'] },
-          ],
-        },
-        {
-          id: 'hr-administration',
-          labelKey: 'nav.sections.admin',
-          items: [
-            { kind: 'link', id: 'official-seal', labelKey: 'nav.hr.officialSeal', icon: 'hr-official-seal', href: '/hr/official-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
-            { kind: 'link', id: 'project-seal', labelKey: 'nav.hr.projectSeal', icon: 'hr-project-seal', href: '/hr/project-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
-            { kind: 'link', id: 'exit-permit', labelKey: 'nav.hr.equipmentAndMaterialsExitPermit', icon: 'hr-equipment-and-materials-exit-permit', href: '/hr/equipment-and-materials-exit-permit', requires: ['administration.access'], keywords: ['gate pass'] },
-            { kind: 'link', id: 'hr-reports', labelKey: 'nav.hr.reports', icon: 'hr-reports', href: '/hr/reports', requires: HR },
-          ],
-        },
-      ],
-    },
-    {
-      kind: 'folder',
-      id: 'organization',
-      labelKey: 'nav.groups.organization',
-      shortLabelKey: 'nav.short.organization',
-      icon: 'domain-organization',
-      groups: [
-        {
-          id: 'org-structure',
-          labelKey: 'nav.sections.structure',
-          items: [
-            { kind: 'link', id: 'departments', labelKey: 'nav.departments', icon: 'departments', href: '/departments', requires: ['org.departments'] },
-            { kind: 'link', id: 'positions', labelKey: 'nav.positions', icon: 'positions', href: '/positions', requires: ['org.positions'], keywords: ['job titles'] },
-            { kind: 'link', id: 'disciplines', labelKey: 'nav.disciplinesCatalog', icon: 'disciplines-catalog', href: '/disciplines', requires: ['org.disciplines'] },
-          ],
-        },
-        {
-          id: 'org-fleet',
-          labelKey: 'nav.sections.companyFleet',
-          items: [
-            { kind: 'link', id: 'company-vehicles', labelKey: 'nav.organization.vehicles', icon: 'hr-vehicle', href: '/organization/vehicles', requires: ['org.vehicles'] },
-          ],
-        },
-      ],
-    },
   ],
+  // Footer: account and system administration only.
   utility: [
-    { kind: 'link', id: 'approvals', labelKey: 'nav.approvals', icon: 'approvals', href: '/approvals', requires: ['approvals.view'], badge: 'pendingApprovals', keywords: ['inbox', 'pending'] },
-    // Visible to non-HR leads via limitedNavigation + evaluation.inbox token.
-    { kind: 'link', id: 'evaluation-inbox', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: ['evaluation.inbox'], badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
     // Every signed-in user can open their own profile — no permission.
     { kind: 'link', id: 'my-profile', labelKey: 'nav.myProfile', icon: 'my-profile', href: '/profile', accountCard: true, activePaths: ['/hr/leave-history/me', '/hr/overtime-history/me'], keywords: ['account', 'password', 'personal', 'me'] },
     { kind: 'link', id: 'audit-logs', labelKey: 'nav.auditLogs', shortLabelKey: 'nav.short.auditLogs', icon: 'audit-logs', href: '/audit-logs', requires: ['audit.view'], keywords: ['history'] },

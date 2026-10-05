@@ -36,7 +36,9 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import {
   BadgeCheck,
+  Banknote,
   BarChart3,
+  Boxes,
   BriefcaseBusiness,
   CalendarCheck2,
   CalendarClock,
@@ -112,6 +114,9 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   // Sidebar rail domains — one per module group
   'domain-projects': ProjectOutlined,
   'domain-hr': lucideNavIcon(Users),
+  'domain-time': lucideNavIcon(CalendarClock),
+  'domain-finance': lucideNavIcon(Banknote),
+  'domain-operations': lucideNavIcon(Boxes),
   'domain-hr-configuration': lucideNavIcon(ClipboardList),
   'domain-organization': ApartmentOutlined,
   'new-request': lucideNavIcon(FilePlus2),

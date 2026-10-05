@@ -81,32 +81,55 @@ describe('sidebar permissions and filtering', () => {
     expect(entry?.kind === 'link' ? entry.href : null).toBe('/approvals/new');
   });
 
-  it('gives an HR officer the full sidebar with every HR group', () => {
+  it('gives an HR officer the inboxes, one folder per domain, and a system-only footer', () => {
     const model = modelFor({
       canViewHr: true,
       canManageUsers: true,
       canViewAuditLogs: true,
       canManageRoles: true,
     });
-    expect(ids(model.primary)).toEqual(['dashboard', 'new-request', 'hr', 'organization']);
-    expect(ids(model.utility)).toEqual([
+    expect(ids(model.primary)).toEqual([
+      'dashboard',
+      'new-request',
       'approvals',
-      'my-profile',
-      'audit-logs',
-      'settings',
+      'people',
+      'time',
+      'finance',
+      'operations',
     ]);
-    expect(folder(model, 'hr')?.groups.map((group) => group.id)).toEqual([
-      'hr-people',
-      'hr-performance',
-      'hr-time-leave',
-      'hr-travel-expenses',
-      'hr-procurement',
-      'hr-fleet-assets',
-      'hr-administration',
+    expect(ids(model.utility)).toEqual(['my-profile', 'audit-logs', 'settings']);
+    expect(folder(model, 'people')?.groups.map((group) => group.id)).toEqual(
+      expect.arrayContaining(['people-employees', 'people-performance', 'people-reports']),
+    );
+    expect(folder(model, 'time')?.groups.map((group) => group.id)).toEqual([
+      'time-leave',
+      'time-attendance',
+      'time-schedules',
+    ]);
+    expect(folder(model, 'operations')?.groups.map((group) => group.id)).toEqual([
+      'ops-procurement',
+      'ops-fleet-assets',
+      'ops-administration',
     ]);
   });
 
-  it('shows payroll when any payroll capability is granted', () => {
+  it('keeps every rail panel short', () => {
+    const model = modelFor({ ...systemAdminWithProjects(), canManageUsers: true, canAccessPayroll: true });
+    for (const entry of model.primary) {
+      if (entry.kind !== 'folder' || entry.id === 'pm') {
+        continue;
+      }
+      const count = entry.groups.reduce((sum, group) => sum + group.items.length, 0);
+      expect(count, `${entry.id} has ${count} links`).toBeLessThanOrEqual(12);
+    }
+  });
+
+  it('keeps the footer to account and system items', () => {
+    const config = SIDEBAR_CONFIG.utility.map((entry) => entry.id);
+    expect(config).toEqual(['my-profile', 'audit-logs', 'settings']);
+  });
+
+  it('shows payroll under Pay & Travel when a payroll capability is granted', () => {
     const permissions = resolveSidebarPermissions({
       capabilities: capabilities({ canViewHr: true, canAccessPayroll: true }),
       ready: true,
@@ -114,12 +137,12 @@ describe('sidebar permissions and filtering', () => {
     });
     expect(permissions.has('payroll.access')).toBe(true);
 
-    const hrFolder = folder(modelFor({ canViewHr: true, canAccessPayroll: true }), 'hr');
-    const timeLeave = hrFolder?.groups.find((g) => g.id === 'hr-time-leave');
-    expect(timeLeave?.items.some((item) => item.id === 'payroll')).toBe(true);
+    const finance = folder(modelFor({ canViewHr: true, canAccessPayroll: true }), 'finance');
+    const payroll = finance?.groups.find((g) => g.id === 'finance-payroll');
+    expect(payroll?.items.some((item) => item.id === 'payroll')).toBe(true);
   });
 
-  it('limits staff without hr.view to Dashboard, New Request and Approvals', () => {
+  it('limits staff without hr.view to Dashboard, New Request, the inboxes and My Profile', () => {
     const model = modelFor({
       canCreateLeave: true,
       canCreateOvertime: true,
@@ -128,8 +151,8 @@ describe('sidebar permissions and filtering', () => {
       canManageRoles: true,
       ...withProjects(),
     });
-    expect(ids(model.primary)).toEqual(['dashboard', 'new-request']);
-    expect(ids(model.utility)).toEqual(['approvals', 'evaluation-inbox', 'my-profile']);
+    expect(ids(model.primary)).toEqual(['dashboard', 'new-request', 'approvals', 'evaluation-inbox']);
+    expect(ids(model.utility)).toEqual(['my-profile']);
   });
 
   it('hides Project Management for non-admins, even with full project access', () => {
@@ -202,7 +225,11 @@ describe('active link resolution', () => {
     expect(resolveActiveLink('/hr/leave-history/me', links)?.link.id).toBe(
       'my-profile',
     );
-    expect(resolveActiveLink('/hr/per-diem/9', links)?.folderId).toBe('hr');
+    expect(resolveActiveLink('/hr/per-diem/9', links)?.folderId).toBe('finance');
+    expect(resolveActiveLink('/hr/attendance/work-from-home', links)?.link.id).toBe(
+      'work-from-home',
+    );
+    expect(resolveActiveLink('/organization/vehicles/3', links)?.folderId).toBe('operations');
   });
 
   it('highlights New Request on the picker and every form, Approvals elsewhere', () => {

@@ -53,21 +53,40 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
 - Panel open/close is a 160ms fade/slide, disabled under `prefers-reduced-motion`.
 - **New Request** (right under Dashboard) is a direct link to the request picker
   (`/approvals/new`). It stays highlighted on every `/approvals/new/*` form. Submitted
-  requests are tracked under **Approvals**.
-- **My Profile** sits in the utility section (after Approvals) with no permission requirement,
-  so every signed-in user can reach `/profile`.
+  requests are tracked under **Approvals**, the next rail item.
+- **My Profile** sits in the footer with no permission requirement, so every signed-in user
+  can reach `/profile`.
 - **Footer (drawer):** utility links render as a row of icon buttons
   (`SidebarFooter.tsx`) with hover/focus tooltips and floating badges. The link flagged
   `accountCard: true` in the config (My Profile) renders as an account card below them,
   with the user's initials, name and email. In compact mode the same links stack vertically
   as icon buttons, the account becomes an initials avatar, and every item has a right-side
   hover/focus tooltip.
-- **Limited navigation:** users without `hr.view` see only Dashboard, New Request, Approvals
-  and My Profile. Users with `hr.view` get the full sidebar (see "How permissions control visibility").
+- **Limited navigation:** users without `hr.view` see only Dashboard, New Request, Approvals,
+  Evaluation Inbox (leads) and My Profile. Users with `hr.view` get the full sidebar (see "How
+  permissions control visibility").
 - **Project pages** (`/projects/:id/...`) show the project's workspace navigation inside the
   Project Management folder, above the portfolio groups (which start collapsed). There is no
   separate project column. Widest case (pinned): 72px rail + 272px docked panel = 344px.
 - **Mobile (< 1024px):** the expanded tree in a left drawer with a visible header and close button.
+
+## Structure — what goes where
+
+The rail is read top to bottom as *daily work → modules → account/system*. Keep it that way.
+
+| Rail position | Entries | Rule |
+| --- | --- | --- |
+| Top | Dashboard, New Request | Where every user starts. |
+| Inboxes | Approvals (badge), Evaluation Inbox (non-HR leads only; HR users have it under People › Performance) | Things waiting on *me*. Direct links, never folders. |
+| People | Employees, Contracts · Performance (inbox, evaluations, cycles, templates) · Company Structure (departments, positions, disciplines) · Reports | Who works here and how they're doing. |
+| Time & Attendance | Leave (requests, policy, public holidays) · Attendance (attendance, field movement, work from home, site assignments) · Schedules & Overtime | When people work. |
+| Pay & Travel | Payroll, Expense Claims · Travel (flights, business trips, per diem, per-diem rates) | Money paid to people. |
+| Operations | Procurement · Fleet & Assets (vehicle requests, refueling, inspection & repair, company vehicles, company assets) · Administration (seals, exit permits) | Company resources — not HR. |
+| Projects | Project Management (System Administrator only; hosts project nav) | |
+| Footer | My Profile (account card), Audit Log, Settings | Account and system only. |
+
+Keep each rail panel to **12 links or fewer** (a test enforces this). If a domain outgrows
+that, split it into a new folder rather than adding another group to an existing one.
 
 ## Add a new module
 

@@ -34,6 +34,10 @@
     "menuApplication": "Application",
     "menuProject": "Project",
     "short": {
+      "people": "People",
+      "timeAttendance": "Time",
+      "payTravel": "Pay",
+      "operations": "Ops",
       "projectManagement": "Projects",
       "humanResources": "HR",
       "organization": "Org",
@@ -41,6 +45,10 @@
       "newRequest": "Request"
     },
     "groups": {
+      "people": "People",
+      "timeAttendance": "Time & Attendance",
+      "payTravel": "Pay & Travel",
+      "operations": "Operations",
       "projectManagement": "Project Management",
       "humanResources": "Human Resources",
       "hrConfiguration": "HR Configuration",
@@ -48,6 +56,13 @@
       "newRequest": "New Request"
     },
     "sections": {
+      "employees": "Employees",
+      "reports": "Reports",
+      "leave": "Leave",
+      "attendance": "Attendance",
+      "schedulesOvertime": "Schedules & Overtime",
+      "payrollExpenses": "Payroll & Expenses",
+      "travel": "Travel",
       "workspace": "Workspace",
       "engineering": "Engineering",
       "siteOps": "Site Operations",

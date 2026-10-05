@@ -34,6 +34,10 @@
     "menuApplication": "应用",
     "menuProject": "项目",
     "short": {
+      "people": "人员",
+      "timeAttendance": "考勤",
+      "payTravel": "薪酬",
+      "operations": "运营",
       "projectManagement": "项目",
       "humanResources": "人事",
       "organization": "组织",
@@ -41,6 +45,10 @@
       "newRequest": "申请"
     },
     "groups": {
+      "people": "人员",
+      "timeAttendance": "考勤与假期",
+      "payTravel": "薪酬与差旅",
+      "operations": "运营",
       "projectManagement": "项目管理",
       "humanResources": "人力资源",
       "hrConfiguration": "人力资源配置",
@@ -48,6 +56,13 @@
       "newRequest": "新建申请"
     },
     "sections": {
+      "employees": "员工",
+      "reports": "报表",
+      "leave": "假期",
+      "attendance": "考勤",
+      "schedulesOvertime": "排班与加班",
+      "payrollExpenses": "薪资与报销",
+      "travel": "差旅",
       "workspace": "工作区",
       "engineering": "工程",
       "siteOps": "现场运营",
@@ -66,6 +81,7 @@
       "vehicles": "公司车辆"
     },
     "hr": {
+      "workFromHome": "居家办公",
       "leaveRequests": "请假申请",
       "siteAssignments": "现场派驻",
       "overtime": "加班申请",
