@@ -39,6 +39,13 @@ import {
   type DayBreakdown,
   type WorkingDaysResult,
 } from './work-schedule.dates';
+import {
+  calculateLeaveDaysForRange,
+  calculateLeaveDaysFromPeriods,
+  summarizeLeaveBreakdown,
+  type LeaveDayPortion,
+  type LeaveDaysResult,
+} from '../../../leave/application/utils/leave-days.util';
 
 type ScheduleWithDays = Prisma.WorkScheduleGetPayload<{
   include: { days: true };
@@ -140,78 +147,71 @@ export class WorkScheduleService {
 
   /**
    * Working-day weights between two inclusive dates for one employee.
+   * Leave balance charging uses the same schedule/holiday rules.
    */
   async calculateWorkingDays(
     employeeId: string,
     companyId: string,
     startDate: Date,
     endDate: Date,
+    dayPortion: LeaveDayPortion = 'FULL',
   ): Promise<WorkingDaysResult> {
     const start = toUtcDateOnly(startDate);
     const end = toUtcDateOnly(endDate);
-    const calendarDays = iterateUtcDays(start, end);
+    const ctx = await this.buildLeaveDayContext(employeeId, companyId, start, end);
+    return calculateLeaveDaysForRange(
+      start,
+      end,
+      ctx.resolveScheduleDay,
+      ctx.holidays,
+      dayPortion,
+    );
+  }
 
-    const employee = await this.prisma.user.findFirst({
-      where: activeOnly({ id: employeeId, companyId }),
-      select: { id: true, nationality: true },
-    });
-    if (!employee) {
-      throw new NotFoundException('Employee not found');
+  /**
+   * Canonical leave-day calculation for submit, preview, and balance deduction.
+   * Never trust client-sent day counts.
+   */
+  async calculateLeaveDays(
+    employeeId: string,
+    companyId: string,
+    periods: Array<{
+      startDate: string;
+      endDate: string;
+      dayPortion?: LeaveDayPortion;
+    }>,
+  ): Promise<LeaveDaysResult> {
+    if (periods.length === 0) {
+      throw new BadRequestException('At least one leave period is required');
     }
+    this.assertPeriodsDoNotOverlap(periods);
 
-    const holidays = await this.loadActiveHolidays(companyId);
-    const applicable = holidays.filter((holiday) =>
-      holidayAppliesToNationality(
-        holiday.appliesToNationality,
-        employee.nationality,
-      ),
+    const parsed = periods.map((period) => ({
+      startDate: parseDateOnly(period.startDate),
+      endDate: parseDateOnly(period.endDate),
+      dayPortion: (period.dayPortion ?? 'FULL') as LeaveDayPortion,
+    }));
+    const rangeStart = parsed.reduce(
+      (min, p) => (p.startDate.getTime() < min.getTime() ? p.startDate : min),
+      parsed[0].startDate,
+    );
+    const rangeEnd = parsed.reduce(
+      (max, p) => (p.endDate.getTime() > max.getTime() ? p.endDate : max),
+      parsed[0].endDate,
     );
 
-    const scheduleCache = new Map<string, ScheduleWithDays>();
-    const breakdown: DayBreakdown[] = [];
-    let total = 0;
+    const ctx = await this.buildLeaveDayContext(
+      employeeId,
+      companyId,
+      rangeStart,
+      rangeEnd,
+    );
 
-    for (const day of calendarDays) {
-      const schedule = await this.getCachedSchedule(
-        employeeId,
-        companyId,
-        day,
-        scheduleCache,
-      );
-      const weekday = schedule.days.find((row) => row.dayOfWeek === day.getUTCDay());
-      const holiday = applicable.find((row) =>
-        holidayFallsOnDate(row.date, row.isRecurring, day),
-      );
-
-      if (holiday) {
-        breakdown.push({
-          date: day,
-          type: 'holiday',
-          holidayName: holiday.name,
-          weight: 0,
-        });
-        continue;
-      }
-
-      if (!weekday || !weekday.isWorkingDay) {
-        breakdown.push({ date: day, type: 'weekend', weight: 0 });
-        continue;
-      }
-
-      if (weekday.isHalfDay) {
-        breakdown.push({ date: day, type: 'half', weight: 0.5 });
-        total += 0.5;
-        continue;
-      }
-
-      breakdown.push({ date: day, type: 'working', weight: 1 });
-      total += 1;
-    }
-
-    return {
-      totalDays: new Prisma.Decimal(total.toFixed(1)),
-      breakdown,
-    };
+    return calculateLeaveDaysFromPeriods(
+      parsed,
+      ctx.resolveScheduleDay,
+      ctx.holidays,
+    );
   }
 
   /**
@@ -367,6 +367,7 @@ export class WorkScheduleService {
       startDate: string;
       endDate: string;
       days: number;
+      dayPortion: LeaveDayPortion;
       breakdown: Array<{
         date: string;
         type: DayBreakdown['type'];
@@ -374,6 +375,13 @@ export class WorkScheduleService {
         weight: number;
       }>;
     }>;
+    summary: {
+      totalDays: number;
+      workingDays: number;
+      halfDays: number;
+      weekendDays: number;
+      holidayDays: number;
+    };
   }> {
     const employeeId = await this.resolvePreviewEmployee(
       dto.employeeId,
@@ -387,6 +395,7 @@ export class WorkScheduleService {
       startDate: string;
       endDate: string;
       days: number;
+      dayPortion: LeaveDayPortion;
       breakdown: Array<{
         date: string;
         type: DayBreakdown['type'];
@@ -398,11 +407,13 @@ export class WorkScheduleService {
     for (const period of dto.periods) {
       const start = parseDateOnly(period.startDate);
       const end = parseDateOnly(period.endDate);
+      const dayPortion = period.dayPortion ?? 'FULL';
       const result = await this.calculateWorkingDays(
         employeeId,
         companyId,
         start,
         end,
+        dayPortion,
       );
       const days = Number(result.totalDays);
       totalDays += days;
@@ -410,6 +421,7 @@ export class WorkScheduleService {
         startDate: formatDateOnly(start),
         endDate: formatDateOnly(end),
         days,
+        dayPortion,
         breakdown: result.breakdown.map((row) => ({
           date: formatDateOnly(row.date),
           type: row.type,
@@ -422,6 +434,16 @@ export class WorkScheduleService {
     return {
       totalDays: Math.round(totalDays * 10) / 10,
       periods,
+      summary: summarizeLeaveBreakdown(
+        periods.flatMap((p) =>
+          p.breakdown.map((row) => ({
+            date: parseDateOnly(row.date),
+            type: row.type,
+            holidayName: row.holidayName,
+            weight: row.weight,
+          })),
+        ),
+      ),
     };
   }
 
@@ -1063,52 +1085,102 @@ export class WorkScheduleService {
   async resolveLeavePeriods(
     employeeId: string,
     companyId: string,
-    periods: Array<{ startDate: string; endDate: string }>,
+    periods: Array<{
+      startDate: string;
+      endDate: string;
+      dayPortion?: LeaveDayPortion;
+    }>,
   ): Promise<{
     startDate: Date;
     endDate: Date;
     days: number;
-    periodRows: Array<{ startDate: Date; endDate: Date; days: number }>;
+    periodRows: Array<{
+      startDate: Date;
+      endDate: Date;
+      days: number;
+      dayPortion: LeaveDayPortion;
+    }>;
     breakdown: WorkingDaysResult['breakdown'];
   }> {
-    if (periods.length === 0) {
-      throw new BadRequestException('At least one leave period is required');
-    }
-    this.assertPeriodsDoNotOverlap(periods);
-
-    const periodRows: Array<{ startDate: Date; endDate: Date; days: number }> =
-      [];
-    const breakdown: WorkingDaysResult['breakdown'] = [];
-    let totalDays = 0;
-
-    for (const period of periods) {
-      const start = parseDateOnly(period.startDate);
-      const end = parseDateOnly(period.endDate);
-      const result = await this.calculateWorkingDays(
-        employeeId,
-        companyId,
-        start,
-        end,
-      );
-      const days = Number(result.totalDays);
-      if (days <= 0) {
-        throw new BadRequestException(
-          `Leave period ${period.startDate} to ${period.endDate} covers no working days`,
-        );
-      }
-      periodRows.push({ startDate: start, endDate: end, days });
-      breakdown.push(...result.breakdown);
-      totalDays += days;
-    }
-
-    periodRows.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    const result = await this.calculateLeaveDays(
+      employeeId,
+      companyId,
+      periods,
+    );
     return {
-      startDate: periodRows[0].startDate,
-      endDate: periodRows[periodRows.length - 1].endDate,
-      days: Math.round(totalDays * 10) / 10,
-      periodRows,
-      breakdown,
+      startDate: result.startDate,
+      endDate: result.endDate,
+      days: result.days,
+      periodRows: result.periodRows.map((row) => ({
+        startDate: row.startDate,
+        endDate: row.endDate,
+        days: row.days,
+        dayPortion: row.dayPortion,
+      })),
+      breakdown: result.breakdown,
     };
+  }
+
+  /**
+   * Loads nationality-filtered holidays and a warmed per-date schedule resolver.
+   */
+  private async buildLeaveDayContext(
+    employeeId: string,
+    companyId: string,
+    from: Date,
+    to: Date,
+  ): Promise<{
+    resolveScheduleDay: (date: Date) => {
+      isWorkingDay: boolean;
+      isHalfDay: boolean;
+    } | null;
+    holidays: Array<{ date: Date; isRecurring: boolean; name: string }>;
+  }> {
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true, nationality: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const holidayRows = await this.loadActiveHolidays(companyId);
+    const holidays = holidayRows
+      .filter((holiday) =>
+        holidayAppliesToNationality(
+          holiday.appliesToNationality,
+          employee.nationality,
+        ),
+      )
+      .map((holiday) => ({
+        date: holiday.date,
+        isRecurring: holiday.isRecurring,
+        name: holiday.name,
+      }));
+
+    const scheduleCache = new Map<string, ScheduleWithDays>();
+    for (const day of iterateUtcDays(from, to)) {
+      await this.getCachedSchedule(employeeId, companyId, day, scheduleCache);
+    }
+
+    const resolveScheduleDay = (date: Date) => {
+      const schedule = scheduleCache.get(formatDateOnly(date));
+      if (!schedule) {
+        return null;
+      }
+      const weekday = schedule.days.find(
+        (row) => row.dayOfWeek === date.getUTCDay(),
+      );
+      if (!weekday) {
+        return null;
+      }
+      return {
+        isWorkingDay: weekday.isWorkingDay,
+        isHalfDay: weekday.isHalfDay,
+      };
+    };
+
+    return { resolveScheduleDay, holidays };
   }
 
   private async resolvePreviewEmployee(

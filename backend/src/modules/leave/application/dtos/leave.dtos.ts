@@ -3,6 +3,7 @@ import {
   IsArray,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -27,6 +28,15 @@ export class LeavePeriodInputDto {
   @ApiProperty({ example: '2026-08-05' })
   @IsDateString()
   endDate!: string;
+
+  @ApiPropertyOptional({
+    enum: ['FULL', 'MORNING', 'AFTERNOON'],
+    description:
+      'FULL (default), or MORNING/AFTERNOON for a single full working weekday (0.5 day)',
+  })
+  @IsOptional()
+  @IsIn(['FULL', 'MORNING', 'AFTERNOON'])
+  dayPortion?: 'FULL' | 'MORNING' | 'AFTERNOON';
 }
 
 /**

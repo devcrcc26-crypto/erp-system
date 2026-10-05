@@ -105,9 +105,12 @@ export interface EmployeeScheduleView {
   history: ScheduleAssignmentHistoryItem[];
 }
 
+export type LeaveDayPortion = 'FULL' | 'MORNING' | 'AFTERNOON';
+
 export interface LeavePeriodInput {
   startDate: string;
   endDate: string;
+  dayPortion?: LeaveDayPortion;
 }
 
 export interface DayBreakdownItem {
@@ -121,12 +124,22 @@ export interface PreviewPeriodResult {
   startDate: string;
   endDate: string;
   days: number;
+  dayPortion?: LeaveDayPortion;
   breakdown: DayBreakdownItem[];
+}
+
+export interface LeaveDaysSummary {
+  totalDays: number;
+  workingDays: number;
+  halfDays: number;
+  weekendDays: number;
+  holidayDays: number;
 }
 
 export interface PreviewDaysResult {
   totalDays: number;
   periods: PreviewPeriodResult[];
+  summary?: LeaveDaysSummary;
 }
 
 export interface PublicHoliday {

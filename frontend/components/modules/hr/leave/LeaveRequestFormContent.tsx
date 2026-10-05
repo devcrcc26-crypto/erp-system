@@ -27,6 +27,7 @@ import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
 import type {
+  LeaveDayPortion,
   LeavePeriodInput,
   PreviewDaysResult,
 } from '@/lib/api/work-schedule.types';
@@ -45,6 +46,7 @@ import { tokens } from '@/lib/theme/tokens';
 interface LeavePeriodRow {
   id: string;
   range: [Dayjs, Dayjs] | null;
+  dayPortion: LeaveDayPortion;
 }
 
 interface LeaveFormValues {
@@ -93,7 +95,48 @@ function toPeriodInputs(periods: LeavePeriodRow[]): LeavePeriodInput[] {
     .map((row) => ({
       startDate: row.range[0].format('YYYY-MM-DD'),
       endDate: row.range[1].format('YYYY-MM-DD'),
+      dayPortion: row.dayPortion,
     }));
+}
+
+function isSingleDay(range: [Dayjs, Dayjs] | null): boolean {
+  if (!range) {
+    return false;
+  }
+  return range[0].isSame(range[1], 'day');
+}
+
+function formatLeaveChargeSummary(
+  preview: PreviewDaysResult,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  const summary = preview.summary;
+  if (!summary) {
+    return t('hr.form.daysCharged', { days: preview.totalDays });
+  }
+  const parts: string[] = [];
+  if (summary.workingDays > 0) {
+    parts.push(
+      t('hr.form.summaryWorking', { count: summary.workingDays }),
+    );
+  }
+  if (summary.halfDays > 0) {
+    parts.push(t('hr.form.summaryHalf', { count: summary.halfDays }));
+  }
+  if (summary.weekendDays > 0) {
+    parts.push(
+      t('hr.form.summaryWeekend', { count: summary.weekendDays }),
+    );
+  }
+  if (summary.holidayDays > 0) {
+    parts.push(
+      t('hr.form.summaryHoliday', { count: summary.holidayDays }),
+    );
+  }
+  return t('hr.form.daysChargedDetail', {
+    days: preview.totalDays,
+    detail: parts.join(', '),
+  });
 }
 
 function ReviewItem({
@@ -137,7 +180,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     Partial<LeaveFormValues>
   >({ leaveType: DEFAULT_LEAVE_TYPE });
   const [periods, setPeriods] = useState<LeavePeriodRow[]>([
-    { id: newPeriodId(), range: null },
+    { id: newPeriodId(), range: null, dayPortion: 'FULL' },
   ]);
   const [preview, setPreview] = useState<PreviewDaysResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -226,7 +269,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     form.setFieldsValue({ leaveType: DEFAULT_LEAVE_TYPE });
     setSelectedFiles([]);
     setDetailsSnapshot({ leaveType: DEFAULT_LEAVE_TYPE });
-    setPeriods([{ id: newPeriodId(), range: null }]);
+    setPeriods([{ id: newPeriodId(), range: null, dayPortion: 'FULL' }]);
     setPreview(null);
     setPreviewError(null);
     setFormError(null);
@@ -420,20 +463,56 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 <p className="mb-2 text-sm font-medium">{t('hr.form.periods')}</p>
                 <div className="flex flex-col gap-3">
                   {periods.map((period, index) => (
-                    <div key={period.id} className="flex items-start gap-2">
+                    <div
+                      key={period.id}
+                      className="flex flex-col gap-2 sm:flex-row sm:items-start"
+                    >
                       <DatePicker.RangePicker
                         className="w-full"
                         value={period.range}
                         onChange={(value) => {
+                          const nextRange = completeRange(
+                            value as [Dayjs | null, Dayjs | null] | null,
+                          );
                           setPeriods((current) =>
                             current.map((row) =>
                               row.id === period.id
                                 ? {
                                     ...row,
-                                    range: completeRange(
-                                      value as [Dayjs | null, Dayjs | null] | null,
-                                    ),
+                                    range: nextRange,
+                                    dayPortion:
+                                      nextRange && isSingleDay(nextRange)
+                                        ? row.dayPortion
+                                        : 'FULL',
                                   }
+                                : row,
+                            ),
+                          );
+                        }}
+                      />
+                      <Select
+                        className="w-full sm:w-[160px]"
+                        value={period.dayPortion}
+                        disabled={!isSingleDay(period.range)}
+                        options={[
+                          {
+                            value: 'FULL',
+                            label: t('hr.form.dayPortionFull'),
+                          },
+                          {
+                            value: 'MORNING',
+                            label: t('hr.form.dayPortionMorning'),
+                          },
+                          {
+                            value: 'AFTERNOON',
+                            label: t('hr.form.dayPortionAfternoon'),
+                          },
+                        ]}
+                        onChange={(value: LeaveDayPortion) => {
+                          setPeriods((current) =>
+                            current.map((row) =>
+                              row.id === period.id
+                                ? { ...row, dayPortion: value }
                                 : row,
                             ),
                           );
@@ -458,7 +537,11 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                           onClick={() =>
                             setPeriods((current) => [
                               ...current,
-                              { id: newPeriodId(), range: null },
+                              {
+                                id: newPeriodId(),
+                                range: null,
+                                dayPortion: 'FULL',
+                              },
                             ])
                           }
                         >
@@ -477,6 +560,19 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                   />
                 ) : preview ? (
                   <div className="mt-3 rounded-xl border border-[#e8ebef] p-3">
+                    <p className="mb-2 text-sm font-medium">
+                      {formatLeaveChargeSummary(preview, t)}
+                    </p>
+                    {selectedBalance ? (
+                      <p className="erp-users-cell-sub mb-2 text-sm">
+                        {t('hr.form.remainingAfterRequest', {
+                          remaining: Math.round(
+                            (selectedBalance.remaining - preview.totalDays) *
+                              10,
+                          ) / 10,
+                        })}
+                      </p>
+                    ) : null}
                     <LeavePeriodBreakdownTable
                       breakdown={preview.periods.flatMap((row) => row.breakdown)}
                       totalDays={preview.totalDays}
@@ -549,7 +645,16 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                   label={t('hr.form.days')}
                   value={preview ? String(preview.totalDays) : '-'}
                 />
-                {selectedBalance ? (
+                {selectedBalance && preview ? (
+                  <ReviewItem
+                    label={t('hr.form.remainingAfter')}
+                    value={String(
+                      Math.round(
+                        (selectedBalance.remaining - preview.totalDays) * 10,
+                      ) / 10,
+                    )}
+                  />
+                ) : selectedBalance ? (
                   <ReviewItem
                     label={t('hr.labels.remaining')}
                     value={String(selectedBalance.remaining)}

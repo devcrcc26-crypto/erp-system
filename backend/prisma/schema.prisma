@@ -206,6 +206,13 @@ enum LeaveRequestStatus {
   CANCELLED
 }
 
+/** Full day, or morning/afternoon half-day on a single full working weekday. */
+enum LeaveDayPortion {
+  FULL
+  MORNING
+  AFTERNOON
+}
+
 // ─── Company & Settings ──────────────────────────────────────────────────────
 
 model Company {
@@ -3853,12 +3860,13 @@ model LeaveRequest {
 }
 
 model LeaveRequestPeriod {
-  id             String   @id @default(uuid())
-  leaveRequestId String   @map("leave_request_id")
-  startDate      DateTime @map("start_date") @db.Date
-  endDate        DateTime @map("end_date") @db.Date
-  days           Decimal  @db.Decimal(4, 1)
-  createdAt      DateTime @default(now()) @map("created_at")
+  id             String          @id @default(uuid())
+  leaveRequestId String          @map("leave_request_id")
+  startDate      DateTime        @map("start_date") @db.Date
+  endDate        DateTime        @map("end_date") @db.Date
+  days           Decimal         @db.Decimal(4, 1)
+  dayPortion     LeaveDayPortion @default(FULL) @map("day_portion")
+  createdAt      DateTime        @default(now()) @map("created_at")
 
   leaveRequest LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
 

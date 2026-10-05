@@ -3,6 +3,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsDateString,
+  IsIn,
   IsOptional,
   IsUUID,
   ValidateNested,
@@ -17,6 +18,15 @@ export class PreviewPeriodDto {
   @ApiProperty({ example: '2026-09-05' })
   @IsDateString()
   endDate!: string;
+
+  @ApiPropertyOptional({
+    enum: ['FULL', 'MORNING', 'AFTERNOON'],
+    description:
+      'FULL (default), or MORNING/AFTERNOON for a single full working weekday',
+  })
+  @IsOptional()
+  @IsIn(['FULL', 'MORNING', 'AFTERNOON'])
+  dayPortion?: 'FULL' | 'MORNING' | 'AFTERNOON';
 }
 
 export class PreviewDaysDto {

@@ -188,7 +188,7 @@ export class LeaveService
     actorUserId: string,
     files: UploadedFile[] = [],
   ): Promise<unknown> {
-    const resolved = await this.workScheduleService.resolveLeavePeriods(
+    const resolved = await this.workScheduleService.calculateLeaveDays(
       employeeId,
       companyId,
       this.resolvePeriodInputs(dto),
@@ -247,6 +247,7 @@ export class LeaveService
               startDate: period.startDate,
               endDate: period.endDate,
               days: new Prisma.Decimal(period.days),
+              dayPortion: period.dayPortion,
             })),
           },
         },
@@ -296,6 +297,7 @@ export class LeaveService
             startDate: formatDateOnly(period.startDate),
             endDate: formatDateOnly(period.endDate),
             days: period.days,
+            dayPortion: period.dayPortion,
           })),
           reason: dto.reason ?? null,
         },
@@ -336,6 +338,7 @@ export class LeaveService
                   startDate: period.startDate,
                   endDate: period.endDate,
                   days: new Prisma.Decimal(period.days),
+                  dayPortion: period.dayPortion,
                 })),
               },
             },
@@ -488,7 +491,7 @@ export class LeaveService
 
     const leaveType = dto.leaveType ?? leave.leaveType;
     const periodInputs = this.resolvePeriodInputs(dto, leave);
-    const resolved = await this.workScheduleService.resolveLeavePeriods(
+    const resolved = await this.workScheduleService.calculateLeaveDays(
       leave.employeeId,
       companyId,
       periodInputs,
@@ -516,6 +519,7 @@ export class LeaveService
               startDate: period.startDate,
               endDate: period.endDate,
               days: new Prisma.Decimal(period.days),
+              dayPortion: period.dayPortion,
             })),
           },
         },
@@ -960,18 +964,27 @@ export class LeaveService
       endDate?: string;
     },
     existing?: { startDate: Date | null; endDate: Date | null },
-  ): LeavePeriodInputDto[] {
+  ): Array<{
+    startDate: string;
+    endDate: string;
+    dayPortion?: 'FULL' | 'MORNING' | 'AFTERNOON';
+  }> {
     if (dto.periods && dto.periods.length > 0) {
-      return dto.periods;
+      return dto.periods.map((period) => ({
+        startDate: period.startDate,
+        endDate: period.endDate,
+        dayPortion: period.dayPortion ?? 'FULL',
+      }));
     }
     if (dto.startDate && dto.endDate) {
-      return [{ startDate: dto.startDate, endDate: dto.endDate }];
+      return [{ startDate: dto.startDate, endDate: dto.endDate, dayPortion: 'FULL' }];
     }
     if (existing?.startDate && existing.endDate) {
       return [
         {
           startDate: formatDateOnly(existing.startDate),
           endDate: formatDateOnly(existing.endDate),
+          dayPortion: 'FULL',
         },
       ];
     }
