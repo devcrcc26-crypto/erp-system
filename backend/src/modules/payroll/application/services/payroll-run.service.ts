@@ -17,12 +17,9 @@ import { randomUUID } from 'crypto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
   computeLeaveCoveredAbsences,
+  dateToYyyyMmDd,
   type LeaveCoveredAbsencesResult,
 } from '../../../attendance/application/services/attendance-leave.util';
-import {
-  countAbsentDaysInWindows,
-  sumLeaveCoveredAbsentWeight,
-} from '../../../attendance/application/utils/attendance-absence.util';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import {
   PayrollCalculationService,
@@ -32,7 +29,6 @@ import {
 import {
   employedCalendarWindow,
   employedPayrollDays,
-  PAYROLL_MONTH_DAYS,
 } from '../utils/payroll-days.util';
 
 interface ServiceContext {
@@ -87,7 +83,6 @@ interface AttendanceSnapshot {
     isHoliday: boolean;
     isWeekend: boolean;
     wasPresent: boolean;
-    isHalfDay: boolean;
   }>;
 }
 
@@ -802,7 +797,6 @@ export class PayrollRunService {
                 isHoliday: true,
                 isWeekend: true,
                 wasPresent: true,
-                isHalfDay: true,
               },
             },
         },
@@ -1043,35 +1037,23 @@ export class PayrollRunService {
     const noteParts: string[] = [];
 
     if (attendance && attendance.dailyLogs.length > 0) {
-      const absentResult = countAbsentDaysInWindows(
+      // Each missed scheduled day counts as 1 (including half-day Saturdays).
+      const absentDates = this.countAbsentInWindow(
         attendance.dailyLogs,
         windows,
       );
-      absentInWindow = absentResult.absentDays;
-      leaveCoveredInWindow = sumLeaveCoveredAbsentWeight(
-        leave.coveredDates,
-        absentResult.absentDateWeights,
-      );
+      absentInWindow = absentDates.length;
+      const absentSet = new Set(absentDates);
+      leaveCoveredInWindow = leave.coveredDates.filter((d) =>
+        absentSet.has(d),
+      ).length;
       if (leaveCoveredInWindow > 0) {
         const coveredInWindow = leave.coveredDates.filter((d) =>
-          absentResult.absentDateWeights.has(d),
+          absentSet.has(d),
         );
         noteParts.push(
           `${leaveCoveredInWindow} absent working day(s) covered by approved leave: ${coveredInWindow.join(', ')}`,
         );
-      }
-
-      // Full-month employment: daily-log absences must match the monthly summary.
-      if (totalEmployedDays === PAYROLL_MONTH_DAYS) {
-        const summaryAbsent = this.toNumber(attendance.absentDays);
-        if (Math.abs(absentInWindow - summaryAbsent) > 0.001) {
-          noteParts.push(
-            `Absence mismatch: logs ${absentInWindow} vs summary ${summaryAbsent}`,
-          );
-          this.logger.warn(
-            `[PayrollRun] Absence mismatch for employee ${employee.id} in ${run.year}-${String(run.month).padStart(2, '0')}: logs ${absentInWindow} vs summary ${summaryAbsent}`,
-          );
-        }
       }
     } else if (attendance) {
       absentInWindow = this.toNumber(attendance.absentDays);
@@ -1375,6 +1357,39 @@ export class PayrollRunService {
 
   private round(value: number): number {
     return Math.round(value * 100) / 100;
+  }
+
+  /**
+   * Absent scheduled-day dates (YYYY-MM-DD) inside any employed window.
+   * Each missed day counts as 1, including half-day Saturdays.
+   */
+  private countAbsentInWindow(
+    logs: Array<{
+      date: Date;
+      isHoliday: boolean;
+      isWeekend: boolean;
+      wasPresent: boolean;
+    }>,
+    windows: DateWindow[],
+  ): string[] {
+    if (windows.length === 0) {
+      return [];
+    }
+
+    const absent: string[] = [];
+    for (const log of logs) {
+      if (log.isHoliday || log.isWeekend || log.wasPresent) {
+        continue;
+      }
+      const t = log.date.getTime();
+      const inWindow = windows.some(
+        (w) => t >= w.windowStart.getTime() && t <= w.windowEnd.getTime(),
+      );
+      if (inWindow) {
+        absent.push(dateToYyyyMmDd(log.date));
+      }
+    }
+    return absent;
   }
 
   private maskBankAccount(account: string | null): string | null {
