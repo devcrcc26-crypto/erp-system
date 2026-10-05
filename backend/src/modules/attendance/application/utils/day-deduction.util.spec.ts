@@ -16,7 +16,7 @@ function emptyContext(overrides: Partial<DayDeductionContext> = {}): DayDeductio
     isSunday: (date) => date.getUTCDay() === 0,
     isPublicHoliday: () => false,
     isWorkFromHome: () => false,
-    isOnApprovedSite: () => false,
+    siteNameForDate: () => null,
     isOnApprovedLeave: () => false,
     fieldMovementCoverage: () => 'NONE',
     ...overrides,
@@ -280,7 +280,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
       year: 2026,
       contracts: [{ startDate: fullContractStart, endDate: null }],
       dailyLogsByDate: daily,
-      context: emptyContext({ isOnApprovedSite: () => true }),
+      context: emptyContext({ siteNameForDate: () => 'Dire Dawa' }),
     });
     expect(result.paidDays).toBe(30);
   });

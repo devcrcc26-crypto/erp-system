@@ -359,6 +359,28 @@ export default function AttendanceReviewPageContent({
         },
       },
       {
+        title: t('pages.hr.attendance.review.columns.siteDays'),
+        key: 'siteDays',
+        width: 180,
+        render: (_: unknown, row: AttendanceRecord) => {
+          const sites = row.siteDaysThisMonth ?? [];
+          if (sites.length === 0) {
+            return (
+              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+            );
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {sites.map((entry) => (
+                <span key={entry.siteName} style={{ fontSize: 12 }}>
+                  {entry.siteName} ({formatNumber(entry.days)})
+                </span>
+              ))}
+            </div>
+          );
+        },
+      },
+      {
         title: t('pages.hr.attendance.review.columns.flaggedDays'),
         key: 'flaggedDays',
         width: 160,

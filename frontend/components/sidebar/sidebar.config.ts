@@ -255,6 +255,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           labelKey: 'nav.sections.timeOff',
           items: [
             { kind: 'link', id: 'leave-requests', labelKey: 'nav.hr.leaveRequests', icon: 'hr-leave', href: '/hr/leave-requests', requires: ['leave.access'], activePaths: ['/hr/leave-history'], keywords: ['vacation', 'annual leave', 'sick'] },
+            { kind: 'link', id: 'site-assignments', labelKey: 'nav.hr.siteAssignments', icon: 'hr-field-movement', href: '/hr/site-assignments', requires: ['leave.access'], keywords: ['site', 'project site', 'remote work', 'Dire Dawa'] },
             { kind: 'link', id: 'overtime', labelKey: 'nav.hr.overtime', icon: 'hr-overtime', href: '/hr/overtime', requires: ['overtime.access'], activePaths: ['/hr/overtime-history'], keywords: ['extra hours'] },
             { kind: 'link', id: 'payroll', labelKey: 'nav.hr.payroll', icon: 'hr-payroll', href: '/hr/payroll', requires: ['payroll.access'], keywords: ['salary', 'payslip', 'wages'] },
             { kind: 'link', id: 'attendance', labelKey: 'nav.hr.attendance', icon: 'hr-attendance', href: '/hr/attendance', requires: HR, keywords: ['clock in', 'deli', 'timesheet'] },

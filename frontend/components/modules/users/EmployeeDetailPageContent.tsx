@@ -15,6 +15,7 @@ import { ArrowLeft } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import MyEvaluationsPageContent from '@/components/modules/hr/evaluation/MyEvaluationsPageContent';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
+import EmployeeSiteAssignmentsSection from '@/components/modules/hr/site-assignment/EmployeeSiteAssignmentsSection';
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeeWorkScheduleSection from '@/components/modules/hr/work-schedule/EmployeeWorkScheduleSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
@@ -529,6 +530,7 @@ export default function EmployeeDetailPageContent({
               ) : (
                 <EmployeeOvertimeProfileSection mode="self" />
               )}
+              <EmployeeSiteAssignmentsSection employeeId={user.id} />
             </div>
           ) : activeTab === 'attendance' ? (
             <EmployeeAttendanceProfileSection

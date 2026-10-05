@@ -188,7 +188,7 @@ function rowClassName(log: AttendanceDailyLog): string {
   if (log.isWeekend) {
     return 'erp-attendance-row-weekend';
   }
-  if (dayStatus(log) === 'ABSENT') {
+  if (resolveDayStatus(log) === 'ABSENT') {
     return 'erp-attendance-row-absent';
   }
   return '';
@@ -453,13 +453,25 @@ export default function AttendanceDailyLogsDrawer({
                 color={config.color}
                 style={{ borderRadius: 999, fontWeight: 500, margin: 0 }}
               >
-                {t(`pages.hr.attendance.review.dayStatus.${config.labelKey}`)}
+                {status === 'ON_SITE' && row.siteAssignmentName
+                  ? t('pages.hr.attendance.review.dayStatus.onSiteAt', {
+                      siteName: row.siteAssignmentName,
+                    })
+                  : t(
+                      `pages.hr.attendance.review.dayStatus.${config.labelKey}`,
+                    )}
                 {row.holidayName ? (
                   <span style={{ fontWeight: 400, marginLeft: 4 }}>
                     ({row.holidayName})
                   </span>
                 ) : null}
               </Tag>
+              {status === 'PRESENT' && row.siteAssignmentName ? (
+                <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+                  {t('pages.hr.attendance.review.dayStatus.alsoOnSite')} —{' '}
+                  {row.siteAssignmentName}
+                </span>
+              ) : null}
               {status === 'HALF_ABSENT' ? (
                 <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
                   No field movement log

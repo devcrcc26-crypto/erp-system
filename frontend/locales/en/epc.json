@@ -67,6 +67,7 @@
     },
     "hr": {
       "leaveRequests": "Leave Requests",
+      "siteAssignments": "Site Assignments",
       "overtime": "Overtime",
       "payroll": "Payroll",
       "flightApplications": "Flight Applications",
@@ -183,6 +184,10 @@
         "LEAVE_REQUEST": {
           "name": "Leave Request",
           "description": "Employee requests for annual, sick, or unpaid leave."
+        },
+        "SITE_ASSIGNMENT": {
+          "name": "Site Assignment",
+          "description": "Request paid on-site days when working at a project location without HQ scanner coverage."
         },
         "EXPENSE_CLAIM": {
           "name": "Expense Claim",
@@ -447,6 +452,62 @@
           "withPendingSub": "Annual leave"
         }
       },
+      "siteAssignments": {
+        "title": "Site Assignments",
+        "description": "Track on-site project work and approved paid days when the HQ scanner is not available.",
+        "newRequest": "New site assignment",
+        "profileSectionTitle": "Site assignments",
+        "columns": {
+          "requestNumber": "Request #",
+          "employee": "Employee",
+          "site": "Site",
+          "project": "Project",
+          "start": "Start",
+          "end": "End",
+          "days": "Days",
+          "status": "Status"
+        },
+        "filters": {
+          "status": "Status",
+          "site": "Site name",
+          "month": "Month"
+        },
+        "status": {
+          "SUBMITTED": "Submitted",
+          "IN_REVIEW": "In review",
+          "APPROVED": "Approved",
+          "REJECTED": "Rejected",
+          "RETURNED": "Returned",
+          "CANCELLED": "Cancelled"
+        },
+        "form": {
+          "title": "Site assignment request",
+          "description": "Dates may include past days back to the 1st of the previous month and future planned site work.",
+          "siteName": "Site name",
+          "siteNamePlaceholder": "e.g. Dire Dawa",
+          "project": "Project (optional)",
+          "projectPlaceholder": "Link to a project",
+          "dateRange": "Date range",
+          "calendarDays": "{{count}} calendar days",
+          "daysLabel": "days",
+          "reason": "Reason",
+          "datesRequired": "Select a start and end date.",
+          "submit": "Submit request",
+          "submitSuccess": "Site assignment submitted."
+        },
+        "detail": {
+          "back": "Back to list",
+          "cancelSubmitted": "Cancel request",
+          "cancelApproved": "Cancel assignment",
+          "cancelApprovedTitle": "Cancel approved site assignment",
+          "shorten": "Shorten end date",
+          "shortenTitle": "Shorten site assignment",
+          "newEndDate": "New end date",
+          "cancelled": "Site assignment updated.",
+          "shortened": "End date updated and attendance recalculated.",
+          "reasonRequired": "A reason is required."
+        }
+      },
       "leaveHistory": {
         "title": "Leave balance & history",
         "description": "Balances and leave requests for {{name}}.",
@@ -688,8 +749,13 @@
             "HOLIDAY": "Holiday",
             "WORK_FROM_HOME": "Work from home",
             "ON_SITE": "On site",
+            "onSiteAt": "On site — {{siteName}}",
+            "alsoOnSite": "also on site",
             "LEAVE": "Leave",
             "FIELD_MOVEMENT_PENDING": "Field movement pending"
+          },
+          "columns": {
+            "siteDays": "Site"
           }
         },
         "importModal": {

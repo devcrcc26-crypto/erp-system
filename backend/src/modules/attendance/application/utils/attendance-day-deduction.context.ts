@@ -4,6 +4,7 @@ import {
   holidayFallsOnDate,
 } from '../../../work-schedule/application/services/work-schedule.dates';
 import { dateToYyyyMmDd } from '../services/attendance-leave.util';
+import { siteNameForDate as resolveSiteNameForDate } from '../../../site-assignment/application/utils/site-assignment.util';
 import {
   fieldMovementCoverageFromStatus,
   type DayDeductionContext,
@@ -33,6 +34,11 @@ interface LoadedDeductionData {
   }>;
   leaveDateKeys: Set<string>;
   fieldMovementByDate: Map<string, FieldMovementCoverage>;
+  siteAssignments: Array<{
+    startDate: Date;
+    endDate: Date;
+    siteName: string;
+  }>;
 }
 
 /**
@@ -137,11 +143,32 @@ export async function loadDeductionDataForMonth(
     }
   }
 
+  const siteRows = await db.siteAssignment.findMany({
+    where: {
+      companyId,
+      employeeId: employee.id,
+      status: 'APPROVED',
+      deletedAt: null,
+      startDate: { lte: monthEnd },
+      endDate: { gte: monthStart },
+    },
+    select: {
+      startDate: true,
+      endDate: true,
+      siteName: true,
+    },
+  });
+
   return {
     holidays,
     wfhDays,
     leaveDateKeys,
     fieldMovementByDate,
+    siteAssignments: siteRows.map((row) => ({
+      startDate: row.startDate,
+      endDate: row.endDate,
+      siteName: row.siteName,
+    })),
   };
 }
 
@@ -174,7 +201,6 @@ function wfhAppliesToEmployee(
 export function buildDayDeductionContext(
   employee: EmployeeDeductionProfile,
   data: LoadedDeductionData,
-  isOnApprovedSite: (date: Date) => boolean = () => false,
 ): DayDeductionContext {
   return {
     isSunday: (date) => date.getUTCDay() === 0,
@@ -191,7 +217,8 @@ export function buildDayDeductionContext(
       const key = dateToYyyyMmDd(date);
       return data.wfhDays.some((row) => wfhAppliesToEmployee(row, employee, key));
     },
-    isOnApprovedSite,
+    siteNameForDate: (date) =>
+      resolveSiteNameForDate(date, data.siteAssignments),
     isOnApprovedLeave: (date) => data.leaveDateKeys.has(dateToYyyyMmDd(date)),
     fieldMovementCoverage: (date) =>
       data.fieldMovementByDate.get(dateToYyyyMmDd(date)) ?? 'NONE',

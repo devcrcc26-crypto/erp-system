@@ -23,6 +23,7 @@ import PlaceholderPage from '@/components/PlaceholderPage';
 import { DemoEmailWarning } from '@/components/auth/DemoEmailWarning';
 import MyEvaluationsPageContent from '@/components/modules/hr/evaluation/MyEvaluationsPageContent';
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
+import EmployeeSiteAssignmentsSection from '@/components/modules/hr/site-assignment/EmployeeSiteAssignmentsSection';
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
@@ -566,7 +567,12 @@ export default function ProfilePageContent(): React.ReactNode {
   function renderTab(tab: ProfileTab, currentProfile: UserProfile): React.ReactNode {
     switch (tab) {
       case 'leave':
-        return <EmployeeLeaveProfileSection mode="self" hideCreateAction />;
+        return (
+          <>
+            <EmployeeLeaveProfileSection mode="self" hideCreateAction />
+            <EmployeeSiteAssignmentsSection employeeId={currentProfile.id} />
+          </>
+        );
       case 'overtime':
         return (
           <EmployeeOvertimeProfileSection

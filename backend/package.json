@@ -22,6 +22,7 @@
     "prisma:seed-hr-users-permissions": "ts-node --transpile-only prisma/seed-hr-users-permissions.ts",
     "prisma:seed-full-project": "ts-node --transpile-only prisma/seed-full-project.ts",
     "prisma:clear-pm": "ts-node --transpile-only prisma/clear-pm-data.ts",
+    "prisma:recalculate-attendance-paid-days": "ts-node -r tsconfig-paths/register --transpile-only prisma/recalculate-attendance-paid-days.ts",
     "prisma:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

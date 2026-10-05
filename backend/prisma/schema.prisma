@@ -206,6 +206,15 @@ enum LeaveRequestStatus {
   CANCELLED
 }
 
+enum SiteAssignmentStatus {
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RETURNED
+  CANCELLED
+}
+
 /** Full day, or morning/afternoon half-day on a single full working weekday. */
 enum LeaveDayPortion {
   FULL
@@ -306,6 +315,7 @@ model Company {
   workSchedules               WorkSchedule[]
   publicHolidays              PublicHoliday[]
   workFromHomeDays            WorkFromHomeDay[]
+  siteAssignments             SiteAssignment[]
   employeeScheduleAssignments EmployeeScheduleAssignment[]
   attendanceImportBatches  AttendanceImportBatch[]
   attendanceRecords        AttendanceRecord[]
@@ -812,6 +822,8 @@ model User {
   attendanceImportBatches         AttendanceImportBatch[]   @relation("AttendanceImporter")
   fieldMovementLogs               FieldMovementLog[]        @relation("FieldMovementEmployee")
   fieldMovementLogsCreated        FieldMovementLog[]        @relation("FieldMovementCreator")
+  siteAssignmentsAsEmployee       SiteAssignment[]          @relation("SiteAssignmentEmployee")
+  siteAssignmentsCreated          SiteAssignment[]          @relation("SiteAssignmentCreator")
   attendanceMonthlyReviews        AttendanceMonthlyApproval[] @relation("AttendanceReviewer")
   attendanceMonthlyApprovals      AttendanceMonthlyApproval[] @relation("AttendanceApprover")
   attendanceMonthlyUnlocks        AttendanceMonthlyApproval[] @relation("AttendanceUnlocker")
@@ -1939,6 +1951,7 @@ model Project {
   purchaseRequests PurchaseRequest[]
   materialRequisitions MaterialRequisition[]
   vehicleApplications  VehicleApplication[]
+  siteAssignments      SiteAssignment[]
 
   @@unique([companyId, projectCode], map: "uq_project_company_code")
   @@index([companyId], map: "idx_project_company_id")
@@ -3602,6 +3615,7 @@ model ApprovalRequest {
   projectSeal            ProjectSeal?
   exitPermit             ExitPermit?
   fieldMovementLog       FieldMovementLog?
+  siteAssignment         SiteAssignment?
 
   @@index([categoryId], map: "idx_approval_request_category")
   @@index([companyId], map: "idx_approval_request_company")
@@ -3794,6 +3808,43 @@ model WorkFromHomeDay {
   @@index([companyId, deletedAt], map: "idx_work_from_home_day_company_deleted")
   @@index([companyId, date], map: "idx_work_from_home_day_company_date")
   @@map("work_from_home_day")
+}
+
+model SiteAssignment {
+  id                String               @id @default(uuid())
+  companyId         String               @map("company_id")
+  requestNumber     String               @map("request_number")
+  employeeId        String               @map("employee_id")
+  siteName          String               @map("site_name")
+  projectId         String?              @map("project_id")
+  startDate         DateTime             @map("start_date") @db.Date
+  endDate           DateTime             @map("end_date") @db.Date
+  reason            String?
+  status            SiteAssignmentStatus @default(SUBMITTED)
+  approvalRequestId String?              @unique @map("approval_request_id")
+  submittedAt       DateTime?            @map("submitted_at")
+  completedAt       DateTime?            @map("completed_at")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  createdBy         String               @map("created_by")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  updatedBy         String               @map("updated_by")
+  deletedAt         DateTime?            @map("deleted_at")
+  deletedBy         String?              @map("deleted_by")
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  employee        User             @relation("SiteAssignmentEmployee", fields: [employeeId], references: [id])
+  creator         User             @relation("SiteAssignmentCreator", fields: [createdBy], references: [id])
+  project         Project?         @relation(fields: [projectId], references: [id])
+  approvalRequest ApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
+
+  @@unique([companyId, requestNumber], map: "uq_site_assignment_company_number")
+  @@index([companyId], map: "idx_site_assignment_company")
+  @@index([companyId, deletedAt], map: "idx_site_assignment_company_deleted")
+  @@index([employeeId], map: "idx_site_assignment_employee")
+  @@index([status], map: "idx_site_assignment_status")
+  @@index([startDate, endDate], map: "idx_site_assignment_dates")
+  @@index([projectId], map: "idx_site_assignment_project")
+  @@map("site_assignment")
 }
 
 // ─── Leave / HR ──────────────────────────────────────────────────────────────
@@ -4169,6 +4220,7 @@ model AttendanceDailyLog {
   isLastExportDay          Boolean           @default(false) @map("is_last_export_day")
   dayStatus                AttendanceDayStatus @default(PRESENT) @map("day_status")
   dayDeduction             Decimal           @default(0) @map("day_deduction") @db.Decimal(3, 2)
+  siteAssignmentName       String?           @map("site_assignment_name")
 
   record               AttendanceRecord              @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
   corrections          AttendanceDailyLogCorrection[]

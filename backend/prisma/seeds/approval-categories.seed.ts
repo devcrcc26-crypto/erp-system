@@ -116,6 +116,34 @@ const CATEGORIES: CategorySeedDef[] = [
     ],
   },
   {
+    code: 'SITE_ASSIGNMENT',
+    name: 'Site Assignment',
+    description:
+      'Request paid on-site days when working at a project location without HQ scanner coverage.',
+    module: 'HR',
+    numberPrefix: 'SA',
+    icon: 'EnvironmentOutlined',
+    sortOrder: 11,
+    formSchema: {
+      fields: [
+        { name: 'siteName', label: 'Site name', type: 'text', required: true },
+        { name: 'projectId', label: 'Project', type: 'text', required: false },
+        { name: 'startDate', label: 'Start date', type: 'date', required: true },
+        { name: 'endDate', label: 'End date', type: 'date', required: true },
+        { name: 'reason', label: 'Reason', type: 'textarea', required: false },
+      ],
+    },
+    approvalRules: [
+      {
+        name: 'Default',
+        tiers: [
+          tier('Department Head', 'DEPARTMENT_HEAD', 1),
+          tier('HR Manager', 'HR_MANAGER', 2),
+        ],
+      },
+    ],
+  },
+  {
     code: 'EXPENSE_CLAIM',
     name: 'Expense Claim',
     description: 'Reimbursement claims for travel, meals, and other business expenses.',

@@ -67,6 +67,7 @@
     },
     "hr": {
       "leaveRequests": "请假申请",
+      "siteAssignments": "现场派驻",
       "overtime": "加班申请",
       "payroll": "薪资",
       "expenseClaims": "费用报销",
@@ -182,6 +183,10 @@
         "LEAVE_REQUEST": {
           "name": "请假申请",
           "description": "员工年假、病假或无薪假申请。"
+        },
+        "SITE_ASSIGNMENT": {
+          "name": "现场派驻",
+          "description": "在无总部考勤机覆盖的项目现场工作时，申请计薪现场天数。"
         },
         "EXPENSE_CLAIM": {
           "name": "费用报销",
@@ -444,6 +449,62 @@
           "lowBalanceSub": "≤ {{threshold}} 天",
           "withPending": "有待审批",
           "withPendingSub": "年假"
+        }
+      },
+      "siteAssignments": {
+        "title": "现场派驻",
+        "description": "记录项目现场工作；总部无考勤机时，经批准的天数计薪且不计缺勤。",
+        "newRequest": "新建现场派驻",
+        "profileSectionTitle": "现场派驻记录",
+        "columns": {
+          "requestNumber": "单号",
+          "employee": "员工",
+          "site": "现场",
+          "project": "项目",
+          "start": "开始",
+          "end": "结束",
+          "days": "天数",
+          "status": "状态"
+        },
+        "filters": {
+          "status": "状态",
+          "site": "现场名称",
+          "month": "月份"
+        },
+        "status": {
+          "SUBMITTED": "已提交",
+          "IN_REVIEW": "审批中",
+          "APPROVED": "已批准",
+          "REJECTED": "已拒绝",
+          "RETURNED": "已退回",
+          "CANCELLED": "已取消"
+        },
+        "form": {
+          "title": "现场派驻申请",
+          "description": "日期可包含上月1日以来的历史天数及未来计划现场工作。",
+          "siteName": "现场名称",
+          "siteNamePlaceholder": "例如：德雷达瓦",
+          "project": "项目（可选）",
+          "projectPlaceholder": "关联项目",
+          "dateRange": "日期范围",
+          "calendarDays": "共 {{count}} 个自然日",
+          "daysLabel": "天",
+          "reason": "原因",
+          "datesRequired": "请选择开始和结束日期。",
+          "submit": "提交申请",
+          "submitSuccess": "现场派驻已提交。"
+        },
+        "detail": {
+          "back": "返回列表",
+          "cancelSubmitted": "取消申请",
+          "cancelApproved": "取消派驻",
+          "cancelApprovedTitle": "取消已批准的现场派驻",
+          "shorten": "缩短结束日期",
+          "shortenTitle": "缩短现场派驻",
+          "newEndDate": "新的结束日期",
+          "cancelled": "现场派驻已更新。",
+          "shortened": "结束日期已更新，考勤已重算。",
+          "reasonRequired": "请填写原因。"
         }
       },
       "leaveHistory": {

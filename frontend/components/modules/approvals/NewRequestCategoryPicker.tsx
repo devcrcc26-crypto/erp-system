@@ -65,7 +65,12 @@ interface RequestGroup {
 const REQUEST_GROUPS: RequestGroup[] = [
   {
     key: 'time',
-    codes: ['LEAVE_REQUEST', 'OVERTIME_APPLICATION', 'FIELD_MOVEMENT_LOG'],
+    codes: [
+      'LEAVE_REQUEST',
+      'SITE_ASSIGNMENT',
+      'OVERTIME_APPLICATION',
+      'FIELD_MOVEMENT_LOG',
+    ],
     accent: tokens.colorBlue400,
     tint: tokens.colorBlue50,
   },

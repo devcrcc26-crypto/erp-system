@@ -50,6 +50,7 @@ import { OfficialSealModule } from './modules/official-seal/official-seal.module
 import { ProjectSealModule } from './modules/project-seal/project-seal.module';
 import { EmployeeContractModule } from './modules/employee-contract/employee-contract.module';
 import { ExitPermitModule } from './modules/exit-permit/exit-permit.module';
+import { SiteAssignmentModule } from './modules/site-assignment/site-assignment.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { EvaluationModule } from './modules/evaluation/evaluation.module';
 import {PayrollModule} from './modules/payroll/payroll.module';
@@ -108,6 +109,7 @@ import {PayrollModule} from './modules/payroll/payroll.module';
     ProjectSealModule,
     EmployeeContractModule,
     ExitPermitModule,
+    SiteAssignmentModule,
     AttendanceModule,
     EvaluationModule,
     PayrollModule,

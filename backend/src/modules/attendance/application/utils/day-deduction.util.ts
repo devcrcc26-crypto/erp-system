@@ -21,7 +21,8 @@ export interface DayDeductionContext {
   isSunday: (date: Date) => boolean;
   isPublicHoliday: (date: Date) => boolean;
   isWorkFromHome: (date: Date) => boolean;
-  isOnApprovedSite: (date: Date) => boolean;
+  /** Approved site assignment covering this date, if any. */
+  siteNameForDate: (date: Date) => string | null;
   isOnApprovedLeave: (date: Date) => boolean;
   fieldMovementCoverage: (date: Date) => FieldMovementCoverage;
 }
@@ -29,6 +30,8 @@ export interface DayDeductionContext {
 export interface DayDeductionResult {
   deduction: DayDeductionValue;
   status: AttendanceDayStatus;
+  /** Set when present on a site day (HQ scan) or ON_SITE. */
+  siteName?: string | null;
 }
 
 function roundDays(value: number): number {
@@ -58,15 +61,18 @@ export function dayDeduction(
   if (context.isWorkFromHome(date)) {
     return { deduction: 0, status: 'WORK_FROM_HOME' };
   }
-  if (context.isOnApprovedSite(date)) {
-    return { deduction: 0, status: 'ON_SITE' };
+
+  const siteName = context.siteNameForDate(date);
+  const hasClockIn = Boolean(day.clockIn);
+  const hasClockOut = Boolean(day.clockOut);
+
+  if (siteName && !hasClockIn && !hasClockOut) {
+    return { deduction: 0, status: 'ON_SITE', siteName };
   }
+
   if (context.isOnApprovedLeave(date)) {
     return { deduction: 0, status: 'LEAVE' };
   }
-
-  const hasClockIn = Boolean(day.clockIn);
-  const hasClockOut = Boolean(day.clockOut);
 
   if (!hasClockIn && !hasClockOut) {
     return { deduction: 1, status: 'ABSENT' };
@@ -85,7 +91,7 @@ export function dayDeduction(
   if (missingClockIn || missingClockOut || earlyDeparture) {
     const fm = context.fieldMovementCoverage(date);
     if (fm === 'APPROVED') {
-      return { deduction: 0, status: 'PRESENT' };
+      return { deduction: 0, status: 'PRESENT', siteName: siteName ?? null };
     }
     if (fm === 'PENDING') {
       return { deduction: 0.5, status: 'FIELD_MOVEMENT_PENDING' };
@@ -93,7 +99,11 @@ export function dayDeduction(
     return { deduction: 0.5, status: 'HALF_ABSENT' };
   }
 
-  return { deduction: 0, status: 'PRESENT' };
+  return {
+    deduction: 0,
+    status: 'PRESENT',
+    siteName: siteName ?? null,
+  };
 }
 
 export interface ContractSegment {

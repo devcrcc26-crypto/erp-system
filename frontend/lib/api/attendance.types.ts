@@ -86,6 +86,7 @@ export interface AttendanceDailyLog {
     | 'LEAVE'
     | 'FIELD_MOVEMENT_PENDING';
   dayDeduction?: number;
+  siteAssignmentName?: string | null;
   corrections?: AttendanceDailyLogCorrection[];
   fieldMovementEntries?: AttendanceFieldMovementEntryLink[];
 }
@@ -137,6 +138,7 @@ export interface AttendanceRecord {
     }>;
   }>;
   leaveDaysThisMonth?: number;
+  siteDaysThisMonth?: Array<{ siteName: string; days: number }>;
 }
 
 export interface AttendanceListParams {

@@ -732,7 +732,8 @@ export class PayrollRunService {
 
     const employeeIds = employees.map((e) => e.id);
 
-    const [contracts, attendanceRecords, overtimeSheets] = await Promise.all([
+    const [contracts, attendanceRecords, overtimeSheets, siteAssignments] =
+      await Promise.all([
       this.prisma.employeeContract.findMany({
         where: {
           companyId: ctx.companyId,
@@ -804,6 +805,22 @@ export class PayrollRunService {
           totalHolidayHours: true,
         },
       }),
+      this.prisma.siteAssignment.findMany({
+        where: {
+          companyId: ctx.companyId,
+          employeeId: { in: employeeIds },
+          status: 'APPROVED',
+          deletedAt: null,
+          startDate: { lte: monthEnd },
+          endDate: { gte: monthStart },
+        },
+        select: {
+          employeeId: true,
+          siteName: true,
+          startDate: true,
+          endDate: true,
+        },
+      }),
     ]);
 
     const contractsByEmployee = new Map<string, ContractSnapshot[]>();
@@ -821,6 +838,20 @@ export class PayrollRunService {
     const overtimeByEmployee = new Map<string, OvertimeSnapshot>();
     for (const sheet of overtimeSheets) {
       overtimeByEmployee.set(sheet.employeeId, sheet);
+    }
+
+    const siteByEmployee = new Map<
+      string,
+      Array<{ siteName: string; startDate: Date; endDate: Date }>
+    >();
+    for (const row of siteAssignments) {
+      const list = siteByEmployee.get(row.employeeId) ?? [];
+      list.push({
+        siteName: row.siteName,
+        startDate: row.startDate,
+        endDate: row.endDate,
+      });
+      siteByEmployee.set(row.employeeId, list);
     }
 
     const taxableThreshold = this.toNumber(run.taxableThreshold);
@@ -843,6 +874,7 @@ export class PayrollRunService {
           contracts: overlapping,
           attendance,
           overtime: overtimeByEmployee.get(employee.id),
+          siteAssignments: siteByEmployee.get(employee.id) ?? [],
           taxableThreshold,
           bonusTopUp: topUp?.bonusTopUp ?? 0,
           bonusTopUpReason: topUp?.bonusTopUpReason ?? null,
@@ -861,6 +893,11 @@ export class PayrollRunService {
     contracts: ContractSnapshot[];
     attendance: AttendanceSnapshot | undefined;
     overtime: OvertimeSnapshot | undefined;
+    siteAssignments: Array<{
+      siteName: string;
+      startDate: Date;
+      endDate: Date;
+    }>;
     taxableThreshold: number;
     bonusTopUp: number;
     bonusTopUpReason: string | null;
@@ -873,11 +910,15 @@ export class PayrollRunService {
       contracts,
       attendance,
       overtime,
+      siteAssignments,
       taxableThreshold,
       bonusTopUp,
       bonusTopUpReason,
       preservedNotes,
     } = input;
+
+    const monthStart = new Date(Date.UTC(run.year, run.month - 1, 1));
+    const monthEnd = new Date(Date.UTC(run.year, run.month, 0));
 
     const sorted = [...contracts].sort(
       (a, b) => a.startDate.getTime() - b.startDate.getTime(),
@@ -931,6 +972,22 @@ export class PayrollRunService {
     if (attendance) {
       absentInWindow = this.toNumber(attendance.absentDays);
       payrollDays = this.toNumber(attendance.paidDays);
+    }
+
+    for (const assignment of siteAssignments) {
+      const rangeStart = new Date(
+        Math.max(assignment.startDate.getTime(), monthStart.getTime()),
+      );
+      const rangeEnd = new Date(
+        Math.min(assignment.endDate.getTime(), monthEnd.getTime()),
+      );
+      if (rangeStart.getTime() > rangeEnd.getTime()) {
+        continue;
+      }
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const days =
+        Math.floor((rangeEnd.getTime() - rangeStart.getTime()) / msPerDay) + 1;
+      noteParts.push(`${days} day(s) on site at ${assignment.siteName}`);
     }
     // Absences reduce earned pay; scale multi-contract period earneds.
     const earnedScale =

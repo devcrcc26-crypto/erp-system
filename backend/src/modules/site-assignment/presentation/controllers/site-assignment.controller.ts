@@ -1,0 +1,136 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { CurrentCompany } from '../../../../shared/decorators/current-company.decorator';
+import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../../shared/permissions/delegate-permission-check.decorator';
+import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
+import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
+import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import {
+  ListSiteAssignmentsDto,
+  ShortenSiteAssignmentDto,
+  SubmitSiteAssignmentDto,
+} from '../../application/dtos/site-assignment.dtos';
+import { SiteAssignmentService } from '../../application/services/site-assignment.service';
+
+@ApiTags('HR Site Assignments')
+@ApiBearerAuth()
+@UseGuards(PermissionsGuard)
+@RequireAnyPermission(
+  { module: 'hr', action: 'view' },
+  { module: 'leave', action: 'view' },
+  { module: 'leave', action: 'create' },
+)
+@Controller('hr/site-assignments')
+export class SiteAssignmentController {
+  constructor(
+    private readonly siteAssignmentService: SiteAssignmentService,
+  ) {}
+
+  @Post()
+  @DelegatePermissionCheck()
+  @ApiOperation({ summary: 'Submit a site assignment request' })
+  async submit(
+    @Body() dto: SubmitSiteAssignmentDto,
+    @CurrentCompany() companyId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.siteAssignmentService.submitRequest(dto, companyId, user.userId);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'List site assignments' })
+  async list(
+    @Query() query: ListSiteAssignmentsDto,
+    @CurrentCompany() companyId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.siteAssignmentService.listRequests(
+      query,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Get('employee/:employeeId')
+  @ApiOperation({ summary: 'Site assignments for employee profile' })
+  async listForEmployee(
+    @Param('employeeId') employeeId: string,
+    @CurrentCompany() companyId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.siteAssignmentService.listForEmployee(
+      employeeId,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Site assignment detail' })
+  async getOne(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.siteAssignmentService.getDetail(id, companyId, user.userId);
+  }
+
+  @Post(':id/cancel')
+  @ApiOperation({ summary: 'Employee cancel (SUBMITTED only)' })
+  async cancelSubmitted(
+    @Param('id') id: string,
+    @CurrentCompany() companyId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.siteAssignmentService.cancelSubmitted(
+      id,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Post(':id/cancel-approved')
+  @ApiOperation({ summary: 'HR cancel an approved assignment' })
+  async cancelApproved(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @CurrentCompany() companyId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.siteAssignmentService.cancelApproved(
+      id,
+      companyId,
+      user.userId,
+      reason,
+    );
+  }
+
+  @Post(':id/shorten')
+  @ApiOperation({ summary: 'HR shorten approved assignment end date' })
+  async shorten(
+    @Param('id') id: string,
+    @Body() dto: ShortenSiteAssignmentDto,
+    @CurrentCompany() companyId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.siteAssignmentService.shortenApproved(
+      id,
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+}

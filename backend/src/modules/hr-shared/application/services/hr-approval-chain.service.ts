@@ -108,6 +108,7 @@ export const HR_ON_BEHALF_MODULE_CODES = [
   'FIELD_MOVEMENT_LOG',
   'INSPECTION_REPAIR',
   'EXIT_PERMIT',
+  'SITE_ASSIGNMENT',
 ] as const;
 
 export type HrOnBehalfModuleCode = (typeof HR_ON_BEHALF_MODULE_CODES)[number];
@@ -308,6 +309,7 @@ export class HrApprovalChainService {
   ): Promise<ResolvedApprovalTier[]> {
     switch (moduleCode) {
       case 'LEAVE_REQUEST':
+      case 'SITE_ASSIGNMENT':
       case 'OVERTIME_APPLICATION':
       case 'FIELD_MOVEMENT_LOG':
       case 'EXIT_PERMIT':

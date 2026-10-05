@@ -69,6 +69,10 @@ const MODULE_AUDIT: Record<
     recordType: 'InspectionRepair',
   },
   EXIT_PERMIT: { module: 'exit-permit', recordType: 'ExitPermit' },
+  SITE_ASSIGNMENT: {
+    module: 'site-assignment',
+    recordType: 'SiteAssignment',
+  },
 };
 
 /**

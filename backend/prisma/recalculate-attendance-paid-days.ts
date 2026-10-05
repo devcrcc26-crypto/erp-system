@@ -1,16 +1,30 @@
 /**
  * One-off: recompute absentDays/paidDays and daily log status from dayDeduction.
- * Usage: npx ts-node --transpile-only prisma/recalculate-attendance-paid-days.ts
+ *
+ * Usage (from backend/):
+ *   npm run prisma:recalculate-attendance-paid-days
+ * or:
+ *   npx ts-node -r tsconfig-paths/register --transpile-only prisma/recalculate-attendance-paid-days.ts
  */
+import 'reflect-metadata';
+import { join } from 'path';
+import { register } from 'tsconfig-paths';
 import { PrismaClient } from '@prisma/client';
+
+register({
+  baseUrl: join(__dirname, '..'),
+  paths: { '@/*': ['src/*'] },
+});
 
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
+  const { NestFactory } = await import('@nestjs/core');
+  const { AppModule } = await import('../src/app.module');
   const { AttendanceService } = await import(
     '../src/modules/attendance/application/services/attendance.service'
   );
-  // Minimal inline recalc without Nest bootstrap — use raw service pattern via records loop.
+
   const records = await prisma.attendanceRecord.findMany({
     select: {
       id: true,
@@ -30,7 +44,10 @@ async function main(): Promise<void> {
     paid: Number(r.paidDays),
   }));
 
-  const byCompanyMonth = new Map<string, { companyId: string; month: number; year: number }>();
+  const byCompanyMonth = new Map<
+    string,
+    { companyId: string; month: number; year: number }
+  >();
   for (const r of records) {
     byCompanyMonth.set(`${r.companyId}:${r.year}:${r.month}`, {
       companyId: r.companyId,
@@ -39,11 +56,6 @@ async function main(): Promise<void> {
     });
   }
 
-  // Dynamic import Nest context is heavy; use AttendanceService via compiled dist if available.
-  // Fallback: invoke recalc SQL-only path through prisma script duplication is avoided —
-  // run via Nest application context.
-  const { NestFactory } = await import('@nestjs/core');
-  const { AppModule } = await import('../src/app.module');
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: false,
   });
@@ -86,7 +98,8 @@ async function main(): Promise<void> {
 
   changes.sort(
     (a, b) =>
-      Math.abs(b.paidDelta) + Math.abs(b.absentDelta) -
+      Math.abs(b.paidDelta) +
+      Math.abs(b.absentDelta) -
       (Math.abs(a.paidDelta) + Math.abs(a.absentDelta)),
   );
 

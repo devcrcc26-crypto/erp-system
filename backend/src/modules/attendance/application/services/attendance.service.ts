@@ -1096,9 +1096,42 @@ export class AttendanceService
       leaveGroups.map((g) => [g.attendanceRecordId, g._count._all]),
     );
 
+    const siteLogRows =
+      recordIds.length > 0
+        ? await this.prisma.attendanceDailyLog.findMany({
+            where: {
+              attendanceRecordId: { in: recordIds },
+              siteAssignmentName: { not: null },
+            },
+            select: {
+              attendanceRecordId: true,
+              siteAssignmentName: true,
+            },
+          })
+        : [];
+    const siteSummaryByRecord = new Map<
+      string,
+      Array<{ siteName: string; days: number }>
+    >();
+    for (const log of siteLogRows) {
+      const name = log.siteAssignmentName?.trim();
+      if (!name) {
+        continue;
+      }
+      const list = siteSummaryByRecord.get(log.attendanceRecordId) ?? [];
+      const existing = list.find((entry) => entry.siteName === name);
+      if (existing) {
+        existing.days += 1;
+      } else {
+        list.push({ siteName: name, days: 1 });
+      }
+      siteSummaryByRecord.set(log.attendanceRecordId, list);
+    }
+
     const enriched = rows.map((row) => ({
       ...row,
       leaveDaysThisMonth: leaveDaysByRecord.get(row.id) ?? 0,
+      siteDaysThisMonth: siteSummaryByRecord.get(row.id) ?? [],
     }));
 
     return buildPaginatedResult(enriched, total, page, limit);
@@ -2520,11 +2553,11 @@ export class AttendanceService
       }
 
       await this.recalculateAttendanceRecord(
-        tx,
         log.employeeId,
         log.companyId,
         log.month,
         log.year,
+        tx,
       );
     });
   }
@@ -2622,13 +2655,14 @@ export class AttendanceService
    * Rebuilds paid/absent days and per-log status from dayDeduction rules.
    */
   private async recalculateAttendanceRecord(
-    tx: Prisma.TransactionClient,
     employeeId: string,
     companyId: string,
     month: number,
     year: number,
+    tx?: Prisma.TransactionClient,
   ): Promise<void> {
-    const record = await tx.attendanceRecord.findUnique({
+    const writeDb = tx ?? this.prisma;
+    const record = await this.prisma.attendanceRecord.findUnique({
       where: {
         companyId_employeeId_month_year: {
           companyId,
@@ -2646,7 +2680,7 @@ export class AttendanceService
       return;
     }
 
-    const employee = await tx.user.findFirst({
+    const employee = await this.prisma.user.findFirst({
       where: { id: employeeId, companyId, deletedAt: null },
       select: { id: true, departmentId: true, nationality: true },
     });
@@ -2656,7 +2690,7 @@ export class AttendanceService
 
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
     const monthEnd = new Date(Date.UTC(year, month, 0));
-    const contracts = await tx.employeeContract.findMany({
+    const contracts = await this.prisma.employeeContract.findMany({
       where: {
         companyId,
         employeeId,
@@ -2705,7 +2739,7 @@ export class AttendanceService
     }
 
     const deductionData = await loadDeductionDataForMonth(
-      tx,
+      this.prisma,
       companyId,
       employee,
       month,
@@ -2720,12 +2754,19 @@ export class AttendanceService
         ...log,
         scheduledEnd: scheduleEndByDate.get(key) ?? null,
       });
-      const { deduction, status } = dayDeduction(log.date, input, context);
-      await tx.attendanceDailyLog.update({
+      const { deduction, status, siteName } = dayDeduction(
+        log.date,
+        input,
+        context,
+      );
+      await writeDb.attendanceDailyLog.update({
         where: { id: log.id },
         data: {
           dayStatus: status,
           dayDeduction: deduction,
+          siteAssignmentName:
+            siteName ??
+            (status === 'ON_SITE' ? context.siteNameForDate(log.date) : null),
         },
       });
     }
@@ -2794,7 +2835,7 @@ export class AttendanceService
       }
     }
 
-    await tx.attendanceRecord.update({
+    await writeDb.attendanceRecord.update({
       where: { id: record.id },
       data: {
         scheduledDays,
@@ -3021,15 +3062,12 @@ export class AttendanceService
       }
 
       if (daysChanged > 0) {
-        await this.prisma.$transaction(async (tx) => {
-          await this.recalculateAttendanceRecord(
-            tx,
-            employeeId,
-            companyId,
-            record.month,
-            record.year,
-          );
-        });
+        await this.recalculateAttendanceRecord(
+          employeeId,
+          companyId,
+          record.month,
+          record.year,
+        );
         updatedRecords += 1;
         updatedDays += daysChanged;
       }
@@ -3092,22 +3130,25 @@ export class AttendanceService
     companyId: string,
     month: number,
     year: number,
+    employeeId?: string,
   ): Promise<{ updated: number }> {
     const records = await this.prisma.attendanceRecord.findMany({
-      where: { companyId, month, year },
+      where: {
+        companyId,
+        month,
+        year,
+        ...(employeeId ? { employeeId } : {}),
+      },
       select: { employeeId: true },
     });
     let updated = 0;
     for (const record of records) {
-      await this.prisma.$transaction(async (tx) => {
-        await this.recalculateAttendanceRecord(
-          tx,
-          record.employeeId,
-          companyId,
-          month,
-          year,
-        );
-      });
+      await this.recalculateAttendanceRecord(
+        record.employeeId,
+        companyId,
+        month,
+        year,
+      );
       updated += 1;
     }
     return { updated };

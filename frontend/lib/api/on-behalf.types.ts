@@ -14,7 +14,8 @@ export type OnBehalfModuleCode =
   | 'VEHICLE_REFUELING'
   | 'OVERTIME_APPLICATION'
   | 'INSPECTION_REPAIR'
-  | 'EXIT_PERMIT';
+  | 'EXIT_PERMIT'
+  | 'SITE_ASSIGNMENT';
 
 /** GET /hr/on-behalf/eligible-employees row. */
 export interface OnBehalfEligibleEmployee {
