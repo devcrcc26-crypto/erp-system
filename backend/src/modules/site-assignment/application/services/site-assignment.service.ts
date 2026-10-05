@@ -142,11 +142,11 @@ export class SiteAssignmentService
     await this.assertNoOverlap(employeeId, companyId, startDate, endDate);
 
     const days = calendarDaysInclusive(startDate, endDate);
-    const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
-      employeeId,
-      companyId,
-      false,
-    );
+    const resolvedTiers =
+      await this.hrApprovalChain.buildSiteAssignmentApprovalChain(
+        employeeId,
+        companyId,
+      );
 
     const title = `Site assignment — ${dto.siteName.trim()} (${formatDateOnly(startDate)} to ${formatDateOnly(endDate)})`;
     const now = new Date();
@@ -210,7 +210,7 @@ export class SiteAssignmentService
       employeeId,
       {
         resolvedTiers: {
-          ruleName: 'Site assignment org chain',
+          ruleName: 'Site assignment single tier',
           tiers: resolvedTiers,
         },
         createdByUserId: userId,

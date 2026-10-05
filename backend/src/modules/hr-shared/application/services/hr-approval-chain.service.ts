@@ -297,6 +297,157 @@ export class HrApprovalChainService {
   }
 
   /**
+   * Single-tier site assignment approval for the assignment owner (`employeeId`).
+   * Standard employee → Discipline Lead, else HR Manager.
+   * Discipline Lead owner → Department Head if assigned, else HR Manager.
+   * Department Head / HR staff / HR Manager → first tier of the org chain (GM or HR Manager).
+   * Skips a candidate when they are the assignment owner (no self-approval).
+   */
+  async buildSiteAssignmentApprovalChain(
+    employeeId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    const primaryRole =
+      (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
+
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      include: {
+        ledDisciplines: { where: { deletedAt: null }, select: { id: true } },
+      },
+    });
+
+    if (!employee) {
+      throw new BadRequestException('Employee not found');
+    }
+
+    if (AUTO_APPROVE_ROLES.includes(primaryRole)) {
+      return [];
+    }
+
+    const isHrManagerTier = HR_MANAGER_ROLES.includes(primaryRole);
+    const isHrStaff = HR_STAFF_ROLES.includes(primaryRole);
+    const isDepartmentHead = primaryRole === 'Department Head';
+    const isDisciplineLeadByRole = primaryRole === 'Discipline Lead';
+    const isDisciplineLeadByData = employee.ledDisciplines.length > 0;
+    const isDisciplineLead = isDisciplineLeadByRole || isDisciplineLeadByData;
+
+    type Candidate = {
+      label: string;
+      approverId: string;
+      resolver: string;
+    };
+
+    const pickSingle = async (
+      candidates: Array<Candidate | null>,
+    ): Promise<ResolvedApprovalTier[]> => {
+      for (const candidate of candidates) {
+        if (!candidate) {
+          continue;
+        }
+        if (candidate.approverId === employeeId) {
+          continue;
+        }
+        return this.finalizeTiers([
+          {
+            order: 1,
+            label: candidate.label,
+            approverId: candidate.approverId,
+            resolver: candidate.resolver,
+          },
+        ]);
+      }
+      return [];
+    };
+
+    if (isHrManagerTier) {
+      const gm = await this.getGeneralManager(companyId);
+      return pickSingle([
+        {
+          label: 'General Manager',
+          approverId: gm.id,
+          resolver: 'ROLE:General Manager',
+        },
+      ]);
+    }
+
+    if (isHrStaff) {
+      const hrManager = await this.getHRManager(companyId);
+      return pickSingle([
+        {
+          label: 'HR Manager',
+          approverId: hrManager.id,
+          resolver: 'ROLE:HR Manager',
+        },
+      ]);
+    }
+
+    if (isDepartmentHead) {
+      const gm = await this.getGeneralManager(companyId);
+      const hrManager = await this.getHRManager(companyId);
+      return pickSingle([
+        {
+          label: 'General Manager',
+          approverId: gm.id,
+          resolver: 'ROLE:General Manager',
+        },
+        {
+          label: 'HR Manager',
+          approverId: hrManager.id,
+          resolver: 'ROLE:HR Manager',
+        },
+      ]);
+    }
+
+    if (isDisciplineLead) {
+      const deptHead = await this.getDepartmentHead(employeeId, companyId);
+      const hrManager = await this.getHRManager(companyId);
+      return pickSingle([
+        deptHead.found
+          ? {
+              label: 'Department Head',
+              approverId: deptHead.id,
+              resolver: 'ROLE:Department Head',
+            }
+          : null,
+        {
+          label: 'HR Manager',
+          approverId: hrManager.id,
+          resolver: 'ROLE:HR Manager',
+        },
+      ]);
+    }
+
+    const disciplineLead = await this.getDisciplineLeadSafe(
+      employeeId,
+      companyId,
+    );
+    const hrManager = await this.getHRManager(companyId);
+
+    if (disciplineLead.found) {
+      return pickSingle([
+        {
+          label: 'Discipline Lead',
+          approverId: disciplineLead.id,
+          resolver: 'DISCIPLINE_LEAD',
+        },
+      ]);
+    }
+
+    this.logger.warn(
+      `[SiteAssignment] Discipline Lead tier skipped for ${employeeId}: ${disciplineLead.reason}`,
+    );
+
+    return pickSingle([
+      {
+        label: 'HR Manager',
+        approverId: hrManager.id,
+        resolver: 'ROLE:HR Manager',
+      },
+    ]);
+  }
+
+  /**
    * Builds (without persisting) the approval chain a module would open for `employeeId`.
    * Value-dependent tiers (purchase > 10k ETB, overtime > 4h) assume the widest chain,
    * so callers see every tier the employee could need. Modules with no approval
@@ -308,8 +459,10 @@ export class HrApprovalChainService {
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
     switch (moduleCode) {
-      case 'LEAVE_REQUEST':
       case 'SITE_ASSIGNMENT':
+        return this.buildSiteAssignmentApprovalChain(employeeId, companyId);
+
+      case 'LEAVE_REQUEST':
       case 'OVERTIME_APPLICATION':
       case 'FIELD_MOVEMENT_LOG':
       case 'EXIT_PERMIT':
