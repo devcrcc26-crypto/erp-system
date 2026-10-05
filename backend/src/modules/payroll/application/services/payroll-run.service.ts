@@ -382,6 +382,14 @@ export class PayrollRunService {
               },
             },
             salaryPeriods: true,
+            payslip: {
+              select: {
+                id: true,
+                generatedAt: true,
+                releasedAt: true,
+                downloadedAt: true,
+              },
+            },
           },
           orderBy: { employee: { firstName: 'asc' } },
         },

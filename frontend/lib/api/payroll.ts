@@ -1,9 +1,12 @@
-import { apiGet, apiPatch, apiPost, downloadApiFile } from '@/lib/api/client';
+import { apiClient, apiGet, apiPatch, apiPost, downloadApiFile } from '@/lib/api/client';
 import type {
   CreatePayrollRunPayload,
+  EmployeePayslip,
   PayrollEntryDetail,
   PayrollRunDetail,
   PayrollRunListItem,
+  PayslipGenerateResult,
+  PayslipReleaseResult,
   SubmitPayrollRunPayload,
   UpdatePayrollEntryPayload,
 } from '@/lib/api/payroll.types';
@@ -88,4 +91,58 @@ export async function downloadPayrollRunExcel(
   filename: string,
 ): Promise<void> {
   await downloadApiFile(`${BASE}/runs/${runId}/export/excel`, filename);
+}
+
+export async function generatePayslips(
+  runId: string,
+): Promise<PayslipGenerateResult> {
+  return apiPost<PayslipGenerateResult>(`${BASE}/runs/${runId}/payslips/generate`);
+}
+
+export async function releasePayslips(
+  runId: string,
+): Promise<PayslipReleaseResult> {
+  return apiPost<PayslipReleaseResult>(`${BASE}/runs/${runId}/payslips/release`);
+}
+
+export async function downloadPayslipZip(
+  runId: string,
+  filename: string,
+): Promise<void> {
+  await downloadApiFile(`${BASE}/runs/${runId}/payslips/zip`, filename);
+}
+
+export async function listMyPayslips(): Promise<EmployeePayslip[]> {
+  return apiGet<EmployeePayslip[]>(`${BASE}/my-payslips`);
+}
+
+export async function listEmployeePayslips(
+  employeeId: string,
+): Promise<EmployeePayslip[]> {
+  return apiGet<EmployeePayslip[]>(`${BASE}/employees/${employeeId}/payslips`);
+}
+
+/**
+ * Fetches a payslip PDF with the session token and opens it in a new tab.
+ */
+export async function openPayslipPdf(payslipId: string): Promise<void> {
+  const response = await apiClient.get(`${BASE}/payslips/${payslipId}/pdf`, {
+    responseType: 'blob',
+  });
+  const contentType = response.headers['content-type'];
+  const blob = new Blob([response.data as BlobPart], {
+    type: typeof contentType === 'string' && contentType.includes('pdf')
+      ? contentType
+      : 'application/pdf',
+  });
+  const objectUrl = URL.createObjectURL(blob);
+  const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }

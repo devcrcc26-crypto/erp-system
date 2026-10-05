@@ -5,6 +5,7 @@ import { Alert, Button, Grid, Skeleton, Space, Tag } from 'antd';
 import {
   BarChartOutlined,
   CalendarOutlined,
+  DollarOutlined,
   EditOutlined,
   StarOutlined,
   UserDeleteOutlined,
@@ -19,6 +20,7 @@ import EmployeeSiteAssignmentsSection from '@/components/modules/hr/site-assignm
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
 import EmployeeWorkScheduleSection from '@/components/modules/hr/work-schedule/EmployeeWorkScheduleSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
+import EmployeePayslipsSection from '@/components/modules/hr/payroll/EmployeePayslipsSection';
 import EmployeeAttendanceProfileSection from '@/components/modules/profile/EmployeeAttendanceProfileSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
@@ -27,6 +29,7 @@ import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
+  useCanCreatePayroll,
   useCanManageEmployeePerDiemRates,
   useCanViewHr,
   useIsSystemAdmin,
@@ -89,6 +92,7 @@ type ProfileTab =
   | 'attendance'
   | 'workSchedule'
   | 'perDiem'
+  | 'payroll'
   | 'evaluations';
 
 function resolveProfileTab(value: string | null): ProfileTab {
@@ -106,6 +110,9 @@ function resolveProfileTab(value: string | null): ProfileTab {
   }
   if (value === 'evaluations') {
     return 'evaluations';
+  }
+  if (value === 'payroll') {
+    return 'payroll';
   }
   return 'overview';
 }
@@ -175,6 +182,7 @@ export default function EmployeeDetailPageContent({
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
+  const canCreatePayroll = useCanCreatePayroll();
   const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
   const viewerIsAdmin = useIsSystemAdmin();
   const currentUserQuery = useCurrentUser();
@@ -186,6 +194,7 @@ export default function EmployeeDetailPageContent({
   const activeTab = resolveProfileTab(searchParams.get('tab'));
   const isOwnProfile = currentUserQuery.data?.id === userId;
   const showPerDiemTab = isOwnProfile || canManagePerDiemRates;
+  const showPayrollTab = isOwnProfile || canCreatePayroll;
 
   function setActiveTab(tab: ProfileTab): void {
     const params = new URLSearchParams(searchParams.toString());
@@ -498,6 +507,19 @@ export default function EmployeeDetailPageContent({
               </span>
             </button>
           ) : null}
+          {showPayrollTab ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'payroll'}
+              onClick={() => setActiveTab('payroll')}
+            >
+              <DollarOutlined />
+              <span className="erp-employee-tab-label">
+                {t('users.tabPayroll')}
+              </span>
+            </button>
+          ) : null}
           <button
             type="button"
             role="tab"
@@ -543,6 +565,11 @@ export default function EmployeeDetailPageContent({
             <EmployeePerDiemRatesSection
               employeeId={user.id}
               editable={canManagePerDiemRates}
+            />
+          ) : activeTab === 'payroll' && showPayrollTab ? (
+            <EmployeePayslipsSection
+              mode={isOwnProfile ? 'self' : 'employee'}
+              employeeId={user.id}
             />
           ) : activeTab === 'evaluations' ? (
             <MyEvaluationsPageContent

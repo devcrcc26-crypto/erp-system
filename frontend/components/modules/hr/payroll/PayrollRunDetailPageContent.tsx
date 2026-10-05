@@ -21,6 +21,7 @@ import {
   Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { FilePdfOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -34,7 +35,7 @@ import {
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import { downloadPayrollRunExcel } from '@/lib/api/payroll';
+import { downloadPayrollRunExcel, downloadPayslipZip, openPayslipPdf } from '@/lib/api/payroll';
 import type {
   PayrollEntryDetail,
   PayrollEntryFlag,
@@ -43,11 +44,13 @@ import type {
 import {
   useApprovePayrollRun,
   useCancelPayrollRun,
+  useGeneratePayslips,
   useGmApprovePayrollRun,
   useMarkPayrollRunPaid,
   useMarkPayrollRunReviewed,
   usePayrollRun,
   useRecalculatePayrollRun,
+  useReleasePayslips,
   useSubmitPayrollRun,
   useUpdatePayrollEntry,
 } from '@/lib/query/payroll';
@@ -131,6 +134,8 @@ export default function PayrollRunDetailPageContent({
   const markPaidMutation = useMarkPayrollRunPaid(runId);
   const cancelMutation = useCancelPayrollRun(runId);
   const updateEntryMutation = useUpdatePayrollEntry(runId);
+  const generatePayslipsMutation = useGeneratePayslips(runId);
+  const releasePayslipsMutation = useReleasePayslips(runId);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [submitAcknowledge, setSubmitAcknowledge] = useState(false);
@@ -144,6 +149,9 @@ export default function PayrollRunDetailPageContent({
   const [bonusEntry, setBonusEntry] = useState<PayrollEntryDetail | null>(null);
   const [bonusForm] = Form.useForm<{ bonusTopUp: number; bonusTopUpReason: string }>();
   const [exporting, setExporting] = useState(false);
+  const [zipping, setZipping] = useState(false);
+  const [releaseOpen, setReleaseOpen] = useState(false);
+  const [openingPayslipId, setOpeningPayslipId] = useState<string | null>(null);
 
   const userDirectory = useMemo(() => {
     const map = new Map<
@@ -172,6 +180,30 @@ export default function PayrollRunDetailPageContent({
       0,
     );
   }, [flagCounts]);
+
+  const payslipCounts = useMemo(() => {
+    let generated = 0;
+    let released = 0;
+    let downloaded = 0;
+    for (const entry of run?.entries ?? []) {
+      if (!entry.payslip?.generatedAt) {
+        continue;
+      }
+      generated += 1;
+      if (entry.payslip.releasedAt) {
+        released += 1;
+      }
+      if (entry.payslip.downloadedAt) {
+        downloaded += 1;
+      }
+    }
+    return {
+      generated,
+      released,
+      downloaded,
+      pendingRelease: generated - released,
+    };
+  }, [run]);
 
   const departments = useMemo(() => {
     if (!run) {
@@ -354,6 +386,20 @@ export default function PayrollRunDetailPageContent({
     }
   }
 
+  const showPayslipColumn =
+    canCreate && (run?.status === 'GM_APPROVED' || run?.status === 'PAID');
+
+  async function openPayslip(payslipId: string): Promise<void> {
+    setOpeningPayslipId(payslipId);
+    try {
+      await openPayslipPdf(payslipId);
+    } catch (error) {
+      notifyApiError(error, t('hr.payroll.payslips.openPdf'), messageApi, t);
+    } finally {
+      setOpeningPayslipId(null);
+    }
+  }
+
   const columns: ColumnsType<PayrollEntryDetail> = useMemo(
     () => [
       {
@@ -520,8 +566,35 @@ export default function PayrollRunDetailPageContent({
             </Tag>
           ),
       },
+      ...(showPayslipColumn
+        ? [
+            {
+              title: t('hr.payroll.payslips.column'),
+              key: 'payslip',
+              width: 72,
+              align: 'center' as const,
+              render: (_: unknown, row: PayrollEntryDetail) => {
+                const payslipId = row.payslip?.generatedAt ? row.payslip.id : null;
+                if (!payslipId) {
+                  return '—';
+                }
+                return (
+                  <Tooltip title={t('hr.payroll.payslips.openPdf')}>
+                    <Button
+                      type="text"
+                      icon={<FilePdfOutlined />}
+                      aria-label={t('hr.payroll.payslips.openPdf')}
+                      loading={openingPayslipId === payslipId}
+                      onClick={() => void openPayslip(payslipId)}
+                    />
+                  </Tooltip>
+                );
+              },
+            },
+          ]
+        : []),
     ],
-    [t],
+    [t, showPayslipColumn, openingPayslipId],
   );
 
   function renderExpandedRow(row: PayrollEntryDetail): React.ReactNode {
@@ -777,6 +850,30 @@ export default function PayrollRunDetailPageContent({
   return (
     <div className="erp-pro-list-page erp-users-page erp-payroll-page flex flex-col gap-4">
       <ConfirmDialog
+        open={releaseOpen}
+        title={t('hr.payroll.payslips.releaseTitle')}
+        description={t('hr.payroll.payslips.releaseDescription', {
+          count: payslipCounts.pendingRelease,
+        })}
+        confirmLabel={t('hr.payroll.confirm.confirmButton')}
+        confirmLoading={releasePayslipsMutation.isPending}
+        onConfirm={() => {
+          void (async () => {
+            try {
+              const result = await releasePayslipsMutation.mutateAsync();
+              messageApi.success(
+                t('hr.payroll.payslips.releaseSuccess', { count: result.notified }),
+              );
+              setReleaseOpen(false);
+            } catch (error) {
+              notifyApiError(error, t('hr.payroll.payslips.release'), messageApi, t);
+            }
+          })();
+        }}
+        onCancel={() => setReleaseOpen(false)}
+      />
+
+      <ConfirmDialog
         open={Boolean(confirmAction && confirmAction !== 'submit')}
         title={confirmMeta?.title ?? ''}
         description={confirmMeta?.description ?? ''}
@@ -956,6 +1053,84 @@ export default function PayrollRunDetailPageContent({
         ))}
       </div>
 
+      {canCreate && (run.status === 'GM_APPROVED' || run.status === 'PAID') ? (
+        <div className="erp-pro-card p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="m-0 text-base font-semibold">
+                {t('hr.payroll.payslips.title')}
+              </h3>
+              <p className="erp-users-cell-sub m-0 mt-1">
+                {t('hr.payroll.payslips.generated')}: {payslipCounts.generated}
+                {' · '}
+                {t('hr.payroll.payslips.released')}: {payslipCounts.released}
+                {' · '}
+                {t('hr.payroll.payslips.downloaded')}: {payslipCounts.downloaded}
+              </p>
+            </div>
+            <Space wrap>
+              <Button
+                loading={generatePayslipsMutation.isPending}
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      const result = await generatePayslipsMutation.mutateAsync();
+                      messageApi.success(
+                        t('hr.payroll.payslips.generateSuccess', {
+                          created: result.created,
+                          updated: result.updated,
+                          skipped: result.skipped,
+                        }),
+                      );
+                    } catch (error) {
+                      notifyApiError(
+                        error,
+                        t('hr.payroll.payslips.generate'),
+                        messageApi,
+                        t,
+                      );
+                    }
+                  })();
+                }}
+              >
+                {t('hr.payroll.payslips.generate')}
+              </Button>
+              <Button onClick={() => setReleaseOpen(true)}>
+                {t('hr.payroll.payslips.release')}
+              </Button>
+              <Button
+                loading={zipping}
+                onClick={() => {
+                  void (async () => {
+                    const mm = String(run.month).padStart(2, '0');
+                    const safeRun = run.runNumber.replace(/[^\w.-]+/g, '_');
+                    setZipping(true);
+                    try {
+                      await downloadPayslipZip(
+                        run.id,
+                        `Payslips_${run.year}_${mm}_${safeRun}.zip`,
+                      );
+                      messageApi.success(t('hr.payroll.payslips.zipSuccess'));
+                    } catch (error) {
+                      notifyApiError(
+                        error,
+                        t('hr.payroll.payslips.downloadZip'),
+                        messageApi,
+                        t,
+                      );
+                    } finally {
+                      setZipping(false);
+                    }
+                  })();
+                }}
+              >
+                {t('hr.payroll.payslips.downloadZip')}
+              </Button>
+            </Space>
+          </div>
+        </div>
+      ) : null}
+
       {totalFlagged > 0 ? (
         <Alert
           type="warning"
@@ -1049,6 +1224,7 @@ export default function PayrollRunDetailPageContent({
                     <MoneyCell value={totalsRow.net} strong />
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={12} />
+                  {showPayslipColumn ? <Table.Summary.Cell index={13} /> : null}
                 </Table.Summary.Row>
               </Table.Summary>
             ) : null

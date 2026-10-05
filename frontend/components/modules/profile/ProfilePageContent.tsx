@@ -9,6 +9,7 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   DesktopOutlined,
+  DollarOutlined,
   FileProtectOutlined,
   FolderOpenOutlined,
   MailOutlined,
@@ -25,6 +26,7 @@ import MyEvaluationsPageContent from '@/components/modules/hr/evaluation/MyEvalu
 import EmployeeLeaveProfileSection from '@/components/modules/hr/leave/EmployeeLeaveProfileSection';
 import EmployeeSiteAssignmentsSection from '@/components/modules/hr/site-assignment/EmployeeSiteAssignmentsSection';
 import EmployeeOvertimeProfileSection from '@/components/modules/hr/overtime/EmployeeOvertimeProfileSection';
+import EmployeePayslipsSection from '@/components/modules/hr/payroll/EmployeePayslipsSection';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
@@ -74,6 +76,7 @@ const PROFILE_TABS = [
   'workSchedule',
   'documents',
   'contract',
+  'payroll',
   'assets',
   'perDiem',
   'evaluations',
@@ -212,6 +215,7 @@ export default function ProfilePageContent(): React.ReactNode {
     workSchedule: { label: t('profile.tabWorkSchedule'), icon: <ScheduleOutlined /> },
     documents: { label: t('profile.tabDocuments'), icon: <FolderOpenOutlined /> },
     contract: { label: t('profile.tabContract'), icon: <FileProtectOutlined /> },
+    payroll: { label: t('profile.tabPayroll'), icon: <DollarOutlined /> },
     assets: {
       label: t('profile.tabAssets'),
       icon: <DesktopOutlined />,
@@ -613,6 +617,8 @@ export default function ProfilePageContent(): React.ReactNode {
         return (
           <ProfileContractTab dateFormat={currentProfile.preferredDateFormat} />
         );
+      case 'payroll':
+        return <EmployeePayslipsSection mode="self" />;
       case 'assets':
         return (
           <ProfileAssetsTab dateFormat={currentProfile.preferredDateFormat} />

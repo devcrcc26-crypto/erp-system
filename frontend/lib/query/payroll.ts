@@ -6,12 +6,16 @@ import {
   cancelPayrollRun,
   createPayrollRun,
   generatePayrollEntries,
+  generatePayslips,
   getPayrollRun,
   gmApprovePayrollRun,
+  listEmployeePayslips,
+  listMyPayslips,
   listPayrollRuns,
   markPayrollRunPaid,
   markPayrollRunReviewed,
   recalculatePayrollRun,
+  releasePayslips,
   submitPayrollRun,
   updatePayrollEntry,
 } from '@/lib/api/payroll';
@@ -25,6 +29,9 @@ export const payrollKeys = {
   all: ['payroll'] as const,
   runs: () => [...payrollKeys.all, 'runs'] as const,
   run: (id: string) => [...payrollKeys.all, 'run', id] as const,
+  myPayslips: () => [...payrollKeys.all, 'my-payslips'] as const,
+  employeePayslips: (employeeId: string) =>
+    [...payrollKeys.all, 'employee-payslips', employeeId] as const,
 };
 
 export function usePayrollRuns(enabled = true) {
@@ -46,6 +53,11 @@ export function usePayrollRun(id: string, enabled = true) {
 function invalidateRun(queryClient: ReturnType<typeof useQueryClient>, id: string): void {
   void queryClient.invalidateQueries({ queryKey: payrollKeys.runs() });
   void queryClient.invalidateQueries({ queryKey: payrollKeys.run(id) });
+}
+
+function invalidatePayslips(queryClient: ReturnType<typeof useQueryClient>): void {
+  void queryClient.invalidateQueries({ queryKey: payrollKeys.myPayslips() });
+  void queryClient.invalidateQueries({ queryKey: [...payrollKeys.all, 'employee-payslips'] });
 }
 
 export function useCreatePayrollRun() {
@@ -118,6 +130,44 @@ export function useCancelPayrollRun(runId: string) {
   return useMutation({
     mutationFn: () => cancelPayrollRun(runId),
     onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+export function useGeneratePayslips(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => generatePayslips(runId),
+    onSuccess: () => {
+      invalidateRun(queryClient, runId);
+      invalidatePayslips(queryClient);
+    },
+  });
+}
+
+export function useReleasePayslips(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => releasePayslips(runId),
+    onSuccess: () => {
+      invalidateRun(queryClient, runId);
+      invalidatePayslips(queryClient);
+    },
+  });
+}
+
+export function useMyPayslips(enabled = true) {
+  return useQuery({
+    queryKey: payrollKeys.myPayslips(),
+    queryFn: listMyPayslips,
+    enabled,
+  });
+}
+
+export function useEmployeePayslips(employeeId: string, enabled = true) {
+  return useQuery({
+    queryKey: payrollKeys.employeePayslips(employeeId),
+    queryFn: () => listEmployeePayslips(employeeId),
+    enabled: enabled && Boolean(employeeId),
   });
 }
 

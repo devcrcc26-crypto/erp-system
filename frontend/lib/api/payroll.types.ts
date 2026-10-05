@@ -57,6 +57,13 @@ export interface PayrollEntryEmployee {
   engineeringDiscipline: { id: string; name: string } | null;
 }
 
+export interface PayrollEntryPayslip {
+  id: string;
+  generatedAt: string | null;
+  releasedAt: string | null;
+  downloadedAt: string | null;
+}
+
 export interface PayrollEntryDetail {
   id: string;
   runId: string;
@@ -100,6 +107,60 @@ export interface PayrollEntryDetail {
   bankAccountNumber: string | null;
   employee: PayrollEntryEmployee;
   salaryPeriods: PayrollSalaryPeriod[];
+  payslip?: PayrollEntryPayslip | null;
+}
+
+export interface PayslipGenerateResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  total: number;
+}
+
+export interface PayslipReleaseResult {
+  released: number;
+  alreadyReleased: number;
+  notified: number;
+}
+
+export interface EmployeePayslip {
+  id: string;
+  runId: string;
+  runNumber: string;
+  month: number;
+  year: number;
+  netPay: MoneyField;
+  releasedAt: string | null;
+  downloadedAt: string | null;
+  downloaded: boolean;
+  released: boolean;
+  employeeName: string;
+  employeeCode: string | null;
+  department: string | null;
+  discipline: string | null;
+  bankName: string | null;
+  bankAccountMasked: string | null;
+  paidDays: MoneyField;
+  basicSalary: MoneyField;
+  earnedSalary: MoneyField;
+  normalOtHours: MoneyField;
+  eveningOtHours: MoneyField;
+  sundayOtHours: MoneyField;
+  holidayOtHours: MoneyField;
+  normalOtPay: MoneyField;
+  eveningOtPay: MoneyField;
+  sundayOtPay: MoneyField;
+  holidayOtPay: MoneyField;
+  transportAllowance: MoneyField;
+  monthlyBonus: MoneyField;
+  bonusTopUp: MoneyField;
+  bonusTopUpReason: string | null;
+  grossIncome: MoneyField;
+  pensionApplicable: boolean;
+  pensionEmployee: MoneyField;
+  pensionEmployer: MoneyField;
+  incomeTax: MoneyField;
+  totalDeductions: MoneyField;
 }
 
 export interface PayrollRunDetail {

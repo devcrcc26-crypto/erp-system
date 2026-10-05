@@ -25,6 +25,7 @@ import {
   UpdatePayrollEntryDto,
 } from '../../application/dtos/payroll.dtos';
 import { PayrollExcelExportService } from '../../application/services/payroll-excel-export.service';
+import { PayrollPayslipService } from '../../application/services/payroll-payslip.service';
 import { PayrollRunService } from '../../application/services/payroll-run.service';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 
@@ -36,6 +37,7 @@ export class PayrollController {
   constructor(
     private readonly payrollRunService: PayrollRunService,
     private readonly payrollExcelExportService: PayrollExcelExportService,
+    private readonly payrollPayslipService: PayrollPayslipService,
     private readonly permissionService: PermissionService,
   ) {}
 
@@ -185,6 +187,88 @@ export class PayrollController {
     return this.payrollRunService.updateEntry(id, dto, this.ctx(user));
   }
 
+  @Get('my-payslips')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'view' },
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+  )
+  @ApiOperation({ summary: 'Released payslips for the signed-in employee' })
+  listMyPayslips(@CurrentUser() user: AuthenticatedUser): Promise<unknown> {
+    return this.payrollPayslipService.listMine(this.ctx(user));
+  }
+
+  @Get('employees/:employeeId/payslips')
+  @RequireAnyPermission({ module: 'payroll', action: 'create' })
+  @ApiOperation({
+    summary: 'Generated payslips for an employee, including unreleased (HR)',
+  })
+  listEmployeePayslips(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollPayslipService.listForHr(employeeId, this.ctx(user));
+  }
+
+  @Post('runs/:id/payslips/generate')
+  @RequireAnyPermission({ module: 'payroll', action: 'create' })
+  @ApiOperation({
+    summary: 'Generate payslips for a GM_APPROVED or PAID run (idempotent)',
+  })
+  generatePayslips(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollPayslipService.generate(id, this.ctx(user));
+  }
+
+  @Post('runs/:id/payslips/release')
+  @RequireAnyPermission({ module: 'payroll', action: 'create' })
+  @ApiOperation({ summary: 'Release generated payslips and notify employees' })
+  releasePayslips(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollPayslipService.release(id, this.ctx(user));
+  }
+
+  @Get('runs/:id/payslips/zip')
+  @RequireAnyPermission({ module: 'payroll', action: 'create' })
+  @ApiOperation({ summary: 'Download every generated payslip PDF as a ZIP' })
+  @ApiProduces('application/zip')
+  async downloadPayslipZip(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<StreamableFile> {
+    const file = await this.payrollPayslipService.getZip(id, this.ctx(user));
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('attachment', file.filename),
+    });
+  }
+
+  @Get('payslips/:id/pdf')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'view' },
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+  )
+  @ApiOperation({
+    summary:
+      'Download a payslip PDF. Employees only after release; payroll.create or payroll.approve any time after generation.',
+  })
+  @ApiProduces('application/pdf')
+  async downloadPayslipPdf(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<StreamableFile> {
+    const file = await this.payrollPayslipService.getPdf(id, this.ctx(user));
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('inline', file.filename),
+    });
+  }
+
   @Get('runs/:id/export/excel')
   @RequireAnyPermission({ module: 'payroll', action: 'export' })
   @ApiOperation({
@@ -233,4 +317,9 @@ export class PayrollController {
       disposition: `attachment; filename="${file.filename}"`,
     });
   }
+}
+
+function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, '');
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
