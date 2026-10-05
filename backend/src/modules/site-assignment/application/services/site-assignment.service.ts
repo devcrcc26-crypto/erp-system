@@ -58,6 +58,20 @@ const DETAIL_INCLUDE = {
   project: {
     select: { id: true, projectCode: true, name: true },
   },
+  perDiemRequests: {
+    where: { deletedAt: null },
+    select: {
+      id: true,
+      requestNumber: true,
+      destination: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      totalAmountEtb: true,
+      paidAt: true,
+    },
+    orderBy: { createdAt: 'desc' as const },
+  },
   approvalRequest: {
     include: {
       category: {

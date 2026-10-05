@@ -39,6 +39,7 @@ import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { EmployeePerDiemRateService } from './employee-per-diem-rate.service';
 import {
   ListPerDiemRequestsDto,
+  MarkPerDiemPaidDto,
   SubmitPerDiemRequestDto,
 } from '../dtos/per-diem.dtos';
 
@@ -61,6 +62,17 @@ const REQUEST_DETAIL_INCLUDE = {
   settlement: {
     select: { id: true, requestNumber: true, status: true },
   },
+  siteAssignment: {
+    select: {
+      id: true,
+      requestNumber: true,
+      siteName: true,
+      startDate: true,
+      endDate: true,
+      status: true,
+    },
+  },
+  payer: { select: USER_SELECT },
   approvalRequest: {
     include: {
       tiers: {
@@ -214,16 +226,40 @@ export class PerDiemService
       }
     }
 
+    let siteAssignmentId: string | null = null;
+    if (dto.siteAssignmentId) {
+      if (tripType !== PerDiemTripType.SITE_DEPLOYMENT) {
+        throw new BadRequestException(
+          'siteAssignmentId is only allowed when tripType is SITE_DEPLOYMENT',
+        );
+      }
+      const assignment = await this.prisma.siteAssignment.findFirst({
+        where: activeOnly({
+          id: dto.siteAssignmentId,
+          companyId,
+          employeeId,
+          status: 'APPROVED',
+        }),
+        select: { id: true },
+      });
+      if (!assignment) {
+        throw new BadRequestException(
+          'siteAssignmentId must reference an approved site assignment for this employee',
+        );
+      }
+      siteAssignmentId = assignment.id;
+    }
+
     const dailyRate = resolvedRate.dailyRate;
     const totalAmount = dailyRate * days;
     const exchangeRate = 1;
     const totalAmountEtb = totalAmount;
 
-    const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
-      employeeId,
-      companyId,
-      true,
-    );
+    const resolvedTiers =
+      await this.hrApprovalChain.buildDisciplineLeadSingleTierChain(
+        employeeId,
+        companyId,
+      );
 
     const approval = (await this.approvalsService.submitRequest(
       {
@@ -240,13 +276,14 @@ export class PerDiemService
           days,
           totalDays,
           totalAmountEtb,
+          siteAssignmentId,
         },
       },
       companyId,
       employeeId,
       {
         resolvedTiers: {
-          ruleName: 'Per diem org chain',
+          ruleName: 'Per diem Discipline Lead chain',
           tiers: resolvedTiers,
         },
         createdByUserId: actorUserId,
@@ -280,6 +317,7 @@ export class PerDiemService
           exchangeRate: new Prisma.Decimal(exchangeRate),
           linkedFlightId: dto.linkedFlightId ?? null,
           linkedBusinessTripId: dto.linkedBusinessTripId ?? null,
+          siteAssignmentId,
           notes: dto.notes?.trim() || null,
           status: PerDiemStatus.SUBMITTED,
           approvalRequestId: approval.id,
@@ -441,8 +479,10 @@ export class PerDiemService
     if (!request) {
       throw new NotFoundException('Per diem request not found');
     }
-    if (request.employeeId !== userId) {
-      throw new ForbiddenException('Only the requester can cancel this request');
+    if (request.employeeId !== userId && request.createdBy !== userId) {
+      throw new ForbiddenException(
+        'Only the employee or the person who submitted on their behalf can cancel this request',
+      );
     }
     if (request.settlementId) {
       throw new BadRequestException(
@@ -478,6 +518,69 @@ export class PerDiemService
           },
         });
       }
+    });
+
+    return this.getRequest(id, companyId, userId);
+  }
+
+  /**
+   * Marks an APPROVED advance as paid. HR with per-diem.edit or hr.edit.
+   */
+  async markPaid(
+    id: string,
+    dto: MarkPerDiemPaidDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const [canEditPerDiem, canEditHr] = await Promise.all([
+      this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'per-diem',
+        'edit',
+      ),
+      this.permissionService.hasPermission(userId, companyId, 'hr', 'edit'),
+    ]);
+    if (!canEditPerDiem && !canEditHr) {
+      throw new ForbiddenException(
+        'Missing permission (any of): per-diem.edit, hr.edit',
+      );
+    }
+
+    const request = await this.prisma.perDiemRequest.findFirst({
+      where: activeOnly({ id, companyId }),
+    });
+    if (!request) {
+      throw new NotFoundException('Per diem request not found');
+    }
+    if (request.status !== PerDiemStatus.APPROVED) {
+      throw new BadRequestException(
+        'Only approved advances can be marked as paid',
+      );
+    }
+    if (request.paidAt) {
+      throw new BadRequestException('This advance is already marked as paid');
+    }
+    if (request.settlementId) {
+      throw new BadRequestException(
+        'This advance is already linked to a settlement',
+      );
+    }
+
+    const paidAmount =
+      dto.paidAmount != null
+        ? new Prisma.Decimal(dto.paidAmount)
+        : request.totalAmount;
+
+    await this.prisma.perDiemRequest.update({
+      where: { id },
+      data: {
+        paidAt: new Date(),
+        paidBy: userId,
+        paidAmount,
+        paymentReference: dto.paymentReference?.trim() || null,
+        updatedBy: userId,
+      },
     });
 
     return this.getRequest(id, companyId, userId);

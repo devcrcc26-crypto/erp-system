@@ -297,13 +297,14 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Single-tier site assignment approval for the assignment owner (`employeeId`).
+   * Single-tier Discipline Lead approval (shared by site assignment and per diem advances).
    * Standard employee → Discipline Lead, else HR Manager.
    * Discipline Lead owner → Department Head if assigned, else HR Manager.
    * Department Head / HR staff / HR Manager → first tier of the org chain (GM or HR Manager).
-   * Skips a candidate when they are the assignment owner (no self-approval).
+   * Skips a candidate when they are the subject (no self-approval).
+   * GM / Managing Director / System Administrator → empty chain (auto-approve).
    */
-  async buildSiteAssignmentApprovalChain(
+  async buildDisciplineLeadSingleTierChain(
     employeeId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
@@ -435,7 +436,7 @@ export class HrApprovalChainService {
     }
 
     this.logger.warn(
-      `[SiteAssignment] Discipline Lead tier skipped for ${employeeId}: ${disciplineLead.reason}`,
+      `[DisciplineLeadSingleTier] Discipline Lead tier skipped for ${employeeId}: ${disciplineLead.reason}`,
     );
 
     return pickSingle([
@@ -445,6 +446,123 @@ export class HrApprovalChainService {
         resolver: 'ROLE:HR Manager',
       },
     ]);
+  }
+
+  /**
+   * Site assignment uses the shared Discipline Lead single-tier chain.
+   */
+  async buildSiteAssignmentApprovalChain(
+    employeeId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    return this.buildDisciplineLeadSingleTierChain(employeeId, companyId);
+  }
+
+  /**
+   * Per diem settlement: single HR tier.
+   * Prefer HR Manager; Local HR Manager is the alternate (and vice versa when the
+   * submitter holds one of those roles). If neither is available → General Manager.
+   */
+  async buildPerDiemSettlementApprovalChain(
+    employeeId: string,
+    companyId: string,
+  ): Promise<ResolvedApprovalTier[]> {
+    const primaryRole =
+      (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
+
+    if (AUTO_APPROVE_ROLES.includes(primaryRole)) {
+      return [];
+    }
+
+    const hrManager = await this.findActiveUserByPrimaryRoleName(
+      companyId,
+      'HR Manager',
+    );
+    const localHr = await this.findActiveUserByPrimaryRoleName(
+      companyId,
+      'Local HR Manager',
+    );
+    const gm = await this.getGeneralManager(companyId);
+
+    type Candidate = {
+      label: string;
+      approverId: string;
+      resolver: string;
+    };
+
+    const candidates: Array<Candidate | null> = [];
+
+    if (primaryRole === 'HR Manager') {
+      candidates.push(
+        localHr
+          ? {
+              label: 'Local HR Manager',
+              approverId: localHr.id,
+              resolver: 'ROLE:Local HR Manager',
+            }
+          : null,
+        {
+          label: 'General Manager',
+          approverId: gm.id,
+          resolver: 'ROLE:General Manager',
+        },
+      );
+    } else if (primaryRole === 'Local HR Manager') {
+      candidates.push(
+        hrManager
+          ? {
+              label: 'HR Manager',
+              approverId: hrManager.id,
+              resolver: 'ROLE:HR Manager',
+            }
+          : null,
+        {
+          label: 'General Manager',
+          approverId: gm.id,
+          resolver: 'ROLE:General Manager',
+        },
+      );
+    } else {
+      candidates.push(
+        hrManager
+          ? {
+              label: 'HR Manager',
+              approverId: hrManager.id,
+              resolver: 'ROLE:HR Manager',
+            }
+          : null,
+        localHr
+          ? {
+              label: 'Local HR Manager',
+              approverId: localHr.id,
+              resolver: 'ROLE:Local HR Manager',
+            }
+          : null,
+        {
+          label: 'General Manager',
+          approverId: gm.id,
+          resolver: 'ROLE:General Manager',
+        },
+      );
+    }
+
+    for (const candidate of candidates) {
+      if (!candidate || candidate.approverId === employeeId) {
+        continue;
+      }
+      return this.finalizeTiers([
+        {
+          order: 1,
+          label: candidate.label,
+          approverId: candidate.approverId,
+          resolver: candidate.resolver,
+        },
+      ]);
+    }
+
+    throw new BadRequestException(
+      'No HR Manager, Local HR Manager, or General Manager available to approve this settlement',
+    );
   }
 
   /**
@@ -460,7 +578,7 @@ export class HrApprovalChainService {
   ): Promise<ResolvedApprovalTier[]> {
     switch (moduleCode) {
       case 'SITE_ASSIGNMENT':
-        return this.buildSiteAssignmentApprovalChain(employeeId, companyId);
+        return this.buildDisciplineLeadSingleTierChain(employeeId, companyId);
 
       case 'LEAVE_REQUEST':
       case 'OVERTIME_APPLICATION':
@@ -469,8 +587,10 @@ export class HrApprovalChainService {
         return this.buildOrgApprovalChain(employeeId, companyId, false);
 
       case 'EXPENSE_CLAIM':
-      case 'PER_DIEM':
         return this.buildOrgApprovalChain(employeeId, companyId, true);
+
+      case 'PER_DIEM':
+        return this.buildDisciplineLeadSingleTierChain(employeeId, companyId);
 
       case 'PURCHASE_REQUEST':
         return this.buildPurchaseApprovalChain(

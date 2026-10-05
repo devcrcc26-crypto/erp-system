@@ -61,6 +61,9 @@ const ADVANCE_SUMMARY_SELECT = {
   totalAmountEtb: true,
   currency: true,
   status: true,
+  paidAt: true,
+  paidAmount: true,
+  paymentReference: true,
 } as const;
 
 const SETTLEMENT_DETAIL_INCLUDE = {
@@ -105,6 +108,7 @@ export class PerDiemSettlementService
 
   /**
    * Lists the caller's approved advances that are not yet on a settlement.
+   * Includes unpaid advances (for "Awaiting payment") and paid ones (selectable).
    */
   async listUnsettledAdvances(
     companyId: string,
@@ -166,11 +170,12 @@ export class PerDiemSettlementService
         id: { in: advanceIds },
         status: PerDiemStatus.APPROVED,
         settlementId: null,
+        paidAt: { not: null },
       }),
     });
     if (advances.length !== advanceIds.length) {
       throw new BadRequestException(
-        'Each advance must be your own approved advance that is not already settled',
+        'Each advance must be your own paid, approved advance that is not already settled',
       );
     }
 
@@ -201,11 +206,11 @@ export class PerDiemSettlementService
       perDiemEarned,
     );
 
-    const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
-      userId,
-      companyId,
-      true,
-    );
+    const resolvedTiers =
+      await this.hrApprovalChain.buildPerDiemSettlementApprovalChain(
+        userId,
+        companyId,
+      );
 
     const approval = (await this.approvalsService.submitRequest(
       {
@@ -227,7 +232,7 @@ export class PerDiemSettlementService
       userId,
       {
         resolvedTiers: {
-          ruleName: 'Per diem org chain',
+          ruleName: 'Per diem settlement HR chain',
           tiers: resolvedTiers,
         },
       },
@@ -405,9 +410,9 @@ export class PerDiemSettlementService
     if (!settlement) {
       throw new NotFoundException('Per diem settlement not found');
     }
-    if (settlement.employeeId !== userId) {
+    if (settlement.employeeId !== userId && settlement.createdBy !== userId) {
       throw new ForbiddenException(
-        'Only the requester can cancel this settlement',
+        'Only the employee or the person who submitted on their behalf can cancel this settlement',
       );
     }
     if (

@@ -4,6 +4,7 @@ import { HrSharedModule } from '../hr-shared/hr-shared.module';
 import { EmployeePerDiemRateImportService } from './application/services/employee-per-diem-rate-import.service';
 import { EmployeePerDiemRateService } from './application/services/employee-per-diem-rate.service';
 import { PerDiemImportService } from './application/services/per-diem-import.service';
+import { PerDiemSettlementReminderService } from './application/services/per-diem-settlement-reminder.service';
 import { PerDiemSettlementService } from './application/services/per-diem-settlement.service';
 import { PerDiemService } from './application/services/per-diem.service';
 import { EmployeePerDiemRateImportController } from './presentation/controllers/employee-per-diem-rate-import.controller';
@@ -14,7 +15,7 @@ import { PerDiemController } from './presentation/controllers/per-diem.controlle
 
 /**
  * Per diem module — ETB employee rates, travel advances, and settlements.
- * Both advances and settlements use buildOrgApprovalChain.
+ * Advances use the Discipline Lead single-tier chain; settlements use HR-only.
  */
 @Module({
   imports: [ApprovalsModule, HrSharedModule],
@@ -30,6 +31,7 @@ import { PerDiemController } from './presentation/controllers/per-diem.controlle
     EmployeePerDiemRateImportService,
     PerDiemService,
     PerDiemSettlementService,
+    PerDiemSettlementReminderService,
     PerDiemImportService,
   ],
   exports: [EmployeePerDiemRateService, PerDiemService, PerDiemSettlementService],

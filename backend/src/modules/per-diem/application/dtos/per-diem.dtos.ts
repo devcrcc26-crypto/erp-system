@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -86,12 +87,38 @@ export class SubmitPerDiemRequestDto extends OnBehalfSubmissionDto {
   @IsUUID()
   linkedBusinessTripId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Approved site assignment to link when tripType is SITE_DEPLOYMENT',
+  })
+  @IsOptional()
+  @Transform(({ value }) => emptyToUndefined(value))
+  @IsUUID()
+  siteAssignmentId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) => emptyToUndefined(value))
   @IsString()
   @MaxLength(2000)
   notes?: string;
+}
+
+export class MarkPerDiemPaidDto {
+  @ApiPropertyOptional({
+    description: 'Amount paid in ETB. Defaults to the advance totalAmount.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  paidAmount?: number;
+
+  @ApiPropertyOptional({ description: 'Payment voucher / bank reference note' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  paymentReference?: string;
 }
 
 export class ListPerDiemRequestsDto {

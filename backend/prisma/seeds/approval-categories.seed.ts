@@ -762,7 +762,7 @@ const CATEGORIES: CategorySeedDef[] = [
     code: 'PER_DIEM',
     name: 'Per Diem Request',
     description:
-      'Daily allowance advance for domestic, regional, or international travel, paid in ETB.',
+      'Daily allowance advance (ETB). Single-tier approval: Discipline Lead, or HR Manager when no DL is assigned.',
     module: 'HR',
     numberPrefix: 'PD',
     icon: 'WalletOutlined',
@@ -771,10 +771,7 @@ const CATEGORIES: CategorySeedDef[] = [
     approvalRules: [
       {
         name: 'Default',
-        tiers: [
-          tier('Discipline Lead', 'DEPARTMENT_HEAD', 1),
-          tier('HR Manager', 'HR_MANAGER', 2),
-        ],
+        tiers: [tier('Discipline Lead', 'DISCIPLINE_LEAD', 1)],
       },
     ],
   },
@@ -782,7 +779,7 @@ const CATEGORIES: CategorySeedDef[] = [
     code: 'PER_DIEM_SETTLEMENT',
     name: 'Per Diem Settlement',
     description:
-      'Settle approved per diem advances against the actual days travelled. Balance is in ETB.',
+      'Settle paid per diem advances against actual days travelled (ETB). Single-tier approval: HR Manager or Local HR Manager.',
     module: 'HR',
     numberPrefix: 'PS',
     icon: 'WalletOutlined',
@@ -791,10 +788,7 @@ const CATEGORIES: CategorySeedDef[] = [
     approvalRules: [
       {
         name: 'Default',
-        tiers: [
-          tier('Discipline Lead', 'DEPARTMENT_HEAD', 1),
-          tier('HR Manager', 'HR_MANAGER', 2),
-        ],
+        tiers: [tier('HR Manager', 'HR_MANAGER', 1)],
       },
     ],
   },

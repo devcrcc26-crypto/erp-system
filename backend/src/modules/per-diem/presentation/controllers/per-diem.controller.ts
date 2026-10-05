@@ -17,6 +17,7 @@ import { RequireAnyPermission } from '../../../../shared/permissions/require-any
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   ListPerDiemRequestsDto,
+  MarkPerDiemPaidDto,
   SubmitPerDiemRequestDto,
 } from '../../application/dtos/per-diem.dtos';
 import { PerDiemService } from '../../application/services/per-diem.service';
@@ -68,12 +69,30 @@ export class PerDiemController {
 
   @Patch(':id/cancel')
   @DelegatePermissionCheck()
-  @ApiOperation({ summary: 'Cancel a draft or submitted per diem request (requester only)' })
+  @ApiOperation({
+    summary:
+      'Cancel a draft or submitted per diem request (employee or on-behalf submitter)',
+  })
   cancel(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
   ): Promise<unknown> {
     return this.perDiemService.cancelRequest(id, companyId, user.userId);
+  }
+
+  @Post(':id/mark-paid')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Mark an approved advance as paid (requires per-diem.edit or hr.edit)',
+  })
+  markPaid(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: MarkPerDiemPaidDto,
+  ): Promise<unknown> {
+    return this.perDiemService.markPaid(id, dto, companyId, user.userId);
   }
 }
