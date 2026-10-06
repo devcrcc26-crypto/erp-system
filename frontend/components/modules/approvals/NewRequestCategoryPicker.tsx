@@ -13,6 +13,8 @@ import {
   Clock3,
   FileText,
   Fuel,
+  Home,
+  MapPin,
   Package,
   PackageMinus,
   PackageOpen,
@@ -36,6 +38,8 @@ import {
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   LEAVE_REQUEST: CalendarDays,
+  SITE_ASSIGNMENT: MapPin,
+  WORK_FROM_HOME: Home,
   OVERTIME_APPLICATION: Timer,
   FIELD_MOVEMENT_LOG: Clock3,
   FLIGHT_APPLICATION: Plane,
@@ -68,6 +72,7 @@ const REQUEST_GROUPS: RequestGroup[] = [
     codes: [
       'LEAVE_REQUEST',
       'SITE_ASSIGNMENT',
+      'WORK_FROM_HOME',
       'OVERTIME_APPLICATION',
       'FIELD_MOVEMENT_LOG',
     ],

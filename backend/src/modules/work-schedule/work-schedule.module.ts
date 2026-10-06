@@ -1,4 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { ApprovalsModule } from '../approvals/approvals.module';
 import { AttendanceModule } from '../attendance/attendance.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
 import { PublicHolidayService } from './application/services/public-holiday.service';
@@ -11,6 +12,7 @@ import { WorkScheduleController } from './presentation/work-schedule.controller'
 
 @Module({
   imports: [
+    ApprovalsModule,
     forwardRef(() => HrSharedModule),
     forwardRef(() => AttendanceModule),
   ],

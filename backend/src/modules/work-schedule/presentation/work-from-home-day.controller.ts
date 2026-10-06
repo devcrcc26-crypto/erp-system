@@ -12,12 +12,14 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentCompany } from '../../../shared/decorators/current-company.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
-import { RequirePermission } from '../../../shared/permissions/require-permission.decorator';
+import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
 import {
   CreateWorkFromHomeDayDto,
   ListWorkFromHomeDaysDto,
+  RequestWorkFromHomeDayDto,
   UpdateWorkFromHomeDayDto,
 } from '../application/dtos/work-from-home-day.dto';
 import { WorkFromHomeDayService } from '../application/services/work-from-home-day.service';
@@ -25,7 +27,11 @@ import { WorkFromHomeDayService } from '../application/services/work-from-home-d
 @ApiTags('HR Work From Home')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequirePermission('hr', 'view')
+@RequireAnyPermission(
+  { module: 'hr', action: 'view' },
+  { module: 'leave', action: 'view' },
+  { module: 'leave', action: 'create' },
+)
 @Controller('hr/attendance/work-from-home')
 export class WorkFromHomeDayController {
   constructor(private readonly service: WorkFromHomeDayService) {}
@@ -39,8 +45,33 @@ export class WorkFromHomeDayController {
     return this.service.list(companyId, query.month, query.year);
   }
 
+  @Get('assignable-employees')
+  @ApiOperation({
+    summary:
+      'Employees the current user may assign WFH to (HR: all; Discipline Lead: their reports)',
+  })
+  listAssignable(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+  ): Promise<unknown> {
+    return this.service.listAssignableEmployees(user.userId, companyId);
+  }
+
+  @Post('request')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Submit a work-from-home request (Employee → Discipline Lead)',
+  })
+  request(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: RequestWorkFromHomeDayDto,
+  ): Promise<unknown> {
+    return this.service.submitRequest(dto, companyId, user.userId);
+  }
+
   @Post()
-  @ApiOperation({ summary: 'Create a work-from-home day' })
+  @ApiOperation({ summary: 'Assign a work-from-home day (HR or Discipline Lead)' })
   create(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,

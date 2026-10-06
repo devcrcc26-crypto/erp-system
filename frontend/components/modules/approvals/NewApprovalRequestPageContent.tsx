@@ -49,6 +49,7 @@ const CATEGORY_ROUTES: Record<string, string> = {
   PROJECT_SEAL_USAGE: '/approvals/new/project-seal',
   FIELD_MOVEMENT_LOG: '/approvals/new/field-movement-log',
   SITE_ASSIGNMENT: '/approvals/new/site-assignment',
+  WORK_FROM_HOME: '/approvals/new/work-from-home',
 };
 
 /**

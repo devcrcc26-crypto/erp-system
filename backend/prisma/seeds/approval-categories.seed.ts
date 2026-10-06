@@ -146,6 +146,28 @@ const CATEGORIES: CategorySeedDef[] = [
     ],
   },
   {
+    code: 'WORK_FROM_HOME',
+    name: 'Work From Home',
+    description:
+      'Employee request to work from home on a specific date. Approval chain is Employee → Discipline Lead only. Discipline Leads and HR may also assign WFH days directly (no approval). Runtime chain is built in code, not from these rules.',
+    module: 'HR',
+    numberPrefix: 'WFH',
+    icon: 'HomeOutlined',
+    sortOrder: 12,
+    formSchema: {
+      fields: [
+        { name: 'date', label: 'Date', type: 'date', required: true },
+        { name: 'reason', label: 'Reason', type: 'textarea', required: true },
+      ],
+    },
+    approvalRules: [
+      {
+        name: 'Employee → Discipline Lead only',
+        tiers: [tier('Discipline Lead', 'DISCIPLINE_LEAD', 1)],
+      },
+    ],
+  },
+  {
     code: 'EXPENSE_CLAIM',
     name: 'Expense Claim',
     description: 'Reimbursement claims for travel, meals, and other business expenses.',

@@ -62,6 +62,10 @@ export function resolveSidebarPermissions(
   // Human resources — self-service entries widen beyond hr.view
   grant('hr.view', hr);
   grant('leave.access', hr || caps.canViewLeave || caps.canCreateLeave);
+  grant(
+    'wfh.assign',
+    hr || epc.navDisciplineLeader || epc.navFullAccess,
+  );
   grant('overtime.access', hr || caps.canViewOvertime || caps.canCreateOvertime);
   grant(
     'payroll.access',

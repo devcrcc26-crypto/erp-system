@@ -19,6 +19,7 @@ export type SidebarPermission =
   | 'hr.view'
   | 'evaluation.inbox'
   | 'leave.access'
+  | 'wfh.assign'
   | 'overtime.access'
   | 'payroll.access'
   | 'flight.access'
@@ -257,7 +258,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
           items: [
             { kind: 'link', id: 'attendance', labelKey: 'nav.hr.attendance', icon: 'hr-attendance', href: '/hr/attendance', requires: HR, keywords: ['clock in', 'deli', 'timesheet'] },
             { kind: 'link', id: 'field-movement-logs', labelKey: 'nav.hr.fieldMovementLogs', icon: 'hr-field-movement', href: '/hr/field-movement-logs', requires: HR, keywords: ['field visit', 'early departure', 'clock'] },
-            { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-attendance', href: '/hr/work-from-home', requires: HR, keywords: ['wfh', 'remote', 'home office'] },
+            { kind: 'link', id: 'work-from-home', labelKey: 'nav.hr.workFromHome', icon: 'hr-attendance', href: '/hr/work-from-home', requires: ['wfh.assign'], keywords: ['wfh', 'remote', 'home office'] },
             { kind: 'link', id: 'site-assignments', labelKey: 'nav.hr.siteAssignments', icon: 'hr-field-movement', href: '/hr/site-assignments', requires: ['leave.access'], keywords: ['site', 'project site', 'remote work', 'Dire Dawa'] },
           ],
         },

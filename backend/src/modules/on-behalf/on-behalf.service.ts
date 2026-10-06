@@ -73,6 +73,10 @@ const MODULE_AUDIT: Record<
     module: 'site-assignment',
     recordType: 'SiteAssignment',
   },
+  WORK_FROM_HOME: {
+    module: 'work-from-home',
+    recordType: 'WorkFromHomeDay',
+  },
 };
 
 /**

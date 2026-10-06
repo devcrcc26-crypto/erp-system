@@ -19,6 +19,27 @@ export interface CreateWorkFromHomeDayDto {
   employeeIds?: string[];
 }
 
+export interface RequestWorkFromHomeDayDto {
+  date: string;
+  reason: string;
+  onBehalfOfEmployeeId?: string;
+}
+
+export interface WorkFromHomeAssignableEmployee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  employeeId: string | null;
+  department: string | null;
+  discipline: string | null;
+}
+
+export interface WorkFromHomeAssignableResult {
+  canAssignCompanyWide: boolean;
+  isDisciplineLead: boolean;
+  employees: WorkFromHomeAssignableEmployee[];
+}
+
 export async function listWorkFromHomeDays(params: {
   month?: number;
   year?: number;
@@ -26,10 +47,22 @@ export async function listWorkFromHomeDays(params: {
   return apiGet<WorkFromHomeDay[]>('/hr/attendance/work-from-home', { params });
 }
 
+export async function listWorkFromHomeAssignableEmployees(): Promise<WorkFromHomeAssignableResult> {
+  return apiGet<WorkFromHomeAssignableResult>(
+    '/hr/attendance/work-from-home/assignable-employees',
+  );
+}
+
 export async function createWorkFromHomeDay(
   dto: CreateWorkFromHomeDayDto,
 ): Promise<WorkFromHomeDay> {
   return apiPost<WorkFromHomeDay>('/hr/attendance/work-from-home', dto);
+}
+
+export async function requestWorkFromHomeDay(
+  dto: RequestWorkFromHomeDayDto,
+): Promise<unknown> {
+  return apiPost('/hr/attendance/work-from-home/request', dto);
 }
 
 export async function updateWorkFromHomeDay(

@@ -76,6 +76,25 @@ export class UpdateWorkFromHomeDayDto {
   employeeIds?: string[];
 }
 
+export class RequestWorkFromHomeDayDto {
+  @ApiProperty({ example: '2026-08-12' })
+  @IsDateString()
+  date!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiPropertyOptional({
+    description: 'Submit on behalf of another employee (HR / Discipline Lead)',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  onBehalfOfEmployeeId?: string;
+}
+
 export class ListWorkFromHomeDaysDto {
   @ApiPropertyOptional()
   @IsOptional()

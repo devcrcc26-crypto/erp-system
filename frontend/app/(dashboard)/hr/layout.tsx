@@ -39,11 +39,13 @@ export default function HrSectionLayout({
     pathname.startsWith('/hr/attendance') ||
     pathname.startsWith('/hr/evaluations');
 
+  const isWfhAssignRoute = pathname.startsWith('/hr/work-from-home');
   const isPayrollRoute = pathname.startsWith('/hr/payroll');
   const isAnnouncementsRoute = pathname.startsWith('/hr/announcements');
   const allowed =
     canViewHr ||
     isEmployeeSelfServiceRoute ||
+    isWfhAssignRoute ||
     (isPayrollRoute && canAccessPayroll) ||
     (isAnnouncementsRoute && canManageAnnouncements);
 

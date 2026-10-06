@@ -9,6 +9,7 @@ export const APPROVAL_CATEGORY_PERMISSION_MODULE: Readonly<
 > = {
   LEAVE_REQUEST: 'leave',
   SITE_ASSIGNMENT: 'leave',
+  WORK_FROM_HOME: 'leave',
   OVERTIME_APPLICATION: 'overtime',
   FIELD_MOVEMENT_LOG: 'field-movement',
   FLIGHT_APPLICATION: 'flight',

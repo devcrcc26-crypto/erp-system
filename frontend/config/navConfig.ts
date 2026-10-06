@@ -184,6 +184,11 @@ const APPROVAL_NEW_ROUTE_META: Record<
     listHref: '/hr/site-assignments',
     listLabelKey: 'nav.hr.siteAssignments',
   },
+  '/approvals/new/work-from-home': {
+    titleKey: 'pages.hr.workFromHome.request.title',
+    listHref: '/hr/work-from-home',
+    listLabelKey: 'nav.hr.workFromHome',
+  },
 };
 
 /** Route → page subtitle (description) i18n keys for MainContentHeader. */

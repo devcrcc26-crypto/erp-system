@@ -204,6 +204,10 @@
           "name": "Site Assignment",
           "description": "Request paid on-site days when working at a project location without HQ scanner coverage."
         },
+        "WORK_FROM_HOME": {
+          "name": "Work From Home",
+          "description": "Request a work-from-home day. Approved by your Discipline Lead."
+        },
         "EXPENSE_CLAIM": {
           "name": "Expense Claim",
           "description": "Reimbursement claims for travel, meals, and other business expenses."
@@ -891,10 +895,12 @@
       },
       "workFromHome": {
         "title": "Work From Home Days",
-        "description": "Mark calendar days when selected people work from home. Those days count as present in attendance (no HQ clock-in required).",
-        "createTitle": "Add work-from-home day",
+        "description": "Assign or request work-from-home days. Assigned days count as present in attendance (no HQ clock-in required).",
+        "createTitle": "Assign work-from-home day",
         "editTitle": "Edit work-from-home day",
         "modalLead": "Choose the date and who should be treated as working from home. Attendance for those people will show Work from home instead of absence.",
+        "modalLeadDisciplineLead": "Select one or more employees in your discipline. They receive WFH attendance credit for that date.",
+        "disciplineLeadEditOnly": "Discipline Leads can only edit employee-scoped assignments.",
         "loadFailed": "Could not load work-from-home days.",
         "saveFailed": "Could not save work-from-home day.",
         "deleteFailed": "Could not delete work-from-home day.",
@@ -932,16 +938,36 @@
         "fields": {
           "date": "Date",
           "reason": "Reason",
-          "reasonHint": "Shown to HR on the calendar (for example office closure or hybrid Friday).",
+          "reasonHint": "Shown on the calendar (for example office closure or hybrid Friday).",
           "reasonPlaceholder": "e.g. Office closed for maintenance",
           "scope": "Who works from home",
-          "scopeHint": "This does not send a request to employees — it only changes how attendance is calculated for the people you select.",
+          "scopeHint": "Direct assignment — no approval request is sent. Employees can also request WFH via New Request.",
+          "disciplineLeadHint": "You can assign WFH only to employees in the discipline(s) you lead.",
           "departments": "Departments",
           "departmentsPlaceholder": "Select one or more departments",
           "pickDepartments": "Select at least one department",
           "employees": "Employees",
           "employeesPlaceholder": "Search and select employees",
           "pickEmployees": "Select at least one employee"
+        },
+        "request": {
+          "title": "Request work from home",
+          "description": "Submit a work-from-home day for Discipline Lead approval.",
+          "backToPicker": "Back to request types",
+          "detailsStepDescription": "Pick the date and explain why you need to work from home.",
+          "reviewStepDescription": "Confirm the details before submitting to your Discipline Lead.",
+          "dateRequired": "Select a date",
+          "reasonHint": "Your Discipline Lead will see this reason.",
+          "reasonPlaceholder": "e.g. Home internet for client call",
+          "approvalChain": "Approval chain",
+          "approvalChainValue": "Employee → Discipline Lead",
+          "submit": "Submit request",
+          "submitSuccess": "Work-from-home request submitted",
+          "submitFailed": "Could not submit work-from-home request",
+          "steps": {
+            "details": "Details",
+            "review": "Review"
+          }
         }
       },
       "fieldMovementLogs": {

@@ -204,6 +204,10 @@
           "name": "现场派驻",
           "description": "在无总部考勤机覆盖的项目现场工作时，申请计薪现场天数。"
         },
+        "WORK_FROM_HOME": {
+          "name": "居家办公",
+          "description": "申请居家办公日，由学科负责人审批。"
+        },
         "EXPENSE_CLAIM": {
           "name": "费用报销",
           "description": "差旅、餐饮及其他公务费用报销。"
@@ -1471,10 +1475,12 @@
       },
       "workFromHome": {
         "title": "居家办公日",
-        "description": "标记指定人员居家办公的日期。这些日期在考勤中计为出勤（无需总部打卡）。",
-        "createTitle": "添加居家办公日",
+        "description": "分配或申请居家办公日。已分配的日期在考勤中计为出勤（无需总部打卡）。",
+        "createTitle": "分配居家办公日",
         "editTitle": "编辑居家办公日",
         "modalLead": "选择日期以及谁应被视为居家办公。这些人的考勤将显示为居家办公，而不是缺勤。",
+        "modalLeadDisciplineLead": "选择您学科下的一名或多名员工，他们将在该日获得居家办公考勤。",
+        "disciplineLeadEditOnly": "学科负责人只能编辑按员工范围分配的记录。",
         "loadFailed": "无法加载居家办公日。",
         "saveFailed": "无法保存居家办公日。",
         "deleteFailed": "无法删除居家办公日。",
@@ -1512,16 +1518,36 @@
         "fields": {
           "date": "日期",
           "reason": "原因",
-          "reasonHint": "显示在 HR 日历上（例如办公室关闭或混合办公周五）。",
+          "reasonHint": "显示在日历上（例如办公室关闭或混合办公周五）。",
           "reasonPlaceholder": "例如：办公室维护关闭",
           "scope": "谁居家办公",
-          "scopeHint": "这不会向员工发送申请 — 只影响您所选人员的考勤计算方式。",
+          "scopeHint": "直接分配 — 不会发送审批申请。员工也可通过“新建申请”提交居家办公申请。",
+          "disciplineLeadHint": "您只能为自己负责学科下的员工分配居家办公。",
           "departments": "部门",
           "departmentsPlaceholder": "选择一个或多个部门",
           "pickDepartments": "请至少选择一个部门",
           "employees": "员工",
           "employeesPlaceholder": "搜索并选择员工",
           "pickEmployees": "请至少选择一名员工"
+        },
+        "request": {
+          "title": "申请居家办公",
+          "description": "提交居家办公日申请，由学科负责人审批。",
+          "backToPicker": "返回申请类型",
+          "detailsStepDescription": "选择日期并说明居家办公原因。",
+          "reviewStepDescription": "提交给学科负责人前请确认详情。",
+          "dateRequired": "请选择日期",
+          "reasonHint": "学科负责人将看到此原因。",
+          "reasonPlaceholder": "例如：在家参加客户电话会议",
+          "approvalChain": "审批链",
+          "approvalChainValue": "员工 → 学科负责人",
+          "submit": "提交申请",
+          "submitSuccess": "居家办公申请已提交",
+          "submitFailed": "无法提交居家办公申请",
+          "steps": {
+            "details": "详情",
+            "review": "确认"
+          }
         }
       }
     },
