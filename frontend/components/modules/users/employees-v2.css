@@ -200,9 +200,17 @@
 }
 
 .erp-employees-v2 .erp-users-role-chip.ant-tag {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 1 auto;
   border: 0;
   border-radius: 999px;
   padding-inline: 10px;
+}
+
+.erp-employees-v2 .erp-users-role-cell .erp-users-role-chip.ant-tag {
+  flex: 0 1 auto;
 }
 
 /* Status: tinted pill per variant instead of a bare dot + text. */

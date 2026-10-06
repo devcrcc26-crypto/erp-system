@@ -508,6 +508,7 @@
         "newRequest": "新建现场派驻",
         "profileSectionTitle": "现场派驻记录",
         "loadFailed": "无法加载现场派驻。",
+        "notFound": "未找到现场派驻。",
         "empty": "暂无现场派驻",
         "emptyFiltered": "没有符合筛选条件的现场派驻",
         "stats": {
@@ -543,6 +544,12 @@
         "form": {
           "title": "现场派驻申请",
           "description": "日期可包含上月1日以来的历史天数及未来计划现场工作。",
+          "detailsStepDescription": "填写现场、日期，以及可选的项目或原因。",
+          "reviewStepDescription": "确认派驻详情后提交审批。",
+          "steps": {
+            "details": "详情",
+            "review": "确认"
+          },
           "siteName": "现场名称",
           "siteNamePlaceholder": "例如：德雷达瓦",
           "project": "项目（可选）",
@@ -5095,6 +5102,7 @@
       "description": "为他人提交？请选择此申请所属的员工。",
       "toggle": "代其他员工提交",
       "employee": "员工",
+      "forYourself": "本人",
       "placeholder": "按姓名或工号搜索",
       "noResults": "没有匹配的员工",
       "autoApprove": "自动审批我的环节",

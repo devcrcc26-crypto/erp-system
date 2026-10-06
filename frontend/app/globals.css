@@ -1918,8 +1918,9 @@ main::-webkit-scrollbar,
 
 .erp-users-role-chip.ant-tag {
   display: inline-block;
-  min-width: 0;
+  width: fit-content;
   max-width: 100%;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1928,7 +1929,7 @@ main::-webkit-scrollbar,
 }
 
 .erp-users-role-cell .erp-users-role-chip.ant-tag {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .erp-users-role-extra.ant-tag {

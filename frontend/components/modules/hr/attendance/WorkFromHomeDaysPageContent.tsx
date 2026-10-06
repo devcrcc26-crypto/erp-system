@@ -7,11 +7,11 @@ import { useMemo, useState } from 'react';
 import {
   Button,
   DatePicker,
+  Drawer,
   Dropdown,
   Form,
   Grid,
   Input,
-  Modal,
   Radio,
   Select,
   Spin,
@@ -53,6 +53,10 @@ import {
 import { useDepartments } from '@/lib/query/org';
 import { useAllUsers } from '@/lib/query/users';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  DRAWER_WIDTH_STANDARD,
+  detailDrawerStyles,
+} from '@/lib/theme/layout';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
@@ -75,7 +79,7 @@ const SCOPE_TAG_COLOR: Record<WorkFromHomeScope, string> = {
 };
 
 /**
- * Company WFH calendar days — employees-matched table + scoped add/edit modal.
+ * Company WFH calendar days — employees-matched table + scoped add/edit drawer.
  */
 export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -84,12 +88,11 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   const queryClient = useQueryClient();
   const screens = Grid.useBreakpoint();
   const isCompact = screens.md === false;
-  const isNarrow = screens.sm === false;
 
   const [month, setMonth] = useState(dayjs().month() + 1);
   const [year, setYear] = useState(dayjs().year());
   const [scopeMode, setScopeMode] = useState<ScopeMode>('all');
-  const [modalOpen, setModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<WorkFromHomeDay | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form] = Form.useForm<WfhFormValues>();
@@ -167,7 +170,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
     mutationFn: createWorkFromHomeDay,
     onSuccess: async () => {
       messageApi.success(t('common.saved'));
-      closeModal();
+      closeDrawer();
       await queryClient.invalidateQueries({ queryKey: ['work-from-home'] });
     },
     onError: (error) =>
@@ -189,7 +192,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
     }) => updateWorkFromHomeDay(id, dto),
     onSuccess: async () => {
       messageApi.success(t('common.saved'));
-      closeModal();
+      closeDrawer();
       await queryClient.invalidateQueries({ queryKey: ['work-from-home'] });
     },
     onError: (error) =>
@@ -253,8 +256,8 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
     });
   }
 
-  function closeModal(): void {
-    setModalOpen(false);
+  function closeDrawer(): void {
+    setDrawerOpen(false);
     setEditing(null);
     form.resetFields();
   }
@@ -267,7 +270,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
       departmentIds: [],
       employeeIds: [],
     });
-    setModalOpen(true);
+    setDrawerOpen(true);
   }
 
   function openEdit(row: WorkFromHomeDay): void {
@@ -279,6 +282,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
       departmentIds: row.departmentIds,
       employeeIds: row.employeeIds,
     });
+    setDrawerOpen(true);
     setModalOpen(true);
   }
 
@@ -334,8 +338,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
       {
         title: t('pages.hr.workFromHome.columns.date'),
         dataIndex: 'date',
-        key: 'date',
-        width: 140,
+        width: 160,
         render: (value: string) => (
           <span className="erp-users-cell-strong">
             {formatProjectDate(value)}
@@ -346,6 +349,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
         title: t('pages.hr.workFromHome.columns.reason'),
         dataIndex: 'reason',
         key: 'reason',
+        ellipsis: true,
         render: (value: string) => (
           <span className="erp-users-cell-strong">{value}</span>
         ),
@@ -434,29 +438,46 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
         }}
         onCancel={() => setDeleteId(null)}
       />
-
-      <Modal
-        rootClassName="erp-wfh-modal"
-        title={
-          editing
-            ? t('pages.hr.workFromHome.editTitle')
-            : t('pages.hr.workFromHome.createTitle')
-        }
-        open={modalOpen}
-        onCancel={closeModal}
-        onOk={() => form.submit()}
-        confirmLoading={saving}
-        okText={editing ? t('common.save') : t('common.add')}
+      <Drawer
+        rootClassName="erp-wfh-drawer"
+        className="erp-responsive-drawer"
+        open={drawerOpen}
+        onClose={closeDrawer}
         destroyOnHidden
-        width={480}
+        size={DRAWER_WIDTH_STANDARD}
+        styles={detailDrawerStyles}
+        title={
+          <div className="min-w-0 py-1">
+            <div className="text-[15px] font-semibold leading-snug text-[var(--color-text-primary)]">
+              {editing
+                ? t('pages.hr.workFromHome.editTitle')
+                : t('pages.hr.workFromHome.createTitle')}
+            </div>
+            <div className="mt-0.5 text-[12px] font-normal text-[var(--color-text-secondary)]">
+              {t('pages.hr.workFromHome.modalLead')}
+            </div>
+          </div>
+        }
+        footer={
+          <div className="erp-wfh-drawer-footer flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button onClick={closeDrawer} disabled={saving}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="primary"
+              loading={saving}
+              onClick={() => form.submit()}
+            >
+              {editing ? t('common.save') : t('common.add')}
+            </Button>
+          </div>
+        }
       >
-        <p className="erp-wfh-modal-lead">
-          {t('pages.hr.workFromHome.modalLead')}
-        </p>
         <Form
           form={form}
           layout="vertical"
           requiredMark={false}
+          className="erp-drawer-form"
           initialValues={{
             scope: 'ALL' as WorkFromHomeScope,
             departmentIds: [],
@@ -572,6 +593,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
             </Form.Item>
           ) : null}
         </Form>
+      </Drawer>
       </Modal>
 
       {listQuery.isError ? (
@@ -684,12 +706,12 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
         <div className="erp-pro-table-card-body">
           <DataTable<WorkFromHomeDay>
             rowKey="id"
-            className="erp-data-table erp-pro-table erp-users-table"
+            className="erp-pro-table erp-users-table"
             size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={filtered}
             loading={listQuery.isFetching && filtered.length === 0}
-            scroll={{ x: isNarrow ? 520 : 780 }}
+            scroll={{ x: isCompact ? 720 : 966 }}
             locale={{
               emptyText: (
                 <TableEmptyState

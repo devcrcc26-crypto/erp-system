@@ -70,20 +70,6 @@ describe('buildDisciplineLeadSingleTierChain (per diem advance)', () => {
     expect(chain[0]?.label).toBe('HR Manager');
   });
 
-  it('site assignment wrapper matches shared DL chain', async () => {
-    mockEmployee(ARCH_EMP_ID);
-    jest.spyOn(service, 'getPrimaryRoleName').mockResolvedValue('Site Engineer');
-    jest
-      .spyOn(service, 'getDisciplineLeadSafe')
-      .mockResolvedValue({ found: true, id: SAMUEL_ID });
-
-    const [siteChain, sharedChain] = await Promise.all([
-      service.buildSiteAssignmentApprovalChain(ARCH_EMP_ID, COMPANY_ID),
-      service.buildDisciplineLeadSingleTierChain(ARCH_EMP_ID, COMPANY_ID),
-    ]);
-
-    expect(siteChain).toEqual(sharedChain);
-  });
 });
 
 describe('buildPerDiemSettlementApprovalChain', () => {

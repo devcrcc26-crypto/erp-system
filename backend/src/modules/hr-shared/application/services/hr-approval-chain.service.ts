@@ -297,12 +297,13 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Single-tier Discipline Lead approval (shared by site assignment and per diem advances).
+   * Single-tier Discipline Lead approval (used by per diem advances).
    * Standard employee → Discipline Lead, else HR Manager.
    * Discipline Lead owner → Department Head if assigned, else HR Manager.
    * Department Head / HR staff / HR Manager → first tier of the org chain (GM or HR Manager).
    * Skips a candidate when they are the subject (no self-approval).
    * GM / Managing Director / System Administrator → empty chain (auto-approve).
+   * Site assignment uses {@link buildSiteAssignmentApprovalChain} instead (DL only).
    */
   async buildDisciplineLeadSingleTierChain(
     employeeId: string,
@@ -449,13 +450,46 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Site assignment uses the shared Discipline Lead single-tier chain.
+   * Site assignment: Employee → Discipline Lead only.
+   * No Department Head / HR Manager / GM fallbacks.
+   * GM / Managing Director / System Administrator → empty chain (auto-approve).
+   * Discipline Lead submitting for themselves → empty chain (no self-approval).
+   * Missing Discipline Lead → BadRequestException.
    */
   async buildSiteAssignmentApprovalChain(
     employeeId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
-    return this.buildDisciplineLeadSingleTierChain(employeeId, companyId);
+    const primaryRole =
+      (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
+
+    if (AUTO_APPROVE_ROLES.includes(primaryRole)) {
+      return [];
+    }
+
+    const disciplineLead = await this.getDisciplineLeadSafe(
+      employeeId,
+      companyId,
+    );
+
+    if (!disciplineLead.found) {
+      throw new BadRequestException(
+        `${disciplineLead.reason}. Site assignments require Discipline Lead approval.`,
+      );
+    }
+
+    if (disciplineLead.id === employeeId) {
+      return [];
+    }
+
+    return this.finalizeTiers([
+      {
+        order: 1,
+        label: 'Discipline Lead',
+        approverId: disciplineLead.id,
+        resolver: 'DISCIPLINE_LEAD',
+      },
+    ]);
   }
 
   /**
@@ -578,7 +612,7 @@ export class HrApprovalChainService {
   ): Promise<ResolvedApprovalTier[]> {
     switch (moduleCode) {
       case 'SITE_ASSIGNMENT':
-        return this.buildDisciplineLeadSingleTierChain(employeeId, companyId);
+        return this.buildSiteAssignmentApprovalChain(employeeId, companyId);
 
       case 'LEAVE_REQUEST':
       case 'OVERTIME_APPLICATION':

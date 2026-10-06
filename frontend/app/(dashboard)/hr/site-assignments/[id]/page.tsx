@@ -1,9 +1,10 @@
 import SiteAssignmentDetailPageContent from '@/components/modules/hr/site-assignment/SiteAssignmentDetailPageContent';
 
-export default function SiteAssignmentDetailPage({
+export default async function SiteAssignmentDetailPage({
   params,
 }: {
-  params: { id: string };
-}): React.ReactNode {
-  return <SiteAssignmentDetailPageContent id={params.id} />;
+  params: Promise<{ id: string }>;
+}): Promise<React.ReactNode> {
+  const { id } = await params;
+  return <SiteAssignmentDetailPageContent id={id} />;
 }

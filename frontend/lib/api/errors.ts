@@ -30,6 +30,14 @@ export function toApiRequestError(error: unknown): ApiRequestError {
     return error;
   }
 
+  if (error == null || typeof error !== 'object') {
+    const message =
+      typeof error === 'string' && error.trim()
+        ? error
+        : 'Request failed';
+    return new ApiRequestError(message, 'REQUEST_FAILED', 0);
+  }
+
   const axiosError = error as AxiosError<ApiErrorEnvelope>;
   const status = axiosError.response?.status ?? 0;
   const envelope = axiosError.response?.data;

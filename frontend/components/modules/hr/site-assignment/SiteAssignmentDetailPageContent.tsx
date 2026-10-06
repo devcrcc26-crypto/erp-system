@@ -126,7 +126,7 @@ export default function SiteAssignmentDetailPageContent({
     );
   }
 
-  if (detailQuery.isError || !row) {
+  if (detailQuery.isError) {
     return (
       <div className="erp-pro-list-page erp-users-page erp-sa-detail-page erp-site-assignments-v2">
         <ErpNotice
@@ -136,6 +136,22 @@ export default function SiteAssignmentDetailPageContent({
             t('pages.hr.siteAssignments.loadFailed'),
             t,
           )}
+          action={
+            <Button onClick={() => router.push(LIST_PATH)}>
+              {t('pages.hr.siteAssignments.detail.back')}
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  if (!row) {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-sa-detail-page erp-site-assignments-v2">
+        <ErpNotice
+          tone="warning"
+          title={t('pages.hr.siteAssignments.notFound')}
           action={
             <Button onClick={() => router.push(LIST_PATH)}>
               {t('pages.hr.siteAssignments.detail.back')}

@@ -508,6 +508,7 @@
         "newRequest": "New site assignment",
         "profileSectionTitle": "Site assignments",
         "loadFailed": "Could not load site assignments.",
+        "notFound": "Site assignment not found.",
         "empty": "No site assignments yet",
         "emptyFiltered": "No site assignments match your filters",
         "stats": {
@@ -543,6 +544,12 @@
         "form": {
           "title": "Site assignment request",
           "description": "Dates may include past days back to the 1st of the previous month and future planned site work.",
+          "detailsStepDescription": "Enter the site, dates, and optional project or reason for this assignment.",
+          "reviewStepDescription": "Confirm the assignment details before submitting for approval.",
+          "steps": {
+            "details": "Details",
+            "review": "Review"
+          },
           "siteName": "Site name",
           "siteNamePlaceholder": "e.g. Dire Dawa",
           "project": "Project (optional)",
@@ -5103,6 +5110,7 @@
       "description": "Filing for someone else? Choose the employee this request belongs to.",
       "toggle": "Submit on behalf of another employee",
       "employee": "Employee",
+      "forYourself": "Yourself",
       "placeholder": "Search by name or employee ID",
       "noResults": "No matching employees",
       "autoApprove": "Auto-approve my tier",

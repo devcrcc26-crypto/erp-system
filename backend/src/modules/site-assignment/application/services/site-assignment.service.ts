@@ -224,7 +224,7 @@ export class SiteAssignmentService
       employeeId,
       {
         resolvedTiers: {
-          ruleName: 'Site assignment single tier',
+          ruleName: 'Site assignment — Discipline Lead only',
           tiers: resolvedTiers,
         },
         createdByUserId: userId,

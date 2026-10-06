@@ -179,6 +179,11 @@ const APPROVAL_NEW_ROUTE_META: Record<
     listHref: '/hr/field-movement-logs',
     listLabelKey: 'nav.hr.fieldMovementLogs',
   },
+  '/approvals/new/site-assignment': {
+    titleKey: 'pages.hr.siteAssignments.form.title',
+    listHref: '/hr/site-assignments',
+    listLabelKey: 'nav.hr.siteAssignments',
+  },
 };
 
 /** Route → page subtitle (description) i18n keys for MainContentHeader. */
