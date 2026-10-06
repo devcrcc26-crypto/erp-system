@@ -18,6 +18,8 @@ export const PROJECT_ADMIN_EXCLUDED_MODULES = new Set([
   'employee-contract',
   'flight',
   'business-trip',
+  // Publishing company news is HR / System Administrator only.
+  'announcements',
 ]);
 
 export const FULL_PERMISSION_FLAGS: PermissionFlags = {

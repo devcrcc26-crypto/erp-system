@@ -185,6 +185,18 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can export payroll Excel / bank files (payroll.export)' })
   canExportPayroll!: boolean;
 
+  @ApiProperty({
+    description:
+      'Can open announcement management (announcements.create OR edit OR approve)',
+  })
+  canManageAnnouncements!: boolean;
+
+  @ApiProperty({ description: 'Can publish, schedule and archive announcements (announcements.approve)' })
+  canPublishAnnouncements!: boolean;
+
+  @ApiProperty({ description: 'Can export announcement read statistics (announcements.export)' })
+  canExportAnnouncements!: boolean;
+
   @ApiProperty({ description: 'Can view flight applications (flight.view)' })
   canViewFlight!: boolean;
 

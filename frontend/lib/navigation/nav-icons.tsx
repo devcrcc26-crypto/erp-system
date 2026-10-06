@@ -39,6 +39,7 @@ import {
   Banknote,
   BarChart3,
   Boxes,
+  Megaphone,
   BriefcaseBusiness,
   CalendarCheck2,
   CalendarClock,
@@ -154,6 +155,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   team: TeamOutlined,
   closeout: FlagOutlined,
   approvals: AuditOutlined,
+  announcements: lucideNavIcon(Megaphone),
 
   // HR — Lucide icons matched to module titles
   'hr-leave': lucideNavIcon(CalendarDays),

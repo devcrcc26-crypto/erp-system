@@ -598,6 +598,12 @@ export interface AuthCapabilities {
   canEditPayroll: boolean;
   canApprovePayroll: boolean;
   canExportPayroll: boolean;
+  /** announcements.create OR edit OR approve — opens /hr/announcements. */
+  canManageAnnouncements?: boolean;
+  /** announcements.approve — publish, schedule, archive, remind. */
+  canPublishAnnouncements?: boolean;
+  /** announcements.export — read statistics as Excel. */
+  canExportAnnouncements?: boolean;
   canViewFlight: boolean;
   canCreateFlight: boolean;
   canManageFlight: boolean;
@@ -663,6 +669,9 @@ export const EMPTY_CAPABILITIES: Capabilities = {
   canEditPayroll: false,
   canApprovePayroll: false,
   canExportPayroll: false,
+  canManageAnnouncements: false,
+  canPublishAnnouncements: false,
+  canExportAnnouncements: false,
   canViewFlight: false,
   canCreateFlight: false,
   canManageFlight: false,

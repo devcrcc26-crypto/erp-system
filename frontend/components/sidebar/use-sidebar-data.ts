@@ -25,6 +25,7 @@ import {
   isProjectNavReady,
 } from '@/lib/navigation/project-nav-visibility';
 import { usePendingMyActionCount } from '@/lib/query/approvals';
+import { useAnnouncementsSummary } from '@/lib/query/announcements';
 import { usePendingMyAction } from '@/lib/query/evaluation';
 import { useProjectDisciplines } from '@/lib/query/disciplines';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -66,13 +67,16 @@ export function useSidebarBadgeCounts(): Partial<Record<SidebarBadgeSource, numb
     enabled: ready && Boolean(userId),
   });
   const pendingEvaluationActions = pendingEvaluations.data?.length ?? 0;
+  const announcements = useAnnouncementsSummary(ready && Boolean(userId));
+  const unreadAnnouncements = announcements.data?.unreadCount ?? 0;
 
   return useMemo(
     () => ({
       pendingApprovals,
       pendingEvaluationActions,
+      unreadAnnouncements,
     }),
-    [pendingApprovals, pendingEvaluationActions],
+    [pendingApprovals, pendingEvaluationActions, unreadAnnouncements],
   );
 }
 

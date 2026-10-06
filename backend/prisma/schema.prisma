@@ -85,6 +85,7 @@ enum FolderContextType {
   EMPLOYEE_PROFILE
   EXIT_PERMIT
   FIELD_MOVEMENT_LOG
+  ANNOUNCEMENT
 }
 
 enum Nationality {
@@ -314,6 +315,7 @@ model Company {
   assetAssignments         AssetAssignment[]
   leavePolicies            LeavePolicy[]
   ExitPermits              ExitPermit[]
+  announcements            Announcement[]
   workSchedules               WorkSchedule[]
   publicHolidays              PublicHoliday[]
   workFromHomeDays            WorkFromHomeDay[]
@@ -807,6 +809,8 @@ model User {
   exitPermitsEmployee             ExitPermit[]              @relation("ExitPermitEmployee")
   exitPermitsCreated              ExitPermit[]              @relation("ExitPermitCreator")
   exitPermitsSubmitted            ExitPermit[]              @relation("ExitPermitSubmitter")
+  announcementsCreated            Announcement[]            @relation("AnnouncementCreator")
+  announcementReceipts            AnnouncementRecipient[]   @relation("AnnouncementRecipientUser")
 
 
   createdAssets                   CompanyAsset[]            @relation("AssetCreator")
@@ -1210,6 +1214,7 @@ model DocumentFolder {
   employeeContracts          EmployeeContract[]
   userProfiles               User[]                 @relation("UserProfileFolder")
   exitPermits                ExitPermit[]
+  announcements              Announcement[]
 
 
   @@index([companyId], map: "idx_document_folder_company_id")
@@ -6227,3 +6232,95 @@ model PayrollEntry {
   @@index([runId], map: "idx_payroll_payslip_run")
   @@map("payroll_payslip")
  }
+
+// ─── Announcements ───────────────────────────────────────────────────────────
+
+enum AnnouncementType {
+  COMPANY
+  SYSTEM_UPDATE
+}
+
+enum AnnouncementPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AnnouncementScope {
+  ALL
+  DEPARTMENTS
+  DISCIPLINES
+  ROLES
+  EMPLOYEES
+}
+
+/// Company news (HR) and system "What's new" posts (System Administrator).
+/// Recipients are snapshotted on publish; see AnnouncementRecipient.
+model Announcement {
+  id                     String               @id @default(uuid())
+  companyId              String               @map("company_id")
+  number                 String
+  type                   AnnouncementType     @default(COMPANY)
+  title                  String
+  titleZh                String?              @map("title_zh")
+  /// Markdown; raw HTML is stripped on save and never rendered.
+  body                   String
+  bodyZh                 String?              @map("body_zh")
+  priority               AnnouncementPriority @default(NORMAL)
+  status                 AnnouncementStatus   @default(DRAFT)
+  audienceScope          AnnouncementScope    @default(ALL) @map("audience_scope")
+  departmentIds          String[]             @default([]) @map("department_ids")
+  disciplineIds          String[]             @default([]) @map("discipline_ids")
+  roleIds                String[]             @default([]) @map("role_ids")
+  employeeIds            String[]             @default([]) @map("employee_ids")
+  requireAcknowledgement Boolean              @default(false) @map("require_acknowledgement")
+  sendEmail              Boolean              @default(false) @map("send_email")
+  pinned                 Boolean              @default(false)
+  publishAt              DateTime?            @map("publish_at")
+  publishedAt            DateTime?            @map("published_at")
+  expiresAt              DateTime?            @map("expires_at")
+  /// Set when title/body change after publish ("Edited {date}").
+  contentEditedAt        DateTime?            @map("content_edited_at")
+  archivedAt             DateTime?            @map("archived_at")
+  attachmentFolderId     String?              @map("attachment_folder_id")
+  createdBy              String               @map("created_by")
+  updatedBy              String               @map("updated_by")
+  createdAt              DateTime             @default(now()) @map("created_at")
+  updatedAt              DateTime             @updatedAt @map("updated_at")
+  deletedAt              DateTime?            @map("deleted_at")
+  deletedBy              String?              @map("deleted_by")
+
+  company          Company                 @relation(fields: [companyId], references: [id])
+  creator          User                    @relation("AnnouncementCreator", fields: [createdBy], references: [id])
+  attachmentFolder DocumentFolder?         @relation(fields: [attachmentFolderId], references: [id])
+  recipients       AnnouncementRecipient[]
+
+  @@unique([companyId, number])
+  @@index([companyId, status, deletedAt], map: "idx_announcement_company_status")
+  @@index([companyId, type, status], map: "idx_announcement_company_type")
+  @@index([status, publishAt], map: "idx_announcement_due")
+  @@map("announcement")
+}
+
+model AnnouncementRecipient {
+  id             String    @id @default(uuid())
+  announcementId String    @map("announcement_id")
+  userId         String    @map("user_id")
+  readAt         DateTime? @map("read_at")
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation("AnnouncementRecipientUser", fields: [userId], references: [id])
+
+  @@unique([announcementId, userId])
+  @@index([userId, readAt], map: "idx_announcement_recipient_user_read")
+  @@map("announcement_recipient")
+}

@@ -57,7 +57,7 @@ const identity = (key: string): string => key;
 describe('sidebar permissions and filtering', () => {
   it('shows only unrestricted links before capabilities load', () => {
     const model = modelFor({ canViewHr: true }, false);
-    expect(ids(model.primary)).toEqual(['dashboard', 'new-request']);
+    expect(ids(model.primary)).toEqual(['dashboard', 'new-request', 'announcements']);
     expect(ids(model.utility)).toEqual(['my-profile']);
   });
 
@@ -92,6 +92,7 @@ describe('sidebar permissions and filtering', () => {
       'dashboard',
       'new-request',
       'approvals',
+      'announcements',
       'people',
       'time',
       'finance',
@@ -151,8 +152,30 @@ describe('sidebar permissions and filtering', () => {
       canManageRoles: true,
       ...withProjects(),
     });
-    expect(ids(model.primary)).toEqual(['dashboard', 'new-request', 'approvals', 'evaluation-inbox']);
+    expect(ids(model.primary)).toEqual([
+      'dashboard',
+      'new-request',
+      'approvals',
+      'evaluation-inbox',
+      'announcements',
+    ]);
     expect(ids(model.utility)).toEqual(['my-profile']);
+  });
+
+  it('gives everyone Announcements with the unread badge', () => {
+    const entry = modelFor({}).primary.find((item) => item.id === 'announcements');
+    expect(entry?.kind).toBe('link');
+    expect(entry?.kind === 'link' ? entry.badge : null).toBe('unreadAnnouncements');
+  });
+
+  it('shows Manage announcements under Operations › Administration only with announcements.manage', () => {
+    const manageIds = (model: SidebarModel): string[] =>
+      flattenSidebarModel(model).map((entry) => entry.link.id).filter((id) => id === 'manage-announcements');
+    expect(manageIds(modelFor({ canViewHr: true }))).toEqual([]);
+    const model = modelFor({ canViewHr: true, canManageAnnouncements: true });
+    const admin = folder(model, 'operations')?.groups.find((group) => group.id === 'ops-administration');
+    expect(admin?.items.some((item) => item.id === 'manage-announcements')).toBe(true);
+    expect(manageIds(model)).toEqual(['manage-announcements']);
   });
 
   it('hides Project Management for non-admins, even with full project access', () => {
@@ -238,6 +261,11 @@ describe('active link resolution', () => {
       'new-request',
     );
     expect(resolveActiveLink('/approvals/42', links)?.link.id).toBe('approvals');
+  });
+
+  it("keeps employee announcements and What's new on the Announcements link", () => {
+    expect(resolveActiveLink('/announcements/7', links)?.link.id).toBe('announcements');
+    expect(resolveActiveLink('/whats-new', links)?.link.id).toBe('announcements');
   });
 });
 

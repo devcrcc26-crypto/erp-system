@@ -270,6 +270,13 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'payroll', action: 'edit', description: 'Edit payroll entries' },
   { module: 'payroll', action: 'approve', description: 'Approve and lock payroll' },
   { module: 'payroll', action: 'export', description: 'Export payroll and bank files' },
+
+  // Announcements — company news and system "What's new" posts
+  { module: 'announcements', action: 'view', description: 'View received announcements' },
+  { module: 'announcements', action: 'create', description: 'Create announcement drafts' },
+  { module: 'announcements', action: 'edit', description: 'Edit announcements' },
+  { module: 'announcements', action: 'approve', description: 'Publish, schedule and archive announcements' },
+  { module: 'announcements', action: 'export', description: 'Export announcement read statistics' },
 ];
 
 const ACTION_TO_FLAG: Record<string, keyof PermissionFlags> = {
@@ -377,6 +384,23 @@ function localHrManagerFlags(): PermissionFlags {
     canApprove: false,
     canExport: true,
   };
+}
+
+/** Announcements: create, edit, publish (approve) and export — no delete. */
+function announcementManagerFlags(): PermissionFlags {
+  return {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: false,
+    canApprove: true,
+    canExport: true,
+  };
+}
+
+/** Announcements: drafts only — the service blocks editing after publish. */
+function announcementDraftFlags(): PermissionFlags {
+  return viewCreateEditFlags();
 }
 
 /** Grants exactly one permission flag; never elevates approve/export/delete implicitly. */
@@ -653,7 +677,8 @@ function projectAdministratorPermissionFlags(
     module === 'leave' ||
     module === 'overtime' ||
     module === 'employee-contract' ||
-    module === 'payroll'
+    module === 'payroll' ||
+    module === 'announcements'
   ) {
     return null;
   }
@@ -1307,6 +1332,7 @@ async function main(): Promise<void> {
     { roleName: 'HR Manager', module: 'flight', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'business-trip', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'payroll', flags: hrManagerFlags() },
+    { roleName: 'HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'HR Manager', module: 'reports', flags: viewExportFlags() },
     { roleName: 'HR Manager', module: 'approvals', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'notifications', flags: viewOnlyFlags() },
@@ -1336,6 +1362,7 @@ async function main(): Promise<void> {
     { roleName: 'Local HR Manager', module: 'flight', flags: viewExportFlags() },
     { roleName: 'Local HR Manager', module: 'business-trip', flags: viewExportFlags() },
     { roleName: 'Local HR Manager', module: 'payroll', flags: localHrManagerFlags() },
+    { roleName: 'Local HR Manager', module: 'announcements', flags: announcementManagerFlags() },
     { roleName: 'Local HR Manager', module: 'reports', flags: viewExportFlags() },
     { roleName: 'Local HR Manager', module: 'approvals', flags: viewOnlyFlags() },
     { roleName: 'Local HR Manager', module: 'notifications', flags: viewOnlyFlags() },
@@ -1365,6 +1392,7 @@ async function main(): Promise<void> {
     },
     { roleName: 'HR Specialist', module: 'business-trip', flags: viewExportFlags() },
     { roleName: 'HR Specialist', module: 'payroll', flags: viewOnlyFlags() },
+    { roleName: 'HR Specialist', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Specialist', module: 'approvals', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'notifications', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'documents', flags: viewOnlyFlags() },
@@ -1382,6 +1410,7 @@ async function main(): Promise<void> {
     { roleName: 'HR Assistant', module: 'flight', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'business-trip', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'payroll', flags: viewOnlyFlags() },
+    { roleName: 'HR Assistant', module: 'announcements', flags: announcementDraftFlags() },
     { roleName: 'HR Assistant', module: 'approvals', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'notifications', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'documents', flags: viewOnlyFlags() },
@@ -1496,6 +1525,26 @@ async function main(): Promise<void> {
       // Persist the full flag set on each action row so modules without a
       // dedicated approve/export action still carry those flags on view rows.
       await upsertRolePermission(roleId, perm.id, flags);
+    }
+  }
+
+  // Announcements — every other role can view what it receives. HR roles get
+  // their matrix rows above; System Administrator already has full flags.
+  const announcementPermissions = permissions.filter(
+    (permission) => permission.module === 'announcements',
+  );
+  const announcementMatrixRoles = new Set([
+    'System Administrator',
+    ...newHrRolePermissions
+      .filter((entry) => entry.module === 'announcements')
+      .map((entry) => entry.roleName),
+  ]);
+  for (const [roleName, roleId] of roleMap) {
+    if (announcementMatrixRoles.has(roleName)) {
+      continue;
+    }
+    for (const permission of announcementPermissions) {
+      await upsertRolePermission(roleId, permission.id, viewOnlyFlags());
     }
   }
 

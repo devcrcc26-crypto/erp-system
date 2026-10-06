@@ -54,6 +54,7 @@ import { SiteAssignmentModule } from './modules/site-assignment/site-assignment.
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { EvaluationModule } from './modules/evaluation/evaluation.module';
 import {PayrollModule} from './modules/payroll/payroll.module';
+import { AnnouncementsModule } from './modules/announcements/announcements.module';
 
 @Module({
   imports: [
@@ -113,6 +114,7 @@ import {PayrollModule} from './modules/payroll/payroll.module';
     AttendanceModule,
     EvaluationModule,
     PayrollModule,
+    AnnouncementsModule,
   ],
   controllers: [AppController],
   providers: [

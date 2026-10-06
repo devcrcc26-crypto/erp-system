@@ -83,6 +83,7 @@ export class SessionCapabilitiesService {
       'flight',
       'business-trip',
       'payroll',
+      'announcements',
       'schedule',
       'engineering_documents',
       'review_sessions',
@@ -112,6 +113,7 @@ export class SessionCapabilitiesService {
     const flight = permissionMap.flight;
     const businessTrip = permissionMap['business-trip'];
     const payroll = permissionMap.payroll;
+    const announcements = permissionMap.announcements;
     const schedule = permissionMap.schedule;
     const engineeringDocuments = permissionMap.engineering_documents;
     const reviewSessions = permissionMap.review_sessions;
@@ -136,6 +138,10 @@ export class SessionCapabilitiesService {
       canEditPayroll: payroll.canEdit,
       canApprovePayroll: payroll.canApprove,
       canExportPayroll: payroll.canExport,
+      canManageAnnouncements:
+        announcements.canCreate || announcements.canEdit || announcements.canApprove,
+      canPublishAnnouncements: announcements.canApprove,
+      canExportAnnouncements: announcements.canExport,
       canViewFlight: flight.canView,
       canCreateFlight: flight.canCreate,
       canManageFlight: flight.canEdit,

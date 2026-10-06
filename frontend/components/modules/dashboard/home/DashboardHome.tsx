@@ -41,6 +41,7 @@ import {
   EvaluationInboxWidget,
   useLeadEvaluations,
 } from './RoleWidgets';
+import AnnouncementsWidget from './AnnouncementsWidget';
 import { rowSpans } from './layout';
 
 const HOME = 'pages.dashboard.home';
@@ -156,6 +157,7 @@ export default function DashboardHome({ enabled }: { enabled: boolean }): React.
       </div>
 
       <div className="dv2-grid">
+        <AnnouncementsWidget enabled={enabled} />
         <PendingApprovalsWidget enabled={enabled} />
         <MyRequestsWidget enabled={enabled} />
         {smallWidgets.map(({ key, Widget }, index) => (

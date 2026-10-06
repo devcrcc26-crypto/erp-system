@@ -4974,5 +4974,202 @@
       "overnightNote": "此记录跨越午夜 — 共 {{hours}} 小时",
       "returnAfterDeparture": "返回时间必须晚于出发时间"
     }
+  },
+  "announcements": {
+    "nav": {
+      "announcements": "公告",
+      "manage": "公告管理",
+      "badgeUnread": "{{count}} 条未读公告"
+    },
+    "pages": {
+      "list": "公告",
+      "listDescription": "发送给您的公司新闻和通知。",
+      "detail": "公告",
+      "whatsNew": "新功能",
+      "whatsNewDescription": "ERP 系统的更新与新功能。",
+      "manage": "公告管理",
+      "manageDescription": "向全体员工或指定群组发布公司新闻，并跟踪阅读情况。",
+      "new": "新建公告",
+      "edit": "编辑公告",
+      "manageDetail": "公告详情"
+    },
+    "type": {
+      "COMPANY": "公司公告",
+      "SYSTEM_UPDATE": "系统更新"
+    },
+    "priority": {
+      "NORMAL": "普通",
+      "IMPORTANT": "重要",
+      "URGENT": "紧急"
+    },
+    "status": {
+      "DRAFT": "草稿",
+      "SCHEDULED": "已定时",
+      "PUBLISHED": "已发布",
+      "ARCHIVED": "已归档"
+    },
+    "scope": {
+      "ALL": "全体员工",
+      "DEPARTMENTS": "部门",
+      "DISCIPLINES": "专业",
+      "ROLES": "角色",
+      "EMPLOYEES": "指定员工"
+    },
+    "scopeCount": {
+      "DEPARTMENTS": "{{count}} 个部门",
+      "DISCIPLINES": "{{count}} 个专业",
+      "ROLES": "{{count}} 个角色",
+      "EMPLOYEES": "{{count}} 名员工"
+    },
+    "list": {
+      "title": "公告",
+      "unreadLabel": "未读",
+      "pinned": "置顶",
+      "expired": "已过期",
+      "filterAll": "全部",
+      "filterUnread": "未读",
+      "loadError": "无法加载公告。",
+      "empty": "暂无公告。",
+      "emptyUnread": "已全部阅读。"
+    },
+    "whatsNew": {
+      "title": "新功能",
+      "empty": "暂无更新。",
+      "pager": "第 {{current}} / {{total}} 条",
+      "next": "下一条",
+      "gotIt": "知道了"
+    },
+    "ack": {
+      "required": "需确认",
+      "done": "已确认",
+      "doneOn": "您已于 {{date}} 确认。",
+      "prompt": "请确认您已阅读并理解本公告。",
+      "button": "我已阅读并理解",
+      "success": "谢谢，已记录您的确认。",
+      "failed": "无法记录您的确认。"
+    },
+    "detail": {
+      "attachments": "附件",
+      "downloadFailed": "无法打开附件。",
+      "notRecipient": "此公告未发送给您。",
+      "notFound": "未找到该公告。",
+      "edited": "已于 {{date}} 编辑"
+    },
+    "banner": {
+      "label": "紧急",
+      "more": "另有 {{count}} 条",
+      "open": "立即阅读",
+      "dismiss": "隐藏紧急公告"
+    },
+    "ackModal": {
+      "kicker": "紧急 — 请确认",
+      "remaining": "有 {{count}} 条公告需要您确认"
+    },
+    "widget": {
+      "title": "最新公告",
+      "empty": "当前没有公告。"
+    },
+    "manage": {
+      "title": "公告",
+      "systemTitle": "系统更新",
+      "new": "新建公告",
+      "newSystem": "新建系统更新",
+      "search": "按标题或编号搜索",
+      "empty": "暂无公告。",
+      "edit": "编辑",
+      "columns": {
+        "announcement": "公告",
+        "status": "状态",
+        "audience": "发送对象",
+        "published": "发布时间",
+        "reads": "阅读情况"
+      },
+      "progress": "已读 {{read}} / {{total}}",
+      "progressAck": "已读 {{read}} / {{total}} · 已确认 {{acknowledged}}",
+      "confirmDelete": "删除此草稿？",
+      "deleted": "草稿已删除。",
+      "archive": "归档",
+      "confirmArchive": "归档此公告？",
+      "confirmArchiveHint": "员工将不再看到此公告，阅读统计会保留。",
+      "unschedule": "取消定时",
+      "never": "永不",
+      "delivery": "发送方式",
+      "inAppOnly": "仅站内",
+      "remind": "提醒未读",
+      "confirmRemind": "向 {{count}} 名未读人员发送提醒？",
+      "reminded": "已向 {{count}} 人发送提醒。",
+      "export": "导出 Excel",
+      "exportFailed": "无法导出统计数据。"
+    },
+    "recipients": {
+      "title": "阅读统计",
+      "total": "接收人数",
+      "read": "已读",
+      "acknowledged": "已确认",
+      "name": "姓名",
+      "department": "部门",
+      "readAt": "阅读时间",
+      "acknowledgedAt": "确认时间",
+      "notRead": "未读",
+      "notAcknowledged": "未确认",
+      "filterAll": "全部",
+      "filterUnread": "未读",
+      "filterUnacknowledged": "未确认",
+      "search": "搜索姓名或员工编号",
+      "empty": "没有符合条件的接收人。"
+    },
+    "form": {
+      "title": "标题",
+      "titleRequired": "请输入标题。",
+      "body": "正文",
+      "bodyRequired": "请填写公告内容。",
+      "bodyPlaceholder": "填写公告内容。支持 Markdown：**粗体**、_斜体_、列表和[链接](https://…)。",
+      "write": "编辑",
+      "preview": "预览",
+      "previewEmpty": "暂无可预览的内容。",
+      "markdownHint": "Markdown：**粗体**、_斜体_、# 标题、- 列表、[文字](https://链接)。不支持 HTML。",
+      "chineseVersion": "中文版本（可选）",
+      "titleZh": "标题（中文）",
+      "bodyZh": "正文（中文）",
+      "attachments": "附件",
+      "addFiles": "添加文件",
+      "attachmentsHint": "接收人可以下载这些文件，每个最大 20 MB。",
+      "removeAttachment": "移除 {{name}}",
+      "audience": "发送对象",
+      "departments": "部门",
+      "disciplines": "专业",
+      "roles": "角色",
+      "employees": "员工",
+      "pickOne": "请至少选择一项。",
+      "countingRecipients": "正在统计接收人数…",
+      "recipientCount": "{{count}} 人将收到此公告",
+      "priority": "优先级",
+      "requireAck": "需要确认",
+      "requireAckHint": "接收人需确认“我已阅读并理解”。",
+      "sendEmail": "发送邮件",
+      "sendEmailHint": "同时通过邮件发送标题、摘要和链接。",
+      "pinned": "置顶",
+      "pinnedHint": "置顶的全员公告也会发送给之后入职的员工。",
+      "whenToPublish": "发布时间",
+      "publishNow": "立即发布",
+      "schedule": "定时发布",
+      "publishAt": "发布于",
+      "publishAtRequired": "请选择发布日期和时间。",
+      "expiresAt": "过期时间",
+      "expiresAtHint": "过期后不再显示在横幅和仪表板中，但仍保留在列表中。",
+      "saveDraft": "保存草稿",
+      "saveChanges": "保存更改",
+      "confirmPublish": "立即发布此公告？",
+      "confirmSchedule": "定时发布此公告？",
+      "confirmSystem": "所有人登录后都会在“新功能”窗口中看到它。",
+      "savedSuccess": "草稿已保存。",
+      "publishedSuccess": "已发布给 {{count}} 人。",
+      "scheduledSuccess": "已定时于 {{date}} 发布。",
+      "saveFailed": "无法保存公告。",
+      "systemNote": "系统更新发送给所有人，登录后在“新功能”窗口中显示一次。不发送邮件，也不需要确认。",
+      "lockedNote": "此公告已发布。您仍可编辑正文、置顶和过期时间；发送对象和发送方式不可更改。",
+      "draftOnlyNote": "您可以保存草稿，由人力资源经理发布。",
+      "cannotEdit": "您无法编辑此公告。"
+    }
   }
 }

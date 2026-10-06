@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import SidebarShell from '@/components/sidebar/SidebarShell';
 import MainContentHeader from '@/components/ui/shell/MainContentHeader';
 import {
+  AnnouncementModals,
+  UrgentAnnouncementBanner,
+} from '@/components/modules/announcements/AnnouncementShellLayer';
+import {
   extractProjectId,
   resolveRouteMeta,
 } from '@/config/navConfig';
@@ -127,6 +131,9 @@ export default function AppShell({
           pageSubtitle={pageSubtitle}
           onOpenMobileNav={() => setMobileNavOpen(true)}
         />
+
+        <UrgentAnnouncementBanner />
+        <AnnouncementModals />
 
         <div
           className={

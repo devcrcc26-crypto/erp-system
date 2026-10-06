@@ -28,6 +28,7 @@ export type SidebarPermission =
   | 'procurement.access'
   | 'fleet.access'
   | 'administration.access'
+  | 'announcements.manage'
   | 'org.departments'
   | 'org.positions'
   | 'org.disciplines'
@@ -48,7 +49,10 @@ export type SidebarPermission =
   | 'pm.correspondence';
 
 /** Live counters a link can display. Resolved in `use-sidebar-data.ts`. */
-export type SidebarBadgeSource = 'pendingApprovals' | 'pendingEvaluationActions';
+export type SidebarBadgeSource =
+  | 'pendingApprovals'
+  | 'pendingEvaluationActions'
+  | 'unreadAnnouncements';
 
 interface SidebarLinkBase {
   readonly kind: 'link';
@@ -156,6 +160,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
       'new-request',
       'approvals',
       'evaluation-inbox',
+      'announcements',
       'my-profile',
     ],
   },
@@ -184,6 +189,8 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
     // Non-HR discipline/team leads (limitedNavigation + evaluation.inbox).
     // HR users get the same inbox inside People › Performance.
     { kind: 'link', id: 'evaluation-inbox', labelKey: 'nav.hr.evaluationInbox', icon: 'hr-employee-evaluation', href: '/hr/evaluations/inbox', requires: ['evaluation.inbox'], badge: 'pendingEvaluationActions', keywords: ['inbox', 'discipline lead', 'team lead', 'pending'] },
+    // Everyone: company news they received, with the unread count.
+    { kind: 'link', id: 'announcements', labelKey: 'announcements.nav.announcements', icon: 'announcements', href: '/announcements', activePaths: ['/whats-new'], badge: 'unreadAnnouncements', keywords: ['news', 'notice', 'memo', "what's new", 'update'] },
     // ── Modules: one rail folder per domain, each panel short ──
     {
       kind: 'folder',
@@ -325,6 +332,7 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
             { kind: 'link', id: 'official-seal', labelKey: 'nav.hr.officialSeal', icon: 'hr-official-seal', href: '/hr/official-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
             { kind: 'link', id: 'project-seal', labelKey: 'nav.hr.projectSeal', icon: 'hr-project-seal', href: '/hr/project-seal', requires: ['administration.access'], keywords: ['stamp', 'chop'] },
             { kind: 'link', id: 'exit-permit', labelKey: 'nav.hr.equipmentAndMaterialsExitPermit', icon: 'hr-equipment-and-materials-exit-permit', href: '/hr/equipment-and-materials-exit-permit', requires: ['administration.access'], keywords: ['gate pass'] },
+            { kind: 'link', id: 'manage-announcements', labelKey: 'announcements.nav.manage', icon: 'announcements', href: '/hr/announcements', requires: ['announcements.manage'], keywords: ['news', 'publish', 'broadcast', "what's new", 'system update'] },
           ],
         },
       ],

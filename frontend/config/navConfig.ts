@@ -181,6 +181,9 @@ const APPROVAL_NEW_ROUTE_META: Record<
 
 /** Route → page subtitle (description) i18n keys for MainContentHeader. */
 const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
+  '/announcements': 'announcements.pages.listDescription',
+  '/whats-new': 'announcements.pages.whatsNewDescription',
+  '/hr/announcements': 'announcements.pages.manageDescription',
   '/approvals': 'pages.approvals.listDescription',
   '/approvals/new': 'pages.approvals.newDescription',
   '/users': 'users.listDescription',
@@ -272,6 +275,53 @@ export function resolveRouteMeta(
   };
 }
 
+/** Employee announcements, What's new, and the HR management pages. */
+function resolveAnnouncementsMeta(
+  pathname: string,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): RouteMeta | null {
+  const home = { label: t('nav.dashboard'), href: '/' };
+  if (pathname === '/announcements') {
+    return { titleKey: 'announcements.pages.list', breadcrumbs: [home, { label: t('announcements.pages.list') }] };
+  }
+  if (pathname === '/whats-new') {
+    return { titleKey: 'announcements.pages.whatsNew', breadcrumbs: [home, { label: t('announcements.pages.whatsNew') }] };
+  }
+  if (pathname.startsWith('/announcements/')) {
+    return {
+      titleKey: 'announcements.pages.detail',
+      breadcrumbs: [
+        home,
+        { label: t('announcements.pages.list'), href: '/announcements' },
+        { label: t('announcements.pages.detail') },
+      ],
+    };
+  }
+  if (!pathname.startsWith('/hr/announcements')) {
+    return null;
+  }
+  const manage = { label: t('announcements.pages.manage'), href: '/hr/announcements' };
+  if (pathname === '/hr/announcements') {
+    return { titleKey: 'announcements.pages.manage', breadcrumbs: [home, { label: manage.label }] };
+  }
+  if (pathname === '/hr/announcements/new') {
+    return {
+      titleKey: 'announcements.pages.new',
+      breadcrumbs: [home, manage, { label: t('announcements.pages.new') }],
+    };
+  }
+  if (pathname.endsWith('/edit')) {
+    return {
+      titleKey: 'announcements.pages.edit',
+      breadcrumbs: [home, manage, { label: t('announcements.pages.edit') }],
+    };
+  }
+  return {
+    titleKey: 'announcements.pages.manageDetail',
+    breadcrumbs: [home, manage, { label: t('announcements.pages.manageDetail') }],
+  };
+}
+
 function resolveRouteMetaCore(
   pathname: string,
   projectName: string | null,
@@ -313,6 +363,11 @@ function resolveRouteMetaCore(
         { label: t('pages.reviewMode.title') },
       ],
     };
+  }
+
+  const announcementsMeta = resolveAnnouncementsMeta(pathname, t);
+  if (announcementsMeta) {
+    return announcementsMeta;
   }
 
   if (

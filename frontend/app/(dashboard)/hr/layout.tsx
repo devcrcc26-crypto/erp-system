@@ -3,7 +3,11 @@
 import { useEffect } from 'react';
 import { Alert, Spin } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCanAccessPayroll, useCanViewHr } from '@/hooks/use-auth-capabilities';
+import {
+  useCanAccessPayroll,
+  useCanManageAnnouncements,
+  useCanViewHr,
+} from '@/hooks/use-auth-capabilities';
 import { usePermissionsLoading } from '@/hooks/use-pm-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
@@ -24,6 +28,7 @@ export default function HrSectionLayout({
   const permLoading = usePermissionsLoading();
   const canViewHr = useCanViewHr();
   const canAccessPayroll = useCanAccessPayroll();
+  const canManageAnnouncements = useCanManageAnnouncements();
 
   const isEmployeeSelfServiceRoute =
     pathname.startsWith('/hr/overtime') ||
@@ -35,8 +40,12 @@ export default function HrSectionLayout({
     pathname.startsWith('/hr/evaluations');
 
   const isPayrollRoute = pathname.startsWith('/hr/payroll');
+  const isAnnouncementsRoute = pathname.startsWith('/hr/announcements');
   const allowed =
-    canViewHr || isEmployeeSelfServiceRoute || (isPayrollRoute && canAccessPayroll);
+    canViewHr ||
+    isEmployeeSelfServiceRoute ||
+    (isPayrollRoute && canAccessPayroll) ||
+    (isAnnouncementsRoute && canManageAnnouncements);
 
   useEffect(() => {
     if (!permLoading && !allowed) {

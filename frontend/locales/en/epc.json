@@ -4999,5 +4999,202 @@
       "overnightNote": "This entry crosses midnight — {{hours}} hours total",
       "returnAfterDeparture": "Return must be after departure"
     }
+  },
+  "announcements": {
+    "nav": {
+      "announcements": "Announcements",
+      "manage": "Manage announcements",
+      "badgeUnread": "Unread announcements: {{count}}"
+    },
+    "pages": {
+      "list": "Announcements",
+      "listDescription": "Company news and notices sent to you.",
+      "detail": "Announcement",
+      "whatsNew": "What's new",
+      "whatsNewDescription": "Updates and new features in the ERP.",
+      "manage": "Manage announcements",
+      "manageDescription": "Post company news to everyone or to selected groups and track who has read it.",
+      "new": "New announcement",
+      "edit": "Edit announcement",
+      "manageDetail": "Announcement details"
+    },
+    "type": {
+      "COMPANY": "Company",
+      "SYSTEM_UPDATE": "System updates"
+    },
+    "priority": {
+      "NORMAL": "Normal",
+      "IMPORTANT": "Important",
+      "URGENT": "Urgent"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "SCHEDULED": "Scheduled",
+      "PUBLISHED": "Published",
+      "ARCHIVED": "Archived"
+    },
+    "scope": {
+      "ALL": "All staff",
+      "DEPARTMENTS": "Departments",
+      "DISCIPLINES": "Disciplines",
+      "ROLES": "Roles",
+      "EMPLOYEES": "Specific employees"
+    },
+    "scopeCount": {
+      "DEPARTMENTS": "Departments: {{count}}",
+      "DISCIPLINES": "Disciplines: {{count}}",
+      "ROLES": "Roles: {{count}}",
+      "EMPLOYEES": "Employees: {{count}}"
+    },
+    "list": {
+      "title": "Announcements",
+      "unreadLabel": "Unread",
+      "pinned": "Pinned",
+      "expired": "Expired",
+      "filterAll": "All",
+      "filterUnread": "Unread",
+      "loadError": "Couldn't load announcements.",
+      "empty": "No announcements yet.",
+      "emptyUnread": "You're all caught up."
+    },
+    "whatsNew": {
+      "title": "What's new",
+      "empty": "No updates yet.",
+      "pager": "{{current}} of {{total}}",
+      "next": "Next",
+      "gotIt": "Got it"
+    },
+    "ack": {
+      "required": "Acknowledgement required",
+      "done": "Acknowledged",
+      "doneOn": "You acknowledged this on {{date}}.",
+      "prompt": "Please confirm you have read and understood this announcement.",
+      "button": "I have read and understood",
+      "success": "Thank you — your acknowledgement was recorded.",
+      "failed": "Couldn't record your acknowledgement."
+    },
+    "detail": {
+      "attachments": "Attachments",
+      "downloadFailed": "Couldn't open the attachment.",
+      "notRecipient": "This announcement wasn't sent to you.",
+      "notFound": "Announcement not found.",
+      "edited": "Edited {{date}}"
+    },
+    "banner": {
+      "label": "Urgent",
+      "more": "+{{count}} more",
+      "open": "Read now",
+      "dismiss": "Hide urgent announcement"
+    },
+    "ackModal": {
+      "kicker": "Urgent — please acknowledge",
+      "remaining": "Waiting for your acknowledgement: {{count}}"
+    },
+    "widget": {
+      "title": "Latest announcements",
+      "empty": "No announcements right now."
+    },
+    "manage": {
+      "title": "Announcements",
+      "systemTitle": "System updates",
+      "new": "New announcement",
+      "newSystem": "New system update",
+      "search": "Search by title or number",
+      "empty": "No announcements yet.",
+      "edit": "Edit",
+      "columns": {
+        "announcement": "Announcement",
+        "status": "Status",
+        "audience": "Audience",
+        "published": "Published",
+        "reads": "Read"
+      },
+      "progress": "{{read}} / {{total}} read",
+      "progressAck": "{{read}} / {{total}} read · {{acknowledged}} acknowledged",
+      "confirmDelete": "Delete this draft?",
+      "deleted": "Draft deleted.",
+      "archive": "Archive",
+      "confirmArchive": "Archive this announcement?",
+      "confirmArchiveHint": "Employees will no longer see it. Read statistics are kept.",
+      "unschedule": "Unschedule",
+      "never": "Never",
+      "delivery": "Delivery",
+      "inAppOnly": "In-app only",
+      "remind": "Remind unread",
+      "confirmRemind": "Send a reminder to everyone who hasn't read it ({{count}})?",
+      "reminded": "Reminder sent. Notified: {{count}}.",
+      "export": "Export Excel",
+      "exportFailed": "Couldn't export the statistics."
+    },
+    "recipients": {
+      "title": "Read statistics",
+      "total": "Recipients",
+      "read": "Read",
+      "acknowledged": "Acknowledged",
+      "name": "Name",
+      "department": "Department",
+      "readAt": "Read at",
+      "acknowledgedAt": "Acknowledged at",
+      "notRead": "Not read",
+      "notAcknowledged": "Not acknowledged",
+      "filterAll": "All",
+      "filterUnread": "Not read",
+      "filterUnacknowledged": "Not acknowledged",
+      "search": "Search name or employee ID",
+      "empty": "No recipients match."
+    },
+    "form": {
+      "title": "Title",
+      "titleRequired": "Enter a title.",
+      "body": "Message",
+      "bodyRequired": "Write the announcement.",
+      "bodyPlaceholder": "Write your announcement. Markdown is supported: **bold**, _italic_, lists and [links](https://…).",
+      "write": "Write",
+      "preview": "Preview",
+      "previewEmpty": "Nothing to preview yet.",
+      "markdownHint": "Markdown: **bold**, _italic_, # heading, - list, [text](https://link). HTML isn't allowed.",
+      "chineseVersion": "Chinese version (optional)",
+      "titleZh": "Title (Chinese)",
+      "bodyZh": "Message (Chinese)",
+      "attachments": "Attachments",
+      "addFiles": "Add files",
+      "attachmentsHint": "Recipients can download these. Up to 20 MB each.",
+      "removeAttachment": "Remove {{name}}",
+      "audience": "Audience",
+      "departments": "Departments",
+      "disciplines": "Disciplines",
+      "roles": "Roles",
+      "employees": "Employees",
+      "pickOne": "Pick at least one.",
+      "countingRecipients": "Counting recipients…",
+      "recipientCount": "Recipients: {{count}}",
+      "priority": "Priority",
+      "requireAck": "Require acknowledgement",
+      "requireAckHint": "Recipients confirm \"I have read and understood\".",
+      "sendEmail": "Send email",
+      "sendEmailHint": "Also email the title, a short excerpt and a link.",
+      "pinned": "Pin to top",
+      "pinnedHint": "Pinned company-wide posts also reach people who join later.",
+      "whenToPublish": "When to publish",
+      "publishNow": "Publish now",
+      "schedule": "Schedule",
+      "publishAt": "Publish at",
+      "publishAtRequired": "Pick the publish date and time.",
+      "expiresAt": "Expires",
+      "expiresAtHint": "After this, it leaves banners and the dashboard but stays in the list.",
+      "saveDraft": "Save draft",
+      "saveChanges": "Save changes",
+      "confirmPublish": "Publish this announcement now?",
+      "confirmSchedule": "Schedule this announcement?",
+      "confirmSystem": "Everyone will see it in the What's new window after they sign in.",
+      "savedSuccess": "Draft saved.",
+      "publishedSuccess": "Published. Recipients: {{count}}.",
+      "scheduledSuccess": "Scheduled for {{date}}.",
+      "saveFailed": "Couldn't save the announcement.",
+      "systemNote": "System updates go to everyone and appear once in the What's new window after sign-in. No email or acknowledgement.",
+      "lockedNote": "This announcement is published. You can still edit the text, pin and expiry; the audience and delivery options can't change.",
+      "draftOnlyNote": "You can save drafts. An HR Manager will publish them.",
+      "cannotEdit": "You can't edit this announcement."
+    }
   }
 }

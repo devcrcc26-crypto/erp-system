@@ -75,6 +75,21 @@ export function useCanCreateOvertime(): boolean {
   );
 }
 
+/** True when the session can open announcement management (create, edit or publish). */
+export function useCanManageAnnouncements(): boolean {
+  return useAuthStore((state) => state.capabilities.canManageAnnouncements ?? false);
+}
+
+/** True when the session can publish, schedule, archive and remind announcements. */
+export function useCanPublishAnnouncements(): boolean {
+  return useAuthStore((state) => state.capabilities.canPublishAnnouncements ?? false);
+}
+
+/** True when the session can export announcement read statistics. */
+export function useCanExportAnnouncements(): boolean {
+  return useAuthStore((state) => state.capabilities.canExportAnnouncements ?? false);
+}
+
 /**
  * True when the session can open payroll runs (any payroll module permission).
  */

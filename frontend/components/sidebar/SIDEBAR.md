@@ -63,7 +63,7 @@ layout (`app/(dashboard)/layout.tsx`) renders for every authenticated page.
   as icon buttons, the account becomes an initials avatar, and every item has a right-side
   hover/focus tooltip.
 - **Limited navigation:** users without `hr.view` see only Dashboard, New Request, Approvals,
-  Evaluation Inbox (leads) and My Profile. Users with `hr.view` get the full sidebar (see "How
+  Evaluation Inbox (leads), Announcements and My Profile. Users with `hr.view` get the full sidebar (see "How
   permissions control visibility").
 - **Project pages** (`/projects/:id/...`) show the project's workspace navigation inside the
   Project Management folder, above the portfolio groups (which start collapsed). There is no
@@ -77,11 +77,11 @@ The rail is read top to bottom as *daily work → modules → account/system*. K
 | Rail position | Entries | Rule |
 | --- | --- | --- |
 | Top | Dashboard, New Request | Where every user starts. |
-| Inboxes | Approvals (badge), Evaluation Inbox (non-HR leads only; HR users have it under People › Performance) | Things waiting on *me*. Direct links, never folders. |
+| Inboxes | Approvals (badge), Evaluation Inbox (non-HR leads only; HR users have it under People › Performance), Announcements (everyone; unread badge; also covers What's new) | Things waiting on *me*. Direct links, never folders. |
 | People | Employees, Contracts · Performance (inbox, evaluations, cycles, templates) · Company Structure (departments, positions, disciplines) · Reports | Who works here and how they're doing. |
 | Time & Attendance | Leave (requests, policy, public holidays) · Attendance (attendance, field movement, work from home, site assignments) · Schedules & Overtime | When people work. |
 | Pay & Travel | Payroll, Expense Claims · Travel (flights, business trips, per diem, per-diem rates) | Money paid to people. |
-| Operations | Procurement · Fleet & Assets (vehicle requests, refueling, inspection & repair, company vehicles, company assets) · Administration (seals, exit permits) | Company resources — not HR. |
+| Operations | Procurement · Fleet & Assets (vehicle requests, refueling, inspection & repair, company vehicles, company assets) · Administration (seals, exit permits, Manage announcements for `announcements.manage`) | Company resources — not HR. |
 | Projects | Project Management (System Administrator only; hosts project nav) | |
 | Footer | My Profile (account card), Audit Log, Settings | Account and system only. |
 
@@ -156,7 +156,7 @@ has to read past.
    folders disappear too.
 5. **Limited navigation** (`SIDEBAR_CONFIG.limitedNavigation`): a session without
    `unlessGranted` (`hr.view`) keeps only the top-level entries listed in `entryIds`
-   (`dashboard`, `new-request`, `approvals`, `my-profile`), whatever else it could open. Change the list in
+   (`dashboard`, `new-request`, `approvals`, `evaluation-inbox`, `announcements`, `my-profile`), whatever else it could open. Change the list in
    the config; do not special-case it in components. `buildSidebarModel` applies it, so the
    desktop sidebar, compact rail and mobile drawer all follow it.
 

@@ -81,6 +81,7 @@ export function resolveSidebarPermissions(
   grant('procurement.access', hr);
   grant('fleet.access', hr);
   grant('administration.access', hr);
+  grant('announcements.manage', caps.canManageAnnouncements ?? false);
 
   // Organization
   const orgStructure =
