@@ -1,21 +1,33 @@
 'use client';
 
+import './evaluation-v2.css';
+
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Input, Table, Tooltip } from 'antd';
+import {
+  Button,
+  Dropdown,
+  Grid,
+  Input,
+  Spin,
+  Tooltip,
+  type MenuProps,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
+  EyeOutlined,
   FieldTimeOutlined,
   InboxOutlined,
+  MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
   TeamOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import Link from 'next/link';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import type { EmployeeEvaluation } from '@/lib/api/evaluation.types';
@@ -28,6 +40,7 @@ import {
   getScoreColor,
   getScoreLabel,
 } from '@/lib/utils/evaluation-status';
+import EvaluationListAvatar from './EvaluationListAvatar';
 import EvaluationStat from './EvaluationStat';
 
 type InboxQueue =
@@ -133,6 +146,8 @@ function matchesSearch(row: EmployeeEvaluation, q: string): boolean {
 
 export default function DisciplineLeadInboxPageContent(): React.ReactNode {
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
   const [queue, setQueue] = useState<InboxQueue>('needs-action');
   const [search, setSearch] = useState('');
 
@@ -145,6 +160,9 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
     dlEvaluationsQuery.isLoading || tlEvaluationsQuery.isLoading;
   const isFetching =
     dlEvaluationsQuery.isFetching || tlEvaluationsQuery.isFetching;
+  const hasData =
+    dlEvaluationsQuery.data !== undefined ||
+    tlEvaluationsQuery.data !== undefined;
 
   const needsDLAction = useMemo(
     () =>
@@ -199,21 +217,46 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
   const meta = QUEUE_META[queue];
   const showRoleColumn = queue === 'needs-action';
 
+  function buildActionMenu(row: InboxRow): MenuProps['items'] {
+    return [
+      {
+        key: 'view',
+        icon: <EyeOutlined />,
+        label: 'View',
+        onClick: () => router.push(`/hr/evaluations/${row.id}`),
+      },
+    ];
+  }
+
   const columns: ColumnsType<InboxRow> = useMemo(() => {
     const cols: ColumnsType<InboxRow> = [
       {
         title: 'Employee',
         key: 'employee',
-        render: (_value, row) => (
-          <div className="min-w-0">
-            <p className="erp-users-cell-strong m-0">
-              {row.employee.firstName} {row.employee.lastName}
-            </p>
-            <p className="erp-users-email m-0 mt-0.5">
-              {row.employee.employeeId ?? '—'}
-            </p>
-          </div>
-        ),
+        width: isCompact ? 220 : 260,
+        render: (_value, row) => {
+          const fullName =
+            `${row.employee.firstName} ${row.employee.lastName}`.trim();
+          return (
+            <div className="flex min-w-0 items-center gap-3">
+              <EvaluationListAvatar
+                firstName={row.employee.firstName}
+                lastName={row.employee.lastName}
+                userId={row.employee.id}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="erp-users-name m-0 truncate">{fullName}</p>
+                {row.employee.employeeId ? (
+                  <span className="erp-users-id-chip mt-1 inline-block">
+                    {row.employee.employeeId}
+                  </span>
+                ) : (
+                  <p className="erp-users-email m-0 mt-0.5">—</p>
+                )}
+              </div>
+            </div>
+          );
+        },
       },
     ];
 
@@ -306,22 +349,34 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
       },
       {
         title: '',
-        key: 'action',
-        width: 72,
+        key: 'actions',
+        width: 52,
+        align: 'right',
         render: (_value, row) => (
-          <Link
-            href={`/hr/evaluations/${row.id}`}
-            className="text-[13px] font-medium text-[#185FA5]"
+          <div
+            className="erp-table-row-actions flex items-center justify-end"
             onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
-            View
-          </Link>
+            <Dropdown
+              menu={{ items: buildActionMenu(row) }}
+              trigger={['click']}
+              rootClassName="erp-row-actions-menu"
+            >
+              <Button
+                size="small"
+                type="text"
+                icon={<MoreOutlined />}
+                aria-label="Actions"
+              />
+            </Dropdown>
+          </div>
         ),
       },
     );
 
     return cols;
-  }, [showRoleColumn]);
+  }, [showRoleColumn, isCompact, router]);
 
   async function handleRefresh(): Promise<void> {
     await Promise.all([
@@ -334,8 +389,18 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
     setSearch('');
   }
 
+  if (isLoading && !hasData) {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-inbox-page erp-evaluation-v2">
+        <div className="erp-evaluation-loading">
+          <Spin />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-inbox-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-inbox-page erp-evaluation-v2">
       <div className="erp-users-stat-bar erp-evaluation-inbox-stats">
         <EvaluationStat
           label="Needs Action"
@@ -416,6 +481,7 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
             className="erp-users-search-input min-w-0"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search by name or employee ID"
           />
           {search.trim() ? (
             <Button
@@ -429,16 +495,22 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
         </div>
 
         <div className="erp-pro-table-card-body">
-          <Table
+          <DataTable<InboxRow>
             dataSource={activeRows}
             columns={columns}
             rowKey={(row) =>
               row.inboxRole ? `${row.id}-${row.inboxRole}` : row.id
             }
             loading={isLoading}
-            pagination={{ pageSize: 10, hideOnSinglePage: true }}
+            pagination={{
+              pageSize: 10,
+              hideOnSinglePage: true,
+              pageSizeOptions: ['10', '20', '50'],
+              showSizeChanger: !isCompact,
+            }}
+            size={isCompact ? 'small' : 'middle'}
             className="erp-pro-table erp-users-table"
-            scroll={{ x: 880 }}
+            scroll={{ x: isCompact ? 720 : 960 }}
             onRow={(row) => ({
               onClick: () => router.push(`/hr/evaluations/${row.id}`),
               className: 'cursor-pointer',

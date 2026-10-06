@@ -1,13 +1,20 @@
 'use client';
 
+import './evaluation-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Button,
+  Dropdown,
+  Form,
+  Grid,
+  Input,
   Modal,
   Select,
-  Table,
+  Spin,
   Tooltip,
   message,
+  type MenuProps,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -15,12 +22,19 @@ import {
   ClockCircleOutlined,
   FileTextOutlined,
   LockOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
-import type { EvaluationCycle } from '@/lib/api/evaluation.types';
+import TableEmptyState from '@/components/ui/TableEmptyState';
+import type {
+  EvaluationCycle,
+  EvaluationCycleStatus,
+} from '@/lib/api/evaluation.types';
 import {
   useActivateCycle,
   useBulkCreateEvaluations,
@@ -36,11 +50,17 @@ import {
 } from '@/lib/utils/evaluation-status';
 import EvaluationStat from './EvaluationStat';
 
+type CycleFilter = 'all' | EvaluationCycleStatus;
+
 export default function EvaluationCyclesPageContent(): React.ReactNode {
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newQuarter, setNewQuarter] = useState<number | undefined>(undefined);
   const [newYear, setNewYear] = useState<number | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<CycleFilter>('all');
+  const [search, setSearch] = useState('');
   const [messageApi, contextHolder] = message.useMessage();
 
   const cyclesQuery = useEvaluationCycles();
@@ -59,6 +79,21 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
     }),
     [cycles],
   );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return cycles.filter((cycle) => {
+      if (statusFilter !== 'all' && cycle.status !== statusFilter) {
+        return false;
+      }
+      if (!q) {
+        return true;
+      }
+      const label = getQuarterLabel(cycle.quarter, cycle.year).toLowerCase();
+      const template = (cycle.template?.name ?? '').toLowerCase();
+      return label.includes(q) || template.includes(q);
+    });
+  }, [cycles, statusFilter, search]);
 
   async function handleCreate(): Promise<void> {
     if (newQuarter == null || newYear == null) {
@@ -112,6 +147,36 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
         }
       },
     });
+  }
+
+  function buildActionMenu(row: EvaluationCycle): MenuProps['items'] {
+    const items: MenuProps['items'] = [];
+    if (row.status === 'DRAFT') {
+      items.push({
+        key: 'activate',
+        icon: <CheckCircleOutlined />,
+        label: 'Activate',
+        onClick: () => void handleActivate(row.id),
+      });
+    }
+    if (row.status === 'ACTIVE') {
+      items.push(
+        {
+          key: 'generate',
+          icon: <TeamOutlined />,
+          label: 'Generate evaluations',
+          onClick: () => void handleBulkCreate(row.id),
+        },
+        {
+          key: 'close',
+          icon: <LockOutlined />,
+          label: 'Close cycle',
+          danger: true,
+          onClick: () => handleClose(row.id),
+        },
+      );
+    }
+    return items;
   }
 
   const currentYear = new Date().getFullYear();
@@ -172,48 +237,53 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
       ),
     },
     {
-      title: 'Actions',
+      title: '',
       key: 'actions',
-      render: (_value, row) => (
-        <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-          {row.status === 'DRAFT' ? (
-            <Button
-              size="small"
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              onClick={() => void handleActivate(row.id)}
+      width: 52,
+      align: 'right',
+      render: (_value, row) => {
+        const items = buildActionMenu(row);
+        if (!items || items.length === 0) {
+          return null;
+        }
+        return (
+          <div
+            className="erp-table-row-actions flex items-center justify-end"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Dropdown
+              menu={{ items }}
+              trigger={['click']}
+              rootClassName="erp-row-actions-menu"
             >
-              Activate
-            </Button>
-          ) : null}
-          {row.status === 'ACTIVE' ? (
-            <>
-              <Tooltip title="Create evaluations for all active employees">
-                <Button
-                  size="small"
-                  icon={<TeamOutlined />}
-                  onClick={() => void handleBulkCreate(row.id)}
-                >
-                  Generate
-                </Button>
-              </Tooltip>
               <Button
                 size="small"
-                danger
-                icon={<LockOutlined />}
-                onClick={() => handleClose(row.id)}
-              >
-                Close
-              </Button>
-            </>
-          ) : null}
-        </div>
-      ),
+                type="text"
+                icon={<MoreOutlined />}
+                aria-label="Actions"
+              />
+            </Dropdown>
+          </div>
+        );
+      },
     },
   ];
 
+  const hasFilters = statusFilter !== 'all' || Boolean(search.trim());
+
+  if (cyclesQuery.isLoading && !cyclesQuery.data) {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+        <div className="erp-evaluation-loading">
+          <Spin />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
       {contextHolder}
 
       <div className="erp-users-stat-bar">
@@ -222,24 +292,32 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
           value={stats.total}
           accent="slate"
           icon={<FileTextOutlined />}
+          active={statusFilter === 'all'}
+          onClick={() => setStatusFilter('all')}
         />
         <EvaluationStat
           label="Active"
           value={stats.active}
           accent="green"
           icon={<CheckCircleOutlined />}
+          active={statusFilter === 'ACTIVE'}
+          onClick={() => setStatusFilter('ACTIVE')}
         />
         <EvaluationStat
           label="Draft"
           value={stats.draft}
           accent="amber"
           icon={<ClockCircleOutlined />}
+          active={statusFilter === 'DRAFT'}
+          onClick={() => setStatusFilter('DRAFT')}
         />
         <EvaluationStat
           label="Closed"
           value={stats.closed}
           accent="slate"
           icon={<LockOutlined />}
+          active={statusFilter === 'CLOSED'}
+          onClick={() => setStatusFilter('CLOSED')}
         />
       </div>
 
@@ -248,7 +326,7 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">Evaluation Cycles</h3>
             <span className="erp-users-count-pill">
-              {stats.total.toLocaleString()}
+              {filtered.length.toLocaleString()}
             </span>
           </div>
           <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
@@ -271,14 +349,71 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
           </div>
         </div>
 
+        <div className="erp-users-filter-bar">
+          <Input
+            allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder="Search by cycle or template"
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search by cycle or template"
+          />
+          {hasFilters ? (
+            <Button
+              type="link"
+              className="!px-1"
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('all');
+              }}
+            >
+              Reset
+            </Button>
+          ) : null}
+        </div>
+
         <div className="erp-pro-table-card-body">
-          <Table
-            dataSource={cycles}
+          <DataTable<EvaluationCycle>
+            dataSource={filtered}
             columns={columns}
             rowKey="id"
             loading={cyclesQuery.isLoading}
             pagination={false}
+            size={isCompact ? 'small' : 'middle'}
             className="erp-pro-table erp-users-table"
+            scroll={{ x: isCompact ? 640 : 800 }}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<FileTextOutlined />}
+                  title={
+                    hasFilters
+                      ? 'No matching cycles'
+                      : 'No evaluation cycles'
+                  }
+                  description={
+                    hasFilters
+                      ? 'Try a different search or clear the status filter.'
+                      : 'Create a cycle to start quarterly employee evaluations.'
+                  }
+                  action={
+                    hasFilters
+                      ? {
+                          label: 'Clear filters',
+                          onClick: () => {
+                            setSearch('');
+                            setStatusFilter('all');
+                          },
+                        }
+                      : {
+                          label: 'New Cycle',
+                          onClick: () => setCreateOpen(true),
+                        }
+                  }
+                />
+              ),
+            }}
           />
         </div>
       </div>
@@ -287,15 +422,27 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
         title="Create Evaluation Cycle"
         open={createOpen}
         onOk={() => void handleCreate()}
-        onCancel={() => setCreateOpen(false)}
+        onCancel={() => {
+          setCreateOpen(false);
+          setNewQuarter(undefined);
+          setNewYear(undefined);
+        }}
         confirmLoading={creating}
-        okText="Create"
+        okText="Create cycle"
+        cancelText="Cancel"
+        destroyOnHidden
+        centered
+        width={440}
+        rootClassName="erp-evaluation-modal"
+        className="erp-evaluation-modal"
       >
-        <div className="flex flex-col gap-4 py-4">
-          <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-[#374151]">
-              Quarter
-            </label>
+        <p className="erp-evaluation-modal-hint">
+          Choose the quarter and year for this evaluation period. The cycle
+          starts as a draft — activate it when you are ready to generate
+          employee evaluations.
+        </p>
+        <Form layout="vertical" requiredMark={false}>
+          <Form.Item label="Quarter" required>
             <Select
               value={newQuarter}
               onChange={setNewQuarter}
@@ -303,12 +450,10 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
               className="w-full"
               allowClear
               placeholder="Select quarter"
+              aria-label="Quarter"
             />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-[#374151]">
-              Year
-            </label>
+          </Form.Item>
+          <Form.Item label="Year" required>
             <Select
               value={newYear}
               onChange={setNewYear}
@@ -316,9 +461,21 @@ export default function EvaluationCyclesPageContent(): React.ReactNode {
               className="w-full"
               allowClear
               placeholder="Select year"
+              aria-label="Year"
             />
+          </Form.Item>
+        </Form>
+        {newQuarter != null && newYear != null ? (
+          <div className="erp-evaluation-modal-preview">
+            <p className="erp-evaluation-modal-preview-label">Preview</p>
+            <p className="erp-evaluation-modal-preview-value">
+              {getQuarterLabel(newQuarter, newYear)}
+            </p>
+            <p className="erp-evaluation-modal-preview-sub">
+              {getQuarterPeriodLabel(newQuarter, newYear)}
+            </p>
           </div>
-        </div>
+        ) : null}
       </Modal>
     </div>
   );

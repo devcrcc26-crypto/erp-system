@@ -1,8 +1,12 @@
 'use client';
 
+import './evaluation-v2.css';
+
 import { Button, Spin, Tabs, message } from 'antd';
 import type { TabsProps } from 'antd';
 import { LockOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { ArrowLeft, CalendarDays, FileText, Users } from 'lucide-react';
+import Link from 'next/link';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -25,6 +29,7 @@ import {
 } from '@/lib/utils/evaluation-status';
 import AssessmentForm from './AssessmentForm';
 import DisputePanel from './DisputePanel';
+import EvaluationListAvatar from './EvaluationListAvatar';
 
 interface EvaluationDetailPageContentProps {
   evaluationId: string;
@@ -60,8 +65,10 @@ export default function EvaluationDetailPageContent({
 
   if (evaluationQuery.isLoading || currentUser.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page flex justify-center p-12">
-        <Spin size="large" />
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page erp-evaluation-v2">
+        <div className="erp-evaluation-loading">
+          <Spin size="large" />
+        </div>
       </div>
     );
   }
@@ -69,9 +76,13 @@ export default function EvaluationDetailPageContent({
   const evaluation = evaluationQuery.data;
   if (!evaluation) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page erp-evaluation-v2">
         <div className="erp-pro-card p-6">
-          <p className="m-0 text-[#6B7280]">Evaluation not found.</p>
+          <p className="erp-users-email m-0">Evaluation not found.</p>
+          <Link href="/hr/evaluations" className="erp-evaluation-back mt-3">
+            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+            Back to evaluations
+          </Link>
         </div>
       </div>
     );
@@ -93,6 +104,11 @@ export default function EvaluationDetailPageContent({
   );
 
   const finalScore = evaluation.adjustedScore ?? evaluation.finalScore;
+  const employeeName =
+    `${evaluation.employee.firstName} ${evaluation.employee.lastName}`.trim();
+  const stagesDone = STAGE_ORDER.filter((stage) =>
+    assessments.some((a) => a.stage === stage && a.submittedAt !== null),
+  ).length;
 
   async function handleShareResult(): Promise<void> {
     try {
@@ -236,120 +252,148 @@ export default function EvaluationDetailPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page erp-evaluation-v2">
       {contextHolder}
 
-      <div className="erp-evaluation-detail-hero">
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <h2 className="m-0 text-[20px] font-semibold text-[#111827]">
-              {evaluation.employee.firstName} {evaluation.employee.lastName}
-            </h2>
-            <span className="erp-users-id-chip">
-              {evaluation.employee.employeeId ?? '—'}
-            </span>
-            <StatusBadge
-              label={EVALUATION_STATUS_LABELS[evaluation.status]}
-              variant={EVALUATION_STATUS_BADGE[evaluation.status]}
-            />
-          </div>
-          <p className="erp-users-email m-0">
-            {getQuarterLabel(evaluation.cycle.quarter, evaluation.cycle.year)}{' '}
-            Evaluation ·{' '}
-            {getQuarterPeriodLabel(
-              evaluation.cycle.quarter,
-              evaluation.cycle.year,
-            )}
-          </p>
-          <div className="erp-evaluation-detail-meta">
-            {evaluation.teamLead ? (
-              <span>
-                Team Lead:{' '}
-                <strong>
-                  {evaluation.teamLead.firstName}{' '}
-                  {evaluation.teamLead.lastName}
-                </strong>
-              </span>
-            ) : null}
-            {evaluation.disciplineLead ? (
-              <span>
-                Discipline Lead:{' '}
-                <strong>
-                  {evaluation.disciplineLead.firstName}{' '}
-                  {evaluation.disciplineLead.lastName}
-                </strong>
-              </span>
-            ) : null}
-            {evaluation.cycle.template?.name ? (
-              <span>
-                Template: <strong>{evaluation.cycle.template.name}</strong>
-              </span>
-            ) : null}
-          </div>
-          <div className="erp-evaluation-detail-stages mt-3">
-            <div className="erp-evaluation-stage-bar">
-              {STAGE_ORDER.map((stage) => {
-                const done = assessments.some(
-                  (a) => a.stage === stage && a.submittedAt !== null,
-                );
-                return (
-                  <div
-                    key={stage}
-                    className={`erp-evaluation-stage-seg${
-                      done ? ' erp-evaluation-stage-seg--done' : ''
-                    }`}
+      <section className="erp-evaluation-detail-hero">
+        <div className="erp-evaluation-hero-top">
+          <div className="min-w-0">
+            <Link href="/hr/evaluations" className="erp-evaluation-back">
+              <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+              All evaluations
+            </Link>
+            <div className="erp-evaluation-hero-identity">
+              <EvaluationListAvatar
+                firstName={evaluation.employee.firstName}
+                lastName={evaluation.employee.lastName}
+                userId={evaluation.employee.id}
+              />
+              <div className="min-w-0">
+                <div className="erp-evaluation-hero-title-row">
+                  <h2 className="erp-evaluation-hero-title">{employeeName}</h2>
+                  {evaluation.employee.employeeId ? (
+                    <span className="erp-users-id-chip">
+                      {evaluation.employee.employeeId}
+                    </span>
+                  ) : null}
+                  <StatusBadge
+                    label={EVALUATION_STATUS_LABELS[evaluation.status]}
+                    variant={EVALUATION_STATUS_BADGE[evaluation.status]}
                   />
-                );
-              })}
+                </div>
+                <p className="erp-evaluation-detail-meta">
+                  <span>
+                    <CalendarDays size={14} strokeWidth={2} aria-hidden />
+                    {getQuarterLabel(
+                      evaluation.cycle.quarter,
+                      evaluation.cycle.year,
+                    )}{' '}
+                    ·{' '}
+                    {getQuarterPeriodLabel(
+                      evaluation.cycle.quarter,
+                      evaluation.cycle.year,
+                    )}
+                  </span>
+                  {evaluation.teamLead ? (
+                    <span>
+                      <Users size={14} strokeWidth={2} aria-hidden />
+                      Team Lead:{' '}
+                      <strong>
+                        {evaluation.teamLead.firstName}{' '}
+                        {evaluation.teamLead.lastName}
+                      </strong>
+                    </span>
+                  ) : null}
+                  {evaluation.disciplineLead ? (
+                    <span>
+                      <Users size={14} strokeWidth={2} aria-hidden />
+                      Discipline Lead:{' '}
+                      <strong>
+                        {evaluation.disciplineLead.firstName}{' '}
+                        {evaluation.disciplineLead.lastName}
+                      </strong>
+                    </span>
+                  ) : null}
+                  {evaluation.cycle.template?.name ? (
+                    <span>
+                      <FileText size={14} strokeWidth={2} aria-hidden />
+                      Template:{' '}
+                      <strong>{evaluation.cycle.template.name}</strong>
+                    </span>
+                  ) : null}
+                </p>
+              </div>
             </div>
-            <div className="erp-evaluation-stage-labels">
-              {STAGE_LABELS.map((label) => (
-                <span key={label}>{label}</span>
-              ))}
-            </div>
+          </div>
+
+          <div className="erp-evaluation-hero-actions">
+            {finalScore != null ? (
+              <div className="erp-evaluation-detail-score">
+                <div
+                  className="erp-evaluation-score"
+                  style={{ color: getScoreColor(Number(finalScore)) }}
+                >
+                  {Number(finalScore).toFixed(1)}
+                </div>
+                <div className="erp-evaluation-score-label">
+                  {getScoreLabel(Number(finalScore))}
+                </div>
+              </div>
+            ) : null}
+
+            {isDisciplineLead &&
+            evaluation.status === 'DISCIPLINE_ASSESSED' ? (
+              <Button
+                type="primary"
+                icon={<ShareAltOutlined />}
+                onClick={() => void handleShareResult()}
+                loading={shareResult.isPending}
+              >
+                Share Result
+              </Button>
+            ) : null}
+
+            {isHR &&
+            (evaluation.status === 'ACCEPTED' ||
+              evaluation.status === 'HR_DECIDED') ? (
+              <Button
+                type="primary"
+                icon={<LockOutlined />}
+                onClick={() => void handleLock()}
+                loading={lockEval.isPending}
+              >
+                Lock & File
+              </Button>
+            ) : null}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {finalScore != null ? (
-            <div className="erp-evaluation-detail-score">
-              <div
-                className="erp-evaluation-score"
-                style={{ color: getScoreColor(Number(finalScore)) }}
-              >
-                {Number(finalScore).toFixed(1)}
-              </div>
-              <div className="erp-evaluation-score-label">
-                {getScoreLabel(Number(finalScore))}
-              </div>
-            </div>
-          ) : null}
-
-          {isDisciplineLead && evaluation.status === 'DISCIPLINE_ASSESSED' ? (
-            <Button
-              type="primary"
-              icon={<ShareAltOutlined />}
-              onClick={() => void handleShareResult()}
-              loading={shareResult.isPending}
-            >
-              Share Result
-            </Button>
-          ) : null}
-
-          {isHR &&
-          (evaluation.status === 'ACCEPTED' ||
-            evaluation.status === 'HR_DECIDED') ? (
-            <Button
-              type="primary"
-              icon={<LockOutlined />}
-              onClick={() => void handleLock()}
-              loading={lockEval.isPending}
-            >
-              Lock & File
-            </Button>
-          ) : null}
+        <div className="erp-evaluation-hero-stages">
+          <p className="erp-evaluation-fact-label mb-2">
+            Assessment progress · {stagesDone}/{STAGE_ORDER.length}
+          </p>
+          <div className="erp-evaluation-stage-bar">
+            {STAGE_ORDER.map((stage) => {
+              const done = assessments.some(
+                (a) => a.stage === stage && a.submittedAt !== null,
+              );
+              return (
+                <div
+                  key={stage}
+                  className={`erp-evaluation-stage-seg${
+                    done ? ' erp-evaluation-stage-seg--done' : ''
+                  }`}
+                />
+              );
+            })}
+          </div>
+          <div className="erp-evaluation-stage-labels">
+            {STAGE_LABELS.map((label) => (
+              <span key={label}>{label}</span>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
 
       <div className="erp-pro-card erp-evaluation-detail-card">
         {sections.length === 0 ? (

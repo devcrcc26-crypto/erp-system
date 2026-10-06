@@ -1,5 +1,7 @@
 'use client';
 
+import './evaluation-v2.css';
+
 import { useState } from 'react';
 import {
   Button,
@@ -11,6 +13,8 @@ import {
   message,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { ArrowLeft, FileText, Layers, ListChecks } from 'lucide-react';
+import Link from 'next/link';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import {
   useAddEvaluationCriteria,
@@ -38,8 +42,10 @@ export default function EvaluationTemplateDetailPageContent({
 
   if (templateQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page flex justify-center p-12">
-        <Spin size="large" />
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page erp-evaluation-v2">
+        <div className="erp-evaluation-loading">
+          <Spin size="large" />
+        </div>
       </div>
     );
   }
@@ -47,9 +53,16 @@ export default function EvaluationTemplateDetailPageContent({
   const template = templateQuery.data;
   if (!template) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page">
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page erp-evaluation-v2">
         <div className="erp-pro-card p-6">
-          <p className="m-0 text-[#6B7280]">Template not found.</p>
+          <p className="erp-users-email m-0">Template not found.</p>
+          <Link
+            href="/hr/evaluations/templates"
+            className="erp-evaluation-back mt-3"
+          >
+            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+            Back to templates
+          </Link>
         </div>
       </div>
     );
@@ -101,43 +114,74 @@ export default function EvaluationTemplateDetailPageContent({
     (sum, s) => sum + s.criteria.length,
     0,
   );
+  const activeCriteria = template.sections.reduce(
+    (sum, s) => sum + s.criteria.filter((c) => c.isActive).length,
+    0,
+  );
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page erp-evaluation-template-detail">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-detail-page erp-evaluation-template-detail erp-evaluation-v2">
       {contextHolder}
 
-      <div className="erp-evaluation-detail-hero">
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <h2 className="m-0 text-[20px] font-semibold text-[#111827]">
-              {template.name}
-            </h2>
-            <span className="erp-users-id-chip">v{template.version}</span>
-            {template.isActive ? (
-              <StatusBadge label="Active" variant="success" />
-            ) : (
-              <StatusBadge label="Inactive" variant="default" />
-            )}
-          </div>
-          {template.description ? (
-            <p className="erp-users-email m-0 mb-1">{template.description}</p>
-          ) : null}
-          <div className="erp-evaluation-detail-meta">
-            <span>
-              Created{' '}
-              <strong>
-                {new Date(template.createdAt).toLocaleDateString()}
-              </strong>
-            </span>
-            <span>
-              Sections: <strong>{template.sections.length}</strong>
-            </span>
-            <span>
-              Criteria: <strong>{criteriaCount}</strong>
-            </span>
+      <section className="erp-evaluation-detail-hero">
+        <div className="erp-evaluation-hero-top">
+          <div className="min-w-0">
+            <Link
+              href="/hr/evaluations/templates"
+              className="erp-evaluation-back"
+            >
+              <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+              All templates
+            </Link>
+            <div className="erp-evaluation-hero-title-row">
+              <h2 className="erp-evaluation-hero-title">{template.name}</h2>
+              <span className="erp-users-id-chip">v{template.version}</span>
+              {template.isActive ? (
+                <StatusBadge label="Active" variant="success" />
+              ) : (
+                <StatusBadge label="Inactive" variant="default" />
+              )}
+            </div>
+            {template.description ? (
+              <p className="erp-users-email m-0 mt-1">{template.description}</p>
+            ) : null}
+            <p className="erp-evaluation-detail-meta">
+              <span>
+                <FileText size={14} strokeWidth={2} aria-hidden />
+                Created{' '}
+                <strong>
+                  {new Date(template.createdAt).toLocaleDateString()}
+                </strong>
+              </span>
+              <span>
+                <Layers size={14} strokeWidth={2} aria-hidden />
+                Sections: <strong>{template.sections.length}</strong>
+              </span>
+              <span>
+                <ListChecks size={14} strokeWidth={2} aria-hidden />
+                Criteria: <strong>{criteriaCount}</strong>
+              </span>
+            </p>
           </div>
         </div>
-      </div>
+
+        <div className="erp-evaluation-fact-row">
+          <div className="erp-evaluation-fact">
+            <p className="erp-evaluation-fact-label">Sections</p>
+            <p className="erp-evaluation-fact-value">
+              {template.sections.length}
+            </p>
+          </div>
+          <div className="erp-evaluation-fact">
+            <p className="erp-evaluation-fact-label">Criteria</p>
+            <p className="erp-evaluation-fact-value">{criteriaCount}</p>
+          </div>
+          <div className="erp-evaluation-fact">
+            <p className="erp-evaluation-fact-label">Active criteria</p>
+            <p className="erp-evaluation-fact-value">{activeCriteria}</p>
+          </div>
+        </div>
+      </section>
 
       <div className="erp-assessment-sections">
         {[...template.sections]
@@ -211,7 +255,7 @@ export default function EvaluationTemplateDetailPageContent({
               </div>
 
               {addingToSection === section.id ? (
-                <div className="erp-assessment-add rounded-lg border border-dashed border-[#e8ebef] p-3">
+                <div className="erp-assessment-add rounded-xl border border-dashed border-[#e8ebef] bg-[#f7f8fa] p-3">
                   <div className="mb-2 flex flex-wrap gap-2">
                     <Input
                       placeholder="Criterion name (EN) *"

@@ -15,6 +15,8 @@ export function buildHrReportExportSheets(report: HrReport): HrExportSheet[] {
     { metric: 'Period start', value: exportCell(report.range.from) },
     { metric: 'Period end', value: exportCell(report.range.to) },
     { metric: 'Active employees', value: exportNumber(report.headcount.activeEmployees) },
+    { metric: 'Inactive employees', value: exportNumber(report.headcount.inactiveEmployees) },
+    { metric: 'New hires in period', value: exportNumber(report.headcount.newHiresInRange) },
     { metric: 'Employees without a department', value: exportNumber(report.headcount.withoutDepartment) },
     { metric: 'Employees without a leave policy', value: exportNumber(report.headcount.withoutLeavePolicy) },
     { metric: 'Leave requests', value: exportNumber(report.leave.requests) },
@@ -32,16 +34,44 @@ export function buildHrReportExportSheets(report: HrReport): HrExportSheet[] {
     { metric: 'Active contracts', value: exportNumber(report.contracts.active) },
     { metric: 'Contracts expiring in period', value: exportNumber(report.contracts.expiringInRange) },
     { metric: 'Contracts ended in period', value: exportNumber(report.contracts.endedInRange) },
+    { metric: 'Site assignments', value: exportNumber(report.siteAssignments.requests) },
+    { metric: 'Approved site assignments', value: exportNumber(report.siteAssignments.approvedRequests) },
+    { metric: 'Work-from-home days', value: exportNumber(report.workFromHome.days) },
+    { metric: 'Expense claims', value: exportNumber(report.expenses.claims) },
+    { metric: 'Approved expense claims', value: exportNumber(report.expenses.approvedClaims) },
+    { metric: 'Approved expense amount (ETB)', value: exportNumber(report.expenses.approvedAmountEtb) },
+    { metric: 'Evaluations', value: exportNumber(report.evaluations.total) },
+    { metric: 'Completed evaluations', value: exportNumber(report.evaluations.completed) },
+    {
+      metric: 'Average evaluation score',
+      value:
+        report.evaluations.averageFinalScore == null
+          ? '—'
+          : exportNumber(report.evaluations.averageFinalScore),
+    },
   ];
+
+  const statusRows = (prefix: string, byStatus: Record<string, number>) =>
+    Object.entries(byStatus).map(([status, count]) => ({
+      metric: `${prefix} — ${exportEnumLabel(status)}`,
+      value: exportNumber(count),
+    }));
 
   return [
     {
       name: 'Summary',
       columns: [
-        { header: 'Metric', key: 'metric', width: 36 },
+        { header: 'Metric', key: 'metric', width: 42 },
         { header: 'Value', key: 'value', width: 16 },
       ],
-      rows: summaryRows,
+      rows: [
+        ...summaryRows,
+        ...statusRows('Leave status', report.leave.byStatus),
+        ...statusRows('Overtime status', report.overtime.byStatus),
+        ...statusRows('Site assignment status', report.siteAssignments.byStatus),
+        ...statusRows('Expense status', report.expenses.byStatus),
+        ...statusRows('Evaluation status', report.evaluations.byStatus),
+      ],
     },
     {
       name: 'Headcount by Department',
@@ -53,6 +83,31 @@ export function buildHrReportExportSheets(report: HrReport): HrExportSheet[] {
         department: exportCell(row.name),
         employees: exportNumber(row.count),
       })),
+    },
+    {
+      name: 'Workforce Mix',
+      columns: [
+        { header: 'Dimension', key: 'dimension', width: 18 },
+        { header: 'Value', key: 'value', width: 20 },
+        { header: 'Employees', key: 'employees', width: 14 },
+      ],
+      rows: [
+        ...report.headcount.byEmployeeType.map((row) => ({
+          dimension: 'Employee type',
+          value: exportEnumLabel(row.name),
+          employees: exportNumber(row.count),
+        })),
+        ...report.headcount.byNationality.map((row) => ({
+          dimension: 'Nationality',
+          value: exportEnumLabel(row.name),
+          employees: exportNumber(row.count),
+        })),
+        ...report.headcount.byGender.map((row) => ({
+          dimension: 'Gender',
+          value: exportEnumLabel(row.name),
+          employees: exportNumber(row.count),
+        })),
+      ],
     },
     {
       name: 'Leave by Type',
@@ -95,6 +150,19 @@ export function buildHrReportExportSheets(report: HrReport): HrExportSheet[] {
         department: exportCell(row.department),
         sheets: exportNumber(row.sheets),
         hours: exportNumber(row.totalHours),
+      })),
+    },
+    {
+      name: 'Expense Categories',
+      columns: [
+        { header: 'Category', key: 'category', width: 28 },
+        { header: 'Line Items', key: 'count', width: 12 },
+        { header: 'Amount (ETB)', key: 'amount', width: 16 },
+      ],
+      rows: report.expenses.byCategory.map((row) => ({
+        category: exportCell(row.name),
+        count: exportNumber(row.count),
+        amount: exportNumber(row.amount),
       })),
     },
   ];

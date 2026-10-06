@@ -1,5 +1,7 @@
 'use client';
 
+import './org-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -235,10 +237,15 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
         fixed: 'right',
         render: (_value, record) => (
           <div
-            className="flex items-center justify-end"
+            className="erp-table-row-actions flex items-center justify-end"
             onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
-            <Dropdown menu={{ items: buildActionMenu(record) }} trigger={['click']}>
+            <Dropdown
+              menu={{ items: buildActionMenu(record) }}
+              trigger={['click']}
+              rootClassName="erp-row-actions-menu"
+            >
               <Button
                 size="small"
                 type="text"
@@ -255,8 +262,8 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
 
   if (permLoading || (disciplinesQuery.isLoading && !disciplinesQuery.data)) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-org-disciplines-page">
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+      <div className="erp-pro-list-page erp-users-page erp-org-disciplines-page erp-org-v2">
+        <div className="erp-org-loading">
           <Spin />
         </div>
       </div>
@@ -265,16 +272,18 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
 
   if (!canView) {
     return (
-      <Alert
-        type="warning"
-        showIcon
-        title={t('pages.disciplinesCatalog.accessDenied')}
-      />
+      <div className="erp-pro-list-page erp-users-page erp-org-disciplines-page erp-org-v2">
+        <Alert
+          type="warning"
+          showIcon
+          title={t('pages.disciplinesCatalog.accessDenied')}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-org-disciplines-page">
+    <div className="erp-pro-list-page erp-users-page erp-org-disciplines-page erp-org-v2">
       <div className="erp-users-stat-bar">
         <OrgListStat
           label={t('pages.disciplinesCatalog.stats.total')}

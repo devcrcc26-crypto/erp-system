@@ -38,13 +38,24 @@ export interface HrReportEmployeeOvertimeRow {
   totalHours: number;
 }
 
+export interface HrReportNamedAmount {
+  name: string;
+  count: number;
+  amount: number;
+}
+
 export interface HrReport {
   generatedAt: string;
   range: HrReportRange;
   departmentId: string | null;
   headcount: {
     activeEmployees: number;
+    inactiveEmployees: number;
+    newHiresInRange: number;
     byDepartment: HrReportNamedCount[];
+    byEmployeeType: HrReportNamedCount[];
+    byNationality: HrReportNamedCount[];
+    byGender: HrReportNamedCount[];
     withoutDepartment: number;
     withoutLeavePolicy: number;
   };
@@ -75,6 +86,27 @@ export interface HrReport {
     active: number;
     expiringInRange: number;
     endedInRange: number;
+  };
+  siteAssignments: {
+    requests: number;
+    approvedRequests: number;
+    byStatus: Record<string, number>;
+  };
+  workFromHome: {
+    days: number;
+  };
+  expenses: {
+    claims: number;
+    approvedClaims: number;
+    approvedAmountEtb: number;
+    byStatus: Record<string, number>;
+    byCategory: HrReportNamedAmount[];
+  };
+  evaluations: {
+    total: number;
+    completed: number;
+    averageFinalScore: number | null;
+    byStatus: Record<string, number>;
   };
 }
 
@@ -157,11 +189,22 @@ export class HrReportService {
       ? { employeeId: { in: employeeScope } }
       : {};
 
+    const userScopeWhere = {
+      companyId,
+      deletedAt: null,
+      ...(departmentId ? { departmentId } : {}),
+    };
+
     const [
       activeEmployees,
+      inactiveEmployees,
+      newHiresInRange,
       withoutDepartment,
       withoutLeavePolicy,
       headcountGroups,
+      employeeTypeGroups,
+      nationalityGroups,
+      genderGroups,
       leaveRequests,
       overtimeSheets,
       flights,
@@ -169,11 +212,29 @@ export class HrReportService {
       activeContracts,
       expiringInRange,
       endedInRange,
+      siteAssignmentRows,
+      workFromHomeDays,
+      expenseClaims,
+      evaluationRows,
     ] = await Promise.all([
       this.prisma.user.count({
         where: activeOnly({
           companyId,
           isActive: true,
+          ...(departmentId ? { departmentId } : {}),
+        }),
+      }),
+      this.prisma.user.count({
+        where: activeOnly({
+          companyId,
+          isActive: false,
+          ...(departmentId ? { departmentId } : {}),
+        }),
+      }),
+      this.prisma.user.count({
+        where: activeOnly({
+          companyId,
+          createdAt: { gte: from, lte: to },
           ...(departmentId ? { departmentId } : {}),
         }),
       }),
@@ -191,11 +252,25 @@ export class HrReportService {
       this.prisma.user.groupBy({
         by: ['departmentId'],
         where: {
-          companyId,
-          deletedAt: null,
+          ...userScopeWhere,
           isActive: true,
           departmentId: departmentId ? departmentId : { not: null },
         },
+        _count: { id: true },
+      }),
+      this.prisma.user.groupBy({
+        by: ['employeeType'],
+        where: { ...userScopeWhere, isActive: true, employeeType: { not: null } },
+        _count: { id: true },
+      }),
+      this.prisma.user.groupBy({
+        by: ['nationality'],
+        where: { ...userScopeWhere, isActive: true, nationality: { not: null } },
+        _count: { id: true },
+      }),
+      this.prisma.user.groupBy({
+        by: ['gender'],
+        where: { ...userScopeWhere, isActive: true, gender: { not: null } },
         _count: { id: true },
       }),
       this.prisma.leaveRequest.findMany({
@@ -282,6 +357,49 @@ export class HrReportService {
           ...employeeFilter,
         },
       }),
+      this.prisma.siteAssignment.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...employeeFilter,
+          startDate: { lte: to },
+          endDate: { gte: from },
+        },
+        select: { status: true },
+      }),
+      this.prisma.workFromHomeDay.count({
+        where: {
+          companyId,
+          deletedAt: null,
+          date: { gte: from, lte: to },
+        },
+      }),
+      this.prisma.expenseClaim.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...employeeFilter,
+          createdAt: { gte: from, lte: to },
+        },
+        select: {
+          status: true,
+          totalAmountEtb: true,
+          items: { select: { category: true, amountEtb: true } },
+        },
+      }),
+      this.prisma.employeeEvaluation.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...employeeFilter,
+          createdAt: { gte: from, lte: to },
+        },
+        select: {
+          status: true,
+          finalScore: true,
+          adjustedScore: true,
+        },
+      }),
     ]);
 
     const departmentNameById = await this.loadDepartmentNames(
@@ -311,6 +429,9 @@ export class HrReportService {
       }),
       departmentNameById,
     );
+    const siteAssignments = this.summariseStatusCounts(siteAssignmentRows);
+    const expenses = this.summariseExpenses(expenseClaims);
+    const evaluations = this.summariseEvaluations(evaluationRows);
 
     return {
       generatedAt: new Date().toISOString(),
@@ -318,7 +439,12 @@ export class HrReportService {
       departmentId,
       headcount: {
         activeEmployees,
+        inactiveEmployees,
+        newHiresInRange,
         byDepartment,
+        byEmployeeType: this.toNamedCounts(employeeTypeGroups, 'employeeType'),
+        byNationality: this.toNamedCounts(nationalityGroups, 'nationality'),
+        byGender: this.toNamedCounts(genderGroups, 'gender'),
         withoutDepartment: departmentId ? 0 : withoutDepartment,
         withoutLeavePolicy,
       },
@@ -330,6 +456,14 @@ export class HrReportService {
         expiringInRange,
         endedInRange,
       },
+      siteAssignments: {
+        requests: siteAssignments.total,
+        approvedRequests: siteAssignments.approved,
+        byStatus: siteAssignments.byStatus,
+      },
+      workFromHome: { days: workFromHomeDays },
+      expenses,
+      evaluations,
     };
   }
 
@@ -502,6 +636,118 @@ export class HrReportService {
         .map((row) => ({ ...row, totalHours: round(row.totalHours) }))
         .sort((a, b) => b.totalHours - a.totalHours)
         .slice(0, 10),
+    };
+  }
+
+  private toNamedCounts<K extends string>(
+    rows: Array<{ [P in K]: string | null } & { _count: { id: number } }>,
+    key: K,
+  ): HrReportNamedCount[] {
+    return rows
+      .filter((row) => row[key] != null)
+      .map((row) => ({
+        name: String(row[key]),
+        count: row._count.id,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  private summariseStatusCounts(
+    rows: Array<{ status: string }>,
+  ): { total: number; approved: number; byStatus: Record<string, number> } {
+    const byStatus: Record<string, number> = {};
+    let approved = 0;
+    for (const row of rows) {
+      byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
+      if (row.status === APPROVED) {
+        approved += 1;
+      }
+    }
+    return { total: rows.length, approved, byStatus };
+  }
+
+  private summariseExpenses(
+    rows: Array<{
+      status: string;
+      totalAmountEtb: Prisma.Decimal;
+      items: Array<{ category: string; amountEtb: Prisma.Decimal }>;
+    }>,
+  ): HrReport['expenses'] {
+    const byStatus: Record<string, number> = {};
+    const categoryTotals = new Map<string, { count: number; amount: number }>();
+    let approvedClaims = 0;
+    let approvedAmountEtb = 0;
+
+    for (const row of rows) {
+      byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
+      if (row.status === APPROVED) {
+        approvedClaims += 1;
+        approvedAmountEtb += toNumber(row.totalAmountEtb);
+      }
+      for (const item of row.items) {
+        const current = categoryTotals.get(item.category) ?? {
+          count: 0,
+          amount: 0,
+        };
+        current.count += 1;
+        current.amount += toNumber(item.amountEtb);
+        categoryTotals.set(item.category, current);
+      }
+    }
+
+    return {
+      claims: rows.length,
+      approvedClaims,
+      approvedAmountEtb: round(approvedAmountEtb),
+      byStatus,
+      byCategory: [...categoryTotals.entries()]
+        .map(([name, totals]) => ({
+          name,
+          count: totals.count,
+          amount: round(totals.amount),
+        }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 10),
+    };
+  }
+
+  private summariseEvaluations(
+    rows: Array<{
+      status: string;
+      finalScore: Prisma.Decimal | null;
+      adjustedScore: Prisma.Decimal | null;
+    }>,
+  ): HrReport['evaluations'] {
+    const byStatus: Record<string, number> = {};
+    const completedStatuses = new Set([
+      'ACCEPTED',
+      'LOCKED',
+      'HR_DECIDED',
+      'DL_UPHELD',
+      'DL_ADJUSTED',
+    ]);
+    let completed = 0;
+    let scoreSum = 0;
+    let scoreCount = 0;
+
+    for (const row of rows) {
+      byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
+      if (completedStatuses.has(row.status)) {
+        completed += 1;
+      }
+      const score = toNumber(row.adjustedScore ?? row.finalScore);
+      if (score > 0) {
+        scoreSum += score;
+        scoreCount += 1;
+      }
+    }
+
+    return {
+      total: rows.length,
+      completed,
+      averageFinalScore:
+        scoreCount > 0 ? round(scoreSum / scoreCount) : null,
+      byStatus,
     };
   }
 }

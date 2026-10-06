@@ -1,5 +1,7 @@
 'use client';
 
+import './org-v2.css';
+
 import { useEffect, useState } from 'react';
 import { Button, Drawer, Form, Input, Switch } from 'antd';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
@@ -10,6 +12,7 @@ import {
   type DepartmentRow,
 } from '@/lib/query/org';
 import { useAppMessage } from '@/hooks/use-app-message';
+import { detailDrawerStyles } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface DepartmentFormValues {
@@ -39,6 +42,7 @@ export default function DepartmentFormDrawer({
   const messageApi = useAppMessage();
   const createDepartment = useCreateDepartment();
   const updateDepartment = useUpdateDepartment();
+  const saving = createDepartment.isPending || updateDepartment.isPending;
 
   useEffect(() => {
     if (!open) {
@@ -115,24 +119,43 @@ export default function DepartmentFormDrawer({
     <>
       <Drawer
         open={open}
-        title={editing ? 'Edit department' : 'Add department'}
         size={560}
-        className="erp-responsive-drawer"
+        className="erp-responsive-drawer erp-org-drawer"
+        rootClassName="erp-org-drawer"
+        styles={detailDrawerStyles}
         onClose={resetAndClose}
         destroyOnHidden
-        extra={
-          <Button
-            type="primary"
-            loading={createDepartment.isPending || updateDepartment.isPending}
-            onClick={() => form.submit()}
-          >
-            Save
-          </Button>
+        title={
+          <div className="min-w-0">
+            <div className="text-[15px] font-semibold leading-snug">
+              {editing ? 'Edit department' : 'Add department'}
+            </div>
+            <p className="erp-org-drawer-hint">
+              {editing
+                ? 'Update the department name, leader, or active status.'
+                : 'Create a department. A code is assigned automatically on save.'}
+            </p>
+          </div>
+        }
+        footer={
+          <div className="erp-org-drawer-footer flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button onClick={resetAndClose} disabled={saving}>
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              loading={saving}
+              onClick={() => form.submit()}
+            >
+              {editing ? 'Save changes' : 'Create department'}
+            </Button>
+          </div>
         }
       >
         <Form<DepartmentFormValues>
           form={form}
           layout="vertical"
+          requiredMark={false}
           onFinish={(values) => void submitValues(values)}
         >
           <Form.Item
@@ -140,19 +163,16 @@ export default function DepartmentFormDrawer({
             name="name"
             rules={[{ required: true, message: 'Name is required' }]}
           >
-            <Input />
+            <Input placeholder="e.g. Engineering" />
           </Form.Item>
           <Form.Item label="Name (Chinese)" name="nameZh">
-            <Input />
+            <Input placeholder="可选中文名称" />
           </Form.Item>
           <Form.Item
             label="Code"
             tooltip="Assigned automatically on save (DEPT-0001, DEPT-0002, …)"
           >
-            <Input
-              disabled
-              value={editing?.code ?? 'Assigned on save'}
-            />
+            <Input disabled value={editing?.code ?? 'Assigned on save'} />
           </Form.Item>
           <Form.Item label="Department leader" name="leaderUserId">
             <UserSelect placeholder="Select leader (optional)" />
@@ -172,7 +192,7 @@ export default function DepartmentFormDrawer({
             : undefined
         }
         confirmLabel="Align and save"
-        confirmLoading={createDepartment.isPending || updateDepartment.isPending}
+        confirmLoading={saving}
         onConfirm={() => {
           if (!pendingValues) {
             return;

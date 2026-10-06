@@ -5,11 +5,15 @@ import { Button, DatePicker, Grid, Select, Skeleton, Tooltip } from 'antd';
 import {
   CalendarOutlined,
   ClockCircleOutlined,
+  EnvironmentOutlined,
   FieldTimeOutlined,
   FileOutlined,
+  HomeOutlined,
   ReloadOutlined,
   SendOutlined,
+  SolutionOutlined,
   TeamOutlined,
+  WalletOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -17,6 +21,13 @@ import {
   ChartCard,
   StatCard,
 } from '@/components/modules/dashboard/DashboardStats';
+import {
+  HrDonutChart,
+  HrHorizontalBarChart,
+  HrPieChart,
+  HrVerticalBarChart,
+  toChartData,
+} from '@/components/modules/hr/reports/HrReportCharts';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
@@ -26,6 +37,7 @@ import type {
   HrReportEmployeeLeaveRow,
   HrReportEmployeeOvertimeRow,
   HrReportLeaveTypeRow,
+  HrReportNamedAmount,
   HrReportNamedCount,
 } from '@/lib/api/reporting.types';
 import { useDepartments } from '@/lib/query/org';
@@ -33,13 +45,22 @@ import { useHrReport } from '@/lib/query/hr-report';
 import { buildHrReportExportSheets } from '@/lib/utils/hr-report-export';
 import { formatLeaveType } from '@/lib/utils/leave-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import '@/components/modules/users/employees-v2.css';
 
 const PAGE = 'pages.hr.reports';
 const DATE_FORMAT = 'YYYY-MM-DD';
 
+function humanizeStatus(value: string): string {
+  return value
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 /**
- * HR reports — headcount, leave, overtime, travel and contracts for a period.
- * The HR dashboard answers "right now"; this page answers "over this range".
+ * HR reports — workforce, leave, overtime, travel, contracts, expenses and
+ * evaluations for a chosen period, with charts and exportable tables.
  */
 export default function HrReportsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -75,6 +96,174 @@ export default function HrReportsPageContent(): React.ReactNode {
         label: department.name,
       })),
     [departmentsQuery.data],
+  );
+
+  const labelEmployeeType = (value: string): string => {
+    const key = `hr.employeeType.${value}`;
+    const label = t(key);
+    return label === key ? humanizeStatus(value) : label;
+  };
+  const labelNationality = (value: string): string => {
+    const key = `hr.nationality.${value}`;
+    const label = t(key);
+    return label === key ? humanizeStatus(value) : label;
+  };
+  const labelGender = (value: string): string => {
+    const key = `hr.gender.${value}`;
+    const label = t(key);
+    return label === key ? humanizeStatus(value) : label;
+  };
+
+  const headcountChart = useMemo(
+    () =>
+      toChartData(
+        (report?.headcount.byDepartment ?? []).map((row) => ({
+          name: row.name,
+          value: row.count,
+        })),
+      ),
+    [report],
+  );
+
+  const employeeTypeChart = useMemo(
+    () =>
+      toChartData(
+        (report?.headcount.byEmployeeType ?? []).map((row) => ({
+          name: labelEmployeeType(row.name),
+          value: row.count,
+        })),
+      ),
+    [report, t],
+  );
+
+  const nationalityChart = useMemo(
+    () =>
+      toChartData(
+        (report?.headcount.byNationality ?? []).map((row) => ({
+          name: labelNationality(row.name),
+          value: row.count,
+        })),
+      ),
+    [report, t],
+  );
+
+  const genderChart = useMemo(
+    () =>
+      toChartData(
+        (report?.headcount.byGender ?? []).map((row) => ({
+          name: labelGender(row.name),
+          value: row.count,
+        })),
+      ),
+    [report, t],
+  );
+
+  const leaveTypeChart = useMemo(
+    () =>
+      toChartData(
+        (report?.leave.byType ?? []).map((row) => ({
+          name: formatLeaveType(row.leaveType, t),
+          value: row.days > 0 ? row.days : row.requests,
+        })),
+      ),
+    [report, t],
+  );
+
+  const leaveStatusChart = useMemo(
+    () =>
+      toChartData(
+        Object.entries(report?.leave.byStatus ?? {}).map(([name, value]) => ({
+          name: humanizeStatus(name),
+          value,
+        })),
+      ),
+    [report],
+  );
+
+  const overtimeMixChart = useMemo(
+    () =>
+      toChartData([
+        {
+          name: t(`${PAGE}.kpi.regularHours`),
+          value: report?.overtime.regularHours ?? 0,
+        },
+        {
+          name: t(`${PAGE}.kpi.nightHours`),
+          value: report?.overtime.nightHours ?? 0,
+        },
+        {
+          name: t(`${PAGE}.kpi.weekendHours`),
+          value: report?.overtime.weekendHours ?? 0,
+        },
+        {
+          name: t(`${PAGE}.kpi.holidayHours`),
+          value: report?.overtime.holidayHours ?? 0,
+        },
+      ]),
+    [report, t],
+  );
+
+  const overtimeTopChart = useMemo(
+    () =>
+      toChartData(
+        (report?.overtime.topEmployees ?? []).map((row) => ({
+          name: row.employeeName,
+          value: row.totalHours,
+        })),
+      ),
+    [report],
+  );
+
+  const expenseStatusChart = useMemo(
+    () =>
+      toChartData(
+        Object.entries(report?.expenses.byStatus ?? {}).map(
+          ([name, value]) => ({
+            name: humanizeStatus(name),
+            value,
+          }),
+        ),
+      ),
+    [report],
+  );
+
+  const expenseCategoryChart = useMemo(
+    () =>
+      toChartData(
+        (report?.expenses.byCategory ?? []).map((row) => ({
+          name: row.name,
+          value: row.amount,
+        })),
+      ),
+    [report],
+  );
+
+  const evaluationStatusChart = useMemo(
+    () =>
+      toChartData(
+        Object.entries(report?.evaluations.byStatus ?? {}).map(
+          ([name, value]) => ({
+            name: humanizeStatus(name),
+            value,
+          }),
+        ),
+      ),
+    [report],
+  );
+
+  const travelMixChart = useMemo(
+    () =>
+      toChartData([
+        {
+          name: t(`${PAGE}.kpi.flights`),
+          value: report?.travel.flights ?? 0,
+        },
+        {
+          name: t(`${PAGE}.kpi.businessTrips`),
+          value: report?.travel.businessTrips ?? 0,
+        },
+      ]),
+    [report, t],
   );
 
   const departmentColumns: ColumnsType<HrReportNamedCount> = [
@@ -167,18 +356,38 @@ export default function HrReportsPageContent(): React.ReactNode {
     },
   ];
 
+  const expenseCategoryColumns: ColumnsType<HrReportNamedAmount> = [
+    { title: t(`${PAGE}.columns.category`), dataIndex: 'name', key: 'name' },
+    {
+      title: t(`${PAGE}.columns.lineItems`),
+      dataIndex: 'count',
+      key: 'count',
+      align: 'right',
+      width: 110,
+    },
+    {
+      title: t(`${PAGE}.columns.amountEtb`),
+      dataIndex: 'amount',
+      key: 'amount',
+      align: 'right',
+      width: 140,
+      render: (value: number) => value.toLocaleString(),
+    },
+  ];
+
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className="erp-pro-list-page erp-users-page erp-employees-v2">
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
   }
 
   const emptyText = t(`${PAGE}.empty`);
+  const chartEmpty = t(`${PAGE}.chartEmpty`);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-dashboard-page">
+    <div className="erp-pro-list-page erp-users-page erp-dashboard-page erp-employees-v2">
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar">
           <div className="flex min-w-0 flex-col">
@@ -262,6 +471,9 @@ export default function HrReportsPageContent(): React.ReactNode {
             <StatCard
               label={t(`${PAGE}.kpi.activeEmployees`)}
               value={report.headcount.activeEmployees}
+              sub={t(`${PAGE}.kpi.newHires`, {
+                count: report.headcount.newHiresInRange,
+              })}
               color="teal"
               icon={<TeamOutlined />}
             />
@@ -311,6 +523,203 @@ export default function HrReportsPageContent(): React.ReactNode {
               color={report.contracts.expiringInRange > 0 ? 'red' : 'default'}
               icon={<FileOutlined />}
             />
+          </div>
+
+          <div className="erp-users-stat-bar erp-dashboard-stat-bar--3">
+            <StatCard
+              label={t(`${PAGE}.kpi.siteAssignments`)}
+              value={report.siteAssignments.requests}
+              sub={t(`${PAGE}.kpi.approvedRequests`, {
+                count: report.siteAssignments.approvedRequests,
+              })}
+              color="blue"
+              icon={<EnvironmentOutlined />}
+            />
+            <StatCard
+              label={t(`${PAGE}.kpi.expenses`)}
+              value={report.expenses.claims}
+              sub={t(`${PAGE}.kpi.approvedAmount`, {
+                amount: report.expenses.approvedAmountEtb.toLocaleString(),
+              })}
+              color="amber"
+              icon={<WalletOutlined />}
+            />
+            <StatCard
+              label={t(`${PAGE}.kpi.evaluations`)}
+              value={report.evaluations.total}
+              sub={
+                report.evaluations.averageFinalScore != null
+                  ? t(`${PAGE}.kpi.avgScore`, {
+                      score: report.evaluations.averageFinalScore,
+                    })
+                  : t(`${PAGE}.kpi.completedEvals`, {
+                      count: report.evaluations.completed,
+                    })
+              }
+              color="teal"
+              icon={<SolutionOutlined />}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+            <ChartCard
+              title={t(`${PAGE}.sections.headcountChart`)}
+              subtitle={t(`${PAGE}.sections.headcountSubtitle`, {
+                count: report.headcount.withoutDepartment,
+              })}
+              icon={<TeamOutlined />}
+            >
+              <HrHorizontalBarChart
+                data={headcountChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+
+            <ChartCard
+              title={t(`${PAGE}.sections.leaveByTypeChart`)}
+              subtitle={t(`${PAGE}.sections.leaveByTypeSubtitle`)}
+              icon={<CalendarOutlined />}
+            >
+              <HrPieChart
+                data={leaveTypeChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
+            <ChartCard
+              title={t(`${PAGE}.sections.byEmployeeType`)}
+              subtitle={t(`${PAGE}.sections.workforceMixSubtitle`)}
+              icon={<TeamOutlined />}
+            >
+              <HrDonutChart
+                data={employeeTypeChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+            <ChartCard
+              title={t(`${PAGE}.sections.byNationality`)}
+              subtitle={t(`${PAGE}.sections.workforceMixSubtitle`)}
+              icon={<TeamOutlined />}
+            >
+              <HrDonutChart
+                data={nationalityChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+            <ChartCard
+              title={t(`${PAGE}.sections.byGender`)}
+              subtitle={t(`${PAGE}.sections.workforceMixSubtitle`)}
+              icon={<TeamOutlined />}
+            >
+              <HrDonutChart
+                data={genderChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+            <ChartCard
+              title={t(`${PAGE}.sections.leaveByStatus`)}
+              subtitle={t(`${PAGE}.sections.leaveByStatusSubtitle`)}
+              icon={<CalendarOutlined />}
+            >
+              <HrDonutChart
+                data={leaveStatusChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+            <ChartCard
+              title={t(`${PAGE}.sections.overtimeMix`)}
+              subtitle={t(`${PAGE}.sections.overtimeMixSubtitle`)}
+              icon={<FieldTimeOutlined />}
+            >
+              <HrVerticalBarChart
+                data={overtimeMixChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+            <ChartCard
+              title={t(`${PAGE}.sections.overtimeByEmployee`)}
+              subtitle={t(`${PAGE}.sections.topTen`)}
+              icon={<FieldTimeOutlined />}
+            >
+              <HrHorizontalBarChart
+                data={overtimeTopChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+            <ChartCard
+              title={t(`${PAGE}.sections.travelMix`)}
+              subtitle={t(`${PAGE}.sections.travelMixSubtitle`)}
+              icon={<SendOutlined />}
+            >
+              <HrDonutChart
+                data={travelMixChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+            <ChartCard
+              title={t(`${PAGE}.sections.expenseStatus`)}
+              subtitle={t(`${PAGE}.sections.expenseStatusSubtitle`)}
+              icon={<WalletOutlined />}
+            >
+              <HrPieChart
+                data={expenseStatusChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+            <ChartCard
+              title={t(`${PAGE}.sections.expenseCategories`)}
+              subtitle={t(`${PAGE}.sections.expenseCategoriesSubtitle`)}
+              icon={<WalletOutlined />}
+            >
+              <HrHorizontalBarChart
+                data={expenseCategoryChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+            <ChartCard
+              title={t(`${PAGE}.sections.evaluationStatus`)}
+              subtitle={t(`${PAGE}.sections.evaluationStatusSubtitle`)}
+              icon={<SolutionOutlined />}
+            >
+              <HrDonutChart
+                data={evaluationStatusChart}
+                emptyDescription={chartEmpty}
+              />
+            </ChartCard>
+            <ChartCard
+              title={t(`${PAGE}.sections.attendanceSnapshot`)}
+              subtitle={t(`${PAGE}.sections.attendanceSnapshotSubtitle`)}
+              icon={<HomeOutlined />}
+            >
+              <div className="erp-users-stat-bar erp-dashboard-stat-bar--3">
+                <StatCard
+                  label={t(`${PAGE}.kpi.siteAssignments`)}
+                  value={report.siteAssignments.requests}
+                />
+                <StatCard
+                  label={t(`${PAGE}.kpi.wfhDays`)}
+                  value={report.workFromHome.days}
+                />
+                <StatCard
+                  label={t(`${PAGE}.kpi.inactiveEmployees`)}
+                  value={report.headcount.inactiveEmployees}
+                />
+              </div>
+            </ChartCard>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
@@ -365,7 +774,7 @@ export default function HrReportsPageContent(): React.ReactNode {
             </ChartCard>
 
             <ChartCard
-              title={t(`${PAGE}.sections.overtimeByEmployee`)}
+              title={t(`${PAGE}.sections.overtimeByEmployeeTable`)}
               subtitle={t(`${PAGE}.sections.topTen`)}
               icon={<FieldTimeOutlined />}
             >
@@ -382,28 +791,18 @@ export default function HrReportsPageContent(): React.ReactNode {
           </div>
 
           <ChartCard
-            title={t(`${PAGE}.sections.overtimeMix`)}
-            subtitle={t(`${PAGE}.sections.overtimeMixSubtitle`)}
-            icon={<FieldTimeOutlined />}
+            title={t(`${PAGE}.sections.expenseCategoriesTable`)}
+            subtitle={t(`${PAGE}.sections.expenseCategoriesSubtitle`)}
+            icon={<WalletOutlined />}
           >
-            <div className="erp-users-stat-bar erp-dashboard-stat-bar--4">
-              <StatCard
-                label={t(`${PAGE}.kpi.regularHours`)}
-                value={report.overtime.regularHours}
-              />
-              <StatCard
-                label={t(`${PAGE}.kpi.nightHours`)}
-                value={report.overtime.nightHours}
-              />
-              <StatCard
-                label={t(`${PAGE}.kpi.weekendHours`)}
-                value={report.overtime.weekendHours}
-              />
-              <StatCard
-                label={t(`${PAGE}.kpi.holidayHours`)}
-                value={report.overtime.holidayHours}
-              />
-            </div>
+            <DataTable<HrReportNamedAmount>
+              rowKey="name"
+              size="small"
+              columns={expenseCategoryColumns}
+              dataSource={report.expenses.byCategory}
+              pagination={false}
+              locale={{ emptyText }}
+            />
           </ChartCard>
         </>
       ) : null}

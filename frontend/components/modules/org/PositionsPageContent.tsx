@@ -1,5 +1,7 @@
 'use client';
 
+import './org-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -7,7 +9,6 @@ import {
   Dropdown,
   Grid,
   Input,
-  Skeleton,
   Spin,
   Tooltip,
   type MenuProps,
@@ -26,6 +27,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { OrgListStat } from '@/components/modules/org/OrgListStat';
 import PositionFormDrawer from '@/components/modules/org/PositionFormDrawer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -50,25 +52,9 @@ import { useFullUsersDirectory } from '@/lib/query/users';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const PAGE_CHROME =
-  'erp-pro-list-page erp-users-page erp-org-positions-page';
-
-const STAT_ACCENT = {
-  blue: {
-    bg: 'var(--color-blue-50)',
-    fg: 'var(--color-blue-400)',
-  },
-  green: {
-    bg: 'var(--color-teal-50)',
-    fg: 'var(--color-teal-400)',
-  },
-  slate: {
-    bg: 'var(--color-surface-secondary)',
-    fg: 'var(--color-text-tertiary)',
-  },
-} as const;
+  'erp-pro-list-page erp-users-page erp-org-positions-page erp-org-v2';
 
 type StatusMode = 'all' | 'active' | 'inactive';
-type StatAccent = keyof typeof STAT_ACCENT;
 
 function filterPositions(
   rows: Position[],
@@ -99,45 +85,6 @@ function PositionTitleChip({ title }: { title: string }): React.ReactNode {
     <span className="erp-position-title-chip" aria-hidden>
       {letter}
     </span>
-  );
-}
-
-function PositionsStat({
-  label,
-  value,
-  subLabel,
-  accent,
-  icon,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  subLabel: string;
-  accent: StatAccent;
-  icon: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}): React.ReactNode {
-  const tint = STAT_ACCENT[accent];
-  return (
-    <button
-      type="button"
-      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
-      onClick={onClick}
-    >
-      <span
-        className="erp-users-stat-chip"
-        style={{ background: tint.bg, color: tint.fg }}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1 text-left">
-        <p className="erp-users-stat-label">{label}</p>
-        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
-        <p className="erp-position-stat-hint">{subLabel}</p>
-      </div>
-    </button>
   );
 }
 
@@ -359,12 +306,14 @@ export default function PositionsPageContent(): React.ReactNode {
         fixed: 'right',
         render: (_value, record) => (
           <div
-            className="flex items-center justify-end"
+            className="erp-table-row-actions flex items-center justify-end"
             onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
             <Dropdown
               menu={{ items: buildActionMenu(record) }}
               trigger={['click']}
+              rootClassName="erp-row-actions-menu"
             >
               <Button
                 size="small"
@@ -383,7 +332,7 @@ export default function PositionsPageContent(): React.ReactNode {
   if (permLoading || (listLoading && allRows.length === 0)) {
     return (
       <div className={PAGE_CHROME}>
-        <div className="flex justify-center rounded-xl border border-[var(--color-border-tertiary)] bg-white p-12">
+        <div className="erp-org-loading">
           <Spin />
         </div>
       </div>
@@ -408,123 +357,36 @@ export default function PositionsPageContent(): React.ReactNode {
 
   return (
     <div className={PAGE_CHROME}>
-      {statsLoading ? (
-        <div className="erp-users-stat-bar">
-          {Array.from({ length: 3 }, (_, index) => (
-            <div key={index} className="erp-users-stat">
-              <Skeleton.Avatar active size={36} shape="square" />
-              <div className="min-w-0 flex-1">
-                <Skeleton.Input active size="small" style={{ width: 80 }} />
-                <Skeleton.Input
-                  active
-                  size="small"
-                  style={{ width: 48, marginTop: 4 }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="erp-users-stat-bar">
-          <PositionsStat
-            label={t('pages.positions.stats.total')}
-            value={stats.total}
-            subLabel={t('pages.positions.stats.totalHint', {
-              count: stats.assigned,
-            })}
-            accent="blue"
-            icon={<IdcardOutlined />}
-            active={statusMode === 'all'}
-            onClick={() => handleStatusMode('all')}
-          />
-          <PositionsStat
-            label={t('common.active')}
-            value={stats.active}
-            subLabel={t('pages.positions.stats.activeHint')}
-            accent="green"
-            icon={<CheckCircleOutlined />}
-            active={statusMode === 'active'}
-            onClick={() => handleStatusMode('active')}
-          />
-          <PositionsStat
-            label={t('common.inactive')}
-            value={stats.inactive}
-            subLabel={t('pages.positions.stats.inactiveHint')}
-            accent="slate"
-            icon={<StopOutlined />}
-            active={statusMode === 'inactive'}
-            onClick={() => handleStatusMode('inactive')}
-          />
-        </div>
-      )}
-
-      <div className="erp-pro-card" style={{ marginBottom: 16, marginTop: 16 }}>
-        <div style={{ padding: '14px 20px' }}>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <Input
-              allowClear
-              prefix={<SearchOutlined className="erp-users-search-icon" />}
-              placeholder={t('pages.positions.searchPlaceholder')}
-              className="erp-users-search-input"
-              style={{ minWidth: 220, flex: 1 }}
-              value={search}
-              onChange={(event) => {
-                const value = event.target.value;
-                setSearch(value);
-                setAppliedSearch(value.trim());
-                resetPage();
-              }}
-              onPressEnter={() => {
-                setAppliedSearch(search.trim());
-                resetPage();
-              }}
-              onClear={() => {
-                setSearch('');
-                setAppliedSearch('');
-                resetPage();
-              }}
-              aria-label={t('pages.positions.searchPlaceholder')}
-            />
-            {hasFilters ? (
-              <Button type="link" onClick={handleResetFilters} className="!px-1">
-                {t('common.reset')}
-              </Button>
-            ) : null}
-          </div>
-        </div>
-        <div className="erp-position-filter-footer">
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listFetching && !listLoading}
-              onClick={() => refetchLists()}
-              aria-label={t('common.refresh')}
-            />
-          </Tooltip>
-          {canManage ? (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openCreateDrawer}
-              aria-label={t('pages.positions.addPosition')}
-            >
-              {isNarrow ? undefined : t('pages.positions.addPosition')}
-            </Button>
-          ) : null}
-        </div>
+      <div className="erp-users-stat-bar">
+        <OrgListStat
+          label={t('pages.positions.stats.total')}
+          value={statsLoading ? 0 : stats.total}
+          accent="blue"
+          icon={<IdcardOutlined />}
+          active={statusMode === 'all'}
+          onClick={() => handleStatusMode('all')}
+        />
+        <OrgListStat
+          label={t('common.active')}
+          value={statsLoading ? 0 : stats.active}
+          accent="green"
+          icon={<CheckCircleOutlined />}
+          active={statusMode === 'active'}
+          onClick={() => handleStatusMode('active')}
+        />
+        <OrgListStat
+          label={t('common.inactive')}
+          value={statsLoading ? 0 : stats.inactive}
+          accent="slate"
+          icon={<StopOutlined />}
+          active={statusMode === 'inactive'}
+          onClick={() => handleStatusMode('inactive')}
+        />
       </div>
 
       <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">
               {t('pages.positions.title')}
             </h3>
@@ -539,6 +401,58 @@ export default function PositionsPageContent(): React.ReactNode {
               </span>
             ) : null}
           </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listFetching && !listLoading}
+                onClick={() => refetchLists()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            {canManage ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openCreateDrawer}
+                aria-label={t('pages.positions.addPosition')}
+              >
+                {isNarrow ? undefined : t('pages.positions.addPosition')}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          <Input
+            allowClear
+            prefix={<SearchOutlined className="erp-users-search-icon" />}
+            placeholder={t('pages.positions.searchPlaceholder')}
+            className="erp-users-search-input min-w-0"
+            value={search}
+            onChange={(event) => {
+              const value = event.target.value;
+              setSearch(value);
+              setAppliedSearch(value.trim());
+              resetPage();
+            }}
+            onPressEnter={() => {
+              setAppliedSearch(search.trim());
+              resetPage();
+            }}
+            onClear={() => {
+              setSearch('');
+              setAppliedSearch('');
+              resetPage();
+            }}
+            aria-label={t('pages.positions.searchPlaceholder')}
+          />
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
         </div>
 
         <div className="erp-pro-table-card-body">
@@ -552,7 +466,7 @@ export default function PositionsPageContent(): React.ReactNode {
             scroll={{ x: isNarrow ? 480 : isCompact ? 680 : 820 }}
             onRow={(record) => ({
               onClick: () => openDrawer(record, !canManage),
-              style: { cursor: 'pointer' },
+              className: 'cursor-pointer',
             })}
             pagination={{
               ...bindMeta(meta),

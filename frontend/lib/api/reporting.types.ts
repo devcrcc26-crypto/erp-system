@@ -142,6 +142,12 @@ export interface HrReportEmployeeOvertimeRow {
   totalHours: number;
 }
 
+export interface HrReportNamedAmount {
+  name: string;
+  count: number;
+  amount: number;
+}
+
 /** Period HR report from GET /hr/reports. */
 export interface HrReport {
   generatedAt: string;
@@ -149,7 +155,12 @@ export interface HrReport {
   departmentId: string | null;
   headcount: {
     activeEmployees: number;
+    inactiveEmployees: number;
+    newHiresInRange: number;
     byDepartment: HrReportNamedCount[];
+    byEmployeeType: HrReportNamedCount[];
+    byNationality: HrReportNamedCount[];
+    byGender: HrReportNamedCount[];
     withoutDepartment: number;
     withoutLeavePolicy: number;
   };
@@ -180,6 +191,27 @@ export interface HrReport {
     active: number;
     expiringInRange: number;
     endedInRange: number;
+  };
+  siteAssignments: {
+    requests: number;
+    approvedRequests: number;
+    byStatus: Record<string, number>;
+  };
+  workFromHome: {
+    days: number;
+  };
+  expenses: {
+    claims: number;
+    approvedClaims: number;
+    approvedAmountEtb: number;
+    byStatus: Record<string, number>;
+    byCategory: HrReportNamedAmount[];
+  };
+  evaluations: {
+    total: number;
+    completed: number;
+    averageFinalScore: number | null;
+    byStatus: Record<string, number>;
   };
 }
 

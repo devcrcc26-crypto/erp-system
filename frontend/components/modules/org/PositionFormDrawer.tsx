@@ -1,5 +1,7 @@
 'use client';
 
+import './org-v2.css';
+
 import { useEffect } from 'react';
 import { Button, Drawer, Form, Input, Switch } from 'antd';
 import { TeamOutlined } from '@ant-design/icons';
@@ -10,6 +12,7 @@ import {
 } from '@/lib/query/org';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { detailDrawerStyles } from '@/lib/theme/layout';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 interface PositionFormValues {
@@ -38,6 +41,7 @@ export default function PositionFormDrawer({
   const messageApi = useAppMessage();
   const createPosition = useCreatePosition();
   const updatePosition = useUpdatePosition();
+  const saving = createPosition.isPending || updatePosition.isPending;
 
   useEffect(() => {
     if (!open) {
@@ -97,38 +101,56 @@ export default function PositionFormDrawer({
   return (
     <Drawer
       open={open}
+      size={480}
+      className="erp-responsive-drawer erp-org-drawer erp-position-drawer"
+      rootClassName="erp-org-drawer"
+      styles={detailDrawerStyles}
+      onClose={onClose}
+      destroyOnHidden
       title={
-        <div className="erp-position-drawer-title">
-          <span>{drawerTitle}</span>
+        <div className="min-w-0">
+          <div className="text-[15px] font-semibold leading-snug">
+            {drawerTitle}
+          </div>
           {editing ? (
-            <span className="erp-position-drawer-meta">
+            <span className="erp-org-drawer-meta">
               <TeamOutlined aria-hidden />
               {t('pages.positions.form.assigneesCount', {
                 count: assigneeCount,
               })}
             </span>
-          ) : null}
+          ) : (
+            <p className="erp-org-drawer-hint">
+              {t('pages.positions.description')}
+            </p>
+          )}
         </div>
       }
-      size={480}
-      className="erp-responsive-drawer erp-position-drawer"
-      onClose={onClose}
-      destroyOnHidden
-      extra={
-        readOnly ? null : (
-          <Button
-            type="primary"
-            loading={createPosition.isPending || updatePosition.isPending}
-            onClick={() => form.submit()}
-          >
-            {t('common.save')}
-          </Button>
+      footer={
+        readOnly ? (
+          <div className="erp-org-drawer-footer flex justify-end">
+            <Button onClick={onClose}>{t('common.cancel')}</Button>
+          </div>
+        ) : (
+          <div className="erp-org-drawer-footer flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button onClick={onClose} disabled={saving}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="primary"
+              loading={saving}
+              onClick={() => form.submit()}
+            >
+              {editing ? t('common.save') : t('pages.positions.addPosition')}
+            </Button>
+          </div>
         )
       }
     >
       <Form<PositionFormValues>
         form={form}
         layout="vertical"
+        requiredMark={false}
         disabled={readOnly}
         onFinish={(values) => void handleSubmit(values)}
         className="erp-position-drawer-form"

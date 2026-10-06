@@ -1,12 +1,28 @@
 'use client';
 
+import './evaluation-v2.css';
+
 import { useMemo, useState } from 'react';
-import { Button, Select, Spin, Table, Tooltip } from 'antd';
+import {
+  Button,
+  Dropdown,
+  Grid,
+  Select,
+  Spin,
+  Tooltip,
+  type MenuProps,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ReloadOutlined } from '@ant-design/icons';
-import Link from 'next/link';
+import {
+  EyeOutlined,
+  FileTextOutlined,
+  MoreOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import type {
   EmployeeEvaluation,
   EvaluationStatus,
@@ -82,6 +98,8 @@ export default function MyEvaluationsPageContent({
   employeeId,
 }: MyEvaluationsPageContentProps = {}): React.ReactNode {
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
   const [yearFilter, setYearFilter] = useState<number | ''>('');
 
   const myQuery = useMyEvaluations();
@@ -132,6 +150,17 @@ export default function MyEvaluationsPageContent({
   const completed = evaluations.filter((e) =>
     COMPLETED_STATUSES.includes(e.status),
   );
+
+  function buildActionMenu(row: EmployeeEvaluation): MenuProps['items'] {
+    return [
+      {
+        key: 'view',
+        icon: <EyeOutlined />,
+        label: 'View',
+        onClick: () => router.push(`/hr/evaluations/${row.id}`),
+      },
+    ];
+  }
 
   const columns: ColumnsType<EmployeeEvaluation> = [
     {
@@ -198,36 +227,48 @@ export default function MyEvaluationsPageContent({
     },
     {
       title: '',
-      key: 'action',
-      width: 72,
+      key: 'actions',
+      width: 52,
+      align: 'right',
       render: (_value, row) => (
-        <Link
-          href={`/hr/evaluations/${row.id}`}
-          className="text-[13px] font-medium text-[#185FA5]"
+        <div
+          className="erp-table-row-actions flex items-center justify-end"
           onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
         >
-          View
-        </Link>
+          <Dropdown
+            menu={{ items: buildActionMenu(row) }}
+            trigger={['click']}
+            rootClassName="erp-row-actions-menu"
+          >
+            <Button
+              size="small"
+              type="text"
+              icon={<MoreOutlined />}
+              aria-label="Actions"
+            />
+          </Dropdown>
+        </div>
       ),
     },
   ];
 
-  if (evaluationsQuery.isLoading) {
+  if (evaluationsQuery.isLoading && !evaluationsQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-evaluation-page flex justify-center p-12">
-        <Spin size="large" />
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+        <div className="erp-evaluation-loading">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
       {completed.length >= 2 ? (
         <div className="erp-pro-card erp-evaluation-trend-card">
           <div className="erp-pro-card-body">
-            <h4 className="mb-3 mt-0 text-[13px] font-semibold text-[#374151]">
-              Performance Trend
-            </h4>
+            <h4 className="erp-evaluation-trend-title">Performance Trend</h4>
             <EvaluationTrendChart evaluations={completed} />
           </div>
         </div>
@@ -261,35 +302,55 @@ export default function MyEvaluationsPageContent({
                 aria-label="Refresh"
               />
             </Tooltip>
-            <Select
-              value={yearFilter}
-              onChange={setYearFilter}
-              options={yearOptions}
-              className="erp-users-filter-select w-[120px]"
-            />
           </div>
         </div>
 
         <div className="erp-users-filter-bar">
-          <p className="erp-users-email m-0">
+          <p className="erp-users-email m-0 flex-1">
             {employeeId
               ? 'Quarterly performance evaluations for this employee'
               : 'Your quarterly performance evaluations'}
           </p>
+          <Select
+            value={yearFilter}
+            onChange={setYearFilter}
+            options={yearOptions}
+            className="erp-users-filter-select"
+            aria-label="Filter by year"
+          />
         </div>
 
         <div className="erp-pro-table-card-body">
-          <Table
+          <DataTable<EmployeeEvaluation>
             dataSource={sorted}
             columns={columns}
             rowKey="id"
-            pagination={{ pageSize: 10 }}
-            locale={{ emptyText: 'No evaluations found' }}
+            pagination={{
+              pageSize: 10,
+              hideOnSinglePage: true,
+              pageSizeOptions: ['10', '20', '50'],
+              showSizeChanger: !isCompact,
+            }}
+            size={isCompact ? 'small' : 'middle'}
             className="erp-pro-table erp-users-table"
+            scroll={{ x: isCompact ? 560 : 720 }}
             onRow={(row) => ({
               onClick: () => router.push(`/hr/evaluations/${row.id}`),
-              style: { cursor: 'pointer' },
+              className: 'cursor-pointer',
             })}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<FileTextOutlined />}
+                  title="No evaluations found"
+                  description={
+                    employeeId
+                      ? 'This employee has no quarterly evaluations yet.'
+                      : 'Your quarterly evaluations will appear here when a cycle is active.'
+                  }
+                />
+              ),
+            }}
           />
         </div>
       </div>

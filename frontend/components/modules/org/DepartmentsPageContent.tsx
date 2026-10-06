@@ -1,5 +1,7 @@
 'use client';
 
+import './org-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -56,7 +58,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 
 const LEADER_WARNING_DISMISS_KEY = 'erp-departments-leader-warning-dismissed';
 const PAGE_CHROME =
-  'erp-pro-list-page erp-users-page erp-org-departments-page';
+  'erp-pro-list-page erp-users-page erp-org-departments-page erp-org-v2';
 
 type StatusMode = 'all' | 'active' | 'inactive';
 
@@ -458,12 +460,14 @@ export default function DepartmentsPageContent(): React.ReactNode {
               fixed: 'right' as const,
               render: (_: unknown, record: DepartmentRow) => (
                 <div
-                  className="flex items-center justify-end"
+                  className="erp-table-row-actions flex items-center justify-end"
                   onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
                 >
                   <Dropdown
                     menu={{ items: buildActionMenu(record) }}
                     trigger={['click']}
+                    rootClassName="erp-row-actions-menu"
                   >
                     <Button
                       size="small"
@@ -484,7 +488,7 @@ export default function DepartmentsPageContent(): React.ReactNode {
   if (permLoading || (listLoading && allRows.length === 0)) {
     return (
       <div className={PAGE_CHROME}>
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+        <div className="erp-org-loading">
           <Spin />
         </div>
       </div>

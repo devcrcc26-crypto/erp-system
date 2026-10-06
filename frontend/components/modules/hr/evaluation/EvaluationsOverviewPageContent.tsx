@@ -1,27 +1,35 @@
 'use client';
 
+import './evaluation-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Button,
+  Dropdown,
+  Grid,
   Input,
   Progress,
   Select,
-  Table,
+  Spin,
   Tooltip,
   message,
+  type MenuProps,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
+  EyeOutlined,
+  MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import type { EmployeeEvaluation } from '@/lib/api/evaluation.types';
 import {
@@ -36,10 +44,13 @@ import {
   getScoreColor,
   getScoreLabel,
 } from '@/lib/utils/evaluation-status';
+import EvaluationListAvatar from './EvaluationListAvatar';
 import EvaluationStat from './EvaluationStat';
 
 export default function EvaluationsOverviewPageContent(): React.ReactNode {
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
   const canViewHr = useCanViewHr();
   const [selectedCycleId, setSelectedCycleId] = useState<string>('');
   const [search, setSearch] = useState('');
@@ -98,111 +109,166 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
     (e) => e.status === 'DISPUTED' || e.status === 'ESCALATED',
   ).length;
   const pending = filtered.filter((e) => e.status === 'PENDING').length;
+  const searchQ = search.trim().toLowerCase();
 
-  const columns: ColumnsType<EmployeeEvaluation> = [
-    {
-      title: 'Employee',
-      key: 'employee',
-      render: (_value, row) => (
-        <div className="min-w-0">
-          <p className="erp-users-cell-strong m-0">
-            {row.employee.firstName} {row.employee.lastName}
-          </p>
-          <p className="erp-users-email m-0 mt-0.5">
-            {row.employee.employeeId ?? '—'}
-          </p>
-        </div>
-      ),
-    },
-    {
-      title: 'Cycle',
-      key: 'cycle',
-      width: 120,
-      render: (_value, row) => (
-        <span className="erp-users-id-chip">
-          {getQuarterLabel(row.cycle.quarter, row.cycle.year)}
-        </span>
-      ),
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      width: 150,
-      render: (_value, row) => (
-        <StatusBadge
-          label={EVALUATION_STATUS_LABELS[row.status]}
-          variant={EVALUATION_STATUS_BADGE[row.status]}
-        />
-      ),
-    },
-    {
-      title: 'Final Score',
-      key: 'score',
-      width: 160,
-      render: (_value, row) => {
-        const score = row.adjustedScore ?? row.finalScore;
-        if (score == null) {
-          return <span className="erp-users-cell-sub">—</span>;
-        }
-        return (
-          <div className="flex items-center gap-2">
-            <span
-              className="erp-evaluation-score"
-              style={{ fontSize: 16, color: getScoreColor(Number(score)) }}
-            >
-              {Number(score).toFixed(1)}
-            </span>
-            <span className="erp-users-cell-sub">
-              {getScoreLabel(Number(score))}
-            </span>
-          </div>
-        );
+  function buildActionMenu(row: EmployeeEvaluation): MenuProps['items'] {
+    return [
+      {
+        key: 'view',
+        icon: <EyeOutlined />,
+        label: 'View',
+        onClick: () => router.push(`/hr/evaluations/${row.id}`),
       },
-    },
-    {
-      title: 'Team Lead',
-      key: 'teamLead',
-      responsive: ['lg'],
-      render: (_value, row) =>
-        row.teamLead ? (
-          <span className="erp-users-cell-strong">
-            {row.teamLead.firstName} {row.teamLead.lastName}
+    ];
+  }
+
+  const columns: ColumnsType<EmployeeEvaluation> = useMemo(
+    () => [
+      {
+        title: 'Employee',
+        key: 'employee',
+        width: isCompact ? 220 : 260,
+        render: (_value, row) => {
+          const fullName =
+            `${row.employee.firstName} ${row.employee.lastName}`.trim();
+          return (
+            <div className="flex min-w-0 items-center gap-3">
+              <EvaluationListAvatar
+                firstName={row.employee.firstName}
+                lastName={row.employee.lastName}
+                userId={row.employee.id}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="erp-users-name m-0 truncate">{fullName}</p>
+                {row.employee.employeeId ? (
+                  <span className="erp-users-id-chip mt-1 inline-block">
+                    {row.employee.employeeId}
+                  </span>
+                ) : (
+                  <p className="erp-users-email m-0 mt-0.5">—</p>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        title: 'Cycle',
+        key: 'cycle',
+        width: 120,
+        render: (_value, row) => (
+          <span className="erp-users-id-chip">
+            {getQuarterLabel(row.cycle.quarter, row.cycle.year)}
           </span>
-        ) : (
-          <span className="erp-users-cell-sub">Not assigned</span>
         ),
-    },
-    {
-      title: 'Discipline Lead',
-      key: 'disciplineLead',
-      responsive: ['xl'],
-      render: (_value, row) =>
-        row.disciplineLead ? (
-          <span className="erp-users-cell-strong">
-            {row.disciplineLead.firstName} {row.disciplineLead.lastName}
-          </span>
-        ) : (
-          <span className="erp-users-cell-sub">Not assigned</span>
+      },
+      {
+        title: 'Status',
+        key: 'status',
+        width: 150,
+        render: (_value, row) => (
+          <StatusBadge
+            label={EVALUATION_STATUS_LABELS[row.status]}
+            variant={EVALUATION_STATUS_BADGE[row.status]}
+          />
         ),
-    },
-    {
-      title: '',
-      key: 'action',
-      width: 72,
-      render: (_value, row) => (
-        <Link
-          href={`/hr/evaluations/${row.id}`}
-          className="text-[13px] font-medium text-[#185FA5]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          View
-        </Link>
-      ),
-    },
-  ];
+      },
+      {
+        title: 'Final Score',
+        key: 'score',
+        width: 160,
+        render: (_value, row) => {
+          const score = row.adjustedScore ?? row.finalScore;
+          if (score == null) {
+            return <span className="erp-users-cell-sub">—</span>;
+          }
+          return (
+            <div className="flex items-center gap-2">
+              <span
+                className="erp-evaluation-score"
+                style={{ fontSize: 16, color: getScoreColor(Number(score)) }}
+              >
+                {Number(score).toFixed(1)}
+              </span>
+              <span className="erp-users-cell-sub">
+                {getScoreLabel(Number(score))}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        title: 'Team Lead',
+        key: 'teamLead',
+        responsive: ['lg'],
+        render: (_value, row) =>
+          row.teamLead ? (
+            <span className="erp-users-cell-strong">
+              {row.teamLead.firstName} {row.teamLead.lastName}
+            </span>
+          ) : (
+            <span className="erp-users-cell-sub">Not assigned</span>
+          ),
+      },
+      {
+        title: 'Discipline Lead',
+        key: 'disciplineLead',
+        responsive: ['xl'],
+        render: (_value, row) =>
+          row.disciplineLead ? (
+            <span className="erp-users-cell-strong">
+              {row.disciplineLead.firstName} {row.disciplineLead.lastName}
+            </span>
+          ) : (
+            <span className="erp-users-cell-sub">Not assigned</span>
+          ),
+      },
+      {
+        title: '',
+        key: 'actions',
+        width: 52,
+        align: 'right',
+        render: (_value, row) => (
+          <div
+            className="erp-table-row-actions flex items-center justify-end"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Dropdown
+              menu={{ items: buildActionMenu(row) }}
+              trigger={['click']}
+              rootClassName="erp-row-actions-menu"
+            >
+              <Button
+                size="small"
+                type="text"
+                icon={<MoreOutlined />}
+                aria-label="Actions"
+              />
+            </Dropdown>
+          </div>
+        ),
+      },
+    ],
+    [isCompact, router],
+  );
+
+  function handleResetSearch(): void {
+    setSearch('');
+  }
+
+  if (evaluationsQuery.isLoading && !evaluationsQuery.data) {
+    return (
+      <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
+        <div className="erp-evaluation-loading">
+          <Spin />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-evaluation-page">
+    <div className="erp-pro-list-page erp-users-page erp-evaluation-page erp-evaluation-v2">
       {contextHolder}
 
       <div className="erp-users-stat-bar">
@@ -233,7 +299,7 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
       </div>
 
       {total > 0 ? (
-        <div className="mb-4 px-1">
+        <div className="erp-evaluation-progress">
           <Progress
             percent={Math.round((completed / total) * 100)}
             strokeColor="#1D9E75"
@@ -265,7 +331,6 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
             </Tooltip>
             {canViewHr ? (
               <Button
-                size="small"
                 onClick={() => void handleManualAutoResolve()}
                 loading={autoResolve.isPending}
               >
@@ -283,29 +348,73 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
             className="erp-users-search-input min-w-0"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search by name or employee ID"
           />
-          <span className="erp-users-filter-spacer" aria-hidden />
           <Select
             value={selectedCycleId}
             onChange={setSelectedCycleId}
             options={cycleOptions}
             className="erp-users-filter-select"
             placeholder="Filter by cycle"
+            aria-label="Filter by cycle"
           />
+          {search.trim() || selectedCycleId ? (
+            <Button
+              type="link"
+              onClick={() => {
+                handleResetSearch();
+                setSelectedCycleId('');
+              }}
+              className="!px-1"
+            >
+              Reset
+            </Button>
+          ) : null}
         </div>
 
         <div className="erp-pro-table-card-body">
-          <Table
+          <DataTable<EmployeeEvaluation>
             dataSource={filtered}
             columns={columns}
             rowKey="id"
             loading={evaluationsQuery.isLoading}
-            pagination={{ pageSize: 20 }}
+            pagination={{
+              pageSize: 20,
+              pageSizeOptions: ['10', '20', '50'],
+              showSizeChanger: !isCompact,
+            }}
+            size={isCompact ? 'small' : 'middle'}
             className="erp-pro-table erp-users-table"
+            scroll={{ x: isCompact ? 720 : 960 }}
             onRow={(row) => ({
               onClick: () => router.push(`/hr/evaluations/${row.id}`),
-              style: { cursor: 'pointer' },
+              className: 'cursor-pointer',
             })}
+            locale={{
+              emptyText: (
+                <TableEmptyState
+                  icon={<TeamOutlined />}
+                  title={
+                    searchQ
+                      ? 'No matching evaluations'
+                      : 'No evaluations found'
+                  }
+                  description={
+                    searchQ
+                      ? 'Try a different name or employee ID, or clear the search.'
+                      : 'Evaluations for the selected cycle will appear here.'
+                  }
+                  action={
+                    searchQ
+                      ? {
+                          label: 'Clear search',
+                          onClick: handleResetSearch,
+                        }
+                      : undefined
+                  }
+                />
+              ),
+            }}
           />
         </div>
       </div>
