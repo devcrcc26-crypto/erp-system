@@ -4237,7 +4237,11 @@
         "showFlaggedOnly": "Show flagged only",
         "entriesTitle": "Entries",
         "allRuns": "All payroll runs",
-        "createdOn": "Created {{date}}"
+        "createdOn": "Created {{date}}",
+        "showMore": "Show {{count}} more",
+        "showDetails": "Details",
+        "hideDetails": "Hide details",
+        "filteredTotals": "Totals for shown entries"
       },
       "summary": {
         "employees": "Employees",

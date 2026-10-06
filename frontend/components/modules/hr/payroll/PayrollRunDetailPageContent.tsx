@@ -8,7 +8,9 @@ import {
   Button,
   Checkbox,
   Dropdown,
+  Empty,
   Form,
+  Grid,
   Input,
   InputNumber,
   Modal,
@@ -76,7 +78,7 @@ import {
   useSubmitPayrollRun,
   useUpdatePayrollEntry,
 } from '@/lib/query/payroll';
-import { useUsersDirectory } from '@/lib/query/users';
+import { useFullUsersDirectory } from '@/lib/query/users';
 import {
   countEntryFlags,
   formatPayrollMoney,
@@ -118,6 +120,8 @@ function MoneyCell({
   );
 }
 
+const MOBILE_PAGE_SIZE = 20;
+
 function resolveUserLabel(
   userId: string | null | undefined,
   directory: Map<string, { firstName: string; lastName: string; chineseName: string | null }>,
@@ -130,6 +134,15 @@ function resolveUserLabel(
     return userId.slice(0, 8);
   }
   return formatUserName(user);
+}
+
+function StepMeta({ who, when }: { who: string; when: string }): React.ReactNode {
+  return (
+    <span className="erp-payroll-step-meta">
+      <span className="erp-payroll-step-who">{who}</span>
+      <span className="erp-payroll-step-when">{dayjs(when).format('YYYY-MM-DD HH:mm')}</span>
+    </span>
+  );
 }
 
 export default function PayrollRunDetailPageContent({
@@ -147,7 +160,9 @@ export default function PayrollRunDetailPageContent({
   const isSysAdmin = useIsSystemAdmin();
 
   const detailQuery = usePayrollRun(runId, canAccess);
-  const usersQuery = useUsersDirectory({ page: 1, limit: 500 }, { enabled: canAccess });
+  const usersQuery = useFullUsersDirectory({ enabled: canAccess });
+  const screens = Grid.useBreakpoint();
+  const isPhone = screens.md === false;
   const recalculateMutation = useRecalculatePayrollRun(runId);
   const markReviewedMutation = useMarkPayrollRunReviewed(runId);
   const submitMutation = useSubmitPayrollRun(runId);
@@ -165,6 +180,13 @@ export default function PayrollRunDetailPageContent({
     null,
   );
   const [flaggedOnly, setFlaggedOnly] = useState(false);
+  const [expandedEntryIds, setExpandedEntryIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [mobilePage, setMobilePage] = useState<{ key: string; count: number }>({
+    key: '',
+    count: MOBILE_PAGE_SIZE,
+  });
   const [search, setSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string | undefined>();
   const [disciplineFilter, setDisciplineFilter] = useState<string | undefined>();
@@ -193,11 +215,11 @@ export default function PayrollRunDetailPageContent({
       string,
       { firstName: string; lastName: string; chineseName: string | null }
     >();
-    for (const user of usersQuery.data?.data ?? []) {
+    for (const user of usersQuery.data ?? []) {
       map.set(user.id, user);
     }
     return map;
-  }, [usersQuery.data?.data]);
+  }, [usersQuery.data]);
 
   const run = detailQuery.data;
 
@@ -311,6 +333,23 @@ export default function PayrollRunDetailPageContent({
       return name.includes(q) || empId.includes(q);
     });
   }, [run, search, departmentFilter, disciplineFilter, flaggedOnly]);
+
+  // Phone card list shows a page at a time; any filter change starts over.
+  const mobileFilterKey = [search, departmentFilter, disciplineFilter, flaggedOnly].join('|');
+  const mobileVisible =
+    mobilePage.key === mobileFilterKey ? mobilePage.count : MOBILE_PAGE_SIZE;
+
+  function toggleEntryExpanded(entryId: string): void {
+    setExpandedEntryIds((current) => {
+      const next = new Set(current);
+      if (next.has(entryId)) {
+        next.delete(entryId);
+      } else {
+        next.add(entryId);
+      }
+      return next;
+    });
+  }
 
   const hasEntryFilters =
     Boolean(search.trim()) ||
@@ -754,6 +793,83 @@ export default function PayrollRunDetailPageContent({
     ],
     [t, showPayslipColumn, openingPayslipId],
   );
+
+  function renderEntryCard(entry: PayrollEntryDetail): React.ReactNode {
+    const expanded = expandedEntryIds.has(entry.id);
+    const payslipId =
+      showPayslipColumn && entry.payslip?.generatedAt ? entry.payslip.id : null;
+    const detailsId = `payroll-entry-${entry.id}`;
+    return (
+      <li key={entry.id} className="erp-payroll-entry-card">
+        <div className="erp-payroll-entry-card-head">
+          <div className="min-w-0">
+            <p className="erp-payroll-employee-name truncate">
+              {entry.employee.firstName} {entry.employee.lastName}
+            </p>
+            <p className="erp-payroll-employee-id">{entry.employee.employeeId ?? '—'}</p>
+          </div>
+          {entry.flag !== 'NONE' ? (
+            <Tag variant="filled" className="erp-payroll-flag">
+              {t(payrollFlagLabelKey(entry.flag))}
+            </Tag>
+          ) : null}
+        </div>
+        <div className="erp-payroll-entry-card-net">
+          <span>{t('hr.payroll.entry.net')}</span>
+          <strong>
+            {formatPayrollMoney(entry.netPay, { emptyZero: false })}
+            <small>ETB</small>
+          </strong>
+        </div>
+        <dl className="erp-payroll-entry-card-grid">
+          <div>
+            <dt>{t('hr.payroll.entry.paidDays')}</dt>
+            <dd>{parsePayrollMoney(entry.payrollDays)}</dd>
+          </div>
+          <div>
+            <dt>{t('hr.payroll.entry.gross')}</dt>
+            <dd>{formatPayrollMoney(entry.grossIncome)}</dd>
+          </div>
+          <div>
+            <dt>{t('hr.payroll.entry.tax')}</dt>
+            <dd>{formatPayrollMoney(entry.incomeTax)}</dd>
+          </div>
+          <div>
+            <dt>{t('hr.payroll.entry.pensionEmp')}</dt>
+            <dd>{formatPayrollMoney(entry.pensionEmployee)}</dd>
+          </div>
+        </dl>
+        <div className="erp-payroll-entry-card-actions">
+          {payslipId ? (
+            <Button
+              size="small"
+              icon={<FilePdfOutlined />}
+              loading={openingPayslipId === payslipId}
+              onClick={() => void openPayslip(payslipId)}
+            >
+              {t('hr.payroll.payslips.column')}
+            </Button>
+          ) : null}
+          <Button
+            size="small"
+            type="text"
+            aria-expanded={expanded}
+            aria-controls={detailsId}
+            onClick={() => toggleEntryExpanded(entry.id)}
+          >
+            {expanded
+              ? t('hr.payroll.detail.hideDetails')
+              : t('hr.payroll.detail.showDetails')}
+          </Button>
+        </div>
+        {expanded ? (
+          <div id={detailsId} className="erp-payroll-entry-card-details">
+            {renderExpandedRow(entry)}
+          </div>
+        ) : null}
+      </li>
+    );
+  }
 
   function renderExpandedRow(row: PayrollEntryDetail): React.ReactNode {
     const canEditBonus =
@@ -1434,6 +1550,7 @@ export default function PayrollRunDetailPageContent({
         <div className="erp-payroll-steps">
           <Steps
             size="small"
+            titlePlacement="vertical"
             current={stepIndex}
             status={
               run.status === 'CANCELLED'
@@ -1451,27 +1568,39 @@ export default function PayrollRunDetailPageContent({
               },
               {
                 title: t('hr.payroll.steps.submitted'),
-                content: run.submittedAt
-                  ? `${resolveUserLabel(run.submittedBy, userDirectory)} · ${dayjs(run.submittedAt).format('YYYY-MM-DD HH:mm')}`
-                  : undefined,
+                content: run.submittedAt ? (
+                  <StepMeta
+                    who={resolveUserLabel(run.submittedBy, userDirectory)}
+                    when={run.submittedAt}
+                  />
+                ) : undefined,
               },
               {
                 title: t('hr.payroll.steps.hrApproved'),
-                content: run.approvedAt
-                  ? `${resolveUserLabel(run.approvedBy, userDirectory)} · ${dayjs(run.approvedAt).format('YYYY-MM-DD HH:mm')}`
-                  : undefined,
+                content: run.approvedAt ? (
+                  <StepMeta
+                    who={resolveUserLabel(run.approvedBy, userDirectory)}
+                    when={run.approvedAt}
+                  />
+                ) : undefined,
               },
               {
                 title: t('hr.payroll.steps.gmApproved'),
-                content: run.gmApprovedAt
-                  ? `${resolveUserLabel(run.gmApprovedBy, userDirectory)} · ${dayjs(run.gmApprovedAt).format('YYYY-MM-DD HH:mm')}`
-                  : undefined,
+                content: run.gmApprovedAt ? (
+                  <StepMeta
+                    who={resolveUserLabel(run.gmApprovedBy, userDirectory)}
+                    when={run.gmApprovedAt}
+                  />
+                ) : undefined,
               },
               {
                 title: t('hr.payroll.steps.paid'),
-                content: run.paidAt
-                  ? `${resolveUserLabel(run.paidBy, userDirectory)} · ${dayjs(run.paidAt).format('YYYY-MM-DD HH:mm')}`
-                  : undefined,
+                content: run.paidAt ? (
+                  <StepMeta
+                    who={resolveUserLabel(run.paidBy, userDirectory)}
+                    when={run.paidAt}
+                  />
+                ) : undefined,
               },
             ]}
           />
@@ -1701,66 +1830,115 @@ export default function PayrollRunDetailPageContent({
           ) : null}
         </div>
 
-        <Table<PayrollEntryDetail>
-          rowKey="id"
-          size="small"
-          columns={columns}
-          dataSource={filteredEntries}
-          scroll={{ x: 1400 }}
-          sticky
-          pagination={false}
-          expandable={{
-            expandedRowRender: renderExpandedRow,
-          }}
-          summary={() =>
-            totalsRow ? (
-              <Table.Summary fixed="bottom">
-                <Table.Summary.Row>
-                  <Table.Summary.Cell index={0} />
-                  <Table.Summary.Cell index={1}>
-                    <strong>{t('hr.payroll.entry.totals')}</strong>
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={2} />
-                  <Table.Summary.Cell index={3} align="right">
-                    <MoneyCell value={totalsRow.basicSalary} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={4} align="right">
-                    <MoneyCell value={totalsRow.earnedSalary} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={5} align="right">
-                    <MoneyCell value={totalsRow.totalOtPay} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={6} align="right">
-                    <MoneyCell value={totalsRow.transport} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={7} align="right">
-                    <MoneyCell value={totalsRow.bonus} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={8} align="right">
-                    <MoneyCell value={totalsRow.gross} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={9} align="right">
-                    <MoneyCell value={totalsRow.taxable} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={10} align="right">
-                    <MoneyCell value={totalsRow.pension} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={11} align="right">
-                    <MoneyCell value={totalsRow.tax} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={12} align="right">
-                    <MoneyCell value={totalsRow.netBonus} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={13} align="right">
-                    <MoneyCell value={totalsRow.net} strong />
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={14} />
-                  {showPayslipColumn ? <Table.Summary.Cell index={15} /> : null}
-                </Table.Summary.Row>
-              </Table.Summary>
-            ) : null
-          }
-        />
+        {isPhone ? (
+          <div className="erp-payroll-entry-cards">
+            {totalsRow ? (
+              <div className="erp-payroll-mobile-totals">
+                <p className="erp-payroll-mobile-totals-title">
+                  {t('hr.payroll.detail.filteredTotals')}
+                </p>
+                <dl>
+                  <div>
+                    <dt>{t('hr.payroll.entry.gross')}</dt>
+                    <dd>{formatPayrollMoney(totalsRow.gross, { emptyZero: false })}</dd>
+                  </div>
+                  <div>
+                    <dt>{t('hr.payroll.entry.tax')}</dt>
+                    <dd>{formatPayrollMoney(totalsRow.tax, { emptyZero: false })}</dd>
+                  </div>
+                  <div className="erp-payroll-mobile-totals-net">
+                    <dt>{t('hr.payroll.entry.net')}</dt>
+                    <dd>{formatPayrollMoney(totalsRow.net, { emptyZero: false })}</dd>
+                  </div>
+                </dl>
+              </div>
+            ) : null}
+            {filteredEntries.length === 0 ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} className="py-6" />
+            ) : (
+              <ul className="erp-payroll-entry-card-list">
+                {filteredEntries.slice(0, mobileVisible).map(renderEntryCard)}
+              </ul>
+            )}
+            {filteredEntries.length > mobileVisible ? (
+              <Button
+                block
+                className="erp-payroll-entry-cards-more"
+                onClick={() =>
+                  setMobilePage({
+                    key: mobileFilterKey,
+                    count: mobileVisible + MOBILE_PAGE_SIZE,
+                  })
+                }
+              >
+                {t('hr.payroll.detail.showMore', {
+                  count: Math.min(MOBILE_PAGE_SIZE, filteredEntries.length - mobileVisible),
+                })}
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <Table<PayrollEntryDetail>
+            rowKey="id"
+            size="small"
+            columns={columns}
+            dataSource={filteredEntries}
+            scroll={{ x: 1400 }}
+            sticky
+            pagination={false}
+            expandable={{
+              expandedRowRender: renderExpandedRow,
+            }}
+            summary={() =>
+              totalsRow ? (
+                <Table.Summary fixed="bottom">
+                  <Table.Summary.Row>
+                    <Table.Summary.Cell index={0} />
+                    <Table.Summary.Cell index={1}>
+                      <strong>{t('hr.payroll.entry.totals')}</strong>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={2} />
+                    <Table.Summary.Cell index={3} align="right">
+                      <MoneyCell value={totalsRow.basicSalary} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={4} align="right">
+                      <MoneyCell value={totalsRow.earnedSalary} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={5} align="right">
+                      <MoneyCell value={totalsRow.totalOtPay} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={6} align="right">
+                      <MoneyCell value={totalsRow.transport} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={7} align="right">
+                      <MoneyCell value={totalsRow.bonus} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={8} align="right">
+                      <MoneyCell value={totalsRow.gross} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={9} align="right">
+                      <MoneyCell value={totalsRow.taxable} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={10} align="right">
+                      <MoneyCell value={totalsRow.pension} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={11} align="right">
+                      <MoneyCell value={totalsRow.tax} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={12} align="right">
+                      <MoneyCell value={totalsRow.netBonus} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={13} align="right">
+                      <MoneyCell value={totalsRow.net} strong />
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={14} />
+                    {showPayslipColumn ? <Table.Summary.Cell index={15} /> : null}
+                  </Table.Summary.Row>
+                </Table.Summary>
+              ) : null
+            }
+          />
+        )}
       </section>
     </div>
   );

@@ -4212,7 +4212,11 @@
         "showFlaggedOnly": "仅显示标记",
         "entriesTitle": "工资明细",
         "allRuns": "全部薪资运行",
-        "createdOn": "创建于 {{date}}"
+        "createdOn": "创建于 {{date}}",
+        "showMore": "再显示 {{count}} 条",
+        "showDetails": "详情",
+        "hideDetails": "收起详情",
+        "filteredTotals": "当前显示记录合计"
       },
       "summary": {
         "employees": "人数",
