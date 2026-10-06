@@ -114,6 +114,8 @@ export interface ManagedAnnouncementDetail {
   attachments: AnnouncementAttachment[];
   audienceLabels: string[];
   stats: AnnouncementStats;
+  /** Present on the update response: acknowledgements cleared by a message edit. */
+  acknowledgementsReset?: number;
   permissions: {
     canEdit: boolean;
     canPublish: boolean;

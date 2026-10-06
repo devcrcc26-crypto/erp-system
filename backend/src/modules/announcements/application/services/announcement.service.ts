@@ -81,6 +81,7 @@ const SCHEDULE_GRACE_MS = 30_000;
 
 export const ANNOUNCEMENT_EVENT_PUBLISHED = 'announcement.published';
 export const ANNOUNCEMENT_EVENT_REMINDER = 'announcement.reminder';
+export const ANNOUNCEMENT_EVENT_UPDATED = 'announcement.updated';
 
 @Injectable()
 export class AnnouncementService {
@@ -161,6 +162,7 @@ export class AnnouncementService {
 
     const data: Prisma.AnnouncementUpdateInput = { updatedBy: ctx.userId };
     let contentChanged = false;
+    let messageChanged = false;
 
     if (dto.title !== undefined) {
       const title = dto.title.trim();
@@ -180,11 +182,13 @@ export class AnnouncementService {
         throw new BadRequestException('Body is required.');
       }
       data.body = body;
-      contentChanged ||= body !== existing.body;
+      messageChanged ||= body !== existing.body;
+      contentChanged ||= messageChanged;
     }
     if (dto.bodyZh !== undefined) {
       data.bodyZh = dto.bodyZh ? sanitizeAnnouncementMarkdown(dto.bodyZh) || null : null;
-      contentChanged ||= (data.bodyZh ?? null) !== existing.bodyZh;
+      messageChanged ||= (data.bodyZh ?? null) !== existing.bodyZh;
+      contentChanged ||= messageChanged;
     }
     if (dto.pinned !== undefined) {
       data.pinned = dto.pinned;
@@ -228,8 +232,39 @@ export class AnnouncementService {
       Object.assign(data, merged);
     }
 
-    await this.prisma.announcement.update({ where: { id }, data });
-    return this.getManaged(ctx, id);
+    // An acknowledgement refers to the text people saw. When the message of
+    // a published post that asks for one changes, everyone reviews it again.
+    const reacknowledge =
+      existing.status === AnnouncementStatus.PUBLISHED &&
+      existing.requireAcknowledgement &&
+      messageChanged;
+
+    let acknowledgementsReset = 0;
+    let recipientIds: string[] = [];
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.announcement.update({ where: { id }, data });
+      if (!reacknowledge) {
+        return;
+      }
+      acknowledgementsReset = await tx.announcementRecipient.count({
+        where: { announcementId: id, acknowledgedAt: { not: null } },
+      });
+      const recipients = await tx.announcementRecipient.findMany({
+        where: { announcementId: id },
+        select: { userId: true },
+      });
+      recipientIds = recipients.map((recipient) => recipient.userId);
+      await tx.announcementRecipient.updateMany({
+        where: { announcementId: id },
+        data: { readAt: null, acknowledgedAt: null },
+      });
+    });
+
+    if (reacknowledge && recipientIds.length > 0) {
+      const updated = await this.prisma.announcement.findUniqueOrThrow({ where: { id } });
+      await this.notifyRecipients(updated, recipientIds, 'updated', ctx.userId);
+    }
+    return { ...(await this.getManaged(ctx, id)), acknowledgementsReset };
   }
 
   /**
@@ -887,7 +922,7 @@ export class AnnouncementService {
   private async notifyRecipients(
     announcement: Announcement,
     userIds: string[],
-    kind: 'published' | 'reminder',
+    kind: 'published' | 'reminder' | 'updated',
     actorId: string,
   ): Promise<number> {
     if (announcement.type === AnnouncementType.SYSTEM_UPDATE || userIds.length === 0) {
@@ -907,10 +942,24 @@ export class AnnouncementService {
     for (const userId of userIds) {
       const zh = language.get(userId)?.toLowerCase().startsWith('zh') ?? false;
       const title = (zh && announcement.titleZh) || announcement.title;
-      const excerpt = markdownToPlainText((zh && announcement.bodyZh) || announcement.body);
-      const subject = kind === 'reminder' ? `📢 ${zh ? '提醒' : 'Reminder'}: ${title}` : `📢 ${title}`;
+      const excerpt =
+        kind === 'updated'
+          ? zh
+            ? '此公告已更新，请重新阅读并确认。'
+            : 'This announcement was updated — please review and acknowledge again.'
+          : markdownToPlainText((zh && announcement.bodyZh) || announcement.body);
+      const subject =
+        kind === 'reminder'
+          ? `📢 ${zh ? '提醒' : 'Reminder'}: ${title}`
+          : kind === 'updated'
+            ? `📢 ${zh ? '已更新' : 'Updated'}: ${title}`
+            : `📢 ${title}`;
       const eventType =
-        kind === 'reminder' ? ANNOUNCEMENT_EVENT_REMINDER : ANNOUNCEMENT_EVENT_PUBLISHED;
+        kind === 'reminder'
+          ? ANNOUNCEMENT_EVENT_REMINDER
+          : kind === 'updated'
+            ? ANNOUNCEMENT_EVENT_UPDATED
+            : ANNOUNCEMENT_EVENT_PUBLISHED;
       try {
         await this.notifications.send(ctx, {
           recipientId: userId,

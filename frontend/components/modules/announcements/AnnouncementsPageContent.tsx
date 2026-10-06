@@ -4,7 +4,9 @@ import './announcements.css';
 import { useState } from 'react';
 import Link from 'next/link';
 import { Alert, Button, Pagination, Segmented, Spin } from 'antd';
-import { BellRing, Megaphone, Pin, Sparkles } from 'lucide-react';
+import { PlusOutlined } from '@ant-design/icons';
+import { BellRing, Megaphone, Pin, Settings2, Sparkles } from 'lucide-react';
+import { useCanManageAnnouncements, useIsSystemAdmin } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { AnnouncementType, MyAnnouncementSummary } from '@/lib/api/announcements.types';
 import { useAnnouncementsSummary, useMyAnnouncements } from '@/lib/query/announcements';
@@ -102,6 +104,12 @@ export default function AnnouncementsPageContent({
   const listQuery = useMyAnnouncements({ type, filter, page, limit: PAGE_SIZE });
   const summary = useAnnouncementsSummary(type === 'COMPANY');
   const isWhatsNew = type === 'SYSTEM_UPDATE';
+  const canManageAnnouncements = useCanManageAnnouncements();
+  const isSystemAdmin = useIsSystemAdmin();
+  // Managers create from here too; What's new posts are System Administrator only.
+  const canCreateHere = isWhatsNew ? isSystemAdmin : canManageAnnouncements;
+  const manageHref = isWhatsNew ? '/hr/announcements?type=SYSTEM_UPDATE' : '/hr/announcements';
+  const createHref = isWhatsNew ? '/hr/announcements/new?type=SYSTEM_UPDATE' : '/hr/announcements/new';
   const rows = listQuery.data?.data ?? [];
   const total = listQuery.data?.meta.total ?? 0;
 
@@ -142,6 +150,20 @@ export default function AnnouncementsPageContent({
                 </Button>
               </Link>
             )}
+            {canCreateHere ? (
+              <>
+                <Link href={manageHref}>
+                  <Button icon={<Settings2 size={14} strokeWidth={2} />}>
+                    {t('announcements.list.manage')}
+                  </Button>
+                </Link>
+                <Link href={createHref}>
+                  <Button type="primary" icon={<PlusOutlined />}>
+                    {isWhatsNew ? t('announcements.manage.newSystem') : t('announcements.manage.new')}
+                  </Button>
+                </Link>
+              </>
+            ) : null}
           </div>
         </div>
 

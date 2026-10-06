@@ -277,6 +277,52 @@ describe('AnnouncementService', () => {
     expect(list.data.map((item) => item.id)).toEqual([draft.id]);
   });
 
+  it('editing the message of an acknowledged post asks everyone to acknowledge again', async () => {
+    const reader = asUser('00000000-0000-4000-8000-000000000201');
+    const draft = await ctx.service.create(hr, {
+      title: 'Leave policy 2027',
+      body: 'Annual leave is 16 days.',
+      requireAcknowledgement: true,
+      audienceScope: 'DEPARTMENTS',
+      departmentIds: [DEPT_A],
+    });
+    await ctx.service.publish(hr, draft.id, {}, NOW);
+    await ctx.service.acknowledge(reader, draft.id, NOW);
+    ctx.sendSpy.mockClear();
+
+    const result = await ctx.service.update(hr, draft.id, { body: 'Annual leave is 18 days.' });
+
+    expect(result.acknowledgementsReset).toBe(1);
+    expect(ctx.prisma.recipients.every((r) => r.acknowledgedAt === null && r.readAt === null)).toBe(true);
+    expect(result.contentEditedAt).toBeTruthy();
+    expect(ctx.sendSpy).toHaveBeenCalledTimes(2);
+    expect(ctx.sendSpy.mock.calls[0]?.[1]).toMatchObject({
+      eventType: 'announcement.updated',
+      subject: '📢 Updated: Leave policy 2027',
+      body: 'This announcement was updated — please review and acknowledge again.',
+    });
+    const summary = await ctx.service.summary(reader, NOW);
+    expect(summary.unreadCount).toBe(1);
+  });
+
+  it('keeps acknowledgements when only the title changes', async () => {
+    const reader = asUser('00000000-0000-4000-8000-000000000201');
+    const draft = await ctx.service.create(hr, {
+      title: 'Leave polcy 2027',
+      body: 'Annual leave is 16 days.',
+      requireAcknowledgement: true,
+    });
+    await ctx.service.publish(hr, draft.id, {}, NOW);
+    await ctx.service.acknowledge(reader, draft.id, NOW);
+    ctx.sendSpy.mockClear();
+
+    const result = await ctx.service.update(hr, draft.id, { title: 'Leave policy 2027' });
+
+    expect(result.acknowledgementsReset).toBe(0);
+    expect(ctx.prisma.recipients.find((r) => r.userId === reader.userId)?.acknowledgedAt).toEqual(NOW);
+    expect(ctx.sendSpy).not.toHaveBeenCalled();
+  });
+
   it('with EMAIL_DISABLED=true sends the in-app notification but no email', async () => {
     ctx = setup({ emailDisabled: true });
     const draft = await ctx.service.create(hr, {

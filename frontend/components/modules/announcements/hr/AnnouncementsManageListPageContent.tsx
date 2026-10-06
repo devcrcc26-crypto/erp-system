@@ -63,12 +63,18 @@ export function ReadProgress({
 }
 
 /** HR / System Administrator list of every announcement. */
-export default function AnnouncementsManageListPageContent(): React.ReactNode {
+export default function AnnouncementsManageListPageContent({
+  initialType = 'COMPANY',
+}: {
+  initialType?: AnnouncementType;
+}): React.ReactNode {
   const { t, locale } = useEpcTranslation();
   const router = useRouter();
   const canManage = useCanManageAnnouncements();
   const isSystemAdmin = useIsSystemAdmin();
-  const [type, setType] = useState<AnnouncementType>('COMPANY');
+  const [type, setType] = useState<AnnouncementType>(
+    initialType === 'SYSTEM_UPDATE' && isSystemAdmin ? 'SYSTEM_UPDATE' : 'COMPANY',
+  );
   const [status, setStatus] = useState<AnnouncementStatus | undefined>();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);

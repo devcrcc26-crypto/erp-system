@@ -770,7 +770,11 @@
             "FIELD_MOVEMENT_PENDING": "Field movement pending"
           },
           "columns": {
-            "siteDays": "Site"
+            "siteDays": "Site",
+            "flag": "Flag",
+            "flaggedDays": "Flagged days",
+            "resolved": "Resolved",
+            "status": "Status"
           }
         },
         "importModal": {
@@ -2146,7 +2150,10 @@
     "resetView": "Reset view",
     "imageCount": "{{current}} of {{total}}",
     "scrollLeft": "Scroll left",
-    "scrollRight": "Scroll right to see more columns"
+    "scrollRight": "Scroll right to see more columns",
+    "saved": "Saved.",
+    "deleted": "Deleted.",
+    "add": "Add"
   },
   "validation": {
     "invalidName": "Use letters, spaces, hyphens, apostrophes or full stops only",
@@ -4061,7 +4068,9 @@
       "standalonePerDiem": "Standalone (no linked travel)",
       "flightPrefix": "Flight",
       "intlFlightPrefix": "Intl Flight",
-      "businessTripPrefix": "Business Trip"
+      "businessTripPrefix": "Business Trip",
+      "attachments": "Attachments",
+      "route": "Route"
     },
     "table": {
       "requestNumber": "Request #",
@@ -4154,7 +4163,8 @@
       "contractNumber": "Contract #",
       "contractType": "Type",
       "signedAt": "Signed",
-      "asset": "Asset"
+      "asset": "Asset",
+      "notes": "Notes"
     },
     "tabs": {
       "allRequests": "All Requests",
@@ -4550,7 +4560,8 @@
       "completeConsumablesDetails": "Complete request details before submitting",
       "consumablesMaxItems": "Maximum {{count}} items per requisition",
       "consumablesDeclarationRequired": "Confirm the low-value consumables declaration",
-      "sealCategoryOtherRequired": "Enter the category name"
+      "sealCategoryOtherRequired": "Enter the category name",
+      "dateRequired": "Select a date."
     },
     "sealCategory": {
       "CONTRACT": "Contract",
@@ -5055,7 +5066,8 @@
       "filterUnread": "Unread",
       "loadError": "Couldn't load announcements.",
       "empty": "No announcements yet.",
-      "emptyUnread": "You're all caught up."
+      "emptyUnread": "You're all caught up.",
+      "manage": "Manage"
     },
     "whatsNew": {
       "title": "What's new",
@@ -5194,7 +5206,12 @@
       "systemNote": "System updates go to everyone and appear once in the What's new window after sign-in. No email or acknowledgement.",
       "lockedNote": "This announcement is published. You can still edit the text, pin and expiry; the audience and delivery options can't change.",
       "draftOnlyNote": "You can save drafts. An HR Manager will publish them.",
-      "cannotEdit": "You can't edit this announcement."
+      "cannotEdit": "You can't edit this announcement.",
+      "changesSaved": "Changes saved.",
+      "reacknowledgeWarning": "Acknowledged so far: {{count}}. Editing the message will ask everyone to acknowledge again.",
+      "reacknowledgeHint": "Title, pin and expiry changes keep their acknowledgements. Changing the message — even a typo — clears them and notifies everyone to review it again.",
+      "reacknowledgeConfirm": "Ask everyone to acknowledge again?",
+      "reacknowledgeSaved": "Saved. Acknowledgements cleared: {{count}}. Everyone was asked to review it again."
     }
   }
 }

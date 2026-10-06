@@ -667,7 +667,8 @@
           "weekend": "周末",
           "absent": "缺勤",
           "yesLate": "是（{{minutes}} 分钟）",
-          "no": "否"
+          "no": "否",
+          "deduction": "扣减"
         },
         "profileYearTitle": "本年考勤",
         "profileMonthlyTitle": "月度明细",
@@ -739,7 +740,7 @@
             "resolved": "已解决",
             "status": "状态",
             "flag": "标记",
-            "flagResolved": "已解决"
+            "siteDays": "现场"
           },
           "flagStatus": {
             "none": "无异常",
@@ -759,8 +760,14 @@
             "PRESENT": "出勤",
             "ABSENT": "缺勤",
             "HOLIDAY": "节假日",
-            "WEEKEND": "休息日",
-            "ON_LEAVE": "休假"
+            "HALF_ABSENT": "半天缺勤",
+            "SUNDAY": "星期日",
+            "WORK_FROM_HOME": "居家办公",
+            "ON_SITE": "现场",
+            "onSiteAt": "现场 — {{siteName}}",
+            "alsoOnSite": "同时在现场",
+            "LEAVE": "休假",
+            "FIELD_MOVEMENT_PENDING": "外出登记待审批"
           }
         },
         "importModal": {
@@ -1397,6 +1404,20 @@
           "pending": "待处理",
           "approved": "已批准",
           "rejected": "已拒绝"
+        }
+      },
+      "workFromHome": {
+        "title": "居家办公日",
+        "createTitle": "添加居家办公日",
+        "columns": {
+          "date": "日期",
+          "reason": "原因",
+          "scope": "范围"
+        },
+        "fields": {
+          "date": "日期",
+          "reason": "原因",
+          "scope": "适用于"
         }
       }
     },
@@ -2122,7 +2143,10 @@
     "resetView": "重置视图",
     "imageCount": "第 {{current}} / {{total}} 张",
     "scrollLeft": "向左滚动",
-    "scrollRight": "向右滚动查看更多列"
+    "scrollRight": "向右滚动查看更多列",
+    "saved": "已保存。",
+    "deleted": "已删除。",
+    "add": "添加"
   },
   "validation": {
     "invalidName": "仅可使用字母、空格、连字符、撇号或句点",
@@ -3996,7 +4020,6 @@
       "itemName": "物品名称",
       "itemCode": "物品编码",
       "description": "描述",
-      "descriptionWithModelSpec": "描述（型号 / 规格）",
       "quantity": "数量",
       "unit": "单位",
       "unitPrice": "单价",
@@ -4037,7 +4060,9 @@
       "standalonePerDiem": "独立申请（无关联出行）",
       "flightPrefix": "航班",
       "intlFlightPrefix": "国际航班",
-      "businessTripPrefix": "出差"
+      "businessTripPrefix": "出差",
+      "attachments": "附件",
+      "route": "路线"
     },
     "table": {
       "requestNumber": "申请编号",
@@ -4129,7 +4154,9 @@
       "contractNumber": "合同编号",
       "contractType": "合同类型",
       "signedAt": "签署日期",
-      "asset": "资产"
+      "asset": "资产",
+      "notes": "备注",
+      "paid": "已支付"
     },
     "tabs": {
       "allRequests": "全部申请",
@@ -4525,7 +4552,8 @@
       "completeConsumablesDetails": "提交前请先完成申请详情",
       "consumablesMaxItems": "每份申请最多 {{count}} 项",
       "consumablesDeclarationRequired": "请确认低值易耗品声明",
-      "sealCategoryOtherRequired": "请填写类别名称"
+      "sealCategoryOtherRequired": "请填写类别名称",
+      "dateRequired": "请选择日期。"
     },
     "sealCategory": {
       "CONTRACT": "合同",
@@ -5030,7 +5058,8 @@
       "filterUnread": "未读",
       "loadError": "无法加载公告。",
       "empty": "暂无公告。",
-      "emptyUnread": "已全部阅读。"
+      "emptyUnread": "已全部阅读。",
+      "manage": "管理"
     },
     "whatsNew": {
       "title": "新功能",
@@ -5169,7 +5198,12 @@
       "systemNote": "系统更新发送给所有人，登录后在“新功能”窗口中显示一次。不发送邮件，也不需要确认。",
       "lockedNote": "此公告已发布。您仍可编辑正文、置顶和过期时间；发送对象和发送方式不可更改。",
       "draftOnlyNote": "您可以保存草稿，由人力资源经理发布。",
-      "cannotEdit": "您无法编辑此公告。"
+      "cannotEdit": "您无法编辑此公告。",
+      "changesSaved": "更改已保存。",
+      "reacknowledgeWarning": "已有 {{count}} 人确认此公告。修改正文后将要求他们重新确认。",
+      "reacknowledgeHint": "修改标题、置顶和过期时间不会影响确认；修改正文（即使只是错别字）会清除确认，并通知所有人重新阅读。",
+      "reacknowledgeConfirm": "要求所有人重新确认？",
+      "reacknowledgeSaved": "已保存。已清除 {{count}} 条确认，并已通知所有人重新阅读。"
     }
   }
 }

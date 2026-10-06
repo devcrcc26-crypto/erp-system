@@ -181,6 +181,17 @@ export default function AnnouncementForm({
   const roleIds = Form.useWatch('roleIds', form);
   const employeeIds = Form.useWatch('employeeIds', form);
   const publishMode = Form.useWatch('publishMode', form) ?? 'now';
+  const bodyValue = Form.useWatch('body', form);
+  const bodyZhValue = Form.useWatch('bodyZh', form);
+  // Editing the message of an acknowledged post resets everyone's acknowledgement.
+  const acknowledgedCount =
+    locked && existing?.requireAcknowledgement ? existing.stats.acknowledged : 0;
+  const messageChanged =
+    locked &&
+    existing !== undefined &&
+    ((bodyValue !== undefined && bodyValue !== existing.body) ||
+      (bodyZhValue !== undefined && (bodyZhValue?.trim() || null) !== (existing.bodyZh ?? null)));
+  const confirmReacknowledge = acknowledgedCount > 0 && messageChanged;
 
   const audienceInput = useMemo(
     () => ({
@@ -273,6 +284,13 @@ export default function AnnouncementForm({
               })
             : t('announcements.form.publishedSuccess', { count: result.stats.recipients }),
         );
+      } else if (locked) {
+        const reset = saved.acknowledgementsReset ?? 0;
+        messageApi.success(
+          reset > 0
+            ? t('announcements.form.reacknowledgeSaved', { count: reset })
+            : t('announcements.form.changesSaved'),
+        );
       } else {
         messageApi.success(t('announcements.form.savedSuccess'));
       }
@@ -318,6 +336,15 @@ export default function AnnouncementForm({
                 showIcon
                 className="mb-4"
                 title={t('announcements.form.lockedNote')}
+              />
+            ) : null}
+            {acknowledgedCount > 0 ? (
+              <Alert
+                type="warning"
+                showIcon
+                className="mb-4"
+                title={t('announcements.form.reacknowledgeWarning', { count: acknowledgedCount })}
+                description={t('announcements.form.reacknowledgeHint')}
               />
             ) : null}
             <Form.Item
@@ -569,9 +596,22 @@ export default function AnnouncementForm({
 
           <div className="erp-ann-form-actions">
             {locked ? (
-              <Button type="primary" loading={busy} onClick={() => void save(false)}>
-                {t('announcements.form.saveChanges')}
-              </Button>
+              <Popconfirm
+                disabled={!confirmReacknowledge}
+                title={t('announcements.form.reacknowledgeConfirm')}
+                description={t('announcements.form.reacknowledgeWarning', { count: acknowledgedCount })}
+                okText={t('announcements.form.saveChanges')}
+                cancelText={t('common.cancel')}
+                onConfirm={() => void save(false)}
+              >
+                <Button
+                  type="primary"
+                  loading={busy}
+                  onClick={confirmReacknowledge ? undefined : () => void save(false)}
+                >
+                  {t('announcements.form.saveChanges')}
+                </Button>
+              </Popconfirm>
             ) : (
               <>
                 <Button loading={busy} onClick={() => void save(false)}>
