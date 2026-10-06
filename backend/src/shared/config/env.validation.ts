@@ -33,4 +33,12 @@ export const envValidationSchema = Joi.object({
   MAIL_FROM: Joi.string().optional(),
   RESEND_API_KEY: Joi.string().optional(),
   NOTIFICATION_RETENTION_DAYS: Joi.number().default(90),
+  SEED_MODE: Joi.boolean()
+    .truthy('true', '1', 1)
+    .falsy('false', '0', 0)
+    .default(false),
+  EMAIL_DISABLED: Joi.boolean()
+    .truthy('true', '1', 1)
+    .falsy('false', '0', 0)
+    .default(false),
 });

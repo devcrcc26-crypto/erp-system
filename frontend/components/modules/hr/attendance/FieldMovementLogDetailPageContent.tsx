@@ -1,13 +1,12 @@
 'use client';
 
+import './field-movement-logs-v2.css';
 import { useMemo } from 'react';
 import { Alert, Avatar, Button, Skeleton } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import {
-  ArrowLeftOutlined,
-  ExportOutlined,
-  UnorderedListOutlined,
-} from '@ant-design/icons';
+import { ArrowLeftOutlined, ExportOutlined } from '@ant-design/icons';
+import { ArrowLeft, MessageSquareText } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   FieldMovementStatusBadge,
@@ -146,13 +145,13 @@ export default function FieldMovementLogDetailPageContent({
       {
         title: 'Original flag',
         key: 'flag',
-        width: 160,
+        width: 220,
         render: (_value, entry) => <FlagBadge flag={entryFlag(entry)} />,
       },
       {
         title: 'Reason',
         key: 'reason',
-        width: 160,
+        width: 190,
         render: (_value, entry) => <ReasonBadge reason={entry.reason} />,
       },
       {
@@ -168,40 +167,24 @@ export default function FieldMovementLogDetailPageContent({
         dataIndex: 'departureTime',
         key: 'departureTime',
         width: 100,
-        render: (value: string | null) => (
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 13,
-              color: value
-                ? 'var(--color-text-primary)'
-                : 'var(--color-text-tertiary)',
-              letterSpacing: '0.02em',
-            }}
-          >
-            {value ?? '—'}
-          </span>
-        ),
+        render: (value: string | null) =>
+          value ? (
+            <span className="erp-fml-time">{value}</span>
+          ) : (
+            <span className="erp-fml-dash">—</span>
+          ),
       },
       {
         title: 'Return',
         dataIndex: 'returnTime',
         key: 'returnTime',
         width: 100,
-        render: (value: string | null) => (
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 13,
-              color: value
-                ? 'var(--color-text-primary)'
-                : 'var(--color-text-tertiary)',
-              letterSpacing: '0.02em',
-            }}
-          >
-            {value ?? '—'}
-          </span>
-        ),
+        render: (value: string | null) =>
+          value ? (
+            <span className="erp-fml-time">{value}</span>
+          ) : (
+            <span className="erp-fml-dash">—</span>
+          ),
       },
       {
         title: 'Notes',
@@ -228,7 +211,7 @@ export default function FieldMovementLogDetailPageContent({
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-fml-v2">
         <Alert type="error" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -237,7 +220,7 @@ export default function FieldMovementLogDetailPageContent({
   if (detailQuery.isLoading && !detailQuery.data) {
     return (
       <div
-        className="erp-pro-list-page erp-users-page erp-attendance-review-page"
+        className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-fml-v2"
         aria-busy="true"
       >
         <p className="sr-only">Loading field movement log…</p>
@@ -248,7 +231,7 @@ export default function FieldMovementLogDetailPageContent({
 
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-review-page flex flex-col gap-4">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-fml-v2">
         <div className="erp-pro-card">
           <div style={{ padding: '20px 24px' }}>
             <Button
@@ -284,201 +267,115 @@ export default function FieldMovementLogDetailPageContent({
   const tiers = (log?.approvalRequest?.tiers ?? []) as ApprovalTier[];
   const daysExplained = entries.length || log?.entryCount || 0;
 
+  const facts: Array<{ key: string; label: string; value: string; waiting?: boolean }> = [
+    {
+      key: 'period',
+      label: t('pages.hr.fieldMovementLogs.facts.period'),
+      value: periodLabel,
+    },
+    {
+      key: 'days',
+      label: t('pages.hr.fieldMovementLogs.facts.daysExplained'),
+      value: String(daysExplained),
+    },
+    {
+      key: 'submitted',
+      label: t('pages.hr.fieldMovementLogs.facts.submitted'),
+      value: formatDateTime(log?.submittedAt ?? null),
+    },
+    {
+      key: 'completed',
+      label: t('pages.hr.fieldMovementLogs.facts.completed'),
+      value: formatDateTime(log?.completedAt ?? null),
+    },
+    ...(log?.currentTierLabel &&
+    (log.status === 'SUBMITTED' || log.status === 'IN_REVIEW')
+      ? [
+          {
+            key: 'waiting',
+            label: t('pages.hr.fieldMovementLogs.facts.waitingOn'),
+            value: log.currentTierLabel,
+            waiting: true,
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page flex flex-col gap-4">
-      <div className="erp-pro-card" style={{ marginBottom: 0 }}>
-        <div style={{ padding: '20px 24px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              marginBottom: 16,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Button
-              type="text"
-              icon={<ArrowLeftOutlined />}
-              onClick={() => router.push('/hr/field-movement-logs')}
-              style={{ padding: '4px 8px' }}
-              aria-label={t('common.back')}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  flexWrap: 'wrap',
-                }}
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-fml-v2">
+      <section className="erp-pro-card erp-fml-hero">
+        <Link href="/hr/field-movement-logs" className="erp-fml-back">
+          <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+          {t('pages.hr.fieldMovementLogs.listTitle')}
+        </Link>
+        <div className="erp-fml-hero-top">
+          <div className="erp-fml-identity">
+            {log?.employee ? (
+              <Avatar
+                className="erp-users-avatar"
+                style={{ background: avatarColor(log.employee.id) }}
               >
-                {log?.employee ? (
-                  <Avatar
-                    size={40}
-                    style={{
-                      background: avatarColor(log.employee.id),
-                      borderRadius: 10,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {initialsOf(
-                      log.employee.firstName,
-                      log.employee.lastName,
-                    )}
-                  </Avatar>
-                ) : null}
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <h1
-                      style={{
-                        margin: 0,
-                        fontSize: 20,
-                        fontWeight: 650,
-                        color: 'var(--color-text-primary)',
-                      }}
-                    >
-                      {employeeName}
-                    </h1>
-                    {log ? (
-                      <FieldMovementStatusBadge status={log.status} />
-                    ) : null}
-                  </div>
-                  <p
-                    style={{
-                      margin: '4px 0 0',
-                      fontSize: 13,
-                      color: 'var(--color-text-tertiary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <span>{log?.requestNumber}</span>
-                    <span className="erp-users-id-chip">{employeeCode}</span>
-                    <span>{periodLabel}</span>
-                  </p>
-                </div>
+                {initialsOf(log.employee.firstName, log.employee.lastName)}
+              </Avatar>
+            ) : null}
+            <div className="min-w-0">
+              <div className="erp-fml-title-row">
+                <h1 className="erp-fml-title">{employeeName}</h1>
+                {log ? <FieldMovementStatusBadge status={log.status} /> : null}
               </div>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                flexShrink: 0,
-                flexWrap: 'wrap',
-              }}
-            >
-              {log?.approvalRequestId ? (
-                <Button
-                  icon={<ExportOutlined />}
-                  onClick={() =>
-                    router.push(`/approvals/${log.approvalRequestId}`)
-                  }
-                >
-                  {t('pages.hr.fieldMovementLogs.openInApprovals')}
-                </Button>
-              ) : null}
+              <p className="erp-fml-meta">
+                <span>{log?.requestNumber}</span>
+                <span className="erp-users-id-chip">{employeeCode}</span>
+                <span>{periodLabel}</span>
+              </p>
             </div>
           </div>
-
-          <div
-            style={{
-              display: 'flex',
-              gap: 16,
-              flexWrap: 'wrap',
-              padding: '12px 14px',
-              background: 'var(--color-surface-secondary)',
-              borderRadius: 8,
-              border: '1px solid var(--color-border-tertiary)',
-            }}
-          >
-            {[
-              {
-                label: t('pages.hr.fieldMovementLogs.facts.period'),
-                value: periodLabel,
-              },
-              {
-                label: t('pages.hr.fieldMovementLogs.facts.daysExplained'),
-                value: String(daysExplained),
-              },
-              {
-                label: t('pages.hr.fieldMovementLogs.facts.submitted'),
-                value: formatDateTime(log?.submittedAt ?? null),
-              },
-              {
-                label: t('pages.hr.fieldMovementLogs.facts.completed'),
-                value: formatDateTime(log?.completedAt ?? null),
-              },
-              ...(log?.currentTierLabel &&
-              (log.status === 'SUBMITTED' || log.status === 'IN_REVIEW')
-                ? [
-                    {
-                      label: t('pages.hr.fieldMovementLogs.facts.waitingOn'),
-                      value: log.currentTierLabel,
-                    },
-                  ]
-                : []),
-            ].map((fact) => (
-              <div key={fact.label} style={{ minWidth: 100 }}>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    letterSpacing: '0.05em',
-                    textTransform: 'uppercase',
-                    color: 'var(--color-text-tertiary)',
-                    marginBottom: 2,
-                  }}
-                >
-                  {fact.label}
-                </div>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: 'var(--color-text-primary)',
-                  }}
-                >
-                  {fact.value}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {log?.notes?.trim() ? (
-            <Alert
-              type="info"
-              showIcon
-              style={{ borderRadius: 8, marginTop: 12 }}
-              title={t('pages.hr.fieldMovementLogs.employeeNote')}
-              description={log.notes}
-            />
+          {log?.approvalRequestId ? (
+            <div className="erp-fml-hero-actions">
+              <Button
+                icon={<ExportOutlined />}
+                onClick={() => router.push(`/approvals/${log.approvalRequestId}`)}
+              >
+                {t('pages.hr.fieldMovementLogs.openInApprovals')}
+              </Button>
+            </div>
           ) : null}
         </div>
-      </div>
 
-      <div
-        className={
-          tiers.length > 0
-            ? 'grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]'
-            : 'flex flex-col gap-4'
-        }
-      >
-        <div className="erp-pro-card">
-          <div className="erp-pro-card-toolbar">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <UnorderedListOutlined
-                style={{ color: 'var(--color-teal-400)' }}
-              />
+        <div className="erp-fml-facts">
+          {facts.map((fact) => (
+            <div
+              key={fact.key}
+              className={`erp-fml-fact${fact.waiting ? ' erp-fml-fact--waiting' : ''}`}
+            >
+              <p className="erp-fml-fact-label">{fact.label}</p>
+              <p className="erp-fml-fact-value">{fact.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {log?.notes?.trim() ? (
+          <div className="erp-fml-note">
+            <MessageSquareText
+              size={18}
+              strokeWidth={2}
+              className="erp-fml-note-icon"
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <p className="erp-fml-note-title">
+                {t('pages.hr.fieldMovementLogs.employeeNote')}
+              </p>
+              <p className="erp-fml-note-text">{log.notes}</p>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <div className={`erp-fml-body${tiers.length > 0 ? '' : ' erp-fml-body--single'}`}>
+        <section className="erp-pro-card erp-fml-entries">
+          <div className="erp-pro-card-toolbar erp-users-toolbar">
+            <div className="flex items-center gap-2.5">
               <h3 className="erp-pro-card-toolbar-title">
                 {t('pages.hr.fieldMovementLogs.explainedDays')}
               </h3>
@@ -487,34 +384,27 @@ export default function FieldMovementLogDetailPageContent({
               </span>
             </div>
           </div>
-          <div className="erp-pro-table-card-body">
-            {entries.length === 0 ? (
-              <div
-                style={{
-                  padding: '32px 24px',
-                  textAlign: 'center',
-                  color: 'var(--color-text-tertiary)',
-                  fontSize: 13,
-                }}
-              >
+          {entries.length === 0 ? (
+            <div className="erp-fml-empty">
+              <p className="erp-fml-empty-text">
                 {t('pages.hr.fieldMovementLogs.noEntries')}
-              </div>
-            ) : (
-              <DataTable<FieldMovementLogEntry>
-                rowKey="id"
-                className="erp-data-table erp-pro-table erp-users-table"
-                size="small"
-                columns={columns}
-                dataSource={entries}
-                pagination={false}
-                scroll={{ x: showAppliedColumn ? 1400 : 1200 }}
-              />
-            )}
-          </div>
-        </div>
+              </p>
+            </div>
+          ) : (
+            <DataTable<FieldMovementLogEntry>
+              rowKey="id"
+              className="erp-data-table erp-pro-table erp-users-table"
+              size="small"
+              columns={columns}
+              dataSource={entries}
+              pagination={false}
+              scroll={{ x: showAppliedColumn ? 1500 : 1300 }}
+            />
+          )}
+        </section>
 
         {tiers.length > 0 && log ? (
-          <aside aria-label="Approval progress">
+          <aside className="erp-fml-chain" aria-label="Approval progress">
             <ApprovalTierTimeline
               tiers={tiers}
               currentTier={log.approvalRequest?.currentTier ?? 0}

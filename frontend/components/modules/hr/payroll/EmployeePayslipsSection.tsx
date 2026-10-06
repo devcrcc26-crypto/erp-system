@@ -165,7 +165,7 @@ export default function EmployeePayslipsSection({
         }
         open={Boolean(selected)}
         onClose={() => setSelected(null)}
-        width={440}
+        size={440}
       >
         {selected ? <PayslipBreakdown payslip={selected} /> : null}
       </Drawer>

@@ -1,5 +1,6 @@
 'use client';
 
+import './field-movement-logs-v2.css';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -206,8 +207,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
         render: (value: string, row: FieldMovementLog) => (
           <Link
             href={`/hr/field-movement-logs/${row.id}`}
-            className="erp-users-name"
-            style={{ color: 'var(--color-teal-600)' }}
+            className="erp-fml-log-link"
             onClick={(event) => event.stopPropagation()}
           >
             {value}
@@ -220,37 +220,22 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
         width: 260,
         render: (_: unknown, row: FieldMovementLog) => {
           if (!row.employee) {
-            return (
-              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-            );
+            return <span className="erp-fml-dash">—</span>;
           }
           const name = formatUserName(row.employee);
           const erpId = row.employee.employeeId?.trim() || '—';
           return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="erp-fml-person">
               <Avatar
                 size={36}
                 className="erp-users-avatar"
-                style={{
-                  background: avatarColor(row.employee.id),
-                  borderRadius: 10,
-                  flexShrink: 0,
-                }}
+                style={{ background: avatarColor(row.employee.id) }}
               >
                 {initialsOf(row.employee.firstName, row.employee.lastName)}
               </Avatar>
-              <div style={{ minWidth: 0 }}>
-                <div className="erp-users-name">{name}</div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginTop: 2,
-                  }}
-                >
-                  <span className="erp-users-id-chip">{erpId}</span>
-                </div>
+              <div className="min-w-0">
+                <div className="erp-users-name truncate">{name}</div>
+                <span className="erp-users-id-chip mt-0.5 inline-block">{erpId}</span>
               </div>
             </div>
           );
@@ -269,15 +254,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
         width: 80,
         align: 'right',
         render: (_: unknown, row: FieldMovementLog) => (
-          <span
-            style={{
-              fontVariantNumeric: 'tabular-nums',
-              fontWeight: 500,
-              color: 'var(--color-text-primary)',
-            }}
-          >
-            {row.entryCount ?? '—'}
-          </span>
+          <span className="erp-fml-num">{row.entryCount ?? '—'}</span>
         ),
       },
       {
@@ -297,7 +274,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
           PENDING_STATUSES.includes(row.status) && row.currentTierLabel ? (
             row.currentTierLabel
           ) : (
-            <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+            <span className="erp-fml-dash">—</span>
           ),
       },
       {
@@ -312,7 +289,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
               year: 'numeric',
             })
           ) : (
-            <span style={{ color: 'var(--color-text-tertiary)' }}>
+            <span className="erp-fml-dash">
               {t('pages.hr.fieldMovementLogs.columns.notSubmitted')}
             </span>
           ),
@@ -323,7 +300,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-fml-v2">
         <Alert
           type="error"
           showIcon
@@ -335,8 +312,8 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page">
-        <div className="flex justify-center rounded-xl border border-[var(--color-border-tertiary)] bg-white p-12">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-fml-v2">
+        <div className="erp-pro-card flex justify-center p-12">
           <Spin />
         </div>
       </div>
@@ -344,59 +321,25 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
   }
 
   const emptyState = (
-    <div
-      style={{
-        padding: '48px 24px',
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 12,
-      }}
-    >
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 16,
-          background: 'var(--color-teal-50)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--color-teal-400)',
-          fontSize: 24,
-          marginBottom: 4,
-        }}
-      >
+    <div className="erp-fml-empty">
+      <span className="erp-fml-empty-icon" aria-hidden>
         <InboxOutlined />
-      </div>
-      <div
-        style={{
-          fontWeight: 600,
-          fontSize: 15,
-          color: 'var(--color-text-primary)',
-        }}
-      >
+      </span>
+      <p className="erp-fml-empty-title">
         {filtersChanged
           ? t('pages.hr.fieldMovementLogs.emptyFiltered')
           : t('pages.hr.fieldMovementLogs.emptyTitle', {
               month: monthName,
               year: String(year),
             })}
-      </div>
+      </p>
       {!filtersChanged ? (
-        <div
-          style={{
-            fontSize: 13,
-            color: 'var(--color-text-tertiary)',
-            maxWidth: 340,
-          }}
-        >
+        <p className="erp-fml-empty-text">
           {t('pages.hr.fieldMovementLogs.emptyDescription')}
-        </div>
+        </p>
       ) : null}
       {filtersChanged ? (
-        <Button type="link" onClick={resetFilters} style={{ marginTop: 4 }}>
+        <Button type="link" onClick={resetFilters}>
           {t('common.reset')}
         </Button>
       ) : null}
@@ -451,7 +394,7 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
   ];
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page">
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page fm-page erp-fml-v2">
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -491,109 +434,28 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
                 <p className="erp-users-stat-value">
                   {stat.value.toLocaleString()}
                 </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    color: 'var(--color-text-tertiary)',
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {stat.hint}
-                </p>
+                <p className="erp-fml-stat-hint">{stat.hint}</p>
               </div>
             </button>
           );
         })}
       </div>
 
-      <div className="erp-pro-card" style={{ marginBottom: 16, marginTop: 16 }}>
-        <div style={{ padding: '14px 20px' }}>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <Select
-              allowClear
-              value={month}
-              options={monthOptions}
-              onChange={(value) => {
-                setMonth(value);
-                resetPage();
-              }}
-              className="erp-users-filter-select"
-              placeholder={t('pages.hr.fieldMovementLogs.filters.allMonths')}
-              aria-label={t('pages.hr.fieldMovementLogs.filters.month')}
-              style={{ minWidth: 140 }}
-            />
-            <InputNumber
-              value={year}
-              min={2020}
-              max={now.getFullYear() + 1}
-              onChange={(value) => {
-                if (typeof value === 'number') {
-                  setYear(value);
-                  resetPage();
-                }
-              }}
-              className="w-28"
-              aria-label={t('pages.hr.fieldMovementLogs.filters.year')}
-            />
-            <Select
-              allowClear
-              value={status}
-              options={STATUS_OPTIONS.map((item) => ({
-                value: item,
-                label: formatFieldMovementStatus(item),
-              }))}
-              onChange={(value) => {
-                setStatus(value);
-                setStatMode('all');
-                resetPage();
-              }}
-              className="erp-users-filter-select"
-              placeholder={t('pages.hr.fieldMovementLogs.filters.anyStatus')}
-              aria-label={t('pages.hr.fieldMovementLogs.filters.status')}
-              style={{ minWidth: 160 }}
-            />
-            <Select
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              value={employeeId}
-              options={employeeOptions}
-              loading={usersQuery.isLoading}
-              onChange={(value) => {
-                setEmployeeId(value);
-                resetPage();
-              }}
-              className="erp-users-filter-select"
-              placeholder={t('pages.hr.fieldMovementLogs.filters.everyone')}
-              aria-label={t('pages.hr.fieldMovementLogs.filters.employee')}
-              style={{ minWidth: 200, flex: 1 }}
-            />
-            {filtersChanged ? (
-              <Button type="link" onClick={resetFilters} className="!px-1">
-                {t('common.reset')}
-              </Button>
-            ) : null}
+      <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5">
+              <h3 className="erp-pro-card-toolbar-title">
+                {t('pages.hr.fieldMovementLogs.listTitle')}
+              </h3>
+              <span className="erp-users-count-pill">
+                {filtered.length.toLocaleString()}
+              </span>
+            </div>
+            <p className="erp-fml-toolbar-sub">
+              {monthName} {year}
+            </p>
           </div>
-        </div>
-        <div
-          style={{
-            padding: '10px 20px',
-            borderTop: '1px solid var(--color-border-tertiary)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 8,
-            background: 'var(--color-surface-secondary)',
-            borderRadius: '0 0 10px 10px',
-          }}
-        >
           <Tooltip title={t('common.refresh')}>
             <Button
               type="text"
@@ -604,18 +466,68 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
             />
           </Tooltip>
         </div>
-      </div>
-
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h3 className="erp-pro-card-toolbar-title">
-              {t('pages.hr.fieldMovementLogs.listTitle')}
-            </h3>
-            <span className="erp-users-count-pill">
-              {filtered.length.toLocaleString()}
-            </span>
-          </div>
+        <div className="erp-users-filter-bar">
+          <Select
+            allowClear
+            value={month}
+            options={monthOptions}
+            onChange={(value) => {
+              setMonth(value);
+              resetPage();
+            }}
+            className="erp-users-filter-select"
+            placeholder={t('pages.hr.fieldMovementLogs.filters.allMonths')}
+            aria-label={t('pages.hr.fieldMovementLogs.filters.month')}
+          />
+          <InputNumber
+            value={year}
+            min={2020}
+            max={now.getFullYear() + 1}
+            onChange={(value) => {
+              if (typeof value === 'number') {
+                setYear(value);
+                resetPage();
+              }
+            }}
+            className="erp-fml-filter-year"
+            aria-label={t('pages.hr.fieldMovementLogs.filters.year')}
+          />
+          <Select
+            allowClear
+            value={status}
+            options={STATUS_OPTIONS.map((item) => ({
+              value: item,
+              label: formatFieldMovementStatus(item),
+            }))}
+            onChange={(value) => {
+              setStatus(value);
+              setStatMode('all');
+              resetPage();
+            }}
+            className="erp-users-filter-select"
+            placeholder={t('pages.hr.fieldMovementLogs.filters.anyStatus')}
+            aria-label={t('pages.hr.fieldMovementLogs.filters.status')}
+          />
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            value={employeeId}
+            options={employeeOptions}
+            loading={usersQuery.isLoading}
+            onChange={(value) => {
+              setEmployeeId(value);
+              resetPage();
+            }}
+            className="erp-fml-filter-employee"
+            placeholder={t('pages.hr.fieldMovementLogs.filters.everyone')}
+            aria-label={t('pages.hr.fieldMovementLogs.filters.employee')}
+          />
+          {filtersChanged ? (
+            <Button type="link" onClick={resetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
         </div>
         <div className="erp-pro-table-card-body">
           <DataTable<FieldMovementLog>

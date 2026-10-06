@@ -32,7 +32,8 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    # Docker Hub minio/minio is restricted; use Quay
+    image: quay.io/minio/minio:latest
     container_name: erp-minio
     restart: unless-stopped
     ports:

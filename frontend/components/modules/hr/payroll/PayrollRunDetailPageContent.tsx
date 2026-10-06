@@ -1079,25 +1079,25 @@ export default function PayrollRunDetailPageContent({
               },
               {
                 title: t('hr.payroll.steps.submitted'),
-                description: run.submittedAt
+                content: run.submittedAt
                   ? `${resolveUserLabel(run.submittedBy, userDirectory)} · ${dayjs(run.submittedAt).format('YYYY-MM-DD HH:mm')}`
                   : undefined,
               },
               {
                 title: t('hr.payroll.steps.hrApproved'),
-                description: run.approvedAt
+                content: run.approvedAt
                   ? `${resolveUserLabel(run.approvedBy, userDirectory)} · ${dayjs(run.approvedAt).format('YYYY-MM-DD HH:mm')}`
                   : undefined,
               },
               {
                 title: t('hr.payroll.steps.gmApproved'),
-                description: run.gmApprovedAt
+                content: run.gmApprovedAt
                   ? `${resolveUserLabel(run.gmApprovedBy, userDirectory)} · ${dayjs(run.gmApprovedAt).format('YYYY-MM-DD HH:mm')}`
                   : undefined,
               },
               {
                 title: t('hr.payroll.steps.paid'),
-                description: run.paidAt
+                content: run.paidAt
                   ? `${resolveUserLabel(run.paidBy, userDirectory)} · ${dayjs(run.paidAt).format('YYYY-MM-DD HH:mm')}`
                   : undefined,
               },

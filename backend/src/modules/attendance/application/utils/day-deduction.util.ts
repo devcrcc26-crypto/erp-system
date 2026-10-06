@@ -154,8 +154,10 @@ function eachDateInWindow(
 
 /**
  * Sums dayDeduction across the payroll employment window for a month.
+ * Every employed calendar day is included; a missing daily-log row is treated
+ * as no scans (same as an empty clock-in/out).
  */
-function uniqueDatesInEmployedWindows(
+export function employedCalendarDatesForContracts(
   month: number,
   year: number,
   contracts: ContractSegment[],
@@ -178,6 +180,14 @@ function uniqueDatesInEmployedWindows(
   }
   dates.sort((a, b) => a.getTime() - b.getTime());
   return dates;
+}
+
+function uniqueDatesInEmployedWindows(
+  month: number,
+  year: number,
+  contracts: ContractSegment[],
+): Date[] {
+  return employedCalendarDatesForContracts(month, year, contracts);
 }
 
 function totalEmployedDays(

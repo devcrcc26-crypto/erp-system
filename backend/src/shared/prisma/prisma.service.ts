@@ -55,6 +55,26 @@ export class PrismaService
     });
   }
 
+  /**
+   * Parses host/port/database from DATABASE_URL for startup logging (never password).
+   */
+  private describeDatabaseTarget(): string {
+    const raw = process.env.DATABASE_URL;
+    if (!raw) {
+      return 'unknown';
+    }
+    try {
+      const url = new URL(raw);
+      const database = url.pathname.replace(/^\//, '').split('?')[0] || 'unknown';
+      const port = url.port || (url.protocol === 'postgresql:' ? '5432' : '');
+      return port
+        ? `${url.hostname}:${port}/${database}`
+        : `${url.hostname}/${database}`;
+    } catch {
+      return 'unparseable-url';
+    }
+  }
+
   async onModuleInit(): Promise<void> {
     const maxAttempts = 5;
     let lastError: unknown;
@@ -62,7 +82,7 @@ export class PrismaService
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         await this.$connect();
-        this.logger.log('Database connection established');
+        this.logger.log(`[DB] Connected to ${this.describeDatabaseTarget()}`);
         return;
       } catch (error) {
         lastError = error;

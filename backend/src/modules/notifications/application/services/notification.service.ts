@@ -1,5 +1,6 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NotificationChannel, NotificationStatus, Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto';
@@ -27,26 +28,60 @@ import { ResendEmailService } from '../../../../shared/mail/resend-email.service
 
 type AuditContext = { companyId: string; userId: string };
 
+/** Seed-mode suppression counters (process-local). */
+let seedSuppressedNotifications = 0;
+
+/**
+ * Returns how many notifications were suppressed under SEED_MODE.
+ */
+export function getSeedSuppressedNotificationCount(): number {
+  return seedSuppressedNotifications;
+}
+
+/**
+ * Resets seed-mode notification suppression counters.
+ */
+export function resetSeedSuppressedNotificationCount(): void {
+  seedSuppressedNotifications = 0;
+}
+
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
+  private readonly seedMode: boolean;
+  private readonly emailDisabled: boolean;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly templateRenderer: TemplateRendererService,
     private readonly resendEmailService: ResendEmailService,
+    private readonly configService: ConfigService,
     @Optional()
     @InjectQueue(NOTIFICATION_QUEUE)
     private readonly notificationQueue?: Queue<SendNotificationJobData>,
-  ) {}
+  ) {
+    this.seedMode = this.configService.get<boolean>('SEED_MODE') === true;
+    this.emailDisabled =
+      this.configService.get<boolean>('EMAIL_DISABLED') === true;
+  }
 
   /**
    * Sends a notification respecting user preferences and optional templates.
+   * SEED_MODE suppresses the notification entirely. EMAIL_DISABLED still
+   * creates the in-app notification and does not queue or send email.
    */
   async send(
     ctx: AuditContext,
     dto: SendNotificationDto,
   ): Promise<{ inAppId?: string; emailQueued: boolean }> {
+    if (this.seedMode) {
+      seedSuppressedNotifications += 1;
+      this.logger.debug(
+        `SEED_MODE: suppressed notification (${dto.eventType}) to ${dto.recipientId}`,
+      );
+      return { emailQueued: false };
+    }
+
     const recipient = await this.prisma.user.findFirst({
       where: activeOnly({ id: dto.recipientId, companyId: ctx.companyId }),
     });
@@ -64,7 +99,8 @@ export class NotificationService {
       dto.channel === undefined || dto.channel === 'EMAIL';
 
     const inAppEnabled = sendInApp && (preference?.inApp ?? true);
-    const emailEnabled = sendEmail && (preference?.email ?? true);
+    const emailEnabled =
+      !this.emailDisabled && sendEmail && (preference?.email ?? true);
     const variables = dto.variables ?? {};
 
     let inAppId: string | undefined;

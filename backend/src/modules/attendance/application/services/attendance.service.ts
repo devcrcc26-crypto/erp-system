@@ -50,6 +50,7 @@ import {
 } from '../utils/attendance-day-deduction.context';
 import {
   dayDeduction,
+  employedCalendarDatesForContracts,
   summarizeMonthAbsence,
 } from '../utils/day-deduction.util';
 import { dateToYyyyMmDd } from './attendance-leave.util';
@@ -2709,33 +2710,146 @@ export class AttendanceService
           }))
         : [{ startDate: monthStart, endDate: null }];
 
+    let dailyLogs = record.dailyLogs;
+
     const dailyLogIdsByDate = new Map<string, string>();
     const dailyLogsByDate = new Map<
       string,
       ReturnType<typeof dailyLogToDeductionInput>
     >();
     const scheduleEndByDate = new Map<string, string | null>();
+    const scheduleCache = new Map<string, ScheduleDayLike[]>();
 
-    for (const log of record.dailyLogs) {
-      const key = dateToYyyyMmDd(log.date);
-      dailyLogIdsByDate.set(key, log.id);
-      const scheduleDays = await this.resolveScheduleDaysCached(
-        new Map(),
-        employeeId,
-        companyId,
-        log.date,
+    const rebuildLogMaps = async (
+      logs: typeof dailyLogs,
+    ): Promise<void> => {
+      dailyLogIdsByDate.clear();
+      dailyLogsByDate.clear();
+      scheduleEndByDate.clear();
+      for (const log of logs) {
+        const key = dateToYyyyMmDd(log.date);
+        dailyLogIdsByDate.set(key, log.id);
+        const scheduleDays = await this.resolveScheduleDaysCached(
+          scheduleCache,
+          employeeId,
+          companyId,
+          log.date,
+        );
+        const scheduleDay = scheduleDays.find(
+          (row) => row.dayOfWeek === log.date.getUTCDay(),
+        );
+        scheduleEndByDate.set(key, scheduledEndForDay(scheduleDay));
+        dailyLogsByDate.set(
+          key,
+          dailyLogToDeductionInput({
+            ...log,
+            scheduledEnd: scheduledEndForDay(scheduleDay),
+          }),
+        );
+      }
+    };
+
+    await rebuildLogMaps(dailyLogs);
+
+    // Materialise missing employed calendar days as empty daily logs (no scans).
+    // Month paid/absent already counted these via summarizeMonthAbsence; persisting
+    // rows makes dayStatus/dayDeduction visible in the UI and subsequent recalcs.
+    const employedDates = employedCalendarDatesForContracts(
+      month,
+      year,
+      contractSegments,
+    );
+    const missingDates = employedDates.filter(
+      (date) => !dailyLogIdsByDate.has(dateToYyyyMmDd(date)),
+    );
+
+    if (missingDates.length > 0) {
+      const holidays = await this.prisma.publicHoliday.findMany({
+        where: {
+          companyId,
+          isActive: true,
+          deletedAt: null,
+        },
+        select: {
+          name: true,
+          date: true,
+          isRecurring: true,
+          appliesToNationality: true,
+        },
+      });
+      const applicableHolidays = holidays.filter((holiday) =>
+        holidayAppliesToNationality(
+          holiday.appliesToNationality,
+          employee.nationality,
+        ),
       );
-      const scheduleDay = scheduleDays.find(
-        (row) => row.dayOfWeek === log.date.getUTCDay(),
-      );
-      scheduleEndByDate.set(key, scheduledEndForDay(scheduleDay));
-      dailyLogsByDate.set(
-        key,
-        dailyLogToDeductionInput({
-          ...log,
-          scheduledEnd: scheduledEndForDay(scheduleDay),
-        }),
-      );
+
+      const toCreate: Prisma.AttendanceDailyLogCreateManyInput[] = [];
+      for (const date of missingDates) {
+        const scheduleDays = await this.resolveScheduleDaysCached(
+          scheduleCache,
+          employeeId,
+          companyId,
+          date,
+        );
+        const scheduleDay = scheduleDays.find(
+          (row) => row.dayOfWeek === date.getUTCDay(),
+        );
+        const matchedHoliday = applicableHolidays.find((holiday) =>
+          holidayFallsOnDate(holiday.date, holiday.isRecurring, date),
+        );
+        const isHoliday = Boolean(matchedHoliday);
+        const wouldBeWorkingDay = scheduleDay?.isWorkingDay ?? false;
+        const isWeekend = !wouldBeWorkingDay;
+        const isDutyDay = !isHoliday && wouldBeWorkingDay;
+        const isHalfDay = isDutyDay ? (scheduleDay?.isHalfDay ?? false) : false;
+        const scheduledHours = isDutyDay
+          ? Number(scheduleDay?.totalHours ?? 0)
+          : 0;
+        const scheduledEnd = scheduledEndForDay(scheduleDay);
+        const flag = resolveAttendanceDayFlag({
+          isHoliday,
+          isWeekend,
+          clockIn: null,
+          clockOut: null,
+          isLastExportDay: false,
+          scheduledEnd,
+        });
+
+        toCreate.push({
+          id: randomUUID(),
+          attendanceRecordId: record.id,
+          date,
+          clockInMachine: null,
+          clockOutMachine: null,
+          clockInLocal: null,
+          clockOutLocal: null,
+          isHoliday,
+          holidayName: matchedHoliday?.name ?? null,
+          isWeekend,
+          isHalfDay,
+          wasPresent: false,
+          scheduledHours,
+          recordedHours: null,
+          isLate: false,
+          lateMinutes: 0,
+          missingClockIn: false,
+          missingClockOut: false,
+          isEarlyLeave: false,
+          earlyLeaveMinutes: 0,
+          flag,
+          flagResolved: false,
+          isLastExportDay: false,
+          dayStatus: 'ABSENT',
+          dayDeduction: 0,
+        });
+      }
+
+      await writeDb.attendanceDailyLog.createMany({ data: toCreate });
+      dailyLogs = await writeDb.attendanceDailyLog.findMany({
+        where: { attendanceRecordId: record.id },
+      });
+      await rebuildLogMaps(dailyLogs);
     }
 
     const deductionData = await loadDeductionDataForMonth(
@@ -2748,7 +2862,7 @@ export class AttendanceService
     );
     const context = buildDayDeductionContext(employee, deductionData);
 
-    for (const log of record.dailyLogs) {
+    for (const log of dailyLogs) {
       const key = dateToYyyyMmDd(log.date);
       const input = dailyLogToDeductionInput({
         ...log,
@@ -2779,11 +2893,11 @@ export class AttendanceService
       context,
     });
 
-    const workingDayLogs = record.dailyLogs.filter(
+    const workingDayLogs = dailyLogs.filter(
       (log) => !log.isWeekend && !log.isHoliday,
     );
-    const holidayLogs = record.dailyLogs.filter((log) => log.isHoliday);
-    const daySummary = summarizeAttendanceDays(record.dailyLogs);
+    const holidayLogs = dailyLogs.filter((log) => log.isHoliday);
+    const daySummary = summarizeAttendanceDays(dailyLogs);
     const scheduledDays = daySummary.scheduledDays;
     const presentDays = daySummary.presentDays;
     const absentDays = monthSummary.absentDays;
@@ -2808,26 +2922,20 @@ export class AttendanceService
         log.flag === AttendanceDayFlag.MISSING_CLOCK_OUT && !log.flagResolved,
     ).length;
 
-    const flaggedDays = record.dailyLogs.filter(
+    const flaggedDays = dailyLogs.filter(
       (log) => log.flag !== AttendanceDayFlag.NONE && !log.flagResolved,
     ).length;
 
-    const resolvedDays = record.dailyLogs.filter(
-      (log) => log.flagResolved,
-    ).length;
+    const resolvedDays = dailyLogs.filter((log) => log.flagResolved).length;
 
     let payableHours = 0;
-    for (const log of record.dailyLogs) {
+    for (const log of dailyLogs) {
       const wouldBeWorkingDay = !log.isWeekend;
       const dutyHours = Number(log.isHalfDay ? 4 : log.scheduledHours || 8);
       if (log.isHoliday && wouldBeWorkingDay) {
         // Holiday credit uses scheduled weekday hours (stored as 0 on holidays).
         payableHours += Number(log.isHalfDay ? 4 : 8);
-      } else if (
-        !log.isHoliday &&
-        !log.isWeekend &&
-        log.wasPresent
-      ) {
+      } else if (!log.isHoliday && !log.isWeekend && log.wasPresent) {
         payableHours +=
           Number(log.scheduledHours) > 0
             ? Number(log.scheduledHours)

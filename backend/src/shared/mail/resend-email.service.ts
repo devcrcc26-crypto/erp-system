@@ -9,6 +9,23 @@ export interface EmailPayload {
   readonly html: string;
 }
 
+/** Seed-mode suppression counters (process-local). */
+let seedSuppressedEmails = 0;
+
+/**
+ * Returns how many emails were suppressed under SEED_MODE.
+ */
+export function getSeedSuppressedEmailCount(): number {
+  return seedSuppressedEmails;
+}
+
+/**
+ * Resets seed-mode email suppression counters.
+ */
+export function resetSeedSuppressedEmailCount(): void {
+  seedSuppressedEmails = 0;
+}
+
 /**
  * Sends transactional email via Resend API or SMTP fallback.
  */
@@ -19,6 +36,8 @@ export class ResendEmailService implements OnModuleInit {
   private readonly mailFrom: string;
   private readonly mailHost: string;
   private readonly redisEnabled: boolean;
+  private readonly seedMode: boolean;
+  private readonly emailDisabled: boolean;
 
   constructor(
     private readonly configService: ConfigService,
@@ -30,6 +49,9 @@ export class ResendEmailService implements OnModuleInit {
     this.mailHost = this.configService.get<string>('MAIL_HOST') ?? '';
     this.redisEnabled =
       this.configService.get<string>('REDIS_ENABLED') === 'true';
+    this.seedMode = this.configService.get<boolean>('SEED_MODE') === true;
+    this.emailDisabled =
+      this.configService.get<boolean>('EMAIL_DISABLED') === true;
   }
 
   /**
@@ -52,9 +74,24 @@ export class ResendEmailService implements OnModuleInit {
 
   /**
    * Sends an email when configured; skips fake/seed addresses silently.
+   * SEED_MODE suppresses and counts the skip. EMAIL_DISABLED returns
+   * without sending and does not affect the seed-mode counter.
    * @returns true when the email was delivered successfully
    */
   async send(payload: EmailPayload): Promise<boolean> {
+    if (this.seedMode) {
+      seedSuppressedEmails += 1;
+      this.logger.debug(
+        `SEED_MODE: suppressed email to ${payload.to} (${payload.subject})`,
+      );
+      return false;
+    }
+
+    if (this.emailDisabled) {
+      this.logger.log(`EMAIL_DISABLED: skipped email to ${payload.to}`);
+      return false;
+    }
+
     if (isLikelyFakeEmail(payload.to)) {
       this.logger.log(
         `Email skipped — fake/seeded address detected: ${payload.to}`,

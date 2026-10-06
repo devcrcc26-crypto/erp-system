@@ -3,6 +3,7 @@
 import { MenuOutlined } from '@ant-design/icons';
 import Breadcrumbs from '@/components/ui/shell/Breadcrumbs';
 import HeaderActions from '@/components/ui/PageHeader/HeaderActions';
+import TestDatabaseBadge from '@/components/ui/shell/TestDatabaseBadge';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { BreadcrumbSegment } from '@/config/navConfig';
 import { useBreadcrumbLabelStore } from '@/stores/breadcrumb-label.store';
@@ -81,6 +82,7 @@ export default function MainContentHeader({
           ) : null}
 
           <div className="erp-shell-header-trailing">
+            <TestDatabaseBadge />
             <HeaderActions />
           </div>
         </div>
