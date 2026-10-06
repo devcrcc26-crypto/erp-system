@@ -90,28 +90,20 @@ export default function AttendanceTable({
           const name = formatUserName(row.employee);
           const erpId = row.employee.employeeId?.trim() || '—';
           return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="flex items-center gap-2.5">
               <Avatar
                 size={36}
                 className="erp-users-avatar"
                 style={{
                   background: avatarColor(row.employee.id),
-                  borderRadius: 10,
                   flexShrink: 0,
                 }}
               >
                 {initialsOf(row.employee.firstName, row.employee.lastName)}
               </Avatar>
-              <div style={{ minWidth: 0 }}>
+              <div className="min-w-0">
                 <div className="erp-users-name">{name}</div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginTop: 2,
-                  }}
-                >
+                <div className="mt-0.5 flex items-center gap-1.5">
                   <span className="erp-users-id-chip">{erpId}</span>
                 </div>
               </div>
@@ -126,12 +118,7 @@ export default function AttendanceTable({
         align: 'right',
         sorter: (a, b) => toNumber(a.scheduledDays) - toNumber(b.scheduledDays),
         render: (_: unknown, row: AttendanceRecord) => (
-          <span
-            style={{
-              fontVariantNumeric: 'tabular-nums',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
+          <span className="erp-att-num erp-att-num--muted">
             {formatNumber(row.scheduledDays)}
           </span>
         ),
@@ -143,15 +130,7 @@ export default function AttendanceTable({
         align: 'right',
         sorter: (a, b) => toNumber(a.presentDays) - toNumber(b.presentDays),
         render: (_: unknown, row: AttendanceRecord) => (
-          <span
-            style={{
-              fontVariantNumeric: 'tabular-nums',
-              color: 'var(--color-text-primary)',
-              fontWeight: 500,
-            }}
-          >
-            {formatNumber(row.presentDays)}
-          </span>
+          <span className="erp-att-num">{formatNumber(row.presentDays)}</span>
         ),
       },
       {
@@ -173,45 +152,25 @@ export default function AttendanceTable({
               : `${leaveDays} absent day(s) covered by approved leave`;
 
           if (absent === 0) {
-            return (
-              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-            );
+            return <span className="erp-att-dash">—</span>;
           }
 
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div className="flex flex-col gap-0.5">
               {leaveDays > 0 ? (
                 <>
                   <Tooltip title={leaveTooltip}>
-                    <span
-                      style={{
-                        fontWeight: 600,
-                        color: '#52c41a',
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
-                    >
+                    <span className="erp-att-num erp-att-num--ok">
                       {adjusted > 0 ? formatNumber(adjusted) : '✓'}
                     </span>
                   </Tooltip>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: 'var(--color-text-tertiary)',
-                    }}
-                  >
+                  <span className="erp-att-stat-hint">
                     {leaveDays}d on leave
                   </span>
                 </>
               ) : (
                 <span
-                  style={{
-                    fontWeight: 500,
-                    color:
-                      absent > 0
-                        ? 'var(--color-red-400)'
-                        : 'inherit',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
+                  className={`erp-att-num${absent > 0 ? ' erp-att-num--danger' : ''}`}
                 >
                   {formatNumber(absent)}
                 </span>
@@ -227,13 +186,11 @@ export default function AttendanceTable({
         render: (_: unknown, row: AttendanceRecord) => {
           const leaves = row.approvedLeave ?? [];
           if (leaves.length === 0) {
-            return (
-              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-            );
+            return <span className="erp-att-dash">—</span>;
           }
 
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div className="flex flex-col gap-0.5">
               {leaves.map((leave) => (
                 <Tooltip
                   key={leave.id}
@@ -244,7 +201,7 @@ export default function AttendanceTable({
                     )
                     .join(', ')}
                 >
-                  <Tag color="green" style={{ margin: 0, fontSize: 11 }}>
+                  <Tag color="green" className="m-0 text-[11px]">
                     {leave.leaveType.replace(/_/g, ' ')} · {leave.days}d
                   </Tag>
                 </Tooltip>
@@ -263,14 +220,9 @@ export default function AttendanceTable({
           const value = row.lateDays;
           return (
             <span
-              style={{
-                fontWeight: value > 0 ? 600 : 400,
-                color:
-                  value > 0
-                    ? 'var(--color-amber-400)'
-                    : 'var(--color-text-tertiary)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
+              className={
+                value > 0 ? 'erp-att-num erp-att-num--warn' : 'erp-att-dash'
+              }
             >
               {value > 0 ? value : '—'}
             </span>
@@ -287,14 +239,9 @@ export default function AttendanceTable({
           const value = row.missingClockOutDays;
           return (
             <span
-              style={{
-                fontWeight: value > 0 ? 600 : 400,
-                color:
-                  value > 0
-                    ? 'var(--color-amber-400)'
-                    : 'var(--color-text-tertiary)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
+              className={
+                value > 0 ? 'erp-att-num erp-att-num--warn' : 'erp-att-dash'
+              }
             >
               {value > 0 ? value : '—'}
             </span>
@@ -308,13 +255,7 @@ export default function AttendanceTable({
         align: 'right',
         sorter: (a, b) => toNumber(a.payableHours) - toNumber(b.payableHours),
         render: (_: unknown, row: AttendanceRecord) => (
-          <span
-            style={{
-              color: 'var(--color-teal-600)',
-              fontWeight: 500,
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
+          <span className="erp-att-num erp-att-num--teal">
             {formatNumber(row.payableHours)}h
           </span>
         ),
@@ -329,25 +270,17 @@ export default function AttendanceTable({
           const flagged = row.flaggedDays ?? 0;
           const resolved = row.resolvedDays ?? 0;
           if (flagged === 0) {
-            return (
-              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-            );
+            return <span className="erp-att-dash">—</span>;
           }
           if (resolved === flagged) {
             return (
-              <Tag
-                color="success"
-                style={{ borderRadius: 999, fontWeight: 500 }}
-              >
+              <Tag color="success" className="rounded-full font-medium">
                 ✓ Resolved
               </Tag>
             );
           }
           return (
-            <Tag
-              color="warning"
-              style={{ borderRadius: 999, fontWeight: 600 }}
-            >
+            <Tag color="warning" className="rounded-full font-semibold">
               {flagged - resolved} pending
             </Tag>
           );
@@ -362,7 +295,7 @@ export default function AttendanceTable({
               align: 'center' as const,
               fixed: 'right' as const,
               render: (_: unknown, row: AttendanceRecord) => (
-                <div className="erp-table-row-actions">
+                <div className="erp-table-row-actions flex items-center justify-center">
                   <Tooltip title={t('pages.hr.attendance.review.viewDailyLogs')}>
                     <Button
                       type="text"
@@ -385,7 +318,7 @@ export default function AttendanceTable({
 
   return (
     <DataTable<AttendanceRecord>
-      className="erp-data-table erp-pro-table"
+      className="erp-data-table erp-pro-table erp-users-table"
       rowKey="id"
       columns={columns}
       dataSource={records}

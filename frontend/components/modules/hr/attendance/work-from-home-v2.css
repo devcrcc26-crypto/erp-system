@@ -1,0 +1,188 @@
+/*
+ * Work-from-home days — table chrome matched to Employees (`.erp-employees-v2`).
+ * Scoped under `.erp-wfh-v2`.
+ */
+.erp-wfh-v2 {
+  --wfh-radius: 16px;
+  --wfh-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+  --wfh-muted: #4b5563;
+  --wfh-strong: #0f172a;
+  --wfh-divider: #eef1f4;
+  --wfh-subtle: #f7f8fa;
+  --wfh-tint: rgba(29, 158, 117, 0.1);
+  --wfh-primary-strong: #0f6e56;
+}
+
+.erp-wfh-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr:not(.ant-table-measure-row)
+  > th,
+.erp-wfh-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-thead
+  > tr:not(.ant-table-measure-row)
+  > th.ant-table-cell {
+  background: var(--wfh-subtle) !important;
+  color: var(--wfh-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: none;
+  border-bottom: 1px solid var(--wfh-divider) !important;
+}
+
+.erp-wfh-v2
+  .erp-data-table.erp-pro-table.erp-users-table
+  .ant-table-tbody
+  > tr:not(.ant-table-measure-row)
+  > td {
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+  border-bottom-color: var(--wfh-divider) !important;
+}
+
+.erp-wfh-v2 .erp-data-table.erp-pro-table.erp-users-table .ant-table-tbody > tr:hover > td {
+  background: var(--wfh-subtle) !important;
+}
+
+.erp-wfh-v2 .erp-users-cell-strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.erp-wfh-v2 .erp-users-cell-sub {
+  color: var(--wfh-muted);
+}
+
+.erp-wfh-v2 .erp-wfh-scope-chip.ant-tag {
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  padding-inline: 10px;
+  font-weight: 500;
+}
+
+.erp-wfh-v2 .erp-wfh-scope-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.erp-wfh-v2 .erp-wfh-scope-detail {
+  margin: 0;
+  color: var(--wfh-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.erp-wfh-v2 .erp-table-row-actions .ant-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.erp-wfh-v2 .ant-table-tbody > tr:hover .erp-table-row-actions .ant-btn,
+.erp-wfh-v2 .ant-table-tbody > tr:focus-within .erp-table-row-actions .ant-btn,
+.erp-wfh-v2 .erp-table-row-actions .ant-btn:focus-visible,
+.erp-wfh-v2 .erp-table-row-actions .ant-btn.ant-dropdown-open {
+  opacity: 1;
+}
+
+.erp-wfh-v2 .erp-table-row-actions .ant-btn:hover {
+  background: #e9edf1 !important;
+}
+
+@media (hover: none) {
+  .erp-wfh-v2 .erp-table-row-actions .ant-btn {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-wfh-v2 .erp-table-row-actions .ant-btn {
+    transition: none;
+  }
+}
+
+/* Modal */
+
+.erp-wfh-modal .ant-modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.erp-wfh-modal .ant-modal-header {
+  padding: 20px 22px 8px;
+  margin: 0;
+  border-bottom: 0;
+}
+
+.erp-wfh-modal .ant-modal-title {
+  color: var(--wfh-strong, #0f172a);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.erp-wfh-modal .ant-modal-body {
+  padding: 4px 22px 8px;
+}
+
+.erp-wfh-modal .ant-modal-footer {
+  padding: 12px 22px 20px;
+  border-top: 0;
+}
+
+.erp-wfh-modal .ant-btn,
+.erp-wfh-modal .ant-picker,
+.erp-wfh-modal .ant-input,
+.erp-wfh-modal .ant-select-selector,
+.erp-wfh-modal textarea.ant-input {
+  border-radius: 10px !important;
+}
+
+.erp-wfh-modal .erp-wfh-modal-lead {
+  margin: 0 0 16px;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.erp-wfh-modal .erp-wfh-scope-hint {
+  margin: -4px 0 12px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.erp-wfh-modal .erp-wfh-scope-radios.ant-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.erp-wfh-modal .erp-wfh-scope-radios .ant-radio-wrapper {
+  margin-inline-end: 0;
+  align-items: flex-start;
+}
+
+.erp-wfh-modal .erp-wfh-scope-option-title {
+  display: block;
+  color: #0f172a;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.erp-wfh-modal .erp-wfh-scope-option-desc {
+  display: block;
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+}

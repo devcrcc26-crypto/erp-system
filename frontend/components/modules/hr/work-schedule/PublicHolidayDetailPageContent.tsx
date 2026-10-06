@@ -1,12 +1,24 @@
 'use client';
 
+import './public-holidays-v2.css';
+
 import { useState } from 'react';
-import { Button, Dropdown, Grid, Skeleton } from 'antd';
-import type { MenuProps } from 'antd';
-import { MoreOutlined } from '@ant-design/icons';
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { Button, Grid, Skeleton, Space } from 'antd';
+import {
+  CheckCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  StopOutlined,
+} from '@ant-design/icons';
+import {
+  ArrowLeft,
+  CalendarDays,
+  Bell,
+  Globe2,
+  RefreshCw,
+} from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -48,17 +60,19 @@ function DetailSection({
   children: React.ReactNode;
 }): React.ReactNode {
   return (
-    <div className="erp-employee-section">
-      <div className="erp-employee-section-header">
-        <h3 className="erp-employee-section-title m-0">{title}</h3>
+    <div className="erp-pro-card erp-ph-section-card">
+      <div className="erp-employee-section">
+        <div className="erp-employee-section-header">
+          <h3 className="erp-employee-section-title">{title}</h3>
+        </div>
+        <div className="erp-employee-section-body">{children}</div>
       </div>
-      <div className="erp-employee-section-body">{children}</div>
     </div>
   );
 }
 
 /**
- * Public holiday detail — date, nationality, recurring, notification.
+ * Public holiday detail — leave / employees v2 hero and soft sections.
  */
 export default function PublicHolidayDetailPageContent({
   holidayId,
@@ -69,7 +83,6 @@ export default function PublicHolidayDetailPageContent({
   const router = useRouter();
   const messageApi = useAppMessage();
   const screens = Grid.useBreakpoint();
-  const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const canViewHr = useCanViewHr();
   const holidayQuery = usePublicHoliday(holidayId, canViewHr);
@@ -137,7 +150,7 @@ export default function PublicHolidayDetailPageContent({
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className="erp-pro-list-page erp-users-page erp-ph-detail-page erp-public-holidays-v2">
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -145,8 +158,8 @@ export default function PublicHolidayDetailPageContent({
 
   if (holidayQuery.isLoading && !holiday) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
-        <div className="erp-pro-card p-6">
+      <div className="erp-pro-list-page erp-users-page erp-ph-detail-page erp-public-holidays-v2">
+        <div className="erp-ph-loading">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
@@ -155,7 +168,7 @@ export default function PublicHolidayDetailPageContent({
 
   if (holidayQuery.isError || !holiday) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className="erp-pro-list-page erp-users-page erp-ph-detail-page erp-public-holidays-v2">
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -173,37 +186,8 @@ export default function PublicHolidayDetailPageContent({
     );
   }
 
-  const overflowMenuItems: MenuProps['items'] = [
-    {
-      key: 'edit',
-      label: t('common.update'),
-      icon: <Pencil size={14} />,
-      onClick: () => router.push(`${LIST_PATH}/${holiday.id}/edit`),
-    },
-    holiday.isActive
-      ? {
-          key: 'deactivate',
-          label: t('hr.publicHoliday.deactivate'),
-          danger: true,
-          onClick: () => setConfirmDeactivate(true),
-        }
-      : {
-          key: 'reactivate',
-          label: t('hr.publicHoliday.reactivate'),
-          onClick: () => void handleReactivate(),
-        },
-    { type: 'divider' },
-    {
-      key: 'delete',
-      label: t('hr.publicHoliday.delete'),
-      icon: <Trash2 size={14} />,
-      danger: true,
-      onClick: () => setConfirmDelete(true),
-    },
-  ];
-
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+    <div className="erp-pro-list-page erp-users-page erp-ph-detail-page erp-public-holidays-v2">
       <ConfirmDialog
         open={confirmDeactivate}
         title={t('hr.publicHoliday.deactivateTitle')}
@@ -228,121 +212,113 @@ export default function PublicHolidayDetailPageContent({
         onCancel={() => setConfirmDelete(false)}
       />
 
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-employee-toolbar">
-          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
-            <Button
-              type="text"
-              icon={<ArrowLeft size={16} />}
-              onClick={() => router.push(LIST_PATH)}
-              aria-label={t('hr.buttons.back')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.back')}
-            </Button>
+      <section className="erp-ph-detail-hero">
+        <div className="erp-ph-hero-top">
+          <div className="min-w-0">
+            <Link href={LIST_PATH} className="erp-ph-back">
+              <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+              {t('hr.publicHoliday.backToList')}
+            </Link>
+            <div className="erp-ph-hero-identity">
+              <span className="erp-ph-icon" aria-hidden>
+                <CalendarDays size={22} strokeWidth={2} />
+              </span>
+              <div className="min-w-0">
+                <div className="erp-ph-hero-title-row">
+                  <h2 className="erp-ph-hero-title">{holiday.name}</h2>
+                  <StatusBadge
+                    label={
+                      holiday.isActive
+                        ? t('common.active')
+                        : t('common.inactive')
+                    }
+                    variant={holiday.isActive ? 'success' : 'default'}
+                  />
+                  {whenBadge()}
+                </div>
+                <p className="erp-ph-detail-meta">
+                  <span>
+                    <CalendarDays size={14} strokeWidth={2} aria-hidden />
+                    {formatProjectDate(holiday.date)}
+                  </span>
+                  <span>
+                    <Globe2 size={14} strokeWidth={2} aria-hidden />
+                    {appliesLabel(holiday.appliesToNationality, t)}
+                  </span>
+                  {holiday.nameZh ? <span>{holiday.nameZh}</span> : null}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
-            {isNarrow ? (
-              <Dropdown menu={{ items: overflowMenuItems }} trigger={['click']}>
-                <Button
-                  icon={<MoreOutlined />}
-                  aria-label={t('common.actions')}
-                />
-              </Dropdown>
-            ) : (
-              <>
-                <Button
-                  type="primary"
-                  icon={<Pencil size={14} />}
-                  onClick={() =>
-                    router.push(`${LIST_PATH}/${holiday.id}/edit`)
-                  }
-                >
-                  {isCompact ? undefined : t('common.update')}
-                </Button>
-                {holiday.isActive ? (
-                  <Button danger onClick={() => setConfirmDeactivate(true)}>
-                    {isCompact ? undefined : t('hr.publicHoliday.deactivate')}
-                  </Button>
-                ) : (
-                  <Button
-                    loading={updateMutation.isPending}
-                    onClick={() => void handleReactivate()}
-                  >
-                    {isCompact ? undefined : t('hr.publicHoliday.reactivate')}
-                  </Button>
-                )}
+
+          <div className="erp-ph-hero-actions">
+            <Space.Compact>
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => router.push(`${LIST_PATH}/${holiday.id}/edit`)}
+                aria-label={t('common.update')}
+              >
+                {isNarrow ? undefined : t('common.update')}
+              </Button>
+              {holiday.isActive ? (
                 <Button
                   danger
-                  icon={<Trash2 size={14} />}
-                  onClick={() => setConfirmDelete(true)}
-                  aria-label={t('hr.publicHoliday.delete')}
+                  icon={<StopOutlined />}
+                  onClick={() => setConfirmDeactivate(true)}
+                  aria-label={t('hr.publicHoliday.deactivate')}
                 >
-                  {isCompact ? undefined : t('hr.publicHoliday.delete')}
+                  {isNarrow ? undefined : t('hr.publicHoliday.deactivate')}
                 </Button>
-              </>
-            )}
+              ) : (
+                <Button
+                  icon={<CheckCircleOutlined />}
+                  loading={updateMutation.isPending}
+                  onClick={() => void handleReactivate()}
+                  aria-label={t('hr.publicHoliday.reactivate')}
+                >
+                  {isNarrow ? undefined : t('hr.publicHoliday.reactivate')}
+                </Button>
+              )}
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => setConfirmDelete(true)}
+                aria-label={t('hr.publicHoliday.delete')}
+              >
+                {isNarrow ? undefined : t('hr.publicHoliday.delete')}
+              </Button>
+            </Space.Compact>
           </div>
         </div>
 
-        <div className="erp-employee-hero erp-contract-hero">
-          <div className="erp-employee-hero-copy min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <StatusBadge
-                label={
-                  holiday.isActive ? t('common.active') : t('common.inactive')
-                }
-                variant={holiday.isActive ? 'success' : 'default'}
-              />
-              {whenBadge()}
-            </div>
-            <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
-              {holiday.name}
-            </h2>
-            <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
-              {holiday.nameZh || formatProjectDate(holiday.date)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.publicHoliday.date')}</p>
-            <p className="erp-employee-meta-value">
+        <div className="erp-ph-fact-row">
+          <div className="erp-ph-fact">
+            <p className="erp-ph-fact-label">{t('hr.publicHoliday.date')}</p>
+            <p className="erp-ph-fact-value">
               {formatProjectDate(holiday.date)}
             </p>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.publicHoliday.appliesTo')}
-            </p>
-            <p className="erp-employee-meta-value truncate">
+          <div className="erp-ph-fact">
+            <p className="erp-ph-fact-label">{t('hr.publicHoliday.appliesTo')}</p>
+            <p className="erp-ph-fact-value">
               {appliesLabel(holiday.appliesToNationality, t)}
             </p>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('hr.publicHoliday.recurring')}
-            </p>
-            <p className="erp-employee-meta-value">
+          <div className="erp-ph-fact">
+            <p className="erp-ph-fact-label">{t('hr.publicHoliday.recurring')}</p>
+            <p className="erp-ph-fact-value">
               {holiday.isRecurring ? t('common.yes') : t('common.no')}
             </p>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
+          <div className="erp-ph-fact">
+            <p className="erp-ph-fact-label">
               {t('hr.publicHoliday.notifyDaysBefore')}
             </p>
-            <p className="erp-employee-meta-value">{holiday.notifyDaysBefore}</p>
+            <p className="erp-ph-fact-value">{holiday.notifyDaysBefore}</p>
           </div>
         </div>
-      </div>
+      </section>
 
       {!holiday.isActive ? (
         <ErpNotice
@@ -352,48 +328,83 @@ export default function PublicHolidayDetailPageContent({
         />
       ) : null}
 
-      <div className="erp-pro-card min-w-0 overflow-hidden">
-        <div className="erp-employee-tab-panel erp-contract-detail-body">
-          <DetailSection title={t('hr.publicHoliday.details')}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <MetaItem label={t('hr.publicHoliday.name')}>{holiday.name}</MetaItem>
-              <MetaItem label={t('hr.publicHoliday.nameZh')}>
-                {holiday.nameZh || '—'}
-              </MetaItem>
-              <MetaItem label={t('hr.publicHoliday.date')}>
-                {formatProjectDate(holiday.date)}
-              </MetaItem>
-              <MetaItem label={t('hr.publicHoliday.appliesTo')}>
-                {appliesLabel(holiday.appliesToNationality, t)}
-              </MetaItem>
-              <MetaItem label={t('hr.publicHoliday.recurring')}>
+      <DetailSection title={t('hr.publicHoliday.details')}>
+        <div className="erp-ph-details-grid">
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">{t('hr.publicHoliday.name')}</p>
+            <p className="erp-ph-field-value">{holiday.name}</p>
+          </div>
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">{t('hr.publicHoliday.nameZh')}</p>
+            <p className="erp-ph-field-value">{holiday.nameZh || '—'}</p>
+          </div>
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">{t('hr.publicHoliday.date')}</p>
+            <p className="erp-ph-field-value">
+              {formatProjectDate(holiday.date)}
+            </p>
+          </div>
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">{t('hr.publicHoliday.appliesTo')}</p>
+            <p className="erp-ph-field-value">
+              {appliesLabel(holiday.appliesToNationality, t)}
+            </p>
+          </div>
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">{t('hr.publicHoliday.recurring')}</p>
+            <p className="erp-ph-field-value">
+              <span className="inline-flex items-center gap-1.5">
+                <RefreshCw size={14} strokeWidth={2} aria-hidden />
                 {holiday.isRecurring ? t('common.yes') : t('common.no')}
-              </MetaItem>
-              <MetaItem label={t('common.status')}>
-                <StatusBadge
-                  label={
-                    holiday.isActive ? t('common.active') : t('common.inactive')
-                  }
-                  variant={holiday.isActive ? 'success' : 'default'}
-                />
-              </MetaItem>
-              <MetaItem label={t('hr.table.createdDate')}>
-                {formatProjectDate(holiday.createdAt)}
-              </MetaItem>
-              <MetaItem label={t('hr.assetLabels.updatedAt')}>
-                {formatProjectDate(holiday.updatedAt)}
-              </MetaItem>
-              {holiday.notes ? (
-                <div className="md:col-span-2">
-                  <MetaItem label={t('hr.publicHoliday.notes')}>
-                    <span className="whitespace-pre-wrap">{holiday.notes}</span>
-                  </MetaItem>
-                </div>
-              ) : null}
+              </span>
+            </p>
+          </div>
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">{t('common.status')}</p>
+            <p className="erp-ph-field-value">
+              <StatusBadge
+                label={
+                  holiday.isActive ? t('common.active') : t('common.inactive')
+                }
+                variant={holiday.isActive ? 'success' : 'default'}
+              />
+            </p>
+          </div>
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">
+              {t('hr.publicHoliday.notifyDaysBefore')}
+            </p>
+            <p className="erp-ph-field-value">
+              <span className="inline-flex items-center gap-1.5">
+                <Bell size={14} strokeWidth={2} aria-hidden />
+                {holiday.notifyDaysBefore}
+              </span>
+            </p>
+          </div>
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">{t('hr.publicHoliday.when')}</p>
+            <p className="erp-ph-field-value">{whenBadge()}</p>
+          </div>
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">{t('hr.table.createdDate')}</p>
+            <p className="erp-ph-field-value">
+              {formatProjectDate(holiday.createdAt)}
+            </p>
+          </div>
+          <div className="erp-ph-field">
+            <p className="erp-ph-field-label">{t('hr.assetLabels.updatedAt')}</p>
+            <p className="erp-ph-field-value">
+              {formatProjectDate(holiday.updatedAt)}
+            </p>
+          </div>
+          {holiday.notes ? (
+            <div className="erp-ph-field erp-ph-field--wide">
+              <p className="erp-ph-field-label">{t('hr.publicHoliday.notes')}</p>
+              <p className="erp-ph-field-value">{holiday.notes}</p>
             </div>
-          </DetailSection>
+          ) : null}
         </div>
-      </div>
+      </DetailSection>
     </div>
   );
 }

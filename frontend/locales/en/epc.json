@@ -507,6 +507,15 @@
         "description": "Track on-site project work and approved paid days when the HQ scanner is not available.",
         "newRequest": "New site assignment",
         "profileSectionTitle": "Site assignments",
+        "loadFailed": "Could not load site assignments.",
+        "empty": "No site assignments yet",
+        "emptyFiltered": "No site assignments match your filters",
+        "stats": {
+          "total": "All requests",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected / cancelled"
+        },
         "columns": {
           "requestNumber": "Request #",
           "employee": "Employee",
@@ -520,7 +529,8 @@
         "filters": {
           "status": "Status",
           "site": "Site name",
-          "month": "Month"
+          "month": "Month",
+          "search": "Search employee, site, or request #"
         },
         "status": {
           "SUBMITTED": "Submitted",
@@ -543,11 +553,14 @@
           "reason": "Reason",
           "datesRequired": "Select a start and end date.",
           "submit": "Submit request",
-          "submitSuccess": "Site assignment submitted."
+          "submitSuccess": "Site assignment submitted.",
+          "submitFailed": "Could not submit site assignment."
         },
         "detail": {
           "back": "Back to list",
+          "details": "Assignment details",
           "cancelSubmitted": "Cancel request",
+          "cancelSubmittedHint": "This withdraws the request before approval. You can submit a new one later.",
           "cancelApproved": "Cancel assignment",
           "cancelApprovedTitle": "Cancel approved site assignment",
           "shorten": "Shorten end date",
@@ -555,7 +568,8 @@
           "newEndDate": "New end date",
           "cancelled": "Site assignment updated.",
           "shortened": "End date updated and attendance recalculated.",
-          "reasonRequired": "A reason is required."
+          "reasonRequired": "A reason is required.",
+          "actionFailed": "Could not update this site assignment."
         }
       },
       "leaveHistory": {
@@ -594,7 +608,10 @@
         "edit": "Edit Public Holiday",
         "detail": "Public Holiday",
         "listTitle": "Public Holidays",
-        "listDescription": "Company holidays managed by HR. Inactive holidays are ignored by day calculations."
+        "listDescription": "Company holidays managed by HR. Inactive holidays are ignored by day calculations.",
+        "detailsStepDescription": "Set the holiday name, date, and who it applies to.",
+        "optionsStepDescription": "Choose recurring, active status, notification lead time, and optional notes.",
+        "reviewStepDescription": "Confirm the holiday details before saving."
       },
       "overtime": {
         "new": "This month's sheet",
@@ -767,7 +784,9 @@
             "employeesHint": "In this import period",
             "employeesWithFlagsHint": "Need employee explanation",
             "totalFlaggedHint": "Days requiring explanation",
-            "resolvedHint": "Explanations approved"
+            "resolvedHint": "Explanations approved",
+            "onLeave": "On Leave",
+            "onLeaveHint": "Approved leave days this month"
           },
           "importMeta": "Imported on {{date}} from {{file}} · {{count}} employees processed",
           "columns": {
@@ -865,16 +884,57 @@
       },
       "workFromHome": {
         "title": "Work From Home Days",
+        "description": "Mark calendar days when selected people work from home. Those days count as present in attendance (no HQ clock-in required).",
         "createTitle": "Add work-from-home day",
+        "editTitle": "Edit work-from-home day",
+        "modalLead": "Choose the date and who should be treated as working from home. Attendance for those people will show Work from home instead of absence.",
+        "loadFailed": "Could not load work-from-home days.",
+        "saveFailed": "Could not save work-from-home day.",
+        "deleteFailed": "Could not delete work-from-home day.",
+        "deleteTitle": "Delete work-from-home day",
+        "deleteDescription": "Remove this day from the WFH calendar? Attendance for that date may change.",
+        "empty": "No work-from-home days in {{month}} {{year}}",
+        "emptyFiltered": "No work-from-home days match your filters",
+        "stats": {
+          "total": "All days",
+          "allEmployees": "Company-wide",
+          "departments": "By department",
+          "employees": "Named people"
+        },
+        "scope": {
+          "ALL": "Everyone in the company",
+          "DEPARTMENTS": "Specific departments",
+          "EMPLOYEES": "Specific employees"
+        },
+        "scopeHelp": {
+          "ALL": "Every active employee is marked WFH on this date.",
+          "DEPARTMENTS": "Only people in the departments you pick get WFH credit.",
+          "EMPLOYEES": "Only the employees you pick get WFH credit."
+        },
+        "scopeDetail": {
+          "all": "Whole company",
+          "departmentsCount": "{{count}} departments",
+          "employeesCount": "{{count}} employees",
+          "employeesNamed": "{{names}} +{{count}} more"
+        },
         "columns": {
           "date": "Date",
           "reason": "Reason",
-          "scope": "Scope"
+          "scope": "Who is covered"
         },
         "fields": {
           "date": "Date",
           "reason": "Reason",
-          "scope": "Applies to"
+          "reasonHint": "Shown to HR on the calendar (for example office closure or hybrid Friday).",
+          "reasonPlaceholder": "e.g. Office closed for maintenance",
+          "scope": "Who works from home",
+          "scopeHint": "This does not send a request to employees — it only changes how attendance is calculated for the people you select.",
+          "departments": "Departments",
+          "departmentsPlaceholder": "Select one or more departments",
+          "pickDepartments": "Select at least one department",
+          "employees": "Employees",
+          "employeesPlaceholder": "Search and select employees",
+          "pickEmployees": "Select at least one employee"
         }
       },
       "fieldMovementLogs": {
@@ -2190,7 +2250,8 @@
     "scrollRight": "Scroll right to see more columns",
     "saved": "Saved.",
     "deleted": "Deleted.",
-    "add": "Add"
+    "add": "Add",
+    "edit": "Edit"
   },
   "validation": {
     "invalidName": "Use letters, spaces, hyphens, apostrophes or full stops only",
@@ -3585,8 +3646,21 @@
       "duplicated": "Copied {{copied}} holiday(s). Skipped {{skipped}}.",
       "duplicateFailed": "Failed to copy holidays.",
       "filterYear": "Year",
+      "searchPlaceholder": "Search holidays…",
       "empty": "No public holidays yet",
-      "emptyHint": "HR adds holidays here. None are hardcoded."
+      "emptyFiltered": "No holidays match your filters",
+      "emptyHint": "HR adds holidays here. None are hardcoded.",
+      "stats": {
+        "total": "Total",
+        "active": "Active",
+        "inactive": "Inactive",
+        "upcoming": "Upcoming"
+      },
+      "steps": {
+        "details": "Details",
+        "options": "Options",
+        "review": "Review"
+      }
     },
     "messages": {
       "requestApproved": "Request approved",

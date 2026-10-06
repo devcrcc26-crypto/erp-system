@@ -12,22 +12,10 @@ import type { AttendanceRecord } from '@/lib/api/attendance.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 const STAT_ACCENT = {
-  blue: {
-    bg: 'var(--color-blue-50)',
-    fg: 'var(--color-blue-400)',
-  },
-  green: {
-    bg: 'var(--color-teal-50)',
-    fg: 'var(--color-teal-400)',
-  },
-  red: {
-    bg: 'color-mix(in srgb, var(--color-red-400) 12%, var(--color-surface-secondary))',
-    fg: 'var(--color-red-400)',
-  },
-  teal: {
-    bg: 'var(--color-teal-50)',
-    fg: 'var(--color-teal-600)',
-  },
+  blue: { bg: '#E6F1FB', fg: '#185FA5' },
+  green: { bg: '#EAF3DE', fg: '#639922' },
+  red: { bg: '#FCEBEB', fg: '#D32F2F' },
+  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
 } as const;
 
 type StatAccent = keyof typeof STAT_ACCENT;
@@ -53,26 +41,17 @@ function AttendanceStat({
 }): React.ReactNode {
   const tint = STAT_ACCENT[accent];
   return (
-    <div className="erp-users-stat">
+    <div className="erp-users-stat erp-contract-stat erp-contract-stat--static">
       <span
         className="erp-users-stat-chip"
         style={{ background: tint.bg, color: tint.fg }}
       >
         {icon}
       </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="min-w-0 flex-1 text-left">
         <p className="erp-users-stat-label">{label}</p>
         <p className="erp-users-stat-value">{value}</p>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 11,
-            color: 'var(--color-text-tertiary)',
-            lineHeight: 1.4,
-          }}
-        >
-          {subLabel}
-        </p>
+        <p className="erp-att-stat-hint">{subLabel}</p>
       </div>
     </div>
   );
@@ -88,7 +67,7 @@ function formatHours(value: number): string {
 }
 
 /**
- * Summary chips for the loaded attendance period (4 cards with sub-labels).
+ * Summary chips for the loaded attendance period (4 floating cards).
  */
 export default function AttendanceStatBar({
   records,
@@ -123,7 +102,7 @@ export default function AttendanceStatBar({
       <div className="erp-users-stat-bar">
         {Array.from({ length: 4 }, (_, index) => (
           <div key={index} className="erp-users-stat">
-            <Skeleton.Avatar active size={36} shape="square" />
+            <Skeleton.Avatar active size={40} shape="square" />
             <div className="min-w-0 flex-1">
               <Skeleton.Input active size="small" style={{ width: 80 }} />
               <Skeleton.Input

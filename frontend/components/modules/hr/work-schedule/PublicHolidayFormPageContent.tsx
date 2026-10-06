@@ -1,6 +1,10 @@
 'use client';
 
+import './public-holidays-v2.css';
+
 import { Button, Spin } from 'antd';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import PublicHolidayForm, {
   buildPublicHolidayPayload,
@@ -21,7 +25,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 const LIST_PATH = '/hr/public-holidays';
 
 /**
- * Create / edit public holiday — cancel + form.
+ * Create / edit public holiday — v2 hero + soft form card.
  */
 export default function PublicHolidayFormPageContent({
   holidayId,
@@ -36,6 +40,8 @@ export default function PublicHolidayFormPageContent({
   const createMutation = useCreatePublicHoliday();
   const updateMutation = useUpdatePublicHoliday();
   const saving = createMutation.isPending || updateMutation.isPending;
+  const backHref =
+    isEdit && holidayId ? `${LIST_PATH}/${holidayId}` : LIST_PATH;
 
   useSetHeaderExtra(null);
 
@@ -58,15 +64,17 @@ export default function PublicHolidayFormPageContent({
 
   if (isEdit && holidayQuery.isLoading && !holidayQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-form-page flex justify-center p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-ph-form-page erp-public-holidays-v2">
+        <div className="erp-ph-loading">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   if (isEdit && holidayQuery.isError) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
+      <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-ph-form-page erp-public-holidays-v2">
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -80,19 +88,28 @@ export default function PublicHolidayFormPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page flex flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-end">
-        <Button
-          onClick={() =>
-            router.push(
-              isEdit && holidayId ? `${LIST_PATH}/${holidayId}` : LIST_PATH,
-            )
-          }
-          className="shrink-0"
-        >
-          {t('common.cancel')}
-        </Button>
-      </div>
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-ph-form-page erp-public-holidays-v2 flex flex-col">
+      <section className="erp-ph-form-hero">
+        <div className="min-w-0">
+          <Link href={backHref} className="erp-ph-back">
+            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+            {t('hr.buttons.backToList')}
+          </Link>
+          <h1 className="erp-ph-form-hero-title">
+            {isEdit
+              ? t('pages.hr.publicHolidays.edit')
+              : t('pages.hr.publicHolidays.new')}
+          </h1>
+          <p className="erp-ph-form-hero-desc">
+            {t('pages.hr.publicHolidays.detailsStepDescription')}
+          </p>
+        </div>
+        <div>
+          <Button onClick={() => router.push(backHref)}>
+            {t('common.cancel')}
+          </Button>
+        </div>
+      </section>
       <PublicHolidayForm
         holiday={holidayQuery.data}
         isSubmitting={saving}

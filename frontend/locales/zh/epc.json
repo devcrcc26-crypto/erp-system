@@ -507,6 +507,15 @@
         "description": "记录项目现场工作；总部无考勤机时，经批准的天数计薪且不计缺勤。",
         "newRequest": "新建现场派驻",
         "profileSectionTitle": "现场派驻记录",
+        "loadFailed": "无法加载现场派驻。",
+        "empty": "暂无现场派驻",
+        "emptyFiltered": "没有符合筛选条件的现场派驻",
+        "stats": {
+          "total": "全部申请",
+          "pending": "待审批",
+          "approved": "已批准",
+          "rejected": "已拒绝 / 已取消"
+        },
         "columns": {
           "requestNumber": "单号",
           "employee": "员工",
@@ -520,7 +529,8 @@
         "filters": {
           "status": "状态",
           "site": "现场名称",
-          "month": "月份"
+          "month": "月份",
+          "search": "搜索员工、现场或单号"
         },
         "status": {
           "SUBMITTED": "已提交",
@@ -543,11 +553,14 @@
           "reason": "原因",
           "datesRequired": "请选择开始和结束日期。",
           "submit": "提交申请",
-          "submitSuccess": "现场派驻已提交。"
+          "submitSuccess": "现场派驻已提交。",
+          "submitFailed": "无法提交现场派驻。"
         },
         "detail": {
           "back": "返回列表",
+          "details": "派驻详情",
           "cancelSubmitted": "取消申请",
+          "cancelSubmittedHint": "将在审批前撤回此申请。您之后可以重新提交。",
           "cancelApproved": "取消派驻",
           "cancelApprovedTitle": "取消已批准的现场派驻",
           "shorten": "缩短结束日期",
@@ -555,7 +568,8 @@
           "newEndDate": "新的结束日期",
           "cancelled": "现场派驻已更新。",
           "shortened": "结束日期已更新，考勤已重算。",
-          "reasonRequired": "请填写原因。"
+          "reasonRequired": "请填写原因。",
+          "actionFailed": "无法更新此现场派驻。"
         }
       },
       "leaveHistory": {
@@ -594,7 +608,10 @@
         "edit": "编辑公共假期",
         "detail": "公共假期",
         "listTitle": "公共假期",
-        "listDescription": "由人力资源维护的公司假期。停用的假期不参与天数计算。"
+        "listDescription": "由人力资源维护的公司假期。停用的假期不参与天数计算。",
+        "detailsStepDescription": "设置假期名称、日期及适用对象。",
+        "optionsStepDescription": "设置是否每年重复、启用状态、提前提醒天数和备注。",
+        "reviewStepDescription": "确认假期信息后保存。"
       },
       "overtime": {
         "new": "本月加班表",
@@ -767,7 +784,9 @@
             "employeesHint": "本导入期间",
             "employeesWithFlagsHint": "需员工说明",
             "totalFlaggedHint": "需说明的天数",
-            "resolvedHint": "已批准的说明"
+            "resolvedHint": "已批准的说明",
+            "onLeave": "请假",
+            "onLeaveHint": "本月已批准请假天数"
           },
           "importMeta": "于 {{date}} 从 {{file}} 导入 · 已处理 {{count}} 名员工",
           "columns": {
@@ -1445,16 +1464,57 @@
       },
       "workFromHome": {
         "title": "居家办公日",
+        "description": "标记指定人员居家办公的日期。这些日期在考勤中计为出勤（无需总部打卡）。",
         "createTitle": "添加居家办公日",
+        "editTitle": "编辑居家办公日",
+        "modalLead": "选择日期以及谁应被视为居家办公。这些人的考勤将显示为居家办公，而不是缺勤。",
+        "loadFailed": "无法加载居家办公日。",
+        "saveFailed": "无法保存居家办公日。",
+        "deleteFailed": "无法删除居家办公日。",
+        "deleteTitle": "删除居家办公日",
+        "deleteDescription": "从居家办公日历中移除此日？该日期的考勤可能会变化。",
+        "empty": "{{year}} 年 {{month}} 暂无居家办公日",
+        "emptyFiltered": "没有符合筛选条件的居家办公日",
+        "stats": {
+          "total": "全部天数",
+          "allEmployees": "全公司",
+          "departments": "按部门",
+          "employees": "指定人员"
+        },
+        "scope": {
+          "ALL": "全公司所有人",
+          "DEPARTMENTS": "指定部门",
+          "EMPLOYEES": "指定员工"
+        },
+        "scopeHelp": {
+          "ALL": "当天所有在职员工均计为居家办公。",
+          "DEPARTMENTS": "仅您选择的部门内员工获得居家办公考勤。",
+          "EMPLOYEES": "仅您选择的员工获得居家办公考勤。"
+        },
+        "scopeDetail": {
+          "all": "全公司",
+          "departmentsCount": "{{count}} 个部门",
+          "employeesCount": "{{count}} 名员工",
+          "employeesNamed": "{{names}} 等另 {{count}} 人"
+        },
         "columns": {
           "date": "日期",
           "reason": "原因",
-          "scope": "范围"
+          "scope": "覆盖范围"
         },
         "fields": {
           "date": "日期",
           "reason": "原因",
-          "scope": "适用于"
+          "reasonHint": "显示在 HR 日历上（例如办公室关闭或混合办公周五）。",
+          "reasonPlaceholder": "例如：办公室维护关闭",
+          "scope": "谁居家办公",
+          "scopeHint": "这不会向员工发送申请 — 只影响您所选人员的考勤计算方式。",
+          "departments": "部门",
+          "departmentsPlaceholder": "选择一个或多个部门",
+          "pickDepartments": "请至少选择一个部门",
+          "employees": "员工",
+          "employeesPlaceholder": "搜索并选择员工",
+          "pickEmployees": "请至少选择一名员工"
         }
       }
     },
@@ -2183,7 +2243,8 @@
     "scrollRight": "向右滚动查看更多列",
     "saved": "已保存。",
     "deleted": "已删除。",
-    "add": "添加"
+    "add": "添加",
+    "edit": "编辑"
   },
   "validation": {
     "invalidName": "仅可使用字母、空格、连字符、撇号或句点",
@@ -3578,8 +3639,21 @@
       "duplicated": "已复制 {{copied}} 条，跳过 {{skipped}} 条。",
       "duplicateFailed": "复制假期失败。",
       "filterYear": "年份",
+      "searchPlaceholder": "搜索假期…",
       "empty": "暂无公共假期",
-      "emptyHint": "由人力资源在此添加假期，系统不预置任何假期。"
+      "emptyFiltered": "没有符合筛选条件的假期",
+      "emptyHint": "由人力资源在此添加假期，系统不预置任何假期。",
+      "stats": {
+        "total": "全部",
+        "active": "启用",
+        "inactive": "停用",
+        "upcoming": "即将到来"
+      },
+      "steps": {
+        "details": "基本信息",
+        "options": "选项",
+        "review": "确认"
+      }
     },
     "messages": {
       "requestApproved": "申请已批准",

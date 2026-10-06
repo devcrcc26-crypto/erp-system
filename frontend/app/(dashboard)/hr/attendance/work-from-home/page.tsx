@@ -1,5 +1,6 @@
-import WorkFromHomeDaysPageContent from '@/components/modules/hr/attendance/WorkFromHomeDaysPageContent';
+import { redirect } from 'next/navigation';
 
-export default function WorkFromHomeDaysPage(): React.ReactNode {
-  return <WorkFromHomeDaysPageContent />;
+/** Legacy attendance-nested path → canonical `/hr/work-from-home`. */
+export default function WorkFromHomeDaysLegacyRedirect(): never {
+  redirect('/hr/work-from-home');
 }

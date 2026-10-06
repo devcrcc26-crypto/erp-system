@@ -1,5 +1,7 @@
 'use client';
 
+import './attendance-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -9,13 +11,13 @@ import {
   Form,
   Input,
   Modal,
+  Space,
   Spin,
   Tag,
   Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
-  ArrowLeftOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -24,7 +26,8 @@ import {
   UnlockOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import AttendanceDailyLogsDrawer from '@/components/modules/hr/attendance/AttendanceDailyLogsDrawer';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
@@ -161,7 +164,6 @@ export default function AttendanceReviewPageContent({
 }: AttendanceReviewPageContentProps): React.ReactNode {
   const { t } = useEpcTranslation();
   const { message, modal } = App.useApp();
-  const router = useRouter();
   const canViewHr = useCanViewHr();
 
   const [drawerEmployeeId, setDrawerEmployeeId] = useState<string | undefined>();
@@ -235,28 +237,20 @@ export default function AttendanceReviewPageContent({
           const name = formatUserName(row.employee);
           const erpId = row.employee.employeeId?.trim() || '—';
           return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="flex items-center gap-2.5">
               <Avatar
                 size={36}
                 className="erp-users-avatar"
                 style={{
                   background: avatarColor(row.employee.id),
-                  borderRadius: 10,
                   flexShrink: 0,
                 }}
               >
                 {initialsOf(row.employee.firstName, row.employee.lastName)}
               </Avatar>
-              <div style={{ minWidth: 0 }}>
+              <div className="min-w-0">
                 <div className="erp-users-name">{name}</div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginTop: 2,
-                  }}
-                >
+                <div className="mt-0.5 flex items-center gap-1.5">
                   <span className="erp-users-id-chip">{erpId}</span>
                 </div>
               </div>
@@ -270,12 +264,7 @@ export default function AttendanceReviewPageContent({
         width: 120,
         align: 'right',
         render: (_: unknown, row: AttendanceRecord) => (
-          <span
-            style={{
-              fontVariantNumeric: 'tabular-nums',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
+          <span className="erp-att-num erp-att-num--muted">
             {formatNumber(row.scheduledDays)}
           </span>
         ),
@@ -286,15 +275,7 @@ export default function AttendanceReviewPageContent({
         width: 110,
         align: 'right',
         render: (_: unknown, row: AttendanceRecord) => (
-          <span
-            style={{
-              fontVariantNumeric: 'tabular-nums',
-              color: 'var(--color-text-primary)',
-              fontWeight: 500,
-            }}
-          >
-            {formatNumber(row.presentDays)}
-          </span>
+          <span className="erp-att-num">{formatNumber(row.presentDays)}</span>
         ),
       },
       {
@@ -303,15 +284,7 @@ export default function AttendanceReviewPageContent({
         width: 110,
         align: 'right',
         render: (_: unknown, row: AttendanceRecord) => (
-          <span
-            style={{
-              fontVariantNumeric: 'tabular-nums',
-              fontWeight: 600,
-              color: 'var(--color-text-primary)',
-            }}
-          >
-            {formatNumber(row.paidDays ?? 0)}
-          </span>
+          <span className="erp-att-num">{formatNumber(row.paidDays ?? 0)}</span>
         ),
       },
       {
@@ -322,18 +295,10 @@ export default function AttendanceReviewPageContent({
         render: (_: unknown, row: AttendanceRecord) => {
           const absent = toNumber(row.absentDays);
           if (absent === 0) {
-            return (
-              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-            );
+            return <span className="erp-att-dash">—</span>;
           }
           return (
-            <span
-              style={{
-                fontWeight: 500,
-                color: 'var(--color-red-400)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
+            <span className="erp-att-num erp-att-num--danger">
               {formatNumber(absent)}
             </span>
           );
@@ -347,14 +312,10 @@ export default function AttendanceReviewPageContent({
         render: (_: unknown, row: AttendanceRecord) => {
           const leaveDays = row.leaveDaysThisMonth ?? 0;
           if (leaveDays === 0) {
-            return (
-              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-            );
+            return <span className="erp-att-dash">—</span>;
           }
           return (
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {formatNumber(leaveDays)}
-            </span>
+            <span className="erp-att-num">{formatNumber(leaveDays)}</span>
           );
         },
       },
@@ -365,14 +326,12 @@ export default function AttendanceReviewPageContent({
         render: (_: unknown, row: AttendanceRecord) => {
           const sites = row.siteDaysThisMonth ?? [];
           if (sites.length === 0) {
-            return (
-              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-            );
+            return <span className="erp-att-dash">—</span>;
           }
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div className="flex flex-col gap-0.5">
               {sites.map((entry) => (
-                <span key={entry.siteName} style={{ fontSize: 12 }}>
+                <span key={entry.siteName} className="erp-att-stat-hint">
                   {entry.siteName} ({formatNumber(entry.days)})
                 </span>
               ))}
@@ -389,32 +348,25 @@ export default function AttendanceReviewPageContent({
           const resolved = toNumber(row.resolvedDays);
           if (flagged === 0) {
             return (
-              <Tag color="success" style={{ borderRadius: 999 }}>
+              <Tag color="success" className="rounded-full">
                 ✓ No flags
               </Tag>
             );
           }
           if (resolved === flagged) {
             return (
-              <Tag color="success" style={{ borderRadius: 999 }}>
+              <Tag color="success" className="rounded-full">
                 ✓ All resolved
               </Tag>
             );
           }
           return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Tag color="warning" style={{ borderRadius: 999, margin: 0 }}>
+            <div className="flex items-center gap-2">
+              <Tag color="warning" className="m-0 rounded-full">
                 ⚠ {flagged}
               </Tag>
               {resolved > 0 ? (
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--color-text-tertiary)',
-                  }}
-                >
-                  {resolved} resolved
-                </span>
+                <span className="erp-att-stat-hint">{resolved} resolved</span>
               ) : null}
             </div>
           );
@@ -428,22 +380,12 @@ export default function AttendanceReviewPageContent({
           const flagged = toNumber(row.flaggedDays);
           const resolved = toNumber(row.resolvedDays);
           if (flagged <= 0) {
-            return (
-              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-            );
+            return <span className="erp-att-dash">—</span>;
           }
           const percent = Math.round((resolved / flagged) * 100);
           return (
-            <div style={{ width: 80 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 3,
-                  fontSize: 11,
-                  color: 'var(--color-text-tertiary)',
-                }}
-              >
+            <div className="w-20">
+              <div className="erp-att-stat-hint mb-0.5 flex justify-between">
                 <span>{resolved}</span>
                 <span>{flagged}</span>
               </div>
@@ -453,9 +395,7 @@ export default function AttendanceReviewPageContent({
                   style={{
                     width: `${percent}%`,
                     background:
-                      resolved === flagged
-                        ? 'var(--color-teal-400)'
-                        : 'var(--color-amber-400)',
+                      resolved === flagged ? '#1d9e75' : '#ba7517',
                   }}
                 />
               </div>
@@ -470,53 +410,22 @@ export default function AttendanceReviewPageContent({
         render: (_: unknown, row: AttendanceRecord) => {
           const flagged = toNumber(row.flaggedDays);
           const resolved = toNumber(row.resolvedDays);
-          if (flagged === 0) {
+          if (flagged === 0 || resolved >= flagged) {
             return (
-              <span
-                style={{
-                  color: 'var(--color-teal-600)',
-                  fontWeight: 500,
-                  fontSize: 12,
-                }}
-              >
-                ✓ Complete
-              </span>
-            );
-          }
-          if (resolved >= flagged) {
-            return (
-              <span
-                style={{
-                  color: 'var(--color-teal-600)',
-                  fontWeight: 500,
-                  fontSize: 12,
-                }}
-              >
-                ✓ All Resolved
+              <span className="erp-att-num erp-att-num--teal text-xs">
+                {flagged === 0 ? '✓ Complete' : '✓ All Resolved'}
               </span>
             );
           }
           if (resolved > 0) {
             return (
-              <span
-                style={{
-                  color: 'var(--color-amber-400)',
-                  fontWeight: 500,
-                  fontSize: 12,
-                }}
-              >
+              <span className="erp-att-num erp-att-num--warn text-xs">
                 Partial
               </span>
             );
           }
           return (
-            <span
-              style={{
-                color: 'var(--color-red-400)',
-                fontWeight: 500,
-                fontSize: 12,
-              }}
-            >
+            <span className="erp-att-num erp-att-num--danger text-xs">
               Needs Attention
             </span>
           );
@@ -529,7 +438,7 @@ export default function AttendanceReviewPageContent({
         align: 'center',
         fixed: 'right',
         render: (_: unknown, row: AttendanceRecord) => (
-          <div className="erp-table-row-actions">
+          <div className="erp-table-row-actions flex items-center justify-center">
             <Tooltip title={t('pages.hr.attendance.review.viewDailyLogs')}>
               <Button
                 type="text"
@@ -617,7 +526,7 @@ export default function AttendanceReviewPageContent({
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page erp-attendance-v2">
         <Alert
           type="error"
           showIcon
@@ -632,78 +541,99 @@ export default function AttendanceReviewPageContent({
     (approvalQuery.isLoading && approvalQuery.data === undefined)
   ) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page">
-        <div
-          className="flex justify-center rounded-xl p-12"
-          style={{
-            border: '1px solid var(--color-border-tertiary)',
-            background: 'var(--color-surface-secondary)',
-          }}
-        >
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page erp-attendance-v2">
+        <div className="erp-att-loading">
           <Spin />
         </div>
       </div>
     );
   }
 
+  const reviewStats = [
+    {
+      key: 'employees',
+      label: t('pages.hr.attendance.review.stats.employees'),
+      hint: t('pages.hr.attendance.review.stats.employeesHint'),
+      value: String(summary.totalEmployees),
+      chipBg: '#E6F1FB',
+      chipFg: '#185FA5',
+      icon: <TeamOutlined />,
+    },
+    {
+      key: 'withFlags',
+      label: t('pages.hr.attendance.review.stats.employeesWithFlags'),
+      hint: t('pages.hr.attendance.review.stats.employeesWithFlagsHint'),
+      value: `${summary.employeesWithFlags}`,
+      suffix: `/ ${summary.totalEmployees}`,
+      chipBg: '#FAEEDA',
+      chipFg: '#BA7517',
+      icon: <WarningOutlined />,
+    },
+    {
+      key: 'flagged',
+      label: t('pages.hr.attendance.review.stats.totalFlagged'),
+      hint: t('pages.hr.attendance.review.stats.totalFlaggedHint'),
+      value: String(summary.totalFlagged),
+      chipBg: '#FAEEDA',
+      chipFg: '#BA7517',
+      icon: <WarningOutlined />,
+    },
+    {
+      key: 'resolved',
+      label: t('pages.hr.attendance.review.stats.resolved'),
+      hint: t('pages.hr.attendance.review.stats.resolvedHint'),
+      value: String(summary.totalResolved),
+      suffix: `/ ${summary.totalFlagged}`,
+      chipBg: '#E1F5EE',
+      chipFg: '#1D9E75',
+      icon: <CheckCircleOutlined />,
+    },
+    {
+      key: 'leave',
+      label: t('pages.hr.attendance.review.stats.onLeave'),
+      hint: t('pages.hr.attendance.review.stats.onLeaveHint'),
+      value: formatNumber(summary.totalLeaveDays),
+      chipBg: '#EAF3DE',
+      chipFg: '#639922',
+      icon: <CalendarOutlined />,
+    },
+  ];
+
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page flex flex-col gap-4">
-      <div className="erp-pro-card" style={{ marginBottom: 0 }}>
-        <div style={{ padding: '16px 20px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Button
-              type="text"
-              icon={<ArrowLeftOutlined />}
-              onClick={() => router.push('/hr/attendance')}
-              style={{ padding: '4px 8px' }}
-              aria-label={t('common.back')}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  flexWrap: 'wrap',
-                }}
-              >
-                {approval ? (
-                  <Tag
-                    color={STATUS_COLORS[approval.status]}
-                    style={{ fontWeight: 600, borderRadius: 999, margin: 0 }}
-                  >
-                    {t(`pages.hr.attendance.review.status.${approval.status}`)}
-                  </Tag>
-                ) : null}
-                <span
-                  style={{
-                    fontSize: 13,
-                    color: 'var(--color-text-tertiary)',
-                  }}
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-review-page erp-attendance-v2">
+      <section className="erp-att-review-hero">
+        <div className="erp-att-review-hero-top">
+          <div className="min-w-0">
+            <Link href="/hr/attendance" className="erp-att-review-back">
+              <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+              {t('hr.buttons.backToList')}
+            </Link>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="erp-att-review-title">
+                {t('pages.hr.attendance.review.reviewButton', {
+                  month: monthName,
+                  year: String(year),
+                })}
+              </h1>
+              {approval ? (
+                <Tag
+                  className="erp-att-status-tag"
+                  color={STATUS_COLORS[approval.status]}
                 >
-                  {t('pages.hr.attendance.review.importMeta', {
-                    date: importedAt,
-                    file: fileName,
-                    count: String(totalRows),
-                  })}
-                </span>
-              </div>
+                  {t(`pages.hr.attendance.review.status.${approval.status}`)}
+                </Tag>
+              ) : null}
             </div>
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                flexShrink: 0,
-                flexWrap: 'wrap',
-              }}
-            >
+            <p className="erp-att-review-meta">
+              {t('pages.hr.attendance.review.importMeta', {
+                date: importedAt,
+                file: fileName,
+                count: String(totalRows),
+              })}
+            </p>
+          </div>
+          <div className="erp-att-review-actions">
+            <Space.Compact>
               {approval?.status === 'PENDING_REVIEW' ? (
                 <Button
                   icon={<EditOutlined />}
@@ -733,206 +663,84 @@ export default function AttendanceReviewPageContent({
                   {t('pages.hr.attendance.review.unlockMonth')}
                 </Button>
               ) : null}
-            </div>
+            </Space.Compact>
           </div>
-
-          {listQuery.isError || approvalQuery.isError ? (
-            <Alert
-              type="error"
-              showIcon
-              style={{ borderRadius: 8, marginTop: 12 }}
-              title={
-                listQuery.error instanceof ApiRequestError
-                  ? listQuery.error.message
-                  : approvalQuery.error instanceof ApiRequestError
-                    ? approvalQuery.error.message
-                    : t('pages.hr.attendance.loadFailed')
-              }
-            />
-          ) : null}
-
-          {!approval && !approvalQuery.isLoading ? (
-            <Alert
-              type="warning"
-              showIcon
-              style={{ borderRadius: 8, marginTop: 12 }}
-              title={t('pages.hr.attendance.review.noApproval')}
-            />
-          ) : null}
-
-          {banner ? (
-            <Alert
-              type={banner.type}
-              showIcon
-              icon={banner.icon}
-              title={banner.message}
-              style={{ borderRadius: 8, marginTop: 12 }}
-            />
-          ) : null}
         </div>
-      </div>
+
+        {listQuery.isError || approvalQuery.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              listQuery.error instanceof ApiRequestError
+                ? listQuery.error.message
+                : approvalQuery.error instanceof ApiRequestError
+                  ? approvalQuery.error.message
+                  : t('pages.hr.attendance.loadFailed')
+            }
+          />
+        ) : null}
+
+        {!approval && !approvalQuery.isLoading ? (
+          <Alert
+            type="warning"
+            showIcon
+            title={t('pages.hr.attendance.review.noApproval')}
+          />
+        ) : null}
+
+        {banner ? (
+          <Alert
+            type={banner.type}
+            showIcon
+            icon={banner.icon}
+            title={banner.message}
+          />
+        ) : null}
+      </section>
 
       <div className="erp-users-stat-bar">
-        <div className="erp-users-stat">
-          <span
-            className="erp-users-stat-chip"
-            style={{
-              background: 'var(--color-blue-50)',
-              color: 'var(--color-blue-400)',
-            }}
+        {reviewStats.map((stat) => (
+          <div
+            key={stat.key}
+            className="erp-users-stat erp-contract-stat erp-contract-stat--static"
           >
-            <TeamOutlined />
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="erp-users-stat-label">
-              {t('pages.hr.attendance.review.stats.employees')}
-            </p>
-            <p className="erp-users-stat-value">{summary.totalEmployees}</p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 11,
-                color: 'var(--color-text-tertiary)',
-              }}
+            <span
+              className="erp-users-stat-chip"
+              style={{ background: stat.chipBg, color: stat.chipFg }}
             >
-              {t('pages.hr.attendance.review.stats.employeesHint')}
-            </p>
+              {stat.icon}
+            </span>
+            <div className="min-w-0 flex-1 text-left">
+              <p className="erp-users-stat-label">{stat.label}</p>
+              <p className="erp-users-stat-value">
+                {stat.value}
+                {stat.suffix ? (
+                  <span className="erp-att-stat-hint ml-1 text-sm font-normal">
+                    {stat.suffix}
+                  </span>
+                ) : null}
+              </p>
+              <p className="erp-att-stat-hint">{stat.hint}</p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <span
-            className="erp-users-stat-chip"
-            style={{
-              background: 'var(--color-amber-50)',
-              color: 'var(--color-amber-400)',
-            }}
-          >
-            <WarningOutlined />
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="erp-users-stat-label">
-              {t('pages.hr.attendance.review.stats.employeesWithFlags')}
-            </p>
-            <p className="erp-users-stat-value">
-              {summary.employeesWithFlags}
-              <span
-                style={{
-                  fontSize: 14,
-                  fontWeight: 400,
-                  color: 'var(--color-text-tertiary)',
-                  marginLeft: 4,
-                }}
-              >
-                / {summary.totalEmployees}
-              </span>
-            </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 11,
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              {t('pages.hr.attendance.review.stats.employeesWithFlagsHint')}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <span
-            className="erp-users-stat-chip"
-            style={{
-              background: 'var(--color-amber-50)',
-              color: 'var(--color-amber-400)',
-            }}
-          >
-            <WarningOutlined />
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="erp-users-stat-label">
-              {t('pages.hr.attendance.review.stats.totalFlagged')}
-            </p>
-            <p className="erp-users-stat-value">{summary.totalFlagged}</p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 11,
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              {t('pages.hr.attendance.review.stats.totalFlaggedHint')}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <span
-            className="erp-users-stat-chip"
-            style={{
-              background: 'var(--color-teal-50)',
-              color: 'var(--color-teal-400)',
-            }}
-          >
-            <CheckCircleOutlined />
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="erp-users-stat-label">
-              {t('pages.hr.attendance.review.stats.resolved')}
-            </p>
-            <p className="erp-users-stat-value">
-              {summary.totalResolved}
-              <span
-                style={{
-                  fontSize: 14,
-                  fontWeight: 400,
-                  color: 'var(--color-text-tertiary)',
-                  marginLeft: 4,
-                }}
-              >
-                / {summary.totalFlagged}
-              </span>
-            </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 11,
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              {t('pages.hr.attendance.review.stats.resolvedHint')}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <span
-            className="erp-users-stat-chip"
-            style={{
-              background: '#f6ffed',
-              color: '#52c41a',
-            }}
-          >
-            <CalendarOutlined />
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p className="erp-users-stat-label">On Leave</p>
-            <p className="erp-users-stat-value">
-              {formatNumber(summary.totalLeaveDays)}
-            </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 11,
-                color: 'var(--color-text-tertiary)',
-              }}
-            >
-              Approved leave days this month
-            </p>
-          </div>
-        </div>
+        ))}
       </div>
 
       <div className="erp-pro-card">
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('pages.hr.attendance.listTitle')}
+            </h3>
+            <span className="erp-users-count-pill">
+              {records.length.toLocaleString()}
+            </span>
+          </div>
+        </div>
         <div className="erp-pro-table-card-body">
           <DataTable<AttendanceRecord>
-            className="erp-data-table erp-pro-table"
+            className="erp-data-table erp-pro-table erp-users-table"
             rowKey="id"
             columns={columns}
             dataSource={records}
@@ -967,6 +775,7 @@ export default function AttendanceReviewPageContent({
       />
 
       <Modal
+        rootClassName="erp-att-correct-modal"
         title={t('pages.hr.attendance.review.unlockTitle')}
         open={unlockOpen}
         onCancel={() => {

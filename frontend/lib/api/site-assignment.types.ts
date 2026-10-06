@@ -61,6 +61,7 @@ export interface SiteAssignmentDetail extends SiteAssignmentListItem {
   approvalRequest?: {
     id: string;
     status: string;
+    currentTier?: number;
     tiers: Array<{
       id: string;
       tierOrder: number;

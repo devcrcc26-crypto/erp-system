@@ -1,5 +1,7 @@
 'use client';
 
+import './attendance-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   App,
@@ -139,42 +141,16 @@ function formatClockCell(
   if (corrected) {
     return (
       <div>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 13,
-            color: 'var(--color-teal-600)',
-            letterSpacing: '0.02em',
-          }}
-        >
-          {corrected}
-        </span>
+        <span className="erp-att-clock erp-att-clock--corrected">{corrected}</span>
         {original ? (
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 11,
-              color: 'var(--color-text-tertiary)',
-              marginLeft: 6,
-              textDecoration: 'line-through',
-            }}
-          >
-            {original}
-          </span>
+          <span className="erp-att-clock erp-att-clock--struck">{original}</span>
         ) : null}
       </div>
     );
   }
   return (
     <span
-      style={{
-        fontFamily: 'var(--font-mono)',
-        fontSize: 13,
-        color: original
-          ? 'var(--color-text-primary)'
-          : 'var(--color-text-tertiary)',
-        letterSpacing: '0.02em',
-      }}
+      className={`erp-att-clock${original ? '' : ' erp-att-clock--empty'}`}
     >
       {original ?? '—'}
     </span>
@@ -296,6 +272,7 @@ function CorrectModalBody({
 
   return (
     <Modal
+      rootClassName="erp-att-correct-modal"
       title={t('pages.hr.attendance.review.correctTitle')}
       open={open}
       onCancel={onClose}
@@ -414,28 +391,15 @@ export default function AttendanceDailyLogsDrawer({
         width: 130,
         render: (_: unknown, row: AttendanceDailyLog) => {
           const d = dayjs(row.date);
+          const muted = row.isWeekend || row.isHoliday;
           return (
             <div>
               <span
-                style={{
-                  fontWeight: 600,
-                  color:
-                    row.isWeekend || row.isHoliday
-                      ? 'var(--color-text-tertiary)'
-                      : 'var(--color-text-primary)',
-                }}
+                className={`erp-att-date-dow${muted ? ' erp-att-date-dow--muted' : ''}`}
               >
                 {d.format('ddd')}
               </span>
-              <span
-                style={{
-                  color: 'var(--color-text-tertiary)',
-                  marginLeft: 4,
-                  fontSize: 12,
-                }}
-              >
-                {d.format('D MMM')}
-              </span>
+              <span className="erp-att-date-day">{d.format('D MMM')}</span>
             </div>
           );
         },
@@ -448,11 +412,8 @@ export default function AttendanceDailyLogsDrawer({
           const status = resolveDayStatus(row);
           const config = STATUS_CONFIG[status];
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <Tag
-                color={config.color}
-                style={{ borderRadius: 999, fontWeight: 500, margin: 0 }}
-              >
+            <div className="flex flex-col gap-1">
+              <Tag color={config.color} className="m-0">
                 {status === 'ON_SITE' && row.siteAssignmentName
                   ? t('pages.hr.attendance.review.dayStatus.onSiteAt', {
                       siteName: row.siteAssignmentName,
@@ -461,19 +422,17 @@ export default function AttendanceDailyLogsDrawer({
                       `pages.hr.attendance.review.dayStatus.${config.labelKey}`,
                     )}
                 {row.holidayName ? (
-                  <span style={{ fontWeight: 400, marginLeft: 4 }}>
-                    ({row.holidayName})
-                  </span>
+                  <span className="ml-1 font-normal">({row.holidayName})</span>
                 ) : null}
               </Tag>
               {status === 'PRESENT' && row.siteAssignmentName ? (
-                <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+                <span className="erp-att-drawer-period">
                   {t('pages.hr.attendance.review.dayStatus.alsoOnSite')} —{' '}
                   {row.siteAssignmentName}
                 </span>
               ) : null}
               {status === 'HALF_ABSENT' ? (
-                <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+                <span className="erp-att-drawer-period">
                   No field movement log
                 </span>
               ) : null}
@@ -487,9 +446,7 @@ export default function AttendanceDailyLogsDrawer({
         width: 90,
         align: 'right',
         render: (_: unknown, row: AttendanceDailyLog) => (
-          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {row.dayDeduction ?? 0}
-          </span>
+          <span className="erp-att-num">{row.dayDeduction ?? 0}</span>
         ),
       },
       {
@@ -512,17 +469,11 @@ export default function AttendanceDailyLogsDrawer({
         width: 200,
         render: (_: unknown, row: AttendanceDailyLog) => {
           if (row.flag === 'NONE') {
-            return (
-              <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-            );
+            return <span className="erp-att-dash">—</span>;
           }
           if (row.flagResolved) {
             return (
-              <Tag
-                icon={<CheckCircleOutlined />}
-                color="success"
-                style={{ borderRadius: 999 }}
-              >
+              <Tag icon={<CheckCircleOutlined />} color="success">
                 Resolved
               </Tag>
             );
@@ -544,7 +495,7 @@ export default function AttendanceDailyLogsDrawer({
               <Tag
                 color={FLAG_COLORS[row.flag]}
                 icon={<FlagIcon flag={row.flag} />}
-                style={{ borderRadius: 999, cursor: 'default' }}
+                className="cursor-default"
               >
                 {FLAG_LABELS[row.flag]}
               </Tag>
@@ -576,102 +527,51 @@ export default function AttendanceDailyLogsDrawer({
 
   return (
     <Drawer
-      className="erp-attendance-daily-drawer"
+      rootClassName="erp-att-daily-drawer"
+      className="erp-attendance-daily-drawer erp-att-daily-drawer"
       closable
       title={
         employee ? (
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                marginBottom: 4,
-                paddingRight: 28,
-              }}
-            >
+          <div className="erp-att-drawer-title">
+            <div className="erp-att-drawer-identity">
               <Avatar
-                size={40}
+                size={44}
+                className="erp-users-avatar"
                 style={{
                   background: avatarColor(employee.id),
-                  borderRadius: 10,
                   flexShrink: 0,
+                  borderRadius: 12,
                 }}
               >
                 {initialsOf(employee.firstName, employee.lastName)}
               </Avatar>
-              <div>
-                <div
-                  style={{
-                    fontWeight: 650,
-                    fontSize: 15,
-                    color: 'var(--color-text-primary)',
-                  }}
-                >
-                  {employeeName}
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginTop: 2,
-                  }}
-                >
+              <div className="min-w-0">
+                <p className="erp-att-drawer-name">{employeeName}</p>
+                <div className="erp-att-drawer-sub">
                   <span className="erp-users-id-chip">{employeeCode}</span>
-                  <span
-                    style={{
-                      color: 'var(--color-text-tertiary)',
-                      fontSize: 12,
-                    }}
-                  >
+                  <span className="erp-att-drawer-period">
                     {monthLabel} {year}
                   </span>
                 </div>
               </div>
             </div>
-            <div
-              style={{
-                display: 'flex',
-                gap: 16,
-                marginTop: 12,
-                padding: '10px 14px',
-                background: 'var(--color-surface-secondary)',
-                borderRadius: 8,
-                border: '1px solid var(--color-border-tertiary)',
-              }}
-            >
-              {miniStats.map((stat) => (
-                <div key={stat.label} style={{ textAlign: 'center' }}>
-                  <div
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 700,
-                      color:
-                        'alert' in stat && stat.alert
-                          ? stat.label === 'Absent'
-                            ? 'var(--color-red-400)'
-                            : 'var(--color-amber-400)'
-                          : 'var(--color-text-primary)',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    {stat.value}
+            <div className="erp-att-drawer-stats">
+              {miniStats.map((stat) => {
+                const alertClass =
+                  'alert' in stat && stat.alert
+                    ? stat.label === 'Absent'
+                      ? ' erp-att-drawer-stat-value--danger'
+                      : ' erp-att-drawer-stat-value--warn'
+                    : '';
+                return (
+                  <div key={stat.label} className="erp-att-drawer-stat">
+                    <div className={`erp-att-drawer-stat-value${alertClass}`}>
+                      {stat.value}
+                    </div>
+                    <div className="erp-att-drawer-stat-label">{stat.label}</div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      letterSpacing: '0.05em',
-                      textTransform: 'uppercase',
-                      color: 'var(--color-text-tertiary)',
-                      marginTop: 2,
-                    }}
-                  >
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : (
@@ -684,21 +584,23 @@ export default function AttendanceDailyLogsDrawer({
       destroyOnHidden
     >
       {query.isLoading && !query.data ? (
-        <div className="flex justify-center p-12">
+        <div className="erp-att-drawer-panel flex justify-center p-12">
           <Spin />
         </div>
       ) : (
-        <DataTable<AttendanceDailyLog>
-          className="erp-data-table erp-pro-table"
-          rowKey="id"
-          columns={columns}
-          dataSource={logs}
-          loading={query.isFetching}
-          size="small"
-          scroll={{ x: 800, y: 'calc(100vh - 260px)' }}
-          pagination={false}
-          rowClassName={rowClassName}
-        />
+        <div className="erp-att-drawer-panel">
+          <DataTable<AttendanceDailyLog>
+            className="erp-data-table erp-pro-table erp-users-table"
+            rowKey="id"
+            columns={columns}
+            dataSource={logs}
+            loading={query.isFetching}
+            size="small"
+            scroll={{ x: 800, y: 'calc(100vh - 280px)' }}
+            pagination={false}
+            rowClassName={rowClassName}
+          />
+        </div>
       )}
     </Drawer>
   );

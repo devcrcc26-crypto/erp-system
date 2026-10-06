@@ -74,6 +74,8 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/work-schedules/new': 'pages.hr.workSchedules.new',
   '/hr/public-holidays': 'pages.hr.publicHolidays.listTitle',
   '/hr/public-holidays/new': 'pages.hr.publicHolidays.new',
+  '/hr/work-from-home': 'pages.hr.workFromHome.title',
+  '/hr/site-assignments': 'nav.hr.siteAssignments',
   '/hr/company-asset': 'nav.hr.companyAssets',
   '/hr/company-asset/new': 'pages.hr.companyAsset.new',
   '/hr/attendance': 'nav.hr.attendance',
@@ -220,6 +222,8 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/work-schedules/new': 'hr.workSchedule.formDescription',
   '/hr/public-holidays': 'pages.hr.publicHolidays.listDescription',
   '/hr/public-holidays/new': 'hr.publicHoliday.formDescription',
+  '/hr/work-from-home': 'pages.hr.workFromHome.description',
+  '/hr/site-assignments': 'pages.hr.siteAssignments.description',
   '/hr/company-asset': 'pages.hr.companyAsset.listDescription',
   '/hr/company-asset/new': 'pages.hr.companyAsset.formDescription',
   '/audit-logs': 'auditLogs.description',
@@ -458,6 +462,46 @@ function resolveRouteMetaCore(
         { label: t('nav.dashboard'), href: '/' },
         { label: t('nav.groups.humanResources') },
         { label: t('pages.hr.attendance.listTitle') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/work-from-home') {
+    return {
+      titleKey: 'pages.hr.workFromHome.title',
+      descriptionKey: 'pages.hr.workFromHome.description',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.workFromHome.title') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/site-assignments') {
+    return {
+      titleKey: 'nav.hr.siteAssignments',
+      descriptionKey: 'pages.hr.siteAssignments.description',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('nav.hr.siteAssignments') },
+      ],
+    };
+  }
+
+  if (pathname.startsWith('/hr/site-assignments/')) {
+    return {
+      titleKey: 'nav.hr.siteAssignments',
+      descriptionKey: 'pages.hr.siteAssignments.description',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        {
+          label: t('nav.hr.siteAssignments'),
+          href: '/hr/site-assignments',
+        },
+        { label: t('pages.hr.siteAssignments.detail.details') },
       ],
     };
   }

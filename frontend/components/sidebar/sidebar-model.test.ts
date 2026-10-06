@@ -249,7 +249,7 @@ describe('active link resolution', () => {
       'my-profile',
     );
     expect(resolveActiveLink('/hr/per-diem/9', links)?.folderId).toBe('finance');
-    expect(resolveActiveLink('/hr/attendance/work-from-home', links)?.link.id).toBe(
+    expect(resolveActiveLink('/hr/work-from-home', links)?.link.id).toBe(
       'work-from-home',
     );
     expect(resolveActiveLink('/organization/vehicles/3', links)?.folderId).toBe('operations');

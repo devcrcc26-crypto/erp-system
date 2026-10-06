@@ -1,9 +1,12 @@
 'use client';
 
+import './attendance-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Grid,
   Input,
   InputNumber,
   Select,
@@ -24,6 +27,7 @@ import AttendanceDailyLogsDrawer from '@/components/modules/hr/attendance/Attend
 import AttendanceImportModal from '@/components/modules/hr/attendance/AttendanceImportModal';
 import AttendanceStatBar from '@/components/modules/hr/attendance/AttendanceStatBar';
 import AttendanceTable from '@/components/modules/hr/attendance/AttendanceTable';
+import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
@@ -45,12 +49,14 @@ const STATUS_COLORS: Record<AttendanceMonthStatus, string> = {
 };
 
 /**
- * HR attendance list — load month/year from API, filter/search on the frontend.
+ * HR attendance list — Employees / leave v2 chrome.
  */
 export default function AttendanceListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const canViewHr = useCanViewHr();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isCompact = screens.md === false;
 
   const now = useMemo(() => new Date(), []);
   const currentMonth = now.getMonth() + 1;
@@ -69,7 +75,6 @@ export default function AttendanceListPageContent(): React.ReactNode {
   const approvalQuery = useAttendanceMonthlyApproval(month, year, canViewHr);
   const allRows = listQuery.data ?? [];
   const approval = approvalQuery.data ?? null;
-  const hasData = allRows.length > 0;
 
   const filtered = useMemo(
     () =>
@@ -143,8 +148,8 @@ export default function AttendanceListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-attendance-page">
-        <div className="flex justify-center rounded-xl border border-[var(--color-border-tertiary)] bg-white p-12">
+      <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-v2">
+        <div className="erp-att-loading">
           <Spin />
         </div>
       </div>
@@ -152,56 +157,21 @@ export default function AttendanceListPageContent(): React.ReactNode {
   }
 
   const emptyState = (
-    <div
-      style={{
-        padding: '48px 24px',
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 12,
-      }}
-    >
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 16,
-          background: 'var(--color-teal-50)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--color-teal-400)',
-          fontSize: 24,
-          marginBottom: 4,
-        }}
-      >
+    <div className="erp-att-empty">
+      <span className="erp-att-empty-icon" aria-hidden>
         <CalendarOutlined />
-      </div>
-      <div
-        style={{
-          fontWeight: 600,
-          fontSize: 15,
-          color: 'var(--color-text-primary)',
-        }}
-      >
+      </span>
+      <p className="erp-att-empty-title">
         {t('pages.hr.attendance.emptyTitle', { month: monthName, year })}
-      </div>
-      <div
-        style={{
-          fontSize: 13,
-          color: 'var(--color-text-tertiary)',
-          maxWidth: 340,
-        }}
-      >
+      </p>
+      <p className="erp-att-empty-text">
         {t('pages.hr.attendance.emptyDescription')}
-      </div>
+      </p>
       {canViewHr ? (
         <Button
           type="primary"
           icon={<UploadOutlined />}
           onClick={() => setImportModalOpen(true)}
-          style={{ marginTop: 4 }}
         >
           {t('pages.hr.attendance.import')}
         </Button>
@@ -210,12 +180,12 @@ export default function AttendanceListPageContent(): React.ReactNode {
   );
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-attendance-page">
+    <div className="erp-pro-list-page erp-users-page erp-attendance-page erp-attendance-v2">
       {listQuery.isError ? (
         <Alert
           type="error"
           showIcon
-          className="mb-4"
+          className="mb-0"
           title={
             listQuery.error instanceof ApiRequestError
               ? listQuery.error.message
@@ -230,134 +200,16 @@ export default function AttendanceListPageContent(): React.ReactNode {
         loading={listQuery.isFetching && !listQuery.data}
       />
 
-      <div className="erp-pro-card" style={{ marginBottom: 16, marginTop: 16 }}>
-        <div style={{ padding: '14px 20px' }}>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            {canViewHr ? (
-              <Input
-                allowClear
-                prefix={<SearchOutlined className="erp-users-search-icon" />}
-                placeholder={t('pages.hr.attendance.filters.search')}
-                className="erp-users-search-input"
-                style={{ minWidth: 220, flex: 1 }}
-                value={search}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setSearch(value);
-                  setAppliedSearch(value.trim());
-                  resetPage();
-                }}
-                onPressEnter={() => {
-                  setAppliedSearch(search.trim());
-                  resetPage();
-                }}
-                onClear={() => {
-                  setSearch('');
-                  setAppliedSearch('');
-                  resetPage();
-                }}
-                aria-label={t('pages.hr.attendance.filters.search')}
-              />
-            ) : null}
-            <Select
-              value={month}
-              options={monthOptions}
-              onChange={handleMonthChange}
-              className="erp-users-filter-select"
-              placeholder={t('pages.hr.attendance.filters.month')}
-              aria-label={t('pages.hr.attendance.filters.month')}
-            />
-            <InputNumber
-              value={year}
-              min={2020}
-              max={2030}
-              onChange={handleYearChange}
-              className="w-28"
-              aria-label={t('pages.hr.attendance.filters.year')}
-            />
-            {hasFilters ? (
-              <Button type="link" onClick={handleResetFilters} className="!px-1">
-                {t('common.reset')}
-              </Button>
-            ) : null}
-          </div>
-        </div>
-        <div
-          style={{
-            padding: '10px 20px',
-            borderTop: '1px solid var(--color-border-tertiary)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            flexWrap: 'wrap',
-            gap: 8,
-            background: 'var(--color-surface-secondary)',
-            borderRadius: '0 0 10px 10px',
-          }}
-        >
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-            />
-          </Tooltip>
-          {canViewHr ? (
-            <Button
-              icon={<CheckCircleOutlined />}
-              onClick={() =>
-                router.push(`/hr/attendance/review/${month}/${year}`)
-              }
-            >
-              {t('pages.hr.attendance.review.reviewButton', {
-                month: monthName,
-                year: String(year),
-              })}
-            </Button>
-          ) : null}
-          {canViewHr ? (
-            <Button
-              type="primary"
-              icon={<UploadOutlined />}
-              onClick={() => setImportModalOpen(true)}
-            >
-              {t('pages.hr.attendance.import')}
-              {!hasData ? (
-                <span
-                  style={{
-                    marginLeft: 6,
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: 'currentColor',
-                    opacity: 0.7,
-                    display: 'inline-block',
-                    verticalAlign: 'middle',
-                  }}
-                />
-              ) : null}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-
       <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="erp-pro-card-toolbar erp-users-toolbar">
+          <div className="erp-users-toolbar-title flex min-w-0 flex-wrap items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{pageTitle}</h3>
             <span className="erp-users-count-pill">
               {filtered.length.toLocaleString()}
             </span>
             {canViewHr && approval ? (
               <Tag
+                className="erp-att-status-tag"
                 color={STATUS_COLORS[approval.status]}
                 icon={
                   approval.status === 'APPROVED' ? <LockOutlined /> : undefined
@@ -367,6 +219,102 @@ export default function AttendanceListPageContent(): React.ReactNode {
               </Tag>
             ) : null}
           </div>
+          <div className="erp-users-toolbar-actions flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            {canViewHr ? (
+              <HrListActions
+                compact={isCompact}
+                extra={
+                  <Button
+                    icon={<CheckCircleOutlined />}
+                    onClick={() =>
+                      router.push(`/hr/attendance/review/${month}/${year}`)
+                    }
+                  >
+                    {t('pages.hr.attendance.review.reviewButton', {
+                      month: monthName,
+                      year: String(year),
+                    })}
+                  </Button>
+                }
+                extraMenuItems={[
+                  {
+                    key: 'review',
+                    icon: <CheckCircleOutlined />,
+                    label: t('pages.hr.attendance.review.reviewButton', {
+                      month: monthName,
+                      year: String(year),
+                    }),
+                    onClick: () =>
+                      router.push(`/hr/attendance/review/${month}/${year}`),
+                  },
+                ]}
+                primary={{
+                  label: t('pages.hr.attendance.import'),
+                  icon: <UploadOutlined />,
+                  onClick: () => setImportModalOpen(true),
+                }}
+              />
+            ) : null}
+          </div>
+        </div>
+
+        <div className="erp-users-filter-bar">
+          {canViewHr ? (
+            <Input
+              allowClear
+              prefix={<SearchOutlined className="erp-users-search-icon" />}
+              placeholder={t('pages.hr.attendance.filters.search')}
+              className="erp-users-search-input min-w-0"
+              value={search}
+              onChange={(event) => {
+                const value = event.target.value;
+                setSearch(value);
+                setAppliedSearch(value.trim());
+                resetPage();
+              }}
+              onPressEnter={() => {
+                setAppliedSearch(search.trim());
+                resetPage();
+              }}
+              onClear={() => {
+                setSearch('');
+                setAppliedSearch('');
+                resetPage();
+              }}
+              aria-label={t('pages.hr.attendance.filters.search')}
+            />
+          ) : null}
+          <Select
+            value={month}
+            options={monthOptions}
+            onChange={handleMonthChange}
+            className="erp-users-filter-select"
+            placeholder={t('pages.hr.attendance.filters.month')}
+            aria-label={t('pages.hr.attendance.filters.month')}
+          />
+          <InputNumber
+            value={year}
+            min={2020}
+            max={2030}
+            onChange={handleYearChange}
+            className="erp-att-year-input"
+            aria-label={t('pages.hr.attendance.filters.year')}
+          />
+          <span className="erp-users-filter-spacer" aria-hidden />
+          {hasFilters ? (
+            <Button type="link" onClick={handleResetFilters} className="!px-1">
+              {t('common.reset')}
+            </Button>
+          ) : null}
         </div>
 
         <div className="erp-pro-table-card-body">
@@ -382,19 +330,13 @@ export default function AttendanceListPageContent(): React.ReactNode {
             }}
             emptyText={
               hasSearch && filtered.length === 0 ? (
-                <div
-                  style={{
-                    padding: '32px 24px',
-                    textAlign: 'center',
-                    color: 'var(--color-text-tertiary)',
-                  }}
-                >
-                  {t('pages.hr.attendance.emptyFiltered')}
-                  <div style={{ marginTop: 8 }}>
-                    <Button type="link" onClick={handleResetFilters}>
-                      {t('common.reset')}
-                    </Button>
-                  </div>
+                <div className="erp-att-empty">
+                  <p className="erp-att-empty-title">
+                    {t('pages.hr.attendance.emptyFiltered')}
+                  </p>
+                  <Button type="link" onClick={handleResetFilters}>
+                    {t('common.reset')}
+                  </Button>
                 </div>
               ) : (
                 emptyState
