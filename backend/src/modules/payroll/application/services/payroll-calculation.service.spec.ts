@@ -2,8 +2,95 @@ import { describe, expect, it } from '@jest/globals';
 import { BadRequestException } from '@nestjs/common';
 import { PayrollCalculationService } from './payroll-calculation.service';
 
+const ZERO_OT = {
+  normalHours: 0,
+  eveningHours: 0,
+  sundayHours: 0,
+  holidayHours: 0,
+};
+
+/** August sheet row 1: basic 13,000 + transport 900 + taxable bonus 14,630.77. */
+const AUGUST_ROW1 = {
+  basicSalary: 13000,
+  transportAllowance: 900,
+  monthlyBonus: 14630.77,
+  bonusTopUp: 0,
+  payrollDays: 30,
+  overtimeHours: ZERO_OT,
+  taxableThreshold: 2200,
+  pensionApplicable: true,
+  taxApplicable: true,
+} as const;
+
 describe('PayrollCalculationService', () => {
   const calc = new PayrollCalculationService();
+
+  describe('net bonus (after tax)', () => {
+    it('basic August row 1 with no net bonus → tax 7,620.77, net 20,000.00', () => {
+      const result = calc.calculate({ ...AUGUST_ROW1 });
+      expect(result.incomeTax).toBeCloseTo(7620.77, 2);
+      expect(result.totalNetBonus).toBe(0);
+      expect(result.netPay).toBeCloseTo(20000, 2);
+    });
+
+    it('same + contract net bonus 2,000 → tax unchanged, net 22,000.00', () => {
+      const result = calc.calculate({
+        ...AUGUST_ROW1,
+        contractNetBonus: 2000,
+      });
+      expect(result.incomeTax).toBeCloseTo(7620.77, 2);
+      expect(result.taxableIncome).toBeCloseTo(
+        calc.calculate({ ...AUGUST_ROW1 }).taxableIncome,
+        2,
+      );
+      expect(result.totalNetBonus).toBeCloseTo(2000, 2);
+      expect(result.netPay).toBeCloseTo(22000, 2);
+    });
+
+    it('same + one-time net top-up 30,000 → net 50,000.00, tax unchanged', () => {
+      const result = calc.calculate({
+        ...AUGUST_ROW1,
+        netTopUp: 30000,
+      });
+      expect(result.incomeTax).toBeCloseTo(7620.77, 2);
+      expect(result.totalNetBonus).toBeCloseTo(30000, 2);
+      expect(result.netPay).toBeCloseTo(50000, 2);
+    });
+
+    it('taxable bonus top-up of 5,000 in 35% bracket → net rises by 3,250', () => {
+      const base = calc.calculate({ ...AUGUST_ROW1 });
+      const topped = calc.calculate({
+        ...AUGUST_ROW1,
+        bonusTopUp: 5000,
+      });
+      expect(topped.netPay - base.netPay).toBeCloseTo(3250, 2);
+      expect(topped.incomeTax - base.incomeTax).toBeCloseTo(1750, 2);
+    });
+
+    it('taxable top-up 5,000 + net top-up 5,000 → net rises by 8,250', () => {
+      const base = calc.calculate({ ...AUGUST_ROW1 });
+      const both = calc.calculate({
+        ...AUGUST_ROW1,
+        bonusTopUp: 5000,
+        netTopUp: 5000,
+      });
+      expect(both.netPay - base.netPay).toBeCloseTo(8250, 2);
+    });
+
+    it('paid days 15 → contract net bonus is still paid in full', () => {
+      const result = calc.calculate({
+        ...AUGUST_ROW1,
+        payrollDays: 15,
+        contractNetBonus: 2000,
+      });
+      expect(result.totalNetBonus).toBeCloseTo(2000, 2);
+      const without = calc.calculate({
+        ...AUGUST_ROW1,
+        payrollDays: 15,
+      });
+      expect(result.netPay - without.netPay).toBeCloseTo(2000, 2);
+    });
+  });
 
   describe('solveBonusForNet', () => {
     it('matches August sheet row 1 (basic 13000, transport 900, net 20000)', () => {
@@ -24,12 +111,7 @@ describe('PayrollCalculationService', () => {
         monthlyBonus: bonus,
         bonusTopUp: 0,
         payrollDays: 30,
-        overtimeHours: {
-          normalHours: 0,
-          eveningHours: 0,
-          sundayHours: 0,
-          holidayHours: 0,
-        },
+        overtimeHours: ZERO_OT,
         taxableThreshold: 2200,
         pensionApplicable: true,
         taxApplicable: true,
@@ -60,12 +142,7 @@ describe('PayrollCalculationService', () => {
         monthlyBonus: 0,
         bonusTopUp: 0,
         payrollDays: 30,
-        overtimeHours: {
-          normalHours: 0,
-          eveningHours: 0,
-          sundayHours: 0,
-          holidayHours: 0,
-        },
+        overtimeHours: ZERO_OT,
         taxableThreshold: 2200,
         pensionApplicable: false,
         taxApplicable: true,
@@ -81,12 +158,7 @@ describe('PayrollCalculationService', () => {
         monthlyBonus: 14630.77,
         bonusTopUp: 0,
         payrollDays: 30,
-        overtimeHours: {
-          normalHours: 0,
-          eveningHours: 0,
-          sundayHours: 0,
-          holidayHours: 0,
-        },
+        overtimeHours: ZERO_OT,
         taxableThreshold: 2200,
         pensionApplicable: true,
         taxApplicable: false,

@@ -58,6 +58,9 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   monthlybonus: 'monthlyBonus',
   'monthly bonus': 'monthlyBonus',
   monthly_bonus: 'monthlyBonus',
+  monthlynetbonus: 'monthlyNetBonus',
+  'monthly net bonus': 'monthlyNetBonus',
+  monthly_net_bonus: 'monthlyNetBonus',
   pensionapplicable: 'pensionApplicable',
   'pension applicable': 'pensionApplicable',
   pension_applicable: 'pensionApplicable',
@@ -84,6 +87,7 @@ interface ParsedImportRow {
   basicSalary: string;
   transportationAllowance: string;
   monthlyBonus: string;
+  monthlyNetBonus: string;
   pensionApplicable: string;
   taxApplicable: string;
   probationEndDate: string;
@@ -129,6 +133,7 @@ export class EmployeeContractImportService {
         width: 20,
       },
       { header: 'monthlyBonus', key: 'monthlyBonus', width: 12 },
+      { header: 'monthlyNetBonus', key: 'monthlyNetBonus', width: 14 },
       { header: 'pensionApplicable', key: 'pensionApplicable', width: 16 },
       { header: 'taxApplicable', key: 'taxApplicable', width: 14 },
       { header: 'probationEndDate', key: 'probationEndDate', width: 16 },
@@ -146,6 +151,7 @@ export class EmployeeContractImportService {
       basicSalary: 25000,
       transportationAllowance: 3000,
       monthlyBonus: 2000,
+      monthlyNetBonus: 0,
       pensionApplicable: true,
       taxApplicable: true,
       probationEndDate: '',
@@ -180,6 +186,11 @@ export class EmployeeContractImportService {
     instructions.addRow(['basicSalary', 'No', 'Number (ETB)']);
     instructions.addRow(['transportationAllowance', 'No', 'Number (ETB)']);
     instructions.addRow(['monthlyBonus', 'No', 'Number (ETB), default 0']);
+    instructions.addRow([
+      'monthlyNetBonus',
+      'No',
+      'Number (ETB), after-tax net bonus, default 0',
+    ]);
     instructions.addRow([
       'pensionApplicable',
       'No',
@@ -234,6 +245,7 @@ export class EmployeeContractImportService {
           basicSalary: row.basicSalary,
           transportationAllowance: row.transportationAllowance,
           monthlyBonus: row.monthlyBonus,
+          monthlyNetBonus: row.monthlyNetBonus,
           pensionApplicable: row.pensionApplicable,
           taxApplicable: row.taxApplicable,
           probationEndDate: row.probationEndDate,
@@ -312,6 +324,7 @@ export class EmployeeContractImportService {
         basicSalary: '',
         transportationAllowance: '',
         monthlyBonus: '',
+        monthlyNetBonus: '',
         pensionApplicable: '',
         taxApplicable: '',
         probationEndDate: '',
@@ -445,6 +458,13 @@ export class EmployeeContractImportService {
     if (!monthlyBonus.ok) {
       return { ...base, status: 'error', message: monthlyBonus.message };
     }
+    const monthlyNetBonus = this.parseOptionalNumber(
+      row.monthlyNetBonus,
+      'monthlyNetBonus',
+    );
+    if (!monthlyNetBonus.ok) {
+      return { ...base, status: 'error', message: monthlyNetBonus.message };
+    }
 
     const pensionApplicable = this.parseOptionalBoolean(
       row.pensionApplicable,
@@ -506,6 +526,7 @@ export class EmployeeContractImportService {
       basicSalary: basicSalary.value,
       transportationAllowance: transportationAllowance.value,
       monthlyBonus: monthlyBonus.value,
+      monthlyNetBonus: monthlyNetBonus.value,
       pensionApplicable: pensionApplicable.value,
       taxApplicable: taxApplicable.value,
       probationEndDate: probationEndDateResult.value,

@@ -200,6 +200,9 @@ export function useCreateEmployeeContract() {
       if (payload.monthlyBonus != null) {
         formData.append('monthlyBonus', String(payload.monthlyBonus));
       }
+      if (payload.monthlyNetBonus != null) {
+        formData.append('monthlyNetBonus', String(payload.monthlyNetBonus));
+      }
       if (payload.pensionApplicable != null) {
         formData.append('pensionApplicable', String(payload.pensionApplicable));
       }

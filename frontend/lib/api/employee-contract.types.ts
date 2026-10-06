@@ -46,6 +46,7 @@ export interface EmployeeContractListItem {
   basicSalary?: string | number | null;
   transportationAllowance?: string | number | null;
   monthlyBonus?: string | number | null;
+  monthlyNetBonus?: string | number | null;
   probationEndDate?: string | null;
   governedBy?: string | null;
   lastWarnedAt?: string | null;
@@ -88,6 +89,7 @@ export interface CreateEmployeeContractPayload {
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
+  monthlyNetBonus?: number;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
   probationEndDate?: string;
@@ -104,6 +106,7 @@ export interface UpdateEmployeeContractPayload {
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
+  monthlyNetBonus?: number;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
   probationEndDate?: string | null;
@@ -129,6 +132,7 @@ export interface SalaryPreviewRequest {
   basicSalary: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
+  monthlyNetBonus?: number;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
   taxableThreshold?: number;
@@ -138,6 +142,7 @@ export interface SalaryPreviewResult {
   basicSalary: number;
   transportationAllowance: number;
   monthlyBonus: number;
+  monthlyNetBonus: number;
   pensionApplicable: boolean;
   taxApplicable: boolean;
   taxableThreshold: number;
@@ -148,6 +153,7 @@ export interface SalaryPreviewResult {
   pensionEmployer: number;
   grossIncome: number;
   totalDeductions: number;
+  totalNetBonus: number;
   netPay: number;
 }
 

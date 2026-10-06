@@ -110,6 +110,18 @@ export class CreateEmployeeContractDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   monthlyBonus?: number;
 
+  @ApiPropertyOptional({
+    example: 2000,
+    description:
+      'Monthly net bonus added after tax (not taxed). Default 0. Not prorated.',
+  })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  monthlyNetBonus?: number;
+
   @ApiPropertyOptional({ default: true })
   @Transform(optionalBoolean)
   @IsOptional()
@@ -186,6 +198,16 @@ export class UpdateEmployeeContractDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   monthlyBonus?: number;
 
+  @ApiPropertyOptional({
+    example: 2000,
+    description: 'Monthly net bonus added after tax (not taxed)',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  monthlyNetBonus?: number;
+
   @ApiPropertyOptional({ default: true })
   @Transform(optionalBoolean)
   @IsOptional()
@@ -235,6 +257,18 @@ export class SalaryPreviewDto {
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   monthlyBonus?: number;
+
+  @ApiPropertyOptional({
+    example: 2000,
+    default: 0,
+    description: 'Monthly net bonus (after tax)',
+  })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  monthlyNetBonus?: number;
 
   @ApiPropertyOptional({ default: true })
   @Transform(optionalBoolean)

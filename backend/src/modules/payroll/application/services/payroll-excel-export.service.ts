@@ -392,6 +392,9 @@ export class PayrollExcelExportService {
       flagNote: string | null;
       notes: string | null;
       bonusTopUpReason: string | null;
+      contractNetBonus: Decimal;
+      netTopUp: Decimal;
+      netTopUpReason: string | null;
       basicSalary: Decimal;
       payrollDays: Decimal;
       earnedSalary: Decimal;
@@ -596,6 +599,9 @@ function buildNotes(entry: {
   flag: PayrollEntryFlag;
   flagNote: string | null;
   bonusTopUpReason: string | null;
+  contractNetBonus: Decimal | number;
+  netTopUp: Decimal | number;
+  netTopUpReason: string | null;
   notes: string | null;
 }): string | null {
   const parts: string[] = [];
@@ -608,10 +614,29 @@ function buildNotes(entry: {
   if (entry.bonusTopUpReason?.trim()) {
     parts.push(`Bonus top-up: ${entry.bonusTopUpReason.trim()}`);
   }
+  const contractNet = toNumber(entry.contractNetBonus);
+  if (contractNet > 0) {
+    parts.push(`${formatNoteAmount(contractNet)} net bonus monthly`);
+  }
+  const oneTimeNet = toNumber(entry.netTopUp);
+  if (oneTimeNet > 0) {
+    const reason = entry.netTopUpReason?.trim();
+    parts.push(
+      reason
+        ? `${formatNoteAmount(oneTimeNet)} net bonus this month only — ${reason}`
+        : `${formatNoteAmount(oneTimeNet)} net bonus this month only`,
+    );
+  }
   if (entry.notes?.trim()) {
     parts.push(entry.notes.trim());
   }
   return parts.length > 0 ? parts.join('; ') : null;
+}
+
+function formatNoteAmount(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function formatFlagLabel(flag: PayrollEntryFlag): string {

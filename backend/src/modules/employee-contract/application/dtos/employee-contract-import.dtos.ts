@@ -25,6 +25,7 @@ export class EmployeeContractImportRowPreviewDto extends ImportRowPreviewDto {
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
+  monthlyNetBonus?: number;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
   probationEndDate?: string;

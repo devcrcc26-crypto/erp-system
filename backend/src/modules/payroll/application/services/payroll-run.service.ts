@@ -43,6 +43,8 @@ interface SubmitRunOptions {
 interface CapturedTopUp {
   bonusTopUp: number;
   bonusTopUpReason: string | null;
+  netTopUp: number;
+  netTopUpReason: string | null;
   notes: string | null;
 }
 
@@ -55,6 +57,7 @@ interface ContractSnapshot {
   basicSalary: Decimal | null;
   transportationAllowance: Decimal | null;
   monthlyBonus: Decimal | null;
+  monthlyNetBonus: Decimal;
   pensionApplicable: boolean;
   taxApplicable: boolean;
 }
@@ -176,6 +179,7 @@ export class PayrollRunService {
           totalEmployees: 0,
           totalGross: new Decimal(0),
           totalNetPay: new Decimal(0),
+          totalNetBonus: new Decimal(0),
           totalPensionEmp: new Decimal(0),
           totalPensionEmr: new Decimal(0),
           totalTax: new Decimal(0),
@@ -275,6 +279,8 @@ export class PayrollRunService {
         employeeId: true,
         bonusTopUp: true,
         bonusTopUpReason: true,
+        netTopUp: true,
+        netTopUpReason: true,
         notes: true,
       },
     });
@@ -282,14 +288,19 @@ export class PayrollRunService {
     const captured = new Map<string, CapturedTopUp>();
     for (const entry of existingEntries) {
       const bonusTopUp = this.toNumber(entry.bonusTopUp);
+      const netTopUp = this.toNumber(entry.netTopUp);
       if (
         bonusTopUp !== 0 ||
         entry.bonusTopUpReason != null ||
+        netTopUp !== 0 ||
+        entry.netTopUpReason != null ||
         entry.notes != null
       ) {
         captured.set(entry.employeeId, {
           bonusTopUp,
           bonusTopUpReason: entry.bonusTopUpReason,
+          netTopUp,
+          netTopUpReason: entry.netTopUpReason,
           notes: entry.notes,
         });
       }
@@ -318,11 +329,12 @@ export class PayrollRunService {
           continue;
         }
 
-        if (topUp.bonusTopUp === 0) {
+        if (topUp.bonusTopUp === 0 && topUp.netTopUp === 0) {
           await this.prisma.payrollEntry.update({
             where: { id: entry.id },
             data: {
               bonusTopUpReason: topUp.bonusTopUpReason,
+              netTopUpReason: topUp.netTopUpReason,
               notes: topUp.notes ?? entry.notes,
               updatedBy: ctx.userId,
             },
@@ -330,16 +342,17 @@ export class PayrollRunService {
           continue;
         }
 
-        const result = await this.recalcEntryAmounts(
-          entry,
-          run,
-          topUp.bonusTopUp,
-        );
+        const result = await this.recalcEntryAmounts(entry, run, {
+          bonusTopUp: topUp.bonusTopUp,
+          netTopUp: topUp.netTopUp,
+        });
         await this.prisma.payrollEntry.update({
           where: { id: entry.id },
           data: {
             bonusTopUp: new Decimal(topUp.bonusTopUp),
             bonusTopUpReason: topUp.bonusTopUpReason,
+            netTopUp: new Decimal(topUp.netTopUp),
+            netTopUpReason: topUp.netTopUpReason,
             notes: topUp.notes ?? entry.notes,
             ...this.calculationToEntryUpdate(result),
             updatedBy: ctx.userId,
@@ -651,13 +664,15 @@ export class PayrollRunService {
   }
 
   /**
-   * Updates bonus top-up / notes on an entry in a DRAFT or REVIEWED run.
+   * Updates bonus / net top-ups and notes on an entry in a DRAFT or REVIEWED run.
    */
   async updateEntry(
     entryId: string,
     dto: {
       bonusTopUp?: number;
       bonusTopUpReason?: string;
+      netTopUp?: number;
+      netTopUpReason?: string;
       notes?: string;
     },
     ctx: ServiceContext,
@@ -676,6 +691,9 @@ export class PayrollRunService {
     }
 
     const bonusTopUp = dto.bonusTopUp ?? this.toNumber(entry.bonusTopUp);
+    if (bonusTopUp < 0) {
+      throw new BadRequestException('bonusTopUp must be >= 0');
+    }
     if (bonusTopUp !== 0) {
       const reason = dto.bonusTopUpReason ?? entry.bonusTopUpReason;
       if (!reason || reason.trim().length === 0) {
@@ -685,7 +703,23 @@ export class PayrollRunService {
       }
     }
 
-    const result = await this.recalcEntryAmounts(entry, entry.run, bonusTopUp);
+    const netTopUp = dto.netTopUp ?? this.toNumber(entry.netTopUp);
+    if (netTopUp < 0) {
+      throw new BadRequestException('netTopUp must be >= 0');
+    }
+    if (netTopUp !== 0) {
+      const reason = dto.netTopUpReason ?? entry.netTopUpReason;
+      if (!reason || reason.trim().length === 0) {
+        throw new BadRequestException(
+          'netTopUpReason is required when netTopUp is not zero',
+        );
+      }
+    }
+
+    const result = await this.recalcEntryAmounts(entry, entry.run, {
+      bonusTopUp,
+      netTopUp,
+    });
 
     const updated = await this.prisma.payrollEntry.update({
       where: { id: entryId },
@@ -695,6 +729,11 @@ export class PayrollRunService {
           dto.bonusTopUpReason !== undefined
             ? dto.bonusTopUpReason
             : entry.bonusTopUpReason,
+        netTopUp: new Decimal(netTopUp),
+        netTopUpReason:
+          dto.netTopUpReason !== undefined
+            ? dto.netTopUpReason
+            : entry.netTopUpReason,
         notes: dto.notes !== undefined ? dto.notes : entry.notes,
         ...this.calculationToEntryUpdate(result),
         updatedBy: ctx.userId,
@@ -775,6 +814,7 @@ export class PayrollRunService {
           basicSalary: true,
           transportationAllowance: true,
           monthlyBonus: true,
+          monthlyNetBonus: true,
           pensionApplicable: true,
           taxApplicable: true,
         },
@@ -886,6 +926,8 @@ export class PayrollRunService {
           taxableThreshold,
           bonusTopUp: topUp?.bonusTopUp ?? 0,
           bonusTopUpReason: topUp?.bonusTopUpReason ?? null,
+          netTopUp: topUp?.netTopUp ?? 0,
+          netTopUpReason: topUp?.netTopUpReason ?? null,
           preservedNotes: topUp?.notes ?? null,
         }),
       );
@@ -909,6 +951,8 @@ export class PayrollRunService {
     taxableThreshold: number;
     bonusTopUp: number;
     bonusTopUpReason: string | null;
+    netTopUp: number;
+    netTopUpReason: string | null;
     preservedNotes: string | null;
   }): EntryDraft {
     const {
@@ -922,6 +966,8 @@ export class PayrollRunService {
       taxableThreshold,
       bonusTopUp,
       bonusTopUpReason,
+      netTopUp,
+      netTopUpReason,
       preservedNotes,
     } = input;
 
@@ -1012,6 +1058,7 @@ export class PayrollRunService {
     const monthEndBasic = this.toNumber(monthEndContract?.basicSalary);
     const transport = this.toNumber(monthEndContract?.transportationAllowance);
     const monthlyBonus = this.toNumber(monthEndContract?.monthlyBonus);
+    const contractNetBonus = this.toNumber(monthEndContract?.monthlyNetBonus);
     const pensionApplicable = monthEndContract?.pensionApplicable ?? true;
     const taxApplicable = monthEndContract?.taxApplicable ?? true;
 
@@ -1040,6 +1087,8 @@ export class PayrollRunService {
       transportAllowance: transport,
       monthlyBonus,
       bonusTopUp,
+      contractNetBonus,
+      netTopUp,
       payrollDays,
       earnedSalary: sumEarned,
       overtimeHours,
@@ -1092,6 +1141,7 @@ export class PayrollRunService {
       basicSalary: new Decimal(monthEndBasic),
       transportAllowance: new Decimal(transport),
       monthlyBonus: new Decimal(monthlyBonus),
+      contractNetBonus: new Decimal(contractNetBonus),
       earnedSalary: new Decimal(result.earnedSalary),
       normalOtHours: new Decimal(overtimeHours.normalHours),
       eveningOtHours: new Decimal(overtimeHours.eveningHours),
@@ -1113,6 +1163,8 @@ export class PayrollRunService {
       netPay: new Decimal(result.netPay),
       bonusTopUp: new Decimal(bonusTopUp),
       bonusTopUpReason,
+      netTopUp: new Decimal(netTopUp),
+      netTopUpReason,
       flag,
       flagNote: flagNote ?? null,
       bankName: employee.bankName,
@@ -1163,7 +1215,7 @@ export class PayrollRunService {
   private async recalcEntryAmounts(
     entry: PayrollEntry,
     run: Pick<PayrollRun, 'taxableThreshold'>,
-    bonusTopUp: number,
+    topUps: { bonusTopUp: number; netTopUp: number },
   ): Promise<PayrollCalculationResult> {
     let pensionApplicable = true;
     let taxApplicable = true;
@@ -1182,7 +1234,9 @@ export class PayrollRunService {
       basicSalary: this.toNumber(entry.basicSalary),
       transportAllowance: this.toNumber(entry.transportAllowance),
       monthlyBonus: this.toNumber(entry.monthlyBonus),
-      bonusTopUp,
+      bonusTopUp: topUps.bonusTopUp,
+      contractNetBonus: this.toNumber(entry.contractNetBonus),
+      netTopUp: topUps.netTopUp,
       payrollDays: this.toNumber(entry.payrollDays),
       earnedSalary: this.toNumber(entry.earnedSalary),
       overtimeHours: {
@@ -1229,6 +1283,8 @@ export class PayrollRunService {
       select: {
         grossIncome: true,
         netPay: true,
+        contractNetBonus: true,
+        netTopUp: true,
         pensionEmployee: true,
         pensionEmployer: true,
         incomeTax: true,
@@ -1239,6 +1295,10 @@ export class PayrollRunService {
       (acc, e) => ({
         totalGross: acc.totalGross + this.toNumber(e.grossIncome),
         totalNetPay: acc.totalNetPay + this.toNumber(e.netPay),
+        totalNetBonus:
+          acc.totalNetBonus +
+          this.toNumber(e.contractNetBonus) +
+          this.toNumber(e.netTopUp),
         totalPensionEmp: acc.totalPensionEmp + this.toNumber(e.pensionEmployee),
         totalPensionEmr: acc.totalPensionEmr + this.toNumber(e.pensionEmployer),
         totalTax: acc.totalTax + this.toNumber(e.incomeTax),
@@ -1246,6 +1306,7 @@ export class PayrollRunService {
       {
         totalGross: 0,
         totalNetPay: 0,
+        totalNetBonus: 0,
         totalPensionEmp: 0,
         totalPensionEmr: 0,
         totalTax: 0,
@@ -1258,6 +1319,7 @@ export class PayrollRunService {
         totalEmployees: entries.length,
         totalGross: new Decimal(this.round(totals.totalGross)),
         totalNetPay: new Decimal(this.round(totals.totalNetPay)),
+        totalNetBonus: new Decimal(this.round(totals.totalNetBonus)),
         totalPensionEmp: new Decimal(this.round(totals.totalPensionEmp)),
         totalPensionEmr: new Decimal(this.round(totals.totalPensionEmr)),
         totalTax: new Decimal(this.round(totals.totalTax)),

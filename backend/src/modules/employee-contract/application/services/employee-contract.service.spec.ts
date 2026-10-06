@@ -5,6 +5,7 @@ const PAY_FIELDS = [
   'basicSalary',
   'transportationAllowance',
   'monthlyBonus',
+  'monthlyNetBonus',
 ] as const;
 
 describe('EmployeeContractService.getMyActiveContract', () => {

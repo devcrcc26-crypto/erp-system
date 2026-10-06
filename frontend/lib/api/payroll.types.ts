@@ -27,6 +27,7 @@ export interface PayrollRunListItem {
   totalEmployees: number;
   totalGross: MoneyField;
   totalNetPay: MoneyField;
+  totalNetBonus: MoneyField;
   totalPensionEmp: MoneyField;
   totalPensionEmr: MoneyField;
   totalTax: MoneyField;
@@ -79,6 +80,7 @@ export interface PayrollEntryDetail {
   basicSalary: MoneyField;
   transportAllowance: MoneyField;
   monthlyBonus: MoneyField;
+  contractNetBonus: MoneyField;
   earnedSalary: MoneyField;
   normalOtHours: MoneyField;
   eveningOtHours: MoneyField;
@@ -100,6 +102,8 @@ export interface PayrollEntryDetail {
   netPay: MoneyField;
   bonusTopUp: MoneyField;
   bonusTopUpReason: string | null;
+  netTopUp: MoneyField;
+  netTopUpReason: string | null;
   flag: PayrollEntryFlag;
   flagNote: string | null;
   notes: string | null;
@@ -155,6 +159,9 @@ export interface EmployeePayslip {
   monthlyBonus: MoneyField;
   bonusTopUp: MoneyField;
   bonusTopUpReason: string | null;
+  contractNetBonus: MoneyField;
+  netTopUp: MoneyField;
+  netTopUpReason: string | null;
   grossIncome: MoneyField;
   pensionApplicable: boolean;
   pensionEmployee: MoneyField;
@@ -173,6 +180,7 @@ export interface PayrollRunDetail {
   totalEmployees: number;
   totalGross: MoneyField;
   totalNetPay: MoneyField;
+  totalNetBonus: MoneyField;
   totalPensionEmp: MoneyField;
   totalPensionEmr: MoneyField;
   totalTax: MoneyField;
@@ -203,5 +211,7 @@ export interface SubmitPayrollRunPayload {
 export interface UpdatePayrollEntryPayload {
   bonusTopUp?: number;
   bonusTopUpReason?: string;
+  netTopUp?: number;
+  netTopUpReason?: string;
   notes?: string;
 }

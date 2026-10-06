@@ -89,6 +89,7 @@ export class EmployeeContractController {
                 basicSalary: { type: 'number' },
                 transportationAllowance: { type: 'number' },
                 monthlyBonus: { type: 'number' },
+                monthlyNetBonus: { type: 'number' },
                 pensionApplicable: { type: 'boolean' },
                 taxApplicable: { type: 'boolean' },
                 probationEndDate: { type: 'string', format: 'date' },

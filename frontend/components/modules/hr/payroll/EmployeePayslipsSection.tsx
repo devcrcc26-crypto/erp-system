@@ -283,6 +283,25 @@ function PayslipBreakdown({ payslip }: { payslip: EmployeePayslip }): React.Reac
         />
       </section>
 
+      {parsePayrollMoney(payslip.contractNetBonus) +
+        parsePayrollMoney(payslip.netTopUp) >
+      0 ? (
+        <section className="erp-payslip-section">
+          <BreakdownRow
+            label={
+              parsePayrollMoney(payslip.netTopUp) > 0 &&
+              payslip.netTopUpReason?.trim()
+                ? `${t('profile.payroll.netBonus')} (${payslip.netTopUpReason.trim()})`
+                : t('profile.payroll.netBonus')
+            }
+            amount={money(
+              parsePayrollMoney(payslip.contractNetBonus) +
+                parsePayrollMoney(payslip.netTopUp),
+            )}
+          />
+        </section>
+      ) : null}
+
       <p className="erp-payslip-note">
         {t('profile.payroll.employerPension')}:{' '}
         {payslip.pensionApplicable

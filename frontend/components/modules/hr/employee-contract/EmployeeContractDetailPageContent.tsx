@@ -178,6 +178,8 @@ export default function EmployeeContractDetailPageContent({
     contract.basicSalary != null ||
     contract.transportationAllowance != null ||
     contract.monthlyBonus != null ||
+    (contract.monthlyNetBonus != null &&
+      Number(contract.monthlyNetBonus) !== 0) ||
     contract.pensionApplicable != null ||
     contract.taxApplicable != null;
 
@@ -407,6 +409,9 @@ export default function EmployeeContractDetailPageContent({
                 </MetaItem>
                 <MetaItem label={t('hr.labels.monthlyBonus')}>
                   {formatMoney(contract.monthlyBonus, ETB)}
+                </MetaItem>
+                <MetaItem label={t('hr.labels.monthlyNetBonus')}>
+                  {formatMoney(contract.monthlyNetBonus ?? 0, ETB)}
                 </MetaItem>
               </div>
             </DetailSection>

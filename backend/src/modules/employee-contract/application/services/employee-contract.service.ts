@@ -161,6 +161,7 @@ export class EmployeeContractService {
             basicSalary: dto.basicSalary ?? 0,
             transportationAllowance: dto.transportationAllowance ?? 0,
             monthlyBonus: dto.monthlyBonus ?? 0,
+            monthlyNetBonus: dto.monthlyNetBonus ?? 0,
             pensionApplicable: dto.pensionApplicable ?? true,
             taxApplicable: dto.taxApplicable ?? true,
         });
@@ -217,6 +218,9 @@ export class EmployeeContractService {
                         salary.transportationAllowance,
                     ),
                     monthlyBonus: this.toDecimal(salary.monthlyBonus),
+                    monthlyNetBonus:
+                        this.toDecimal(salary.monthlyNetBonus) ??
+                        new Prisma.Decimal(0),
                     probationEndDate: dto.probationEndDate
                         ? this.parseDateOnly(dto.probationEndDate)
                         : null,
@@ -252,12 +256,15 @@ export class EmployeeContractService {
         const basicSalary = dto.basicSalary;
         const transportationAllowance = dto.transportationAllowance ?? 0;
         const monthlyBonus = dto.monthlyBonus ?? 0;
+        const monthlyNetBonus = dto.monthlyNetBonus ?? 0;
 
         const result = this.payrollCalc.calculate({
             basicSalary,
             transportAllowance: transportationAllowance,
             monthlyBonus,
             bonusTopUp: 0,
+            contractNetBonus: monthlyNetBonus,
+            netTopUp: 0,
             payrollDays: 30,
             overtimeHours: ZERO_OT,
             taxableThreshold: threshold,
@@ -269,6 +276,7 @@ export class EmployeeContractService {
             basicSalary,
             transportationAllowance,
             monthlyBonus,
+            monthlyNetBonus,
             pensionApplicable,
             taxApplicable,
             taxableThreshold: threshold,
@@ -281,6 +289,7 @@ export class EmployeeContractService {
             pensionEmployee: result.pensionEmployee,
             pensionEmployer: result.pensionEmployer,
             totalDeductions: result.totalDeductions,
+            totalNetBonus: result.totalNetBonus,
             netPay: result.netPay,
         };
     }
@@ -490,6 +499,7 @@ export class EmployeeContractService {
             dto.basicSalary !== undefined ||
             dto.transportationAllowance !== undefined ||
             dto.monthlyBonus !== undefined ||
+            dto.monthlyNetBonus !== undefined ||
             dto.pensionApplicable !== undefined ||
             dto.taxApplicable !== undefined;
 
@@ -506,6 +516,9 @@ export class EmployeeContractService {
                   monthlyBonus:
                       dto.monthlyBonus ??
                       this.payrollCalc.toNumber(contract.monthlyBonus),
+                  monthlyNetBonus:
+                      dto.monthlyNetBonus ??
+                      this.payrollCalc.toNumber(contract.monthlyNetBonus),
                   pensionApplicable:
                       dto.pensionApplicable ?? contract.pensionApplicable,
                   taxApplicable: dto.taxApplicable ?? contract.taxApplicable,
@@ -532,6 +545,9 @@ export class EmployeeContractService {
                               salary.transportationAllowance,
                           ),
                           monthlyBonus: this.toDecimal(salary.monthlyBonus),
+                          monthlyNetBonus:
+                              this.toDecimal(salary.monthlyNetBonus) ??
+                              new Prisma.Decimal(0),
                       }
                     : {}),
                 ...(dto.probationEndDate !== undefined
@@ -835,6 +851,7 @@ export class EmployeeContractService {
             'basicSalary',
             'transportationAllowance',
             'monthlyBonus',
+            'monthlyNetBonus',
         ] as const;
         const dateFields = [
             'signedAt',
@@ -1037,12 +1054,14 @@ export class EmployeeContractService {
         basicSalary: number;
         transportationAllowance: number;
         monthlyBonus: number;
+        monthlyNetBonus: number;
         pensionApplicable: boolean;
         taxApplicable: boolean;
     }): {
         basicSalary: number;
         transportationAllowance: number;
         monthlyBonus: number;
+        monthlyNetBonus: number;
         pensionApplicable: boolean;
         taxApplicable: boolean;
     } {
@@ -1050,6 +1069,7 @@ export class EmployeeContractService {
             basicSalary: input.basicSalary,
             transportationAllowance: input.transportationAllowance,
             monthlyBonus: input.monthlyBonus ?? 0,
+            monthlyNetBonus: input.monthlyNetBonus ?? 0,
             pensionApplicable: input.pensionApplicable,
             taxApplicable: input.taxApplicable,
         };

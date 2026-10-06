@@ -13,6 +13,16 @@ export interface PayrollCalculationInput {
   transportAllowance: number;
   monthlyBonus: number;
   bonusTopUp: number;
+  /**
+   * Recurring net bonus from the contract (after tax, not taxed).
+   * Defaults to 0. Not prorated by paid days.
+   */
+  contractNetBonus?: number;
+  /**
+   * One-time net top-up for this run (after tax, not taxed).
+   * Defaults to 0.
+   */
+  netTopUp?: number;
   /** Paid days after absences/leave in the employed window (0–30). */
   payrollDays: number;
   /**
@@ -58,6 +68,8 @@ export interface PayrollCalculationResult {
   incomeTax: number;
   totalDeductions: number;
 
+  /** contractNetBonus + netTopUp (after tax, not taxed). */
+  totalNetBonus: number;
   netPay: number;
 }
 
@@ -87,6 +99,8 @@ export class PayrollCalculationService {
       transportAllowance,
       monthlyBonus,
       bonusTopUp,
+      contractNetBonus = 0,
+      netTopUp = 0,
       payrollDays: payrollDaysInput,
       earnedSalary: earnedSalaryOverride,
       overtimeHours,
@@ -143,7 +157,9 @@ export class PayrollCalculationService {
       : 0;
     const totalDeductions = this.round(pensionEmployee + incomeTax);
 
-    const netPay = this.round(grossIncome - totalDeductions);
+    // Net bonuses are after tax and never enter taxable income / gross / deductions.
+    const totalNetBonus = this.round(contractNetBonus + netTopUp);
+    const netPay = this.round(grossIncome - totalDeductions + totalNetBonus);
 
     return {
       payrollDays,
@@ -161,6 +177,7 @@ export class PayrollCalculationService {
       pensionEmployer,
       incomeTax,
       totalDeductions,
+      totalNetBonus,
       netPay,
     };
   }

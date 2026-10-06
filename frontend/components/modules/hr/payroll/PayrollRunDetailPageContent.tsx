@@ -1,7 +1,7 @@
 'use client';
 
 import './payroll-v2.css';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
@@ -11,6 +11,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Radio,
   Select,
   Spin,
   Steps,
@@ -160,7 +161,15 @@ export default function PayrollRunDetailPageContent({
   const [departmentFilter, setDepartmentFilter] = useState<string | undefined>();
   const [disciplineFilter, setDisciplineFilter] = useState<string | undefined>();
   const [bonusEntry, setBonusEntry] = useState<PayrollEntryDetail | null>(null);
-  const [bonusForm] = Form.useForm<{ bonusTopUp: number; bonusTopUpReason: string }>();
+  const [bonusForm] = Form.useForm<{
+    treatment: 'taxable' | 'net';
+    amount: number;
+    reason: string;
+  }>();
+  const [bonusPreview, setBonusPreview] = useState<{
+    treatment: 'taxable' | 'net';
+    amount: number;
+  }>({ treatment: 'taxable', amount: 0 });
   const [exporting, setExporting] = useState(false);
   const [zipping, setZipping] = useState(false);
   const [releaseOpen, setReleaseOpen] = useState(false);
@@ -178,6 +187,23 @@ export default function PayrollRunDetailPageContent({
   }, [usersQuery.data?.data]);
 
   const run = detailQuery.data;
+
+  useEffect(() => {
+    if (!bonusEntry) {
+      return;
+    }
+    const taxable = parsePayrollMoney(bonusEntry.bonusTopUp);
+    const net = parsePayrollMoney(bonusEntry.netTopUp);
+    const treatment: 'taxable' | 'net' =
+      net > 0 && taxable === 0 ? 'net' : 'taxable';
+    const amount = treatment === 'net' ? net : taxable;
+    const reason =
+      treatment === 'net'
+        ? (bonusEntry.netTopUpReason ?? '')
+        : (bonusEntry.bonusTopUpReason ?? '');
+    bonusForm.setFieldsValue({ treatment, amount, reason });
+    setBonusPreview({ treatment, amount });
+  }, [bonusEntry, bonusForm]);
 
   const flagCounts = useMemo(
     () => (run ? countEntryFlags(run.entries) : null),
@@ -302,6 +328,10 @@ export default function PayrollRunDetailPageContent({
       bonus: sum((e) =>
         parsePayrollMoney(e.monthlyBonus) + parsePayrollMoney(e.bonusTopUp),
       ),
+      netBonus: sum(
+        (e) =>
+          parsePayrollMoney(e.contractNetBonus) + parsePayrollMoney(e.netTopUp),
+      ),
       gross: sum((e) => parsePayrollMoney(e.grossIncome)),
       taxable: sum((e) => parsePayrollMoney(e.taxableIncome)),
       pension: sum((e) => parsePayrollMoney(e.pensionEmployee)),
@@ -393,15 +423,19 @@ export default function PayrollRunDetailPageContent({
     }
     try {
       const values = await bonusForm.validateFields();
+      const amount = values.amount ?? 0;
+      const reason = values.reason?.trim() || undefined;
+      const payload =
+        values.treatment === 'net'
+          ? { netTopUp: amount, netTopUpReason: reason }
+          : { bonusTopUp: amount, bonusTopUpReason: reason };
       await updateEntryMutation.mutateAsync({
         entryId: bonusEntry.id,
-        payload: {
-          bonusTopUp: values.bonusTopUp,
-          bonusTopUpReason: values.bonusTopUpReason?.trim(),
-        },
+        payload,
       });
       messageApi.success(t('hr.payroll.entry.bonusSaved'));
       setBonusEntry(null);
+      setBonusPreview({ treatment: 'taxable', amount: 0 });
       bonusForm.resetFields();
     } catch (error) {
       if (error instanceof ApiRequestError) {
@@ -410,6 +444,32 @@ export default function PayrollRunDetailPageContent({
         notifyApiError(error, 'Request failed', messageApi);
       }
     }
+  }
+
+  function estimateNetIncrease(
+    treatment: 'taxable' | 'net' | undefined,
+    amount: number | undefined,
+    taxableIncome: number,
+  ): number {
+    const value = typeof amount === 'number' && Number.isFinite(amount) ? amount : 0;
+    if (value <= 0) {
+      return 0;
+    }
+    if (treatment === 'net') {
+      return Math.round(value * 100) / 100;
+    }
+    const taxBefore = estimateEthiopianTax(taxableIncome);
+    const taxAfter = estimateEthiopianTax(taxableIncome + value);
+    return Math.round((value - (taxAfter - taxBefore)) * 100) / 100;
+  }
+
+  function estimateEthiopianTax(taxableIncome: number): number {
+    if (taxableIncome <= 2000) return 0;
+    if (taxableIncome <= 4000) return taxableIncome * 0.15 - 300;
+    if (taxableIncome <= 7000) return taxableIncome * 0.2 - 500;
+    if (taxableIncome <= 10000) return taxableIncome * 0.25 - 850;
+    if (taxableIncome <= 14000) return taxableIncome * 0.3 - 1350;
+    return taxableIncome * 0.35 - 2050;
   }
 
   const showPayslipColumn =
@@ -575,6 +635,31 @@ export default function PayrollRunDetailPageContent({
         render: (v) => <MoneyCell value={v} />,
       },
       {
+        title: t('hr.payroll.entry.netBonus'),
+        key: 'netBonus',
+        align: 'right',
+        width: 110,
+        render: (_, row) => {
+          const contractNet = parsePayrollMoney(row.contractNetBonus);
+          const oneTime = parsePayrollMoney(row.netTopUp);
+          const total = contractNet + oneTime;
+          return (
+            <span style={PAYROLL_MONEY_CELL_STYLE}>
+              {formatPayrollMoney(total)}
+              {oneTime > 0 ? (
+                <Tooltip
+                  title={
+                    row.netTopUpReason || t('hr.payroll.entry.netTopUpAmount')
+                  }
+                >
+                  <span className="erp-payroll-topup-mark">*</span>
+                </Tooltip>
+              ) : null}
+            </span>
+          );
+        },
+      },
+      {
         title: t('hr.payroll.entry.net'),
         dataIndex: 'netPay',
         align: 'right',
@@ -665,6 +750,37 @@ export default function PayrollRunDetailPageContent({
               <p className="erp-payroll-fact-value">{row.notes}</p>
             </div>
           ) : null}
+          {parsePayrollMoney(row.contractNetBonus) > 0 ||
+          parsePayrollMoney(row.netTopUp) > 0 ? (
+            <div className="erp-payroll-fact erp-payroll-fact--wide">
+              <p className="erp-payroll-fact-label">
+                {t('hr.payroll.entry.netBonus')}
+              </p>
+              <p className="erp-payroll-fact-value">
+                {parsePayrollMoney(row.contractNetBonus) > 0
+                  ? t('hr.payroll.entry.contractNetBonusValue', {
+                      amount: formatPayrollMoney(row.contractNetBonus, {
+                        emptyZero: false,
+                      }),
+                    })
+                  : null}
+                {parsePayrollMoney(row.contractNetBonus) > 0 &&
+                parsePayrollMoney(row.netTopUp) > 0
+                  ? ' · '
+                  : null}
+                {parsePayrollMoney(row.netTopUp) > 0
+                  ? t('hr.payroll.entry.netTopUpValue', {
+                      amount: formatPayrollMoney(row.netTopUp, {
+                        emptyZero: false,
+                      }),
+                      reason: row.netTopUpReason?.trim()
+                        ? ` — ${row.netTopUpReason.trim()}`
+                        : '',
+                    })
+                  : null}
+              </p>
+            </div>
+          ) : null}
         </div>
         <div className="erp-payroll-entry-side">
           <p className="erp-payroll-fact-label">{t('hr.payroll.entry.salaryPeriods')}</p>
@@ -718,10 +834,6 @@ export default function PayrollRunDetailPageContent({
             <Button
               onClick={() => {
                 setBonusEntry(row);
-                bonusForm.setFieldsValue({
-                  bonusTopUp: parsePayrollMoney(row.bonusTopUp),
-                  bonusTopUpReason: row.bonusTopUpReason ?? '',
-                });
               }}
             >
               {t('hr.payroll.entry.editBonusTopUp')}
@@ -998,6 +1110,7 @@ export default function PayrollRunDetailPageContent({
         open={Boolean(bonusEntry)}
         onCancel={() => {
           setBonusEntry(null);
+          setBonusPreview({ treatment: 'taxable', amount: 0 });
           bonusForm.resetFields();
         }}
         onOk={() => void saveBonusTopUp()}
@@ -1005,21 +1118,143 @@ export default function PayrollRunDetailPageContent({
         destroyOnHidden
         className="erp-payroll-modal"
       >
-        <Form form={bonusForm} layout="vertical">
+        {bonusEntry ? (
+          <div className="mb-3 text-sm text-[var(--erp-text-secondary,#6B7280)]">
+            {parsePayrollMoney(bonusEntry.bonusTopUp) > 0 ? (
+              <p className="m-0">
+                {t('hr.payroll.entry.currentTaxableTopUp', {
+                  amount: formatPayrollMoney(bonusEntry.bonusTopUp, {
+                    emptyZero: false,
+                  }),
+                  reason: bonusEntry.bonusTopUpReason?.trim()
+                    ? ` — ${bonusEntry.bonusTopUpReason.trim()}`
+                    : '',
+                })}
+              </p>
+            ) : null}
+            {parsePayrollMoney(bonusEntry.netTopUp) > 0 ? (
+              <p className="m-0">
+                {t('hr.payroll.entry.currentNetTopUp', {
+                  amount: formatPayrollMoney(bonusEntry.netTopUp, {
+                    emptyZero: false,
+                  }),
+                  reason: bonusEntry.netTopUpReason?.trim()
+                    ? ` — ${bonusEntry.netTopUpReason.trim()}`
+                    : '',
+                })}
+              </p>
+            ) : null}
+            {parsePayrollMoney(bonusEntry.contractNetBonus) > 0 ? (
+              <p className="m-0">
+                {t('hr.payroll.entry.contractNetBonusValue', {
+                  amount: formatPayrollMoney(bonusEntry.contractNetBonus, {
+                    emptyZero: false,
+                  }),
+                })}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+        <Form
+          form={bonusForm}
+          layout="vertical"
+          initialValues={{ treatment: 'taxable', amount: 0, reason: '' }}
+          onValuesChange={(_, all) => {
+            setBonusPreview({
+              treatment: (all.treatment as 'taxable' | 'net' | undefined) ?? 'taxable',
+              amount:
+                typeof all.amount === 'number' && Number.isFinite(all.amount)
+                  ? all.amount
+                  : 0,
+            });
+          }}
+        >
           <Form.Item
-            name="bonusTopUp"
-            label={t('hr.payroll.entry.bonusTopUpAmount')}
-            rules={[{ required: true, message: t('hr.payroll.entry.bonusTopUpRequired') }]}
+            name="treatment"
+            label={t('hr.payroll.entry.bonusTreatment')}
+            rules={[{ required: true }]}
+          >
+            <Radio.Group
+              onChange={(e) => {
+                if (!bonusEntry) {
+                  return;
+                }
+                const next = e.target.value as 'taxable' | 'net';
+                const amount =
+                  next === 'net'
+                    ? parsePayrollMoney(bonusEntry.netTopUp)
+                    : parsePayrollMoney(bonusEntry.bonusTopUp);
+                const reason =
+                  next === 'net'
+                    ? (bonusEntry.netTopUpReason ?? '')
+                    : (bonusEntry.bonusTopUpReason ?? '');
+                bonusForm.setFieldsValue({ amount, reason });
+                setBonusPreview({ treatment: next, amount });
+              }}
+              options={[
+                {
+                  value: 'taxable',
+                  label: t('hr.payroll.entry.treatmentTaxable'),
+                },
+                {
+                  value: 'net',
+                  label: t('hr.payroll.entry.treatmentNet'),
+                },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
+            name="amount"
+            label={
+              bonusPreview.treatment === 'net'
+                ? t('hr.payroll.entry.netTopUpAmount')
+                : t('hr.payroll.entry.bonusTopUpAmount')
+            }
+            rules={[
+              { required: true, message: t('hr.payroll.entry.bonusTopUpRequired') },
+            ]}
           >
             <InputNumber min={0} precision={2} className="w-full" />
           </Form.Item>
           <Form.Item
-            name="bonusTopUpReason"
-            label={t('hr.payroll.entry.bonusTopUpReason')}
-            rules={[{ required: true, message: t('hr.payroll.entry.bonusReasonRequired') }]}
+            name="reason"
+            label={
+              bonusPreview.treatment === 'net'
+                ? t('hr.payroll.entry.netTopUpReason')
+                : t('hr.payroll.entry.bonusTopUpReason')
+            }
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const amount = getFieldValue('amount') as number | undefined;
+                  if (amount != null && amount !== 0 && !String(value ?? '').trim()) {
+                    return Promise.reject(
+                      new Error(t('hr.payroll.entry.bonusReasonRequired')),
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              }),
+            ]}
           >
             <Input.TextArea rows={3} maxLength={500} />
           </Form.Item>
+          {bonusEntry && bonusPreview.amount > 0 ? (
+            <Alert
+              type="info"
+              showIcon
+              title={t('hr.payroll.entry.netIncreasePreview', {
+                amount: formatPayrollMoney(
+                  estimateNetIncrease(
+                    bonusPreview.treatment,
+                    bonusPreview.amount,
+                    parsePayrollMoney(bonusEntry.taxableIncome),
+                  ),
+                  { emptyZero: false },
+                ),
+              })}
+            />
+          ) : null}
         </Form>
       </Modal>
 
@@ -1141,6 +1376,15 @@ export default function PayrollRunDetailPageContent({
             label: t('hr.payroll.summary.totalTax'),
             value: formatPayrollMoney(run.totalTax, { emptyZero: false }),
             icon: <Receipt size={15} strokeWidth={2} />,
+            money: true,
+          },
+          {
+            key: 'netBonus',
+            label: t('hr.payroll.summary.totalNetBonus'),
+            value: formatPayrollMoney(run.totalNetBonus ?? 0, {
+              emptyZero: false,
+            }),
+            icon: <Wallet size={15} strokeWidth={2} />,
             money: true,
           },
           {
@@ -1368,10 +1612,13 @@ export default function PayrollRunDetailPageContent({
                     <MoneyCell value={totalsRow.tax} strong />
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={12} align="right">
+                    <MoneyCell value={totalsRow.netBonus} strong />
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={13} align="right">
                     <MoneyCell value={totalsRow.net} strong />
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={13} />
-                  {showPayslipColumn ? <Table.Summary.Cell index={14} /> : null}
+                  <Table.Summary.Cell index={14} />
+                  {showPayslipColumn ? <Table.Summary.Cell index={15} /> : null}
                 </Table.Summary.Row>
               </Table.Summary>
             ) : null

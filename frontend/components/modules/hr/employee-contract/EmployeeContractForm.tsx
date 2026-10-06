@@ -63,6 +63,7 @@ export interface EmployeeContractFormValues {
   basicSalary?: number;
   transportationAllowance?: number;
   monthlyBonus?: number;
+  monthlyNetBonus?: number;
   pensionApplicable: boolean;
   taxApplicable: boolean;
   probationEndDate?: dayjs.Dayjs | null;
@@ -90,6 +91,7 @@ const COMPENSATION_FIELDS = [
   'basicSalary',
   'transportationAllowance',
   'monthlyBonus',
+  'monthlyNetBonus',
   'pensionApplicable',
   'taxApplicable',
 ] as const;
@@ -152,6 +154,7 @@ function valuesFromContract(
     basicSalary: toAmount(contract.basicSalary),
     transportationAllowance: toAmount(contract.transportationAllowance),
     monthlyBonus: toAmount(contract.monthlyBonus),
+    monthlyNetBonus: toAmount(contract.monthlyNetBonus) ?? 0,
     pensionApplicable: contract.pensionApplicable ?? true,
     taxApplicable: contract.taxApplicable ?? true,
     probationEndDate: toDay(contract.probationEndDate),
@@ -271,6 +274,7 @@ export default function EmployeeContractForm({
   const basicSalary = Form.useWatch('basicSalary', form);
   const transportationAllowance = Form.useWatch('transportationAllowance', form);
   const monthlyBonus = Form.useWatch('monthlyBonus', form);
+  const monthlyNetBonus = Form.useWatch('monthlyNetBonus', form);
   const pensionApplicable = Form.useWatch('pensionApplicable', form);
   const taxApplicable = Form.useWatch('taxApplicable', form);
   const employeeId = Form.useWatch('employeeId', form) ?? detailsSnapshot.employeeId;
@@ -315,6 +319,10 @@ export default function EmployeeContractForm({
       typeof monthlyBonus === 'number' && Number.isFinite(monthlyBonus)
         ? monthlyBonus
         : 0;
+    const netBonus =
+      typeof monthlyNetBonus === 'number' && Number.isFinite(monthlyNetBonus)
+        ? monthlyNetBonus
+        : 0;
 
     if (basic == null) {
       setSalaryPreview(null);
@@ -332,6 +340,7 @@ export default function EmployeeContractForm({
             basicSalary: basic,
             transportationAllowance: transport,
             monthlyBonus: bonus,
+            monthlyNetBonus: netBonus,
             pensionApplicable: pensionApplicable ?? true,
             taxApplicable: taxApplicable ?? true,
           });
@@ -366,6 +375,7 @@ export default function EmployeeContractForm({
     basicSalary,
     transportationAllowance,
     monthlyBonus,
+    monthlyNetBonus,
     pensionApplicable,
     taxApplicable,
     t,
@@ -564,6 +574,7 @@ export default function EmployeeContractForm({
       basicSalary: values.basicSalary,
       transportationAllowance: values.transportationAllowance,
       monthlyBonus: values.monthlyBonus,
+      monthlyNetBonus: values.monthlyNetBonus ?? 0,
       pensionApplicable: values.pensionApplicable ?? true,
       taxApplicable: values.taxApplicable ?? true,
       probationEndDate: values.probationEndDate
@@ -844,6 +855,13 @@ export default function EmployeeContractForm({
               >
                 <CurrencyInputNumber min={0} precision={2} />
               </Form.Item>
+              <Form.Item
+                name="monthlyNetBonus"
+                label={t('hr.labels.monthlyNetBonus')}
+                extra={t('hr.labels.monthlyNetBonusHint')}
+              >
+                <CurrencyInputNumber min={0} precision={2} />
+              </Form.Item>
             </div>
 
             <div
@@ -875,6 +893,12 @@ export default function EmployeeContractForm({
                     label={t('hr.labels.pensionEmployee')}
                     value={formatEtb(salaryPreview.pensionEmployee)}
                   />
+                  {(salaryPreview.monthlyNetBonus ?? 0) > 0 ? (
+                    <PreviewRow
+                      label={t('hr.labels.monthlyNetBonus')}
+                      value={formatEtb(salaryPreview.monthlyNetBonus)}
+                    />
+                  ) : null}
                   <PreviewRow
                     label={t('hr.labels.estimatedNet')}
                     value={formatEtb(salaryPreview.netPay)}
@@ -1067,6 +1091,10 @@ export default function EmployeeContractForm({
                 <ReviewItem
                   label={t('hr.labels.monthlyBonus')}
                   value={formatEtb(reviewValues.monthlyBonus)}
+                />
+                <ReviewItem
+                  label={t('hr.labels.monthlyNetBonus')}
+                  value={formatEtb(reviewValues.monthlyNetBonus ?? 0)}
                 />
                 {salaryPreview ? (
                   <ReviewItem

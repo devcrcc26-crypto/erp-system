@@ -35,6 +35,9 @@ function model(overrides: Partial<PayslipPdfModel> = {}): PayslipPdfModel {
     monthlyBonus: 3500,
     bonusTopUp: 0,
     bonusTopUpReason: null,
+    contractNetBonus: 0,
+    netTopUp: 0,
+    netTopUpReason: null,
     grossIncome: 19512.5,
     pensionApplicable: true,
     pensionEmployee: 910,
@@ -121,6 +124,26 @@ describe('payslip layout', () => {
     expect(body).toContain('公司养老金: Not applicable / 不适用');
     expect(body).toContain('Bonus top-up / 额外奖金  (Site completion)');
     expect(body).toContain('Evening   2 h × 1.75');
+  });
+
+  it('shows net bonus after deductions and before net pay', () => {
+    const body = textOf(
+      buildPayslipLines(
+        model({
+          contractNetBonus: 2000,
+          netTopUp: 30000,
+          netTopUpReason: 'Project completion',
+          netPay: 52000,
+        }),
+      ),
+    );
+    expect(body).toContain('Net bonus (after tax) / 税后奖金');
+    expect(body).toContain('32,000.00');
+    expect(body).toContain('Includes one-time net top-up 30,000.00 — Project completion');
+    const netBonusIdx = body.indexOf('Net bonus (after tax)');
+    const netPayIdx = body.indexOf('NET PAY / 实发工资');
+    expect(netBonusIdx).toBeGreaterThan(-1);
+    expect(netPayIdx).toBeGreaterThan(netBonusIdx);
   });
 
   it('includes the Chinese labels in the text passed to the font subset', () => {

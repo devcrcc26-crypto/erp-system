@@ -55,6 +55,24 @@ export class UpdatePayrollEntryDto {
   @IsString()
   bonusTopUpReason?: string;
 
+  @ApiPropertyOptional({
+    description: 'One-time net bonus (after tax). Must be >= 0.',
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  netTopUp?: number;
+
+  @ApiPropertyOptional({
+    description: 'Required when netTopUp is non-zero',
+  })
+  @ValidateIf(
+    (dto: UpdatePayrollEntryDto) =>
+      dto.netTopUp != null && dto.netTopUp !== 0,
+  )
+  @IsString()
+  netTopUpReason?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

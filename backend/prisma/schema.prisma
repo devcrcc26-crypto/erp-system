@@ -5459,6 +5459,7 @@ model EmployeeContract{
   basicSalary               Decimal?                      @map("basic_salary") @db.Decimal(14, 2)
   transportationAllowance   Decimal?                      @map("transportation_allowance") @db.Decimal(14, 2)
   monthlyBonus              Decimal?                      @map("monthly_bonus") @db.Decimal(14, 2)
+  monthlyNetBonus           Decimal                       @default(0) @map("monthly_net_bonus") @db.Decimal(14, 2)
   probationEndDate          DateTime?                     @map("probation_end_date") @db.Date
   governedBy                String?                       @map("governed_by")
   lastWarnedAt              DateTime?                     @map("last_warned_at")
@@ -6014,6 +6015,7 @@ model PayrollRun{
   totalEmployees          Int                                 @default(0) @map("total_employees")
   totalGross              Decimal                             @default(0) @map("total_gross") @db.Decimal(14, 2)
   totalNetPay             Decimal                             @default(0) @map("total_net_pay") @db.Decimal(14, 2)
+  totalNetBonus           Decimal                             @default(0) @map("total_net_bonus") @db.Decimal(14, 2)
   totalPensionEmp         Decimal                             @default(0) @map("total_pension_emp") @db.Decimal(14, 2)
   totalPensionEmr         Decimal                             @default(0) @map("total_pension_emr") @db.Decimal(14, 2)
   totalTax                Decimal                             @default(0) @map("total_tax") @db.Decimal(14, 2)
@@ -6073,6 +6075,7 @@ model PayrollEntry {
   basicSalary              Decimal            @default(0) @map("basic_salary") @db.Decimal(14 , 2)
   transportAllowance       Decimal            @default(0) @map("transport_allowance") @db.Decimal(14, 2)
   monthlyBonus             Decimal            @default(0) @map("monthly_bonus") @db.Decimal(14 , 2)
+  contractNetBonus         Decimal            @default(0) @map("contract_net_bonus") @db.Decimal(14, 2)
 
 
   // Earned salary 
@@ -6110,9 +6113,13 @@ model PayrollEntry {
   // Net Pay
   netPay                   Decimal             @default(0) @map("net_pay") @db.Decimal(14, 2)
 
-  // Bonus top-up 
+  // Bonus top-up (taxable, before tax)
   bonusTopUp               Decimal             @default(0) @map("bonus_top_up") @db.Decimal(14, 2)
   bonusTopUpReason         String?             @map("bonus_top_up_reason")
+
+  // Net bonus top-up (after tax, not taxed)
+  netTopUp                 Decimal             @default(0) @map("net_top_up") @db.Decimal(14, 2)
+  netTopUpReason           String?             @map("net_top_up_reason")
 
 
   // Flags and overrides 

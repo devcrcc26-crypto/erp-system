@@ -44,6 +44,9 @@ export interface PayslipPdfModel {
   monthlyBonus: number;
   bonusTopUp: number;
   bonusTopUpReason: string | null;
+  contractNetBonus: number;
+  netTopUp: number;
+  netTopUpReason: string | null;
   grossIncome: number;
   pensionApplicable: boolean;
   pensionEmployee: number;
@@ -267,6 +270,26 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
     label: 'TOTAL / 扣除合计',
     amount: formatEtb(model.totalDeductions),
   });
+
+  const totalNetBonus = model.contractNetBonus + model.netTopUp;
+  if (totalNetBonus > 0) {
+    lines.push({
+      kind: 'amount',
+      indent: 1,
+      label: 'Net bonus (after tax) / 税后奖金',
+      amount: formatEtb(totalNetBonus),
+    });
+    if (model.netTopUp > 0) {
+      const reason = model.netTopUpReason?.trim();
+      lines.push({
+        kind: 'note',
+        text: reason
+          ? `Includes one-time net top-up ${formatEtb(model.netTopUp)} — ${reason}`
+          : `Includes one-time net top-up ${formatEtb(model.netTopUp)}`,
+      });
+    }
+  }
+
   lines.push({ kind: 'rule' });
   lines.push({
     kind: 'net',

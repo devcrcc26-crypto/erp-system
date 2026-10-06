@@ -77,6 +77,9 @@ export interface PayslipListItem {
   monthlyBonus: number;
   bonusTopUp: number;
   bonusTopUpReason: string | null;
+  contractNetBonus: number;
+  netTopUp: number;
+  netTopUpReason: string | null;
   grossIncome: number;
   pensionApplicable: boolean;
   pensionEmployee: number;
@@ -124,6 +127,9 @@ type PayslipWithRelations = {
     monthlyBonus: Decimal;
     bonusTopUp: Decimal;
     bonusTopUpReason: string | null;
+    contractNetBonus: Decimal;
+    netTopUp: Decimal;
+    netTopUpReason: string | null;
     grossIncome: Decimal;
     pensionEmployee: Decimal;
     pensionEmployer: Decimal;
@@ -476,6 +482,9 @@ export class PayrollPayslipService {
       monthlyBonus: this.toNumber(entry.monthlyBonus),
       bonusTopUp: this.toNumber(entry.bonusTopUp),
       bonusTopUpReason: entry.bonusTopUpReason,
+      contractNetBonus: this.toNumber(entry.contractNetBonus),
+      netTopUp: this.toNumber(entry.netTopUp),
+      netTopUpReason: entry.netTopUpReason,
       grossIncome: this.toNumber(entry.grossIncome),
       pensionApplicable: entry.contract?.pensionApplicable ?? true,
       pensionEmployee: this.toNumber(entry.pensionEmployee),
@@ -513,6 +522,9 @@ export class PayrollPayslipService {
       monthlyBonus: item.monthlyBonus,
       bonusTopUp: item.bonusTopUp,
       bonusTopUpReason: item.bonusTopUpReason,
+      contractNetBonus: item.contractNetBonus,
+      netTopUp: item.netTopUp,
+      netTopUpReason: item.netTopUpReason,
       grossIncome: item.grossIncome,
       pensionApplicable: item.pensionApplicable,
       pensionEmployee: item.pensionEmployee,
