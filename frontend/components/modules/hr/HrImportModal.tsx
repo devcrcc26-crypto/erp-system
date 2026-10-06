@@ -1,5 +1,7 @@
 'use client';
 
+import '@/components/modules/hr/import-export/hr-import-v2.css';
+
 import { useRef, useState } from 'react';
 import { Alert, Button, Modal, Spin, Upload } from 'antd';
 import {
@@ -302,8 +304,8 @@ export default function HrImportModal({
       footer={footer}
       width={840}
       centered
-      rootClassName="erp-user-import-modal"
-      className="erp-user-import-modal"
+      rootClassName="erp-user-import-modal erp-hr-import-v2"
+      className="erp-user-import-modal erp-hr-import-v2"
       classNames={{
         content: 'erp-user-import-modal-content',
         footer: 'erp-user-import-modal-footer',

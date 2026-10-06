@@ -11,7 +11,6 @@ import type {
   LeavePolicyLeaveType,
   LeavePolicyRuleInput,
 } from '@/lib/api/leave-policy.types';
-import { tokens } from '@/lib/theme/tokens';
 import { formatLeaveType } from '@/lib/utils/leave-display';
 import { previewEntitlement } from '@/lib/utils/leave-policy-preview';
 
@@ -146,24 +145,20 @@ export function buildLeavePolicyRules(
 function ReviewItem({
   label,
   value,
+  wide = false,
 }: {
   label: string;
   value: string;
+  wide?: boolean;
 }): React.ReactNode {
   return (
-    <div className="min-w-0">
-      <p
-        className="mb-0.5 text-xs font-medium uppercase tracking-wide"
-        style={{ color: tokens.colorTextTertiary }}
-      >
-        {label}
-      </p>
-      <p
-        className="m-0 whitespace-pre-wrap text-sm"
-        style={{ color: tokens.colorTextPrimary }}
-      >
-        {value}
-      </p>
+    <div
+      className={`erp-leave-policy-review-field${
+        wide ? ' erp-leave-policy-review-field--wide' : ''
+      }`}
+    >
+      <p className="erp-leave-policy-review-label">{label}</p>
+      <p className="erp-leave-policy-review-value">{value}</p>
     </div>
   );
 }
@@ -458,7 +453,7 @@ export default function LeavePolicyForm({
             title={t('hr.leavePolicy.steps.review')}
             description={t('pages.hr.leavePolicy.reviewStepDescription')}
           >
-            <div className="erp-form-grid-2">
+            <div className="erp-leave-policy-review-grid">
               <ReviewItem
                 label={t('hr.leavePolicy.name')}
                 value={review.name?.trim() || '—'}
@@ -473,23 +468,19 @@ export default function LeavePolicyForm({
                   review.isActive ? t('common.active') : t('common.inactive')
                 }
               />
-              <div className="md:col-span-2">
-                <ReviewItem
-                  label={t('hr.leavePolicy.description')}
-                  value={review.description?.trim() || '—'}
-                />
-              </div>
+              <ReviewItem
+                label={t('hr.leavePolicy.description')}
+                value={review.description?.trim() || '—'}
+                wide
+              />
             </div>
 
             <div className="mt-6 flex flex-col gap-4">
               <div>
-                <p
-                  className="mb-2 text-sm font-semibold"
-                  style={{ color: tokens.colorTextPrimary }}
-                >
+                <p className="erp-leave-policy-form-hero-title mb-2 !text-sm">
                   {ruleTitle('ANNUAL')}
                 </p>
-                <div className="erp-form-grid-2">
+                <div className="erp-leave-policy-review-grid">
                   <ReviewItem
                     label={t('hr.leavePolicy.baseDays')}
                     value={String(review.annualBaseDays ?? '—')}
@@ -542,13 +533,10 @@ export default function LeavePolicyForm({
               </div>
 
               <div>
-                <p
-                  className="mb-2 text-sm font-semibold"
-                  style={{ color: tokens.colorTextPrimary }}
-                >
+                <p className="erp-leave-policy-form-hero-title mb-2 !text-sm">
                   {ruleTitle('MATERNITY')}
                 </p>
-                <div className="erp-form-grid-2">
+                <div className="erp-leave-policy-review-grid">
                   <ReviewItem
                     label={t('hr.leavePolicy.baseDays')}
                     value={String(review.maternityBaseDays ?? '—')}
@@ -561,13 +549,10 @@ export default function LeavePolicyForm({
               </div>
 
               <div>
-                <p
-                  className="mb-2 text-sm font-semibold"
-                  style={{ color: tokens.colorTextPrimary }}
-                >
+                <p className="erp-leave-policy-form-hero-title mb-2 !text-sm">
                   {ruleTitle('SICK')}
                 </p>
-                <div className="erp-form-grid-2">
+                <div className="erp-leave-policy-review-grid">
                   <ReviewItem
                     label={t('hr.leavePolicy.baseDays')}
                     value={String(review.sickBaseDays ?? '—')}

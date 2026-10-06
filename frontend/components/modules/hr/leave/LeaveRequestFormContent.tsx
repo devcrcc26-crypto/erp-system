@@ -1,5 +1,7 @@
 ﻿'use client';
 
+import './leave-v2.css';
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -11,6 +13,8 @@ import {
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -142,30 +146,24 @@ function formatLeaveChargeSummary(
 function ReviewItem({
   label,
   value,
+  wide = false,
 }: {
   label: string;
   value: string;
+  wide?: boolean;
 }): React.ReactNode {
   return (
-    <div className="min-w-0">
-      <p
-        className="mb-0.5 text-xs font-medium uppercase tracking-wide"
-        style={{ color: tokens.colorTextTertiary }}
-      >
-        {label}
-      </p>
-      <p
-        className="m-0 whitespace-pre-wrap text-sm"
-        style={{ color: tokens.colorTextPrimary }}
-      >
-        {value}
-      </p>
+    <div
+      className={`erp-leave-review-field${wide ? ' erp-leave-review-field--wide' : ''}`}
+    >
+      <p className="erp-leave-review-label">{label}</p>
+      <p className="erp-leave-review-value">{value}</p>
     </div>
   );
 }
 
 /**
- * New leave request - multi-period dates counted from the work schedule.
+ * New leave request — multi-period dates counted from the work schedule.
  */
 export default function LeaveRequestFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -400,30 +398,30 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     }
 
     return (
-      <div className="erp-leave-balance-summary">
-        <div className="erp-leave-balance-summary-main">
-          <span className="erp-leave-balance-summary-label">
-            {t('hr.labels.remaining')}
-          </span>
-          <span className="erp-leave-balance-summary-value">
-            {selectedBalance.remaining}
-          </span>
+      <div className="erp-leave-form-balance-tiles">
+        <div className="erp-leave-form-balance-tile erp-leave-form-balance-tile--primary">
+          <p className="erp-leave-fact-label">{t('hr.labels.remaining')}</p>
+          <p className="erp-leave-fact-value">{selectedBalance.remaining}</p>
         </div>
-        <div className="erp-leave-balance-summary-meta">
-          <span>
-            {t('hr.labels.used')}: {selectedBalance.used}
-          </span>
-          <span>
-            {t('hr.labels.entitled')}: {selectedBalance.entitled}
-          </span>
-          <span>
-            {t('hr.labels.broughtForward')}: {selectedBalance.broughtForward}
-          </span>
-          {selectedBalance.pending > 0 ? (
-            <span>
-              {t('hr.labels.pending')}: {selectedBalance.pending}
-            </span>
-          ) : null}
+        <div className="erp-leave-form-balance-tile">
+          <p className="erp-leave-fact-label">{t('hr.labels.used')}</p>
+          <p className="erp-leave-fact-value">{selectedBalance.used}</p>
+        </div>
+        <div className="erp-leave-form-balance-tile">
+          <p className="erp-leave-fact-label">{t('hr.labels.entitled')}</p>
+          <p className="erp-leave-fact-value">{selectedBalance.entitled}</p>
+        </div>
+        <div className="erp-leave-form-balance-tile">
+          <p className="erp-leave-fact-label">
+            {selectedBalance.pending > 0
+              ? t('hr.labels.pending')
+              : t('hr.labels.broughtForward')}
+          </p>
+          <p className="erp-leave-fact-value">
+            {selectedBalance.pending > 0
+              ? selectedBalance.pending
+              : selectedBalance.broughtForward}
+          </p>
         </div>
       </div>
     );
@@ -459,14 +457,13 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 />
               </Form.Item>
 
-              <div className="mb-4">
-                <p className="mb-2 text-sm font-medium">{t('hr.form.periods')}</p>
-                <div className="flex flex-col gap-3">
+              <div className="erp-leave-period-editor mb-4">
+                <p className="erp-leave-period-editor-label">
+                  {t('hr.form.periods')}
+                </p>
+                <div className="erp-leave-period-editor-list">
                   {periods.map((period, index) => (
-                    <div
-                      key={period.id}
-                      className="flex flex-col gap-2 sm:flex-row sm:items-start"
-                    >
+                    <div key={period.id} className="erp-leave-period-editor-row">
                       <DatePicker.RangePicker
                         className="w-full"
                         value={period.range}
@@ -491,7 +488,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                         }}
                       />
                       <Select
-                        className="w-full sm:w-[160px]"
+                        className="w-full"
                         value={period.dayPortion}
                         disabled={!isSingleDay(period.range)}
                         options={[
@@ -518,36 +515,38 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                           );
                         }}
                       />
-                      {periods.length > 1 ? (
-                        <Button
-                          type="text"
-                          danger
-                          icon={<DeleteOutlined />}
-                          aria-label={t('hr.form.removePeriod')}
-                          onClick={() =>
-                            setPeriods((current) =>
-                              current.filter((row) => row.id !== period.id),
-                            )
-                          }
-                        />
-                      ) : null}
-                      {index === periods.length - 1 ? (
-                        <Button
-                          icon={<PlusOutlined />}
-                          onClick={() =>
-                            setPeriods((current) => [
-                              ...current,
-                              {
-                                id: newPeriodId(),
-                                range: null,
-                                dayPortion: 'FULL',
-                              },
-                            ])
-                          }
-                        >
-                          {t('hr.form.addPeriod')}
-                        </Button>
-                      ) : null}
+                      <div className="erp-leave-period-editor-actions">
+                        {periods.length > 1 ? (
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            aria-label={t('hr.form.removePeriod')}
+                            onClick={() =>
+                              setPeriods((current) =>
+                                current.filter((row) => row.id !== period.id),
+                              )
+                            }
+                          />
+                        ) : null}
+                        {index === periods.length - 1 ? (
+                          <Button
+                            icon={<PlusOutlined />}
+                            onClick={() =>
+                              setPeriods((current) => [
+                                ...current,
+                                {
+                                  id: newPeriodId(),
+                                  range: null,
+                                  dayPortion: 'FULL',
+                                },
+                              ])
+                            }
+                          >
+                            {t('hr.form.addPeriod')}
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -556,25 +555,28 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                     type="error"
                     showIcon
                     title={previewError}
-                    className="mt-3"
+                    className="mt-1"
                   />
                 ) : preview ? (
-                  <div className="mt-3 rounded-xl border border-[#e8ebef] p-3">
-                    <p className="mb-2 text-sm font-medium">
+                  <div className="erp-leave-preview-panel">
+                    <p className="erp-leave-preview-title">
                       {formatLeaveChargeSummary(preview, t)}
                     </p>
                     {selectedBalance ? (
-                      <p className="erp-users-cell-sub mb-2 text-sm">
+                      <p className="erp-leave-preview-hint">
                         {t('hr.form.remainingAfterRequest', {
-                          remaining: Math.round(
-                            (selectedBalance.remaining - preview.totalDays) *
-                              10,
-                          ) / 10,
+                          remaining:
+                            Math.round(
+                              (selectedBalance.remaining - preview.totalDays) *
+                                10,
+                            ) / 10,
                         })}
                       </p>
                     ) : null}
                     <LeavePeriodBreakdownTable
-                      breakdown={preview.periods.flatMap((row) => row.breakdown)}
+                      breakdown={preview.periods.flatMap(
+                        (row) => row.breakdown,
+                      )}
                       totalDays={preview.totalDays}
                       showTotal
                     />
@@ -582,10 +584,10 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 ) : null}
               </div>
 
-              <div className="erp-leave-balance-panel mb-4">
-                <p className="erp-leave-balance-panel-title">
+              <div className="erp-leave-form-balance mb-4">
+                <p className="erp-leave-form-balance-title">
                   {leaveType
-                    ? `${formatLeaveType(leaveType, t)} - ${t('hr.section.leaveBalance')} (${year})`
+                    ? `${formatLeaveType(leaveType, t)} — ${t('hr.section.leaveBalance')} (${year})`
                     : `${t('hr.section.leaveBalance')} (${year})`}
                 </p>
                 {renderBalancePanel()}
@@ -633,7 +635,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               title={t('hr.form.reviewSubmit')}
               description={t('pages.hr.leave.reviewStepDescription')}
             >
-              <div className="erp-form-grid-2">
+              <div className="erp-leave-review-grid">
                 <ReviewItem
                   label={t('hr.form.leaveType')}
                   value={formatLeaveType(
@@ -643,7 +645,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 />
                 <ReviewItem
                   label={t('hr.form.days')}
-                  value={preview ? String(preview.totalDays) : '-'}
+                  value={preview ? String(preview.totalDays) : '—'}
                 />
                 {selectedBalance && preview ? (
                   <ReviewItem
@@ -661,16 +663,15 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                   />
                 ) : null}
                 {reviewValues.reason?.trim() ? (
-                  <div className="md:col-span-2">
-                    <ReviewItem
-                      label={t('hr.form.reason')}
-                      value={reviewValues.reason.trim()}
-                    />
-                  </div>
+                  <ReviewItem
+                    label={t('hr.form.reason')}
+                    value={reviewValues.reason.trim()}
+                    wide
+                  />
                 ) : null}
               </div>
               {preview ? (
-                <div className="mt-4">
+                <div className="erp-leave-preview-panel mt-4">
                   <LeavePeriodBreakdownTable
                     breakdown={preview.periods.flatMap((row) => row.breakdown)}
                   />
@@ -684,20 +685,18 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               title={t('hr.section.supportingDocuments')}
             >
               {selectedFiles.length > 0 ? (
-                <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
+                <ul className="erp-leave-review-files">
                   {selectedFiles.map((file) => (
                     <li
                       key={`${file.name}-${file.size}`}
-                      className="flex items-center gap-2 rounded-xl border border-[#e8ebef] bg-white px-3 py-2"
+                      className="erp-leave-review-file"
                     >
                       <ProfileFileTypeIcon
                         name={file.name}
                         fileType={file.type}
                         size="sm"
                       />
-                      <span className="min-w-0 truncate text-sm" title={file.name}>
-                        {file.name}
-                      </span>
+                      <span title={file.name}>{file.name}</span>
                     </li>
                   ))}
                 </ul>
@@ -732,16 +731,26 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   );
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-form-page">
-      <div className="flex shrink-0 items-center justify-end gap-2">
-        <Button
-          onClick={() => router.push('/hr/leave-requests')}
-          className="shrink-0"
-          style={{ borderRadius: 8 }}
-        >
-          {t('hr.buttons.cancel')}
-        </Button>
-      </div>
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-form-page erp-leave-v2">
+      <section className="erp-leave-form-hero">
+        <div className="min-w-0">
+          <Link href="/hr/leave-requests" className="erp-leave-back">
+            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+            {t('hr.buttons.backToList')}
+          </Link>
+          <h1 className="erp-leave-form-hero-title">
+            {t('pages.hr.leave.new')}
+          </h1>
+          <p className="erp-leave-form-hero-desc">
+            {t('pages.hr.leave.detailsStepDescription')}
+          </p>
+        </div>
+        <div className="erp-leave-form-hero-actions">
+          <Button onClick={() => router.push('/hr/leave-requests')}>
+            {t('hr.buttons.cancel')}
+          </Button>
+        </div>
+      </section>
 
       <Form<LeaveFormValues>
         form={form}

@@ -1,5 +1,7 @@
 'use client';
 
+import './leave-policy-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Button,
@@ -14,6 +16,7 @@ import {
   CheckCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   FileTextOutlined,
   MoreOutlined,
   ReloadOutlined,
@@ -23,6 +26,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import EvaluationStat from '@/components/modules/hr/evaluation/EvaluationStat';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
@@ -49,51 +53,8 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 const LIST_PATH = '/hr/leave-policy';
 const NEW_PATH = '/hr/leave-policy/new';
 
-const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
-  green: { bg: '#EAF3DE', fg: '#639922' },
-  amber: { bg: '#FAEEDA', fg: '#BA7517' },
-  gray: { bg: '#F0F1F3', fg: '#5F6B7A' },
-} as const;
-
-function LeavePolicyStat({
-  label,
-  value,
-  accent,
-  icon,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  accent: keyof typeof STAT_ACCENT;
-  icon: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}): React.ReactNode {
-  const tint = STAT_ACCENT[accent];
-  return (
-    <button
-      type="button"
-      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
-      onClick={onClick}
-    >
-      <span
-        className="erp-users-stat-chip"
-        style={{ background: tint.bg, color: tint.fg }}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0 text-left">
-        <p className="erp-users-stat-label">{label}</p>
-        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
-      </div>
-    </button>
-  );
-}
-
 /**
- * Leave policy list — Users chrome (stat bar, filter row, soft table).
+ * Leave policy list — Employees / leave v2 chrome.
  */
 export default function LeavePolicyListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -182,6 +143,12 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
   function buildActionMenu(row: LeavePolicy): MenuProps['items'] {
     return [
       {
+        key: 'view',
+        icon: <EyeOutlined />,
+        label: t('common.view'),
+        onClick: () => router.push(`${LIST_PATH}/${row.id}`),
+      },
+      {
         key: 'update',
         icon: <EditOutlined />,
         label: t('common.update'),
@@ -197,8 +164,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
     ];
   }
 
-  const hasFilters =
-    Boolean(appliedSearch.trim()) || statusMode !== 'all';
+  const hasFilters = Boolean(appliedSearch.trim()) || statusMode !== 'all';
 
   const columns: ColumnsType<LeavePolicy> = useMemo(
     () => [
@@ -207,13 +173,18 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         dataIndex: 'name',
         key: 'name',
         render: (_: unknown, row: LeavePolicy) => (
-          <div className="min-w-0">
-            <p className="erp-users-cell-strong m-0 truncate">{row.name}</p>
-            {row.description ? (
-              <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
-                {row.description}
-              </p>
-            ) : null}
+          <div className="erp-leave-policy-person">
+            <span className="erp-leave-policy-icon" aria-hidden>
+              <FileTextOutlined />
+            </span>
+            <div className="min-w-0">
+              <p className="erp-users-name m-0 truncate">{row.name}</p>
+              {row.description ? (
+                <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
+                  {row.description}
+                </p>
+              ) : null}
+            </div>
           </div>
         ),
       },
@@ -235,7 +206,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         align: 'right',
         responsive: ['md'],
         render: (value: number) => (
-          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+          <span className="erp-users-cell-strong tabular-nums">{value}</span>
         ),
       },
       {
@@ -246,7 +217,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         align: 'right',
         responsive: ['md'],
         render: (value: number) => (
-          <span className="erp-users-cell-sub tabular-nums">{value}</span>
+          <span className="erp-users-cell-strong tabular-nums">{value}</span>
         ),
       },
       {
@@ -264,16 +235,18 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
       {
         title: '',
         key: 'actions',
-        width: 56,
+        width: 52,
+        align: 'right',
         render: (_: unknown, row: LeavePolicy) => (
           <div
-            className="flex items-center justify-end"
+            className="erp-table-row-actions flex items-center justify-end"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           >
             <Dropdown
               menu={{ items: buildActionMenu(row) }}
               trigger={['click']}
+              rootClassName="erp-row-actions-menu"
             >
               <Button
                 size="small"
@@ -291,7 +264,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page">
+      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page erp-leave-policy-v2">
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -299,8 +272,8 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page">
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+      <div className="erp-pro-list-page erp-users-page erp-leave-policy-page erp-leave-policy-v2">
+        <div className="erp-leave-policy-loading">
           <Spin />
         </div>
       </div>
@@ -308,7 +281,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-leave-policy-page">
+    <div className="erp-pro-list-page erp-users-page erp-leave-policy-page erp-leave-policy-v2">
       {importOpen ? (
         <ImportModal
           schema={leavePolicyImportSchema}
@@ -343,7 +316,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
       />
 
       <div className="erp-users-stat-bar">
-        <LeavePolicyStat
+        <EvaluationStat
           label={t('hr.leavePolicy.stats.total')}
           value={statusCounts.all}
           accent="teal"
@@ -351,7 +324,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
           active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
         />
-        <LeavePolicyStat
+        <EvaluationStat
           label={t('hr.leavePolicy.stats.active')}
           value={statusCounts.active}
           accent="green"
@@ -359,15 +332,15 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
           active={statusMode === 'active'}
           onClick={() => handleStatusMode('active')}
         />
-        <LeavePolicyStat
+        <EvaluationStat
           label={t('hr.leavePolicy.stats.inactive')}
           value={statusCounts.inactive}
-          accent="gray"
+          accent="slate"
           icon={<StopOutlined />}
           active={statusMode === 'inactive'}
           onClick={() => handleStatusMode('inactive')}
         />
-        <LeavePolicyStat
+        <EvaluationStat
           label={t('hr.leavePolicy.stats.progressive')}
           value={statusCounts.progressive}
           accent="amber"
@@ -401,8 +374,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
               compact={isCompact}
               exports={[
                 {
-                  key: 'policies',
-                  label: t('hr.exportImport.leavePolicies.export'),
+                  key: 'export',
                   filePrefix: 'leave-policies',
                   disabled: filtered.length === 0,
                   buildSheets: () => buildLeavePolicyExportSheets(filtered),

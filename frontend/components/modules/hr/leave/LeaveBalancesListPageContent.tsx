@@ -20,6 +20,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
+import EvaluationListAvatar from '@/components/modules/hr/evaluation/EvaluationListAvatar';
+import EvaluationStat from '@/components/modules/hr/evaluation/EvaluationStat';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -42,73 +44,42 @@ import { leaveHistoryPath } from '@/lib/utils/leave-history-path';
 
 const LOW_BALANCE_THRESHOLD = 5;
 
-const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
-  blue: { bg: '#E6F1FB', fg: '#185FA5' },
-  amber: { bg: '#FAEEDA', fg: '#BA7517' },
-  slate: { bg: '#EEF1F4', fg: '#64748B' },
-} as const;
-
-function BalanceStat({
-  label,
-  value,
-  sub,
-  accent,
-  icon,
-}: {
-  label: string;
-  value: number;
-  sub?: string;
-  accent: keyof typeof STAT_ACCENT;
-  icon: React.ReactNode;
-}): React.ReactNode {
-  const tint = STAT_ACCENT[accent];
-  return (
-    <div className="erp-users-stat">
-      <span
-        className="erp-users-stat-chip"
-        style={{ background: tint.bg, color: tint.fg }}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="erp-users-stat-label">{label}</p>
-        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
-        {sub ? <p className="erp-users-email m-0 mt-0.5">{sub}</p> : null}
-      </div>
-    </div>
-  );
-}
-
-function renderBalanceCell(balance: LeaveBalance | null): React.ReactNode {
+function renderBalanceCell(
+  balance: LeaveBalance | null,
+  lowLabel: string,
+): React.ReactNode {
   if (!balance) {
-    return <span className="erp-users-cell-sub">-</span>;
+    return <span className="erp-users-cell-sub">—</span>;
   }
 
   const isLow = balance.remaining <= LOW_BALANCE_THRESHOLD;
 
   return (
-    <div className="leading-5">
+    <div className="erp-leave-balance-cell">
       <div>
         <span
-          className="erp-users-cell-strong"
-          style={isLow ? { color: '#BA7517' } : undefined}
+          className={`erp-leave-balance-remaining${
+            isLow ? ' erp-leave-balance-remaining--low' : ''
+          }`}
         >
           {balance.remaining}
         </span>
-        <span className="erp-users-cell-sub ml-1">
+        <span className="erp-leave-balance-entitled">
           / {balance.entitled + balance.broughtForward}
         </span>
       </div>
-      <span className="erp-users-email">
+      <span className="erp-leave-balance-meta">
         {balance.used} used · {balance.pending} pending
       </span>
+      {isLow ? (
+        <span className="erp-leave-balance-low-pill">{lowLabel}</span>
+      ) : null}
     </div>
   );
 }
 
 /**
- * HR leave balances tab - Users chrome.
+ * HR leave balances tab — Employees v2 chrome (floating stats, soft card).
  */
 export default function LeaveBalancesListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -131,7 +102,6 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       }),
     [allRows, appliedSearch],
   );
-
 
   const meta: PaginationMeta = useMemo(() => {
     const total = filtered.length;
@@ -168,50 +138,59 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
     return { lowBalance, withPending };
   }, [filtered]);
 
+  const lowLabel = t('pages.hr.leave.balanceStats.lowBalance');
+
   const columns: ColumnsType<EmployeeLeaveBalanceSummary> = useMemo(
     () => [
       {
         title: t('hr.table.employee'),
         key: 'employee',
-        width: 220,
+        width: isCompact ? 200 : 260,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) => (
-          <div className="min-w-0">
-            <p className="erp-users-cell-strong m-0">
-              {formatLeaveEmployeeName(row.employee)}
-            </p>
-            {row.employee.email ? (
-              <p className="erp-users-email m-0 mt-0.5">
-                {row.employee.email}
+          <div className="erp-leave-person">
+            <EvaluationListAvatar
+              firstName={row.employee.firstName}
+              lastName={row.employee.lastName}
+              userId={row.employee.id}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="erp-users-name m-0 truncate">
+                {formatLeaveEmployeeName(row.employee)}
               </p>
-            ) : null}
+              {row.employee.email ? (
+                <p className="erp-users-email m-0 mt-0.5 truncate">
+                  {row.employee.email}
+                </p>
+              ) : null}
+            </div>
           </div>
         ),
       },
       {
         title: formatLeaveType('ANNUAL', t),
         key: 'annual',
-        width: 150,
+        width: 160,
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
-          renderBalanceCell(row.annual),
+          renderBalanceCell(row.annual, lowLabel),
       },
       {
         title: formatLeaveType('MATERNITY', t),
         key: 'maternity',
-        width: 150,
+        width: 160,
         responsive: ['md'],
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
-          renderBalanceCell(row.maternity),
+          renderBalanceCell(row.maternity, lowLabel),
       },
       {
         title: formatLeaveType('SICK', t),
         key: 'sick',
-        width: 150,
+        width: 160,
         responsive: ['md'],
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
-          renderBalanceCell(row.sick),
+          renderBalanceCell(row.sick, lowLabel),
       },
     ],
-    [t],
+    [isCompact, lowLabel, t],
   );
 
   function handleResetFilters(): void {
@@ -225,7 +204,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
 
   if (balancesQuery.isLoading && !balancesQuery.data) {
     return (
-      <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+      <div className="erp-leave-loading">
         <Spin />
       </div>
     );
@@ -246,31 +225,27 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
       ) : null}
 
       <div className="erp-users-stat-bar">
-        <BalanceStat
+        <EvaluationStat
           label={t('pages.hr.leave.balanceStats.employees')}
           value={meta.total}
           accent="teal"
           icon={<UserOutlined />}
         />
-        <BalanceStat
+        <EvaluationStat
           label={t('hr.labels.year')}
           value={year}
           accent="blue"
           icon={<CalendarOutlined />}
         />
-        <BalanceStat
+        <EvaluationStat
           label={t('pages.hr.leave.balanceStats.lowBalance')}
           value={pageStats.lowBalance}
-          sub={t('pages.hr.leave.balanceStats.lowBalanceSub', {
-            threshold: LOW_BALANCE_THRESHOLD,
-          })}
           accent="amber"
           icon={<WarningOutlined />}
         />
-        <BalanceStat
+        <EvaluationStat
           label={t('pages.hr.leave.balanceStats.withPending')}
           value={pageStats.withPending}
-          sub={t('pages.hr.leave.balanceStats.withPendingSub')}
           accent="slate"
           icon={<ClockCircleOutlined />}
         />
@@ -365,7 +340,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
             size={isCompact ? 'small' : 'middle'}
             columns={columns}
             dataSource={rows}
-            scroll={{ x: isCompact ? 480 : 720 }}
+            scroll={{ x: isCompact ? 480 : 760 }}
             onRow={(record) => ({
               onClick: () => router.push(leaveHistoryPath(record.employeeId)),
               className: 'cursor-pointer',

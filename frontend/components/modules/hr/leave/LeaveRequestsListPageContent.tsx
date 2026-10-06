@@ -1,5 +1,7 @@
 'use client';
 
+import './leave-v2.css';
+
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -20,6 +22,7 @@ import {
   CloseCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -29,6 +32,8 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import HrImportModal from '@/components/modules/hr/HrImportModal';
+import EvaluationListAvatar from '@/components/modules/hr/evaluation/EvaluationListAvatar';
+import EvaluationStat from '@/components/modules/hr/evaluation/EvaluationStat';
 import LeaveBalancesListPageContent from '@/components/modules/hr/leave/LeaveBalancesListPageContent';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import DataTable from '@/components/ui/DataTable/DataTable';
@@ -83,13 +88,6 @@ const PENDING_STATUSES: LeaveRequestStatus[] = [
 const APPROVED_STATUSES: LeaveRequestStatus[] = ['APPROVED'];
 const REJECTED_STATUSES: LeaveRequestStatus[] = ['REJECTED', 'CANCELLED'];
 
-const STAT_ACCENT = {
-  teal: { bg: '#E1F5EE', fg: '#1D9E75' },
-  green: { bg: '#EAF3DE', fg: '#639922' },
-  amber: { bg: '#FAEEDA', fg: '#BA7517' },
-  red: { bg: '#FCEBEB', fg: '#D32F2F' },
-} as const;
-
 function statusesForMode(mode: StatusMode): LeaveRequestStatus[] {
   switch (mode) {
     case 'pending':
@@ -103,44 +101,8 @@ function statusesForMode(mode: StatusMode): LeaveRequestStatus[] {
   }
 }
 
-function LeaveStat({
-  label,
-  value,
-  accent,
-  icon,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  accent: keyof typeof STAT_ACCENT;
-  icon: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}): React.ReactNode {
-  const tint = STAT_ACCENT[accent];
-  return (
-    <button
-      type="button"
-      className={`erp-users-stat erp-contract-stat${active ? ' erp-contract-stat--active' : ''}`}
-      onClick={onClick}
-    >
-      <span
-        className="erp-users-stat-chip"
-        style={{ background: tint.bg, color: tint.fg }}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0 text-left">
-        <p className="erp-users-stat-label">{label}</p>
-        <p className="erp-users-stat-value">{value.toLocaleString()}</p>
-      </div>
-    </button>
-  );
-}
-
 /**
- * Leave requests list - Users chrome (stat bar, filter row, rounded table).
+ * Leave requests list — Employees v2 chrome with floating stats and soft cards.
  */
 export default function LeaveRequestsListPageContent(): React.ReactNode {
   const router = useRouter();
@@ -307,6 +269,38 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
     }
   }
 
+  function buildActionMenu(record: LeaveRequestListItem): MenuProps['items'] {
+    const items: MenuProps['items'] = [
+      {
+        key: 'view',
+        icon: <EyeOutlined />,
+        label: t('common.view'),
+        onClick: () => router.push(`/hr/leave-requests/${record.id}`),
+      },
+    ];
+    if (canManage) {
+      const canEditRow =
+        record.status === 'DRAFT' || record.status === 'RETURNED';
+      if (canEditRow) {
+        items.push({
+          key: 'update',
+          icon: <EditOutlined />,
+          label: t('common.update'),
+          onClick: () =>
+            router.push(`/hr/leave-requests/${record.id}/edit`),
+        });
+      }
+      items.push({
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: t('common.delete'),
+        danger: true,
+        onClick: () => setDeletingRequest(record),
+      });
+    }
+    return items;
+  }
+
   const columns: ColumnsType<LeaveRequestListItem> = useMemo(
     () => [
       {
@@ -323,20 +317,33 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
             {
               title: t('hr.table.employee'),
               key: 'employee',
-              width: 220,
+              width: isCompact ? 200 : 240,
               responsive: ['md'] as const,
-              render: (_: unknown, row: LeaveRequestListItem) => (
-                <div className="min-w-0">
-                  <p className="erp-users-cell-strong m-0">
-                    {formatLeaveEmployeeName(row.employee)}
-                  </p>
-                  {row.employee?.email ? (
-                    <p className="erp-users-email m-0 mt-0.5">
-                      {row.employee.email}
-                    </p>
-                  ) : null}
-                </div>
-              ),
+              render: (_: unknown, row: LeaveRequestListItem) => {
+                const employee = row.employee;
+                if (!employee) {
+                  return <span className="erp-users-cell-sub">—</span>;
+                }
+                return (
+                  <div className="erp-leave-person">
+                    <EvaluationListAvatar
+                      firstName={employee.firstName}
+                      lastName={employee.lastName}
+                      userId={employee.id}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="erp-users-name m-0 truncate">
+                        {formatLeaveEmployeeName(employee)}
+                      </p>
+                      {employee.email ? (
+                        <p className="erp-users-email m-0 mt-0.5 truncate">
+                          {employee.email}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              },
             } satisfies ColumnsType<LeaveRequestListItem>[number],
           ]
         : []),
@@ -358,7 +365,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         key: 'startDate',
         width: 120,
         render: (value: string) => (
-          <span className="erp-users-cell-strong">
+          <span className="erp-leave-date erp-leave-date--strong">
             {formatProjectDate(value)}
           </span>
         ),
@@ -370,9 +377,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         width: 120,
         responsive: ['md'],
         render: (value: string) => (
-          <span className="erp-users-cell-sub">
-            {formatProjectDate(value)}
-          </span>
+          <span className="erp-leave-date">{formatProjectDate(value)}</span>
         ),
       },
       {
@@ -381,7 +386,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
         key: 'days',
         width: 80,
         render: (value: number) => (
-          <span className="erp-users-cell-strong">{value}</span>
+          <span className="erp-leave-days">{value}</span>
         ),
       },
       {
@@ -396,55 +401,34 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           />
         ),
       },
-      ...(canManage
-        ? [
-            {
-              title: '',
-              key: 'actions',
-              width: 52,
-              align: 'right' as const,
-              render: (_: unknown, record: LeaveRequestListItem) => {
-                const canEditRow =
-                  record.status === 'DRAFT' || record.status === 'RETURNED';
-                const items: MenuProps['items'] = [];
-                if (canEditRow) {
-                  items.push({
-                    key: 'update',
-                    icon: <EditOutlined />,
-                    label: t('common.update'),
-                    onClick: () =>
-                      router.push(`/hr/leave-requests/${record.id}/edit`),
-                  });
-                }
-                items.push({
-                  key: 'delete',
-                  icon: <DeleteOutlined />,
-                  label: t('common.delete'),
-                  danger: true,
-                  onClick: () => setDeletingRequest(record),
-                });
-                return (
-                  <div
-                    className="erp-table-row-actions flex items-center justify-end"
-                    onClick={(event) => event.stopPropagation()}
-                    onKeyDown={(event) => event.stopPropagation()}
-                  >
-                    <Dropdown menu={{ items }} trigger={['click']} rootClassName="erp-row-actions-menu">
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<MoreOutlined />}
-                        aria-label={t('common.actions')}
-                      />
-                    </Dropdown>
-                  </div>
-                );
-              },
-            } satisfies ColumnsType<LeaveRequestListItem>[number],
-          ]
-        : []),
+      {
+        title: '',
+        key: 'actions',
+        width: 52,
+        align: 'right' as const,
+        render: (_: unknown, record: LeaveRequestListItem) => (
+          <div
+            className="erp-table-row-actions flex items-center justify-end"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Dropdown
+              menu={{ items: buildActionMenu(record) }}
+              trigger={['click']}
+              rootClassName="erp-row-actions-menu"
+            >
+              <Button
+                size="small"
+                type="text"
+                icon={<MoreOutlined />}
+                aria-label={t('common.actions')}
+              />
+            </Dropdown>
+          </div>
+        ),
+      },
     ],
-    [canManage, canViewHr, router, t],
+    [canManage, canViewHr, isCompact, router, t],
   );
 
   const hasFilters =
@@ -456,7 +440,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-page">
+      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-leave-v2">
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -465,7 +449,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   const showRequestsSkeleton = listQuery.isLoading && !listQuery.data;
 
   const requestsPanel = showRequestsSkeleton ? (
-    <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+    <div className="erp-leave-loading">
       <Spin />
     </div>
   ) : (
@@ -508,7 +492,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
       ) : null}
 
       <div className="erp-users-stat-bar">
-        <LeaveStat
+        <EvaluationStat
           label={t('pages.hr.leave.stats.total')}
           value={statusCounts.all}
           accent="teal"
@@ -516,7 +500,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           active={statusMode === 'all'}
           onClick={() => handleStatusMode('all')}
         />
-        <LeaveStat
+        <EvaluationStat
           label={t('pages.hr.leave.stats.pending')}
           value={statusCounts.pending}
           accent="amber"
@@ -524,7 +508,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           active={statusMode === 'pending'}
           onClick={() => handleStatusMode('pending')}
         />
-        <LeaveStat
+        <EvaluationStat
           label={t('pages.hr.leave.stats.approved')}
           value={statusCounts.approved}
           accent="green"
@@ -532,7 +516,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
           active={statusMode === 'approved'}
           onClick={() => handleStatusMode('approved')}
         />
-        <LeaveStat
+        <EvaluationStat
           label={t('pages.hr.leave.stats.rejected')}
           value={statusCounts.rejected}
           accent="red"
@@ -565,7 +549,6 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
               exports={[
                 {
                   key: 'export',
-                  label: undefined,
                   filePrefix: 'leave-requests',
                   disabled: filtered.length === 0,
                   buildSheets: () => buildLeaveRequestExportSheets(filtered),
@@ -706,7 +689,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
 
   if (canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-leave-page">
+      <div className="erp-pro-list-page erp-users-page erp-leave-page erp-leave-v2">
         <div className="erp-pro-card">
           <div className="erp-profile-tabbar erp-employee-tabbar" role="tablist">
             <button
@@ -742,7 +725,7 @@ export default function LeaveRequestsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-leave-page">
+    <div className="erp-pro-list-page erp-users-page erp-leave-page erp-leave-v2">
       {requestsPanel}
     </div>
   );

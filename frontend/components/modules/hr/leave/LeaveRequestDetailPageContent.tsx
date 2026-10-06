@@ -1,5 +1,7 @@
 'use client';
 
+import './leave-v2.css';
+
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Grid, Skeleton, Space } from 'antd';
 import {
@@ -7,11 +9,20 @@ import {
   EditOutlined,
   StopOutlined,
 } from '@ant-design/icons';
-import { ArrowLeft } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarDays,
+  CalendarRange,
+  Clock3,
+  FileText,
+  Hash,
+  UserRound,
+} from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ApprovalTierTimeline from '@/components/modules/approvals/ApprovalTierTimeline';
+import EvaluationListAvatar from '@/components/modules/hr/evaluation/EvaluationListAvatar';
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
-import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -40,28 +51,24 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 function DetailSection({
   title,
   children,
-  className = '',
-  bodyClassName = '',
 }: {
   title: string;
   children: React.ReactNode;
-  className?: string;
-  bodyClassName?: string;
 }): React.ReactNode {
   return (
-    <div className={`erp-employee-section ${className}`.trim()}>
-      <div className="erp-employee-section-header">
-        <h3 className="erp-employee-section-title">{title}</h3>
-      </div>
-      <div className={`erp-employee-section-body ${bodyClassName}`.trim()}>
-        {children}
+    <div className="erp-pro-card erp-leave-section-card">
+      <div className="erp-employee-section">
+        <div className="erp-employee-section-header">
+          <h3 className="erp-employee-section-title">{title}</h3>
+        </div>
+        <div className="erp-employee-section-body">{children}</div>
       </div>
     </div>
   );
 }
 
 /**
- * Leave request detail - Users / employee profile chrome.
+ * Leave request detail — Employees / evaluation v2 hero and soft sections.
  */
 export default function LeaveRequestDetailPageContent({
   requestId,
@@ -183,7 +190,7 @@ export default function LeaveRequestDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-detail-page">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-detail-page erp-leave-v2">
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -193,7 +200,7 @@ export default function LeaveRequestDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-v2">
         <Alert
           type="error"
           showIcon
@@ -218,32 +225,71 @@ export default function LeaveRequestDetailPageContent({
     request.employeeId !== currentUser.data.id
   ) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
-        <div className="flex min-h-[240px] items-center justify-center">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-v2">
+        <div className="erp-leave-loading">
           <Skeleton active paragraph={{ rows: 4 }} />
         </div>
       </div>
     );
   }
 
-  const employeeName = formatLeaveEmployeeName(request.employee);
+  const employee = request.employee;
+  const employeeName = formatLeaveEmployeeName(employee);
   const leaveTypeLabel = formatLeaveType(request.leaveType, t);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-detail-page">
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-employee-toolbar">
-          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
-            <Button
-              type="text"
-              icon={<ArrowLeft size={16} />}
-              onClick={() => router.push('/hr/leave-requests')}
-              aria-label={t('hr.buttons.backToList')}
-            >
-              {isNarrow ? undefined : t('hr.buttons.back')}
-            </Button>
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-detail-page erp-leave-v2">
+      <section className="erp-leave-detail-hero">
+        <div className="erp-leave-hero-top">
+          <div className="min-w-0">
+            <Link href="/hr/leave-requests" className="erp-leave-back">
+              <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+              {t('hr.buttons.backToList')}
+            </Link>
+            <div className="erp-leave-hero-identity">
+              {employee ? (
+                <EvaluationListAvatar
+                  firstName={employee.firstName}
+                  lastName={employee.lastName}
+                  userId={employee.id}
+                />
+              ) : null}
+              <div className="min-w-0">
+                <div className="erp-leave-hero-title-row">
+                  <h2 className="erp-leave-hero-title">{employeeName}</h2>
+                  <span className="erp-users-id-chip">
+                    {request.requestNumber}
+                  </span>
+                  <StatusBadge
+                    label={formatLeaveStatus(request.status, t)}
+                    variant={leaveStatusVariant(request.status)}
+                  />
+                  <StatusBadge
+                    label={leaveTypeLabel}
+                    variant={leaveTypeVariant(request.leaveType)}
+                  />
+                </div>
+                <p className="erp-leave-detail-meta">
+                  <span>
+                    <CalendarDays size={14} strokeWidth={2} aria-hidden />
+                    {formatProjectDate(request.startDate)} –{' '}
+                    {formatProjectDate(request.endDate)}
+                  </span>
+                  <span>
+                    <Clock3 size={14} strokeWidth={2} aria-hidden />
+                    <strong>{request.days}</strong>{' '}
+                    {t('hr.labels.days').toLowerCase()}
+                  </span>
+                  <span>
+                    <Hash size={14} strokeWidth={2} aria-hidden />
+                    {leaveTypeLabel}
+                  </span>
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
+
+          <div className="erp-leave-hero-actions">
             {request.approvalRequestId ? (
               <Button
                 onClick={() =>
@@ -263,7 +309,7 @@ export default function LeaveRequestDetailPageContent({
                 {isNarrow ? undefined : t('hr.buttons.cancelRequest')}
               </Button>
             ) : null}
-            {(canEdit || canManage) ? (
+            {canEdit || canManage ? (
               <Space.Compact>
                 {canEdit ? (
                   <Button
@@ -292,165 +338,251 @@ export default function LeaveRequestDetailPageContent({
           </div>
         </div>
 
-        <div className="erp-employee-hero erp-contract-hero">
-          <div className="erp-employee-hero-copy min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <span className="erp-users-id-chip">{request.requestNumber}</span>
-              <StatusBadge
-                label={formatLeaveStatus(request.status, t)}
-                variant={leaveStatusVariant(request.status)}
-              />
-              <span className="erp-users-role-tag">{leaveTypeLabel}</span>
-            </div>
-            <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
-              <h2 className="erp-users-name erp-employee-hero-name m-0">
-                {leaveTypeLabel}
-              </h2>
-            </div>
-            <p className="erp-users-email m-0 mt-1.5">{employeeName}</p>
-            <p className="erp-users-cell-sub m-0 mt-1">
-              {[
-                `${t('hr.labels.startDate')} ${formatProjectDate(request.startDate)}`,
-                `${t('hr.labels.endDate')} ${formatProjectDate(request.endDate)}`,
-                `${request.days} ${t('hr.labels.days').toLowerCase()}`,
-              ].join(' · ')}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="erp-users-stat-bar erp-employee-meta-bar erp-contract-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.startDate')}</p>
-            <p className="erp-employee-meta-value">
+        <div className="erp-leave-fact-row">
+          <div className="erp-leave-fact">
+            <p className="erp-leave-fact-label">{t('hr.labels.startDate')}</p>
+            <p className="erp-leave-fact-value erp-leave-fact-value--sm">
               {formatProjectDate(request.startDate)}
             </p>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.endDate')}</p>
-            <p className="erp-employee-meta-value">
+          <div className="erp-leave-fact">
+            <p className="erp-leave-fact-label">{t('hr.labels.endDate')}</p>
+            <p className="erp-leave-fact-value erp-leave-fact-value--sm">
               {formatProjectDate(request.endDate)}
             </p>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.days')}</p>
-            <p className="erp-employee-meta-value">{request.days}</p>
+          <div className="erp-leave-fact">
+            <p className="erp-leave-fact-label">{t('hr.labels.days')}</p>
+            <p className="erp-leave-fact-value">{request.days}</p>
+          </div>
+          <div className="erp-leave-fact">
+            <p className="erp-leave-fact-label">{t('hr.labels.leaveType')}</p>
+            <p className="erp-leave-fact-value erp-leave-fact-value--sm">
+              {leaveTypeLabel}
+            </p>
           </div>
         </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('hr.labels.leaveType')}</p>
-            <p className="erp-employee-meta-value">{leaveTypeLabel}</p>
-          </div>
-        </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="erp-pro-card min-w-0">
-          <div className="erp-employee-tab-panel erp-contract-detail-body">
-            <DetailSection title={t('hr.section.requestDetails')}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <MetaItem label={t('hr.labels.employee')}>
-                  {employeeName}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.leaveType')}>
-                  <StatusBadge
-                    label={leaveTypeLabel}
-                    variant={leaveTypeVariant(request.leaveType)}
-                  />
-                </MetaItem>
-                <MetaItem label={t('hr.labels.startDate')}>
-                  {formatProjectDate(request.startDate)}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.endDate')}>
-                  {formatProjectDate(request.endDate)}
-                </MetaItem>
-                <MetaItem label={t('hr.labels.days')}>
-                  <span className="font-semibold">{request.days}</span>
-                </MetaItem>
-                {request.periods && request.periods.length > 0 ? (
-                  <div className="md:col-span-2">
-                    <MetaItem label={t('hr.form.periods')}>
-                      <ul className="m-0 list-none p-0">
-                        {request.periods.map((period) => (
-                          <li key={`${period.startDate}-${period.endDate}`}>
-                            {formatProjectDate(period.startDate)} –{' '}
-                            {formatProjectDate(period.endDate)} ({period.days}{' '}
-                            {t('hr.labels.days').toLowerCase()})
-                          </li>
-                        ))}
-                      </ul>
-                    </MetaItem>
+      <div className="erp-leave-detail-layout">
+        <div className="erp-leave-detail-main">
+          <DetailSection title={t('hr.section.requestDetails')}>
+            <div className="erp-leave-details">
+              <div className="erp-leave-details-grid">
+                <div className="erp-leave-field erp-leave-field--wide">
+                  <span className="erp-leave-field-icon" aria-hidden>
+                    <UserRound size={16} strokeWidth={2} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="erp-leave-field-label">
+                      {t('hr.labels.employee')}
+                    </p>
+                    <div className="erp-leave-field-person">
+                      {employee ? (
+                        <EvaluationListAvatar
+                          firstName={employee.firstName}
+                          lastName={employee.lastName}
+                          userId={employee.id}
+                        />
+                      ) : null}
+                      <div className="min-w-0">
+                        <p className="erp-leave-field-value truncate">
+                          {employeeName}
+                        </p>
+                        {employee?.email ? (
+                          <p className="erp-leave-field-hint truncate">
+                            {employee.email}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                ) : null}
-                {request.breakdown && request.breakdown.length > 0 ? (
-                  <div className="md:col-span-2">
-                    <LeavePeriodBreakdownTable breakdown={request.breakdown} />
+                </div>
+
+                <div className="erp-leave-field">
+                  <span className="erp-leave-field-icon" aria-hidden>
+                    <Hash size={16} strokeWidth={2} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="erp-leave-field-label">
+                      {t('hr.labels.leaveType')}
+                    </p>
+                    <div className="erp-leave-field-value-row">
+                      <StatusBadge
+                        label={leaveTypeLabel}
+                        variant={leaveTypeVariant(request.leaveType)}
+                      />
+                    </div>
                   </div>
-                ) : null}
-                {request.reason?.trim() ? (
-                  <div className="md:col-span-2">
-                    <MetaItem label={t('hr.labels.reason')}>
-                      <p className="m-0 whitespace-pre-wrap leading-relaxed">
-                        {request.reason}
-                      </p>
-                    </MetaItem>
+                </div>
+
+                <div className="erp-leave-field">
+                  <span className="erp-leave-field-icon" aria-hidden>
+                    <Clock3 size={16} strokeWidth={2} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="erp-leave-field-label">
+                      {t('hr.labels.days')}
+                    </p>
+                    <p className="erp-leave-field-value erp-leave-field-value--num">
+                      {request.days}
+                      <span className="erp-leave-field-unit">
+                        {t('hr.labels.days').toLowerCase()}
+                      </span>
+                    </p>
                   </div>
-                ) : null}
+                </div>
+
+                <div className="erp-leave-field">
+                  <span className="erp-leave-field-icon" aria-hidden>
+                    <CalendarDays size={16} strokeWidth={2} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="erp-leave-field-label">
+                      {t('hr.labels.startDate')}
+                    </p>
+                    <p className="erp-leave-field-value">
+                      {formatProjectDate(request.startDate)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="erp-leave-field">
+                  <span className="erp-leave-field-icon" aria-hidden>
+                    <CalendarDays size={16} strokeWidth={2} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="erp-leave-field-label">
+                      {t('hr.labels.endDate')}
+                    </p>
+                    <p className="erp-leave-field-value">
+                      {formatProjectDate(request.endDate)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {request.periods && request.periods.length > 0 ? (
+                <div className="erp-leave-details-block">
+                  <div className="erp-leave-details-block-head">
+                    <CalendarRange size={15} strokeWidth={2} aria-hidden />
+                    <span>{t('hr.form.periods')}</span>
+                  </div>
+                  <ul className="erp-leave-period-cards">
+                    {request.periods.map((period, index) => (
+                      <li
+                        key={`${period.startDate}-${period.endDate}`}
+                        className="erp-leave-period-card"
+                      >
+                        <span className="erp-leave-period-index">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="erp-leave-period-range">
+                            {formatProjectDate(period.startDate)}
+                            <span aria-hidden> → </span>
+                            {formatProjectDate(period.endDate)}
+                          </p>
+                          <p className="erp-leave-period-days">
+                            {period.days} {t('hr.labels.days').toLowerCase()}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {request.breakdown && request.breakdown.length > 0 ? (
+                <div className="erp-leave-details-block">
+                  <div className="erp-leave-details-block-head">
+                    <CalendarDays size={15} strokeWidth={2} aria-hidden />
+                    <span>{t('hr.form.periodPreview')}</span>
+                  </div>
+                  <div className="erp-leave-breakdown-wrap">
+                    <LeavePeriodBreakdownTable
+                      breakdown={request.breakdown}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {request.reason?.trim() ? (
+                <div className="erp-leave-reason-panel">
+                  <div className="erp-leave-details-block-head">
+                    <FileText size={15} strokeWidth={2} aria-hidden />
+                    <span>{t('hr.labels.reason')}</span>
+                  </div>
+                  <p className="erp-leave-reason">{request.reason}</p>
+                </div>
+              ) : null}
+            </div>
+          </DetailSection>
+
+          {request.balance ? (
+            <DetailSection title={t('hr.section.leaveBalance')}>
+              <div className="erp-leave-balance-grid">
+                <div className="erp-leave-balance-tile">
+                  <p className="erp-leave-fact-label">
+                    {t('hr.labels.entitled')}
+                  </p>
+                  <p className="erp-leave-fact-value">
+                    {request.balance.entitled}
+                  </p>
+                </div>
+                <div className="erp-leave-balance-tile">
+                  <p className="erp-leave-fact-label">
+                    {t('hr.labels.broughtForward')}
+                  </p>
+                  <p className="erp-leave-fact-value">
+                    {request.balance.broughtForward}
+                  </p>
+                </div>
+                <div className="erp-leave-balance-tile">
+                  <p className="erp-leave-fact-label">{t('hr.labels.used')}</p>
+                  <p className="erp-leave-fact-value">
+                    {request.balance.used}
+                  </p>
+                </div>
+                <div className="erp-leave-balance-tile">
+                  <p className="erp-leave-fact-label">
+                    {t('hr.labels.pending')}
+                  </p>
+                  <p className="erp-leave-fact-value">
+                    {request.balance.pending}
+                  </p>
+                </div>
+                <div className="erp-leave-balance-tile erp-leave-balance-tile--highlight">
+                  <p className="erp-leave-fact-label">
+                    {t('hr.labels.remaining')}
+                  </p>
+                  <p className="erp-leave-fact-value">
+                    {request.balance.remaining}
+                  </p>
+                </div>
               </div>
             </DetailSection>
+          ) : null}
 
-            {request.balance ? (
-              <DetailSection title={t('hr.section.leaveBalance')}>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <MetaItem label={t('hr.labels.entitled')}>
-                    {request.balance.entitled}
-                  </MetaItem>
-                  <MetaItem label={t('hr.labels.broughtForward')}>
-                    {request.balance.broughtForward}
-                  </MetaItem>
-                  <MetaItem label={t('hr.labels.used')}>
-                    {request.balance.used}
-                  </MetaItem>
-                  <MetaItem label={t('hr.labels.pending')}>
-                    {request.balance.pending}
-                  </MetaItem>
-                  <MetaItem label={t('hr.labels.remaining')}>
-                    <span className="font-semibold">
-                      {request.balance.remaining}
-                    </span>
-                  </MetaItem>
-                </div>
-              </DetailSection>
-            ) : null}
-
-            {(request.documents?.length ?? 0) > 0 ? (
-              <DetailSection title={t('hr.section.attachments')}>
-                <AttachmentDownloadList documents={request.documents} />
-              </DetailSection>
-            ) : null}
-          </div>
+          {(request.documents?.length ?? 0) > 0 ? (
+            <DetailSection title={t('hr.section.attachments')}>
+              <AttachmentDownloadList documents={request.documents} />
+            </DetailSection>
+          ) : null}
         </div>
 
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-4">
+        <aside className="erp-leave-detail-aside lg:sticky lg:top-4">
           {approvalRequest ? (
             <ApprovalTierTimeline
               tiers={tiers}
               currentTier={approvalRequest.currentTier ?? 0}
             />
           ) : (
-            <div className="erp-pro-card">
-              <DetailSection title={t('hr.section.approvalChain')}>
-                <p className="erp-users-cell-sub m-0">
-                  {t('hr.empty.noApprovalChain')}
-                </p>
-              </DetailSection>
-            </div>
+            <DetailSection title={t('hr.section.approvalChain')}>
+              <p className="erp-users-cell-sub m-0">
+                {t('hr.empty.noApprovalChain')}
+              </p>
+            </DetailSection>
           )}
         </aside>
       </div>

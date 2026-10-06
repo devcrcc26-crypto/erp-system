@@ -1,6 +1,10 @@
 'use client';
 
+import './leave-policy-v2.css';
+
 import { Button, Spin } from 'antd';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LeavePolicyForm, {
   buildLeavePolicyRules,
@@ -25,7 +29,7 @@ interface LeavePolicyFormPageContentProps {
 }
 
 /**
- * Create / edit leave policy — cancel + stepper form.
+ * Create / edit leave policy — v2 hero + stepper form.
  */
 export default function LeavePolicyFormPageContent({
   policyId,
@@ -39,6 +43,8 @@ export default function LeavePolicyFormPageContent({
   const updateMutation = useUpdateLeavePolicy(policyId ?? '');
 
   const saving = createMutation.isPending || updateMutation.isPending;
+  const backHref =
+    isEdit && policyId ? `${LIST_PATH}/${policyId}` : LIST_PATH;
 
   useSetHeaderExtra(null);
 
@@ -74,15 +80,17 @@ export default function LeavePolicyFormPageContent({
 
   if (isEdit && policyQuery.isLoading && !policyQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page flex justify-center p-12">
-        <Spin />
+      <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page erp-leave-policy-v2">
+        <div className="erp-leave-policy-loading">
+          <Spin />
+        </div>
       </div>
     );
   }
 
   if (isEdit && policyQuery.isError) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page">
+      <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page erp-leave-policy-v2">
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -96,19 +104,28 @@ export default function LeavePolicyFormPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page flex flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-end">
-        <Button
-          onClick={() =>
-            router.push(
-              isEdit && policyId ? `${LIST_PATH}/${policyId}` : LIST_PATH,
-            )
-          }
-          className="shrink-0"
-        >
-          {t('common.cancel')}
-        </Button>
-      </div>
+    <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page erp-leave-policy-v2 flex flex-col">
+      <section className="erp-leave-policy-form-hero">
+        <div className="min-w-0">
+          <Link href={backHref} className="erp-leave-policy-back">
+            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+            {t('hr.buttons.backToList')}
+          </Link>
+          <h1 className="erp-leave-policy-form-hero-title">
+            {isEdit
+              ? t('pages.hr.leavePolicy.edit')
+              : t('pages.hr.leavePolicy.new')}
+          </h1>
+          <p className="erp-leave-policy-form-hero-desc">
+            {t('pages.hr.leavePolicy.detailsStepDescription')}
+          </p>
+        </div>
+        <div>
+          <Button onClick={() => router.push(backHref)}>
+            {t('common.cancel')}
+          </Button>
+        </div>
+      </section>
       <LeavePolicyForm
         policy={policyQuery.data}
         isSubmitting={saving}
