@@ -1244,6 +1244,8 @@
         "advancesStep": "Advances taken",
         "advancesStepDescription": "Select one or more of your paid, unsettled advances. They must share a destination category. Approved advances awaiting payment cannot be settled yet.",
         "noAdvances": "You have no approved advances waiting to be settled.",
+        "noPaidAdvances": "No paid advances to settle",
+        "noPaidAdvancesDescription": "You need at least one approved advance that has been paid before you can submit a settlement.",
         "awaitingPayment": "Awaiting payment",
         "calculation": "Calculation",
         "advancesTaken": "Advances taken",

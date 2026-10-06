@@ -48,6 +48,8 @@ export interface ApprovalCategorySummary {
   isActive?: boolean;
   /** False for internal categories (e.g. PAYROLL_RUN); omitted from New Request by the API. */
   isUserRequestable?: boolean;
+  /** Nest RBAC module required for create (e.g. leave, vehicle-refueling). */
+  permissionModule?: string | null;
   allowAttachments?: boolean;
   sortOrder?: number;
 }

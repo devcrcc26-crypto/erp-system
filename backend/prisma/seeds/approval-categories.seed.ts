@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { APPROVAL_CATEGORY_PERMISSION_MODULE } from '../../src/modules/approvals/application/utils/approval-category-permission.util';
 
 const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -43,6 +44,8 @@ interface CategorySeedDef {
   sortOrder: number;
   /** When false, hidden from New Request and blocked on generic submit. Default true. */
   isUserRequestable?: boolean;
+  /** Nest permission.module for create checks. Defaults from APPROVAL_CATEGORY_PERMISSION_MODULE. */
+  permissionModule?: string;
   formSchema: { fields: FormFieldDef[] };
   approvalRules: ApprovalRuleSeed[];
 }
@@ -859,6 +862,10 @@ export async function seedApprovalCategories(
       numberPrefix: def.numberPrefix,
       isActive: true,
       isUserRequestable: def.isUserRequestable !== false,
+      permissionModule:
+        def.permissionModule ??
+        APPROVAL_CATEGORY_PERMISSION_MODULE[def.code] ??
+        null,
       allowAttachments: true,
       sortOrder: def.sortOrder,
       updatedBy: actorUserId,

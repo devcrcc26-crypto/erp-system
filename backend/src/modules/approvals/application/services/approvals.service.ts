@@ -48,6 +48,8 @@ import {
   SubmitRequestDto,
 } from '../dtos/approval.dtos';
 import type { ApprovalFinalDecision } from '../ports/approval-decision.listener';
+import { resolveCategoryPermissionModule } from '../utils/approval-category-permission.util';
+import { isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import { ApprovalDecisionRegistry } from './approval-decision-registry.service';
 import {
   ApprovalResolverService,
@@ -162,17 +164,73 @@ export class ApprovalsService {
   ) {}
 
   /**
-   * Lists active, user-requestable approval categories for the company
-   * (New Request picker / Other requests). Internal categories are omitted.
+   * Lists active, user-requestable approval categories the caller may create.
+   * System Administrator sees every requestable category. Per Diem Settlement
+   * is further gated on having at least one paid, unsettled advance (admins exempt).
    */
-  async getCategories(companyId: string): Promise<unknown[]> {
-    return this.prisma.approvalCategory.findMany({
+  async getCategories(companyId: string, userId: string): Promise<unknown[]> {
+    const categories = await this.prisma.approvalCategory.findMany({
       where: activeOnly({
         companyId,
         isActive: true,
         isUserRequestable: true,
       }),
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+
+    const roleNames = await this.permissionService.getUserRoleNames(
+      userId,
+      companyId,
+    );
+    const isSysAdmin = isTrueSystemAdministrator(roleNames);
+
+    // Use the code→module map (column may exist before Prisma client is regenerated).
+    const modules = [
+      ...new Set(
+        categories
+          .map((category) => resolveCategoryPermissionModule(category.code))
+          .filter((module): module is string => Boolean(module)),
+      ),
+    ];
+    const permissionMap = isSysAdmin
+      ? null
+      : await this.permissionService.getUserModulePermissionsMap(
+          userId,
+          companyId,
+          modules,
+        );
+
+    let hasPaidUnsettledAdvance = isSysAdmin;
+    if (!isSysAdmin) {
+      const needsSettlementGate = categories.some(
+        (category) => category.code === 'PER_DIEM_SETTLEMENT',
+      );
+      if (needsSettlementGate) {
+        const count = await this.prisma.perDiemRequest.count({
+          where: activeOnly({
+            companyId,
+            employeeId: userId,
+            status: PerDiemStatus.APPROVED,
+            settlementId: null,
+            paidAt: { not: null },
+          }),
+        });
+        hasPaidUnsettledAdvance = count > 0;
+      }
+    }
+
+    return categories.filter((category) => {
+      if (category.code === 'PER_DIEM_SETTLEMENT' && !hasPaidUnsettledAdvance) {
+        return false;
+      }
+      if (isSysAdmin) {
+        return true;
+      }
+      const module = resolveCategoryPermissionModule(category.code);
+      if (!module) {
+        return false;
+      }
+      return permissionMap?.[module]?.canCreate === true;
     });
   }
 
@@ -219,6 +277,27 @@ export class ApprovalsService {
       throw new BadRequestException(
         `Approval category "${dto.categoryCode}" cannot be submitted from New Request`,
       );
+    }
+
+    const permissionModule = resolveCategoryPermissionModule(category.code);
+    if (permissionModule) {
+      const roleNames = await this.permissionService.getUserRoleNames(
+        userId,
+        companyId,
+      );
+      if (!isTrueSystemAdministrator(roleNames)) {
+        const canCreate = await this.permissionService.hasPermission(
+          userId,
+          companyId,
+          permissionModule,
+          'create',
+        );
+        if (!canCreate) {
+          throw new ForbiddenException(
+            `Missing permission: ${permissionModule}.create`,
+          );
+        }
+      }
     }
 
     if (dto.documentFolderId) {

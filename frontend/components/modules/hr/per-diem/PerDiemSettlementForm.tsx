@@ -8,6 +8,7 @@ import {
   Form,
   Input,
   InputNumber,
+  Spin,
   TimePicker,
 } from 'antd';
 import dayjs from 'dayjs';
@@ -76,6 +77,7 @@ export default function PerDiemSettlementForm({
   const values = Form.useWatch([], form) as SettlementFormValues | undefined;
 
   const advances = advancesQuery.data ?? [];
+  const paidAdvances = advances.filter((row) => Boolean(row.paidAt));
   const selected = advances.filter((row) => selectedIds.includes(row.id));
   const category = selected[0]?.destinationCategory;
   const mixedCategory =
@@ -508,6 +510,25 @@ export default function PerDiemSettlementForm({
       messageApi,
     ],
   );
+
+  if (advancesQuery.isLoading && !advancesQuery.data) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spin />
+      </div>
+    );
+  }
+
+  if (paidAdvances.length === 0) {
+    return (
+      <Alert
+        type="info"
+        showIcon
+        title={t('pages.hr.perDiemSettlement.noPaidAdvances')}
+        description={t('pages.hr.perDiemSettlement.noPaidAdvancesDescription')}
+      />
+    );
+  }
 
   return (
     <Form<SettlementFormValues>

@@ -1223,6 +1223,8 @@
         "advancesStep": "已领预支",
         "advancesStepDescription": "选择一笔或多笔本人已支付且未结算的预支。所选预支的目的地类别必须相同。已批准但尚未支付的预支暂不可结算。",
         "noAdvances": "没有待结算的已批准预支。",
+        "noPaidAdvances": "没有可结算的已支付预支",
+        "noPaidAdvancesDescription": "提交结算前，您至少需要一笔已批准且已支付的预支。",
         "awaitingPayment": "待支付",
         "calculation": "计算",
         "advancesTaken": "已领预支",

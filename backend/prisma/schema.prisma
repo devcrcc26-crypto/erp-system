@@ -3559,6 +3559,8 @@ model ApprovalCategory {
   isActive            Boolean   @default(true) @map("is_active")
   /// When false, category is hidden from New Request and cannot be submitted via the generic API.
   isUserRequestable   Boolean   @default(true) @map("is_user_requestable")
+  /// NestJS RBAC permission.module required for create (e.g. leave, vehicle-refueling).
+  permissionModule    String?   @map("permission_module")
   allowAttachments    Boolean   @default(true) @map("allow_attachments")
   sortOrder           Int       @default(0) @map("sort_order")
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
