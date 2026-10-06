@@ -78,3 +78,81 @@ export class UpdatePayrollEntryDto {
   @IsString()
   notes?: string;
 }
+
+/** HR-editable payroll letterhead / tax-form company settings. */
+export class UpdatePayrollCompanySettingsDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  orgNameTax?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  tin?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  taxAccountNo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  region?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  zone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  woreda?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  kebele?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  houseNo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  fax?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  taxCollectorOffice?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  salaryBankName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  bankBranch?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  companyAccountNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  bankLetterRefPrefix?: string;
+}

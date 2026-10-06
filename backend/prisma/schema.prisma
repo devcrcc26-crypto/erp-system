@@ -624,6 +624,7 @@ model User {
   gender                Gender?
   dateOfBirth           DateTime?       @map("date_of_birth") @db.Date
   nationalId            String?         @map("national_id")
+  tin                   String?         @map("tin")
   nationality           Nationality?
   employeeType          EmployeeType?   @map("employee_type")
   educationLevel        EducationLevel? @map("education_level")
@@ -6020,6 +6021,7 @@ model PayrollRun{
   totalPensionEmr         Decimal                             @default(0) @map("total_pension_emr") @db.Decimal(14, 2)
   totalTax                Decimal                             @default(0) @map("total_tax") @db.Decimal(14, 2)
   taxableThreshold        Decimal                             @default(2200) @map("taxable_threshold") @db.Decimal(10, 2)
+  bankLetterRefNo         String?                             @map("bank_letter_ref_no")
   notes                   String?
   submittedAt             DateTime?                           @map("submitted_at")
   submittedBy             String?                             @map("submitted_by")

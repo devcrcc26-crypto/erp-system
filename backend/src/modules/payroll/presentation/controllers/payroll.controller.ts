@@ -6,9 +6,11 @@ import {
   Param,
   Patch,
   Post,
+  Res,
   StreamableFile,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -22,8 +24,17 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   CreatePayrollRunDto,
   SubmitPayrollRunDto,
+  UpdatePayrollCompanySettingsDto,
   UpdatePayrollEntryDto,
 } from '../../application/dtos/payroll.dtos';
+import {
+  PayrollBankLetterPreview,
+  PayrollBankLetterService,
+} from '../../application/services/payroll-bank-letter.service';
+import {
+  PayrollCompanySettings,
+  PayrollCompanySettingsService,
+} from '../../application/services/payroll-company-settings.service';
 import { PayrollExcelExportService } from '../../application/services/payroll-excel-export.service';
 import { PayrollPayslipService } from '../../application/services/payroll-payslip.service';
 import { PayrollRunService } from '../../application/services/payroll-run.service';
@@ -37,12 +48,49 @@ export class PayrollController {
   constructor(
     private readonly payrollRunService: PayrollRunService,
     private readonly payrollExcelExportService: PayrollExcelExportService,
+    private readonly payrollBankLetterService: PayrollBankLetterService,
     private readonly payrollPayslipService: PayrollPayslipService,
+    private readonly payrollCompanySettingsService: PayrollCompanySettingsService,
     private readonly permissionService: PermissionService,
   ) {}
 
   private ctx(user: AuthenticatedUser): { userId: string; companyId: string } {
     return { userId: user.userId, companyId: user.companyId };
+  }
+
+  @Get('company-settings')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'edit' },
+    { module: 'payroll', action: 'create' },
+    { module: 'company_settings', action: 'view' },
+  )
+  @ApiOperation({
+    summary:
+      'Get payroll company settings (tax form letterhead, bank letter). Missing keys use defaults.',
+  })
+  async getCompanySettings(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PayrollCompanySettings> {
+    return this.payrollCompanySettingsService.getSettings(user.companyId);
+  }
+
+  @Patch('company-settings')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'edit' },
+    { module: 'company_settings', action: 'edit' },
+  )
+  @ApiOperation({
+    summary: 'Update payroll company settings (HR / admin). Stored as company_setting module=payroll.',
+  })
+  async updateCompanySettings(
+    @Body() dto: UpdatePayrollCompanySettingsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PayrollCompanySettings> {
+    return this.payrollCompanySettingsService.updateSettings(
+      user.companyId,
+      user.userId,
+      dto,
+    );
   }
 
   @Get('runs')
@@ -282,6 +330,73 @@ export class PayrollController {
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<StreamableFile> {
+    await this.assertRunListAccess(user);
+
+    const file = await this.payrollExcelExportService.exportRun(
+      id,
+      user.companyId,
+    );
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: `attachment; filename="${file.filename}"`,
+    });
+  }
+
+  @Get('runs/:id/export/bank-letter/preview')
+  @RequireAnyPermission({ module: 'payroll', action: 'export' })
+  @ApiOperation({
+    summary:
+      'Preview the bank letter (counts, total, employees without bank accounts) without generating it. Requires GM_APPROVED or PAID.',
+  })
+  async previewBankLetter(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PayrollBankLetterPreview> {
+    await this.assertRunListAccess(user);
+    return this.payrollBankLetterService.preview(id, user.companyId);
+  }
+
+  @Get('runs/:id/export/bank-letter')
+  @RequireAnyPermission({ module: 'payroll', action: 'export' })
+  @ApiOperation({
+    summary:
+      'Download the salary bank letter (.docx). Requires GM_APPROVED or PAID. ' +
+      'Reference and skipped accounts are returned in X-Payroll-Bank-Letter-Ref and X-Payroll-Excluded-Accounts headers.',
+  })
+  @ApiProduces(
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  )
+  async exportBankLetter(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    await this.assertRunListAccess(user);
+
+    const file = await this.payrollBankLetterService.generate(
+      id,
+      user.companyId,
+      user.userId,
+    );
+    res.setHeader('X-Payroll-Bank-Letter-Ref', headerSafe(file.refNo));
+    res.setHeader(
+      'X-Payroll-Excluded-Accounts',
+      headerSafe(file.excludedEmployees.map((e) => e.name).join('; ')),
+    );
+    res.setHeader(
+      'X-Payroll-Excluded-Count',
+      String(file.excludedEmployees.length),
+    );
+    return new StreamableFile(file.buffer, {
+      type: file.mimeType,
+      disposition: contentDisposition('attachment', file.filename),
+    });
+  }
+
+  /**
+   * Export endpoints also require payroll run list access (create, approve or edit).
+   */
+  private async assertRunListAccess(user: AuthenticatedUser): Promise<void> {
     const [canCreate, canApprove, canEdit] = await Promise.all([
       this.permissionService.hasPermission(
         user.userId,
@@ -307,16 +422,12 @@ export class PayrollController {
         'Missing permission (any of): payroll.create, payroll.approve, payroll.edit',
       );
     }
-
-    const file = await this.payrollExcelExportService.exportRun(
-      id,
-      user.companyId,
-    );
-    return new StreamableFile(file.buffer, {
-      type: file.mimeType,
-      disposition: `attachment; filename="${file.filename}"`,
-    });
   }
+}
+
+/** Replaces characters that are illegal in HTTP header values. */
+function headerSafe(value: string): string {
+  return value.replace(/[^\x20-\x7E]/g, '?');
 }
 
 function contentDisposition(kind: 'inline' | 'attachment', filename: string): string {

@@ -650,6 +650,9 @@ export default function EmployeeDetailPageContent({
                     <MetaItem label={t('users.form.bankAccountNumber')}>
                       {displayValue(user.bankAccountNumber)}
                     </MetaItem>
+                    <MetaItem label={t('users.form.tin')}>
+                      {displayValue(user.tin)}
+                    </MetaItem>
                   </div>
                 </DetailSection>
 

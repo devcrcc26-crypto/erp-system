@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../shared/prisma/prisma.module';
 import { PayrollController } from './presentation/controllers/payroll.controller';
 import { PayrollCalculationService } from './application/services/payroll-calculation.service';
+import { PayrollBankLetterService } from './application/services/payroll-bank-letter.service';
+import { PayrollCompanySettingsService } from './application/services/payroll-company-settings.service';
 import { PayrollExcelExportService } from './application/services/payroll-excel-export.service';
 import { PayrollPayslipPdfService } from './application/services/payroll-payslip-pdf.service';
 import { PayrollPayslipService } from './application/services/payroll-payslip.service';
@@ -15,6 +17,8 @@ import { PayrollRunService } from './application/services/payroll-run.service';
   controllers: [PayrollController],
   providers: [
     PayrollCalculationService,
+    PayrollCompanySettingsService,
+    PayrollBankLetterService,
     PayrollExcelExportService,
     PayrollPayslipPdfService,
     PayrollPayslipService,
@@ -23,6 +27,8 @@ import { PayrollRunService } from './application/services/payroll-run.service';
   exports: [
     PayrollRunService,
     PayrollCalculationService,
+    PayrollCompanySettingsService,
+    PayrollBankLetterService,
     PayrollExcelExportService,
     PayrollPayslipService,
   ],

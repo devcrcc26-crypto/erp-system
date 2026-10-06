@@ -39,6 +39,12 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: config.get<string>('CORS_ORIGIN', 'http://localhost:3000'),
     credentials: true,
+    exposedHeaders: [
+      'Content-Disposition',
+      'X-Payroll-Bank-Letter-Ref',
+      'X-Payroll-Excluded-Accounts',
+      'X-Payroll-Excluded-Count',
+    ],
   });
 
   // Use the ValidationPipe to validate the request data (DTOs)

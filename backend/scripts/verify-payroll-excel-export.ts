@@ -3,13 +3,17 @@
  */
 import { PrismaClient } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
+import { PayrollCompanySettingsService } from '../src/modules/payroll/application/services/payroll-company-settings.service';
 import { PayrollExcelExportService } from '../src/modules/payroll/application/services/payroll-excel-export.service';
 
 const TARGET = ['EM-010', 'EM-021', 'EM-038', 'EM-043', 'EM-080'] as const;
 
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
-  const service = new PayrollExcelExportService(prisma as never);
+  const service = new PayrollExcelExportService(
+    prisma as never,
+    new PayrollCompanySettingsService(prisma as never),
+  );
 
   const run = await prisma.payrollRun.findFirst({
     where: { month: 8, year: 2026, deletedAt: null },
@@ -32,9 +36,10 @@ async function main(): Promise<void> {
   console.log('SUBTITLE', sheet.getCell('D2').value);
   console.log('HDR_E', sheet.getCell('E3').value);
   console.log('HDR_F', sheet.getCell('F3').value);
-  console.log('HDR_U', sheet.getCell('U3').value);
-  console.log('HDR_L', sheet.getCell('L3').value);
-  console.log('SUB_M', sheet.getCell('M4').value);
+  console.log('HDR_G', sheet.getCell('G3').value);
+  console.log('HDR_V', sheet.getCell('V3').value);
+  console.log('HDR_M', sheet.getCell('M3').value);
+  console.log('SUB_N', sheet.getCell('N4').value);
 
   const entries = await prisma.payrollEntry.findMany({
     where: {
@@ -64,8 +69,8 @@ async function main(): Promise<void> {
     if (name === 'TOTAL') {
       console.log(
         'TOTAL_NET_FORMULA',
-        (row.getCell(27).value as { formula?: string } | null)?.formula ??
-          row.getCell(27).value,
+        (row.getCell(28).value as { formula?: string } | null)?.formula ??
+          row.getCell(28).value,
       );
       return;
     }
@@ -76,22 +81,22 @@ async function main(): Promise<void> {
       JSON.stringify({
         id: entry.employee.employeeId,
         name,
-        excelNet: row.getCell(27).value,
+        excelNet: row.getCell(28).value,
         dbNet: String(entry.netPay),
-        excelNormalHr: row.getCell(12).value,
+        excelNormalHr: row.getCell(13).value,
         dbNormalHr: String(entry.normalOtHours),
-        excelNormalPay: row.getCell(13).value,
+        excelNormalPay: row.getCell(14).value,
         flaggedFill:
           (row.getCell(5).fill as { fgColor?: { argb?: string } } | undefined)
             ?.fgColor?.argb ?? null,
-        notes: row.getCell(29).value,
+        notes: row.getCell(30).value,
       }),
     );
   });
 
   console.log('FOUND', found.sort().join(','));
   console.log('STATUS', run.status);
-  console.log('HAS_DRAFT_BANNER', String(sheet.getCell('D2').value).includes('NOT APPROVED'));
+  console.log('HAS_DRAFT_BANNER', String(sheet.getCell('AC2').value).includes('NOT APPROVED'));
 
   // Totals vs run summary
   const sumNet = entries.reduce((s, e) => s + Number(e.netPay), 0);

@@ -56,6 +56,7 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
     'bankName',
     'bankBranch',
     'bankAccountNumber',
+    'tin',
   ],
   ['educationLevel', 'fieldOfStudy', 'experienceStartDate'],
   ['leavePolicyId', 'workScheduleId'],

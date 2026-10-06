@@ -22,6 +22,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  SettingOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import { Wallet } from 'lucide-react';
@@ -30,10 +31,12 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
+import PayrollCompanySettingsModal from '@/components/modules/hr/payroll/PayrollCompanySettingsModal';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessPayroll,
   useCanCreatePayroll,
+  useCanEditPayroll,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useTablePagination } from '@/hooks/use-table-pagination';
@@ -133,11 +136,13 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
   const isNarrow = screens.sm === false;
   const canAccess = useCanAccessPayroll();
   const canCreate = useCanCreatePayroll();
+  const canEdit = useCanEditPayroll();
   const listQuery = usePayrollRuns(canAccess);
   const createMutation = useCreatePayrollRun();
   const { params, resetPage, bindMeta } = useTablePagination(10);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [period, setPeriod] = useState<Dayjs | null>(null);
   const [notes, setNotes] = useState('');
   const [filterMode, setFilterMode] = useState<PayrollFilterMode>('all');
@@ -427,6 +432,12 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
         </Form>
       </Modal>
 
+      <PayrollCompanySettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        readOnly={!canEdit && !canCreate}
+      />
+
       {listQuery.isError ? (
         <Alert
           type="error"
@@ -503,6 +514,16 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
                 aria-label={t('common.refresh')}
               />
             </Tooltip>
+            {canAccess ? (
+              <Button
+                icon={<SettingOutlined />}
+                onClick={() => setSettingsOpen(true)}
+              >
+                {isNarrow
+                  ? t('hr.payroll.companySettings.openButtonShort')
+                  : t('hr.payroll.companySettings.openButton')}
+              </Button>
+            ) : null}
             {canCreate ? (
               <Button
                 type="primary"

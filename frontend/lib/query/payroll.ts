@@ -7,6 +7,7 @@ import {
   createPayrollRun,
   generatePayrollEntries,
   generatePayslips,
+  getPayrollCompanySettings,
   getPayrollRun,
   gmApprovePayrollRun,
   listEmployeePayslips,
@@ -17,11 +18,13 @@ import {
   recalculatePayrollRun,
   releasePayslips,
   submitPayrollRun,
+  updatePayrollCompanySettings,
   updatePayrollEntry,
 } from '@/lib/api/payroll';
 import type {
   CreatePayrollRunPayload,
   SubmitPayrollRunPayload,
+  UpdatePayrollCompanySettingsPayload,
   UpdatePayrollEntryPayload,
 } from '@/lib/api/payroll.types';
 
@@ -29,6 +32,7 @@ export const payrollKeys = {
   all: ['payroll'] as const,
   runs: () => [...payrollKeys.all, 'runs'] as const,
   run: (id: string) => [...payrollKeys.all, 'run', id] as const,
+  companySettings: () => [...payrollKeys.all, 'company-settings'] as const,
   myPayslips: () => [...payrollKeys.all, 'my-payslips'] as const,
   employeePayslips: (employeeId: string) =>
     [...payrollKeys.all, 'employee-payslips', employeeId] as const,
@@ -182,5 +186,24 @@ export function useUpdatePayrollEntry(runId: string) {
       payload: UpdatePayrollEntryPayload;
     }) => updatePayrollEntry(entryId, payload),
     onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+export function usePayrollCompanySettings(enabled = true) {
+  return useQuery({
+    queryKey: payrollKeys.companySettings(),
+    queryFn: getPayrollCompanySettings,
+    enabled,
+  });
+}
+
+export function useUpdatePayrollCompanySettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdatePayrollCompanySettingsPayload) =>
+      updatePayrollCompanySettings(payload),
+    onSuccess: (data) => {
+      queryClient.setQueryData(payrollKeys.companySettings(), data);
+    },
   });
 }

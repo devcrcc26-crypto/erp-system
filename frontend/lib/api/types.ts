@@ -237,6 +237,7 @@ export interface User {
   gender?: Gender | null;
   dateOfBirth?: string | null;
   nationalId?: string | null;
+  tin?: string | null;
   nationality?: Nationality | null;
   employeeType?: EmployeeType | null;
   educationLevel?: EducationLevel | null;
@@ -325,6 +326,7 @@ export interface CreateUserRequest {
   gender?: Gender;
   dateOfBirth?: string;
   nationalId?: string;
+  tin?: string;
   nationality?: Nationality;
   employeeType?: EmployeeType;
   educationLevel?: EducationLevel;
@@ -367,6 +369,7 @@ export interface UpdateUserRequest {
   gender?: Gender;
   dateOfBirth?: string;
   nationalId?: string;
+  tin?: string;
   nationality?: Nationality;
   employeeType?: EmployeeType;
   educationLevel?: EducationLevel;

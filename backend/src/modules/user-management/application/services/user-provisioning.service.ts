@@ -36,6 +36,7 @@ export interface ProvisionInvitedUserInput {
   gender?: Gender;
   dateOfBirth?: Date | string;
   nationalId?: string;
+  tin?: string;
   nationality?: Nationality;
   employeeType?: EmployeeType;
   educationLevel?: EducationLevel;
@@ -314,6 +315,7 @@ export class UserProvisioningService {
     | 'gender'
     | 'dateOfBirth'
     | 'nationalId'
+    | 'tin'
     | 'nationality'
     | 'employeeType'
     | 'educationLevel'
@@ -333,6 +335,7 @@ export class UserProvisioningService {
       gender: input.gender ?? null,
       dateOfBirth: this.toNullableDate(input.dateOfBirth),
       nationalId: input.nationalId?.trim() || null,
+      tin: input.tin?.trim() || null,
       nationality: input.nationality ?? null,
       employeeType: input.employeeType ?? null,
       educationLevel: input.educationLevel ?? null,

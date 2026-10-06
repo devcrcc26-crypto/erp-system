@@ -2,12 +2,14 @@ import { apiClient, apiGet, apiPatch, apiPost, downloadApiFile } from '@/lib/api
 import type {
   CreatePayrollRunPayload,
   EmployeePayslip,
+  PayrollCompanySettings,
   PayrollEntryDetail,
   PayrollRunDetail,
   PayrollRunListItem,
   PayslipGenerateResult,
   PayslipReleaseResult,
   SubmitPayrollRunPayload,
+  UpdatePayrollCompanySettingsPayload,
   UpdatePayrollEntryPayload,
 } from '@/lib/api/payroll.types';
 
@@ -91,6 +93,56 @@ export async function downloadPayrollRunExcel(
   filename: string,
 ): Promise<void> {
   await downloadApiFile(`${BASE}/runs/${runId}/export/excel`, filename);
+}
+
+export interface BankLetterPreview {
+  allowed: boolean;
+  refNo: string | null;
+  totalNet: number;
+  includedCount: number;
+  excludedEmployees: Array<{ id: string; name: string }>;
+  reason?: string | null;
+}
+
+/**
+ * Preview bank letter inclusion before downloading the Word file.
+ */
+export async function previewPayrollBankLetter(
+  runId: string,
+): Promise<BankLetterPreview> {
+  return apiGet<BankLetterPreview>(
+    `${BASE}/runs/${runId}/export/bank-letter/preview`,
+  );
+}
+
+/**
+ * Downloads the bank transfer letter (.docx) for a GM-approved or paid run.
+ */
+export async function downloadPayrollBankLetter(
+  runId: string,
+  filename: string,
+): Promise<{ excludedAccounts: string[]; refNo: string | null }> {
+  const { headers } = await downloadApiFile(
+    `${BASE}/runs/${runId}/export/bank-letter`,
+    filename,
+  );
+  const excludedRaw = headers['x-payroll-excluded-accounts'] ?? '';
+  const excludedAccounts = excludedRaw
+    .split(';')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const refNo = headers['x-payroll-bank-letter-ref'] ?? null;
+  return { excludedAccounts, refNo };
+}
+
+export async function getPayrollCompanySettings(): Promise<PayrollCompanySettings> {
+  return apiGet<PayrollCompanySettings>(`${BASE}/company-settings`);
+}
+
+export async function updatePayrollCompanySettings(
+  payload: UpdatePayrollCompanySettingsPayload,
+): Promise<PayrollCompanySettings> {
+  return apiPatch<PayrollCompanySettings>(`${BASE}/company-settings`, payload);
 }
 
 export async function generatePayslips(

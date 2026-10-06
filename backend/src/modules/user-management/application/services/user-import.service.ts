@@ -17,6 +17,7 @@ import {
   ImportPreviewResponseDto,
   ImportRowPreviewDto,
 } from '../dtos/user-import.dtos';
+import { TIN_PATTERN } from '../dtos/user-field.rules';
 import { UserInvitationDispatchService } from './user-invitation-dispatch.service';
 import {
   ProvisionedUser,
@@ -110,6 +111,14 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   nationalid: 'nationalId',
   'national id': 'nationalId',
   national_id: 'nationalId',
+  tin: 'tin',
+  'tin number': 'tin',
+  'tin no': 'tin',
+  'tin no.': 'tin',
+  tin_number: 'tin',
+  tinnumber: 'tin',
+  'tax id': 'tin',
+  'tax identification number': 'tin',
   educationlevel: 'educationLevel',
   'education level': 'educationLevel',
   education_level: 'educationLevel',
@@ -148,6 +157,7 @@ interface ParsedImportRow {
   addressHouseNumber?: string;
   dateOfBirth?: string;
   nationalId?: string;
+  tin?: string;
   educationLevel?: string;
   fieldOfStudy?: string;
   experienceStartDate?: string;
@@ -205,6 +215,7 @@ export class UserImportService {
       { header: 'employeeType', key: 'employeeType', width: 14 },
       { header: 'dateOfBirth', key: 'dateOfBirth', width: 14 },
       { header: 'nationalId', key: 'nationalId', width: 16 },
+      { header: 'tin', key: 'tin', width: 14 },
       { header: 'educationLevel', key: 'educationLevel', width: 14 },
       { header: 'fieldOfStudy', key: 'fieldOfStudy', width: 18 },
       { header: 'experienceStartDate', key: 'experienceStartDate', width: 18 },
@@ -234,6 +245,7 @@ export class UserImportService {
       employeeType: 'PERMANENT',
       dateOfBirth: '1990-05-15',
       nationalId: '',
+      tin: '',
       educationLevel: 'BSC',
       fieldOfStudy: 'Civil Engineering',
       experienceStartDate: '2015-01-01',
@@ -262,6 +274,7 @@ export class UserImportService {
       employeeType: 'CONTRACT',
       dateOfBirth: '',
       nationalId: '',
+      tin: '',
       educationLevel: 'MSC',
       fieldOfStudy: '',
       experienceStartDate: '',
@@ -320,6 +333,7 @@ export class UserImportService {
     ]);
     instructions.addRow(['dateOfBirth', 'No', 'YYYY-MM-DD']);
     instructions.addRow(['nationalId', 'No', 'National ID / passport number']);
+    instructions.addRow(['tin', 'No', 'Tax Identification Number (10 digits)']);
     instructions.addRow([
       'educationLevel',
       'No',
@@ -397,6 +411,7 @@ export class UserImportService {
           educationLevel: row.educationLevel ?? undefined,
           dateOfBirth: row.dateOfBirth,
           nationalId: row.nationalId,
+          tin: row.tin,
           fieldOfStudy: row.fieldOfStudy,
           experienceStartDate: row.experienceStartDate,
           addressCountry: row.addressCountry,
@@ -585,6 +600,9 @@ export class UserImportService {
           case 'nationalId':
             parsed.nationalId = value || undefined;
             break;
+          case 'tin':
+            parsed.tin = value || undefined;
+            break;
           case 'educationLevel':
             parsed.educationLevel = value || undefined;
             break;
@@ -674,6 +692,7 @@ export class UserImportService {
       employeeId: row.employeeId,
       leavePolicy: row.leavePolicy,
       nationalId: row.nationalId,
+      tin: row.tin,
       fieldOfStudy: row.fieldOfStudy,
       addressCountry: row.addressCountry,
       addressRegion: row.addressRegion,
@@ -689,6 +708,14 @@ export class UserImportService {
         ...base,
         status: 'error',
         message: 'firstName and lastName are required',
+      };
+    }
+
+    if (row.tin && !TIN_PATTERN.test(row.tin.trim())) {
+      return {
+        ...base,
+        status: 'error',
+        message: 'tin must be exactly 10 digits',
       };
     }
 

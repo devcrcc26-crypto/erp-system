@@ -45,6 +45,7 @@ import {
   MIN_EMPLOYEE_AGE,
   NATIONAL_ID_PATTERN,
   PHONE_PATTERN,
+  TIN_PATTERN,
   USER_NAME_MAX,
   USER_NAME_PATTERN,
   trimString,
@@ -334,6 +335,19 @@ export class CreateUserDto {
     message: '$property must be 4–30 letters, digits, spaces or hyphens',
   })
   nationalId?: string;
+
+  @ApiPropertyOptional({
+    example: '0012345678',
+    description: 'Ethiopian Tax Identification Number (10 digits)',
+  })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @Matches(TIN_PATTERN, {
+    message: '$property must be exactly 10 digits',
+  })
+  tin?: string;
 
   @ApiPropertyOptional({ enum: Nationality })
   @IsOptional()

@@ -1001,6 +1001,7 @@ export class UserManagementService {
       gender: true,
       dateOfBirth: true,
       nationalId: true,
+      tin: true,
       nationality: true,
       employeeType: true,
       educationLevel: true,
@@ -1085,6 +1086,7 @@ export class UserManagementService {
     gender?: CreateUserDto['gender'];
     dateOfBirth?: string;
     nationalId?: string;
+    tin?: string;
     nationality?: CreateUserDto['nationality'];
     employeeType?: CreateUserDto['employeeType'];
     educationLevel?: CreateUserDto['educationLevel'];
@@ -1109,6 +1111,7 @@ export class UserManagementService {
       gender: dto.gender,
       dateOfBirth: dto.dateOfBirth,
       nationalId: dto.nationalId,
+      tin: dto.tin,
       nationality: dto.nationality,
       employeeType: dto.employeeType,
       educationLevel: dto.educationLevel,
@@ -1141,6 +1144,7 @@ export class UserManagementService {
       gender?: CreateUserDto['gender'];
       dateOfBirth?: string;
       nationalId?: string;
+      tin?: string;
       nationality?: CreateUserDto['nationality'];
       employeeType?: CreateUserDto['employeeType'];
       educationLevel?: CreateUserDto['educationLevel'];
@@ -1197,6 +1201,7 @@ export class UserManagementService {
           ? this.parseDateOnly(profileInput.dateOfBirth)
           : null,
         nationalId: profileInput.nationalId?.trim() || null,
+        tin: profileInput.tin?.trim() || null,
         nationality: profileInput.nationality as Prisma.UserUpdateInput['nationality'],
         employeeType: profileInput.employeeType as Prisma.UserUpdateInput['employeeType'],
         educationLevel:
@@ -1248,6 +1253,7 @@ export class UserManagementService {
       | 'gender'
       | 'dateOfBirth'
       | 'nationalId'
+      | 'tin'
       | 'nationality'
       | 'employeeType'
       | 'educationLevel'
@@ -1290,6 +1296,7 @@ export class UserManagementService {
         | 'gender'
         | 'dateOfBirth'
         | 'nationalId'
+        | 'tin'
         | 'nationality'
         | 'employeeType'
         | 'educationLevel'
@@ -1337,6 +1344,9 @@ export class UserManagementService {
     }
     if (rest.nationalId !== undefined) {
       data.nationalId = rest.nationalId?.trim() || null;
+    }
+    if (rest.tin !== undefined) {
+      data.tin = rest.tin?.trim() || null;
     }
     if (rest.nationality !== undefined) {
       data.nationality = rest.nationality;

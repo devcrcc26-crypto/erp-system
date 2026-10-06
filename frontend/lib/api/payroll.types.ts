@@ -215,3 +215,25 @@ export interface UpdatePayrollEntryPayload {
   netTopUpReason?: string;
   notes?: string;
 }
+
+/** Company letterhead / tax-form / bank-letter settings (module = payroll). */
+export interface PayrollCompanySettings {
+  orgNameTax: string;
+  tin: string;
+  taxAccountNo: string;
+  region: string;
+  zone: string;
+  woreda: string;
+  kebele: string;
+  houseNo: string;
+  phone: string;
+  fax: string;
+  taxCollectorOffice: string;
+  salaryBankName: string;
+  bankBranch: string;
+  companyAccountNumber: string;
+  bankLetterRefPrefix: string;
+}
+
+export type UpdatePayrollCompanySettingsPayload = Partial<PayrollCompanySettings>;
+

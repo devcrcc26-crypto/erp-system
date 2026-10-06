@@ -82,6 +82,9 @@ export class ImportRowPreviewDto {
   nationalId?: string;
 
   @ApiPropertyOptional()
+  tin?: string;
+
+  @ApiPropertyOptional()
   fieldOfStudy?: string;
 
   @ApiPropertyOptional({ description: 'ISO date YYYY-MM-DD' })

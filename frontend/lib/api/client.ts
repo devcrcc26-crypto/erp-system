@@ -196,7 +196,7 @@ export async function apiPatchForm<T>(
 export async function downloadApiFile(
   url: string,
   filename: string,
-): Promise<void> {
+): Promise<{ headers: Record<string, string> }> {
   const response = await apiClient.get(url, { responseType: 'blob' });
   const contentType = response.headers['content-type'];
   const blob = new Blob([response.data as BlobPart], {
@@ -208,5 +208,12 @@ export async function downloadApiFile(
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(objectUrl);
+  const headers: Record<string, string> = {};
+  for (const [key, value] of Object.entries(response.headers)) {
+    if (typeof value === 'string') {
+      headers[key.toLowerCase()] = value;
+    }
+  }
+  return { headers };
 }
 

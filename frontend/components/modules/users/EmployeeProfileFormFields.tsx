@@ -45,6 +45,7 @@ export interface EmployeeProfileFormValues {
   gender?: Gender;
   dateOfBirth?: Dayjs;
   nationalId?: string;
+  tin?: string;
   nationality?: Nationality;
   employeeType?: EmployeeType;
   educationLevel?: EducationLevel;
@@ -432,6 +433,26 @@ export function EmployeeProfileFormFields({
             >
               <Input maxLength={64} autoComplete="off" />
             </Form.Item>
+            <Form.Item
+              label={t('users.form.tin')}
+              name="tin"
+              extra={t('users.form.tinHint')}
+              rules={[
+                {
+                  validator: async (_, value: string | undefined) => {
+                    const trimmed = value?.trim() ?? '';
+                    if (!trimmed) {
+                      return;
+                    }
+                    if (!/^\d{10}$/.test(trimmed)) {
+                      throw new Error(t('users.form.tinInvalid'));
+                    }
+                  },
+                },
+              ]}
+            >
+              <Input maxLength={10} autoComplete="off" placeholder="0000000000" />
+            </Form.Item>
           </div>
         </SectionShell>
       ) : null}
@@ -479,6 +500,7 @@ export function buildEmployeeProfilePayload(
   | 'gender'
   | 'dateOfBirth'
   | 'nationalId'
+  | 'tin'
   | 'nationality'
   | 'employeeType'
   | 'educationLevel'
@@ -504,6 +526,7 @@ export function buildEmployeeProfilePayload(
     gender: values.gender,
     dateOfBirth: formatFormDate(values.dateOfBirth),
     nationalId: values.nationalId?.trim() || undefined,
+    tin: values.tin?.trim() || undefined,
     nationality: values.nationality,
     employeeType: values.employeeType,
     educationLevel: values.educationLevel,
@@ -549,6 +572,7 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     gender: user.gender ?? undefined,
     dateOfBirth: user.dateOfBirth ? dayjs(user.dateOfBirth) : undefined,
     nationalId: user.nationalId ?? undefined,
+    tin: user.tin ?? undefined,
     nationality: user.nationality ?? undefined,
     employeeType: user.employeeType ?? undefined,
     educationLevel: user.educationLevel ?? undefined,

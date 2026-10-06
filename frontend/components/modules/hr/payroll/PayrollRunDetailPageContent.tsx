@@ -7,6 +7,7 @@ import {
   Alert,
   Button,
   Checkbox,
+  Dropdown,
   Form,
   Input,
   InputNumber,
@@ -20,6 +21,7 @@ import {
   Tag,
   Tooltip,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   DownloadOutlined,
@@ -49,7 +51,13 @@ import {
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import { downloadPayrollRunExcel, downloadPayslipZip, openPayslipPdf } from '@/lib/api/payroll';
+import {
+  downloadPayrollBankLetter,
+  downloadPayrollRunExcel,
+  downloadPayslipZip,
+  openPayslipPdf,
+  previewPayrollBankLetter,
+} from '@/lib/api/payroll';
 import type {
   PayrollEntryDetail,
   PayrollEntryFlag,
@@ -171,6 +179,11 @@ export default function PayrollRunDetailPageContent({
     amount: number;
   }>({ treatment: 'taxable', amount: 0 });
   const [exporting, setExporting] = useState(false);
+  const [bankLetterLoading, setBankLetterLoading] = useState(false);
+  const [bankLetterWarn, setBankLetterWarn] = useState<{
+    excludedNames: string[];
+    includedCount: number;
+  } | null>(null);
   const [zipping, setZipping] = useState(false);
   const [releaseOpen, setReleaseOpen] = useState(false);
   const [openingPayslipId, setOpeningPayslipId] = useState<string | null>(null);
@@ -470,6 +483,38 @@ export default function PayrollRunDetailPageContent({
     if (taxableIncome <= 10000) return taxableIncome * 0.25 - 850;
     if (taxableIncome <= 14000) return taxableIncome * 0.3 - 1350;
     return taxableIncome * 0.35 - 2050;
+  }
+
+  async function downloadBankLetterFile(
+    runId: string,
+    year: number,
+    month: number,
+    runNumber: string,
+  ): Promise<void> {
+    const mm = String(month).padStart(2, '0');
+    const safeRun = runNumber.replace(/[^\w.-]+/g, '_');
+    const filename = `Bank_Letter_${year}_${mm}_${safeRun}.docx`;
+    setBankLetterLoading(true);
+    try {
+      const result = await downloadPayrollBankLetter(runId, filename);
+      messageApi.success(
+        result.refNo
+          ? t('hr.payroll.actions.exportBankLetterSuccessRef', {
+              ref: result.refNo,
+            })
+          : t('hr.payroll.actions.exportBankLetterSuccess'),
+      );
+      if (result.excludedAccounts.length > 0) {
+        messageApi.warning(
+          t('hr.payroll.actions.exportBankLetterExcluded', {
+            count: result.excludedAccounts.length,
+            names: result.excludedAccounts.join(', '),
+          }),
+        );
+      }
+    } finally {
+      setBankLetterLoading(false);
+    }
   }
 
   const showPayslipColumn =
@@ -918,12 +963,13 @@ export default function PayrollRunDetailPageContent({
     };
 
     if (canExport && status !== 'CANCELLED' && run) {
-      buttons.push(
-        <Button
-          key="export"
-          icon={<DownloadOutlined />}
-          loading={exporting}
-          onClick={() => {
+      const bankLetterEnabled =
+        status === 'GM_APPROVED' || status === 'PAID';
+      const exportItems: MenuProps['items'] = [
+        {
+          key: 'excel',
+          label: t('hr.payroll.actions.exportSalarySheet'),
+          onClick: () => {
             void (async () => {
               const mm = String(run.month).padStart(2, '0');
               const safeRun = run.runNumber.replace(/[^\w.-]+/g, '_');
@@ -933,15 +979,66 @@ export default function PayrollRunDetailPageContent({
                 await downloadPayrollRunExcel(run.id, filename);
                 messageApi.success(t('hr.payroll.actions.exportExcelSuccess'));
               } catch (error) {
-                notifyApiError(error, t('hr.payroll.actions.exportExcel'), messageApi, t);
+                notifyApiError(
+                  error,
+                  t('hr.payroll.actions.exportExcel'),
+                  messageApi,
+                  t,
+                );
               } finally {
                 setExporting(false);
               }
             })();
-          }}
+          },
+        },
+        {
+          key: 'bank-letter',
+          label: t('hr.payroll.actions.exportBankLetter'),
+          disabled: !bankLetterEnabled,
+          onClick: () => {
+            if (!bankLetterEnabled) {
+              return;
+            }
+            void (async () => {
+              setBankLetterLoading(true);
+              try {
+                const preview = await previewPayrollBankLetter(run.id);
+                if (preview.excludedEmployees.length > 0) {
+                  setBankLetterWarn({
+                    excludedNames: preview.excludedEmployees.map((e) => e.name),
+                    includedCount: preview.includedCount,
+                  });
+                  return;
+                }
+                await downloadBankLetterFile(run.id, run.year, run.month, run.runNumber);
+              } catch (error) {
+                notifyApiError(
+                  error,
+                  t('hr.payroll.actions.exportBankLetter'),
+                  messageApi,
+                  t,
+                );
+              } finally {
+                setBankLetterLoading(false);
+              }
+            })();
+          },
+        },
+      ];
+      buttons.push(
+        <Dropdown
+          key="export"
+          menu={{ items: exportItems }}
+          trigger={['click']}
+          disabled={exporting || bankLetterLoading}
         >
-          {t('hr.payroll.actions.exportExcel')}
-        </Button>,
+          <Button
+            icon={<DownloadOutlined />}
+            loading={exporting || bankLetterLoading}
+          >
+            {t('hr.payroll.actions.exportMenu')}
+          </Button>
+        </Dropdown>,
       );
     }
 
@@ -1022,6 +1119,46 @@ export default function PayrollRunDetailPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-payroll-page erp-payroll-v2 erp-payroll-detail">
+      <ConfirmDialog
+        open={Boolean(bankLetterWarn)}
+        title={t('hr.payroll.actions.exportBankLetterWarnTitle')}
+        description={
+          bankLetterWarn
+            ? t('hr.payroll.actions.exportBankLetterWarnDescription', {
+                count: bankLetterWarn.excludedNames.length,
+                names: bankLetterWarn.excludedNames.join(', '),
+                included: bankLetterWarn.includedCount,
+              })
+            : ''
+        }
+        confirmLabel={t('hr.payroll.actions.exportBankLetterContinue')}
+        confirmLoading={bankLetterLoading}
+        onConfirm={() => {
+          if (!run || !bankLetterWarn) {
+            return;
+          }
+          void (async () => {
+            try {
+              setBankLetterWarn(null);
+              await downloadBankLetterFile(
+                run.id,
+                run.year,
+                run.month,
+                run.runNumber,
+              );
+            } catch (error) {
+              notifyApiError(
+                error,
+                t('hr.payroll.actions.exportBankLetter'),
+                messageApi,
+                t,
+              );
+            }
+          })();
+        }}
+        onCancel={() => setBankLetterWarn(null)}
+      />
+
       <ConfirmDialog
         open={releaseOpen}
         title={t('hr.payroll.payslips.releaseTitle')}

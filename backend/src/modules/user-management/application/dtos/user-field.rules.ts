@@ -20,6 +20,9 @@ export const EMPLOYEE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{0,18}[A-Za-z0-9]$/;
 /** 4–30 letters, digits, spaces or hyphens; starts and ends with a letter or digit. */
 export const NATIONAL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 -]{2,28}[A-Za-z0-9]$/;
 
+/** Ethiopian Tax Identification Number: exactly 10 digits. */
+export const TIN_PATTERN = /^\d{10}$/;
+
 export const EMAIL_MAX = 254;
 export const ADDRESS_MAX = 100;
 export const HOUSE_NUMBER_MAX = 20;
