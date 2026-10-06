@@ -46,6 +46,8 @@ export interface ApprovalCategorySummary {
   module?: string;
   description?: string | null;
   isActive?: boolean;
+  /** False for internal categories (e.g. PAYROLL_RUN); omitted from New Request by the API. */
+  isUserRequestable?: boolean;
   allowAttachments?: boolean;
   sortOrder?: number;
 }

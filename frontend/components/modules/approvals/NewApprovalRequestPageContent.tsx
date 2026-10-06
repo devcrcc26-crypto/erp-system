@@ -156,7 +156,10 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
     );
   }
 
-  const categories = categoriesQuery.data ?? [];
+  // Backend already omits non-requestable categories; keep a client guard for older caches.
+  const categories = (categoriesQuery.data ?? []).filter(
+    (category) => category.isUserRequestable !== false,
+  );
 
   if (!selectedCategory) {
     return (

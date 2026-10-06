@@ -122,7 +122,7 @@ export function AnnouncementModals(): React.ReactNode {
         open
         centered
         closable={false}
-        maskClosable={false}
+        mask={{ closable: false }}
         keyboard={false}
         footer={null}
         width={640}

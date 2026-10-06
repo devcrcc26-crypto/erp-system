@@ -41,6 +41,8 @@ interface CategorySeedDef {
   numberPrefix: string;
   icon: string;
   sortOrder: number;
+  /** When false, hidden from New Request and blocked on generic submit. Default true. */
+  isUserRequestable?: boolean;
   formSchema: { fields: FormFieldDef[] };
   approvalRules: ApprovalRuleSeed[];
 }
@@ -735,17 +737,29 @@ const CATEGORIES: CategorySeedDef[] = [
   {
     code: 'PAYROLL_RUN',
     name: 'Payroll Run Approval',
-    description: 'Monthly payroll approval - prepared by Local HR Manager, approved by HR Manager then General Manager.',
+    description:
+      'Monthly payroll approval — not user-requestable. Runs are created and approved only from /hr/payroll.',
     module: 'HR',
     numberPrefix: 'PR',
     icon: 'dollar-circle',
     sortOrder: 160,
+    isUserRequestable: false,
     formSchema: {
-      fields:[
-        {name: 'month', label: 'Month', type: 'number', required: true},
-        {name: 'year', label: 'Year', type:'number', required: true},
-        {name: 'totalEmployees', label: 'Total Employees', type: 'number', required: true},
-        {name: 'totalNetPay', label: 'Total Net Pay (ETB)', type: 'number', required: true},
+      fields: [
+        { name: 'month', label: 'Month', type: 'number', required: true },
+        { name: 'year', label: 'Year', type: 'number', required: true },
+        {
+          name: 'totalEmployees',
+          label: 'Total Employees',
+          type: 'number',
+          required: true,
+        },
+        {
+          name: 'totalNetPay',
+          label: 'Total Net Pay (ETB)',
+          type: 'number',
+          required: true,
+        },
       ],
     },
     approvalRules: [
@@ -844,6 +858,7 @@ export async function seedApprovalCategories(
       approvalRules: def.approvalRules as unknown as Prisma.InputJsonValue,
       numberPrefix: def.numberPrefix,
       isActive: true,
+      isUserRequestable: def.isUserRequestable !== false,
       allowAttachments: true,
       sortOrder: def.sortOrder,
       updatedBy: actorUserId,

@@ -162,11 +162,16 @@ export class ApprovalsService {
   ) {}
 
   /**
-   * Lists active approval categories for the company.
+   * Lists active, user-requestable approval categories for the company
+   * (New Request picker / Other requests). Internal categories are omitted.
    */
   async getCategories(companyId: string): Promise<unknown[]> {
     return this.prisma.approvalCategory.findMany({
-      where: activeOnly({ companyId, isActive: true }),
+      where: activeOnly({
+        companyId,
+        isActive: true,
+        isUserRequestable: true,
+      }),
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
   }
@@ -208,6 +213,11 @@ export class ApprovalsService {
     if (!category) {
       throw new NotFoundException(
         `Approval category "${dto.categoryCode}" not found`,
+      );
+    }
+    if (!category.isUserRequestable) {
+      throw new BadRequestException(
+        `Approval category "${dto.categoryCode}" cannot be submitted from New Request`,
       );
     }
 
