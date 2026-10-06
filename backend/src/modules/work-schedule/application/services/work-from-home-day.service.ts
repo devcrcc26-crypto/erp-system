@@ -103,6 +103,20 @@ export class WorkFromHomeDayService
   }
 
   /**
+   * List for assigners (HR or Discipline Lead). Ordinary employees use New Request.
+   */
+  async listForAssigner(
+    companyId: string,
+    userId: string,
+    month?: number,
+    year?: number,
+  ): Promise<unknown[]> {
+    const ctx = await this.resolveAssigner(userId, companyId);
+    this.assertCanAssign(ctx);
+    return this.list(companyId, month, year);
+  }
+
+  /**
    * Employees the actor may assign WFH to (HR: anyone; DL: their discipline).
    */
   async listAssignableEmployees(

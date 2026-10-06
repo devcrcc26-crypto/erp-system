@@ -14,7 +14,6 @@ import { CurrentCompany } from '../../../shared/decorators/current-company.decor
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import { DelegatePermissionCheck } from '../../../shared/permissions/delegate-permission-check.decorator';
 import { PermissionsGuard } from '../../../shared/permissions/permissions.guard';
-import { RequireAnyPermission } from '../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../shared/types/jwt-payload.type';
 import {
   CreateWorkFromHomeDayDto,
@@ -27,22 +26,24 @@ import { WorkFromHomeDayService } from '../application/services/work-from-home-d
 @ApiTags('HR Work From Home')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
-@RequireAnyPermission(
-  { module: 'hr', action: 'view' },
-  { module: 'leave', action: 'view' },
-  { module: 'leave', action: 'create' },
-)
+@DelegatePermissionCheck()
 @Controller('hr/attendance/work-from-home')
 export class WorkFromHomeDayController {
   constructor(private readonly service: WorkFromHomeDayService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List work-from-home days' })
+  @ApiOperation({ summary: 'List work-from-home days (HR or Discipline Lead)' })
   list(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Query() query: ListWorkFromHomeDaysDto,
   ): Promise<unknown[]> {
-    return this.service.list(companyId, query.month, query.year);
+    return this.service.listForAssigner(
+      companyId,
+      user.userId,
+      query.month,
+      query.year,
+    );
   }
 
   @Get('assignable-employees')
@@ -58,7 +59,6 @@ export class WorkFromHomeDayController {
   }
 
   @Post('request')
-  @DelegatePermissionCheck()
   @ApiOperation({
     summary: 'Submit a work-from-home request (Employee → Discipline Lead)',
   })
