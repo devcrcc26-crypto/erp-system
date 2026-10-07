@@ -46,6 +46,7 @@ import {
 } from '@/lib/utils/employee-per-diem-list-filter';
 import { formatUserName } from '@/lib/utils/user-display';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const STAT_ACCENT = {
   teal: { bg: '#E1F5EE', fg: '#1D9E75' },
   green: { bg: '#EAF3DE', fg: '#639922' },
@@ -325,7 +326,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
 
   if (!canManagePerDiemRates) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -333,7 +334,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -342,7 +343,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-per-diem-rates-page ${LIST_PAGE_V2}`}>
       {importOpen ? (
         <ImportModal
           schema={employeePerDiemRateImportSchema}

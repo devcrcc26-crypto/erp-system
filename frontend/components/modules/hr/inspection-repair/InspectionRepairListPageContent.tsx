@@ -49,6 +49,7 @@ import { buildInspectionRepairExportSheets } from '@/lib/utils/inspection-repair
 import { inspectionRepairImportSchema } from '@/lib/utils/hr-import-configs';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const PENDING_STATUSES = statusesForInspectionRepairMode('pending');
 const ACTIVE_STATUSES = statusesForInspectionRepairMode('active');
 const DONE_STATUSES = statusesForInspectionRepairMode('done');
@@ -297,7 +298,7 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-inspection-repair-page">
+      <div className={`erp-pro-list-page erp-users-page erp-inspection-repair-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -306,7 +307,7 @@ export default function InspectionRepairListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-inspection-repair-page">
+    <div className={`erp-pro-list-page erp-users-page erp-inspection-repair-page ${LIST_PAGE_V2}`}>
       {importOpen ? (
         <ImportModal
           schema={inspectionRepairImportSchema}

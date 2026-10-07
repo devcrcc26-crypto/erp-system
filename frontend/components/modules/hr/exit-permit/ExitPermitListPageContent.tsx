@@ -59,6 +59,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const LIST_PATH = '/hr/equipment-and-materials-exit-permit';
 const NEW_PATH = '/approvals/new/exit-permit';
 
@@ -322,7 +323,7 @@ export default function ExitPermitListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-exit-permit-page">
+      <div className={`erp-pro-list-page erp-users-page erp-exit-permit-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -331,7 +332,7 @@ export default function ExitPermitListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-exit-permit-page">
+    <div className={`erp-pro-list-page erp-users-page erp-exit-permit-page ${LIST_PAGE_V2}`}>
       {importOpen ? (
         <ImportModal
           schema={exitPermitImportSchema}

@@ -61,6 +61,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildPerDiemRequestExportSheets } from '@/lib/utils/per-diem-export';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const PENDING_STATUSES = statusesForPerDiemMode('pending');
 const APPROVED_STATUSES = statusesForPerDiemMode('approved');
 const REJECTED_STATUSES = statusesForPerDiemMode('rejected');
@@ -365,7 +366,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   if (listTab === 'settlements') {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-per-diem-page">
+      <div className={`erp-pro-list-page erp-users-page erp-per-diem-page ${LIST_PAGE_V2}`}>
         {listTabs}
         <PerDiemSettlementsList />
       </div>
@@ -374,7 +375,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-per-diem-page">
+      <div className={`erp-pro-list-page erp-users-page erp-per-diem-page ${LIST_PAGE_V2}`}>
         {listTabs}
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
@@ -384,7 +385,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-per-diem-page">
+    <div className={`erp-pro-list-page erp-users-page erp-per-diem-page ${LIST_PAGE_V2}`}>
       {listTabs}
       {importOpen ? (
         <HrImportModal

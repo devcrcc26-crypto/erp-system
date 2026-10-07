@@ -33,6 +33,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 import { tokens } from '@/lib/theme/tokens';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const HISTORY_PAGE_SIZE = 15;
 
 export type OvertimeHistoryPageMode = 'self' | 'employee';
@@ -357,7 +358,7 @@ export default function OvertimeHistoryPageContent({
 
   if (!allowed) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
+      <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -370,14 +371,14 @@ export default function OvertimeHistoryPageContent({
     canViewHr
   ) {
     return (
-      <div className="erp-pro-list-page flex flex-col gap-3">
+      <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
   }
 
   return (
-    <div className="erp-pro-list-page flex flex-col gap-3">
+    <div className={`erp-pro-list-page flex flex-col ${LIST_PAGE_V2}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <Button

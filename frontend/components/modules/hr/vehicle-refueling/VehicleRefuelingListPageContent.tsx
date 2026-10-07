@@ -52,6 +52,7 @@ import { vehicleRefuelingImportSchema } from '@/lib/utils/hr-import-configs';
 import { buildVehicleRefuelingExportSheets } from '@/lib/utils/vehicle-refueling-export';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const PENDING_STATUSES = statusesForVehicleRefuelingMode('pending');
 const APPROVED_STATUSES = statusesForVehicleRefuelingMode('approved');
 const REJECTED_STATUSES = statusesForVehicleRefuelingMode('rejected');
@@ -358,7 +359,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-vehicle-refueling-page">
+      <div className={`erp-pro-list-page erp-users-page erp-vehicle-refueling-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -367,7 +368,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-vehicle-refueling-page">
+    <div className={`erp-pro-list-page erp-users-page erp-vehicle-refueling-page ${LIST_PAGE_V2}`}>
       {importOpen ? (
         <ImportModal
           schema={vehicleRefuelingImportSchema}

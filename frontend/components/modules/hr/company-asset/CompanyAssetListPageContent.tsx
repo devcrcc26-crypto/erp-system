@@ -52,6 +52,7 @@ import { buildCompanyAssetExportSheets } from '@/lib/utils/company-asset-export'
 import { companyAssetImportSchema } from '@/lib/utils/hr-import-configs';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const STAT_ACCENT = {
   teal: { bg: '#E1F5EE', fg: '#1D9E75' },
   green: { bg: '#EAF3DE', fg: '#639922' },
@@ -332,7 +333,7 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-company-asset-page">
+      <div className={`erp-pro-list-page erp-users-page erp-company-asset-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -341,7 +342,7 @@ export default function CompanyAssetListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-company-asset-page">
+    <div className={`erp-pro-list-page erp-users-page erp-company-asset-page ${LIST_PAGE_V2}`}>
       {importOpen ? (
         <ImportModal
           schema={companyAssetImportSchema}

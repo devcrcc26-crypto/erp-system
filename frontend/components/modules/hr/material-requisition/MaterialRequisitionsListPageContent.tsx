@@ -58,6 +58,7 @@ import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildMaterialRequisitionExportSheets } from '@/lib/utils/requisition-export';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const PENDING_STATUSES = statusesForMaterialRequisitionMode('pending');
 const APPROVED_STATUSES = statusesForMaterialRequisitionMode('approved');
 const REJECTED_STATUSES = statusesForMaterialRequisitionMode('rejected');
@@ -320,7 +321,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-material-requisitions-page">
+      <div className={`erp-pro-list-page erp-users-page erp-material-requisitions-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -329,7 +330,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-material-requisitions-page">
+    <div className={`erp-pro-list-page erp-users-page erp-material-requisitions-page ${LIST_PAGE_V2}`}>
       {importOpen ? (
         <HrImportModal
           entity="materialRequisitions"

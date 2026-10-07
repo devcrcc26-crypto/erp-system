@@ -36,24 +36,24 @@ export default function FormLayout({
   const isPro = variant === 'pro';
   const headerPad = dense
     ? isPro
-      ? 'px-3 py-3 sm:px-4'
+      ? 'px-4 py-3'
       : 'px-3 py-2.5'
     : isPro
-      ? 'px-3 py-3 sm:px-6 sm:py-4'
+      ? 'px-4 pt-4 pb-3 sm:px-6 sm:pt-5'
       : 'px-3 py-3 sm:px-[18px] sm:py-[14px]';
   const bodyPad = dense
     ? isPro
-      ? 'px-3 py-3 sm:px-4'
+      ? 'px-4 py-4'
       : 'px-3 py-3'
     : isPro
-      ? 'px-3 py-4 sm:px-6 sm:py-6'
+      ? 'px-4 py-4 sm:px-6 sm:py-5'
       : 'px-3 py-4 sm:px-[18px]';
   const bodyOnlyPad = dense
     ? isPro
-      ? '12px 16px'
+      ? '16px'
       : '12px 14px'
     : isPro
-      ? '24px'
+      ? '20px 24px'
       : '16px 18px';
   const resolvedBodyClassName = hasHeader
     ? (bodyClassName ?? bodyPad)
@@ -62,7 +62,11 @@ export default function FormLayout({
   return (
     <Card
       variant="borderless"
-      className={`erp-responsive-card${isPro ? ' erp-form-layout-pro' : ''} ${className ?? ''}`}
+      className={`erp-responsive-card${
+        isPro
+          ? ' erp-form-layout-pro overflow-hidden !rounded-2xl !border-0 !bg-white !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]'
+          : ''
+      } ${className ?? ''}`}
       styles={{
         body: {
           padding:
@@ -71,32 +75,32 @@ export default function FormLayout({
               : bodyOnlyPad,
         },
       }}
-      style={{
-        borderRadius: isPro ? 12 : tokens.borderRadiusCard,
-        border: isPro ? '1px solid #e8ebef' : `0.5px solid ${tokens.colorBorder}`,
-        boxShadow: isPro
-          ? '0 1px 3px rgba(15, 23, 42, 0.04)'
-          : 'none',
-        background: tokens.colorCardBg,
-        overflow: isPro ? 'hidden' : undefined,
-      }}
+      style={
+        isPro
+          ? undefined
+          : {
+              borderRadius: tokens.borderRadiusCard,
+              border: `0.5px solid ${tokens.colorBorder}`,
+              boxShadow: 'none',
+              background: tokens.colorCardBg,
+            }
+      }
     >
       {hasHeader && (
         <div
-          className={`${isPro ? 'erp-form-layout-pro-header ' : ''}flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 ${headerPad}`}
-          style={{
-            borderBottom: isPro
-              ? '1px solid #eef1f4'
-              : `0.5px solid ${tokens.colorBorder}`,
-            background: isPro ? '#fbfcfd' : undefined,
-          }}
+          className={`${
+            isPro ? 'erp-form-layout-pro-header border-b border-slate-100 bg-white ' : ''
+          }flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 ${headerPad}`}
+          style={
+            isPro ? undefined : { borderBottom: `0.5px solid ${tokens.colorBorder}` }
+          }
         >
           <div className="min-w-0 flex-1">
             {title && (
               <div
                 className={
                   isPro
-                    ? 'erp-form-layout-pro-title'
+                    ? 'text-[15px] leading-snug font-semibold tracking-tight text-slate-900'
                     : 'text-[13px] font-medium leading-[1.5]'
                 }
                 style={
@@ -108,8 +112,12 @@ export default function FormLayout({
             )}
             {description && (
               <div
-                className="mt-1 text-[12px] font-normal leading-[1.5]"
-                style={{ color: tokens.colorTextSecondary }}
+                className={
+                  isPro
+                    ? 'mt-1 text-[13px] leading-snug font-normal text-slate-500'
+                    : 'mt-1 text-[12px] font-normal leading-[1.5]'
+                }
+                style={isPro ? undefined : { color: tokens.colorTextSecondary }}
               >
                 {description}
               </div>

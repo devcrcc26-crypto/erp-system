@@ -58,6 +58,7 @@ import {
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL';
 
 const NEW_PATH = '/approvals/new';
@@ -379,7 +380,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-approvals-page">
+      <div className={`erp-pro-list-page erp-users-page erp-approvals-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -388,7 +389,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-approvals-page">
+    <div className={`erp-pro-list-page erp-users-page erp-approvals-page ${LIST_PAGE_V2}`}>
       {listQuery.isError ? (
         <ErpNotice
           tone="error"

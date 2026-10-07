@@ -90,6 +90,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildOvertimeExportSheets } from '@/lib/utils/overtime-export';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 function isEditableSheetStatus(status: OvertimeSheetListItem['status']): boolean {
   return status === 'DRAFT' || status === 'RETURNED';
 }
@@ -448,7 +449,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
 
   if (!canAccess) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-overtime-page">
+      <div className={`erp-pro-list-page erp-users-page erp-overtime-page ${LIST_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -456,7 +457,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-overtime-page">
+      <div className={`erp-pro-list-page erp-users-page erp-overtime-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -465,7 +466,7 @@ export default function OvertimeSheetsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-overtime-page">
+    <div className={`erp-pro-list-page erp-users-page erp-overtime-page ${LIST_PAGE_V2}`}>
       <ConfirmDialog
         open={Boolean(deletingSheet)}
         title={t('hr.empty.deleteOvertimeSheetTitle')}

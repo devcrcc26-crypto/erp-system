@@ -40,6 +40,7 @@ import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatUserDiscipline, formatUserName } from '@/lib/utils/user-display';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const STAT_ACCENT = {
   teal: { bg: '#E1F5EE', fg: '#1D9E75' },
   blue: { bg: '#E6F1FB', fg: '#378ADD' },
@@ -187,7 +188,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
 
   if (auditLogsQuery.isLoading && !auditLogsQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-audit-logs-page">
+      <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -202,7 +203,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
         : 0;
 
     return (
-      <div className="erp-pro-list-page erp-users-page erp-audit-logs-page">
+      <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={
@@ -229,7 +230,7 @@ export default function AuditLogsPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-audit-logs-page">
+    <div className={`erp-pro-list-page erp-users-page erp-audit-logs-page ${LIST_PAGE_V2}`}>
       <div className="erp-users-stat-bar">
         <AuditStat
           label={t('auditLogs.stats.total')}

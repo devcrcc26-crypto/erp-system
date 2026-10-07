@@ -524,7 +524,7 @@ export default function WorkScheduleForm({
             {submitLabel}
           </Button>
           {cancelHref ? (
-            <Link href={cancelHref} className="block">
+            <Link href={cancelHref} className="block lg:hidden">
               <Button size="large" block>
                 {t('common.cancel')}
               </Button>

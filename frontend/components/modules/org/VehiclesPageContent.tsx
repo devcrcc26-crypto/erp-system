@@ -60,6 +60,7 @@ import { buildCompanyVehicleExportSheets } from '@/lib/utils/company-vehicle-exp
 import { companyVehicleImportSchema } from '@/lib/utils/hr-import-configs';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 /**
  * Company vehicles list — Users chrome (stat bar, filter row, rounded table).
  */
@@ -238,7 +239,7 @@ export default function VehiclesPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-org-vehicles-page">
+      <div className={`erp-pro-list-page erp-users-page erp-org-vehicles-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -249,7 +250,7 @@ export default function VehiclesPageContent(): React.ReactNode {
   const pagination = bindMeta(meta);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-org-vehicles-page">
+    <div className={`erp-pro-list-page erp-users-page erp-org-vehicles-page ${LIST_PAGE_V2}`}>
       {importOpen ? (
         <ImportModal
           schema={companyVehicleImportSchema}

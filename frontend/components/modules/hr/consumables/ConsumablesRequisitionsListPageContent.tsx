@@ -58,6 +58,7 @@ import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import HrListActions from '@/components/modules/hr/import-export/HrListActions';
 import { buildConsumablesRequisitionExportSheets } from '@/lib/utils/requisition-export';
 
+import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
 const PENDING_STATUSES = statusesForConsumablesRequisitionMode('pending');
 const APPROVED_STATUSES = statusesForConsumablesRequisitionMode('approved');
 const REJECTED_STATUSES = statusesForConsumablesRequisitionMode('rejected');
@@ -338,7 +339,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-consumables-page">
+      <div className={`erp-pro-list-page erp-users-page erp-consumables-page ${LIST_PAGE_V2}`}>
         <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
           <Spin />
         </div>
@@ -347,7 +348,7 @@ export default function ConsumablesRequisitionsListPageContent(): React.ReactNod
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-consumables-page">
+    <div className={`erp-pro-list-page erp-users-page erp-consumables-page ${LIST_PAGE_V2}`}>
       {importOpen ? (
         <HrImportModal
           entity="consumablesRequisitions"
