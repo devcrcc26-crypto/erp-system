@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { Button, Form, Input, Select, Switch, TimePicker } from 'antd';
+import Link from 'next/link';
+import { Button, Form, Input, Segmented, Switch, TimePicker } from 'antd';
+import { Copy } from 'lucide-react';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import FormLayout from '@/components/ui/FormLayout/FormLayout';
+import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   CreateWorkSchedulePayload,
@@ -172,21 +174,128 @@ export function buildWorkSchedulePayload(
   };
 }
 
+const CARD =
+  'rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]';
+
+/** Display order: Monday first, Sunday last (dayOfWeek stays 0 = Sunday in data). */
+const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
+
+const MODE_DOT: Record<DayMode, string> = {
+  working: 'bg-emerald-600 text-white',
+  half: 'bg-amber-100 text-amber-800',
+  off: 'bg-slate-100 text-slate-500',
+};
+
+function TimeRange({
+  index,
+  startField,
+  endField,
+  label,
+  requiredMessage,
+  orderMessage,
+}: {
+  index: number;
+  startField: keyof DayFormValue;
+  endField: keyof DayFormValue;
+  label: string;
+  requiredMessage: string;
+  orderMessage: string;
+}): React.ReactNode {
+  return (
+    <div className="min-w-0">
+      <p className="m-0 mb-1 text-xs font-medium text-slate-500">{label}</p>
+      <div className="flex items-start gap-1.5">
+        <Form.Item
+          name={['days', index, startField]}
+          rules={[{ required: true, message: requiredMessage }]}
+          className="!mb-0 min-w-0 flex-1"
+        >
+          <TimePicker
+            format="HH:mm"
+            minuteStep={5}
+            needConfirm={false}
+            allowClear={false}
+            className="w-full"
+            aria-label={`${label} start`}
+          />
+        </Form.Item>
+        <span className="pt-1.5 text-slate-400" aria-hidden>
+          –
+        </span>
+        <Form.Item
+          name={['days', index, endField]}
+          dependencies={[['days', index, startField]]}
+          rules={[
+            { required: true, message: requiredMessage },
+            ({ getFieldValue }) => ({
+              validator(_, value: Dayjs | null | undefined) {
+                const start = getFieldValue(['days', index, startField]) as Dayjs | null | undefined;
+                if (!value || !start || value.isAfter(start)) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error(orderMessage));
+              },
+            }),
+          ]}
+          className="!mb-0 min-w-0 flex-1"
+        >
+          <TimePicker
+            format="HH:mm"
+            minuteStep={5}
+            needConfirm={false}
+            allowClear={false}
+            className="w-full"
+            aria-label={`${label} end`}
+          />
+        </Form.Item>
+      </div>
+    </div>
+  );
+}
+
+function SwitchRow({
+  name,
+  label,
+  hint,
+  disabled,
+}: {
+  name: 'isDefault' | 'isActive';
+  label: string;
+  hint: string;
+  disabled: boolean;
+}): React.ReactNode {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
+      <div className="min-w-0">
+        <p className="m-0 text-sm font-medium text-slate-800">{label}</p>
+        <p className="m-0 mt-0.5 text-xs leading-snug text-slate-500">{hint}</p>
+      </div>
+      <Form.Item name={name} valuePropName="checked" className="!mb-0 shrink-0">
+        <Switch disabled={disabled} aria-label={label} />
+      </Form.Item>
+    </div>
+  );
+}
+
 /**
- * Create / edit work schedule — details plus Sunday–Saturday hours.
+ * Create / edit work schedule — details, a compact Monday–Sunday grid and a
+ * live week summary with the save action.
  */
 export default function WorkScheduleForm({
   schedule,
   isSubmitting,
   submitLabel,
   onSubmit,
+  cancelHref,
 }: {
   schedule?: WorkSchedule;
   isSubmitting: boolean;
   submitLabel: string;
   onSubmit: (values: WorkScheduleFormValues) => Promise<void>;
+  cancelHref?: string;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const messageApi = useAppMessage();
   const [form] = Form.useForm<WorkScheduleFormValues>();
   const watchedDays = Form.useWatch('days', form) as DayFormValue[] | undefined;
   /** The default is transferred by making another schedule default, never cleared here. */
@@ -204,10 +313,46 @@ export default function WorkScheduleForm({
     ],
     [t],
   );
+  const dayShort = useMemo(
+    () => Array.from({ length: 7 }, (_, index) => t(`hr.workSchedule.dayShort${index}`)),
+    [t],
+  );
 
   useEffect(() => {
     form.setFieldsValue(valuesFromSchedule(schedule));
   }, [form, schedule]);
+
+  const days = watchedDays ?? valuesFromSchedule(schedule).days;
+  const summary = useMemo(() => {
+    const totals = days.map((day) => (day ? computeHours(day) : 0));
+    return {
+      hours: Math.round(totals.reduce((sum, value) => sum + value, 0) * 10) / 10,
+      working: days.filter((day) => day?.mode === 'working').length,
+      half: days.filter((day) => day?.mode === 'half').length,
+      totals,
+    };
+  }, [days]);
+
+  function copyMondayToWeekdays(): void {
+    const monday = form.getFieldValue(['days', 1]) as DayFormValue | undefined;
+    if (!monday) {
+      return;
+    }
+    const current = (form.getFieldValue('days') as DayFormValue[]) ?? [];
+    const next = current.map((day, index) =>
+      index >= 2 && index <= 5 ? { ...monday } : day,
+    );
+    form.setFieldsValue({ days: next });
+    messageApi.success(t('hr.workSchedule.copiedMonday'));
+  }
+
+  const modeOptions = [
+    { value: 'working', label: t('hr.workSchedule.workingDay') },
+    { value: 'half', label: t('hr.workSchedule.halfDay') },
+    { value: 'off', label: t('hr.workSchedule.offDay') },
+  ];
+  const requiredTime = t('hr.workSchedule.timeRequired');
+  const orderMessage = t('hr.workSchedule.endAfterStart');
 
   return (
     <Form<WorkScheduleFormValues>
@@ -216,118 +361,177 @@ export default function WorkScheduleForm({
       requiredMark={false}
       initialValues={valuesFromSchedule(schedule)}
       onFinish={(values) => void onSubmit(values)}
-      className="flex flex-col gap-4"
+      className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]"
     >
-      <FormLayout
-        variant="pro"
-        title={t('hr.workSchedule.details')}
-        description={t('hr.workSchedule.formDescription')}
-      >
-        <Form.Item
-          name="name"
-          label={t('hr.workSchedule.name')}
-          rules={[{ required: true, message: t('hr.workSchedule.nameRequired') }]}
-        >
-          <Input maxLength={200} />
-        </Form.Item>
-        <Form.Item name="description" label={t('hr.workSchedule.description')}>
-          <Input.TextArea rows={2} maxLength={2000} />
-        </Form.Item>
-        <div className="erp-form-grid-2">
-          <Form.Item
-            name="isDefault"
-            label={t('hr.workSchedule.defaultBadge')}
-            valuePropName="checked"
-            extra={isDefaultSchedule ? t('hr.workSchedule.defaultLockedHint') : undefined}
-          >
-            <Switch disabled={isDefaultSchedule} />
-          </Form.Item>
-          <Form.Item
-            name="isActive"
-            label={t('common.active')}
-            valuePropName="checked"
-            extra={
-              isDefaultSchedule
-                ? t('hr.workSchedule.defaultCannotDeactivate')
-                : undefined
-            }
-          >
-            <Switch disabled={isDefaultSchedule} />
-          </Form.Item>
-        </div>
-      </FormLayout>
-
-      <FormLayout variant="pro" title={t('hr.workSchedule.weekPattern')}>
-        {dayLabels.map((label, index) => {
-          const day = watchedDays?.[index];
-          const mode = day?.mode ?? 'off';
-          const hours = day ? computeHours(day) : 0;
-          return (
-            <div
-              key={label}
-              className="mb-4 rounded-xl border border-[#e8ebef] p-3 last:mb-0"
+      <div className="flex min-w-0 flex-col gap-4">
+        <section className={`${CARD} p-5 sm:p-6`}>
+          <h2 className="m-0 text-base font-semibold text-slate-900">
+            {t('hr.workSchedule.details')}
+          </h2>
+          <div className="mt-4 grid gap-x-4 md:grid-cols-2">
+            <Form.Item
+              name="name"
+              label={<span className="font-medium text-slate-700">{t('hr.workSchedule.name')}</span>}
+              rules={[{ required: true, whitespace: true, message: t('hr.workSchedule.nameRequired') }]}
             >
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-medium">{label}</span>
-                <span className="erp-users-cell-sub">
-                  {hours} {t('hr.workSchedule.hours')}
-                </span>
-              </div>
-              <Form.Item name={['days', index, 'mode']} className="mb-2">
-                <Select
-                  options={[
-                    { value: 'working', label: t('hr.workSchedule.workingDay') },
-                    { value: 'half', label: t('hr.workSchedule.halfDay') },
-                    { value: 'off', label: t('hr.workSchedule.offDay') },
-                  ]}
-                />
-              </Form.Item>
-              {mode !== 'off' ? (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <Form.Item
-                    name={['days', index, 'morningStart']}
-                    label={t('hr.workSchedule.morningStart')}
-                    rules={[{ required: true }]}
-                  >
-                    <TimePicker format="HH:mm" className="w-full" />
-                  </Form.Item>
-                  <Form.Item
-                    name={['days', index, 'morningEnd']}
-                    label={t('hr.workSchedule.morningEnd')}
-                    rules={[{ required: true }]}
-                  >
-                    <TimePicker format="HH:mm" className="w-full" />
-                  </Form.Item>
-                  {mode === 'working' ? (
-                    <>
-                      <Form.Item
-                        name={['days', index, 'afternoonStart']}
-                        label={t('hr.workSchedule.afternoonStart')}
-                        rules={[{ required: true }]}
-                      >
-                        <TimePicker format="HH:mm" className="w-full" />
-                      </Form.Item>
-                      <Form.Item
-                        name={['days', index, 'afternoonEnd']}
-                        label={t('hr.workSchedule.afternoonEnd')}
-                        rules={[{ required: true }]}
-                      >
-                        <TimePicker format="HH:mm" className="w-full" />
-                      </Form.Item>
-                    </>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-      </FormLayout>
+              <Input maxLength={200} placeholder={t('hr.workSchedule.namePlaceholder')} />
+            </Form.Item>
+            <Form.Item
+              name="description"
+              label={<span className="font-medium text-slate-700">{t('hr.workSchedule.description')}</span>}
+            >
+              <Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} maxLength={2000} />
+            </Form.Item>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <SwitchRow
+              name="isDefault"
+              label={t('hr.workSchedule.defaultBadge')}
+              hint={
+                isDefaultSchedule
+                  ? t('hr.workSchedule.defaultLockedHint')
+                  : t('hr.workSchedule.defaultHint')
+              }
+              disabled={isDefaultSchedule}
+            />
+            <SwitchRow
+              name="isActive"
+              label={t('common.active')}
+              hint={
+                isDefaultSchedule
+                  ? t('hr.workSchedule.defaultCannotDeactivate')
+                  : t('hr.workSchedule.activeHint')
+              }
+              disabled={isDefaultSchedule}
+            />
+          </div>
+        </section>
 
-      <div className="flex justify-end">
-        <Button type="primary" htmlType="submit" loading={isSubmitting}>
-          {submitLabel}
-        </Button>
+        <section className={CARD}>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 sm:px-6">
+            <div>
+              <h2 className="m-0 text-base font-semibold text-slate-900">
+                {t('hr.workSchedule.weekPattern')}
+              </h2>
+              <p className="m-0 mt-0.5 text-[13px] text-slate-500">
+                {t('hr.workSchedule.weekPatternHint')}
+              </p>
+            </div>
+            <Button size="small" icon={<Copy size={14} strokeWidth={2} />} onClick={copyMondayToWeekdays}>
+              {t('hr.workSchedule.copyMonday')}
+            </Button>
+          </div>
+
+          <ul className="m-0 mt-4 list-none divide-y divide-slate-100 p-0">
+            {DISPLAY_ORDER.map((index) => {
+              const day = days[index];
+              const mode: DayMode = day?.mode ?? 'off';
+              const hours = summary.totals[index] ?? 0;
+              return (
+                <li
+                  key={index}
+                  className={`grid gap-3 px-5 py-4 sm:px-6 lg:grid-cols-[120px_minmax(0,1fr)_72px] lg:items-start ${
+                    mode === 'off' ? 'bg-slate-50/60' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 lg:block lg:pt-1">
+                    <p className="m-0 text-sm font-semibold text-slate-900">{dayLabels[index]}</p>
+                    <span className="text-xs font-medium text-slate-500 tabular-nums lg:hidden">
+                      {hours} {t('hr.workSchedule.hours')}
+                    </span>
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-3">
+                    <Form.Item name={['days', index, 'mode']} className="!mb-0">
+                      <Segmented options={modeOptions} size="middle" />
+                    </Form.Item>
+                    {mode !== 'off' ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <TimeRange
+                          index={index}
+                          startField="morningStart"
+                          endField="morningEnd"
+                          label={t('hr.workSchedule.morning')}
+                          requiredMessage={requiredTime}
+                          orderMessage={orderMessage}
+                        />
+                        {mode === 'working' ? (
+                          <TimeRange
+                            index={index}
+                            startField="afternoonStart"
+                            endField="afternoonEnd"
+                            label={t('hr.workSchedule.afternoon')}
+                            requiredMessage={requiredTime}
+                            orderMessage={orderMessage}
+                          />
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <p className="m-0 hidden text-right text-sm font-semibold text-slate-900 tabular-nums lg:block lg:pt-1">
+                    {hours}
+                    <span className="ml-1 text-xs font-medium text-slate-500">
+                      {t('hr.workSchedule.hours')}
+                    </span>
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       </div>
+
+      <aside className={`${CARD} p-5 lg:sticky lg:top-0`}>
+        <p className="m-0 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+          {t('hr.workSchedule.summaryTitle')}
+        </p>
+        <p className="m-0 mt-2 text-3xl font-semibold tracking-tight text-slate-900 tabular-nums">
+          {summary.hours}
+          <span className="ml-1.5 text-sm font-medium text-slate-500">
+            {t('hr.workSchedule.hoursPerWeek')}
+          </span>
+        </p>
+
+        <ol className="m-0 mt-4 grid list-none grid-cols-7 gap-1.5 p-0" aria-label={t('hr.workSchedule.weekPattern')}>
+          {DISPLAY_ORDER.map((index) => {
+            const mode: DayMode = days[index]?.mode ?? 'off';
+            return (
+              <li
+                key={index}
+                className={`flex h-9 items-center justify-center rounded-lg text-xs font-semibold ${MODE_DOT[mode]}`}
+                title={`${dayLabels[index]}: ${modeOptions.find((option) => option.value === mode)?.label ?? ''}`}
+              >
+                {dayShort[index]}
+              </li>
+            );
+          })}
+        </ol>
+
+        <dl className="m-0 mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+            <dt className="text-xs text-slate-500">{t('hr.workSchedule.workingDays')}</dt>
+            <dd className="m-0 mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">{summary.working}</dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+            <dt className="text-xs text-slate-500">{t('hr.workSchedule.halfDays')}</dt>
+            <dd className="m-0 mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">{summary.half}</dd>
+          </div>
+        </dl>
+
+        <div className="mt-5 flex flex-col gap-2">
+          <Button type="primary" htmlType="submit" size="large" block loading={isSubmitting}>
+            {submitLabel}
+          </Button>
+          {cancelHref ? (
+            <Link href={cancelHref} className="block">
+              <Button size="large" block>
+                {t('common.cancel')}
+              </Button>
+            </Link>
+          ) : null}
+        </div>
+      </aside>
     </Form>
   );
 }

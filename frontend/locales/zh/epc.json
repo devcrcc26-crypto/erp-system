@@ -3636,7 +3636,20 @@
       "effectiveTo": "生效结束",
       "ongoing": "进行中",
       "noSchedule": "该员工使用公司默认时间表。",
-      "noHistory": "暂无分配记录。"
+      "noHistory": "暂无分配记录。",
+      "namePlaceholder": "例如：总部（周一至周五，周六半天）",
+      "defaultHint": "新员工将自动使用默认排班。",
+      "activeHint": "只有启用的排班才能分配给员工。",
+      "weekPatternHint": "选择工作日、半天或休息日，然后设置时间。",
+      "copyMonday": "将周一复制到周二至周五",
+      "copiedMonday": "已将周一的时间复制到周二至周五。",
+      "morning": "上午",
+      "afternoon": "下午",
+      "timeRequired": "请设置时间。",
+      "endAfterStart": "结束时间必须晚于开始时间。",
+      "summaryTitle": "每周汇总",
+      "workingDays": "工作日",
+      "halfDays": "半天"
     },
     "publicHoliday": {
       "new": "新建假期",

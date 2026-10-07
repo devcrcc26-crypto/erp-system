@@ -3643,7 +3643,20 @@
       "effectiveTo": "Effective to",
       "ongoing": "Ongoing",
       "noSchedule": "This employee uses the company default schedule.",
-      "noHistory": "No assignment history."
+      "noHistory": "No assignment history.",
+      "namePlaceholder": "e.g. Head office (Mon–Fri, half-day Saturday)",
+      "defaultHint": "New employees get the default schedule automatically.",
+      "activeHint": "Only active schedules can be assigned to employees.",
+      "weekPatternHint": "Choose a working day, half day or day off, then set the hours.",
+      "copyMonday": "Copy Monday to Tue–Fri",
+      "copiedMonday": "Monday’s hours copied to Tuesday–Friday.",
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "timeRequired": "Set a time.",
+      "endAfterStart": "End must be after start.",
+      "summaryTitle": "Week summary",
+      "workingDays": "Working days",
+      "halfDays": "Half days"
     },
     "publicHoliday": {
       "new": "New holiday",

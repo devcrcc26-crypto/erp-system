@@ -60,7 +60,7 @@ export default function HrFormPageShell({
           {backHref ? (
             <Link
               href={backHref}
-              className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 no-underline transition-colors hover:text-emerald-700"
+              className="mb-2 inline-flex items-center gap-1.5 rounded text-[13px] font-medium !text-slate-500 no-underline transition-colors hover:!text-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             >
               <ArrowLeft size={14} strokeWidth={2} aria-hidden />
               {backLabel ?? cancelLabel}

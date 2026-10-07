@@ -142,6 +142,7 @@ export default function WorkScheduleFormPageContent({
         isSubmitting={saving}
         submitLabel={t('common.save')}
         onSubmit={handleSubmit}
+        cancelHref={backHref}
       />
 
       <ConfirmDialog
