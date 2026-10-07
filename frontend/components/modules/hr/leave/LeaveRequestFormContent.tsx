@@ -13,9 +13,8 @@ import {
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
@@ -27,7 +26,6 @@ import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import ProfileFileTypeIcon from '@/components/modules/users/ProfileFileTypeIcon';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
 import type {
@@ -216,8 +214,6 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     const balanceLeaveType = resolveBalanceLeaveType(leaveType);
     return balancesQuery.data.find((row) => row.leaveType === balanceLeaveType);
   }, [balancesQuery.data, leaveType]);
-
-  useSetHeaderExtra(null);
 
   useEffect(() => {
     form.setFieldsValue({ leaveType: DEFAULT_LEAVE_TYPE });
@@ -732,26 +728,13 @@ export default function LeaveRequestFormContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-form-page erp-leave-v2">
-      <section className="erp-leave-form-hero">
-        <div className="min-w-0">
-          <Link href="/hr/leave-requests" className="erp-leave-back">
-            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
-            {t('hr.buttons.backToList')}
-          </Link>
-          <h1 className="erp-leave-form-hero-title">
-            {t('pages.hr.leave.new')}
-          </h1>
-          <p className="erp-leave-form-hero-desc">
-            {t('pages.hr.leave.detailsStepDescription')}
-          </p>
-        </div>
-        <div className="erp-leave-form-hero-actions">
-          <Button onClick={() => router.push('/hr/leave-requests')}>
-            {t('hr.buttons.cancel')}
-          </Button>
-        </div>
-      </section>
-
+      <HrFormPageShell
+        title={t('pages.hr.leave.new')}
+        description={t('pages.hr.leave.detailsStepDescription')}
+        cancelLabel={t('hr.buttons.cancel')}
+        cancelHref="/approvals/new"
+        backLabel={t('hr.buttons.backToList')}
+      >
       <Form<LeaveFormValues>
         form={form}
         layout="vertical"
@@ -780,6 +763,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
           submitLabel={t('hr.buttons.submitRequest')}
         />
       </Form>
+      </HrFormPageShell>
     </div>
   );
 }

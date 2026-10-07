@@ -1,11 +1,11 @@
 'use client';
 
-import { Button, Skeleton } from 'antd';
+import { Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import AddEmployeeForm from '@/components/modules/users/add-employee/AddEmployeeForm';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { useUser } from '@/lib/query/users';
 
 export default function EditEmployeeFormContent({
@@ -17,8 +17,6 @@ export default function EditEmployeeFormContent({
   const router = useRouter();
   const messageApi = useAppMessage();
   const userQuery = useUser(userId);
-
-  useSetHeaderExtra(null);
 
   function handleSuccess(result: { userId: string; email: string | null }): void {
     const name = userQuery.data
@@ -40,16 +38,15 @@ export default function EditEmployeeFormContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
-      <div className="flex shrink-0 items-center justify-end gap-2">
-        <Button
-          onClick={() => router.push(`/users/${userId}`)}
-          className="shrink-0"
-          style={{ borderRadius: 8 }}
-        >
-          {t('users.form.cancel')}
-        </Button>
-      </div>
-      <AddEmployeeForm userId={userId} onSuccess={handleSuccess} />
+      <HrFormPageShell
+        title={t('pages.users.edit')}
+        description={t('users.form.editEmployeeDescription')}
+        cancelLabel={t('users.form.cancel')}
+        cancelHref={`/users/${userId}`}
+        backLabel={t('hr.buttons.back')}
+      >
+        <AddEmployeeForm userId={userId} onSuccess={handleSuccess} />
+      </HrFormPageShell>
     </div>
   );
 }

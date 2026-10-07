@@ -2,10 +2,9 @@
 
 import './public-holidays-v2.css';
 
-import { Button, Spin } from 'antd';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { Spin } from 'antd';
 import { useRouter } from 'next/navigation';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import PublicHolidayForm, {
   buildPublicHolidayPayload,
   type PublicHolidayFormValues,
@@ -13,7 +12,6 @@ import PublicHolidayForm, {
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import {
   useCreatePublicHoliday,
   usePublicHoliday,
@@ -42,8 +40,6 @@ export default function PublicHolidayFormPageContent({
   const saving = createMutation.isPending || updateMutation.isPending;
   const backHref =
     isEdit && holidayId ? `${LIST_PATH}/${holidayId}` : LIST_PATH;
-
-  useSetHeaderExtra(null);
 
   async function handleSubmit(values: PublicHolidayFormValues): Promise<void> {
     const payload = buildPublicHolidayPayload(values);
@@ -89,33 +85,24 @@ export default function PublicHolidayFormPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-ph-form-page erp-public-holidays-v2 flex flex-col">
-      <section className="erp-ph-form-hero">
-        <div className="min-w-0">
-          <Link href={backHref} className="erp-ph-back">
-            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
-            {t('hr.buttons.backToList')}
-          </Link>
-          <h1 className="erp-ph-form-hero-title">
-            {isEdit
-              ? t('pages.hr.publicHolidays.edit')
-              : t('pages.hr.publicHolidays.new')}
-          </h1>
-          <p className="erp-ph-form-hero-desc">
-            {t('pages.hr.publicHolidays.detailsStepDescription')}
-          </p>
-        </div>
-        <div>
-          <Button onClick={() => router.push(backHref)}>
-            {t('common.cancel')}
-          </Button>
-        </div>
-      </section>
-      <PublicHolidayForm
-        holiday={holidayQuery.data}
-        isSubmitting={saving}
-        submitLabel={t('common.save')}
-        onSubmit={handleSubmit}
-      />
+      <HrFormPageShell
+        title={
+          isEdit
+            ? t('pages.hr.publicHolidays.edit')
+            : t('pages.hr.publicHolidays.new')
+        }
+        description={t('hr.publicHoliday.formDescription')}
+        cancelLabel={t('common.cancel')}
+        cancelHref={backHref}
+        backLabel={t('hr.buttons.backToList')}
+      >
+        <PublicHolidayForm
+          holiday={holidayQuery.data}
+          isSubmitting={saving}
+          submitLabel={t('common.save')}
+          onSubmit={handleSubmit}
+        />
+      </HrFormPageShell>
     </div>
   );
 }

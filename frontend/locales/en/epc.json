@@ -5185,6 +5185,7 @@
       "whatsNewDescription": "Updates and new features in the ERP.",
       "manage": "Manage announcements",
       "manageDescription": "Post company news to everyone or to selected groups and track who has read it.",
+      "formDescription": "Write the announcement, choose the audience, then publish now or schedule for later.",
       "new": "New announcement",
       "edit": "Edit announcement",
       "manageDetail": "Announcement details"

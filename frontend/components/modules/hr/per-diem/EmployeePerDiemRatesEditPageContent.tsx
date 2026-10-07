@@ -1,18 +1,19 @@
 'use client';
 
-import { Alert, Button, Grid, Skeleton } from 'antd';
-import { ArrowLeft } from 'lucide-react';
+import { Alert, Button, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useCanManageEmployeePerDiemRates } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useUser } from '@/lib/query/users';
 import { formatUserName } from '@/lib/utils/user-display';
 
+const LIST_PATH = '/hr/employee-per-diem-rates';
+
 /**
- * Edit employee per diem rates — employee detail / form chrome.
+ * Edit employee per diem rates — shared HR form banner.
  */
 export default function EmployeePerDiemRatesEditPageContent({
   employeeId,
@@ -21,11 +22,7 @@ export default function EmployeePerDiemRatesEditPageContent({
 }): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
-  const screens = Grid.useBreakpoint();
-  const isNarrow = screens.sm === false;
   const canManagePerDiemRates = useCanManageEmployeePerDiemRates();
-
-  useSetHeaderExtra(null);
 
   const userQuery = useUser(employeeId, canManagePerDiemRates);
 
@@ -59,9 +56,7 @@ export default function EmployeePerDiemRatesEditPageContent({
               : t('hr.messages.employeeNotFound')
           }
           action={
-            <Button
-              onClick={() => router.push('/hr/employee-per-diem-rates')}
-            >
+            <Button onClick={() => router.push(LIST_PATH)}>
               {t('hr.buttons.backToList')}
             </Button>
           }
@@ -71,59 +66,31 @@ export default function EmployeePerDiemRatesEditPageContent({
   }
 
   const employeeName = formatUserName(userQuery.data);
+  const detailHref = `${LIST_PATH}/${employeeId}`;
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-employee-per-diem-form-page">
-      <div className="erp-employee-per-diem-form-actions flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-        <Button
-          type="text"
-          icon={<ArrowLeft size={16} />}
-          onClick={() =>
-            router.push(`/hr/employee-per-diem-rates/${employeeId}`)
-          }
-          aria-label={t('hr.buttons.back')}
-          className="sm:!me-auto"
-        >
-          {isNarrow ? undefined : t('hr.buttons.back')}
-        </Button>
-        <Button
-          onClick={() =>
-            router.push(`/hr/employee-per-diem-rates/${employeeId}`)
-          }
-          className="shrink-0"
-          style={{ borderRadius: 8 }}
-        >
-          {t('hr.buttons.cancel')}
-        </Button>
-      </div>
-
-      <div className="erp-pro-card">
-        <div className="erp-employee-hero erp-contract-hero !pb-4">
-          <div className="erp-employee-hero-copy min-w-0 flex-1">
-            <p className="erp-users-stat-label m-0 mb-1">
-              {t('pages.hr.employeePerDiemRates.editTitle')}
-            </p>
-            <h2 className="erp-users-name erp-employee-hero-name m-0 break-words">
-              {employeeName}
-            </h2>
-            {userQuery.data.email ? (
-              <p className="erp-users-email m-0 mt-1.5">
-                {userQuery.data.email}
-              </p>
-            ) : null}
+      <HrFormPageShell
+        title={t('pages.hr.employeePerDiemRates.editTitle')}
+        description={
+          userQuery.data.email
+            ? `${employeeName} · ${userQuery.data.email}`
+            : employeeName
+        }
+        cancelLabel={t('hr.buttons.cancel')}
+        cancelHref={detailHref}
+        backLabel={t('hr.buttons.back')}
+      >
+        <div className="erp-pro-card min-w-0 overflow-hidden">
+          <div className="erp-employee-tab-panel erp-contract-detail-body">
+            <EmployeePerDiemRatesSection
+              employeeId={employeeId}
+              editable
+              embedded={false}
+            />
           </div>
         </div>
-      </div>
-
-      <div className="erp-pro-card min-w-0 overflow-hidden">
-        <div className="erp-employee-tab-panel erp-contract-detail-body">
-          <EmployeePerDiemRatesSection
-            employeeId={employeeId}
-            editable
-            embedded={false}
-          />
-        </div>
-      </div>
+      </HrFormPageShell>
     </div>
   );
 }

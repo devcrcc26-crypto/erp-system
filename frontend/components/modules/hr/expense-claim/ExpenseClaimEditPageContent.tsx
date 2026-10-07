@@ -3,11 +3,11 @@
 import { useEffect } from 'react';
 import { Alert, Button, Form, Input, Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import { useExpenseClaim, useUpdateExpenseClaim } from '@/lib/query/expense-claim';
 import { useCurrentUser } from '@/lib/query/profile';
@@ -34,8 +34,6 @@ export default function ExpenseClaimEditPageContent({
   const [form] = Form.useForm<ClaimFormValues>();
   const detailQuery = useExpenseClaim(claimId);
   const updateMutation = useUpdateExpenseClaim(claimId);
-
-  useSetHeaderExtra(null);
 
   const claim = detailQuery.data;
   const canEdit =
@@ -124,42 +122,30 @@ export default function ExpenseClaimEditPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-expense-claim-form-page">
-      <div className="erp-expense-claim-edit-actions flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-        <Button
-          onClick={() => router.push(`/hr/expense-claims/${claimId}`)}
-          className="shrink-0"
-        >
-          {t('hr.buttons.cancel')}
-        </Button>
-        <Button
-          type="primary"
-          loading={updateMutation.isPending}
-          onClick={() => form.submit()}
-          className="shrink-0"
-        >
-          {t('hr.buttons.save')}
-        </Button>
-      </div>
-
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-0 sm:px-0">
-        <div className="overflow-hidden rounded-[12px] border border-[#e8ebef] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-          <div className="border-b border-[#e8ebef] bg-[#fafbfc] px-4 py-3 sm:px-5">
-            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-tertiary)]">
-              {claim.claimNumber}
-            </p>
-            <h2 className="m-0 mt-1 text-[17px] font-semibold leading-snug text-[var(--color-text-primary)]">
-              {t('pages.hr.expenseClaim.edit')}
-            </h2>
-            <p className="m-0 mt-1.5 text-[13px] text-[var(--color-text-secondary)]">
-              {t('pages.hr.expenseClaim.editDescription')}
-            </p>
-          </div>
-        </div>
-
+      <HrFormPageShell
+        title={t('pages.hr.expenseClaim.edit')}
+        description={t('pages.hr.expenseClaim.editDescription')}
+        cancelLabel={t('hr.buttons.cancel')}
+        cancelHref={`/hr/expense-claims/${claimId}`}
+        backLabel={t('hr.buttons.back')}
+        headerExtra={
+          <Button
+            type="primary"
+            loading={updateMutation.isPending}
+            onClick={() => form.submit()}
+          >
+            {t('hr.buttons.save')}
+          </Button>
+        }
+      >
         <FormLayout
           variant="pro"
           title={t('hr.section.requestDetails')}
-          description={t('pages.hr.expenseClaim.detailsStepDescription')}
+          description={
+            claim.claimNumber
+              ? `${claim.claimNumber} · ${t('pages.hr.expenseClaim.detailsStepDescription')}`
+              : t('pages.hr.expenseClaim.detailsStepDescription')
+          }
         >
           <Form
             form={form}
@@ -199,7 +185,7 @@ export default function ExpenseClaimEditPageContent({
             </Form.Item>
           </Form>
         </FormLayout>
-      </div>
+      </HrFormPageShell>
     </div>
   );
 }

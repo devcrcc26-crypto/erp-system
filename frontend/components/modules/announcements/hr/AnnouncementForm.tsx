@@ -3,8 +3,8 @@
 import '../announcements.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import {
   Alert,
   Button,
@@ -20,7 +20,7 @@ import {
   Upload,
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import { ArrowLeft, Paperclip, Users, X } from 'lucide-react';
+import { Paperclip, Users, X } from 'lucide-react';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanPublishAnnouncements } from '@/hooks/use-auth-capabilities';
@@ -307,11 +307,19 @@ export default function AnnouncementForm({
 
   return (
     <div className="erp-ann-page">
-      <Link href={backHref} className="erp-ann-back">
-        <ArrowLeft size={14} strokeWidth={2} aria-hidden />
-        {existing ? existing.number : t('announcements.manage.title')}
-      </Link>
-
+      <HrFormPageShell
+        title={
+          existing
+            ? t('announcements.pages.edit')
+            : t('announcements.pages.new')
+        }
+        description={t('announcements.pages.formDescription')}
+        cancelLabel={t('common.cancel')}
+        cancelHref={backHref}
+        backLabel={
+          existing ? existing.number : t('hr.buttons.backToList')
+        }
+      >
       <Form<FormValues>
         form={form}
         layout="vertical"
@@ -649,6 +657,7 @@ export default function AnnouncementForm({
           </div>
         </aside>
       </Form>
+      </HrFormPageShell>
     </div>
   );
 }

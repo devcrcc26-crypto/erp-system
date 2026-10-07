@@ -1,13 +1,12 @@
 'use client';
 
-import { Button, Skeleton } from 'antd';
+import { Skeleton } from 'antd';
 import { useRouter } from 'next/navigation';
 import AddVehicleForm from '@/components/modules/org/vehicles/add-vehicle/AddVehicleForm';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { useCompanyVehicle } from '@/lib/query/company-vehicle';
-import { tokens } from '@/lib/theme/tokens';
 
 export default function EditVehicleFormContent({
   vehicleId,
@@ -19,8 +18,6 @@ export default function EditVehicleFormContent({
   const messageApi = useAppMessage();
   const vehicleQuery = useCompanyVehicle(vehicleId);
 
-  useSetHeaderExtra(null);
-
   function handleSuccess(): void {
     const plate = vehicleQuery.data?.plateNumber ?? vehicleId;
     messageApi.success(t('vehicles.updated', { plate }));
@@ -31,26 +28,19 @@ export default function EditVehicleFormContent({
     return <Skeleton active paragraph={{ rows: 8 }} />;
   }
 
+  const vehicleSubtitle = vehicleQuery.data
+    ? `${vehicleQuery.data.plateNumber} · ${vehicleQuery.data.make} ${vehicleQuery.data.model}`
+    : t('vehicles.form.editDescription');
+
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-end gap-2">
-        <Button
-          onClick={() => router.push(`/organization/vehicles/${vehicleId}`)}
-          className="shrink-0"
-          style={{ borderRadius: 0 }}
-        >
-          {t('common.cancel')}
-        </Button>
-      </div>
-      <p
-        className="m-0 text-[14px] leading-relaxed"
-        style={{ color: tokens.colorTextSecondary, fontFamily: tokens.fontFamily }}
-      >
-        {vehicleQuery.data
-          ? `${vehicleQuery.data.plateNumber} · ${vehicleQuery.data.make} ${vehicleQuery.data.model}`
-          : t('vehicles.form.editDescription')}
-      </p>
+    <HrFormPageShell
+      title={t('pages.organization.vehicles.edit')}
+      description={vehicleSubtitle}
+      cancelLabel={t('common.cancel')}
+      cancelHref={`/organization/vehicles/${vehicleId}`}
+      backLabel={t('hr.buttons.back')}
+    >
       <AddVehicleForm vehicleId={vehicleId} onSuccess={handleSuccess} />
-    </div>
+    </HrFormPageShell>
   );
 }

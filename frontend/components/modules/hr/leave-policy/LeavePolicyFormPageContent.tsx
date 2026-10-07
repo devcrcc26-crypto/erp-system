@@ -2,10 +2,9 @@
 
 import './leave-policy-v2.css';
 
-import { Button, Spin } from 'antd';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { Spin } from 'antd';
 import { useRouter } from 'next/navigation';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import LeavePolicyForm, {
   buildLeavePolicyRules,
   type LeavePolicyFormValues,
@@ -13,7 +12,6 @@ import LeavePolicyForm, {
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import {
   useCreateLeavePolicy,
   useLeavePolicy,
@@ -45,8 +43,6 @@ export default function LeavePolicyFormPageContent({
   const saving = createMutation.isPending || updateMutation.isPending;
   const backHref =
     isEdit && policyId ? `${LIST_PATH}/${policyId}` : LIST_PATH;
-
-  useSetHeaderExtra(null);
 
   async function handleSubmit(values: LeavePolicyFormValues): Promise<void> {
     const payload = {
@@ -105,33 +101,24 @@ export default function LeavePolicyFormPageContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-policy-form-page erp-leave-policy-v2 flex flex-col">
-      <section className="erp-leave-policy-form-hero">
-        <div className="min-w-0">
-          <Link href={backHref} className="erp-leave-policy-back">
-            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
-            {t('hr.buttons.backToList')}
-          </Link>
-          <h1 className="erp-leave-policy-form-hero-title">
-            {isEdit
-              ? t('pages.hr.leavePolicy.edit')
-              : t('pages.hr.leavePolicy.new')}
-          </h1>
-          <p className="erp-leave-policy-form-hero-desc">
-            {t('pages.hr.leavePolicy.detailsStepDescription')}
-          </p>
-        </div>
-        <div>
-          <Button onClick={() => router.push(backHref)}>
-            {t('common.cancel')}
-          </Button>
-        </div>
-      </section>
-      <LeavePolicyForm
-        policy={policyQuery.data}
-        isSubmitting={saving}
-        submitLabel={t('common.save')}
-        onSubmit={handleSubmit}
-      />
+      <HrFormPageShell
+        title={
+          isEdit
+            ? t('pages.hr.leavePolicy.edit')
+            : t('pages.hr.leavePolicy.new')
+        }
+        description={t('hr.leavePolicy.formDescription')}
+        cancelLabel={t('common.cancel')}
+        cancelHref={backHref}
+        backLabel={t('hr.buttons.backToList')}
+      >
+        <LeavePolicyForm
+          policy={policyQuery.data}
+          isSubmitting={saving}
+          submitLabel={t('common.save')}
+          onSubmit={handleSubmit}
+        />
+      </HrFormPageShell>
     </div>
   );
 }

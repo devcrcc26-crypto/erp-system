@@ -13,7 +13,6 @@ import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { OvertimeSheetStatus } from '@/lib/api/overtime.types';
 import { useOnBehalfEligibleEmployees } from '@/lib/query/on-behalf';
@@ -96,8 +95,6 @@ export default function OvertimeNewPageContent(): React.ReactNode {
     return null;
   }, [existingSheet]);
 
-  useSetHeaderExtra(null);
-
   async function handleOpen(): Promise<void> {
     if (!month || selectedMonth == null || selectedYear == null) {
       messageApi.warning(t('hr.validation.selectMonth'));
@@ -149,6 +146,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
       }
       cancelLabel={t('hr.buttons.cancel')}
       cancelHref="/approvals/new"
+      backLabel={t('hr.buttons.backToList')}
     >
       {!eligibleResolved ? (
         opening

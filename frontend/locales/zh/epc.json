@@ -5177,6 +5177,7 @@
       "whatsNewDescription": "ERP 系统的更新与新功能。",
       "manage": "公告管理",
       "manageDescription": "向全体员工或指定群组发布公司新闻，并跟踪阅读情况。",
+      "formDescription": "撰写公告内容，选择受众，然后立即发布或安排稍后发布。",
       "new": "新建公告",
       "edit": "编辑公告",
       "manageDetail": "公告详情"

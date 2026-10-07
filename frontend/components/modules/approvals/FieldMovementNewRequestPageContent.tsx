@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { Button, Select, Spin } from 'antd';
-import { useRouter } from 'next/navigation';
 import FieldMovementForm from '@/components/modules/profile/FieldMovementForm';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useMyFlaggedDays } from '@/lib/query/attendance';
 import type { FlaggedDay } from '@/lib/api/attendance.types';
@@ -20,7 +21,7 @@ function previousPeriod(month: number, year: number): { month: number; year: num
  * Dedicated New Request flow for field movement / early departure explanations.
  */
 export default function FieldMovementNewRequestPageContent(): React.ReactNode {
-  const router = useRouter();
+  const { t } = useEpcTranslation();
   const now = new Date();
   const current = { month: now.getMonth() + 1, year: now.getFullYear() };
   const previous = previousPeriod(current.month, current.year);
@@ -34,6 +35,11 @@ export default function FieldMovementNewRequestPageContent(): React.ReactNode {
   const profileQuery = useCurrentUser();
   const currentFlags = useMyFlaggedDays(current.month, current.year, true);
   const previousFlags = useMyFlaggedDays(previous.month, previous.year, true);
+
+  const shellTitle = t('pages.approvals.categories.FIELD_MOVEMENT_LOG.name');
+  const shellDescription = t(
+    'pages.approvals.categories.FIELD_MOVEMENT_LOG.description',
+  );
 
   const periodsWithFlags = useMemo(() => {
     const options: Array<{ month: number; year: number; days: FlaggedDay[] }> =
@@ -87,14 +93,19 @@ export default function FieldMovementNewRequestPageContent(): React.ReactNode {
   if (periodsWithFlags.length === 0) {
     return (
       <div className="erp-pro-list-page erp-users-page flex flex-col gap-4">
-        <div className="flex justify-end">
-          <Button onClick={() => router.push('/approvals/new')}>Back</Button>
-        </div>
-        <ErpNotice
-          tone="info"
-          title="No flagged days to explain"
-          description="You do not have unresolved attendance flags for the current or previous month."
-        />
+        <HrFormPageShell
+          title={shellTitle}
+          description={shellDescription}
+          cancelLabel={t('hr.buttons.cancel')}
+          cancelHref="/approvals/new"
+          backLabel={t('hr.buttons.backToList')}
+        >
+          <ErpNotice
+            tone="info"
+            title="No flagged days to explain"
+            description="You do not have unresolved attendance flags for the current or previous month."
+          />
+        </HrFormPageShell>
       </div>
     );
   }
@@ -103,71 +114,66 @@ export default function FieldMovementNewRequestPageContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="m-0 text-lg font-semibold text-[#1A1A1A]">
-            Field Movement / Early Departure Log
-          </h1>
-          <p className="m-0 mt-1 text-sm text-[#6B7280]">
-            Explain missing clock-ins, missing clock-outs, or early departures
-            flagged in your monthly attendance.
-          </p>
-        </div>
-        <Button onClick={() => router.push('/approvals/new')}>Back</Button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Select
-          style={{ minWidth: 200 }}
-          allowClear
-          placeholder="Select month"
-          value={
-            selectedPeriod
-              ? `${selectedPeriod.year}-${selectedPeriod.month}`
-              : undefined
-          }
-          options={periodsWithFlags.map((period) => ({
-            value: `${period.year}-${period.month}`,
-            label: `${new Date(period.year, period.month - 1, 1).toLocaleString('en', { month: 'long' })} ${period.year} (${period.days.length})`,
-          }))}
-          onChange={(value) => {
-            if (!value) {
-              setSelectedPeriod(null);
-              setFormOpen(false);
-              return;
+      <HrFormPageShell
+        title={shellTitle}
+        description={shellDescription}
+        cancelLabel={t('hr.buttons.cancel')}
+        cancelHref="/approvals/new"
+        backLabel={t('hr.buttons.backToList')}
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            style={{ minWidth: 200 }}
+            allowClear
+            placeholder="Select month"
+            value={
+              selectedPeriod
+                ? `${selectedPeriod.year}-${selectedPeriod.month}`
+                : undefined
             }
-            const [yearPart, monthPart] = value.split('-');
-            setSelectedPeriod({
-              year: Number(yearPart),
-              month: Number(monthPart),
-            });
-          }}
-        />
-        <Button
-          type="primary"
-          disabled={
-            selectedPeriod == null || activeFlags.length === 0 || !employeeId
-          }
-          onClick={() => setFormOpen(true)}
-        >
-          Submit Explanation
-        </Button>
-      </div>
+            options={periodsWithFlags.map((period) => ({
+              value: `${period.year}-${period.month}`,
+              label: `${new Date(period.year, period.month - 1, 1).toLocaleString('en', { month: 'long' })} ${period.year} (${period.days.length})`,
+            }))}
+            onChange={(value) => {
+              if (!value) {
+                setSelectedPeriod(null);
+                setFormOpen(false);
+                return;
+              }
+              const [yearPart, monthPart] = value.split('-');
+              setSelectedPeriod({
+                year: Number(yearPart),
+                month: Number(monthPart),
+              });
+            }}
+          />
+          <Button
+            type="primary"
+            disabled={
+              selectedPeriod == null || activeFlags.length === 0 || !employeeId
+            }
+            onClick={() => setFormOpen(true)}
+          >
+            Submit Explanation
+          </Button>
+        </div>
 
-      {employeeId && selectedPeriod ? (
-        <FieldMovementForm
-          open={formOpen}
-          onClose={() => setFormOpen(false)}
-          onSuccess={() => {
-            void currentFlags.refetch();
-            void previousFlags.refetch();
-          }}
-          employeeId={employeeId}
-          month={selectedPeriod.month}
-          year={selectedPeriod.year}
-          flaggedDays={activeFlags}
-        />
-      ) : null}
+        {employeeId && selectedPeriod ? (
+          <FieldMovementForm
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            onSuccess={() => {
+              void currentFlags.refetch();
+              void previousFlags.refetch();
+            }}
+            employeeId={employeeId}
+            month={selectedPeriod.month}
+            year={selectedPeriod.year}
+            flaggedDays={activeFlags}
+          />
+        ) : null}
+      </HrFormPageShell>
     </div>
   );
 }

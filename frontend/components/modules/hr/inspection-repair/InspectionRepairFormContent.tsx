@@ -1,24 +1,21 @@
 'use client';
 
-import { Button } from 'antd';
 import { useRouter } from 'next/navigation';
 import InspectionRepairForm from '@/components/modules/hr/inspection-repair/InspectionRepairForm';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import type { InspectionRepairDetail } from '@/lib/api/inspection-repair.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 
 /**
- * New inspection & repair — title in MainContentHeader; page shows cancel + form.
+ * New inspection & repair request — shared HR form banner + stepper form.
  */
 export default function InspectionRepairFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const router = useRouter();
 
-  useSetHeaderExtra(null);
-
   function handleSuccess(created: InspectionRepairDetail): void {
-    if (created.approvalRequest?.id) {
-      router.push(`/approvals/${created.approvalRequest.id}`);
+    if (created.approvalRequestId) {
+      router.push(`/approvals/${created.approvalRequestId}`);
     } else {
       router.push(`/hr/inspection-repair/${created.id}`);
     }
@@ -26,15 +23,15 @@ export default function InspectionRepairFormContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-inspection-repair-form-page flex flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-end">
-        <Button
-          onClick={() => router.push('/hr/inspection-repair')}
-          className="shrink-0"
-        >
-          {t('hr.buttons.cancel')}
-        </Button>
-      </div>
-      <InspectionRepairForm onSuccess={handleSuccess} />
+      <HrFormPageShell
+        title={t('pages.hr.inspectionRepair.new')}
+        description={t('pages.hr.inspectionRepair.formDescription')}
+        cancelLabel={t('hr.buttons.cancel')}
+        cancelHref="/approvals/new"
+        backLabel={t('hr.buttons.backToList')}
+      >
+        <InspectionRepairForm onSuccess={handleSuccess} />
+      </HrFormPageShell>
     </div>
   );
 }

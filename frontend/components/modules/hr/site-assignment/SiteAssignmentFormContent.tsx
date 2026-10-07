@@ -3,11 +3,10 @@
 import './site-assignments-v2.css';
 
 import { useMemo, useState } from 'react';
-import { Button, DatePicker, Form, Input, Select } from 'antd';
+import { DatePicker, Form, Input, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import {
@@ -16,14 +15,11 @@ import {
 } from '@/components/shared/OnBehalfSelector';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { useSubmitSiteAssignment } from '@/lib/query/site-assignment';
 import { useProjects } from '@/lib/query/projects';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
-
-const LIST_PATH = '/hr/site-assignments';
 
 interface SiteAssignmentFormValues {
   siteName?: string;
@@ -78,8 +74,6 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
     startDate: null,
     endDate: null,
   });
-
-  useSetHeaderExtra(null);
 
   const dayCount = useMemo(() => {
     if (!range?.[0] || !range[1]) {
@@ -308,26 +302,13 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-sa-form-page erp-site-assignments-v2 flex flex-col">
-      <section className="erp-sa-form-hero">
-        <div className="min-w-0">
-          <Link href={LIST_PATH} className="erp-sa-back">
-            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
-            {t('hr.buttons.backToList')}
-          </Link>
-          <h1 className="erp-sa-form-hero-title">
-            {t('pages.hr.siteAssignments.form.title')}
-          </h1>
-          <p className="erp-sa-form-hero-desc">
-            {t('pages.hr.siteAssignments.form.description')}
-          </p>
-        </div>
-        <div>
-          <Button onClick={() => router.push(LIST_PATH)}>
-            {t('common.cancel')}
-          </Button>
-        </div>
-      </section>
-
+      <HrFormPageShell
+        title={t('pages.hr.siteAssignments.form.title')}
+        description={t('pages.hr.siteAssignments.form.description')}
+        cancelLabel={t('common.cancel')}
+        cancelHref="/approvals/new"
+        backLabel={t('hr.buttons.backToList')}
+      >
       <Form<SiteAssignmentFormValues>
         form={form}
         layout="vertical"
@@ -344,6 +325,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
           submitLabel={t('pages.hr.siteAssignments.form.submit')}
         />
       </Form>
+      </HrFormPageShell>
     </div>
   );
 }

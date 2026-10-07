@@ -14,12 +14,12 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FormPageFooter from '@/components/ui/FormPageFooter/FormPageFooter';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { LeaveType } from '@/lib/api/leave.types';
 import type {
@@ -171,8 +171,6 @@ export default function LeaveRequestEditPageContent({
     return () => window.clearTimeout(handle);
   }, [periods, request?.employeeId, t]);
 
-  useSetHeaderExtra(null);
-
   async function handleSubmit(values: LeaveFormValues): Promise<void> {
     const inputs = toPeriodInputs(periods);
     if (inputs.length === 0) {
@@ -243,17 +241,13 @@ export default function LeaveRequestEditPageContent({
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-end gap-2">
-        <Button
-            onClick={() => router.push(`/hr/leave-requests/${requestId}`)}
-            className="shrink-0"
-            style={{ borderRadius: 0 }}
-          >
-            {t('hr.buttons.cancel')}
-          </Button>
-      </div>
-
+    <HrFormPageShell
+      title={t('pages.hr.leave.edit')}
+      description={t('pages.hr.leave.detailsStepDescription')}
+      cancelLabel={t('hr.buttons.cancel')}
+      cancelHref={`/hr/leave-requests/${requestId}`}
+      backLabel={t('hr.buttons.back')}
+    >
       {updateMutation.isError ? (
         <Alert
           type="error"
@@ -370,6 +364,6 @@ export default function LeaveRequestEditPageContent({
         submitDisabled={!canEdit}
         onSubmit={() => form.submit()}
       />
-    </div>
+    </HrFormPageShell>
   );
 }

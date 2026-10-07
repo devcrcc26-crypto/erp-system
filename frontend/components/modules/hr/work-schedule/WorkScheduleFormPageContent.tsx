@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, DatePicker, Spin } from 'antd';
+import { DatePicker, Spin } from 'antd';
 import { type Dayjs } from 'dayjs';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import WorkScheduleForm, {
   buildWorkSchedulePayload,
   type WorkScheduleFormValues,
@@ -14,7 +13,6 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import {
   useCreateWorkSchedule,
   useUpdateWorkSchedule,
@@ -49,8 +47,6 @@ export default function WorkScheduleFormPageContent({
     useState<WorkScheduleFormValues | null>(null);
   const [recalcConfirmOpen, setRecalcConfirmOpen] = useState(false);
   const [recalcFrom, setRecalcFrom] = useState<Dayjs | null>(null);
-
-  useSetHeaderExtra(null);
 
   async function saveSchedule(
     values: WorkScheduleFormValues,
@@ -130,32 +126,17 @@ export default function WorkScheduleFormPageContent({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <section className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-white px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]">
-        <div className="min-w-0">
-          <Link
-            href={backHref}
-            className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 no-underline transition-colors hover:text-emerald-700"
-          >
-            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
-            {t('hr.workSchedule.backToList')}
-          </Link>
-          <h1 className="m-0 text-xl font-semibold tracking-tight text-slate-900">
-            {isEdit
-              ? t('pages.hr.workSchedules.edit')
-              : t('pages.hr.workSchedules.new')}
-          </h1>
-          <p className="mt-1 mb-0 max-w-3xl text-[13px] leading-snug text-slate-500">
-            {t('hr.workSchedule.formDescription')}
-          </p>
-        </div>
-        <div className="shrink-0">
-          <Button onClick={() => router.push(backHref)}>
-            {t('common.cancel')}
-          </Button>
-        </div>
-      </section>
-
+    <HrFormPageShell
+      title={
+        isEdit
+          ? t('pages.hr.workSchedules.edit')
+          : t('pages.hr.workSchedules.new')
+      }
+      description={t('hr.workSchedule.formDescription')}
+      cancelLabel={t('common.cancel')}
+      cancelHref={backHref}
+      backLabel={t('hr.workSchedule.backToList')}
+    >
       <WorkScheduleForm
         schedule={scheduleQuery.data}
         isSubmitting={saving}
@@ -198,6 +179,6 @@ export default function WorkScheduleFormPageContent({
           />
         </div>
       </ConfirmDialog>
-    </div>
+    </HrFormPageShell>
   );
 }

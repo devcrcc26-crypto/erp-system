@@ -3,9 +3,9 @@
 import { Alert, Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import EmployeeContractForm from '@/components/modules/hr/employee-contract/EmployeeContractForm';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { EmployeeContractDetail } from '@/lib/api/employee-contract.types';
 import { useEmployeeContract } from '@/lib/query/employee-contract';
@@ -23,8 +23,6 @@ export default function EmployeeContractFormContent({
   const canViewHr = useCanViewHr();
   const isEdit = Boolean(contractId);
   const detailQuery = useEmployeeContract(contractId ?? '', isEdit);
-
-  useSetHeaderExtra(null);
 
   function handleSuccess(result: EmployeeContractDetail): void {
     router.push(`/hr/employee-contract/${result.id}`);
@@ -86,20 +84,23 @@ export default function EmployeeContractFormContent({
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-contract-form-page">
-      <div className="flex shrink-0 items-center justify-end gap-2">
-        <Button
-          onClick={() => router.push('/hr/employee-contract')}
-          className="shrink-0"
-          style={{ borderRadius: 8 }}
-        >
-          {t('common.cancel')}
-        </Button>
-      </div>
-      <EmployeeContractForm
-        mode={isEdit ? 'edit' : 'create'}
-        contract={isEdit ? detailQuery.data : undefined}
-        onSuccess={handleSuccess}
-      />
+      <HrFormPageShell
+        title={
+          isEdit
+            ? t('pages.hr.employeeContract.edit')
+            : t('pages.hr.employeeContract.new')
+        }
+        description={t('pages.hr.employeeContract.formDescription')}
+        cancelLabel={t('common.cancel')}
+        cancelHref="/hr/employee-contract"
+        backLabel={t('hr.buttons.backToList')}
+      >
+        <EmployeeContractForm
+          mode={isEdit ? 'edit' : 'create'}
+          contract={isEdit ? detailQuery.data : undefined}
+          onSuccess={handleSuccess}
+        />
+      </HrFormPageShell>
     </div>
   );
 }

@@ -4,11 +4,10 @@ import '../site-assignment/site-assignments-v2.css';
 import './work-from-home-v2.css';
 
 import { useMemo, useState } from 'react';
-import { Button, DatePicker, Form, Input } from 'antd';
+import { DatePicker, Form, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import {
@@ -17,7 +16,6 @@ import {
 } from '@/components/shared/OnBehalfSelector';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { requestWorkFromHomeDay } from '@/lib/api/work-from-home.api';
 import { useMutation } from '@tanstack/react-query';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -59,8 +57,6 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
     date: string | null;
     reason: string;
   }>({ date: null, reason: '' });
-
-  useSetHeaderExtra(null);
 
   const submitMutation = useMutation({
     mutationFn: requestWorkFromHomeDay,
@@ -207,26 +203,13 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
 
   return (
     <div className="erp-pro-list-page erp-users-page erp-employee-form-page erp-sa-form-page erp-wfh-v2 flex flex-col">
-      <section className="erp-sa-form-hero">
-        <div className="min-w-0">
-          <Link href="/approvals/new" className="erp-sa-back">
-            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
-            {t('pages.hr.workFromHome.request.backToPicker')}
-          </Link>
-          <h1 className="erp-sa-form-hero-title">
-            {t('pages.hr.workFromHome.request.title')}
-          </h1>
-          <p className="erp-sa-form-hero-desc">
-            {t('pages.hr.workFromHome.request.description')}
-          </p>
-        </div>
-        <div>
-          <Button onClick={() => router.push('/approvals/new')}>
-            {t('common.cancel')}
-          </Button>
-        </div>
-      </section>
-
+      <HrFormPageShell
+        title={t('pages.hr.workFromHome.request.title')}
+        description={t('pages.hr.workFromHome.request.description')}
+        cancelLabel={t('common.cancel')}
+        cancelHref="/approvals/new"
+        backLabel={t('pages.hr.workFromHome.request.backToPicker')}
+      >
       <Form<WfhRequestFormValues>
         form={form}
         layout="vertical"
@@ -243,6 +226,7 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
           submitLabel={t('pages.hr.workFromHome.request.submit')}
         />
       </Form>
+      </HrFormPageShell>
     </div>
   );
 }
