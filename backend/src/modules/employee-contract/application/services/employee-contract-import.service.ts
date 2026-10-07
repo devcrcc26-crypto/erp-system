@@ -176,7 +176,11 @@ export class EmployeeContractImportService {
       'Yes',
       'FIXED_TERM | OPEN_ENDED | PROBATION | RENEWAL',
     ]);
-    instructions.addRow(['signedAt', 'Yes', 'YYYY-MM-DD']);
+    instructions.addRow([
+      'signedAt',
+      'No',
+      'YYYY-MM-DD — defaults to startDate when blank',
+    ]);
     instructions.addRow(['startDate', 'Yes', 'YYYY-MM-DD']);
     instructions.addRow([
       'endDate',
@@ -295,9 +299,9 @@ export class EmployeeContractImportService {
     });
 
     const mapped = new Set(columnMap.values());
-    if (!mapped.has('contractType') || !mapped.has('signedAt') || !mapped.has('startDate')) {
+    if (!mapped.has('contractType') || !mapped.has('startDate')) {
       throw new BadRequestException(
-        'Missing required columns: contractType, signedAt, startDate. Download the template.',
+        'Missing required columns: contractType, startDate. Download the template.',
       );
     }
     if (!mapped.has('employeeEmail') && !mapped.has('employeeId')) {
@@ -412,7 +416,7 @@ export class EmployeeContractImportService {
       return { ...base, status: 'error', message: contractTypeResult.message };
     }
 
-    const signedAtResult = this.parseImportDate(row.signedAt, 'signedAt', true);
+    const signedAtResult = this.parseImportDate(row.signedAt, 'signedAt', false);
     if (!signedAtResult.ok) {
       return { ...base, status: 'error', message: signedAtResult.message };
     }
@@ -421,6 +425,9 @@ export class EmployeeContractImportService {
     if (!startDateResult.ok) {
       return { ...base, status: 'error', message: startDateResult.message };
     }
+
+    // Create DTO / DB require signedAt — default to startDate when omitted
+    const signedAt = signedAtResult.value ?? startDateResult.value!;
 
     const endDateResult = this.parseImportDate(row.endDate, 'endDate', false);
     if (!endDateResult.ok) {
@@ -510,7 +517,7 @@ export class EmployeeContractImportService {
         status: 'duplicate',
         message: `Employee already has an active contract (${activeExisting.contractNumber})`,
         contractType: contractTypeResult.value,
-        signedAt: signedAtResult.value,
+        signedAt,
         startDate: startDateResult.value,
         endDate: endDateResult.value,
       };
@@ -520,7 +527,7 @@ export class EmployeeContractImportService {
       ...base,
       status: 'ok',
       contractType: contractTypeResult.value,
-      signedAt: signedAtResult.value,
+      signedAt,
       startDate: startDateResult.value,
       endDate: endDateResult.value,
       basicSalary: basicSalary.value,

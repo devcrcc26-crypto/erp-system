@@ -2617,7 +2617,8 @@
       "importError": "导入失败，请重试。",
       "summary": "已导入 {{created}} 名员工，已发送 {{sent}} 封激活邮件",
       "line": "行号",
-      "name": "姓名"
+      "name": "姓名",
+      "message": "说明"
     }
   },
   "auditLogs": {
@@ -3076,7 +3077,7 @@
       "contracts": {
         "title": "从 Excel 导入劳动合同",
         "description": "上传表格批量创建劳动合同。已有生效合同的员工将跳过。",
-        "requiredColumns": "必填：employeeEmail 或 employeeId、contractType、signedAt、startDate。可选：endDate、basicSalary、transportationAllowance、monthlyBonus、monthlyNetBonus、pensionApplicable、taxApplicable、probationEndDate、governedBy、notes。",
+        "requiredColumns": "必填：employeeEmail 或 employeeId、contractType、startDate。可选：signedAt（默认与 startDate 相同）、endDate、basicSalary、transportationAllowance、monthlyBonus、monthlyNetBonus、pensionApplicable、taxApplicable、probationEndDate、governedBy、notes。",
         "importRows": "导入 {{count}} 份合同",
         "importRowsPlural": "导入 {{count}} 份合同",
         "created": "已创建 {{count}} 份合同。",

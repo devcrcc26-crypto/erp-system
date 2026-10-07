@@ -473,6 +473,16 @@ export default function UserImportModal({
                         />
                       ),
                     },
+                    {
+                      title: t('users.import.message'),
+                      key: 'message',
+                      ellipsis: true,
+                      render: (_, row) => (
+                        <span className="erp-users-cell-sub">
+                          {row.message || '-'}
+                        </span>
+                      ),
+                    },
                   ]}
                 />
               </div>

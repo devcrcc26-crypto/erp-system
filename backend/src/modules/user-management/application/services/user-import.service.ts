@@ -128,9 +128,80 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   experiencestartdate: 'experienceStartDate',
   'experience start date': 'experienceStartDate',
   experience_start_date: 'experienceStartDate',
+  'date of employment': 'experienceStartDate',
+  'date of employmt': 'experienceStartDate',
+  'date of employt': 'experienceStartDate',
+  'employment date': 'experienceStartDate',
+  'employment start date': 'experienceStartDate',
+  hiredate: 'experienceStartDate',
+  'hire date': 'experienceStartDate',
   leavepolicy: 'leavePolicy',
   'leave policy': 'leavePolicy',
   leave_policy: 'leavePolicy',
+};
+
+/** Spreadsheet labels → catalog position titles (case-insensitive keys). */
+const POSITION_ALIASES: Record<string, string> = {
+  'admin assistant (directorate)': 'Admin Assistant',
+  'admin assistant (directore)': 'Admin Assistant',
+  'mechanical eng.': 'Mechanical Engineer',
+  'mechanical eng': 'Mechanical Engineer',
+  'pavement eng.': 'Pavement Engineer',
+  'pavement eng': 'Pavement Engineer',
+  'chief surveyor': 'Surveyor',
+  'junior surveyor': 'Surveyor',
+  'structure eng.': 'Structural Engineer',
+  'structure eng': 'Structural Engineer',
+  'structural eng.': 'Structural Engineer',
+  'structural eng': 'Structural Engineer',
+  'stru. eng./office eng.': 'Structural Engineer',
+  'stru. des./office eng.': 'Structural Engineer',
+  'highway eng.': 'Highway Engineer',
+  'highway eng': 'Highway Engineer',
+  'highway office eng.': 'Highway Engineer',
+  'highway office eng': 'Highway Engineer',
+  'highway/road eng.': 'Highway Engineer',
+  'highway/road eng': 'Highway Engineer',
+  'highway/rural eng.': 'Highway Engineer',
+  'highway/rural eng': 'Highway Engineer',
+  'highway structural': 'Structural Engineer',
+  'highway/structural eng': 'Structural Engineer',
+  'highway/structural eng.': 'Structural Engineer',
+  'geological eng.': 'Geological Engineer',
+  'geological eng': 'Geological Engineer',
+  'sanitary eng.': 'Sanitary Engineer',
+  'sanitary eng': 'Sanitary Engineer',
+  'junior electrical eng': 'Electrical Engineer',
+  'junior electrical eng.': 'Electrical Engineer',
+  'senior electrical eng.': 'Electrical Engineer',
+  'senior electrical eng': 'Electrical Engineer',
+  'senior electrical engineer': 'Electrical Engineer',
+  'electrical eng.': 'Electrical Engineer',
+  'electrical eng': 'Electrical Engineer',
+  'hydraulic eng.': 'Hydraulic Engineer',
+  'hydraulic eng': 'Hydraulic Engineer',
+  'senior hydrologist (freelancer)': 'Hydraulic Engineer',
+  'senior hydrologist': 'Hydraulic Engineer',
+  'leader architect': 'Architect',
+  'architectural eng.': 'Architect',
+  'architectural eng': 'Architect',
+  'hr manager': 'Human Resource Manager',
+  'hr assistant': 'Human Resource Assistant',
+  'senior communication & publicity officer':
+    'Communication & Publicity Officer',
+  'geotechnical/material eng': 'Geotechnical Engineer',
+  'geotechnical/material eng.': 'Geotechnical Engineer',
+  'material eng.': 'Material Engineer',
+  'material eng': 'Material Engineer',
+  'contract eng.': 'Contract Engineer',
+  'contract eng': 'Contract Engineer',
+  'deputy general manager': 'Deputy General',
+  'software eng/erp developer': 'Software Engineer (ERP Developer)',
+  'software eng-erp (developer)': 'Software Engineer (ERP Developer)',
+  'software engineer (erp developer)': 'Software Engineer (ERP Developer)',
+  'purchase officer': 'Purchase Officer',
+  'purchaser officer': 'Purchase Officer',
+  'site engineer': 'Highway Engineer',
 };
 
 interface ParsedImportRow {
@@ -238,8 +309,8 @@ export class UserImportService {
       phone: '',
       discipline: 'Highway',
       gender: 'FEMALE',
-      department: 'Engineering',
-      position: 'Site Engineer',
+      department: 'Engineering Management Department',
+      position: 'Highway Engineer',
       employeeId: '',
       nationality: 'ETHIOPIAN',
       employeeType: 'PERMANENT',
@@ -313,7 +384,7 @@ export class UserImportService {
       'No',
       'UserDiscipline enum label/key (e.g. Highway) and/or engineering discipline catalog name',
     ]);
-    instructions.addRow(['gender', 'No', 'MALE or FEMALE']);
+    instructions.addRow(['gender', 'No', 'MALE or FEMALE (Male/Female also accepted)']);
     instructions.addRow([
       'department',
       'No',
@@ -322,7 +393,7 @@ export class UserImportService {
     instructions.addRow([
       'position',
       'No',
-      'Must match an existing position title (case-insensitive)',
+      'Must match an existing position title (common abbreviations like Structure Eng. are accepted)',
     ]);
     instructions.addRow(['employeeId', 'No', 'Unique employee number when provided']);
     instructions.addRow(['nationality', 'No', 'ETHIOPIAN or CHINESE']);
@@ -331,7 +402,7 @@ export class UserImportService {
       'No',
       'PERMANENT, CONTRACT, or TEMPORARY',
     ]);
-    instructions.addRow(['dateOfBirth', 'No', 'YYYY-MM-DD']);
+    instructions.addRow(['dateOfBirth', 'No', 'YYYY-MM-DD or DD/MM/YYYY']);
     instructions.addRow(['nationalId', 'No', 'National ID / passport number']);
     instructions.addRow(['tin', 'No', 'Tax Identification Number (10 digits)']);
     instructions.addRow([
@@ -340,7 +411,11 @@ export class UserImportService {
       'PHD, MSC, BSC, DIPLOMA, CERTIFICATE, or OTHER',
     ]);
     instructions.addRow(['fieldOfStudy', 'No', '']);
-    instructions.addRow(['experienceStartDate', 'No', 'YYYY-MM-DD']);
+    instructions.addRow([
+      'experienceStartDate',
+      'No',
+      'YYYY-MM-DD or DD/MM/YYYY (aliases: Date of Employment)',
+    ]);
     instructions.addRow(['addressCountry', 'No', '']);
     instructions.addRow(['addressRegion', 'No', '']);
     instructions.addRow(['addressCity', 'No', '']);
@@ -816,8 +891,9 @@ export class UserImportService {
 
     let positionId: string | undefined;
     if (row.position?.trim()) {
-      const position = lookups.positionByNormalizedTitle.get(
-        this.normalizeLookupKey(row.position),
+      const position = this.resolvePosition(
+        row.position,
+        lookups.positionByNormalizedTitle,
       );
       if (!position) {
         return {
@@ -1030,8 +1106,13 @@ export class UserImportService {
     if (value === undefined || value.trim() === '') {
       return { ok: true, value: undefined };
     }
-    const normalized = value.trim().toUpperCase();
-    const match = allowed.find((entry) => entry === normalized);
+    const trimmed = value.trim();
+    const upper = trimmed.toUpperCase().replace(/[\s-]+/g, '_');
+    const compact = trimmed.toUpperCase().replace(/[\s_-]+/g, '');
+    const match = allowed.find((entry) => {
+      const entryCompact = entry.replace(/_/g, '');
+      return entry === upper || entryCompact === compact;
+    });
     if (!match) {
       return {
         ok: false,
@@ -1039,6 +1120,22 @@ export class UserImportService {
       };
     }
     return { ok: true, value: match };
+  }
+
+  private resolvePosition(
+    rawLabel: string,
+    catalog: Map<string, NamedLookup>,
+  ): NamedLookup | undefined {
+    const key = this.normalizeLookupKey(rawLabel);
+    const direct = catalog.get(key);
+    if (direct) {
+      return direct;
+    }
+    const aliased = POSITION_ALIASES[key];
+    if (aliased) {
+      return catalog.get(this.normalizeLookupKey(aliased));
+    }
+    return undefined;
   }
 
   private parseImportDate(
@@ -1050,14 +1147,41 @@ export class UserImportService {
     if (value === undefined || value.trim() === '') {
       return { ok: true, value: undefined };
     }
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
-    if (!match) {
-      return {
-        ok: false,
-        message: `Invalid ${fieldLabel}: use YYYY-MM-DD`,
-      };
+    const trimmed = value.trim();
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+    if (iso) {
+      return { ok: true, value: `${iso[1]}-${iso[2]}-${iso[3]}` };
     }
-    return { ok: true, value: `${match[1]}-${match[2]}-${match[3]}` };
+    // DD/MM/YYYY or D/M/YYYY (Ethiopian/EU sheet style)
+    const dmy = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})$/.exec(trimmed);
+    if (dmy) {
+      const day = Number(dmy[1]);
+      const month = Number(dmy[2]);
+      const year = Number(dmy[3]);
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+        return {
+          ok: true,
+          value: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        };
+      }
+    }
+    // Excel serial date as plain number string
+    if (/^\d+(\.\d+)?$/.test(trimmed)) {
+      const serial = Number(trimmed);
+      if (serial > 20000 && serial < 80000) {
+        const excelEpoch = Date.UTC(1899, 11, 30);
+        const ms = excelEpoch + Math.floor(serial) * 24 * 60 * 60 * 1000;
+        const date = new Date(ms);
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return { ok: true, value: `${year}-${month}-${day}` };
+      }
+    }
+    return {
+      ok: false,
+      message: `Invalid ${fieldLabel}: use YYYY-MM-DD or DD/MM/YYYY`,
+    };
   }
 
   private async loadWorkbookFromBuffer(
@@ -1118,6 +1242,16 @@ export class UserImportService {
       const year = value.getFullYear();
       const month = String(value.getMonth() + 1).padStart(2, '0');
       const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      // Excel serial day count (1900 date system)
+      const excelEpoch = Date.UTC(1899, 11, 30);
+      const ms = excelEpoch + Math.floor(value) * 24 * 60 * 60 * 1000;
+      const date = new Date(ms);
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
     if (typeof value === 'object' && 'text' in value) {

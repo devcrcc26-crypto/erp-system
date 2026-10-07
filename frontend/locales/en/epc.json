@@ -2624,7 +2624,8 @@
       "importError": "Import failed. Please try again.",
       "summary": "{{created}} employees imported, {{sent}} activation emails sent",
       "line": "Line",
-      "name": "Name"
+      "name": "Name",
+      "message": "Message"
     }
   },
   "auditLogs": {
@@ -3083,7 +3084,7 @@
       "contracts": {
         "title": "Import employee contracts",
         "description": "Upload a spreadsheet to create employment contracts. Employees who already have an active contract are skipped.",
-        "requiredColumns": "Required: employeeEmail or employeeId, contractType, signedAt, startDate. Optional: endDate, basicSalary, transportationAllowance, monthlyBonus, monthlyNetBonus, pensionApplicable, taxApplicable, probationEndDate, governedBy, notes.",
+        "requiredColumns": "Required: employeeEmail or employeeId, contractType, startDate. Optional: signedAt (defaults to startDate), endDate, basicSalary, transportationAllowance, monthlyBonus, monthlyNetBonus, pensionApplicable, taxApplicable, probationEndDate, governedBy, notes.",
         "importRows": "Import {{count}} contract",
         "importRowsPlural": "Import {{count}} contracts",
         "created": "{{count}} contract created.",

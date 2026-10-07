@@ -117,6 +117,42 @@ describe('UserImportService', () => {
     };
   }
 
+  it('accepts DD/MM/YYYY experienceStartDate values', async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Users');
+    sheet.addRow([
+      'email',
+      'firstName',
+      'lastName',
+      'role',
+      'experienceStartDate',
+      'gender',
+      'position',
+    ]);
+    sheet.addRow([
+      '',
+      'Abebe',
+      'Gereme',
+      'Employee',
+      '12/8/2026',
+      'Male',
+      'Structure Eng.',
+    ]);
+    prisma.position.findMany.mockResolvedValue([
+      { id: 'pos-struct', title: 'Structural Engineer' },
+    ]);
+    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+    const result = await service.previewImport(ctx, buildFile(buffer));
+
+    expect(result.valid).toBe(1);
+    expect(result.rows[0]).toMatchObject({
+      status: 'ok',
+      experienceStartDate: '2026-08-12',
+      gender: 'MALE',
+      positionId: 'pos-struct',
+    });
+  });
+
   it('returns preview rows for valid data', async () => {
     const file = buildFile(
       await buildWorkbookBuffer([
