@@ -127,7 +127,7 @@ export interface UserProfile {
   branchName?: string | null;
   reportsToName?: string | null;
   reportsToChineseName?: string | null;
-  employeeType?: 'PERMANENT' | 'CONTRACT' | 'TEMPORARY' | null;
+  employeeType?: 'PERMANENT' | 'CONTRACT' | 'TEMPORARY' | 'FREELANCER' | null;
   nationality?: 'ETHIOPIAN' | 'CHINESE' | null;
   dateOfBirth?: string | null;
   gender?: 'MALE' | 'FEMALE' | null;
@@ -180,7 +180,11 @@ export type { UserDiscipline };
 
 export type Gender = 'MALE' | 'FEMALE';
 export type Nationality = 'ETHIOPIAN' | 'CHINESE';
-export type EmployeeType = 'PERMANENT' | 'CONTRACT' | 'TEMPORARY';
+export type EmployeeType =
+  | 'PERMANENT'
+  | 'CONTRACT'
+  | 'TEMPORARY'
+  | 'FREELANCER';
 export type EducationLevel = 'PHD' | 'MSC' | 'BSC' | 'DIPLOMA' | 'CERTIFICATE' | 'OTHER';
 
 export interface EmergencyContact {
@@ -399,12 +403,36 @@ export interface ImportRowPreview {
   email?: string;
   firstName: string;
   lastName: string;
+  middleName?: string;
   chineseName?: string;
   role: string;
   phone?: string;
+  department?: string;
+  position?: string;
+  employeeId?: string;
+  leavePolicy?: string;
+  discipline?: string | null;
+  gender?: string | null;
+  nationality?: string | null;
+  employeeType?: string | null;
+  educationLevel?: string | null;
+  dateOfBirth?: string;
+  nationalId?: string;
+  tin?: string;
+  fieldOfStudy?: string;
+  experienceStartDate?: string;
+  addressCountry?: string;
+  addressRegion?: string;
+  addressCity?: string;
+  addressSubcity?: string;
+  addressWoreda?: string;
+  addressHouseNumber?: string;
   status: ImportRowStatus;
   message?: string;
   roleId?: string;
+  departmentId?: string;
+  positionId?: string;
+  leavePolicyId?: string;
 }
 
 export interface ImportPreviewResult {

@@ -103,6 +103,7 @@ enum EmployeeType {
   PERMANENT
   CONTRACT
   TEMPORARY
+  FREELANCER
 }
 
 enum Gender {

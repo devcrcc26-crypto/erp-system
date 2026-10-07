@@ -346,12 +346,28 @@ describe('UserImportService', () => {
   it('rejects files without required columns', async () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Users');
-    sheet.addRow(['email', 'firstName']);
-    sheet.addRow(['only@test.local', 'Jane']);
+    sheet.addRow(['email', 'lastName']);
+    sheet.addRow(['only@test.local', 'Doe']);
     const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
 
     await expect(
       service.previewImport(ctx, buildFile(buffer)),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('accepts rows with blank lastName', async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Users');
+    sheet.addRow(['email', 'firstName', 'lastName', 'role']);
+    sheet.addRow(['', 'Abebe', '', 'Employee']);
+    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+
+    const preview = await service.previewImport(ctx, buildFile(buffer));
+    expect(preview.valid).toBe(1);
+    expect(preview.rows[0]).toMatchObject({
+      status: 'ok',
+      firstName: 'Abebe',
+      lastName: '',
+    });
   });
 });

@@ -62,7 +62,12 @@ export interface EmployeeProfileFormValues {
 
 export const GENDER_OPTIONS: Gender[] = ['MALE', 'FEMALE'];
 const NATIONALITY_OPTIONS: Nationality[] = ['ETHIOPIAN', 'CHINESE'];
-const EMPLOYEE_TYPE_OPTIONS: EmployeeType[] = ['PERMANENT', 'CONTRACT', 'TEMPORARY'];
+const EMPLOYEE_TYPE_OPTIONS: EmployeeType[] = [
+  'PERMANENT',
+  'CONTRACT',
+  'TEMPORARY',
+  'FREELANCER',
+];
 const EDUCATION_LEVEL_OPTIONS: EducationLevel[] = [
   'PHD',
   'MSC',

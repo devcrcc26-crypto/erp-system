@@ -792,6 +792,10 @@ export default function UsersPageContent(): React.ReactNode {
                       value: 'TEMPORARY',
                       label: t('hr.employeeType.TEMPORARY'),
                     },
+                    {
+                      value: 'FREELANCER',
+                      label: t('hr.employeeType.FREELANCER'),
+                    },
                   ]}
                   value={employeeTypeFilter}
                   onChange={(value?: EmployeeType) => {

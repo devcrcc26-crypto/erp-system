@@ -106,7 +106,10 @@ export class ProfileResponseDto {
   @ApiProperty({ nullable: true })
   reportsToChineseName!: string | null;
 
-  @ApiProperty({ nullable: true, enum: ['PERMANENT', 'CONTRACT', 'TEMPORARY'] })
+  @ApiProperty({
+    nullable: true,
+    enum: ['PERMANENT', 'CONTRACT', 'TEMPORARY', 'FREELANCER'],
+  })
   employeeType!: string | null;
 
   @ApiProperty({ nullable: true, enum: ['ETHIOPIAN', 'CHINESE'] })

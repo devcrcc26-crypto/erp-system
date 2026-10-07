@@ -366,7 +366,7 @@ export class UserImportService {
       'Optional. Leave blank for record-only users who will not log in.',
     ]);
     instructions.addRow(['firstName', 'Yes', '']);
-    instructions.addRow(['lastName', 'Yes', '']);
+    instructions.addRow(['lastName', 'No', 'Optional']);
     instructions.addRow(['middleName', 'No', 'Optional middle name']);
     instructions.addRow([
       'chineseName',
@@ -400,7 +400,7 @@ export class UserImportService {
     instructions.addRow([
       'employeeType',
       'No',
-      'PERMANENT, CONTRACT, or TEMPORARY',
+      'PERMANENT, CONTRACT, TEMPORARY, or FREELANCER',
     ]);
     instructions.addRow(['dateOfBirth', 'No', 'YYYY-MM-DD or DD/MM/YYYY']);
     instructions.addRow(['nationalId', 'No', 'National ID / passport number']);
@@ -571,10 +571,7 @@ export class UserImportService {
       }
     });
 
-    const requiredFields: Array<keyof ParsedImportRow> = [
-      'firstName',
-      'lastName',
-    ];
+    const requiredFields: Array<keyof ParsedImportRow> = ['firstName'];
     const mappedFields = new Set(columnMap.values());
     for (const field of requiredFields) {
       if (!mappedFields.has(field)) {
@@ -766,6 +763,14 @@ export class UserImportService {
       position: row.position,
       employeeId: row.employeeId,
       leavePolicy: row.leavePolicy,
+      // Raw sheet values so the UI can edit invalid rows from the message
+      gender: row.gender as ImportRowPreviewDto['gender'],
+      nationality: row.nationality as ImportRowPreviewDto['nationality'],
+      employeeType: row.employeeType as ImportRowPreviewDto['employeeType'],
+      educationLevel: row.educationLevel as ImportRowPreviewDto['educationLevel'],
+      dateOfBirth: row.dateOfBirth,
+      experienceStartDate: row.experienceStartDate,
+      discipline: row.discipline as ImportRowPreviewDto['discipline'],
       nationalId: row.nationalId,
       tin: row.tin,
       fieldOfStudy: row.fieldOfStudy,
@@ -778,11 +783,11 @@ export class UserImportService {
       status: 'error',
     };
 
-    if (!row.firstName || !row.lastName) {
+    if (!row.firstName.trim()) {
       return {
         ...base,
         status: 'error',
-        message: 'firstName and lastName are required',
+        message: 'firstName is required',
       };
     }
 
