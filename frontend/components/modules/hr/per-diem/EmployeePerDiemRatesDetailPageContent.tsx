@@ -19,6 +19,7 @@ import {
   PER_DIEM_DESTINATION_CATEGORIES,
 } from '@/lib/constants/per-diem-destination-categories';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 /**
  * Employee per diem rates detail — Users / employee profile chrome.
  */
@@ -40,7 +41,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (!canManagePerDiemRates) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert type="warning" showIcon title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -48,7 +49,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (userQuery.isLoading || rateQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-employee-per-diem-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -58,7 +59,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
 
   if (userQuery.isError || !userQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -85,7 +86,7 @@ export default function EmployeePerDiemRatesDetailPageContent({
   const employeeName = formatUserName(employee);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-employee-per-diem-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-employee-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

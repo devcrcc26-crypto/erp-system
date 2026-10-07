@@ -56,7 +56,7 @@ export default function VehicleChangeStatusDialog({
     >
       <div className="mt-3 flex flex-col gap-4">
         <div
-          className="rounded-none border px-3 py-3"
+          className="rounded-xl border border-slate-200 px-3 py-3"
           style={{
             borderColor: tokens.colorBorder,
             background: tokens.colorSurfaceSecondary,
@@ -93,7 +93,7 @@ export default function VehicleChangeStatusDialog({
                   return (
                     <label
                       key={option.value}
-                      className="m-0 flex w-full cursor-pointer items-center gap-3 rounded-none border px-3 py-3"
+                      className="m-0 flex w-full cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-3 py-3"
                       style={{
                         borderColor: selected
                           ? tokens.colorPrimary

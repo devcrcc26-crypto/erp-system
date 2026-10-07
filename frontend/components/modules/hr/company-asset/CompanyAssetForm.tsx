@@ -502,7 +502,7 @@ export default function CompanyAssetForm({
               icon={<Paperclip size={14} />}
               disabled={submitting || uploadPhotoMutation.isPending}
               onClick={() => fileInputRef.current?.click()}
-              style={{ borderRadius: 0, marginBottom: 12 }}
+              style={{ marginBottom: 12 }}
             >
               {t('hr.assetButtons.uploadPhoto')}
             </Button>

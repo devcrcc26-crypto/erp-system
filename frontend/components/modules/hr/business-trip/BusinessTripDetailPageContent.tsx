@@ -59,6 +59,7 @@ import { exportBusinessTripPdf } from '@/lib/utils/business-trip-pdf';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 function DetailSection({
   title,
   children,
@@ -256,7 +257,7 @@ export default function BusinessTripDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-business-trip-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-business-trip-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -266,7 +267,7 @@ export default function BusinessTripDetailPageContent({
 
   if (detailQuery.isError || !trip) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -306,7 +307,7 @@ export default function BusinessTripDetailPageContent({
     Boolean(trip.itinerary);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-business-trip-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-business-trip-detail-page ${DETAIL_PAGE_V2}`}>
       {importOpen ? (
         <HrImportModal
           entity="businessTripPassengers"

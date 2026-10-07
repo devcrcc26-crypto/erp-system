@@ -96,11 +96,11 @@ export function SummaryStrip({
         : 'sm:grid-cols-3';
 
   return (
-    <div className={`grid grid-cols-2 gap-3 ${cols}`}>
+    <div className={`grid grid-cols-2 gap-3 lg:gap-4 ${cols}`}>
       {items.map(({ label, value, emphasize }) => (
         <div
           key={label}
-          className="min-w-0 rounded-xl border border-[#e8ebef] bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)] sm:px-4"
+          className="min-w-0 rounded-2xl bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)] sm:px-5 sm:py-4"
         >
           <p className="erp-users-stat-label m-0 mb-1">{label}</p>
           <div

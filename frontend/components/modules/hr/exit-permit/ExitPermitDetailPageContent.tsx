@@ -61,6 +61,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const EXIT_PERMIT_LIST_PATH = '/hr/equipment-and-materials-exit-permit';
 
 function DetailSection({
@@ -327,7 +328,7 @@ export default function ExitPermitDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-exit-permit-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-exit-permit-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -337,7 +338,7 @@ export default function ExitPermitDetailPageContent({
 
   if (detailQuery.isError || !permit) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -402,7 +403,7 @@ export default function ExitPermitDetailPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-exit-permit-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-exit-permit-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

@@ -19,6 +19,7 @@ import {
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const LIST_PATH = '/audit-logs';
 
 function DetailSection({
@@ -87,7 +88,7 @@ export default function AuditLogDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-audit-log-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-audit-log-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -97,7 +98,7 @@ export default function AuditLogDetailPageContent({
 
   if (detailQuery.isError || !log) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={
@@ -120,7 +121,7 @@ export default function AuditLogDetailPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-audit-log-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-audit-log-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

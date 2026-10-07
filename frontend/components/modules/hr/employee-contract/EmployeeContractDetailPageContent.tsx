@@ -43,6 +43,7 @@ import { formatCurrencyAmount } from '@/lib/utils/expense-claim-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 interface TerminateFormValues {
   terminatedAt?: dayjs.Dayjs;
   terminationReason: string;
@@ -144,7 +145,7 @@ export default function EmployeeContractDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -154,7 +155,7 @@ export default function EmployeeContractDetailPageContent({
 
   if (detailQuery.isError || !contract) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -184,7 +185,7 @@ export default function EmployeeContractDetailPageContent({
     contract.taxApplicable != null;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-contract-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

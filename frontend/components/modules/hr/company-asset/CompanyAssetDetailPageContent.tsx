@@ -59,6 +59,7 @@ import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 interface IssueAssetFormValues {
   employeeId?: string;
   notes?: string;
@@ -348,7 +349,7 @@ export default function CompanyAssetDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -358,7 +359,7 @@ export default function CompanyAssetDetailPageContent({
 
   if (detailQuery.isError || !asset) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -424,7 +425,7 @@ export default function CompanyAssetDetailPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-company-asset-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

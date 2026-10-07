@@ -67,6 +67,7 @@ import { exportExpenseClaimDetailItemsExcel } from '@/lib/utils/expense-claim-ex
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 function DetailSection({
   title,
   children,
@@ -480,7 +481,7 @@ export default function ExpenseClaimDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -490,7 +491,7 @@ export default function ExpenseClaimDetailPageContent({
 
   if (detailQuery.isError || !claim) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -515,7 +516,7 @@ export default function ExpenseClaimDetailPageContent({
     claim.employeeId !== currentUser.data.id
   ) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="flex min-h-[240px] items-center justify-center">
           <Skeleton active paragraph={{ rows: 4 }} />
         </div>
@@ -556,7 +557,7 @@ export default function ExpenseClaimDetailPageContent({
         : 420;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-expense-claim-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

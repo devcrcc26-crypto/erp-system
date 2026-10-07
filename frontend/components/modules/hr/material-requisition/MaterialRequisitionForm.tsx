@@ -275,7 +275,6 @@ export default function MaterialRequisitionForm({
             type="text"
             icon={<EditOutlined />}
             onClick={() => openEditItem(row)}
-            style={{ borderRadius: 0 }}
           />
           <Button
             size="small"
@@ -283,7 +282,6 @@ export default function MaterialRequisitionForm({
             danger
             icon={<DeleteOutlined />}
             onClick={() => removeItem(row._key)}
-            style={{ borderRadius: 0 }}
           />
         </Space>
       ),
@@ -384,7 +382,6 @@ export default function MaterialRequisitionForm({
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={openAddItem}
-                  style={{ borderRadius: 0 }}
                 >
                   {t('hr.buttons.addItem')}
                 </Button>
@@ -394,7 +391,7 @@ export default function MaterialRequisitionForm({
             <div
               className={
                 showItemForm
-                  ? 'mb-4 rounded-none border border-[rgba(0,0,0,0.08)] p-4'
+                  ? 'mb-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4'
                   : 'hidden'
               }
               style={
@@ -470,13 +467,12 @@ export default function MaterialRequisitionForm({
                 </div>
               </Form>
               <div className="flex justify-end gap-2">
-                <Button onClick={cancelItemForm} style={{ borderRadius: 0 }}>
+                <Button onClick={cancelItemForm}>
                   {t('hr.buttons.cancel')}
                 </Button>
                 <Button
                   type="primary"
                   onClick={() => void saveItem()}
-                  style={{ borderRadius: 0 }}
                 >
                   {editingKey ? t('common.save') : t('hr.buttons.addItem')}
                 </Button>

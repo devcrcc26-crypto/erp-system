@@ -69,6 +69,7 @@ import {
 import { exportOvertimeSheetEntriesExcel } from '@/lib/utils/overtime-export-excel';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 function DetailSection({
   title,
   children,
@@ -454,7 +455,7 @@ export default function OvertimeSheetDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -464,7 +465,7 @@ export default function OvertimeSheetDetailPageContent({
 
   if (detailQuery.isError || !sheet) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -490,7 +491,7 @@ export default function OvertimeSheetDetailPageContent({
     !isOnBehalfFiler
   ) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="flex min-h-[240px] items-center justify-center">
           <Skeleton active paragraph={{ rows: 4 }} />
         </div>
@@ -505,7 +506,7 @@ export default function OvertimeSheetDetailPageContent({
   );
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-overtime-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -588,84 +589,59 @@ export default function OvertimeSheetDetailPageContent({
         </div>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          gap: 0,
-          border: '1px solid var(--color-border, #e8ebef)',
-          borderRadius: 10,
-          overflow: 'hidden',
-          marginBottom: 20,
-        }}
-      >
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
         {(
           [
             {
               label: t('hr.overtimeCategory.regular'),
               value: sheet.totalRegularHours,
-              color: '#1677ff',
+              color: 'text-blue-700',
             },
             {
               label: t('hr.overtimeCategory.night'),
               value: sheet.totalNightHours,
-              color: '#722ed1',
+              color: 'text-violet-700',
             },
             {
               label: t('hr.overtimeCategory.weekend'),
               value: sheet.totalWeekendHours,
-              color: '#fa8c16',
+              color: 'text-amber-700',
             },
             {
               label: t('hr.overtimeCategory.holiday'),
               value: sheet.totalHolidayHours,
-              color: '#f5222d',
+              color: 'text-red-700',
             },
             {
               label: t('hr.overtimeCategory.total'),
               value: sheet.totalHours,
-              color: 'var(--color-teal-600)',
-              bold: true,
+              color: 'text-[#0f6e56]',
+              total: true,
             },
           ] as const
-        ).map((item, i) => (
-          <div
-            key={item.label}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              borderLeft:
-                i > 0 ? '1px solid var(--color-border, #e8ebef)' : 'none',
-              background: 'var(--color-bg-secondary, #fafafa)',
-            }}
-          >
+        ).map((item) => {
+          const hours = Number(item.value);
+          const isTotal = 'total' in item && item.total;
+          return (
             <div
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: 'var(--color-text-tertiary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                marginBottom: 4,
-              }}
+              key={item.label}
+              className={`rounded-2xl px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)] ${
+                isTotal ? 'bg-[#f0faf6]' : 'bg-white'
+              }`}
             >
-              {item.label}
+              <p className="m-0 text-xs font-semibold tracking-[0.06em] text-gray-600 uppercase">
+                {item.label}
+              </p>
+              <p
+                className={`m-0 mt-1 font-semibold tabular-nums ${isTotal ? 'text-2xl' : 'text-xl'} ${
+                  hours > 0 ? item.color : 'text-gray-400'
+                }`}
+              >
+                {hours > 0 ? `${formatOvertimeHours(hours)}h` : '—'}
+              </p>
             </div>
-            <div
-              style={{
-                fontSize: 'bold' in item && item.bold ? 22 : 18,
-                fontWeight: 'bold' in item && item.bold ? 700 : 600,
-                color:
-                  Number(item.value) > 0
-                    ? item.color
-                    : 'var(--color-text-tertiary)',
-              }}
-            >
-              {Number(item.value) > 0
-                ? `${formatOvertimeHours(Number(item.value))}h`
-                : '—'}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {unregisteredHolidayDates.length > 0 ? (

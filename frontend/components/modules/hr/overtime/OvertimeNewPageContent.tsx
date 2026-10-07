@@ -128,7 +128,7 @@ export default function OvertimeNewPageContent(): React.ReactNode {
   const periodLabel = month ? month.format('MMMM YYYY') : '—';
 
   const opening = (
-    <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-12">
+    <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl bg-white p-12 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]">
       <Spin size="large" />
       <p className="m-0 text-sm text-[var(--color-text-secondary)]">
         {t('pages.hr.overtime.openingSheet')}

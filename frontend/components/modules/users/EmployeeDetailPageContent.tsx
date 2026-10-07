@@ -55,6 +55,7 @@ import {
   userStatusVariant,
 } from '@/lib/utils/user-status';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const USER_STATUS_DOT: Record<'success' | 'warning' | 'default', string> = {
   success: '#16a34a',
   warning: '#d97706',
@@ -303,7 +304,7 @@ export default function EmployeeDetailPageContent({
     user.userRoles[0]?.role.name;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

@@ -67,6 +67,7 @@ import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 type ActionModalKind = 'approve' | 'conditional' | 'return' | 'reject' | null;
 
 function resolveCategoryCode(request: ApprovalRequestDetail): string {
@@ -486,7 +487,7 @@ export default function ApprovalDetailPageContent({
 
   if (detailQuery.isLoading && !request) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -496,7 +497,7 @@ export default function ApprovalDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -530,7 +531,7 @@ export default function ApprovalDetailPageContent({
   const currentTierLabel = currentTier?.label?.trim() || null;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

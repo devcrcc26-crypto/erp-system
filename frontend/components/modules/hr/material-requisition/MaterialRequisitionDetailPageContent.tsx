@@ -65,6 +65,7 @@ import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 function DetailSection({
   title,
   children,
@@ -383,7 +384,7 @@ export default function MaterialRequisitionDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-material-requisition-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-material-requisition-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -393,7 +394,7 @@ export default function MaterialRequisitionDetailPageContent({
 
   if (detailQuery.isError || !requisition) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -447,7 +448,7 @@ export default function MaterialRequisitionDetailPageContent({
         : 400;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-material-requisition-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-material-requisition-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

@@ -26,6 +26,7 @@ import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const LIST_PATH = '/hr/work-schedules';
 
 function DetailSection({
@@ -108,7 +109,7 @@ export default function WorkScheduleDetailPageContent({
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -116,7 +117,7 @@ export default function WorkScheduleDetailPageContent({
 
   if (scheduleQuery.isLoading && !schedule) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -126,7 +127,7 @@ export default function WorkScheduleDetailPageContent({
 
   if (scheduleQuery.isError || !schedule) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -187,7 +188,7 @@ export default function WorkScheduleDetailPageContent({
   ];
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
       <AssignWorkScheduleModal
         open={assignOpen}
         schedule={schedule}

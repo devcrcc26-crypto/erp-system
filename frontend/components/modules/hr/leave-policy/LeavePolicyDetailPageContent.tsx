@@ -25,6 +25,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { previewEntitlement } from '@/lib/utils/leave-policy-preview';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const LIST_PATH = '/hr/leave-policy';
 const RULE_ORDER = ['ANNUAL', 'MATERNITY', 'SICK'] as const;
 const PREVIEW_YEARS = 3;
@@ -134,7 +135,7 @@ export default function LeavePolicyDetailPageContent({
 
   if (!canViewHr) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice tone="warning" title={t('pages.hr.accessDenied')} />
       </div>
     );
@@ -142,7 +143,7 @@ export default function LeavePolicyDetailPageContent({
 
   if (policyQuery.isLoading && !policy) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -152,7 +153,7 @@ export default function LeavePolicyDetailPageContent({
 
   if (policyQuery.isError || !policy) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -188,7 +189,7 @@ export default function LeavePolicyDetailPageContent({
   const showOverflowMenu = isNarrow;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-leave-policy-detail-page ${DETAIL_PAGE_V2}`}>
       <ConfirmDialog
         open={confirmDelete}
         title={t('hr.leavePolicy.deleteTitle')}

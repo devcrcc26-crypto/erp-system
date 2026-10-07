@@ -48,6 +48,7 @@ import {
 import { formatSealCategory } from '@/lib/utils/seal-category';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const LIST_PATH = '/hr/official-seal';
 
 function DetailSection({
@@ -162,7 +163,7 @@ export default function OfficialSealDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-official-seal-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-official-seal-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -172,7 +173,7 @@ export default function OfficialSealDetailPageContent({
 
   if (detailQuery.isError || !seal) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -242,7 +243,7 @@ export default function OfficialSealDetailPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-official-seal-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-official-seal-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

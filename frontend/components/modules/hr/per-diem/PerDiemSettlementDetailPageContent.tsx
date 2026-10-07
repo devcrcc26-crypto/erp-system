@@ -32,6 +32,7 @@ import {
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 /**
  * Per diem settlement detail — same sheet layout as the create form, plus approval and cash returned.
  */
@@ -115,7 +116,7 @@ export default function PerDiemSettlementDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -125,7 +126,7 @@ export default function PerDiemSettlementDetailPageContent({
 
   if (detailQuery.isError || !settlement) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -145,7 +146,7 @@ export default function PerDiemSettlementDetailPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-per-diem-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-per-diem-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="flex min-w-0 items-center gap-2">

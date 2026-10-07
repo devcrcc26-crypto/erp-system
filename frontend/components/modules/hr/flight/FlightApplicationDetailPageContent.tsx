@@ -56,6 +56,7 @@ import { exportFlightApplicationPassengersExcel } from '@/lib/utils/flight-expor
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 function DetailSection({
   title,
   children,
@@ -244,7 +245,7 @@ export default function FlightApplicationDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-flight-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-flight-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -254,7 +255,7 @@ export default function FlightApplicationDetailPageContent({
 
   if (detailQuery.isError || !application) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -277,7 +278,7 @@ export default function FlightApplicationDetailPageContent({
   const tripTypeLabel = formatTripType(application.tripType, t);
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-flight-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-flight-detail-page ${DETAIL_PAGE_V2}`}>
       {importOpen ? (
         <HrImportModal
           entity="flightPassengers"

@@ -34,6 +34,7 @@ import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { tokens } from '@/lib/theme/tokens';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 export default function VehicleDetailPageContent({
   vehicleId,
 }: {
@@ -80,8 +81,8 @@ export default function VehicleDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="rounded-none border border-[rgba(0,0,0,0.08)] bg-white p-6">
+      <div className={`flex flex-col ${DETAIL_PAGE_V2}`}>
+        <div className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       </div>
@@ -90,7 +91,7 @@ export default function VehicleDetailPageContent({
 
   if (detailQuery.isError || !vehicle) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className={`flex flex-col ${DETAIL_PAGE_V2}`}>
         <Alert
           type="error"
           showIcon
@@ -102,7 +103,6 @@ export default function VehicleDetailPageContent({
           action={
             <Button
               onClick={() => router.push('/organization/vehicles')}
-              style={{ borderRadius: 0 }}
             >
               {t('vehicles.backToList')}
             </Button>
@@ -113,7 +113,7 @@ export default function VehicleDetailPageContent({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={`flex flex-col ${DETAIL_PAGE_V2}`}>
       <VehicleChangeStatusDialog
         open={statusModalOpen}
         plateNumber={vehicle.plateNumber}
@@ -146,7 +146,6 @@ export default function VehicleDetailPageContent({
           type="text"
           icon={<ArrowLeft size={16} />}
           onClick={() => router.push('/organization/vehicles')}
-          style={{ borderRadius: 0 }}
         >
           {t('vehicles.backToList')}
         </Button>
@@ -156,14 +155,12 @@ export default function VehicleDetailPageContent({
               setNewStatus(initialVehicleStatusChangeSelection(vehicle.status));
               setStatusModalOpen(true);
             }}
-            style={{ borderRadius: 0 }}
           >
             {t('vehicles.changeStatus')}
           </Button>
           <Button
             danger
             onClick={() => setDeleteOpen(true)}
-            style={{ borderRadius: 0 }}
           >
             {t('common.delete')}
           </Button>
@@ -173,7 +170,6 @@ export default function VehicleDetailPageContent({
             onClick={() =>
               router.push(`/organization/vehicles/${vehicle.id}/edit`)
             }
-            style={{ borderRadius: 0 }}
           >
             {t('common.update')}
           </Button>
@@ -181,11 +177,7 @@ export default function VehicleDetailPageContent({
       </div>
 
       <div
-        className="overflow-hidden rounded-none"
-        style={{
-          background: tokens.colorCardBg,
-          border: `1px solid ${tokens.colorBorder}`,
-        }}
+        className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]"
       >
         <div className="flex flex-col gap-4 px-3 py-4 sm:flex-row sm:items-start sm:px-5">
           <VehiclePhoto

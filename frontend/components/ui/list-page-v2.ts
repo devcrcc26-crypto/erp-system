@@ -55,3 +55,43 @@ export const LIST_PAGE_V2 = [
   // Muted text at readable contrast (#4B5563 = 7.6:1 on white).
   '[&_.erp-users-cell-sub]:!text-gray-600',
 ].join(' ');
+
+/**
+ * v2 detail-page look for pages built on the shared `erp-employee-*` detail
+ * chrome (hero card, fact strip, section cards, approval chain). Includes the
+ * list rules above for stat tiles, cards and tables.
+ *
+ * Usage: <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
+ */
+export const DETAIL_PAGE_V2 = [
+  LIST_PAGE_V2,
+
+  // Top bar (back link + actions) on the hero card.
+  '[&_.erp-employee-toolbar]:!border-b [&_.erp-employee-toolbar]:!border-solid [&_.erp-employee-toolbar]:!border-[#eef1f4] [&_.erp-employee-toolbar]:!px-5 [&_.erp-employee-toolbar]:!py-3',
+
+  // Hero: larger title, roomier padding.
+  '[&_.erp-employee-hero]:!px-6 [&_.erp-employee-hero]:!pt-5 [&_.erp-employee-hero]:!pb-6',
+  '[&_.erp-employee-hero-name]:!text-2xl [&_.erp-employee-hero-name]:!font-semibold [&_.erp-employee-hero-name]:!tracking-tight [&_.erp-employee-hero-name]:!text-slate-900',
+
+  // Fact strip: floating tiles (the list rules), without the joined cell borders.
+  '[&_.erp-employee-meta-bar_.erp-users-stat]:!border-0 [&_.erp-employee-meta-bar_.erp-users-stat]:!py-4',
+  // One row however many facts there are (3, 4 or 5), wrapping only when narrow.
+  '[&_.erp-employee-meta-bar]:!grid-cols-[repeat(auto-fit,minmax(170px,1fr))]',
+  '[&_.erp-employee-meta-value]:!text-[15px] [&_.erp-employee-meta-value]:!font-semibold [&_.erp-employee-meta-value]:!text-slate-900',
+
+  // Sections: white cards with a sentence-case heading instead of a grey
+  // uppercase bar. Inside the main card they lose their own card chrome.
+  '[&_.erp-employee-section]:!rounded-2xl [&_.erp-employee-section]:!border-0 [&_.erp-employee-section]:!bg-white',
+  '[&_.erp-employee-section]:!shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]',
+  '[&_.erp-pro-card_.erp-employee-section]:!rounded-none [&_.erp-pro-card_.erp-employee-section]:!shadow-none',
+  '[&_.erp-employee-section-header]:!border-b [&_.erp-employee-section-header]:!border-solid [&_.erp-employee-section-header]:!border-[#eef1f4] [&_.erp-employee-section-header]:!bg-white',
+  '[&_.erp-employee-section-header]:!px-5 [&_.erp-employee-section-header]:!pt-4 [&_.erp-employee-section-header]:!pb-3',
+  '[&_.erp-employee-section-title]:!text-[15px] [&_.erp-employee-section-title]:!font-semibold [&_.erp-employee-section-title]:!normal-case',
+  '[&_.erp-employee-section-title]:!tracking-normal [&_.erp-employee-section-title]:!text-slate-900',
+  '[&_.erp-employee-section-body]:!px-5 [&_.erp-employee-section-body]:!py-4',
+  '[&_.erp-pro-card_.erp-employee-tab-panel]:!p-0',
+
+  // Chips and tags: soft fills instead of outlines.
+  '[&_.erp-users-id-chip]:!rounded-lg [&_.erp-users-id-chip]:!border-0 [&_.erp-users-id-chip]:!bg-[#f2f4f7] [&_.erp-users-id-chip]:!text-[#344054]',
+  '[&_.erp-users-role-tag]:!border-0 [&_.erp-users-role-tag]:!bg-emerald-600/10 [&_.erp-users-role-tag]:!font-semibold [&_.erp-users-role-tag]:!text-[#0f6e56]',
+].join(' ');

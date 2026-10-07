@@ -77,6 +77,7 @@ import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
+import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const CURRENCY_OPTIONS: { value: SupportedCurrency; label: string }[] = [
   { value: 'ETB', label: 'ETB' },
   { value: 'USD', label: 'USD' },
@@ -454,7 +455,7 @@ export default function PurchaseRequestDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-purchase-request-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-purchase-request-detail-page ${DETAIL_PAGE_V2}`}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -464,7 +465,7 @@ export default function PurchaseRequestDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page">
+      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -514,7 +515,7 @@ export default function PurchaseRequestDetailPageContent({
         : 420;
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-purchase-request-detail-page">
+    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-purchase-request-detail-page ${DETAIL_PAGE_V2}`}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">

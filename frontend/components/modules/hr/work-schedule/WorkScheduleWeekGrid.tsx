@@ -26,8 +26,12 @@ function formatDayHours(
   return `${day.morningStart}–${day.morningEnd}, ${day.afternoonStart}–${day.afternoonEnd} (${day.totalHours}h)`;
 }
 
+/** Monday first, Sunday last (dayOfWeek stays 0 = Sunday in data). */
+const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
 /**
- * Sunday–Saturday grid for a work schedule week.
+ * Monday–Sunday grid for a work schedule week: one tile per day with its type
+ * and hours, matching the schedule form.
  */
 export default function WorkScheduleWeekGrid({
   days,
@@ -35,21 +39,38 @@ export default function WorkScheduleWeekGrid({
   days: WorkScheduleDay[];
 }): React.ReactNode {
   const { t } = useEpcTranslation();
-  const ordered = [...days].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+  const byDay = new Map(days.map((day) => [day.dayOfWeek, day]));
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      {ordered.map((day) => (
-        <div
-          key={day.dayOfWeek}
-          className="rounded-lg border border-[#e8ebef] px-3 py-2"
-        >
-          <p className="m-0 text-sm font-medium">
-            {t(DAY_KEYS[day.dayOfWeek] ?? DAY_KEYS[0])}
-          </p>
-          <p className="erp-users-cell-sub m-0">{formatDayHours(day, t)}</p>
-        </div>
-      ))}
-    </div>
+    <ul className="m-0 grid list-none gap-2.5 p-0 sm:grid-cols-2 xl:grid-cols-4">
+      {DISPLAY_ORDER.map((dayOfWeek) => {
+        const day = byDay.get(dayOfWeek);
+        const off = !day || !day.isWorkingDay;
+        const half = Boolean(day?.isWorkingDay && day.isHalfDay);
+        const badge = off
+          ? { label: t('hr.workSchedule.offDay'), className: 'bg-slate-100 text-slate-600' }
+          : half
+            ? { label: t('hr.workSchedule.halfDay'), className: 'bg-amber-50 text-amber-800' }
+            : { label: t('hr.workSchedule.workingDay'), className: 'bg-emerald-50 text-emerald-800' };
+        return (
+          <li
+            key={dayOfWeek}
+            className={`rounded-xl px-4 py-3 ${off ? 'bg-slate-50' : 'bg-white ring-1 ring-slate-100'}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="m-0 text-sm font-semibold text-slate-900">
+                {t(DAY_KEYS[dayOfWeek] ?? DAY_KEYS[0])}
+              </p>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge.className}`}>
+                {badge.label}
+              </span>
+            </div>
+            <p className="m-0 mt-1.5 text-[13px] text-slate-600 tabular-nums">
+              {day && !off ? formatDayHours(day, t) : '—'}
+            </p>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
