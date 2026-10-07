@@ -71,7 +71,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/leave-policy': 'pages.hr.leavePolicy.listTitle',
   '/hr/leave-policy/new': 'pages.hr.leavePolicy.new',
   '/hr/work-schedules': 'pages.hr.workSchedules.listTitle',
-  '/hr/work-schedules/new': 'pages.hr.workSchedules.new',
+  '/hr/work-schedules/new': 'pages.hr.workSchedules.listTitle',
   '/hr/public-holidays': 'pages.hr.publicHolidays.listTitle',
   '/hr/public-holidays/new': 'pages.hr.publicHolidays.new',
   '/hr/work-from-home': 'pages.hr.workFromHome.title',
@@ -229,7 +229,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/leave-policy': 'pages.hr.leavePolicy.listDescription',
   '/hr/leave-policy/new': 'hr.leavePolicy.formDescription',
   '/hr/work-schedules': 'pages.hr.workSchedules.listDescription',
-  '/hr/work-schedules/new': 'hr.workSchedule.formDescription',
+  '/hr/work-schedules/new': 'pages.hr.workSchedules.listDescription',
   '/hr/public-holidays': 'pages.hr.publicHolidays.listDescription',
   '/hr/public-holidays/new': 'hr.publicHoliday.formDescription',
   '/hr/work-from-home': 'pages.hr.workFromHome.description',
@@ -573,10 +573,11 @@ function resolveRouteMetaCore(
 
   if (pathname === '/hr/work-schedules/new') {
     return {
-      titleKey: 'pages.hr.workSchedules.new',
-      descriptionKey: 'hr.workSchedule.formDescription',
+      titleKey: 'pages.hr.workSchedules.listTitle',
+      descriptionKey: 'pages.hr.workSchedules.listDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
         {
           label: t('pages.hr.workSchedules.listTitle'),
           href: '/hr/work-schedules',
@@ -589,10 +590,11 @@ function resolveRouteMetaCore(
   if (pathname.match(/^\/hr\/work-schedules\/[^/]+\/edit$/)) {
     const id = pathname.split('/')[3];
     return {
-      titleKey: 'pages.hr.workSchedules.edit',
-      descriptionKey: 'hr.workSchedule.formDescription',
+      titleKey: 'pages.hr.workSchedules.listTitle',
+      descriptionKey: 'pages.hr.workSchedules.listDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
         {
           label: t('pages.hr.workSchedules.listTitle'),
           href: '/hr/work-schedules',
@@ -608,9 +610,11 @@ function resolveRouteMetaCore(
 
   if (pathname.match(/^\/hr\/work-schedules\/[^/]+$/)) {
     return {
-      titleKey: 'pages.hr.workSchedules.detail',
+      titleKey: 'pages.hr.workSchedules.listTitle',
+      descriptionKey: 'pages.hr.workSchedules.listDescription',
       breadcrumbs: [
         { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
         {
           label: t('pages.hr.workSchedules.listTitle'),
           href: '/hr/work-schedules',

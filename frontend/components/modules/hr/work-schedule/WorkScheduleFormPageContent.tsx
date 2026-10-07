@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Button, DatePicker, Spin } from 'antd';
 import { type Dayjs } from 'dayjs';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import WorkScheduleForm, {
   buildWorkSchedulePayload,
@@ -24,7 +26,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 const LIST_PATH = '/hr/work-schedules';
 
 /**
- * Create / edit work schedule — cancel + form.
+ * Create / edit work schedule — shell keeps list title/subtitle; page has hero banner.
  * On edit, asks whether to recalculate attendance from a chosen date.
  */
 export default function WorkScheduleFormPageContent({
@@ -40,6 +42,8 @@ export default function WorkScheduleFormPageContent({
   const createMutation = useCreateWorkSchedule();
   const updateMutation = useUpdateWorkSchedule(scheduleId ?? '');
   const saving = createMutation.isPending || updateMutation.isPending;
+  const backHref =
+    isEdit && scheduleId ? `${LIST_PATH}/${scheduleId}` : LIST_PATH;
 
   const [pendingValues, setPendingValues] =
     useState<WorkScheduleFormValues | null>(null);
@@ -88,7 +92,7 @@ export default function WorkScheduleFormPageContent({
         router.push(`${LIST_PATH}/${created.id}`);
       }
     } catch (error: unknown) {
-      notifyApiError(error, t('hr.workSchedule.saveFailed'), messageApi);
+      notifyApiError(error, t('hr.workSchedule.saveFailed'), messageApi, t);
     }
   }
 
@@ -104,7 +108,7 @@ export default function WorkScheduleFormPageContent({
 
   if (isEdit && scheduleQuery.isLoading && !scheduleQuery.data) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-form-page flex justify-center p-12">
+      <div className="flex min-h-[240px] items-center justify-center">
         <Spin />
       </div>
     );
@@ -112,7 +116,7 @@ export default function WorkScheduleFormPageContent({
 
   if (isEdit && scheduleQuery.isError) {
     return (
-      <div className="erp-pro-list-page erp-users-page erp-employee-form-page">
+      <div className="flex flex-col gap-5">
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -126,19 +130,32 @@ export default function WorkScheduleFormPageContent({
   }
 
   return (
-    <div className="erp-pro-list-page erp-users-page erp-employee-form-page flex flex-col gap-4">
-      <div className="flex shrink-0 items-center justify-end">
-        <Button
-          onClick={() =>
-            router.push(
-              isEdit && scheduleId ? `${LIST_PATH}/${scheduleId}` : LIST_PATH,
-            )
-          }
-          className="shrink-0"
-        >
-          {t('common.cancel')}
-        </Button>
-      </div>
+    <div className="flex flex-col gap-4">
+      <section className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-white px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)]">
+        <div className="min-w-0">
+          <Link
+            href={backHref}
+            className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 no-underline transition-colors hover:text-emerald-700"
+          >
+            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
+            {t('hr.workSchedule.backToList')}
+          </Link>
+          <h1 className="m-0 text-xl font-semibold tracking-tight text-slate-900">
+            {isEdit
+              ? t('pages.hr.workSchedules.edit')
+              : t('pages.hr.workSchedules.new')}
+          </h1>
+          <p className="mt-1 mb-0 max-w-3xl text-[13px] leading-snug text-slate-500">
+            {t('hr.workSchedule.formDescription')}
+          </p>
+        </div>
+        <div className="shrink-0">
+          <Button onClick={() => router.push(backHref)}>
+            {t('common.cancel')}
+          </Button>
+        </div>
+      </section>
+
       <WorkScheduleForm
         schedule={scheduleQuery.data}
         isSubmitting={saving}
@@ -169,15 +186,8 @@ export default function WorkScheduleFormPageContent({
           }
         }}
       >
-        <div style={{ marginTop: 12 }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: 6,
-              fontSize: 13,
-              color: 'var(--color-text-secondary)',
-            }}
-          >
+        <div className="mt-3">
+          <label className="mb-1.5 block text-[13px] text-slate-500">
             {t('hr.workSchedule.effectiveFrom')}
           </label>
           <DatePicker
