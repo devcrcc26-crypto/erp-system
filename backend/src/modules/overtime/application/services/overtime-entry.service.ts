@@ -3,11 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { LeaveRequestStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import {
+  addUtcDays,
   formatDateOnly,
   parseDateOnly,
   toUtcDateOnly,
@@ -16,9 +18,17 @@ import { PreviewOvertimeEntryDto } from '../dtos/overtime.dtos';
 import {
   buildOvertimeScheduleNote,
   calculateOvertimeHours,
+  overtimeEntrySpanMinutes,
+  totalOvertimeHours,
+  WITHIN_SCHEDULE_MESSAGE,
   type OvertimeDayContext,
   type OvertimeHoursBuckets,
 } from '../utils/overtime-hours.util';
+import {
+  buildAttendanceWarning,
+  collectLeaveExcludedWindows,
+  type WeekdayScheduleSlice,
+} from '../utils/overtime-entry-guards.util';
 
 export interface ClassifiedOvertimeEntry extends OvertimeHoursBuckets {
   isHoliday: boolean;
@@ -28,6 +38,7 @@ export interface ClassifiedOvertimeEntry extends OvertimeHoursBuckets {
   isHalfDay: boolean;
   scheduleNote: string | null;
   totalHours: number;
+  attendanceWarning: string | null;
 }
 
 /**
@@ -76,33 +87,81 @@ export class OvertimeEntryService {
       companyId,
       onDate,
     );
+    const isOvernight = Boolean(options?.isOvernight);
     const weekday = schedule.days.find(
       (row) => row.dayOfWeek === onDate.getUTCDay(),
     );
-    const isWorkingDay = Boolean(weekday?.isWorkingDay);
-    const isHalfDay = Boolean(weekday?.isWorkingDay && weekday.isHalfDay);
-
-    const context: OvertimeDayContext = {
+    const leaveWindowsStart = await this.resolveLeaveExcludedWindows(
+      employeeId,
+      companyId,
+      onDate,
+      weekday,
+    );
+    const context = this.buildDayContext(
+      weekday,
       isHoliday,
-      isWorkingDay,
-      isHalfDay,
-      morningStart: weekday?.morningStart ?? null,
-      morningEnd: weekday?.morningEnd ?? null,
-    };
+      leaveWindowsStart,
+    );
+
+    let nextDayContext: OvertimeDayContext | undefined;
+    if (isOvernight && this.crossesMidnight(startTime, endTime)) {
+      const nextDate = addUtcDays(onDate, 1);
+      const nextCalendar = await this.workScheduleService.isHolidayForEmployee(
+        companyId,
+        employee.nationality,
+        nextDate,
+      );
+      const nextSchedule = await this.workScheduleService.getActiveSchedule(
+        employeeId,
+        companyId,
+        nextDate,
+      );
+      const nextWeekday = nextSchedule.days.find(
+        (row) => row.dayOfWeek === nextDate.getUTCDay(),
+      );
+      const leaveWindowsNext = await this.resolveLeaveExcludedWindows(
+        employeeId,
+        companyId,
+        nextDate,
+        nextWeekday,
+      );
+      nextDayContext = this.buildDayContext(
+        nextWeekday,
+        nextCalendar.isHoliday,
+        leaveWindowsNext,
+      );
+    }
+
+    const attendanceLog = await this.findAttendanceDailyLog(
+      employeeId,
+      companyId,
+      onDate,
+    );
+    const attendanceWarning = buildAttendanceWarning(attendanceLog, {
+      startTime,
+      endTime,
+      isOvernight,
+    });
 
     const hours = calculateOvertimeHours(
       onDate,
       startTime,
       endTime,
       context,
-      Boolean(options?.isOvernight),
+      isOvernight,
+      nextDayContext,
     );
-    const totalHours = roundHours(
-      hours.regularHours +
-        hours.nightHours +
-        hours.weekendHours +
-        hours.holidayHours,
+    const totalHours = totalOvertimeHours(hours);
+    const spanMinutes = overtimeEntrySpanMinutes(
+      startTime,
+      endTime,
+      isOvernight,
     );
+
+    let scheduleNote = buildOvertimeScheduleNote(onDate, context);
+    if (totalHours === 0 && spanMinutes > 0) {
+      scheduleNote = WITHIN_SCHEDULE_MESSAGE;
+    }
 
     return {
       ...hours,
@@ -110,9 +169,10 @@ export class OvertimeEntryService {
       isHoliday,
       isCalendarHoliday,
       holidayName: isCalendarHoliday ? calendar.holidayName : null,
-      isWeekend: !isWorkingDay,
-      isHalfDay,
-      scheduleNote: buildOvertimeScheduleNote(onDate, context),
+      isWeekend: !context.isWorkingDay,
+      isHalfDay: context.isHalfDay,
+      scheduleNote,
+      attendanceWarning,
     };
   }
 
@@ -134,6 +194,7 @@ export class OvertimeEntryService {
     isWeekend: boolean;
     isHalfDay: boolean;
     scheduleNote: string | null;
+    attendanceWarning: string | null;
   }> {
     const employeeId = await this.resolvePreviewEmployee(
       dto.employeeId,
@@ -160,6 +221,7 @@ export class OvertimeEntryService {
       isWeekend: classified.isWeekend,
       isHalfDay: classified.isHalfDay,
       scheduleNote: classified.scheduleNote,
+      attendanceWarning: classified.attendanceWarning,
     };
   }
 
@@ -196,6 +258,95 @@ export class OvertimeEntryService {
     return [...flagged].sort();
   }
 
+  private buildDayContext(
+    weekday:
+      | {
+          isWorkingDay: boolean;
+          isHalfDay: boolean;
+          morningStart: string | null;
+          morningEnd: string | null;
+          afternoonStart: string | null;
+          afternoonEnd: string | null;
+        }
+      | undefined,
+    isHoliday: boolean,
+    leaveExcludedWindows: Array<{ start: string; end: string }> = [],
+  ): OvertimeDayContext {
+    const isWorkingDay = Boolean(weekday?.isWorkingDay);
+    const isHalfDay = Boolean(weekday?.isWorkingDay && weekday?.isHalfDay);
+    return {
+      isHoliday,
+      isWorkingDay,
+      isHalfDay,
+      morningStart: weekday?.morningStart ?? null,
+      morningEnd: weekday?.morningEnd ?? null,
+      afternoonStart:
+        isWorkingDay && !isHalfDay ? weekday?.afternoonStart ?? null : null,
+      afternoonEnd:
+        isWorkingDay && !isHalfDay ? weekday?.afternoonEnd ?? null : null,
+      excludedWindows:
+        leaveExcludedWindows.length > 0 ? leaveExcludedWindows : undefined,
+    };
+  }
+
+  private async resolveLeaveExcludedWindows(
+    employeeId: string,
+    companyId: string,
+    onDate: Date,
+    weekday: WeekdayScheduleSlice | undefined,
+  ): Promise<Array<{ start: string; end: string }>> {
+    const periods = await this.prisma.leaveRequestPeriod.findMany({
+      where: {
+        startDate: { lte: onDate },
+        endDate: { gte: onDate },
+        leaveRequest: {
+          companyId,
+          employeeId,
+          status: LeaveRequestStatus.APPROVED,
+          deletedAt: null,
+        },
+      },
+      select: { dayPortion: true },
+    });
+    return collectLeaveExcludedWindows(periods, weekday);
+  }
+
+  private async findAttendanceDailyLog(
+    employeeId: string,
+    companyId: string,
+    onDate: Date,
+  ): Promise<{
+    clockInLocal: string | null;
+    clockOutLocal: string | null;
+    correctedClockInLocal: string | null;
+    correctedClockOutLocal: string | null;
+  } | null> {
+    const month = onDate.getUTCMonth() + 1;
+    const year = onDate.getUTCFullYear();
+    const record = await this.prisma.attendanceRecord.findFirst({
+      where: { companyId, employeeId, month, year },
+      select: { id: true },
+    });
+    if (!record) {
+      return null;
+    }
+    return this.prisma.attendanceDailyLog.findFirst({
+      where: { attendanceRecordId: record.id, date: onDate },
+      select: {
+        clockInLocal: true,
+        clockOutLocal: true,
+        correctedClockInLocal: true,
+        correctedClockOutLocal: true,
+      },
+    });
+  }
+
+  private crossesMidnight(startTime: string, endTime: string): boolean {
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    return endH * 60 + endM <= startH * 60 + startM;
+  }
+
   private async resolvePreviewEmployee(
     requestedId: string,
     companyId: string,
@@ -226,6 +377,3 @@ export class OvertimeEntryService {
   }
 }
 
-function roundHours(value: number): number {
-  return Math.round(value * 100) / 100;
-}

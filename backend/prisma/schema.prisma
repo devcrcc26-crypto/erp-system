@@ -4066,6 +4066,7 @@ model OvertimeEntry {
   holidayHours    Decimal  @default(0) @map("holiday_hours") @db.Decimal(5, 2)
   totalHours      Decimal  @default(dbgenerated("(((regular_hours + night_hours) + weekend_hours) + holiday_hours)")) @map("total_hours") @db.Decimal(5, 2)
   taskDescription String   @map("task_description")
+  attendanceWarning String? @map("attendance_warning") @db.VarChar(500)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 

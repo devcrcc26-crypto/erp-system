@@ -1,6 +1,15 @@
 'use client';
 
-import { Checkbox, DatePicker, Form, Input, Spin, Tag, TimePicker } from 'antd';
+import {
+  Alert,
+  Checkbox,
+  DatePicker,
+  Form,
+  Input,
+  Spin,
+  Tag,
+  TimePicker,
+} from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -294,6 +303,14 @@ export default function OvertimeEntryForm({
                   emphasize
                 />
               </div>
+              {preview.attendanceWarning ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  className="!mt-3"
+                  message={preview.attendanceWarning}
+                />
+              ) : null}
               {preview.scheduleNote ? (
                 <p className="m-0 mt-3 text-[12px] text-[var(--color-text-secondary)]">
                   {preview.scheduleNote}

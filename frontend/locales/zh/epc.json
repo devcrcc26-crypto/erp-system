@@ -645,6 +645,7 @@
         "timeRange": "时间",
         "classificationPreview": "时长分类预览",
         "classificationPreviewHint": "保存时计算精确分类",
+        "attendanceFlag": "考勤核对",
         "rateRegular": "平时 × 1.5",
         "rateNight": "夜间 × 1.75",
         "rateWeekend": "周末 × 2.0",

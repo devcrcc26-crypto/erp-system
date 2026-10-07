@@ -3,13 +3,31 @@ import { BadRequestException } from '@nestjs/common';
 export const OVERNIGHT_REQUIRED_MESSAGE =
   'End time is before start time. If this entry crosses midnight, mark it as overnight.';
 
+export const WITHIN_SCHEDULE_MESSAGE =
+  'These hours are within your normal working hours.';
+
+export const OVERNIGHT_NEXT_DAY_CONTEXT_MESSAGE =
+  'Overnight entries that cross midnight require the next calendar day schedule context.';
+
 /**
- * Schedule-aware overtime hour splitter.
- * Priority per 15-minute block: Holiday > Weekend (non-working day) >
- * half-day overflow > Night (22:00–06:00) > Regular.
+ * Schedule-aware overtime hour splitter (15-minute blocks, Ethiopian local HH:mm).
  *
- * Night hours stay hardcoded. Weekend and holiday come from WorkScheduleDay
- * / PublicHoliday via OvertimeEntryService — never Sunday/Saturday literals.
+ * Full working day priority per block:
+ * 1. Public holiday → Holiday
+ * 2. Non-working day → Weekend
+ * 3. Inside morning, afternoon, or excluded windows → skip (not overtime)
+ * 4. Night (22:00–06:00) → Night
+ * 5. Else → Regular
+ *
+ * Half working day priority per block:
+ * 1. Holiday
+ * 2. Non-working day → Weekend
+ * 3. Inside morning window → skip
+ * 4. Night (22:00–06:00) before morningStart → Night
+ * 5. Outside morning (including evening/night after the half-day shift) → Weekend
+ *
+ * Overnight: each block uses the calendar day it falls on (start-day context, then
+ * nextDayContext for minutes on the following day).
  */
 
 export interface OvertimeDayContext {
@@ -18,6 +36,10 @@ export interface OvertimeDayContext {
   isHalfDay: boolean;
   morningStart: string | null;
   morningEnd: string | null;
+  afternoonStart: string | null;
+  afternoonEnd: string | null;
+  /** Optional extra excluded windows (e.g. half-day leave), minutes as HH:mm */
+  excludedWindows?: Array<{ start: string; end: string }>;
 }
 
 export interface OvertimeHoursBuckets {
@@ -28,6 +50,7 @@ export interface OvertimeHoursBuckets {
 }
 
 const BLOCK_MINUTES = 15;
+const MINUTES_PER_DAY = 24 * 60;
 const WEEKDAY_NAMES = [
   'Sunday',
   'Monday',
@@ -38,11 +61,14 @@ const WEEKDAY_NAMES = [
   'Saturday',
 ] as const;
 
+type OvertimeCategory = keyof OvertimeHoursBuckets;
+
 /**
  * Splits a time interval into overtime buckets using the employee's day context.
  * `date` is unused for classification (context already encodes holiday/weekend)
  * but kept so callers can pair the result with a calendar day.
  * An end time at or before the start time is only accepted when `isOvernight` is set.
+ * When the span crosses midnight, `nextDayContext` is required for blocks on the next day.
  */
 export function calculateOvertimeHours(
   date: Date,
@@ -50,60 +76,79 @@ export function calculateOvertimeHours(
   endTime: string,
   context: OvertimeDayContext,
   isOvernight = false,
+  nextDayContext?: OvertimeDayContext,
 ): OvertimeHoursBuckets {
   void date;
-  const [startH, startM] = startTime.split(':').map(Number);
-  const [endH, endM] = endTime.split(':').map(Number);
-
-  const startMinutes = startH * 60 + startM;
-  let endMinutes = endH * 60 + endM;
+  const startMinutes = parseTimeToMinutes(startTime);
+  let endMinutes = parseTimeToMinutes(endTime);
 
   if (endMinutes <= startMinutes) {
     if (!isOvernight) {
       throw new BadRequestException(OVERNIGHT_REQUIRED_MESSAGE);
     }
-    endMinutes += 24 * 60;
+    endMinutes += MINUTES_PER_DAY;
   }
 
-  let regularHours = 0;
-  let nightHours = 0;
-  let weekendHours = 0;
-  let holidayHours = 0;
-
-  const morningStartMinutes = parseHhMmToMinutes(context.morningStart);
-  const morningEndMinutes = parseHhMmToMinutes(context.morningEnd);
+  const startDayIndex = Math.floor(startMinutes / MINUTES_PER_DAY);
+  const buckets: Record<OvertimeCategory, number> = {
+    regularHours: 0,
+    nightHours: 0,
+    weekendHours: 0,
+    holidayHours: 0,
+  };
 
   for (let m = startMinutes; m < endMinutes; m += BLOCK_MINUTES) {
-    const blockHours = BLOCK_MINUTES / 60;
-    const minutesInDay = ((m % (24 * 60)) + 24 * 60) % (24 * 60);
-    const hour = minutesInDay / 60;
-    const isNightBlock = hour >= 22 || hour < 6;
-    const isHalfDayOverflow =
-      context.isWorkingDay &&
-      context.isHalfDay &&
-      isOutsideMorningWindow(
-        minutesInDay,
-        morningStartMinutes,
-        morningEndMinutes,
-      );
-
-    if (context.isHoliday) {
-      holidayHours += blockHours;
-    } else if (!context.isWorkingDay || isHalfDayOverflow) {
-      weekendHours += blockHours;
-    } else if (isNightBlock) {
-      nightHours += blockHours;
-    } else {
-      regularHours += blockHours;
+    const dayIndex = Math.floor(m / MINUTES_PER_DAY) - startDayIndex;
+    const blockContext = resolveBlockContext(
+      dayIndex,
+      context,
+      nextDayContext,
+      isOvernight,
+    );
+    const minutesInDay = ((m % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+    const category = classifyBlock(minutesInDay, blockContext);
+    if (category) {
+      buckets[category] += BLOCK_MINUTES / 60;
     }
   }
 
   return {
-    regularHours: roundHours(regularHours),
-    nightHours: roundHours(nightHours),
-    weekendHours: roundHours(weekendHours),
-    holidayHours: roundHours(holidayHours),
+    regularHours: roundHours(buckets.regularHours),
+    nightHours: roundHours(buckets.nightHours),
+    weekendHours: roundHours(buckets.weekendHours),
+    holidayHours: roundHours(buckets.holidayHours),
   };
+}
+
+/**
+ * Sum of all overtime bucket hours.
+ */
+export function totalOvertimeHours(buckets: OvertimeHoursBuckets): number {
+  return roundHours(
+    buckets.regularHours +
+      buckets.nightHours +
+      buckets.weekendHours +
+      buckets.holidayHours,
+  );
+}
+
+/**
+ * Positive span length in minutes for a start/end pair (includes overnight extension).
+ */
+export function overtimeEntrySpanMinutes(
+  startTime: string,
+  endTime: string,
+  isOvernight: boolean,
+): number {
+  const startMinutes = parseTimeToMinutes(startTime);
+  let endMinutes = parseTimeToMinutes(endTime);
+  if (endMinutes <= startMinutes) {
+    if (!isOvernight) {
+      return 0;
+    }
+    endMinutes += MINUTES_PER_DAY;
+  }
+  return endMinutes - startMinutes;
 }
 
 /**
@@ -121,9 +166,126 @@ export function buildOvertimeScheduleNote(
     return `${weekday} is a non-working day — hours classified as weekend`;
   }
   if (context.isHalfDay) {
-    return `${weekday} half day — afternoon classified as weekend`;
+    return `${weekday} half day — time outside the morning shift classified as weekend`;
   }
   return null;
+}
+
+function resolveBlockContext(
+  dayIndex: number,
+  context: OvertimeDayContext,
+  nextDayContext: OvertimeDayContext | undefined,
+  isOvernight: boolean,
+): OvertimeDayContext {
+  if (dayIndex <= 0) {
+    return context;
+  }
+  if (dayIndex === 1 && nextDayContext) {
+    return nextDayContext;
+  }
+  if (isOvernight && dayIndex >= 1 && !nextDayContext) {
+    throw new BadRequestException(OVERNIGHT_NEXT_DAY_CONTEXT_MESSAGE);
+  }
+  throw new BadRequestException(OVERNIGHT_NEXT_DAY_CONTEXT_MESSAGE);
+}
+
+function classifyBlock(
+  minutesInDay: number,
+  context: OvertimeDayContext,
+): OvertimeCategory | null {
+  if (context.isHoliday) {
+    return 'holidayHours';
+  }
+  if (!context.isWorkingDay) {
+    return 'weekendHours';
+  }
+
+  const morningStart = parseHhMmToMinutes(context.morningStart);
+  const morningEnd = parseHhMmToMinutes(context.morningEnd);
+
+  if (context.isHalfDay) {
+    if (isInsideWindow(minutesInDay, morningStart, morningEnd)) {
+      return null;
+    }
+    if (isHalfDayPreMorningNight(minutesInDay, morningStart)) {
+      return 'nightHours';
+    }
+    return 'weekendHours';
+  }
+
+  if (isInsideScheduledWorkingTime(minutesInDay, context)) {
+    return null;
+  }
+
+  if (isNightBlock(minutesInDay)) {
+    return 'nightHours';
+  }
+
+  return 'regularHours';
+}
+
+function isInsideScheduledWorkingTime(
+  minutesInDay: number,
+  context: OvertimeDayContext,
+): boolean {
+  const morningStart = parseHhMmToMinutes(context.morningStart);
+  const morningEnd = parseHhMmToMinutes(context.morningEnd);
+  const afternoonStart = parseHhMmToMinutes(context.afternoonStart);
+  const afternoonEnd = parseHhMmToMinutes(context.afternoonEnd);
+
+  if (isInsideWindow(minutesInDay, morningStart, morningEnd)) {
+    return true;
+  }
+  if (isInsideWindow(minutesInDay, afternoonStart, afternoonEnd)) {
+    return true;
+  }
+  if (context.excludedWindows?.length) {
+    for (const window of context.excludedWindows) {
+      const start = parseHhMmToMinutes(window.start);
+      const end = parseHhMmToMinutes(window.end);
+      if (isInsideWindow(minutesInDay, start, end)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isNightBlock(minutesInDay: number): boolean {
+  const hour = minutesInDay / 60;
+  return hour >= 22 || hour < 6;
+}
+
+function isHalfDayPreMorningNight(
+  minutesInDay: number,
+  morningStart: number | null,
+): boolean {
+  if (!isNightBlock(minutesInDay)) {
+    return false;
+  }
+  if (morningStart == null) {
+    return true;
+  }
+  return minutesInDay < morningStart;
+}
+
+function isInsideWindow(
+  minutesInDay: number,
+  start: number | null,
+  end: number | null,
+): boolean {
+  if (start == null || end == null) {
+    return false;
+  }
+  return minutesInDay >= start && minutesInDay < end;
+}
+
+function parseTimeToMinutes(value: string): number {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) {
+    throw new BadRequestException(`Invalid time: ${value}`);
+  }
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
 function parseHhMmToMinutes(value: string | null): number | null {
@@ -135,17 +297,6 @@ function parseHhMmToMinutes(value: string | null): number | null {
     return null;
   }
   return Number(match[1]) * 60 + Number(match[2]);
-}
-
-function isOutsideMorningWindow(
-  minutesInDay: number,
-  morningStart: number | null,
-  morningEnd: number | null,
-): boolean {
-  if (morningStart == null || morningEnd == null) {
-    return true;
-  }
-  return minutesInDay < morningStart || minutesInDay >= morningEnd;
 }
 
 function roundHours(value: number): number {

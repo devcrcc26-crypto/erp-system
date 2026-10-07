@@ -59,6 +59,7 @@ export interface OvertimeEntry {
   holidayHours: number;
   totalHours: number;
   taskDescription: string;
+  attendanceWarning?: string | null;
   holidayName?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -132,4 +133,5 @@ export interface PreviewOvertimeEntryResult {
   isWeekend: boolean;
   isHalfDay: boolean;
   scheduleNote: string | null;
+  attendanceWarning: string | null;
 }

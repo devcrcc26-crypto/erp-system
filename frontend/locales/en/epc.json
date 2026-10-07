@@ -645,6 +645,7 @@
         "timeRange": "Time",
         "classificationPreview": "Hour classification preview",
         "classificationPreviewHint": "Exact classification calculated on save",
+        "attendanceFlag": "Attendance check",
         "rateRegular": "Regular × 1.5",
         "rateNight": "Night × 1.75",
         "rateWeekend": "Weekend × 2.0",

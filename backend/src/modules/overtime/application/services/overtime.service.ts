@@ -13,6 +13,7 @@ import {
   ApprovalRequestStatus,
   FolderContextType,
   OvertimeSheetStatus,
+  PayrollRunStatus,
   Prisma,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -52,7 +53,15 @@ import {
   OpenOvertimeSheetDto,
   UpsertOvertimeEntryDto,
 } from '../dtos/overtime.dtos';
-import { OvertimeEntryService } from './overtime-entry.service';
+import {
+  overtimeEntrySpanMinutes,
+  WITHIN_SCHEDULE_MESSAGE,
+} from '../utils/overtime-hours.util';
+import { PAYROLL_LOCKED_MESSAGE } from '../utils/overtime-entry-guards.util';
+import {
+  OvertimeEntryService,
+  type ClassifiedOvertimeEntry,
+} from './overtime-entry.service';
 
 type UploadedFile = {
   originalname: string;
@@ -378,6 +387,12 @@ export class OvertimeService
         isOvernight: dto.isOvernight,
       },
     );
+    this.assertClassifiedHasOvertimeHours(
+      classified,
+      dto.startTime,
+      dto.endTime,
+      Boolean(dto.isOvernight),
+    );
 
     await this.assertNoOverlap(
       sheetId,
@@ -403,6 +418,7 @@ export class OvertimeService
             weekendHours: new Prisma.Decimal(classified.weekendHours),
             holidayHours: new Prisma.Decimal(classified.holidayHours),
             taskDescription: dto.taskDescription.trim(),
+            attendanceWarning: classified.attendanceWarning,
           },
         });
         await this.recalculateSheetTotals(sheetId, tx);
@@ -448,6 +464,12 @@ export class OvertimeService
       dto.endTime,
       { isOvernight: dto.isOvernight },
     );
+    this.assertClassifiedHasOvertimeHours(
+      classified,
+      dto.startTime,
+      dto.endTime,
+      Boolean(dto.isOvernight),
+    );
 
     await this.assertNoOverlap(sheetId, date, startTime, endTime, entryId);
 
@@ -466,6 +488,7 @@ export class OvertimeService
             weekendHours: new Prisma.Decimal(classified.weekendHours),
             holidayHours: new Prisma.Decimal(classified.holidayHours),
             taskDescription: dto.taskDescription.trim(),
+            attendanceWarning: classified.attendanceWarning,
           },
         });
         await this.recalculateSheetTotals(sheetId, tx);
@@ -1040,7 +1063,41 @@ export class OvertimeService
         'Entries can only be changed on draft or returned sheets',
       );
     }
+    await this.assertPayrollNotLocked(companyId, sheet.month, sheet.year);
     return sheet;
+  }
+
+  private async assertPayrollNotLocked(
+    companyId: string,
+    month: number,
+    year: number,
+  ): Promise<void> {
+    const lockedRun = await this.prisma.payrollRun.findFirst({
+      where: activeOnly({
+        companyId,
+        month,
+        year,
+        status: { in: [PayrollRunStatus.GM_APPROVED, PayrollRunStatus.PAID] },
+      }),
+      select: { id: true },
+    });
+    if (lockedRun) {
+      throw new BadRequestException(PAYROLL_LOCKED_MESSAGE);
+    }
+  }
+
+  private assertClassifiedHasOvertimeHours(
+    classified: ClassifiedOvertimeEntry,
+    startTime: string,
+    endTime: string,
+    isOvernight: boolean,
+  ): void {
+    if (
+      classified.totalHours === 0 &&
+      overtimeEntrySpanMinutes(startTime, endTime, isOvernight) > 0
+    ) {
+      throw new BadRequestException(WITHIN_SCHEDULE_MESSAGE);
+    }
   }
 
   private assertEntryInSheetMonth(

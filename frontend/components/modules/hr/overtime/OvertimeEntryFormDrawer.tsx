@@ -134,7 +134,15 @@ export default function OvertimeEntryFormDrawer({
     };
     // previewMutation identity is unstable; depend on the watched fields only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, employeeId, watchedDate, watchedStart, watchedEnd, previewBlocked]);
+  }, [
+    open,
+    employeeId,
+    watchedDate,
+    watchedStart,
+    watchedEnd,
+    watchedOvernight,
+    previewBlocked,
+  ]);
 
   async function handleSubmit(values: OvertimeEntryFormValues): Promise<void> {
     const payload: UpsertOvertimeEntryPayload = {

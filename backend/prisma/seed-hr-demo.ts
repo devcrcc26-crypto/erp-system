@@ -679,6 +679,8 @@ async function main(): Promise<void> {
           isHalfDay: false,
           morningStart: '08:30',
           morningEnd: '12:30',
+          afternoonStart: '13:30',
+          afternoonEnd: '17:30',
         },
         false,
       );

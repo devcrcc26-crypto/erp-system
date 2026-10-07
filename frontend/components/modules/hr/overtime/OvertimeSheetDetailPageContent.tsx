@@ -392,21 +392,29 @@ export default function OvertimeSheetDetailPageContent({
         title: t('hr.labels.taskDescription'),
         dataIndex: 'taskDescription',
         key: 'taskDescription',
-        render: (text: string) => (
-          <span
-            style={{
-              fontSize: 12,
-              color: 'var(--color-text-secondary)',
-              display: 'block',
-              maxWidth: 200,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            title={text}
-          >
-            {text || '—'}
-          </span>
+        render: (text: string, row: OvertimeEntry) => (
+          <div className="flex max-w-[240px] flex-col gap-1">
+            <span
+              style={{
+                fontSize: 12,
+                color: 'var(--color-text-secondary)',
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              title={text}
+            >
+              {text || '—'}
+            </span>
+            {row.attendanceWarning ? (
+              <Tooltip title={row.attendanceWarning}>
+                <Tag color="gold" style={{ margin: 0, width: 'fit-content' }}>
+                  {t('pages.hr.overtime.attendanceFlag')}
+                </Tag>
+              </Tooltip>
+            ) : null}
+          </div>
         ),
       },
       ...(canEdit
