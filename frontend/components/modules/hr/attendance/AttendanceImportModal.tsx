@@ -9,7 +9,7 @@ import {
   Button,
   Checkbox,
   Collapse,
-  Modal,
+  Drawer,
   Popconfirm,
   Select,
   Spin,
@@ -48,6 +48,12 @@ import {
   useAttendanceImportPreview,
 } from '@/lib/query/attendance';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
+import {
+  DRAWER_WIDTH_SUBMITTAL,
+  detailDrawerStyles,
+  responsiveDetailDrawerClassName,
+} from '@/lib/theme/layout';
+import { CheckCircle2, FileSpreadsheet, ListChecks } from 'lucide-react';
 
 export interface AttendanceImportModalProps {
   open: boolean;
@@ -811,7 +817,7 @@ export default function AttendanceImportModal({
                 pagination={false}
                 scroll={{ y: 280, x: 720 }}
               />
-              <p className="m-0 mt-3 text-[12px] text-[#6B7280]">
+              <p className="m-0 mt-3 text-[12px] text-slate-600">
                 {t('pages.hr.attendance.importModal.rejectedNote')}
               </p>
             </div>
@@ -849,63 +855,121 @@ export default function AttendanceImportModal({
     </Button>
   );
 
+  const stepLabels = [
+    t('pages.hr.attendance.importModal.stepUpload'),
+    t('pages.hr.attendance.importModal.stepReview'),
+    t('pages.hr.attendance.importModal.stepDone'),
+  ];
+  const headerSubtitle = t('pages.hr.attendance.importModal.stepOf', {
+    current: step + 1,
+    label:
+      step === 1 && preview
+        ? `${stepLabels[1]} · ${preview.fileName}`
+        : stepLabels[step],
+  });
+  const headerIcon =
+    step === 2 ? (
+      <CheckCircle2 size={19} strokeWidth={2} />
+    ) : step === 1 ? (
+      <ListChecks size={19} strokeWidth={2} />
+    ) : (
+      <FileSpreadsheet size={19} strokeWidth={2} />
+    );
+  const busy = uploading || confirming;
+
+  const footer = (
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      {step === 0 ? (
+        <Button onClick={handleClose} disabled={uploading}>
+          {t('common.cancel')}
+        </Button>
+      ) : null}
+      {step === 1 && preview ? (
+        <>
+          <Button onClick={handleBackToUpload} disabled={confirming}>
+            {t('common.back')}
+          </Button>
+          {preview.alreadyImported ? (
+            <Popconfirm
+              title={t('pages.hr.attendance.importModal.replaceTitle')}
+              description={t(
+                'pages.hr.attendance.importModal.replaceDescription',
+                { month: monthName, year: preview.year },
+              )}
+              okText={t('pages.hr.attendance.importModal.replaceConfirm')}
+              cancelText={t('common.cancel')}
+              onConfirm={() => void runConfirm(true)}
+              disabled={confirming}
+            >
+              {confirmButton}
+            </Popconfirm>
+          ) : (
+            confirmButton
+          )}
+        </>
+      ) : null}
+      {step === 2 && importResult ? (
+        <>
+          <Button onClick={handleImportAnother}>
+            {t('pages.hr.attendance.importModal.importAnother')}
+          </Button>
+          <Button type="primary" onClick={handleDoneClose}>
+            {t('common.close')}
+          </Button>
+        </>
+      ) : null}
+    </div>
+  );
+
   return (
-    <Modal
+    <Drawer
       open={open}
-      onCancel={handleClose}
-      title={null}
-      width={980}
-      footer={null}
-      centered
-      mask={{ closable: false }}
-      destroyOnHidden
-      rootClassName="erp-user-import-modal erp-hr-import-v2 erp-att-import-v2"
-      className="erp-user-import-modal erp-hr-import-v2 erp-att-import-v2"
-      classNames={{
-        content: 'erp-user-import-modal-content',
-        body: 'erp-user-import-modal-body',
-      }}
+      placement="right"
+      size={DRAWER_WIDTH_SUBMITTAL}
+      rootClassName="erp-att-import-v2"
+      className={responsiveDetailDrawerClassName}
       styles={{
-        content: {
-          borderRadius: 16,
-          overflow: 'hidden',
-          padding: 0,
+        ...detailDrawerStyles,
+        header: {
+          ...(detailDrawerStyles as { header?: React.CSSProperties }).header,
+          height: 'auto',
+          minHeight: 68,
+          padding: '12px 20px',
         },
       }}
+      onClose={handleClose}
+      maskClosable={!busy}
+      closable={!busy}
+      destroyOnHidden
+      footer={footer}
+      title={
+        <div className="flex min-w-0 items-center gap-3 py-1">
+          <span
+            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600/10 text-emerald-800"
+            aria-hidden
+          >
+            {headerIcon}
+          </span>
+          <div className="min-w-0">
+            <div className="text-base leading-snug font-semibold text-slate-900">
+              {t('pages.hr.attendance.importModal.title')}
+            </div>
+            <p className="m-0 mt-0.5 truncate text-[13px] leading-snug font-normal text-slate-600">
+              {headerSubtitle}
+            </p>
+          </div>
+        </div>
+      }
     >
-      <div className="erp-att-import-header">
-        <span className="erp-att-import-header-icon" aria-hidden>
-          <InboxOutlined />
-        </span>
-        <div className="min-w-0">
-          <h3 className="erp-att-import-title">
-            {t('pages.hr.attendance.importModal.title')}
-          </h3>
-          <p className="erp-att-import-desc">
-            {t('pages.hr.attendance.importModal.dropHint')}
-          </p>
-        </div>
-      </div>
-
-      <div className="erp-att-import-body">
-        <div className="erp-att-import-steps">
-          <Steps
-            size="small"
-            current={step}
-            items={[
-              { title: t('pages.hr.attendance.importModal.stepUpload') },
-              { title: t('pages.hr.attendance.importModal.stepReview') },
-              { title: t('pages.hr.attendance.importModal.stepDone') },
-            ]}
-          />
-        </div>
+      <div className="flex flex-col gap-5">
+        <Steps size="small" current={step} items={stepLabels.map((title) => ({ title }))} />
 
         {step === 0 ? (
           <div className="relative">
             {uploading ? (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-[14px] bg-white/80">
                 <Spin />
-                <span className="text-[13px] text-[#6B7280]">
+                <span className="text-[13px] text-slate-600">
                   {t('pages.hr.attendance.importModal.previewing')}
                 </span>
               </div>
@@ -924,11 +988,11 @@ export default function AttendanceImportModal({
                 {t('pages.hr.attendance.importModal.dropHint')}
               </p>
             </Upload.Dragger>
-            <p className="m-0 mt-3 text-center text-[12px] text-[#6B7280]">
+            <p className="m-0 mt-3 text-center text-[12px] text-slate-600">
               {t('pages.hr.attendance.importModal.formatNote')}
             </p>
             {errorMessage ? (
-              <p className="m-0 mt-3 text-[13px] text-[#D32F2F]">
+              <p className="m-0 mt-3 text-[13px] text-red-700">
                 {errorMessage}
               </p>
             ) : null}
@@ -970,7 +1034,7 @@ export default function AttendanceImportModal({
             ) : null}
 
             <div className="flex flex-wrap items-center gap-2">
-              <p className="m-0 text-[14px] font-semibold text-[#0f172a]">
+              <p className="m-0 text-[14px] font-semibold text-slate-900">
                 {t('pages.hr.attendance.importModal.periodHeading', {
                   month: monthName,
                   year: preview.year,
@@ -986,7 +1050,7 @@ export default function AttendanceImportModal({
               items={collapseItems}
             />
 
-            <p className="m-0 text-[12px] text-[#6B7280]">
+            <p className="m-0 text-[12px] text-slate-600">
               {t('pages.hr.attendance.importModal.summaryFooter', {
                 importCount,
                 skippedCount: skippedReviewCount,
@@ -995,31 +1059,9 @@ export default function AttendanceImportModal({
             </p>
 
             {errorMessage ? (
-              <p className="m-0 text-[13px] text-[#D32F2F]">{errorMessage}</p>
+              <p className="m-0 text-[13px] text-red-700">{errorMessage}</p>
             ) : null}
 
-            <div className="erp-att-import-footer">
-              <Button onClick={handleBackToUpload} disabled={confirming}>
-                {t('common.back')}
-              </Button>
-              {preview.alreadyImported ? (
-                <Popconfirm
-                  title={t('pages.hr.attendance.importModal.replaceTitle')}
-                  description={t(
-                    'pages.hr.attendance.importModal.replaceDescription',
-                    { month: monthName, year: preview.year },
-                  )}
-                  okText={t('pages.hr.attendance.importModal.replaceConfirm')}
-                  cancelText={t('common.cancel')}
-                  onConfirm={() => void runConfirm(true)}
-                  disabled={confirming}
-                >
-                  {confirmButton}
-                </Popconfirm>
-              ) : (
-                confirmButton
-              )}
-            </div>
           </div>
         ) : null}
 
@@ -1070,29 +1112,21 @@ export default function AttendanceImportModal({
                   })}
                 </Button>
                 {rejectedExpanded ? (
-                  <ul className="m-0 mt-2 list-disc pl-5 text-[13px] text-[#0f172a]">
+                  <ul className="m-0 mt-2 list-disc pl-5 text-[13px] text-slate-900">
                     {importResult.rejectedNames.map((name) => (
                       <li key={name}>{name}</li>
                     ))}
                   </ul>
                 ) : null}
-                <p className="m-0 mt-2 text-[12px] text-[#6B7280]">
+                <p className="m-0 mt-2 text-[12px] text-slate-600">
                   {t('pages.hr.attendance.importModal.rejectedFollowUp')}
                 </p>
               </div>
             ) : null}
 
-            <div className="erp-att-import-footer">
-              <Button onClick={handleImportAnother}>
-                {t('pages.hr.attendance.importModal.importAnother')}
-              </Button>
-              <Button type="primary" onClick={handleDoneClose}>
-                {t('common.close')}
-              </Button>
-            </div>
           </div>
         ) : null}
       </div>
-    </Modal>
+    </Drawer>
   );
 }

@@ -891,7 +891,8 @@
           "doneRejected": "{{count}} not matched",
           "rejectedListToggle": "Employees not imported ({{count}})",
           "rejectedFollowUp": "Set their employee ID in the Deli e+ app and re-import next month, or match them manually on the next import.",
-          "importAnother": "Import Another Month"
+          "importAnother": "Import Another Month",
+          "stepOf": "Step {{current}} of 3 · {{label}}"
         }
       },
       "workFromHome": {

@@ -2,6 +2,10 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import type { ResolvedApprovalTier } from '../../../approvals/application/services/approval-resolver.service';
+import {
+  AUTO_APPROVE_FALLBACK_TIER_LABEL,
+  getAutoApproveModeFromEnv,
+} from '../../../../shared/config/auto-approve.mode';
 
 interface ChainTierDraft {
   order: number;
@@ -134,6 +138,43 @@ export class HrApprovalChainService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * In AUTO_APPROVE_ALL local mode, empty or failed chains become a single
+   * "Test auto-approval" tier so submissions are never blocked.
+   */
+  private async withAutoApproveFallback(
+    build: () => Promise<ResolvedApprovalTier[]>,
+  ): Promise<ResolvedApprovalTier[]> {
+    const mode = getAutoApproveModeFromEnv();
+    if (!mode.active) {
+      return build();
+    }
+    try {
+      const tiers = await build();
+      if (tiers.length === 0) {
+        return [this.buildTestAutoApproveTier(mode.actorId)];
+      }
+      return tiers;
+    } catch (error: unknown) {
+      this.logger.warn(
+        `AUTO_APPROVE_ALL: chain resolution failed, using fallback tier: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return [this.buildTestAutoApproveTier(mode.actorId)];
+    }
+  }
+
+  private buildTestAutoApproveTier(actorId: string): ResolvedApprovalTier {
+    return {
+      tierOrder: 1,
+      label: AUTO_APPROVE_FALLBACK_TIER_LABEL,
+      approverId: actorId,
+      resolver: 'AUTO_APPROVE_FALLBACK',
+    };
+  }
+
+
+  /**
    * Approval chain for purchase requests.
    * Employee → Discipline Lead → HR Officer → GM when total ETB > 10,000.
    * HR Officer / above skip Discipline Lead (and HR self-approval).
@@ -144,6 +185,9 @@ export class HrApprovalChainService {
     totalEtb: number,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildPurchaseApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const primaryRole =
       (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
 
@@ -228,6 +272,8 @@ export class HrApprovalChainService {
       approverId: tier.approverId,
       resolver: tier.resolver,
     }));
+  
+    });
   }
 
   /**
@@ -240,6 +286,9 @@ export class HrApprovalChainService {
     companyId: string,
     options?: ExitPermitChainOptions,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildExitPermitApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const submittedOnBehalf = options?.submittedOnBehalf === true;
 
     if (submittedOnBehalf) {
@@ -295,6 +344,8 @@ export class HrApprovalChainService {
     }
 
     return this.finalizeTiers(tiers);
+  
+    });
   }
 
   /**
@@ -310,6 +361,9 @@ export class HrApprovalChainService {
     employeeId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildDisciplineLeadSingleTierChain
+    return this.withAutoApproveFallback(async () => {
+
     const primaryRole =
       (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
 
@@ -448,6 +502,8 @@ export class HrApprovalChainService {
         resolver: 'ROLE:HR Manager',
       },
     ]);
+  
+    });
   }
 
   /**
@@ -461,6 +517,9 @@ export class HrApprovalChainService {
     employeeId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildSiteAssignmentApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const primaryRole =
       (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
 
@@ -491,6 +550,8 @@ export class HrApprovalChainService {
         resolver: 'DISCIPLINE_LEAD',
       },
     ]);
+  
+    });
   }
 
   /**
@@ -502,6 +563,9 @@ export class HrApprovalChainService {
     employeeId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildPerDiemSettlementApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const primaryRole =
       (await this.getPrimaryRoleName(employeeId, companyId)) ?? '';
 
@@ -598,6 +662,8 @@ export class HrApprovalChainService {
     throw new BadRequestException(
       'No HR Manager, Local HR Manager, or General Manager available to approve this settlement',
     );
+  
+    });
   }
 
   /**
@@ -769,6 +835,9 @@ export class HrApprovalChainService {
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildMaterialRequisitionApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const primaryRole =
       (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
 
@@ -853,6 +922,8 @@ export class HrApprovalChainService {
       approverId: tier.approverId,
       resolver: tier.resolver,
     }));
+  
+    });
   }
 
   /**
@@ -864,6 +935,9 @@ export class HrApprovalChainService {
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildConsumablesApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const submitterRole =
       (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
 
@@ -888,6 +962,8 @@ export class HrApprovalChainService {
         resolver: 'ROLE:HR Officer',
       },
     ];
+  
+    });
   }
 
   /**
@@ -899,6 +975,9 @@ export class HrApprovalChainService {
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildVehicleApplicationApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const submitterRole =
       (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
 
@@ -923,6 +1002,8 @@ export class HrApprovalChainService {
         resolver: 'ROLE:HR Officer',
       },
     ];
+  
+    });
   }
 
   /**
@@ -934,6 +1015,9 @@ export class HrApprovalChainService {
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildVehicleRefuelingApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const submitterRole =
       (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
 
@@ -958,6 +1042,8 @@ export class HrApprovalChainService {
         resolver: 'ROLE:HR Officer',
       },
     ];
+  
+    });
   }
 
   /**
@@ -971,6 +1057,9 @@ export class HrApprovalChainService {
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildOfficialSealApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const submitterRole =
       (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
 
@@ -1019,12 +1108,17 @@ export class HrApprovalChainService {
       resolver: tier.resolver,
     }));
 
+  
+    });
   }
 
   async buildProjectSealApprovalChain(
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildProjectSealApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const submitterRole =
       (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
 
@@ -1073,6 +1167,8 @@ export class HrApprovalChainService {
       resolver: tier.resolver,
     }));
 
+  
+    });
   }
   /**
    * Field movement / early departure: same chain as leave (Discipline Lead → HR).
@@ -1081,7 +1177,12 @@ export class HrApprovalChainService {
     userId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildFieldMovementApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     return this.buildOrgApprovalChain(userId, companyId, false);
+  
+    });
   }
 
   /**
@@ -1099,6 +1200,9 @@ export class HrApprovalChainService {
     companyId: string,
     _includeGeneralManager: boolean,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildOrgApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     void _includeGeneralManager;
 
     const primaryRole =
@@ -1226,6 +1330,8 @@ export class HrApprovalChainService {
     });
 
     return this.finalizeTiers(tiers);
+  
+    });
   }
 
   /**
@@ -1481,6 +1587,9 @@ export class HrApprovalChainService {
     submitterId: string,
     companyId: string,
   ): Promise<ResolvedApprovalTier[]> {
+    // AUTO_APPROVE_WRAP:buildFlightApprovalChain
+    return this.withAutoApproveFallback(async () => {
+
     const primaryRole =
       (await this.getPrimaryRoleName(submitterId, companyId)) ?? '';
 
@@ -1604,6 +1713,8 @@ export class HrApprovalChainService {
     });
 
     return this.finalizeTiers(tiers);
+  
+    });
   }
 
   /**

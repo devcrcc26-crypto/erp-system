@@ -30,14 +30,29 @@ export interface AttendanceMatchResult {
 type EmployeeMatchCandidate = {
   id: string;
   firstName: string;
+  middleName: string | null;
   lastName: string;
   employeeId: string | null;
   fullName: string;
 };
 
 /**
+ * Builds "First Middle Last", omitting blank middle names.
+ */
+function formatEmployeeFullName(employee: {
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+}): string {
+  return [employee.firstName, employee.middleName, employee.lastName]
+    .map((part) => part?.trim() ?? '')
+    .filter((part) => part.length > 0)
+    .join(' ');
+}
+
+/**
  * Matches Deli attendance rows to ERP employees by employee ID first,
- * then by fuzzy full-name search via fuse.js.
+ * then by fuzzy full-name search via fuse.js (first + middle + last).
  */
 @Injectable()
 export class AttendanceMatchingService {
@@ -56,6 +71,7 @@ export class AttendanceMatchingService {
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         lastName: true,
         employeeId: true,
       },
@@ -63,7 +79,7 @@ export class AttendanceMatchingService {
 
     const nameList: EmployeeMatchCandidate[] = employees.map((employee) => ({
       ...employee,
-      fullName: `${employee.firstName} ${employee.lastName}`,
+      fullName: formatEmployeeFullName(employee),
     }));
 
     const fuseByName = new Fuse(nameList, {
@@ -81,6 +97,7 @@ export class AttendanceMatchingService {
     employees: Array<{
       id: string;
       firstName: string;
+      middleName: string | null;
       lastName: string;
       employeeId: string | null;
     }>,
@@ -100,7 +117,7 @@ export class AttendanceMatchingService {
           attendanceName: row.attendanceName,
           attendanceId: row.attendanceId,
           matchedEmployeeId: found.id,
-          matchedEmployeeName: `${found.firstName} ${found.lastName}`,
+          matchedEmployeeName: formatEmployeeFullName(found),
           matchedEmployeeErpId: found.employeeId,
           confidence: 'ID_MATCH',
           score: 100,

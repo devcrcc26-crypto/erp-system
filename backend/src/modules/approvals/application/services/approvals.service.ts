@@ -50,10 +50,17 @@ import {
 import type { ApprovalFinalDecision } from '../ports/approval-decision.listener';
 import { resolveCategoryPermissionModule } from '../utils/approval-category-permission.util';
 import { isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
+import {
+  AUTO_APPROVE_COMMENT,
+  AUTO_APPROVE_FALLBACK_TIER_LABEL,
+  getAutoApproveModeFromEnv,
+  isAutoApproveExcludedCategory,
+} from '../../../../shared/config/auto-approve.mode';
 import { ApprovalDecisionRegistry } from './approval-decision-registry.service';
 import {
   ApprovalResolverService,
   type MatchedApprovalRule,
+  type ResolvedApprovalTier,
 } from './approval-resolver.service';
 
 const APPROVAL_RETURNED_EVENT = 'approval.returned';
@@ -325,9 +332,9 @@ export class ApprovalsService {
       }
     }
 
-    const matched =
+    let matched: MatchedApprovalRule =
       options?.resolvedTiers ??
-      (await this.resolver.resolveRule(
+      (await this.resolveRuleWithAutoApproveFallback(
         companyId,
         userId,
         category.approvalRules,
@@ -335,7 +342,15 @@ export class ApprovalsService {
       ));
 
     if (!matched.tiers || matched.tiers.length === 0) {
-      throw new BadRequestException('Approval chain has no tiers');
+      const mode = getAutoApproveModeFromEnv();
+      if (mode.active && !isAutoApproveExcludedCategory(category.code)) {
+        matched = {
+          ruleName: AUTO_APPROVE_FALLBACK_TIER_LABEL,
+          tiers: [this.buildAutoApproveFallbackTier(mode.actorId)],
+        };
+      } else {
+        throw new BadRequestException('Approval chain has no tiers');
+      }
     }
 
     const requestNumber = await this.nextRequestNumber(category.numberPrefix);
@@ -408,6 +423,8 @@ export class ApprovalsService {
         },
       });
     }
+
+    this.enqueueAutoApproveAll(created.id, companyId, category.code);
 
     return detailed ?? created;
   }
@@ -872,11 +889,13 @@ export class ApprovalsService {
     tierId: string,
     userId: string,
     note?: string,
+    options?: { bypassApproverCheck?: boolean },
   ): Promise<unknown> {
     const { tier, request } = await this.loadTierForAction(
       requestId,
       tierId,
       userId,
+      options,
     );
     this.assertPendingWorkflow(request.status);
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
@@ -1628,6 +1647,14 @@ export class ApprovalsService {
       },
     });
 
+    const category = await this.prisma.approvalCategory.findFirst({
+      where: { id: request.categoryId },
+      select: { code: true },
+    });
+    if (category) {
+      this.enqueueAutoApproveAll(request.id, companyId, category.code);
+    }
+
     return this.getRequest(request.id, companyId, userId);
   }
 
@@ -1953,6 +1980,7 @@ export class ApprovalsService {
     requestId: string,
     tierId: string,
     userId: string,
+    options?: { bypassApproverCheck?: boolean },
   ): Promise<{
     tier: {
       id: string;
@@ -2004,7 +2032,10 @@ export class ApprovalsService {
       throw new NotFoundException('Approval request not found');
     }
 
-    if (tier.approverId !== userId) {
+    if (
+      tier.approverId !== userId &&
+      options?.bypassApproverCheck !== true
+    ) {
       throw new ForbiddenException(
         'Only the assigned approver can act on this tier',
       );
@@ -2188,5 +2219,250 @@ export class ApprovalsService {
         error instanceof Error ? error.message : String(error),
       );
     }
+  }
+
+  /**
+   * Resolves category rules; on auto-approve mode, empty/failed chains become
+   * a single "Test auto-approval" tier.
+   */
+  private async resolveRuleWithAutoApproveFallback(
+    companyId: string,
+    userId: string,
+    approvalRules: unknown,
+    formData: Record<string, unknown>,
+  ): Promise<MatchedApprovalRule> {
+    const mode = getAutoApproveModeFromEnv();
+    try {
+      return await this.resolver.resolveRule(
+        companyId,
+        userId,
+        approvalRules,
+        formData,
+      );
+    } catch (error: unknown) {
+      if (!mode.active) {
+        throw error;
+      }
+      this.logger.warn(
+        `AUTO_APPROVE_ALL: rule resolution failed, using fallback tier: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return {
+        ruleName: AUTO_APPROVE_FALLBACK_TIER_LABEL,
+        tiers: [this.buildAutoApproveFallbackTier(mode.actorId)],
+      };
+    }
+  }
+
+  private buildAutoApproveFallbackTier(actorId: string): ResolvedApprovalTier {
+    return {
+      tierOrder: 1,
+      label: AUTO_APPROVE_FALLBACK_TIER_LABEL,
+      approverId: actorId,
+      resolver: 'AUTO_APPROVE_FALLBACK',
+    };
+  }
+
+  /**
+   * Schedules full-chain auto-approval after the submit/resubmit call stack
+   * (and module linking) finishes. Failures leave the request pending.
+   */
+  private enqueueAutoApproveAll(
+    requestId: string,
+    companyId: string,
+    categoryCode: string,
+  ): void {
+    const mode = getAutoApproveModeFromEnv();
+    if (!mode.active || isAutoApproveExcludedCategory(categoryCode)) {
+      return;
+    }
+
+    setImmediate(() => {
+      void this.runAutoApproveAll(requestId, companyId, mode.actorId).catch(
+        (error: unknown) => {
+          this.logger.error(
+            `AUTO_APPROVE_ALL failed for request ${requestId}`,
+            error instanceof Error ? error.stack : String(error),
+          );
+        },
+      );
+    });
+  }
+
+  /**
+   * Approves every pending tier in order via approveTier (same path as UI).
+   */
+  private async runAutoApproveAll(
+    requestId: string,
+    companyId: string,
+    actorId: string,
+  ): Promise<void> {
+    await this.waitForAutoApproveReady(requestId, companyId);
+
+    const maxSteps = 20;
+    for (let step = 0; step < maxSteps; step += 1) {
+      const request = await this.prisma.approvalRequest.findFirst({
+        where: activeOnly({ id: requestId, companyId }),
+        select: {
+          id: true,
+          status: true,
+          currentTier: true,
+          tiers: {
+            orderBy: { tierOrder: 'asc' },
+            select: {
+              id: true,
+              tierOrder: true,
+              decision: true,
+            },
+          },
+        },
+      });
+
+      if (!request) {
+        return;
+      }
+
+      if (
+        request.status === ApprovalRequestStatus.APPROVED ||
+        request.status === ApprovalRequestStatus.REJECTED ||
+        request.status === ApprovalRequestStatus.CANCELLED ||
+        request.status === ApprovalRequestStatus.RETURNED
+      ) {
+        return;
+      }
+
+      const current = request.tiers.find(
+        (tier) =>
+          tier.tierOrder === request.currentTier &&
+          (tier.decision === ApprovalTierDecision.PENDING ||
+            tier.decision === ApprovalTierDecision.CONDITIONALLY_APPROVED),
+      );
+      if (!current) {
+        return;
+      }
+
+      try {
+        await this.approveTier(
+          requestId,
+          current.id,
+          actorId,
+          AUTO_APPROVE_COMMENT,
+          { bypassApproverCheck: true },
+        );
+      } catch (error: unknown) {
+        this.logger.error(
+          `AUTO_APPROVE_ALL stopped at tier ${current.tierOrder} on ${requestId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        return;
+      }
+    }
+  }
+
+  /**
+   * Waits briefly for domain modules to link their records after submitRequest
+   * returns (leave/overtime create the row after the approval request).
+   */
+  private async waitForAutoApproveReady(
+    requestId: string,
+    companyId: string,
+  ): Promise<void> {
+    const maxAttempts = 40;
+    const delayMs = 50;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const request = await this.prisma.approvalRequest.findFirst({
+        where: activeOnly({ id: requestId, companyId }),
+        select: {
+          status: true,
+          leaveRequest: { select: { id: true } },
+          overtimeSheet: { select: { id: true } },
+          flightApplication: { select: { id: true } },
+          businessTrip: { select: { id: true } },
+          expenseClaim: { select: { id: true } },
+          perDiemRequest: { select: { id: true } },
+          perDiemSettlement: { select: { id: true } },
+          purchaseRequest: { select: { id: true } },
+          materialRequisition: { select: { id: true } },
+          consumablesRequisition: { select: { id: true } },
+          vehicleApplication: { select: { id: true } },
+          vehicleRefueling: { select: { id: true } },
+          officialSeal: { select: { id: true } },
+          projectSeal: { select: { id: true } },
+          exitPermit: { select: { id: true } },
+          siteAssignment: { select: { id: true } },
+          fieldMovementLog: { select: { id: true } },
+          category: { select: { code: true } },
+        },
+      });
+
+      if (!request) {
+        return;
+      }
+
+      if (
+        request.status === ApprovalRequestStatus.CANCELLED ||
+        request.status === ApprovalRequestStatus.APPROVED
+      ) {
+        return;
+      }
+
+      const linked =
+        request.leaveRequest ||
+        request.overtimeSheet ||
+        request.flightApplication ||
+        request.businessTrip ||
+        request.expenseClaim ||
+        request.perDiemRequest ||
+        request.perDiemSettlement ||
+        request.purchaseRequest ||
+        request.materialRequisition ||
+        request.consumablesRequisition ||
+        request.vehicleApplication ||
+        request.vehicleRefueling ||
+        request.officialSeal ||
+        request.projectSeal ||
+        request.exitPermit ||
+        request.siteAssignment ||
+        request.fieldMovementLog;
+
+      if (linked) {
+        return;
+      }
+
+      // Generic / rule-only categories never get a module link.
+      if (attempt >= 4 && !this.categoryExpectsModuleLink(request.category.code)) {
+        return;
+      }
+
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, delayMs);
+      });
+    }
+  }
+
+  private categoryExpectsModuleLink(categoryCode: string): boolean {
+    return [
+      'LEAVE_REQUEST',
+      'OVERTIME_APPLICATION',
+      'FLIGHT_APPLICATION',
+      'BUSINESS_TRIP',
+      'EXPENSE_CLAIM',
+      'PER_DIEM',
+      'PER_DIEM_SETTLEMENT',
+      'PURCHASE_REQUEST',
+      'MATERIAL_REQUISITION',
+      'CONSUMABLES_REQUISITION',
+      'VEHICLE_APPLICATION',
+      'VEHICLE_REFUELING',
+      'OFFICIAL_SEAL_USAGE',
+      'PROJECT_SEAL_USAGE',
+      'EXIT_PERMIT',
+      'SITE_ASSIGNMENT',
+      'FIELD_MOVEMENT_LOG',
+      'WORK_FROM_HOME',
+    ].includes(categoryCode);
   }
 }

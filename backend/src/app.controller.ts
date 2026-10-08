@@ -2,21 +2,17 @@ import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from './shared/decorators/public.decorator';
+import {
+  getAutoApproveModeFromEnv,
+  resolveDatabaseHostFromUrl,
+} from './shared/config/auto-approve.mode';
 import { PrismaService } from './shared/prisma/prisma.service';
 
 /**
  * Extracts the DB hostname from DATABASE_URL (never credentials).
  */
 function resolveDatabaseHost(): string {
-  const raw = process.env.DATABASE_URL;
-  if (!raw) {
-    return 'unknown';
-  }
-  try {
-    return new URL(raw).hostname || 'unknown';
-  } catch {
-    return 'unknown';
-  }
+  return resolveDatabaseHostFromUrl(process.env.DATABASE_URL);
 }
 
 @ApiTags('Health')
@@ -40,6 +36,7 @@ export class AppController {
     database: string;
     databaseHost: string;
     emailDisabled: boolean;
+    autoApproveAll: boolean;
   }> {
     await this.prisma.$queryRaw`SELECT 1`;
 
@@ -49,6 +46,7 @@ export class AppController {
       databaseHost: resolveDatabaseHost(),
       emailDisabled:
         this.configService.get<boolean>('EMAIL_DISABLED') === true,
+      autoApproveAll: getAutoApproveModeFromEnv().active,
     };
   }
 }

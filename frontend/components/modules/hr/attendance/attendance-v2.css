@@ -611,58 +611,7 @@
   }
 }
 
-/* ── Attendance import modal ── */
-
-.erp-att-import-v2.erp-user-import-modal .ant-modal-content {
-  border-radius: 16px !important;
-  overflow: hidden;
-  box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 16px 40px rgba(16, 24, 40, 0.12) !important;
-}
-
-.erp-att-import-v2 .erp-att-import-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 22px 22px 14px;
-}
-
-.erp-att-import-v2 .erp-att-import-header-icon {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: rgba(29, 158, 117, 0.12);
-  color: #0f6e56;
-  font-size: 22px;
-}
-
-.erp-att-import-v2 .erp-att-import-title {
-  margin: 0;
-  color: #0f172a;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.erp-att-import-v2 .erp-att-import-desc {
-  margin: 4px 0 0;
-  color: #4b5563;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.erp-att-import-v2 .erp-att-import-body {
-  padding: 0 22px 22px;
-}
-
-.erp-att-import-v2 .erp-att-import-steps {
-  margin-bottom: 16px;
-}
+/* ── Attendance import drawer ── */
 
 .erp-att-import-v2 .erp-att-import-dropzone.ant-upload-wrapper .ant-upload-drag {
   border: 1px dashed #d1d5db !important;
@@ -677,16 +626,6 @@
   background: #f0faf6 !important;
 }
 
-.erp-att-import-v2 .erp-att-import-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 4px;
-  padding-top: 16px;
-  border-top: 1px solid #eef1f4;
-}
-
-.erp-att-import-v2 .erp-att-import-footer .ant-btn,
 .erp-att-import-v2 .ant-btn {
   border-radius: 10px;
 }

@@ -884,7 +884,8 @@
           "doneRejected": "未匹配 {{count}} 条",
           "rejectedListToggle": "未导入员工（{{count}}）",
           "rejectedFollowUp": "请在得力 e+ 中设置其工号后下月再导入，或在下次导入时手动匹配。",
-          "importAnother": "导入其他月份"
+          "importAnother": "导入其他月份",
+          "stepOf": "第 {{current}} 步，共 3 步 · {{label}}"
         }
       },
       "fieldMovementLogs": {

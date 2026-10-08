@@ -12,6 +12,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 // AppModule is the root module of the application, this is entry point for the application
 import { AppModule } from './app.module';
+import { getAutoApproveModeFromEnv } from './shared/config/auto-approve.mode';
 
 // Async function that starts the application
 
@@ -67,6 +68,19 @@ async function bootstrap(): Promise<void> {
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
+
+  const autoApprove = getAutoApproveModeFromEnv();
+  if (autoApprove.ignoredNonLocal) {
+    Logger.error(
+      'AUTO_APPROVE_ALL ignored: not a local database.',
+      'Bootstrap',
+    );
+  } else if (autoApprove.active) {
+    Logger.warn(
+      '⚠ AUTO-APPROVE MODE: all approval requests are approved automatically',
+      'Bootstrap',
+    );
+  }
 
   await app.listen(port, '0.0.0.0');
   Logger.log(`Backend running on http://localhost:${port}/${apiPrefix}`, 'Bootstrap');
