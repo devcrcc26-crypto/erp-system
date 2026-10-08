@@ -18,6 +18,7 @@ export interface EmployeeDeductionProfile {
   id: string;
   departmentId: string | null;
   nationality: string | null;
+  employeeType?: string | null;
 }
 
 interface LoadedDeductionData {
@@ -180,11 +181,14 @@ function wfhAppliesToEmployee(
   if (dateToYyyyMmDd(row.date) !== dateKey) {
     return false;
   }
+  if (row.employeeIds.includes(employee.id)) {
+    return true;
+  }
   if (row.scope === 'ALL') {
     return true;
   }
   if (row.scope === 'EMPLOYEES') {
-    return row.employeeIds.includes(employee.id);
+    return false;
   }
   if (row.scope === 'DEPARTMENTS') {
     return (
@@ -222,6 +226,7 @@ export function buildDayDeductionContext(
     isOnApprovedLeave: (date) => data.leaveDateKeys.has(dateToYyyyMmDd(date)),
     fieldMovementCoverage: (date) =>
       data.fieldMovementByDate.get(dateToYyyyMmDd(date)) ?? 'NONE',
+    isFreelancerEmployee: () => employee.employeeType === 'FREELANCER',
   };
 }
 

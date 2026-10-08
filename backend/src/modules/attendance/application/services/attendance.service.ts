@@ -20,6 +20,8 @@ import {
   FieldMovementReason,
   FieldMovementStatus,
   Prisma,
+  SiteAssignmentStatus,
+  WorkFromHomeScope,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -100,6 +102,8 @@ export interface AttendanceMissingEmployee {
   name: string;
   employeeId: string | null;
   departmentName: string | null;
+  employeeType: string | null;
+  isFreelancer: boolean;
 }
 
 export interface AttendancePreviewResult {
@@ -357,6 +361,7 @@ export class AttendanceService
         middleName: true,
         lastName: true,
         employeeId: true,
+        employeeType: true,
         department: { select: { name: true } },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
@@ -372,6 +377,8 @@ export class AttendanceService
           .join(' '),
         employeeId: employee.employeeId,
         departmentName: employee.department?.name ?? null,
+        employeeType: employee.employeeType,
+        isFreelancer: employee.employeeType === 'FREELANCER',
       }));
 
     const previewToken = `attendance:preview:${companyId}:${userId}:${Date.now()}`;
@@ -816,6 +823,73 @@ export class AttendanceService
       } else {
         stillRejected.push(row);
       }
+    }
+
+    const missingById = new Map(
+      (cached.missingFromAttendance ?? []).map((row) => [row.id, row]),
+    );
+    const missingActions = dto.missingEmployeeActions ?? [];
+    const seenMissingActionIds = new Set<string>();
+    for (const action of missingActions) {
+      if (seenMissingActionIds.has(action.employeeId)) {
+        throw new BadRequestException(
+          'Each missing employee can only have one presence action',
+        );
+      }
+      seenMissingActionIds.add(action.employeeId);
+      const missing = missingById.get(action.employeeId);
+      if (!missing) {
+        throw new BadRequestException(
+          'Presence action refers to an employee who is not in the missing list',
+        );
+      }
+      if (missing.isFreelancer) {
+        throw new BadRequestException(
+          'Freelancers are auto-marked present and do not need site/WFH actions',
+        );
+      }
+      if (action.action === 'SITE' && !action.siteName?.trim()) {
+        throw new BadRequestException(
+          'Site name is required for site assignment presence',
+        );
+      }
+    }
+
+    await this.applyMissingEmployeePresenceActions({
+      actions: missingActions,
+      companyId,
+      userId,
+      month,
+      year,
+    });
+
+    const syntheticIds = new Set<string>();
+    for (const missing of missingById.values()) {
+      if (missing.isFreelancer) {
+        syntheticIds.add(missing.id);
+      }
+    }
+    for (const action of missingActions) {
+      syntheticIds.add(action.employeeId);
+    }
+
+    for (const employeeId of syntheticIds) {
+      if (takenEmployeeIds.has(employeeId)) {
+        continue;
+      }
+      const missing = missingById.get(employeeId);
+      claimEmployee(employeeId);
+      rowsToImport.push({
+        attendanceName: missing?.name ?? 'System employee',
+        attendanceId: missing?.employeeId ?? '-',
+        matchedEmployeeId: employeeId,
+        matchedEmployeeName: missing?.name ?? null,
+        matchedEmployeeErpId: missing?.employeeId ?? null,
+        confidence: 'MANUAL',
+        score: 100,
+        data: { payableHours: 0, dailyData: [] },
+      });
+      manualAssignedCount += 1;
     }
 
     const confirmedReviewCount = [...confirmedIndices].filter(
@@ -2727,7 +2801,12 @@ export class AttendanceService
 
     const employee = await this.prisma.user.findFirst({
       where: { id: employeeId, companyId, deletedAt: null },
-      select: { id: true, departmentId: true, nationality: true },
+      select: {
+        id: true,
+        departmentId: true,
+        nationality: true,
+        employeeType: true,
+      },
     });
     if (!employee) {
       return;
@@ -3304,6 +3383,124 @@ export class AttendanceService
       updated += 1;
     }
     return { updated };
+  }
+
+  /**
+   * Creates approved site assignments and/or WFH coverage for the import month
+   * for employees missing from the attendance file.
+   */
+  private async applyMissingEmployeePresenceActions(input: {
+    actions: Array<{
+      employeeId: string;
+      action: 'SITE' | 'WFH';
+      siteName?: string;
+    }>;
+    companyId: string;
+    userId: string;
+    month: number;
+    year: number;
+  }): Promise<void> {
+    if (input.actions.length === 0) {
+      return;
+    }
+
+    const monthStart = new Date(Date.UTC(input.year, input.month - 1, 1));
+    const monthEnd = new Date(Date.UTC(input.year, input.month, 0));
+    const now = new Date();
+
+    const siteActions = input.actions.filter((a) => a.action === 'SITE');
+    const wfhEmployeeIds = [
+      ...new Set(
+        input.actions
+          .filter((a) => a.action === 'WFH')
+          .map((a) => a.employeeId),
+      ),
+    ];
+
+    for (const action of siteActions) {
+      const siteName = action.siteName?.trim() ?? '';
+      const overlapping = await this.prisma.siteAssignment.findFirst({
+        where: {
+          companyId: input.companyId,
+          employeeId: action.employeeId,
+          status: SiteAssignmentStatus.APPROVED,
+          deletedAt: null,
+          startDate: { lte: monthEnd },
+          endDate: { gte: monthStart },
+        },
+        select: { id: true },
+      });
+      if (overlapping) {
+        continue;
+      }
+
+      const count = await this.prisma.siteAssignment.count({
+        where: { companyId: input.companyId },
+      });
+      await this.prisma.siteAssignment.create({
+        data: {
+          id: randomUUID(),
+          companyId: input.companyId,
+          requestNumber: `SA-${String(count + 1).padStart(4, '0')}`,
+          employeeId: action.employeeId,
+          siteName,
+          startDate: monthStart,
+          endDate: monthEnd,
+          reason: 'Created during attendance import',
+          status: SiteAssignmentStatus.APPROVED,
+          submittedAt: now,
+          completedAt: now,
+          createdBy: input.userId,
+          updatedBy: input.userId,
+        },
+      });
+    }
+
+    if (wfhEmployeeIds.length === 0) {
+      return;
+    }
+
+    const cursor = new Date(monthStart);
+    while (cursor.getTime() <= monthEnd.getTime()) {
+      if (cursor.getUTCDay() !== 0) {
+        const existing = await this.prisma.workFromHomeDay.findFirst({
+          where: {
+            companyId: input.companyId,
+            date: new Date(cursor),
+            deletedAt: null,
+          },
+        });
+
+        if (!existing) {
+          await this.prisma.workFromHomeDay.create({
+            data: {
+              id: randomUUID(),
+              companyId: input.companyId,
+              date: new Date(cursor),
+              reason: 'Attendance import — work from home',
+              scope: WorkFromHomeScope.EMPLOYEES,
+              employeeIds: wfhEmployeeIds,
+              createdBy: input.userId,
+              updatedBy: input.userId,
+            },
+          });
+        } else if (existing.scope === WorkFromHomeScope.ALL) {
+          // Already company-wide for this date.
+        } else {
+          const merged = [
+            ...new Set([...existing.employeeIds, ...wfhEmployeeIds]),
+          ];
+          await this.prisma.workFromHomeDay.update({
+            where: { id: existing.id },
+            data: {
+              employeeIds: merged,
+              updatedBy: input.userId,
+            },
+          });
+        }
+      }
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
   }
 }
 

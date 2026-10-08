@@ -41,6 +41,27 @@ export class ManualAssignmentDto {
   employeeId!: string;
 }
 
+export class MissingEmployeePresenceDto {
+  @ApiProperty({ description: 'ERP employee missing from the attendance file' })
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({
+    description: 'Presence to apply for the import month',
+    enum: ['SITE', 'WFH'],
+  })
+  @IsIn(['SITE', 'WFH'])
+  action!: 'SITE' | 'WFH';
+
+  @ApiPropertyOptional({
+    description: 'Required when action is SITE',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  siteName?: string;
+}
+
 export class ConfirmAttendanceImportDto {
   @ApiProperty()
   @IsString()
@@ -67,6 +88,17 @@ export class ConfirmAttendanceImportDto {
   @ValidateNested({ each: true })
   @Type(() => ManualAssignmentDto)
   manualAssignments?: ManualAssignmentDto[];
+
+  @ApiPropertyOptional({
+    type: [MissingEmployeePresenceDto],
+    description:
+      'Site assignment or work-from-home for employees missing from the file',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MissingEmployeePresenceDto)
+  missingEmployeeActions?: MissingEmployeePresenceDto[];
 }
 
 export class ListAttendanceDto {

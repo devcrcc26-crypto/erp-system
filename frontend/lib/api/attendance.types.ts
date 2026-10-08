@@ -203,6 +203,8 @@ export interface AttendanceMissingEmployee {
   name: string;
   employeeId: string | null;
   departmentName: string | null;
+  employeeType: string | null;
+  isFreelancer: boolean;
 }
 
 export interface AttendancePreviewResult {
@@ -236,11 +238,18 @@ export interface ManualAssignmentDto {
   employeeId: string;
 }
 
+export interface MissingEmployeePresenceDto {
+  employeeId: string;
+  action: 'SITE' | 'WFH';
+  siteName?: string;
+}
+
 export interface ConfirmAttendanceImportDto {
   previewToken: string;
   overwrite: boolean;
   confirmedReviewIndices?: number[];
   manualAssignments?: ManualAssignmentDto[];
+  missingEmployeeActions?: MissingEmployeePresenceDto[];
 }
 
 export interface AttendanceEmployeeSearchResult {

@@ -10,8 +10,10 @@ import {
   Checkbox,
   Collapse,
   Drawer,
+  Input,
   Popconfirm,
   Select,
+  Space,
   Spin,
   Steps,
   Table,
@@ -44,6 +46,7 @@ import type {
   AttendancePreviewRow,
   ManualAssignmentDto,
   MatchConfidence,
+  MissingEmployeePresenceDto,
 } from '@/lib/api/attendance.types';
 import {
   useAttendanceImportConfirm,
@@ -69,6 +72,11 @@ type MatchedRow = AttendancePreviewRow & { matchedIndex: number };
 type ReviewRow = AttendancePreviewRow & { reviewIndex: number };
 type RejectedRow = AttendancePreviewRow & { rejectedIndex: number };
 type MissingRow = AttendanceMissingEmployee;
+type MissingPresenceAction = 'NONE' | 'SITE' | 'WFH';
+type MissingPresenceState = {
+  action: MissingPresenceAction;
+  siteName: string;
+};
 
 type EditingCell =
   | { bucket: 'review'; index: number }
@@ -142,6 +150,10 @@ export default function AttendanceImportModal({
   const [rejectedAssignments, setRejectedAssignments] = useState<
     Record<number, string>
   >({});
+  /** missing employee id → site/WFH presence for the import month */
+  const [missingPresence, setMissingPresence] = useState<
+    Record<string, MissingPresenceState>
+  >({});
   const [employeeLabels, setEmployeeLabels] = useState<
     Record<string, EmployeeLabel>
   >({});
@@ -166,6 +178,7 @@ export default function AttendanceImportModal({
     setReviewSelections({});
     setReviewOverrides({});
     setRejectedAssignments({});
+    setMissingPresence({});
     setEmployeeLabels({});
     setEditingCell(null);
     setEmployeeSearchResults([]);
@@ -436,11 +449,33 @@ export default function AttendanceImportModal({
         })),
       ];
 
+      const missingEmployeeActions: MissingEmployeePresenceDto[] = [];
+      for (const [employeeId, state] of Object.entries(missingPresence)) {
+        if (state.action === 'NONE') {
+          continue;
+        }
+        if (state.action === 'SITE' && !state.siteName.trim()) {
+          setErrorMessage(
+            t('pages.hr.attendance.importModal.missingSiteNamePlaceholder'),
+          );
+          setConfirming(false);
+          return;
+        }
+        missingEmployeeActions.push({
+          employeeId,
+          action: state.action,
+          ...(state.action === 'SITE'
+            ? { siteName: state.siteName.trim() }
+            : {}),
+        });
+      }
+
       const result = await confirmMutation.mutateAsync({
         previewToken: preview.previewToken,
         overwrite,
         confirmedReviewIndices,
         manualAssignments,
+        missingEmployeeActions,
       });
       setImportResult(result);
       setStep(2);
@@ -461,6 +496,7 @@ export default function AttendanceImportModal({
     setReviewSelections({});
     setReviewOverrides({});
     setRejectedAssignments({});
+    setMissingPresence({});
     setEmployeeLabels({});
     setEditingCell(null);
     setEmployeeSearchResults([]);
@@ -652,6 +688,75 @@ export default function AttendanceImportModal({
       key: 'departmentName',
       ellipsis: true,
       render: (value: string | null) => value ?? '—',
+    },
+    {
+      title: t('pages.hr.attendance.importModal.colPresence'),
+      key: 'presence',
+      width: 280,
+      render: (_: unknown, row: MissingRow) => {
+        if (row.isFreelancer) {
+          return (
+            <Tag color="blue">
+              {t('pages.hr.attendance.importModal.missingFreelancerTag')}
+            </Tag>
+          );
+        }
+        const state = missingPresence[row.id] ?? {
+          action: 'NONE' as MissingPresenceAction,
+          siteName: '',
+        };
+        return (
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+            <Select
+              size="small"
+              style={{ width: '100%' }}
+              value={state.action}
+              options={[
+                {
+                  value: 'NONE',
+                  label: t('pages.hr.attendance.importModal.missingActionNone'),
+                },
+                {
+                  value: 'SITE',
+                  label: t('pages.hr.attendance.importModal.missingActionSite'),
+                },
+                {
+                  value: 'WFH',
+                  label: t('pages.hr.attendance.importModal.missingActionWfh'),
+                },
+              ]}
+              onChange={(action: MissingPresenceAction) => {
+                setMissingPresence((prev) => ({
+                  ...prev,
+                  [row.id]: {
+                    action,
+                    siteName: prev[row.id]?.siteName ?? '',
+                  },
+                }));
+              }}
+            />
+            {state.action === 'SITE' ? (
+              <Input
+                size="small"
+                placeholder={t(
+                  'pages.hr.attendance.importModal.missingSiteNamePlaceholder',
+                )}
+                value={state.siteName}
+                onChange={(event) => {
+                  const siteName = event.target.value;
+                  setMissingPresence((prev) => ({
+                    ...prev,
+                    [row.id]: {
+                      action: 'SITE',
+                      siteName,
+                    },
+                  }));
+                }}
+              />
+            ) : null}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -881,7 +986,7 @@ export default function AttendanceImportModal({
                 columns={missingColumns}
                 dataSource={missingRows}
                 pagination={false}
-                scroll={{ y: 220 }}
+                scroll={{ y: 220, x: 780 }}
               />
               <p className="m-0 mt-3 text-[12px] text-slate-600">
                 {t('pages.hr.attendance.importModal.missingNote')}
