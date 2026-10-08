@@ -6348,33 +6348,6 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Attendance daily logs drawer — keep close at top-right with tall header */
-.erp-attendance-daily-drawer .ant-drawer-header {
-  position: relative;
-  align-items: flex-start;
-}
-
-.erp-attendance-daily-drawer .ant-drawer-header-title {
-  align-items: flex-start;
-  flex: 1;
-  min-width: 0;
-}
-
-.erp-attendance-daily-drawer .ant-drawer-close {
-  position: absolute;
-  top: 16px;
-  inset-inline-end: 16px;
-  z-index: 1;
-  width: 32px;
-  height: 32px;
-  margin: 0;
-  border-radius: 8px;
-}
-
-.erp-attendance-daily-drawer .ant-drawer-close:hover {
-  background: var(--color-surface-secondary);
-}
-
 /* Attendance module */
 .erp-attendance-page .erp-users-stat-bar {
   grid-template-columns: repeat(4, 1fr);

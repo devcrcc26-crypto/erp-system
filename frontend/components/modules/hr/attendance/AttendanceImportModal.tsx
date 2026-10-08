@@ -55,6 +55,7 @@ import {
   useAttendanceImportPreview,
 } from '@/lib/query/attendance';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
+import { formatOrdinal } from '@/lib/utils/ordinal';
 import {
   DRAWER_WIDTH_SUBMITTAL,
   detailDrawerStyles,
@@ -413,7 +414,17 @@ export default function AttendanceImportModal({
       setReviewSelections(initial);
       setReviewOverrides({});
       setRejectedAssignments({});
-      setMissingResolutions({});
+      // Still not enrolled from an earlier month → pre-select Needs enrolment.
+      setMissingResolutions(
+        Object.fromEntries(
+          result.missingFromAttendance
+            .filter((row) => row.suggestedResolution === 'NEEDS_ENROLMENT')
+            .map((row) => [
+              row.id,
+              { resolution: 'NEEDS_ENROLMENT' as MissingResolution, note: '' },
+            ]),
+        ),
+      );
       setIgnoredReasons({});
       setIgnoreReasonDrafts({});
       setEmployeeLabels({});
@@ -730,7 +741,19 @@ export default function AttendanceImportModal({
       title: t('pages.hr.attendance.importModal.colErpName'),
       dataIndex: 'name',
       key: 'name',
-      ellipsis: true,
+      render: (name: string, row: MissingRow) => (
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <span className="text-[13px] font-medium text-slate-900">{name}</span>
+          {row.notEnrolledMonth ? (
+            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200 ring-inset">
+              {t('pages.hr.attendance.importModal.notEnrolledMonth', {
+                n: row.notEnrolledMonth,
+                ordinal: formatOrdinal(row.notEnrolledMonth),
+              })}
+            </span>
+          ) : null}
+        </div>
+      ),
     },
     {
       title: t('pages.hr.attendance.importModal.colEmployeeId'),

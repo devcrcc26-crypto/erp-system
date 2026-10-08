@@ -23,6 +23,7 @@ export interface EmployeeDeductionProfile {
 
 interface LoadedDeductionData {
   holidays: Array<{
+    name: string;
     date: Date;
     isRecurring: boolean;
     appliesToNationality: string;
@@ -63,6 +64,7 @@ export async function loadDeductionDataForMonth(
       deletedAt: null,
     },
     select: {
+      name: true,
       date: true,
       isRecurring: true,
       appliesToNationality: true,
@@ -200,6 +202,26 @@ function wfhAppliesToEmployee(
 }
 
 /**
+ * Holiday that applies to this employee on the given calendar day, if any.
+ */
+export function matchedPublicHolidayForEmployee(
+  employee: EmployeeDeductionProfile,
+  data: LoadedDeductionData,
+  date: Date,
+): { name: string; date: Date; isRecurring: boolean; appliesToNationality: string } | null {
+  return (
+    data.holidays.find(
+      (holiday) =>
+        holidayFallsOnDate(holiday.date, holiday.isRecurring, date) &&
+        holidayAppliesToNationality(
+          holiday.appliesToNationality as 'ALL' | 'ETHIOPIAN' | 'CHINESE',
+          employee.nationality as 'ETHIOPIAN' | 'CHINESE' | null,
+        ),
+    ) ?? null
+  );
+}
+
+/**
  * Builds dayDeduction context from preloaded month data.
  */
 export function buildDayDeductionContext(
@@ -209,14 +231,7 @@ export function buildDayDeductionContext(
   return {
     isSunday: (date) => date.getUTCDay() === 0,
     isPublicHoliday: (date) =>
-      data.holidays.some(
-        (holiday) =>
-          holidayFallsOnDate(holiday.date, holiday.isRecurring, date) &&
-          holidayAppliesToNationality(
-            holiday.appliesToNationality as 'ALL' | 'ETHIOPIAN' | 'CHINESE',
-            employee.nationality as 'ETHIOPIAN' | 'CHINESE' | null,
-          ),
-      ),
+      matchedPublicHolidayForEmployee(employee, data, date) != null,
     isWorkFromHome: (date) => {
       const key = dateToYyyyMmDd(date);
       return data.wfhDays.some((row) => wfhAppliesToEmployee(row, employee, key));

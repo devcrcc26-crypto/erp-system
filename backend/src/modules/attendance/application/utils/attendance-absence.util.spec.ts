@@ -1,18 +1,8 @@
-import {
-  summarizeAttendanceDays,
-  workingDayWeight,
-} from './attendance-absence.util';
+import { summarizeAttendanceDays } from './attendance-absence.util';
 
 describe('attendance-absence.util', () => {
-  describe('workingDayWeight', () => {
-    it('half-day = 0.5, full day = 1', () => {
-      expect(workingDayWeight(true)).toBe(0.5);
-      expect(workingDayWeight(false)).toBe(1);
-    });
-  });
-
   describe('summarizeAttendanceDays', () => {
-    it('scheduled − present with half-day weights', () => {
+    it('every working day counts 1 — half-day (Saturday) schedules are never 0.5', () => {
       const summary = summarizeAttendanceDays([
         {
           isHoliday: false,
@@ -33,9 +23,9 @@ describe('attendance-absence.util', () => {
           isHalfDay: true,
         },
       ]);
-      expect(summary.scheduledDays).toBe(2);
-      expect(summary.presentDays).toBe(1.5);
-      expect(summary.absentDays).toBe(0.5);
+      expect(summary.scheduledDays).toBe(3);
+      expect(summary.presentDays).toBe(2);
+      expect(summary.absentDays).toBe(1);
     });
   });
 });

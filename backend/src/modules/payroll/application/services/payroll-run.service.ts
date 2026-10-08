@@ -24,6 +24,11 @@ import {
   type PayrollCalculationResult,
 } from './payroll-calculation.service';
 import {
+  FULLY_ABSENT_NO_PAY_NOTE,
+  isFullyAbsentFromStoredLogs,
+} from '../../../attendance/application/utils/day-deduction.util';
+import { resolveEntryAttendanceFlag } from '../utils/payroll-attendance-flag.util';
+import {
   allocateContractPayrollDays,
   employedPayrollDays,
 } from '../utils/payroll-days.util';
@@ -96,6 +101,14 @@ interface AttendanceSnapshot {
   presentDays: Decimal;
   absentDays: Decimal;
   paidDays: Decimal;
+  /** NEEDS_ENROLMENT → counted present, non-blocking note on the entry. */
+  matchMethod: string;
+  /** Daily logs used to detect fully-absent Mon–Sat months. */
+  dailyLogs: Array<{
+    date: Date;
+    dayDeduction: Decimal;
+    isHoliday: boolean;
+  }>;
 }
 
 interface OvertimeSnapshot {
@@ -931,6 +944,14 @@ export class PayrollRunService {
           presentDays: true,
           absentDays: true,
           paidDays: true,
+          matchMethod: true,
+          dailyLogs: {
+            select: {
+              date: true,
+              dayDeduction: true,
+              isHoliday: true,
+            },
+          },
         },
       }),
       this.prisma.overtimeSheet.findMany({
@@ -1322,6 +1343,11 @@ export class PayrollRunService {
       payrollDays = this.toNumber(attendance.paidDays);
     }
 
+    const fullyAbsentWorkingDays = this.isFullyAbsentWorkingMonth(
+      attendance,
+      windows,
+    );
+
     for (const assignment of siteAssignments) {
       const rangeStart = new Date(
         Math.max(assignment.startDate.getTime(), monthStart.getTime()),
@@ -1350,38 +1376,35 @@ export class PayrollRunService {
     const monthEndContract =
       sorted.length > 0 ? sorted[sorted.length - 1] : undefined;
     const monthEndBasic = this.toNumber(monthEndContract?.basicSalary);
-    const transport = this.toNumber(monthEndContract?.transportationAllowance);
-    const monthlyBonus = this.toNumber(monthEndContract?.monthlyBonus);
-    const contractNetBonus = this.toNumber(monthEndContract?.monthlyNetBonus);
-    const pensionApplicable = monthEndContract?.pensionApplicable ?? true;
+    // Fully absent Mon–Sat month: no transport, bonuses, net bonuses, or pension.
+    // Approved overtime is still paid.
+    let transport = this.toNumber(monthEndContract?.transportationAllowance);
+    let monthlyBonus = this.toNumber(monthEndContract?.monthlyBonus);
+    let contractNetBonus = this.toNumber(monthEndContract?.monthlyNetBonus);
+    let effectiveBonusTopUp = bonusTopUp;
+    let effectiveNetTopUp = netTopUp;
+    let pensionApplicable = monthEndContract?.pensionApplicable ?? true;
     const taxApplicable = monthEndContract?.taxApplicable ?? true;
+    if (fullyAbsentWorkingDays) {
+      transport = 0;
+      monthlyBonus = 0;
+      contractNetBonus = 0;
+      effectiveBonusTopUp = 0;
+      effectiveNetTopUp = 0;
+      pensionApplicable = false;
+      noteParts.push(FULLY_ABSENT_NO_PAY_NOTE);
+    }
 
-    let flag: PayrollEntryFlag = 'NONE';
-    let flagNote: string | undefined;
-    if (sorted.length === 0 && attendance) {
-      flag = 'MISSING_CONTRACT';
-      flagNote = 'No overlapping contract found for this month';
-    } else if (sorted.length > 0 && !attendance) {
-      flag = 'MISSING_ATTENDANCE';
-      const missingResolution = input.missingAttendanceResolution;
-      if (missingResolution === 'NEEDS_ENROLMENT') {
-        flagNote =
-          'No attendance record found for this month (Needs enrolment)';
-      } else if (missingResolution === 'PENDING') {
-        flagNote =
-          'No attendance record found for this month (Pending resolution)';
-      } else if (missingResolution === 'MARKED_EXEMPT') {
-        flagNote =
-          'No attendance record found for this month (Marked exempt)';
-      } else if (missingResolution === 'MANUAL_PRESENT') {
-        flagNote =
-          'No attendance record found for this month (Manual present)';
-      } else {
-        flagNote = 'No attendance record found for this month';
-      }
-    } else if (monthEndBasic === 0) {
-      flag = 'ZERO_SALARY';
-      flagNote = 'Basic salary is zero on month-end contract';
+    const attendanceFlag = resolveEntryAttendanceFlag({
+      hasContract: sorted.length > 0,
+      attendance,
+      missingResolution: input.missingAttendanceResolution,
+      monthEndBasic,
+    });
+    const flag: PayrollEntryFlag = attendanceFlag.flag;
+    const flagNote = attendanceFlag.flagNote;
+    if (attendanceFlag.entryNote) {
+      noteParts.push(attendanceFlag.entryNote);
     }
 
     const datedEntries: DatedOvertimeEntry[] =
@@ -1424,9 +1447,9 @@ export class PayrollRunService {
       basicSalary: monthEndBasic,
       transportAllowance: transport,
       monthlyBonus,
-      bonusTopUp,
+      bonusTopUp: effectiveBonusTopUp,
       contractNetBonus,
-      netTopUp,
+      netTopUp: effectiveNetTopUp,
       payrollDays,
       earnedSalary: sumEarned,
       overtimeHours,
@@ -1519,10 +1542,10 @@ export class PayrollRunService {
       incomeTax: new Decimal(result.incomeTax),
       totalDeductions: new Decimal(result.totalDeductions),
       netPay: new Decimal(result.netPay),
-      bonusTopUp: new Decimal(bonusTopUp),
-      bonusTopUpReason,
-      netTopUp: new Decimal(netTopUp),
-      netTopUpReason,
+      bonusTopUp: new Decimal(effectiveBonusTopUp),
+      bonusTopUpReason: fullyAbsentWorkingDays ? null : bonusTopUpReason,
+      netTopUp: new Decimal(effectiveNetTopUp),
+      netTopUpReason: fullyAbsentWorkingDays ? null : netTopUpReason,
       flag,
       flagNote: flagNote ?? null,
       bankName: employee.bankName,
@@ -1654,6 +1677,28 @@ export class PayrollRunService {
       totalDeductions: new Decimal(result.totalDeductions),
       netPay: new Decimal(result.netPay),
     };
+  }
+
+  /**
+   * Every Mon–Sat non-holiday day in the attendance month has full absence
+   * (dayDeduction = 1). Matches {@link summarizeMonthAbsence} fully-absent rule.
+   */
+  private isFullyAbsentWorkingMonth(
+    attendance: AttendanceSnapshot | undefined,
+    windows: DateWindow[],
+  ): boolean {
+    if (!attendance) {
+      return false;
+    }
+    return isFullyAbsentFromStoredLogs(
+      this.toNumber(attendance.paidDays),
+      attendance.dailyLogs.map((log) => ({
+        date: log.date,
+        dayDeduction: this.toNumber(log.dayDeduction),
+        isHoliday: log.isHoliday,
+      })),
+      windows,
+    );
   }
 
   private async updateRunTotals(

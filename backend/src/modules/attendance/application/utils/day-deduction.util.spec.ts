@@ -1,11 +1,14 @@
 import { describe, expect, it } from '@jest/globals';
 import {
   dayDeduction,
+  FULLY_ABSENT_NO_PAY_NOTE,
+  isFullyAbsentFromStoredLogs,
   summarizeMonthAbsence,
   type DayDeductionContext,
   type DayDeductionDayInput,
 } from './day-deduction.util';
 import { dateToYyyyMmDd } from '../services/attendance-leave.util';
+import { calculateLeaveDaysForRange } from '../../../leave/application/utils/leave-days.util';
 
 function d(year: number, month: number, day: number): Date {
   return new Date(Date.UTC(year, month - 1, day));
@@ -66,21 +69,54 @@ function logsForMonth(
 describe('dayDeduction / summarizeMonthAbsence', () => {
   const fullContractStart = d(2020, 1, 1);
 
-  it('full month, no issues → paid 30', () => {
-    const month = 8;
-    const year = 2026;
-    const daily = logsForMonth(month, year, fullContractStart, null, (date) =>
-      dayInput(date),
-    );
-    const result = summarizeMonthAbsence({
-      month,
-      year,
-      contracts: [{ startDate: fullContractStart, endDate: null }],
-      dailyLogsByDate: daily,
-      context: emptyContext(),
-    });
-    expect(result.paidDays).toBe(30);
-    expect(result.absentDays).toBe(0);
+  it('full month, no absences: Feb → 30, Aug → 30, Sep → 30', () => {
+    for (const month of [2, 8, 9]) {
+      const daily = logsForMonth(month, 2026, fullContractStart, null, (date) =>
+        dayInput(date),
+      );
+      const result = summarizeMonthAbsence({
+        month,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      expect(result.paidDays).toBe(30);
+      expect(result.absentDays).toBe(0);
+      expect(result.fullyAbsentWorkingDays).toBe(false);
+    }
+  });
+
+  it('3 absences (including a Saturday) → 27 in Feb, Aug, and Sep', () => {
+    // Pick Mon + Wed + Sat in each month (dates that fall on those DOWs).
+    const absencesByMonth: Record<number, [Date, Date, Date]> = {
+      2: [d(2026, 2, 2), d(2026, 2, 4), d(2026, 2, 7)], // Mon Wed Sat
+      8: [d(2026, 8, 3), d(2026, 8, 5), d(2026, 8, 8)], // Mon Wed Sat
+      9: [d(2026, 9, 7), d(2026, 9, 9), d(2026, 9, 12)], // Mon Wed Sat
+    };
+    for (const month of [2, 8, 9]) {
+      const keys = new Set(
+        absencesByMonth[month]!.map((date) => dateToYyyyMmDd(date)),
+      );
+      const daily = logsForMonth(month, 2026, fullContractStart, null, (date, key) => {
+        if (keys.has(key)) {
+          return dayInput(date, { clockIn: null, clockOut: null });
+        }
+        return dayInput(date);
+      });
+      const result = summarizeMonthAbsence({
+        month,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      expect(result.absentDays).toBe(3);
+      expect(result.paidDays).toBe(27);
+      // Saturday absence is 1, not 0.5
+      const satKey = dateToYyyyMmDd(absencesByMonth[month]![2]!);
+      expect(result.byDate.get(satKey)?.deduction).toBe(1);
+    }
   });
 
   it('no scan on a Monday and a Saturday → paid 28', () => {
@@ -286,22 +322,65 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(result.paidDays).toBe(30);
   });
 
-  it('absent every Mon–Sat in June with 4 Sundays → paid 4', () => {
-    const daily = logsForMonth(6, 2026, fullContractStart, null, (date) => {
-      if (date.getUTCDay() === 0) {
-        return dayInput(date, { clockIn: null, clockOut: null });
-      }
-      return dayInput(date, { clockIn: null, clockOut: null });
-    });
+  it('fully absent: Aug → 0, Feb → 0, Sep → 0 (never negative, never 5 or 6)', () => {
+    for (const month of [2, 8, 9]) {
+      const daily = logsForMonth(month, 2026, fullContractStart, null, (date) =>
+        dayInput(date, { clockIn: null, clockOut: null }),
+      );
+      const result = summarizeMonthAbsence({
+        month,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      expect(result.fullyAbsentWorkingDays).toBe(true);
+      expect(result.paidDays).toBe(0);
+      expect(result.paidDays).toBeGreaterThanOrEqual(0);
+      expect(result.paidDays).not.toBe(5);
+      expect(result.paidDays).not.toBe(6);
+      expect(result.absentDays).toBeGreaterThan(0);
+    }
+  });
+
+  it('absent every working day except one approved leave day → not fully absent', () => {
+    const leaveDay = d(2026, 8, 6); // Thursday
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date) =>
+      dayInput(date, { clockIn: null, clockOut: null }),
+    );
     const result = summarizeMonthAbsence({
-      month: 6,
+      month: 8,
       year: 2026,
       contracts: [{ startDate: fullContractStart, endDate: null }],
       dailyLogsByDate: daily,
+      context: emptyContext({
+        isOnApprovedLeave: (date) =>
+          dateToYyyyMmDd(date) === dateToYyyyMmDd(leaveDay),
+      }),
+    });
+    expect(result.fullyAbsentWorkingDays).toBe(false);
+    expect(result.leaveDays).toBe(1);
+    expect(result.paidDays).toBe(
+      Math.max(0, result.employedDays - result.absentDays),
+    );
+    expect(result.paidDays).toBeGreaterThan(0);
+  });
+
+  it('joiner Aug 17, absent every working day from the 17th → 0', () => {
+    const join = d(2026, 8, 17);
+    const daily = logsForMonth(8, 2026, join, null, (date) =>
+      dayInput(date, { clockIn: null, clockOut: null }),
+    );
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: join, endDate: null }],
+      dailyLogsByDate: daily,
       context: emptyContext(),
     });
-    expect(result.paidDays).toBe(4);
-    expect(result.absentDays).toBe(26);
+    expect(result.employedDays).toBe(14);
+    expect(result.fullyAbsentWorkingDays).toBe(true);
+    expect(result.paidDays).toBe(0);
   });
 
   it('joined June 8, no scan on June 10 → paid 22', () => {
@@ -414,5 +493,287 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     );
     expect(r.deduction).toBe(0);
     expect(r.status).toBe('LEAVE');
+  });
+
+  it('scheduled / present days: whole days, Saturday = 1, never 0.5', () => {
+    // Aug 2026: 31 days, Sundays 2/9/16/23/30 → 26 Mon–Sat working days.
+    const absentKey = '2026-08-03'; // Monday, no scan
+    const satKey = '2026-08-08'; // Saturday, present
+    const missingOutKey = '2026-08-12'; // Wednesday, clock-in only
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, key) => {
+      if (key === absentKey) return dayInput(date, { clockIn: null, clockOut: null });
+      if (key === missingOutKey) return dayInput(date, { clockOut: null });
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext(),
+    });
+    expect(daily.get(satKey)).toBeDefined();
+    expect(result.scheduledDays).toBe(26);
+    // Missing clock-out is still a present day (its 0.5 is a pay deduction only).
+    expect(result.presentDays).toBe(25);
+    expect(Number.isInteger(result.presentDays)).toBe(true);
+    expect(result.absentDays).toBe(1.5);
+    expect(result.paidDays).toBe(28.5);
+  });
+
+  it('"Present this month" / exempt with no scans → present all working days, paid 30', () => {
+    for (const month of [2, 8, 9]) {
+      const leaveKey = `2026-${String(month).padStart(2, '0')}-04`;
+      const result = summarizeMonthAbsence({
+        month,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: new Map(), // missing from the export: no logs at all
+        context: emptyContext({
+          isAttendanceExempt: () => true,
+          isOnApprovedLeave: (date) => dateToYyyyMmDd(date) === leaveKey,
+        }),
+      });
+      expect(result.paidDays).toBe(30);
+      expect(result.absentDays).toBe(0);
+      expect(result.fullyAbsentWorkingDays).toBe(false);
+      // Approved leave still shows as leave, not present.
+      const leaveIsWorkingDay = d(2026, month, 4).getUTCDay() !== 0;
+      expect(result.presentDays).toBe(
+        result.scheduledDays - (leaveIsWorkingDay ? 1 : 0),
+      );
+    }
+  });
+
+  it('joined Aug 17, "Present this month", no scans → paid 14, absent 0', () => {
+    const join = d(2026, 8, 17);
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: join, endDate: null }],
+      dailyLogsByDate: new Map(),
+      context: emptyContext({ isAttendanceExempt: () => true }),
+    });
+    expect(result.employedDays).toBe(14);
+    expect(result.paidDays).toBe(14);
+    expect(result.absentDays).toBe(0);
+    expect(result.fullyAbsentWorkingDays).toBe(false);
+    // Aug 17–31 has 13 Mon–Sat days; nothing before the 17th is counted.
+    expect(result.scheduledDays).toBe(13);
+    expect(result.presentDays).toBe(13);
+    expect([...result.byDate.keys()].every((key) => key >= '2026-08-17')).toBe(true);
+  });
+
+  it('left Aug 15, "Present this month", no scans → paid 15, absent 0', () => {
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: d(2026, 8, 15) }],
+      dailyLogsByDate: new Map(),
+      context: emptyContext({ isAttendanceExempt: () => true }),
+    });
+    expect(result.employedDays).toBe(15);
+    expect(result.paidDays).toBe(15);
+    expect(result.absentDays).toBe(0);
+    // Aug 1–15 has 13 Mon–Sat days (Sundays 2 and 9); nothing after the 15th.
+    expect(result.scheduledDays).toBe(13);
+    expect(result.presentDays).toBe(13);
+    expect([...result.byDate.keys()].every((key) => key <= '2026-08-15')).toBe(true);
+  });
+
+  it('joiner Aug 17 → scheduled / present count only the employed window', () => {
+    const join = d(2026, 8, 17);
+    const daily = logsForMonth(8, 2026, join, null, (date) => dayInput(date));
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: join, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext(),
+    });
+    // Aug 17–31: 15 days, Sundays 23 and 30 → 13 working days.
+    expect(result.scheduledDays).toBe(13);
+    expect(result.presentDays).toBe(13);
+  });
+
+  it('Saturday no-scan absence is 1 (not 0.5)', () => {
+    const sat = d(2026, 8, 8);
+    const r = dayDeduction(
+      sat,
+      dayInput(sat, { clockIn: null, clockOut: null }),
+      emptyContext(),
+    );
+    expect(r.deduction).toBe(1);
+    expect(r.status).toBe('ABSENT');
+  });
+
+  it('leave balance Mon–Sat → 5.5 (unchanged; separate from payroll)', () => {
+    function standardSchedule(date: Date): {
+      isWorkingDay: boolean;
+      isHalfDay: boolean;
+    } {
+      const dow = date.getUTCDay();
+      if (dow === 0) return { isWorkingDay: false, isHalfDay: false };
+      if (dow === 6) return { isWorkingDay: true, isHalfDay: true };
+      return { isWorkingDay: true, isHalfDay: false };
+    }
+    // 2026-10-05 Mon … 2026-10-10 Sat
+    const result = calculateLeaveDaysForRange(
+      d(2026, 10, 5),
+      d(2026, 10, 10),
+      standardSchedule,
+      [],
+    );
+    expect(Number(result.totalDays)).toBe(5.5);
+    expect(FULLY_ABSENT_NO_PAY_NOTE).toBe('Absent all working days — no pay.');
+  });
+});
+
+/** Stored daily logs as the attendance recompute writes them (0 outside the window). */
+function storedLogsFromSummary(
+  month: number,
+  year: number,
+  byDate: Map<string, { deduction: number }>,
+  isHoliday: (date: Date) => boolean = () => false,
+): Array<{ date: Date; dayDeduction: number; isHoliday: boolean }> {
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return Array.from({ length: lastDay }, (_, index) => {
+    const date = d(year, month, index + 1);
+    return {
+      date,
+      dayDeduction: byDate.get(dateToYyyyMmDd(date))?.deduction ?? 0,
+      isHoliday: isHoliday(date),
+    };
+  });
+}
+
+describe('isFullyAbsentFromStoredLogs (payroll run) matches summarizeMonthAbsence', () => {
+  const fullContractStart = d(2020, 1, 1);
+  const wholeMonth = (month: number, year: number) => [
+    {
+      windowStart: d(year, month, 1),
+      windowEnd: new Date(Date.UTC(year, month, 0)),
+    },
+  ];
+
+  it('fully absent Feb / Aug / Sep → payroll sees fully absent, paid 0', () => {
+    for (const month of [2, 8, 9]) {
+      const daily = logsForMonth(month, 2026, fullContractStart, null, (date) =>
+        dayInput(date, { clockIn: null, clockOut: null }),
+      );
+      const summary = summarizeMonthAbsence({
+        month,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      expect(
+        isFullyAbsentFromStoredLogs(
+          summary.paidDays,
+          storedLogsFromSummary(month, 2026, summary.byDate),
+          wholeMonth(month, 2026),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('3 absences → paid 27 and payroll does not treat it as fully absent', () => {
+    const absent = new Set(['2026-08-03', '2026-08-08', '2026-08-12']); // Mon, Sat, Wed
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, key) =>
+      absent.has(key) ? dayInput(date, { clockIn: null, clockOut: null }) : dayInput(date),
+    );
+    const summary = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext(),
+    });
+    expect(summary.paidDays).toBe(27);
+    expect(
+      isFullyAbsentFromStoredLogs(
+        summary.paidDays,
+        storedLogsFromSummary(8, 2026, summary.byDate),
+        wholeMonth(8, 2026),
+      ),
+    ).toBe(false);
+  });
+
+  it('one approved leave day in an otherwise absent month → not fully absent', () => {
+    const leaveKey = '2026-08-06';
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date) =>
+      dayInput(date, { clockIn: null, clockOut: null }),
+    );
+    const summary = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        isOnApprovedLeave: (date) => dateToYyyyMmDd(date) === leaveKey,
+      }),
+    });
+    expect(summary.paidDays).toBe(summary.employedDays - summary.absentDays);
+    expect(
+      isFullyAbsentFromStoredLogs(
+        summary.paidDays,
+        storedLogsFromSummary(8, 2026, summary.byDate),
+        wholeMonth(8, 2026),
+      ),
+    ).toBe(false);
+  });
+
+  it('joiner Aug 17, absent from the 17th → fully absent within the employed window only', () => {
+    const join = d(2026, 8, 17);
+    const daily = logsForMonth(8, 2026, join, null, (date) =>
+      dayInput(date, { clockIn: null, clockOut: null }),
+    );
+    const summary = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: join, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext(),
+    });
+    // Days before the 17th are stored with deduction 0 and must not block the rule.
+    const stored = storedLogsFromSummary(8, 2026, summary.byDate);
+    expect(stored.find((log) => dateToYyyyMmDd(log.date) === '2026-08-10')?.dayDeduction).toBe(0);
+    expect(
+      isFullyAbsentFromStoredLogs(summary.paidDays, stored, [
+        { windowStart: join, windowEnd: d(2026, 8, 31) },
+      ]),
+    ).toBe(true);
+  });
+
+  it('Saturday counts as a working day even when the schedule marks it off', () => {
+    // Every Mon–Fri absent (1) but Saturdays present (0) → not fully absent.
+    const stored = Array.from({ length: 31 }, (_, index) => {
+      const date = d(2026, 8, index + 1);
+      const dow = date.getUTCDay();
+      return {
+        date,
+        dayDeduction: dow === 0 || dow === 6 ? 0 : 1,
+        isHoliday: false,
+      };
+    });
+    expect(isFullyAbsentFromStoredLogs(0, stored, wholeMonth(8, 2026))).toBe(false);
+  });
+
+  it('a missing punch (0.5) never counts as a full absence', () => {
+    const stored = Array.from({ length: 30 }, (_, index) => {
+      const date = d(2026, 9, index + 1);
+      return {
+        date,
+        dayDeduction: date.getUTCDay() === 6 ? 0.5 : date.getUTCDay() === 0 ? 0 : 1,
+        isHoliday: false,
+      };
+    });
+    expect(isFullyAbsentFromStoredLogs(0, stored, wholeMonth(9, 2026))).toBe(false);
+  });
+
+  it('paid days above 0 → never fully absent', () => {
+    const stored = [{ date: d(2026, 8, 3), dayDeduction: 1, isHoliday: false }];
+    expect(isFullyAbsentFromStoredLogs(1, stored, wholeMonth(8, 2026))).toBe(false);
   });
 });

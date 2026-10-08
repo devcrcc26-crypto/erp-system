@@ -915,7 +915,31 @@
           "rejectedListToggle": "Employees not imported ({{count}})",
           "rejectedFollowUp": "Set their employee ID in the Deli e+ app and re-import next month, or match them manually on the next import.",
           "importAnother": "Import Another Month",
-          "stepOf": "Step {{current}} of 3 · {{label}}"
+          "stepOf": "Step {{current}} of 3 · {{label}}",
+          "notEnrolledMonth": "Not enrolled — {{ordinal}} month"
+        },
+        "dailyDrawer": {
+          "period": "{{month}} {{year}}",
+          "statScheduled": "Scheduled",
+          "statPresent": "Present",
+          "statAbsent": "Absent",
+          "statFlagged": "Flagged",
+          "statResolved": "Resolved",
+          "flagMissingClockIn": "Missing clock-in",
+          "flagMissingClockOut": "Missing clock-out",
+          "flagEarlyLeave": "Early departure",
+          "flagResolved": "{{flag}} · resolved",
+          "explained": "Explained: {{reason}}",
+          "noExplanation": "No explanation submitted yet",
+          "noFieldMovement": "No field movement log",
+          "correctedFrom": "Corrected from {{time}}"
+        },
+        "awaitingEnrolment": {
+          "title": "Awaiting enrolment",
+          "description": "Not yet enrolled on the attendance machine — counted present. They leave this list automatically once an import contains a scan for them.",
+          "since": "Since {{month}} {{year}}",
+          "monthsOne": "1 month",
+          "monthsMany": "{{count}} months"
         }
       },
       "workFromHome": {

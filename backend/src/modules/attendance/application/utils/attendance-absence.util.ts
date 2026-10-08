@@ -1,7 +1,8 @@
 /**
- * Shared attendance day weighting for monthly attendance summaries.
- * Half-day schedule days (e.g. Saturday) count as 0.5; full days as 1.
- * Presence is binary (wasPresent) — same rule as AttendanceService.
+ * Import-time attendance day counts, before the month is recomputed with
+ * summarizeMonthAbsence (which then sets scheduled / present / absent / paid).
+ * Every working day counts 1, Saturday included — a half-day schedule never
+ * makes a day 0.5. Payroll paid/absent days come from summarizeMonthAbsence.
  */
 
 export interface AttendanceAbsenceLog {
@@ -22,14 +23,7 @@ function roundDays(value: number): number {
 }
 
 /**
- * Day weight for a scheduled working day.
- */
-export function workingDayWeight(isHalfDay: boolean): number {
-  return isHalfDay ? 0.5 : 1;
-}
-
-/**
- * Monthly attendance summary: scheduled − present = absent, with half-day weights.
+ * Monthly attendance summary: scheduled − present = absent, one per day.
  * Holidays and weekends are excluded from scheduled/present/absent.
  */
 export function summarizeAttendanceDays(
@@ -39,13 +33,8 @@ export function summarizeAttendanceDays(
     (log) => !log.isHoliday && !log.isWeekend,
   );
 
-  const scheduledDays = workingDayLogs.reduce(
-    (sum, log) => sum + workingDayWeight(log.isHalfDay),
-    0,
-  );
-  const presentDays = workingDayLogs
-    .filter((log) => log.wasPresent)
-    .reduce((sum, log) => sum + workingDayWeight(log.isHalfDay), 0);
+  const scheduledDays = workingDayLogs.length;
+  const presentDays = workingDayLogs.filter((log) => log.wasPresent).length;
 
   return {
     scheduledDays: roundDays(scheduledDays),

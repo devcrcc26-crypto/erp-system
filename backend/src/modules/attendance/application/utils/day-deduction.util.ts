@@ -83,6 +83,7 @@ export function dayDeduction(
     return { deduction: 0, status: 'PRESENT' };
   }
 
+  // Full absence on any Mon–Sat duty day (Saturday included as 1, never 0.5).
   if (!hasClockIn && !hasClockOut) {
     return { deduction: 1, status: 'ABSENT' };
   }
@@ -130,10 +131,43 @@ export interface MonthAbsenceSummaryInput {
 
 export interface MonthAbsenceSummary {
   employedDays: number;
+  /** Mon–Sat non-holiday days in the employment window; Saturday counts 1. */
+  scheduledDays: number;
+  /**
+   * Scheduled days with a scan (clock-in or clock-out, after corrections), or
+   * marked present for attendance-exempt staff. Each counts 1 — never 0.5; a
+   * missing punch is a pay deduction, not a half presence.
+   */
+  presentDays: number;
   absentDays: number;
   paidDays: number;
   leaveDays: number;
+  /**
+   * True when every Mon–Sat non-holiday day in the employment window has
+   * deduction 1 (full absence). Paid days are then forced to 0.
+   */
+  fullyAbsentWorkingDays: boolean;
   byDate: Map<string, DayDeductionResult>;
+}
+
+export const FULLY_ABSENT_NO_PAY_NOTE =
+  'Absent all working days — no pay.';
+
+/**
+ * Working day for absence pay: Mon–Sat and not a public holiday.
+ * Saturday is a full absence day (deduction 1), never 0.5.
+ */
+export function isAbsenceWorkingDay(
+  date: Date,
+  context: Pick<DayDeductionContext, 'isSunday' | 'isPublicHoliday'>,
+): boolean {
+  if (context.isSunday(date)) {
+    return false;
+  }
+  if (context.isPublicHoliday(date)) {
+    return false;
+  }
+  return true;
 }
 
 function eachDateInWindow(
@@ -252,15 +286,75 @@ export function summarizeMonthAbsence(
   }
 
   const absentRounded = roundDays(absentDays);
-  const paidDays = roundDays(Math.max(0, employedDays - absentRounded));
+
+  const workingDates = dates.filter((date) =>
+    isAbsenceWorkingDay(date, input.context),
+  );
+  const presentDays = workingDates.filter((date) => {
+    const key = dateToYyyyMmDd(date);
+    const day = input.dailyLogsByDate.get(key);
+    const hasScan = Boolean(day?.clockIn || day?.clockOut);
+    return hasScan || byDate.get(key)?.status === 'PRESENT';
+  }).length;
+  const fullyAbsentWorkingDays =
+    workingDates.length > 0 &&
+    workingDates.every((date) => {
+      const result = byDate.get(dateToYyyyMmDd(date));
+      return result != null && result.deduction === 1;
+    });
+
+  // Normal: paid = employed − absent. Fully absent Mon–Sat month → 0
+  // (do not leave Sunday/holiday remainder as paid days).
+  const paidDays = fullyAbsentWorkingDays
+    ? 0
+    : roundDays(Math.max(0, employedDays - absentRounded));
 
   return {
     employedDays,
+    scheduledDays: workingDates.length,
+    presentDays,
     absentDays: absentRounded,
     paidDays,
     leaveDays: roundDays(leaveDays),
+    fullyAbsentWorkingDays,
     byDate,
   };
+}
+
+export interface StoredDayDeduction {
+  date: Date;
+  dayDeduction: number;
+  isHoliday: boolean;
+}
+
+/**
+ * Fully-absent check on stored daily logs (payroll run), using the same rule
+ * as summarizeMonthAbsence: paid days are 0 and every Mon–Sat non-holiday day
+ * inside the employed windows has deduction 1. Saturday is a working day here
+ * whatever the schedule says; only the calendar Sunday is excluded.
+ * With no windows (no contract) every stored log counts.
+ */
+export function isFullyAbsentFromStoredLogs(
+  paidDays: number,
+  logs: ReadonlyArray<StoredDayDeduction>,
+  windows: ReadonlyArray<{ windowStart: Date; windowEnd: Date }>,
+): boolean {
+  if (paidDays !== 0) {
+    return false;
+  }
+  const inWindow = (date: Date): boolean =>
+    windows.length === 0 ||
+    windows.some(
+      (window) =>
+        date.getTime() >= window.windowStart.getTime() &&
+        date.getTime() <= window.windowEnd.getTime(),
+    );
+  const working = logs.filter(
+    (log) => log.date.getUTCDay() !== 0 && !log.isHoliday && inWindow(log.date),
+  );
+  return (
+    working.length > 0 && working.every((log) => log.dayDeduction === 1)
+  );
 }
 
 /** Maps field movement log status to coverage used by dayDeduction. */

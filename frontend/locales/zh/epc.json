@@ -908,7 +908,31 @@
           "rejectedListToggle": "未导入员工（{{count}}）",
           "rejectedFollowUp": "请在得力 e+ 中设置其工号后下月再导入，或在下次导入时手动匹配。",
           "importAnother": "导入其他月份",
-          "stepOf": "第 {{current}} 步，共 3 步 · {{label}}"
+          "stepOf": "第 {{current}} 步，共 3 步 · {{label}}",
+          "notEnrolledMonth": "未录入考勤机 — 第 {{n}} 个月"
+        },
+        "dailyDrawer": {
+          "period": "{{year}} 年 {{month}}",
+          "statScheduled": "应出勤",
+          "statPresent": "出勤",
+          "statAbsent": "缺勤",
+          "statFlagged": "异常",
+          "statResolved": "已处理",
+          "flagMissingClockIn": "缺少上班打卡",
+          "flagMissingClockOut": "缺少下班打卡",
+          "flagEarlyLeave": "早退",
+          "flagResolved": "{{flag}} · 已处理",
+          "explained": "已说明：{{reason}}",
+          "noExplanation": "尚未提交说明",
+          "noFieldMovement": "无外出登记",
+          "correctedFrom": "原时间 {{time}}"
+        },
+        "awaitingEnrolment": {
+          "title": "待录入考勤机",
+          "description": "尚未录入考勤机，按出勤计算。导入文件中出现其打卡记录后将自动移出此列表。",
+          "since": "自 {{year}} 年 {{month}}起",
+          "monthsOne": "1 个月",
+          "monthsMany": "{{count}} 个月"
         }
       },
       "fieldMovementLogs": {

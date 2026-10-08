@@ -9,6 +9,7 @@ import {
   createFieldMovementLog,
   getAttendanceImportHistory,
   getAttendanceMonthlyApproval,
+  getAwaitingEnrolment,
   getEmployeeAttendance,
   getEmployeeAttendanceDailyLogs,
   getFieldMovementLog,
@@ -42,6 +43,8 @@ export const attendanceKeys = {
   employeeYear: (employeeId: string, year: number) =>
     [...attendanceKeys.all, 'employee', employeeId, year] as const,
   history: () => [...attendanceKeys.all, 'import-history'] as const,
+  awaitingEnrolment: () =>
+    [...attendanceKeys.all, 'awaiting-enrolment'] as const,
   monthlyApproval: (month: number, year: number) =>
     [...attendanceKeys.all, 'monthly-approval', month, year] as const,
   employeeDailyLogs: (employeeId: string, month: number, year: number) =>
@@ -213,6 +216,18 @@ export function useAttendanceImportPreview() {
 /**
  * Confirm a cached attendance import preview.
  */
+/**
+ * Open enrolment list (Needs enrolment, no scan in a later import).
+ */
+export function useAwaitingEnrolment(enabled = true) {
+  return useQuery({
+    queryKey: attendanceKeys.awaitingEnrolment(),
+    queryFn: () => getAwaitingEnrolment(),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useAttendanceImportConfirm() {
   const queryClient = useQueryClient();
   return useMutation({

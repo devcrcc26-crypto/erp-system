@@ -1,6 +1,7 @@
 import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from '@/lib/api/client';
 import type {
   AttendanceEmployeeSearchResult,
+  AwaitingEnrolmentEmployee,
   AttendanceIdentity,
   AttendanceImportBatch,
   AttendanceImportBatchDetails,
@@ -113,6 +114,17 @@ export async function searchAttendanceEmployees(
   }
   return apiGet<AttendanceEmployeeSearchResult[]>(
     `${ATTENDANCE_PATH}/employees/search${toQueryString({ q: trimmed })}`,
+  );
+}
+
+/**
+ * Employees marked "Needs enrolment" with no scan in any later import.
+ */
+export async function getAwaitingEnrolment(): Promise<
+  AwaitingEnrolmentEmployee[]
+> {
+  return apiGet<AwaitingEnrolmentEmployee[]>(
+    `${ATTENDANCE_PATH}/awaiting-enrolment`,
   );
 }
 

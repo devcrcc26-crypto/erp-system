@@ -227,6 +227,37 @@ describe('PayrollCalculationService', () => {
     });
   });
 
+  describe('fully absent working days (payroll run zeros allowances)', () => {
+    it('paid days 0 + 6 h Normal OT → OT paid; transport and bonus 0; pension 0', () => {
+      const result = calc.calculate({
+        basicSalary: 30000,
+        transportAllowance: 0,
+        monthlyBonus: 0,
+        bonusTopUp: 0,
+        contractNetBonus: 0,
+        netTopUp: 0,
+        payrollDays: 0,
+        earnedSalary: 0,
+        overtimeHours: {
+          normalHours: 6,
+          eveningHours: 0,
+          sundayHours: 0,
+          holidayHours: 0,
+        },
+        taxableThreshold: 2200,
+        pensionApplicable: false,
+      });
+      expect(result.payrollDays).toBe(0);
+      expect(result.earnedSalary).toBe(0);
+      expect(result.normalOtPay).toBeCloseTo((30000 / 192) * 6 * 1.5, 2);
+      expect(result.totalOtPay).toBeGreaterThan(0);
+      expect(result.nonTaxableTransport).toBe(0);
+      expect(result.pensionEmployee).toBe(0);
+      expect(result.pensionEmployer).toBe(0);
+      expect(result.grossIncome).toBeCloseTo(result.totalOtPay, 2);
+    });
+  });
+
   describe('tax once on whole month taxable income', () => {
     it('salary change: taxable income is sum of both periods, taxed once', () => {
       const earned = 68000; // 50k/30×3 + 70k/30×27

@@ -4176,6 +4176,8 @@ enum AttendanceMatchMethod {
   MANUAL
   EXEMPT
   MANUAL_PRESENT
+  /// Not yet enrolled on the attendance machine — counted present.
+  NEEDS_ENROLMENT
 }
 
 enum AttendanceUnmatchedStatus {

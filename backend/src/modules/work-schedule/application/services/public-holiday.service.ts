@@ -1,13 +1,17 @@
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { HolidayNationality, Nationality, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { AttendanceService } from '../../../attendance/application/services/attendance.service';
 import {
   CreatePublicHolidayDto,
   UpdatePublicHolidayDto,
@@ -26,10 +30,18 @@ import {
 
 /**
  * HR-managed public holidays. Inactive holidays are ignored by calculations.
+ * Create / update / remove / activate recalculates attendance for the affected month(s)
+ * so daily logs stop treating the day as absent.
  */
 @Injectable()
 export class PublicHolidayService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PublicHolidayService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => AttendanceService))
+    private readonly attendanceService: AttendanceService,
+  ) {}
 
   /**
    * Creates a public holiday for the company.
@@ -57,6 +69,7 @@ export class PublicHolidayService {
           updatedBy: userId,
         },
       });
+      await this.recalculateAffectedMonths(companyId, [created.date]);
       return this.mapHoliday(created);
     } catch (error: unknown) {
       const revived = await this.reviveDeleted(dto, companyId, userId, error);
@@ -113,6 +126,7 @@ export class PublicHolidayService {
         updatedBy: userId,
       },
     });
+    await this.recalculateAffectedMonths(companyId, [revived.date]);
     return this.mapHoliday(revived);
   }
 
@@ -125,7 +139,7 @@ export class PublicHolidayService {
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    await this.findOrThrow(id, companyId);
+    const existing = await this.findOrThrow(id, companyId);
     try {
       const updated = await this.prisma.publicHoliday.update({
         where: { id },
@@ -151,6 +165,10 @@ export class PublicHolidayService {
           updatedBy: userId,
         },
       });
+      await this.recalculateAffectedMonths(companyId, [
+        existing.date,
+        updated.date,
+      ]);
       return this.mapHoliday(updated);
     } catch (error: unknown) {
       this.throwIfUnique(error);
@@ -170,11 +188,11 @@ export class PublicHolidayService {
   }
 
   /**
-   * Removes a holiday from the calendar (soft delete). Leave, overtime and
-   * attendance records already saved keep the day counts they were given.
+   * Removes a holiday from the calendar (soft delete) and recalculates
+   * attendance for that month so the day reverts to absent/present rules.
    */
   async remove(id: string, companyId: string, userId: string): Promise<void> {
-    await this.findOrThrow(id, companyId);
+    const existing = await this.findOrThrow(id, companyId);
     await this.prisma.publicHoliday.update({
       where: { id },
       data: {
@@ -183,6 +201,7 @@ export class PublicHolidayService {
         updatedBy: userId,
       },
     });
+    await this.recalculateAffectedMonths(companyId, [existing.date]);
   }
 
   /**
@@ -193,6 +212,13 @@ export class PublicHolidayService {
     companyId: string,
     userId: string,
   ): Promise<{ updated: number }> {
+    const rows = await this.prisma.publicHoliday.findMany({
+      where: activeOnly({
+        companyId,
+        id: { in: dto.ids },
+      }),
+      select: { id: true, date: true },
+    });
     const result = await this.prisma.publicHoliday.updateMany({
       where: activeOnly({
         companyId,
@@ -203,6 +229,10 @@ export class PublicHolidayService {
         updatedBy: userId,
       },
     });
+    await this.recalculateAffectedMonths(
+      companyId,
+      rows.map((row) => row.date),
+    );
     return { updated: result.count };
   }
 
@@ -231,6 +261,7 @@ export class PublicHolidayService {
 
     let copied = 0;
     let skipped = 0;
+    const copiedDates: Date[] = [];
 
     for (const holiday of source) {
       const nextDate = new Date(
@@ -258,6 +289,7 @@ export class PublicHolidayService {
           },
         });
         copied += 1;
+        copiedDates.push(nextDate);
       } catch (error: unknown) {
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -270,6 +302,7 @@ export class PublicHolidayService {
       }
     }
 
+    await this.recalculateAffectedMonths(companyId, copiedDates);
     return { copied, skipped };
   }
 
@@ -387,6 +420,40 @@ export class PublicHolidayService {
   async get(id: string, companyId: string): Promise<unknown> {
     const holiday = await this.findOrThrow(id, companyId);
     return this.mapHoliday(holiday);
+  }
+
+  /**
+   * Recomputes attendance for each distinct calendar month touched by the dates.
+   */
+  private async recalculateAffectedMonths(
+    companyId: string,
+    dates: Date[],
+  ): Promise<void> {
+    const months = new Map<string, { month: number; year: number }>();
+    for (const date of dates) {
+      const year = date.getUTCFullYear();
+      const month = date.getUTCMonth() + 1;
+      months.set(`${year}-${month}`, { month, year });
+    }
+    for (const { month, year } of months.values()) {
+      try {
+        const result =
+          await this.attendanceService.recalculateCompanyAttendanceMonth(
+            companyId,
+            month,
+            year,
+          );
+        this.logger.log(
+          `Recalculated attendance after public-holiday change: ${year}-${String(month).padStart(2, '0')} (${result.updated} records)`,
+        );
+      } catch (error: unknown) {
+        this.logger.error(
+          `Failed to recalculate attendance for ${year}-${month} after public-holiday change`,
+          error instanceof Error ? error.stack : String(error),
+        );
+        throw error;
+      }
+    }
   }
 
   private async findOrThrow(

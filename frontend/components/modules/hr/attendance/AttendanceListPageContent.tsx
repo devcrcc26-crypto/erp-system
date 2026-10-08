@@ -23,6 +23,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
+import AttendanceAwaitingEnrolment from '@/components/modules/hr/attendance/AttendanceAwaitingEnrolment';
 import AttendanceDailyLogsDrawer from '@/components/modules/hr/attendance/AttendanceDailyLogsDrawer';
 import AttendanceImportModal from '@/components/modules/hr/attendance/AttendanceImportModal';
 import AttendanceStatBar from '@/components/modules/hr/attendance/AttendanceStatBar';
@@ -345,6 +346,8 @@ export default function AttendanceListPageContent(): React.ReactNode {
           />
         </div>
       </div>
+
+      {canViewHr ? <AttendanceAwaitingEnrolment /> : null}
 
       {canViewHr ? (
         <AttendanceImportModal

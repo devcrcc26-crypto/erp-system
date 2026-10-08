@@ -294,6 +294,17 @@ export default function AttendanceReviewPageContent({
         ),
       },
       {
+        title: t('pages.hr.attendance.columns.paidDays'),
+        key: 'paidDays',
+        width: 110,
+        align: 'right',
+        render: (_: unknown, row: AttendanceRecord) => (
+          <span className="erp-att-num erp-att-num--teal">
+            {formatNumber(row.paidDays ?? 0)}
+          </span>
+        ),
+      },
+      {
         title: t('pages.hr.attendance.columns.absentDays'),
         key: 'absentDays',
         width: 110,

@@ -49,9 +49,17 @@ import {
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import { summarizeAttendanceDays } from '../utils/attendance-absence.util';
 import {
+  awaitingEnrolment,
+  isCountedPresentMatchMethod,
+  NOT_ENROLLED_RECORD_NOTE,
+  previousNotEnrolledMonths,
+  type AwaitingEnrolmentEntry,
+} from '../utils/attendance-enrolment.util';
+import {
   buildDayDeductionContext,
   dailyLogToDeductionInput,
   loadDeductionDataForMonth,
+  matchedPublicHolidayForEmployee,
 } from '../utils/attendance-day-deduction.context';
 import {
   dayDeduction,
@@ -107,6 +115,19 @@ export interface AttendanceMissingEmployee {
   employeeId: string | null;
   departmentName: string | null;
   attendanceMode: string;
+  /**
+   * Set when the previous month(s) were already "Needs enrolment": this is the
+   * nth consecutive month without enrolment (2 = second month).
+   */
+  notEnrolledMonth?: number;
+  /** Pre-selected resolution in the preview. */
+  suggestedResolution?: 'NEEDS_ENROLMENT';
+}
+
+export interface AwaitingEnrolmentEmployee extends AwaitingEnrolmentEntry {
+  name: string;
+  employeeCode: string | null;
+  departmentName: string | null;
 }
 
 export interface AttendancePreviewResult {
@@ -384,18 +405,56 @@ export class AttendanceService
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     });
 
-    const missingFromAttendance: AttendanceMissingEmployee[] = activeEmployees
-      .filter((employee) => !foundEmployeeIds.has(employee.id))
-      .map((employee) => ({
-        id: employee.id,
-        name: [employee.firstName, employee.middleName, employee.lastName]
-          .map((part) => part?.trim() ?? '')
-          .filter((part) => part.length > 0)
-          .join(' '),
-        employeeId: employee.employeeId,
-        departmentName: employee.department?.name ?? null,
-        attendanceMode: employee.attendanceMode,
-      }));
+    const missingEmployees = activeEmployees.filter(
+      (employee) => !foundEmployeeIds.has(employee.id),
+    );
+    // Earlier "Needs enrolment" months (up to two years back) → nth month label.
+    const enrolmentRecords =
+      missingEmployees.length > 0
+        ? await this.prisma.attendanceRecord.findMany({
+            where: {
+              companyId,
+              employeeId: { in: missingEmployees.map((e) => e.id) },
+              matchMethod: AttendanceMatchMethod.NEEDS_ENROLMENT,
+              year: { gte: year - 2, lte: year },
+            },
+            select: { employeeId: true, month: true, year: true },
+          })
+        : [];
+    const enrolmentMonthsByEmployee = new Map<
+      string,
+      Array<{ month: number; year: number }>
+    >();
+    for (const record of enrolmentRecords) {
+      const list = enrolmentMonthsByEmployee.get(record.employeeId) ?? [];
+      list.push({ month: record.month, year: record.year });
+      enrolmentMonthsByEmployee.set(record.employeeId, list);
+    }
+
+    const missingFromAttendance: AttendanceMissingEmployee[] =
+      missingEmployees.map((employee) => {
+        const previous = previousNotEnrolledMonths(
+          month,
+          year,
+          enrolmentMonthsByEmployee.get(employee.id) ?? [],
+        );
+        return {
+          id: employee.id,
+          name: [employee.firstName, employee.middleName, employee.lastName]
+            .map((part) => part?.trim() ?? '')
+            .filter((part) => part.length > 0)
+            .join(' '),
+          employeeId: employee.employeeId,
+          departmentName: employee.department?.name ?? null,
+          attendanceMode: employee.attendanceMode,
+          ...(previous > 0
+            ? {
+                notEnrolledMonth: previous + 1,
+                suggestedResolution: 'NEEDS_ENROLMENT' as const,
+              }
+            : {}),
+        };
+      });
 
     const previewToken = `attendance:preview:${companyId}:${userId}:${Date.now()}`;
     const preview: CachedAttendancePreview = {
@@ -998,12 +1057,6 @@ export class AttendanceService
     }
 
     for (const action of missingActions) {
-      if (
-        action.resolution !== 'MARKED_EXEMPT' &&
-        action.resolution !== 'MANUAL_PRESENT'
-      ) {
-        continue;
-      }
       if (takenEmployeeIds.has(action.employeeId)) {
         continue;
       }
@@ -1031,7 +1084,9 @@ export class AttendanceService
         matchMethod:
           action.resolution === 'MARKED_EXEMPT'
             ? AttendanceMatchMethod.EXEMPT
-            : AttendanceMatchMethod.MANUAL_PRESENT,
+            : action.resolution === 'NEEDS_ENROLMENT'
+              ? AttendanceMatchMethod.NEEDS_ENROLMENT
+              : AttendanceMatchMethod.MANUAL_PRESENT,
         data: { payableHours: 0, dailyData: [] },
       });
       manualAssignedCount += 1;
@@ -1339,21 +1394,20 @@ export class AttendanceService
               batchId: batch.id,
               userId: employee.id,
               resolution,
-              note: action?.note?.trim() || null,
+              note:
+                action?.note?.trim() ||
+                (resolution === AttendanceMissingResolution.NEEDS_ENROLMENT
+                  ? NOT_ENROLLED_RECORD_NOTE
+                  : null),
               resolvedBy: isResolved ? userId : null,
               resolvedAt: isResolved ? now : null,
             };
           });
 
-        // Also persist resolved missing employees who received a record this import
-        // (MARKED_EXEMPT / MANUAL_PRESENT) so the review page shows the outcome.
+        // Also persist resolved missing employees who received a record this
+        // import (Exempt / Present this month / Needs enrolment) so the review
+        // page shows the outcome.
         for (const action of missingActions) {
-          if (
-            action.resolution !== 'MARKED_EXEMPT' &&
-            action.resolution !== 'MANUAL_PRESENT'
-          ) {
-            continue;
-          }
           if (missingRows.some((row) => row.userId === action.employeeId)) {
             continue;
           }
@@ -1365,8 +1419,14 @@ export class AttendanceService
             resolution:
               action.resolution === 'MARKED_EXEMPT'
                 ? AttendanceMissingResolution.MARKED_EXEMPT
-                : AttendanceMissingResolution.MANUAL_PRESENT,
-            note: action.note?.trim() || null,
+                : action.resolution === 'NEEDS_ENROLMENT'
+                  ? AttendanceMissingResolution.NEEDS_ENROLMENT
+                  : AttendanceMissingResolution.MANUAL_PRESENT,
+            note:
+              action.note?.trim() ||
+              (action.resolution === 'NEEDS_ENROLMENT'
+                ? NOT_ENROLLED_RECORD_NOTE
+                : null),
             resolvedBy: userId,
             resolvedAt: now,
           });
@@ -1477,7 +1537,19 @@ export class AttendanceService
                   },
                 },
                 {
+                  middleName: {
+                    contains: filters.search.trim(),
+                    mode: 'insensitive' as const,
+                  },
+                },
+                {
                   lastName: {
+                    contains: filters.search.trim(),
+                    mode: 'insensitive' as const,
+                  },
+                },
+                {
+                  chineseName: {
                     contains: filters.search.trim(),
                     mode: 'insensitive' as const,
                   },
@@ -1499,7 +1571,9 @@ export class AttendanceService
             select: {
               id: true,
               firstName: true,
+              middleName: true,
               lastName: true,
+              chineseName: true,
               employeeId: true,
               departmentId: true,
               department: {
@@ -1900,22 +1974,12 @@ export class AttendanceService
     const now = new Date();
     const { month, year } = missing.batch;
 
-    if (dto.resolution === 'NEEDS_ENROLMENT') {
-      return this.prisma.attendanceImportMissing.update({
-        where: { id: missing.id },
-        data: {
-          resolution: AttendanceMissingResolution.NEEDS_ENROLMENT,
-          note: dto.note?.trim() || missing.note,
-          resolvedBy: userId,
-          resolvedAt: now,
-        },
-      });
-    }
-
     const matchMethod =
       dto.resolution === 'MARKED_EXEMPT'
         ? AttendanceMatchMethod.EXEMPT
-        : AttendanceMatchMethod.MANUAL_PRESENT;
+        : dto.resolution === 'NEEDS_ENROLMENT'
+          ? AttendanceMatchMethod.NEEDS_ENROLMENT
+          : AttendanceMatchMethod.MANUAL_PRESENT;
 
     if (dto.resolution === 'MARKED_EXEMPT') {
       await this.prisma.user.update({
@@ -1939,7 +2003,12 @@ export class AttendanceService
       select: { id: true },
     });
 
-    if (!existingRecord) {
+    if (existingRecord) {
+      await this.prisma.attendanceRecord.update({
+        where: { id: existingRecord.id },
+        data: { matchMethod },
+      });
+    } else {
       const name = [
         missing.user.firstName,
         missing.user.middleName,
@@ -2014,14 +2083,15 @@ export class AttendanceService
         }
         void name;
       });
-
-      await this.recalculateAttendanceRecord(
-        missing.userId,
-        companyId,
-        month,
-        year,
-      );
     }
+
+    // Present / paid / absent days must reflect the decision straight away.
+    await this.recalculateAttendanceRecord(
+      missing.userId,
+      companyId,
+      month,
+      year,
+    );
 
     return this.prisma.attendanceImportMissing.update({
       where: { id: missing.id },
@@ -2029,12 +2099,106 @@ export class AttendanceService
         resolution:
           dto.resolution === 'MARKED_EXEMPT'
             ? AttendanceMissingResolution.MARKED_EXEMPT
-            : AttendanceMissingResolution.MANUAL_PRESENT,
-        note: dto.note?.trim() || null,
+            : dto.resolution === 'NEEDS_ENROLMENT'
+              ? AttendanceMissingResolution.NEEDS_ENROLMENT
+              : AttendanceMissingResolution.MANUAL_PRESENT,
+        note:
+          dto.note?.trim() ||
+          (dto.resolution === 'NEEDS_ENROLMENT'
+            ? NOT_ENROLLED_RECORD_NOTE
+            : null),
         resolvedBy: userId,
         resolvedAt: now,
       },
     });
+  }
+
+  /**
+   * Employees on the open enrolment list: a Needs-enrolment month with no later
+   * month that contains a scan. Derived from current records, so overwrite /
+   * re-import keeps it correct.
+   */
+  async listAwaitingEnrolment(
+    companyId: string,
+  ): Promise<AwaitingEnrolmentEmployee[]> {
+    const enrolment = await this.prisma.attendanceRecord.findMany({
+      where: {
+        companyId,
+        matchMethod: AttendanceMatchMethod.NEEDS_ENROLMENT,
+        employee: { deletedAt: null, isActive: true },
+      },
+      select: { employeeId: true },
+      distinct: ['employeeId'],
+    });
+    const employeeIds = enrolment.map((row) => row.employeeId);
+    if (employeeIds.length === 0) {
+      return [];
+    }
+
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: { companyId, employeeId: { in: employeeIds } },
+      select: {
+        employeeId: true,
+        month: true,
+        year: true,
+        matchMethod: true,
+        _count: {
+          select: {
+            dailyLogs: {
+              where: {
+                OR: [
+                  { clockInLocal: { not: null } },
+                  { clockOutLocal: { not: null } },
+                ],
+              },
+            },
+          },
+        },
+        employee: {
+          select: {
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            chineseName: true,
+            employeeId: true,
+            department: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const entries = awaitingEnrolment(
+      records.map((record) => ({
+        employeeId: record.employeeId,
+        month: record.month,
+        year: record.year,
+        matchMethod: record.matchMethod,
+        hasScan: record._count.dailyLogs > 0,
+      })),
+    );
+    const employeeById = new Map(
+      records.map((record) => [record.employeeId, record.employee]),
+    );
+    return entries
+      .map((entry) => {
+        const employee = employeeById.get(entry.employeeId);
+        const english = [
+          employee?.firstName,
+          employee?.middleName,
+          employee?.lastName,
+        ]
+          .map((part) => part?.trim() ?? '')
+          .filter((part) => part.length > 0)
+          .join(' ');
+        const chinese = employee?.chineseName?.trim();
+        return {
+          ...entry,
+          name: chinese ? `${english} (${chinese})` : english,
+          employeeCode: employee?.employeeId ?? null,
+          departmentName: employee?.department?.name ?? null,
+        };
+      })
+      .sort((a, b) => b.months - a.months || a.name.localeCompare(b.name));
   }
 
   /**
@@ -2390,7 +2554,9 @@ export class AttendanceService
           select: {
             id: true,
             firstName: true,
+            middleName: true,
             lastName: true,
+            chineseName: true,
             employeeId: true,
           },
         },
@@ -3660,31 +3826,19 @@ export class AttendanceService
       year,
       dailyLogIdsByDate,
     );
-    const context = buildDayDeductionContext(employee, deductionData);
+    // "Present this month" / "Exempt" / "Needs enrolment" chosen for an
+    // employee missing from the export: no scans exist, so treat the month like
+    // an attendance-exempt one (paid categories such as leave still apply
+    // first) instead of letting every working day become a no-scan absence.
+    const presentByDecision = isCountedPresentMatchMethod(record.matchMethod);
+    const context = buildDayDeductionContext(
+      presentByDecision ? { ...employee, attendanceMode: 'EXEMPT' } : employee,
+      deductionData,
+    );
 
-    for (const log of dailyLogs) {
-      const key = dateToYyyyMmDd(log.date);
-      const input = dailyLogToDeductionInput({
-        ...log,
-        scheduledEnd: scheduleEndByDate.get(key) ?? null,
-      });
-      const { deduction, status, siteName } = dayDeduction(
-        log.date,
-        input,
-        context,
-      );
-      await writeDb.attendanceDailyLog.update({
-        where: { id: log.id },
-        data: {
-          dayStatus: status,
-          dayDeduction: deduction,
-          siteAssignmentName:
-            siteName ??
-            (status === 'ON_SITE' ? context.siteNameForDate(log.date) : null),
-        },
-      });
-    }
-
+    // Month totals over the employed window only (30-day payroll scale). Per-day
+    // deductions are stored from the same summary so the daily breakdown adds up
+    // to absentDays; days outside the employment window carry no deduction.
     const monthSummary = summarizeMonthAbsence({
       month,
       year,
@@ -3693,13 +3847,91 @@ export class AttendanceService
       context,
     });
 
+    for (const log of dailyLogs) {
+      const key = dateToYyyyMmDd(log.date);
+      const matchedHoliday = matchedPublicHolidayForEmployee(
+        employee,
+        deductionData,
+        log.date,
+      );
+      const isHoliday = matchedHoliday != null;
+      const scheduledEnd = scheduleEndByDate.get(key) ?? null;
+      const clockIn = log.correctedClockInLocal ?? log.clockInLocal;
+      const clockOut = log.correctedClockOutLocal ?? log.clockOutLocal;
+      const input = dailyLogToDeductionInput({
+        ...log,
+        scheduledEnd,
+      });
+      const { deduction, status, siteName } = dayDeduction(
+        log.date,
+        input,
+        context,
+      );
+      const inEmployedWindow = monthSummary.byDate.has(key);
+      const flag = resolveAttendanceDayFlag({
+        isHoliday,
+        isWeekend: log.isWeekend,
+        clockIn,
+        clockOut,
+        isLastExportDay: log.isLastExportDay,
+        scheduledEnd,
+      });
+      // Holidays / weekends are never scheduled duty. When a holiday is cleared,
+      // restore weekday hours from the schedule already resolved in rebuildLogMaps.
+      let scheduledHours = Number(log.scheduledHours);
+      if (isHoliday || log.isWeekend) {
+        scheduledHours = 0;
+      } else if (log.isHoliday && !isHoliday) {
+        const scheduleDays = await this.resolveScheduleDaysCached(
+          scheduleCache,
+          employeeId,
+          companyId,
+          log.date,
+        );
+        const scheduleDay = scheduleDays.find(
+          (row) => row.dayOfWeek === log.date.getUTCDay(),
+        );
+        scheduledHours = Number(scheduleDay?.totalHours ?? 0);
+      }
+
+      await writeDb.attendanceDailyLog.update({
+        where: { id: log.id },
+        data: {
+          isHoliday,
+          holidayName: matchedHoliday?.name ?? null,
+          scheduledHours,
+          dayStatus: status,
+          dayDeduction: inEmployedWindow ? deduction : 0,
+          flag,
+          flagResolved:
+            flag === AttendanceDayFlag.NONE ? true : log.flagResolved,
+          flagResolvedAt:
+            flag === AttendanceDayFlag.NONE
+              ? (log.flagResolvedAt ?? new Date())
+              : log.flagResolved
+                ? log.flagResolvedAt
+                : null,
+          siteAssignmentName:
+            siteName ??
+            (status === 'ON_SITE' ? context.siteNameForDate(log.date) : null),
+        },
+      });
+
+      // Keep in-memory logs aligned so month KPIs below use the new holiday flags.
+      log.isHoliday = isHoliday;
+      log.holidayName = matchedHoliday?.name ?? null;
+      log.scheduledHours = scheduledHours as never;
+      log.dayStatus = status;
+      log.dayDeduction = (inEmployedWindow ? deduction : 0) as never;
+      log.flag = flag;
+    }
+
     const workingDayLogs = dailyLogs.filter(
       (log) => !log.isWeekend && !log.isHoliday,
     );
     const holidayLogs = dailyLogs.filter((log) => log.isHoliday);
-    const daySummary = summarizeAttendanceDays(dailyLogs);
-    const scheduledDays = daySummary.scheduledDays;
-    const presentDays = daySummary.presentDays;
+    const scheduledDays = monthSummary.scheduledDays;
+    const presentDays = monthSummary.presentDays;
     const absentDays = monthSummary.absentDays;
     const paidDays = monthSummary.paidDays;
     const holidayDays = holidayLogs.length;

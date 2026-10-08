@@ -122,48 +122,34 @@ export default function AttendanceTable({
         ),
       },
       {
+        title: t('pages.hr.attendance.columns.paidDays'),
+        key: 'paidDays',
+        width: 110,
+        align: 'right',
+        sorter: (a, b) => toNumber(a.paidDays) - toNumber(b.paidDays),
+        render: (_: unknown, row: AttendanceRecord) => (
+          <span className="erp-att-num erp-att-num--teal">
+            {formatNumber(row.paidDays ?? 0)}
+          </span>
+        ),
+      },
+      {
         title: t('pages.hr.attendance.columns.absentDays'),
         key: 'absentDays',
         width: 120,
         align: 'right',
-        sorter: (a, b) =>
-          toNumber(a.adjustedAbsentDays ?? a.absentDays) -
-          toNumber(b.adjustedAbsentDays ?? b.absentDays),
+        sorter: (a, b) => toNumber(a.absentDays) - toNumber(b.absentDays),
+        // Stored absentDays: the same value the payroll entry uses (leave days
+        // are already 0, so they never need subtracting here).
         render: (_: unknown, row: AttendanceRecord) => {
           const absent = toNumber(row.absentDays);
-          const leaveDays = row.leaveDaysThisMonth ?? 0;
-          const coveredDates = row.coveredDates ?? [];
-          const adjusted = row.adjustedAbsentDays ?? absent;
-          const leaveTooltip =
-            coveredDates.length > 0
-              ? `${leaveDays} absent day(s) covered by approved leave: ${coveredDates.join(', ')}`
-              : `${leaveDays} absent day(s) covered by approved leave`;
-
           if (absent === 0) {
             return <span className="erp-att-dash">—</span>;
           }
-
           return (
-            <div className="flex flex-col gap-0.5">
-              {leaveDays > 0 ? (
-                <>
-                  <Tooltip title={leaveTooltip}>
-                    <span className="erp-att-num erp-att-num--ok">
-                      {adjusted > 0 ? formatNumber(adjusted) : '✓'}
-                    </span>
-                  </Tooltip>
-                  <span className="erp-att-stat-hint">
-                    {leaveDays}d on leave
-                  </span>
-                </>
-              ) : (
-                <span
-                  className={`erp-att-num${absent > 0 ? ' erp-att-num--danger' : ''}`}
-                >
-                  {formatNumber(absent)}
-                </span>
-              )}
-            </div>
+            <span className="erp-att-num erp-att-num--danger">
+              {formatNumber(absent)}
+            </span>
           );
         },
       },

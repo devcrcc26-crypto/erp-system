@@ -19,7 +19,8 @@ export type AttendanceMatchMethod =
   | 'NAME_REVIEW'
   | 'MANUAL'
   | 'EXEMPT'
-  | 'MANUAL_PRESENT';
+  | 'MANUAL_PRESENT'
+  | 'NEEDS_ENROLMENT';
 
 export type AttendanceMissingResolution =
   | 'PENDING'
@@ -140,7 +141,9 @@ export interface AttendanceRecord {
   employee: {
     id: string;
     firstName: string;
+    middleName?: string | null;
     lastName: string;
+    chineseName?: string | null;
     employeeId: string | null;
     departmentId?: string | null;
     department: { id: string; name: string } | null;
@@ -230,6 +233,22 @@ export interface AttendanceMissingEmployee {
   employeeId: string | null;
   departmentName: string | null;
   attendanceMode: AttendanceMode | string;
+  /** nth consecutive month not enrolled (2 = second month); absent the first time. */
+  notEnrolledMonth?: number;
+  /** Pre-selected resolution for the preview. */
+  suggestedResolution?: 'NEEDS_ENROLMENT';
+}
+
+/** Employee on the open enrolment list (Needs enrolment, no later scan). */
+export interface AwaitingEnrolmentEmployee {
+  employeeId: string;
+  name: string;
+  employeeCode: string | null;
+  departmentName: string | null;
+  /** Needs-enrolment months since the last scanned month. */
+  months: number;
+  since: { month: number; year: number };
+  latest: { month: number; year: number };
 }
 
 export interface AttendancePreviewResult {
@@ -426,7 +445,9 @@ export interface EmployeeDailyLogsResponse extends AttendanceRecord {
   employee: {
     id: string;
     firstName: string;
+    middleName?: string | null;
     lastName: string;
+    chineseName?: string | null;
     employeeId: string | null;
     departmentId?: string | null;
     department?: { id: string; name: string } | null;

@@ -40,6 +40,7 @@ import {
 } from '../application/dtos/attendance.dto';
 import {
   AttendanceEmployeeSearchResult,
+  AwaitingEnrolmentEmployee,
   AttendanceImportSummary,
   AttendancePreviewResult,
   AttendanceService,
@@ -113,6 +114,18 @@ export class AttendanceController {
     @Query('q') query = '',
   ): Promise<AttendanceEmployeeSearchResult[]> {
     return this.attendanceService.searchEmployees(query, companyId);
+  }
+
+  @Get('awaiting-enrolment')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({
+    summary:
+      'Employees marked "Needs enrolment" with no scan in any later import',
+  })
+  listAwaitingEnrolment(
+    @CurrentCompany() companyId: string,
+  ): Promise<AwaitingEnrolmentEmployee[]> {
+    return this.attendanceService.listAwaitingEnrolment(companyId);
   }
 
   @Get('identities')
