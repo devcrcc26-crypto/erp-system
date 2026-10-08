@@ -34,7 +34,9 @@ import {
   ListAttendanceDto,
   ListAttendanceMonthlyApprovalsDto,
   ListFieldMovementLogsDto,
+  ResolveAttendanceMissingDto,
   UnlockAttendanceMonthDto,
+  UpdateAttendanceIdentityDto,
 } from '../application/dtos/attendance.dto';
 import {
   AttendanceEmployeeSearchResult,
@@ -111,6 +113,66 @@ export class AttendanceController {
     @Query('q') query = '',
   ): Promise<AttendanceEmployeeSearchResult[]> {
     return this.attendanceService.searchEmployees(query, companyId);
+  }
+
+  @Get('identities')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({ summary: 'List attendance device identities' })
+  listIdentities(
+    @CurrentCompany() companyId: string,
+    @Query('status') status?: 'MAPPED' | 'IGNORED',
+  ): Promise<unknown> {
+    return this.attendanceService.listIdentities(companyId, status);
+  }
+
+  @Patch('identities/:id')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({ summary: 'Update an attendance identity mapping' })
+  updateIdentity(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateAttendanceIdentityDto,
+  ): Promise<unknown> {
+    return this.attendanceService.updateIdentity(
+      id,
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Get('imports/:batchId/details')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({
+    summary: 'Unmatched and missing rows for an import batch',
+  })
+  getImportBatchDetails(
+    @CurrentCompany() companyId: string,
+    @Param('batchId') batchId: string,
+  ): Promise<unknown> {
+    return this.attendanceService.getImportBatchDetails(batchId, companyId);
+  }
+
+  @Post('imports/:batchId/missing/:missingId/resolve')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({
+    summary: 'Resolve an employee missing from the attendance file',
+  })
+  resolveImportMissing(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('batchId') batchId: string,
+    @Param('missingId') missingId: string,
+    @Body() dto: ResolveAttendanceMissingDto,
+  ): Promise<unknown> {
+    return this.attendanceService.resolveImportMissing(
+      batchId,
+      missingId,
+      dto,
+      companyId,
+      user.userId,
+    );
   }
 
   @Get('monthly-approvals')

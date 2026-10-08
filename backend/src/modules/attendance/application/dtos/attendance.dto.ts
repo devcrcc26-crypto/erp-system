@@ -41,25 +41,37 @@ export class ManualAssignmentDto {
   employeeId!: string;
 }
 
-export class MissingEmployeePresenceDto {
+export class IgnoreAttendanceRowDto {
+  @ApiProperty({ description: 'Zero-based index into the rejected preview array' })
+  @IsInt()
+  @Min(0)
+  rowIndex!: number;
+
+  @ApiProperty({ description: 'Why this Deli identity should be ignored' })
+  @IsString()
+  @MinLength(3)
+  reason!: string;
+}
+
+export class MissingEmployeeImportActionDto {
   @ApiProperty({ description: 'ERP employee missing from the attendance file' })
   @IsUUID()
   employeeId!: string;
 
   @ApiProperty({
-    description: 'Presence to apply for the import month',
-    enum: ['SITE', 'WFH'],
+    description: 'Resolution chosen during import preview',
+    enum: ['MARKED_EXEMPT', 'MANUAL_PRESENT', 'NEEDS_ENROLMENT'],
   })
-  @IsIn(['SITE', 'WFH'])
-  action!: 'SITE' | 'WFH';
+  @IsIn(['MARKED_EXEMPT', 'MANUAL_PRESENT', 'NEEDS_ENROLMENT'])
+  resolution!: 'MARKED_EXEMPT' | 'MANUAL_PRESENT' | 'NEEDS_ENROLMENT';
 
   @ApiPropertyOptional({
-    description: 'Required when action is SITE',
+    description: 'Required when resolution is MANUAL_PRESENT',
   })
   @IsOptional()
   @IsString()
-  @MinLength(1)
-  siteName?: string;
+  @MinLength(3)
+  note?: string;
 }
 
 export class ConfirmAttendanceImportDto {
@@ -90,15 +102,56 @@ export class ConfirmAttendanceImportDto {
   manualAssignments?: ManualAssignmentDto[];
 
   @ApiPropertyOptional({
-    type: [MissingEmployeePresenceDto],
-    description:
-      'Site assignment or work-from-home for employees missing from the file',
+    type: [IgnoreAttendanceRowDto],
+    description: 'Not-matched rows to persist as IGNORED identities',
   })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => MissingEmployeePresenceDto)
-  missingEmployeeActions?: MissingEmployeePresenceDto[];
+  @Type(() => IgnoreAttendanceRowDto)
+  ignoredRows?: IgnoreAttendanceRowDto[];
+
+  @ApiPropertyOptional({
+    type: [MissingEmployeeImportActionDto],
+    description:
+      'Resolutions for SCANNER employees missing from the attendance file',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MissingEmployeeImportActionDto)
+  missingEmployeeActions?: MissingEmployeeImportActionDto[];
+}
+
+export class UpdateAttendanceIdentityDto {
+  @ApiPropertyOptional({ enum: ['MAPPED', 'IGNORED'] })
+  @IsOptional()
+  @IsIn(['MAPPED', 'IGNORED'])
+  status?: 'MAPPED' | 'IGNORED';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  userId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  reason?: string | null;
+}
+
+export class ResolveAttendanceMissingDto {
+  @ApiProperty({
+    enum: ['MARKED_EXEMPT', 'MANUAL_PRESENT', 'NEEDS_ENROLMENT'],
+  })
+  @IsIn(['MARKED_EXEMPT', 'MANUAL_PRESENT', 'NEEDS_ENROLMENT'])
+  resolution!: 'MARKED_EXEMPT' | 'MANUAL_PRESENT' | 'NEEDS_ENROLMENT';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  note?: string;
 }
 
 export class ListAttendanceDto {

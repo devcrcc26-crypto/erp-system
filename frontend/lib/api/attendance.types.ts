@@ -1,9 +1,33 @@
 export type MatchConfidence =
+  | 'IDENTITY'
   | 'ID_MATCH'
   | 'NAME_HIGH'
   | 'NAME_REVIEW'
+  | 'MAPPED_INACTIVE'
   | 'MANUAL'
-  | 'NO_MATCH';
+  | 'NO_MATCH'
+  | 'IGNORED';
+
+export type AttendanceMode = 'SCANNER' | 'EXEMPT';
+
+export type AttendanceIdentityStatus = 'MAPPED' | 'IGNORED';
+
+export type AttendanceMatchMethod =
+  | 'IDENTITY'
+  | 'EMPLOYEE_ID'
+  | 'NAME_HIGH'
+  | 'NAME_REVIEW'
+  | 'MANUAL'
+  | 'EXEMPT'
+  | 'MANUAL_PRESENT';
+
+export type AttendanceMissingResolution =
+  | 'PENDING'
+  | 'MARKED_EXEMPT'
+  | 'MANUAL_PRESENT'
+  | 'NEEDS_ENROLMENT';
+
+export type AttendanceUnmatchedStatus = 'UNMATCHED' | 'IGNORED';
 
 export type AttendanceDayFlag =
   | 'MISSING_CLOCK_IN'
@@ -191,20 +215,20 @@ export interface AttendancePreviewRow {
   matchedEmployeeErpId: string | null;
   confidence: MatchConfidence;
   score: number | null;
+  identityId?: string | null;
   data: {
     payableHours: number;
     dailyData: AttendancePreviewDaily[];
   };
 }
 
-/** Active ERP employee with no row in the uploaded attendance file. */
+/** Active SCANNER ERP employee with no row in the uploaded attendance file. */
 export interface AttendanceMissingEmployee {
   id: string;
   name: string;
   employeeId: string | null;
   departmentName: string | null;
-  employeeType: string | null;
-  isFreelancer: boolean;
+  attendanceMode: AttendanceMode | string;
 }
 
 export interface AttendancePreviewResult {
@@ -217,6 +241,7 @@ export interface AttendancePreviewResult {
   matched: AttendancePreviewRow[];
   review: AttendancePreviewRow[];
   rejected: AttendancePreviewRow[];
+  ignored: AttendancePreviewRow[];
   /** System employees not present in the attendance upload. */
   missingFromAttendance: AttendanceMissingEmployee[];
 }
@@ -238,10 +263,15 @@ export interface ManualAssignmentDto {
   employeeId: string;
 }
 
-export interface MissingEmployeePresenceDto {
+export interface IgnoreAttendanceRowDto {
+  rowIndex: number;
+  reason: string;
+}
+
+export interface MissingEmployeeImportActionDto {
   employeeId: string;
-  action: 'SITE' | 'WFH';
-  siteName?: string;
+  resolution: 'MARKED_EXEMPT' | 'MANUAL_PRESENT' | 'NEEDS_ENROLMENT';
+  note?: string;
 }
 
 export interface ConfirmAttendanceImportDto {
@@ -249,7 +279,63 @@ export interface ConfirmAttendanceImportDto {
   overwrite: boolean;
   confirmedReviewIndices?: number[];
   manualAssignments?: ManualAssignmentDto[];
-  missingEmployeeActions?: MissingEmployeePresenceDto[];
+  ignoredRows?: IgnoreAttendanceRowDto[];
+  missingEmployeeActions?: MissingEmployeeImportActionDto[];
+}
+
+export interface AttendanceIdentity {
+  id: string;
+  companyId: string;
+  attendanceId: string;
+  attendanceName: string;
+  status: AttendanceIdentityStatus;
+  userId: string | null;
+  reason: string | null;
+  decidedBy: string;
+  decidedAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+    employeeId: string | null;
+    isActive: boolean;
+  } | null;
+  decider?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface AttendanceImportUnmatched {
+  id: string;
+  attendanceId: string;
+  attendanceName: string;
+  status: AttendanceUnmatchedStatus;
+}
+
+export interface AttendanceImportMissing {
+  id: string;
+  userId: string;
+  resolution: AttendanceMissingResolution;
+  note: string | null;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  user: {
+    id: string;
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+    employeeId: string | null;
+    department?: { name: string } | null;
+    attendanceMode?: AttendanceMode | string;
+  };
+}
+
+export interface AttendanceImportBatchDetails {
+  unmatched: AttendanceImportUnmatched[];
+  missing: AttendanceImportMissing[];
 }
 
 export interface AttendanceEmployeeSearchResult {

@@ -44,10 +44,12 @@ import type {
   AttendanceMissingEmployee,
   AttendancePreviewResult,
   AttendancePreviewRow,
+  IgnoreAttendanceRowDto,
   ManualAssignmentDto,
   MatchConfidence,
-  MissingEmployeePresenceDto,
+  MissingEmployeeImportActionDto,
 } from '@/lib/api/attendance.types';
+import Link from 'next/link';
 import {
   useAttendanceImportConfirm,
   useAttendanceImportPreview,
@@ -72,10 +74,14 @@ type MatchedRow = AttendancePreviewRow & { matchedIndex: number };
 type ReviewRow = AttendancePreviewRow & { reviewIndex: number };
 type RejectedRow = AttendancePreviewRow & { rejectedIndex: number };
 type MissingRow = AttendanceMissingEmployee;
-type MissingPresenceAction = 'NONE' | 'SITE' | 'WFH';
-type MissingPresenceState = {
-  action: MissingPresenceAction;
-  siteName: string;
+type MissingResolution =
+  | 'NONE'
+  | 'MARKED_EXEMPT'
+  | 'MANUAL_PRESENT'
+  | 'NEEDS_ENROLMENT';
+type MissingResolutionState = {
+  resolution: MissingResolution;
+  note: string;
 };
 
 type EditingCell =
@@ -102,8 +108,14 @@ function matchTypeLabel(
   confidence: MatchConfidence,
   t: (key: string) => string,
 ): string {
+  if (confidence === 'IDENTITY') {
+    return t('pages.hr.attendance.importModal.matchIdentity');
+  }
   if (confidence === 'ID_MATCH') {
     return t('pages.hr.attendance.importModal.matchId');
+  }
+  if (confidence === 'MAPPED_INACTIVE') {
+    return t('pages.hr.attendance.importModal.matchMappedInactive');
   }
   if (confidence === 'MANUAL') {
     return t('pages.hr.attendance.importModal.matchManual');
@@ -112,8 +124,14 @@ function matchTypeLabel(
 }
 
 function matchTypeColor(confidence: MatchConfidence): string {
+  if (confidence === 'IDENTITY') {
+    return 'cyan';
+  }
   if (confidence === 'ID_MATCH') {
     return 'blue';
+  }
+  if (confidence === 'MAPPED_INACTIVE') {
+    return 'orange';
   }
   if (confidence === 'MANUAL') {
     return 'purple';
@@ -150,9 +168,16 @@ export default function AttendanceImportModal({
   const [rejectedAssignments, setRejectedAssignments] = useState<
     Record<number, string>
   >({});
-  /** missing employee id → site/WFH presence for the import month */
-  const [missingPresence, setMissingPresence] = useState<
-    Record<string, MissingPresenceState>
+  /** missing employee id → resolution for the import month */
+  const [missingResolutions, setMissingResolutions] = useState<
+    Record<string, MissingResolutionState>
+  >({});
+  /** rejectedIndex → ignore reason (left company) */
+  const [ignoredReasons, setIgnoredReasons] = useState<Record<number, string>>(
+    {},
+  );
+  const [ignoreReasonDrafts, setIgnoreReasonDrafts] = useState<
+    Record<number, string>
   >({});
   const [employeeLabels, setEmployeeLabels] = useState<
     Record<string, EmployeeLabel>
@@ -178,7 +203,9 @@ export default function AttendanceImportModal({
     setReviewSelections({});
     setReviewOverrides({});
     setRejectedAssignments({});
-    setMissingPresence({});
+    setMissingResolutions({});
+    setIgnoredReasons({});
+    setIgnoreReasonDrafts({});
     setEmployeeLabels({});
     setEditingCell(null);
     setEmployeeSearchResults([]);
@@ -243,8 +270,13 @@ export default function AttendanceImportModal({
     (preview?.matched.length ?? 0) +
     selectedReviewCount +
     manuallyAssignedCount;
+  const ignoredLocalCount = Object.keys(ignoredReasons).length;
   const rejectedCount =
-    (preview?.rejected.length ?? 0) - manuallyAssignedCount;
+    (preview?.rejected.length ?? 0) -
+    manuallyAssignedCount -
+    ignoredLocalCount;
+  const totalIgnoredCount =
+    (preview?.ignored?.length ?? 0) + ignoredLocalCount;
 
   /** Employee IDs already claimed by auto-match, included review, or manual picks. */
   const takenEmployeeIds = useMemo(() => {
@@ -381,10 +413,17 @@ export default function AttendanceImportModal({
       setReviewSelections(initial);
       setReviewOverrides({});
       setRejectedAssignments({});
+      setMissingResolutions({});
+      setIgnoredReasons({});
+      setIgnoreReasonDrafts({});
       setEmployeeLabels({});
       setEditingCell(null);
       setEmployeeSearchResults([]);
-      setPreview(result);
+      setPreview({
+        ...result,
+        ignored: result.ignored ?? [],
+        missingFromAttendance: result.missingFromAttendance ?? [],
+      });
 
       if (result.alreadyImported) {
         try {
@@ -449,32 +488,41 @@ export default function AttendanceImportModal({
         })),
       ];
 
-      const missingEmployeeActions: MissingEmployeePresenceDto[] = [];
-      for (const [employeeId, state] of Object.entries(missingPresence)) {
-        if (state.action === 'NONE') {
+      const missingEmployeeActions: MissingEmployeeImportActionDto[] = [];
+      for (const [employeeId, state] of Object.entries(missingResolutions)) {
+        if (state.resolution === 'NONE') {
           continue;
         }
-        if (state.action === 'SITE' && !state.siteName.trim()) {
+        if (
+          state.resolution === 'MANUAL_PRESENT' &&
+          state.note.trim().length < 3
+        ) {
           setErrorMessage(
-            t('pages.hr.attendance.importModal.missingSiteNamePlaceholder'),
+            t('pages.hr.attendance.importModal.missingPresentReasonRequired'),
           );
           setConfirming(false);
           return;
         }
         missingEmployeeActions.push({
           employeeId,
-          action: state.action,
-          ...(state.action === 'SITE'
-            ? { siteName: state.siteName.trim() }
-            : {}),
+          resolution: state.resolution,
+          ...(state.note.trim() ? { note: state.note.trim() } : {}),
         });
       }
+
+      const ignoredRows: IgnoreAttendanceRowDto[] = Object.entries(
+        ignoredReasons,
+      ).map(([idx, reason]) => ({
+        rowIndex: Number(idx),
+        reason,
+      }));
 
       const result = await confirmMutation.mutateAsync({
         previewToken: preview.previewToken,
         overwrite,
         confirmedReviewIndices,
         manualAssignments,
+        ignoredRows,
         missingEmployeeActions,
       });
       setImportResult(result);
@@ -496,7 +544,9 @@ export default function AttendanceImportModal({
     setReviewSelections({});
     setReviewOverrides({});
     setRejectedAssignments({});
-    setMissingPresence({});
+    setMissingResolutions({});
+    setIgnoredReasons({});
+    setIgnoreReasonDrafts({});
     setEmployeeLabels({});
     setEditingCell(null);
     setEmployeeSearchResults([]);
@@ -535,7 +585,7 @@ export default function AttendanceImportModal({
     );
   }
 
-  const matchedColumns: ColumnsType<AttendancePreviewRow> = [
+  const matchedColumns: ColumnsType<MatchedRow> = [
     {
       title: t('pages.hr.attendance.importModal.colAttendanceName'),
       dataIndex: 'attendanceName',
@@ -692,68 +742,78 @@ export default function AttendanceImportModal({
     {
       title: t('pages.hr.attendance.importModal.colPresence'),
       key: 'presence',
-      width: 280,
+      width: 320,
       render: (_: unknown, row: MissingRow) => {
-        if (row.isFreelancer) {
-          return (
-            <Tag color="blue">
-              {t('pages.hr.attendance.importModal.missingFreelancerTag')}
-            </Tag>
-          );
-        }
-        const state = missingPresence[row.id] ?? {
-          action: 'NONE' as MissingPresenceAction,
-          siteName: '',
+        const state = missingResolutions[row.id] ?? {
+          resolution: 'NONE' as MissingResolution,
+          note: '',
         };
         return (
           <Space orientation="vertical" size={4} style={{ width: '100%' }}>
             <Select
               size="small"
               style={{ width: '100%' }}
-              value={state.action}
+              value={state.resolution}
               options={[
                 {
                   value: 'NONE',
                   label: t('pages.hr.attendance.importModal.missingActionNone'),
                 },
                 {
-                  value: 'SITE',
-                  label: t('pages.hr.attendance.importModal.missingActionSite'),
+                  value: 'MARKED_EXEMPT',
+                  label: t(
+                    'pages.hr.attendance.importModal.missingActionExempt',
+                  ),
                 },
                 {
-                  value: 'WFH',
-                  label: t('pages.hr.attendance.importModal.missingActionWfh'),
+                  value: 'MANUAL_PRESENT',
+                  label: t(
+                    'pages.hr.attendance.importModal.missingActionPresent',
+                  ),
+                },
+                {
+                  value: 'NEEDS_ENROLMENT',
+                  label: t(
+                    'pages.hr.attendance.importModal.missingActionEnrolment',
+                  ),
                 },
               ]}
-              onChange={(action: MissingPresenceAction) => {
-                setMissingPresence((prev) => ({
+              onChange={(resolution: MissingResolution) => {
+                setMissingResolutions((prev) => ({
                   ...prev,
                   [row.id]: {
-                    action,
-                    siteName: prev[row.id]?.siteName ?? '',
+                    resolution,
+                    note: prev[row.id]?.note ?? '',
                   },
                 }));
               }}
             />
-            {state.action === 'SITE' ? (
+            {state.resolution === 'MANUAL_PRESENT' ? (
               <Input
                 size="small"
                 placeholder={t(
-                  'pages.hr.attendance.importModal.missingSiteNamePlaceholder',
+                  'pages.hr.attendance.importModal.missingPresentReasonPlaceholder',
                 )}
-                value={state.siteName}
+                value={state.note}
                 onChange={(event) => {
-                  const siteName = event.target.value;
-                  setMissingPresence((prev) => ({
+                  const note = event.target.value;
+                  setMissingResolutions((prev) => ({
                     ...prev,
                     [row.id]: {
-                      action: 'SITE',
-                      siteName,
+                      resolution: 'MANUAL_PRESENT',
+                      note,
                     },
                   }));
                 }}
               />
             ) : null}
+            <Link
+              href={`/approvals/new/site-assignment`}
+              className="text-[12px]"
+              target="_blank"
+            >
+              {t('pages.hr.attendance.importModal.submitSiteAssignment')}
+            </Link>
           </Space>
         );
       },
@@ -831,19 +891,65 @@ export default function AttendanceImportModal({
         }
 
         return (
-          <Button
-            type="link"
-            className="!px-0"
-            onClick={() => {
-              setEmployeeSearchResults([]);
-              setEditingCell({
-                bucket: 'rejected',
-                index: row.rejectedIndex,
-              });
-            }}
-          >
-            {t('pages.hr.attendance.importModal.assignEmployee')}
-          </Button>
+          <Space size={8} wrap>
+            <Button
+              type="link"
+              className="!px-0"
+              onClick={() => {
+                setEmployeeSearchResults([]);
+                setEditingCell({
+                  bucket: 'rejected',
+                  index: row.rejectedIndex,
+                });
+              }}
+            >
+              {t('pages.hr.attendance.importModal.assignEmployee')}
+            </Button>
+            <Popconfirm
+              title={t('pages.hr.attendance.importModal.ignoreTitle')}
+              description={
+                <Input.TextArea
+                  rows={2}
+                  placeholder={t(
+                    'pages.hr.attendance.importModal.ignoreReasonPlaceholder',
+                  )}
+                  value={ignoreReasonDrafts[row.rejectedIndex] ?? ''}
+                  onChange={(event) => {
+                    const reason = event.target.value;
+                    setIgnoreReasonDrafts((prev) => ({
+                      ...prev,
+                      [row.rejectedIndex]: reason,
+                    }));
+                  }}
+                />
+              }
+              okText={t('pages.hr.attendance.importModal.ignoreConfirm')}
+              onConfirm={() => {
+                const reason = (
+                  ignoreReasonDrafts[row.rejectedIndex] ?? ''
+                ).trim();
+                if (reason.length < 3) {
+                  setErrorMessage(
+                    t('pages.hr.attendance.importModal.ignoreReasonRequired'),
+                  );
+                  return;
+                }
+                setIgnoredReasons((prev) => ({
+                  ...prev,
+                  [row.rejectedIndex]: reason,
+                }));
+                setRejectedAssignments((prev) => {
+                  const next = { ...prev };
+                  delete next[row.rejectedIndex];
+                  return next;
+                });
+              }}
+            >
+              <Button type="link" danger className="!px-0">
+                {t('pages.hr.attendance.importModal.ignoreLeftCompany')}
+              </Button>
+            </Popconfirm>
+          </Space>
         );
       },
     },
@@ -861,13 +967,21 @@ export default function AttendanceImportModal({
     reviewIndex: index,
   }));
 
-  const rejectedRows: RejectedRow[] = (preview?.rejected ?? []).map(
-    (row, index) => ({
+  const rejectedRows: RejectedRow[] = (preview?.rejected ?? [])
+    .map((row, index) => ({
       ...row,
       rejectedIndex: index,
-    }),
-  );
+    }))
+    .filter((row) => ignoredReasons[row.rejectedIndex] == null);
 
+  const locallyIgnoredRows: RejectedRow[] = (preview?.rejected ?? [])
+    .map((row, index) => ({
+      ...row,
+      rejectedIndex: index,
+    }))
+    .filter((row) => ignoredReasons[row.rejectedIndex] != null);
+
+  const previewIgnoredRows = preview?.ignored ?? [];
   const missingRows: MissingRow[] = preview?.missingFromAttendance ?? [];
 
   const collapseItems = preview
@@ -935,7 +1049,7 @@ export default function AttendanceImportModal({
               <CloseCircleOutlined style={{ color: '#D32F2F' }} />
               {t('pages.hr.attendance.importModal.rejectedSection')}
               <Badge
-                count={preview.rejected.length}
+                count={rejectedRows.length}
                 style={{ backgroundColor: '#D32F2F' }}
                 showZero
               />
@@ -991,6 +1105,118 @@ export default function AttendanceImportModal({
               <p className="m-0 mt-3 text-[12px] text-slate-600">
                 {t('pages.hr.attendance.importModal.missingNote')}
               </p>
+            </div>
+          ),
+        },
+        {
+          key: 'ignored',
+          label: (
+            <span className="inline-flex items-center gap-2">
+              <ExclamationCircleOutlined style={{ color: '#64748b' }} />
+              {t('pages.hr.attendance.importModal.ignoredSection', {
+                count: totalIgnoredCount,
+              })}
+              <Badge
+                count={totalIgnoredCount}
+                style={{ backgroundColor: '#64748b' }}
+                showZero
+              />
+            </span>
+          ),
+          children: (
+            <div className="space-y-3">
+              {previewIgnoredRows.length > 0 ? (
+                <Table<AttendancePreviewRow>
+                  className="erp-data-table"
+                  size="small"
+                  rowKey={(row, index) =>
+                    `ignored-preview-${row.attendanceId}-${index}`
+                  }
+                  pagination={false}
+                  dataSource={previewIgnoredRows}
+                  columns={[
+                    {
+                      title: t(
+                        'pages.hr.attendance.importModal.colAttendanceName',
+                      ),
+                      dataIndex: 'attendanceName',
+                      key: 'attendanceName',
+                    },
+                    {
+                      title: t(
+                        'pages.hr.attendance.importModal.colIdInSystem',
+                      ),
+                      dataIndex: 'attendanceId',
+                      key: 'attendanceId',
+                      render: (value: string) =>
+                        value && value !== '-' ? value : '—',
+                    },
+                    {
+                      title: t('pages.hr.attendance.importModal.colReason'),
+                      key: 'reason',
+                      render: () =>
+                        t('pages.hr.attendance.importModal.ignoredStored'),
+                    },
+                  ]}
+                />
+              ) : null}
+              {locallyIgnoredRows.length > 0 ? (
+                <Table<RejectedRow>
+                  className="erp-data-table"
+                  size="small"
+                  rowKey={(row) => `ignored-local-${row.rejectedIndex}`}
+                  pagination={false}
+                  dataSource={locallyIgnoredRows}
+                  columns={[
+                    {
+                      title: t(
+                        'pages.hr.attendance.importModal.colAttendanceName',
+                      ),
+                      dataIndex: 'attendanceName',
+                      key: 'attendanceName',
+                    },
+                    {
+                      title: t(
+                        'pages.hr.attendance.importModal.colIdInSystem',
+                      ),
+                      dataIndex: 'attendanceId',
+                      key: 'attendanceId',
+                      render: (value: string) =>
+                        value && value !== '-' ? value : '—',
+                    },
+                    {
+                      title: t('pages.hr.attendance.importModal.colReason'),
+                      key: 'reason',
+                      render: (_: unknown, row: RejectedRow) =>
+                        ignoredReasons[row.rejectedIndex] ?? '—',
+                    },
+                    {
+                      title: t('pages.hr.attendance.importModal.colAssign'),
+                      key: 'undo',
+                      render: (_: unknown, row: RejectedRow) => (
+                        <Button
+                          type="link"
+                          className="!px-0"
+                          onClick={() => {
+                            setIgnoredReasons((prev) => {
+                              const next = { ...prev };
+                              delete next[row.rejectedIndex];
+                              return next;
+                            });
+                          }}
+                        >
+                          {t('pages.hr.attendance.importModal.undoIgnore')}
+                        </Button>
+                      ),
+                    },
+                  ]}
+                />
+              ) : null}
+              {totalIgnoredCount === 0 ? (
+                <p className="m-0 text-[12px] text-slate-600">
+                  {t('pages.hr.attendance.importModal.ignoredEmpty')}
+                </p>
+              ) : null}
             </div>
           ),
         },

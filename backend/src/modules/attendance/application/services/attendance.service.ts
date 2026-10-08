@@ -20,8 +20,11 @@ import {
   FieldMovementReason,
   FieldMovementStatus,
   Prisma,
-  SiteAssignmentStatus,
-  WorkFromHomeScope,
+  AttendanceIdentityStatus,
+  AttendanceMatchMethod,
+  AttendanceMissingResolution,
+  AttendanceMode,
+  AttendanceUnmatchedStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -76,6 +79,7 @@ import {
 import {
   AttendanceMatchResult,
   AttendanceMatchingService,
+  normaliseAttendanceName,
 } from './attendance-matching.service';
 import { AttendancePreviewCache } from './attendance-preview.cache';
 
@@ -96,14 +100,13 @@ const MONTH_NAMES = [
   'December',
 ] as const;
 
-/** Active ERP employee with no row in the uploaded attendance file. */
+/** Active SCANNER ERP employee with no row in the uploaded attendance file. */
 export interface AttendanceMissingEmployee {
   id: string;
   name: string;
   employeeId: string | null;
   departmentName: string | null;
-  employeeType: string | null;
-  isFreelancer: boolean;
+  attendanceMode: string;
 }
 
 export interface AttendancePreviewResult {
@@ -116,7 +119,8 @@ export interface AttendancePreviewResult {
   matched: AttendanceMatchResult[];
   review: AttendanceMatchResult[];
   rejected: AttendanceMatchResult[];
-  /** System employees not present in the attendance upload. */
+  ignored: AttendanceMatchResult[];
+  /** Active includeInPayroll SCANNER employees not present in the file. */
   missingFromAttendance: AttendanceMissingEmployee[];
 }
 
@@ -337,13 +341,20 @@ export class AttendanceService
 
     const matched = matchResults.filter(
       (row) =>
-        row.confidence === 'ID_MATCH' || row.confidence === 'NAME_HIGH',
+        row.confidence === 'IDENTITY' ||
+        row.confidence === 'ID_MATCH' ||
+        row.confidence === 'NAME_HIGH',
     );
     const review = matchResults.filter(
-      (row) => row.confidence === 'NAME_REVIEW',
+      (row) =>
+        row.confidence === 'NAME_REVIEW' ||
+        row.confidence === 'MAPPED_INACTIVE',
     );
     const rejected = matchResults.filter(
       (row) => row.confidence === 'NO_MATCH',
+    );
+    const ignored = matchResults.filter(
+      (row) => row.confidence === 'IGNORED',
     );
 
     const foundEmployeeIds = new Set<string>();
@@ -354,14 +365,20 @@ export class AttendanceService
     }
 
     const activeEmployees = await this.prisma.user.findMany({
-      where: { companyId, deletedAt: null, isActive: true },
+      where: {
+        companyId,
+        deletedAt: null,
+        isActive: true,
+        includeInPayroll: true,
+        attendanceMode: AttendanceMode.SCANNER,
+      },
       select: {
         id: true,
         firstName: true,
         middleName: true,
         lastName: true,
         employeeId: true,
-        employeeType: true,
+        attendanceMode: true,
         department: { select: { name: true } },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
@@ -377,8 +394,7 @@ export class AttendanceService
           .join(' '),
         employeeId: employee.employeeId,
         departmentName: employee.department?.name ?? null,
-        employeeType: employee.employeeType,
-        isFreelancer: employee.employeeType === 'FREELANCER',
+        attendanceMode: employee.attendanceMode,
       }));
 
     const previewToken = `attendance:preview:${companyId}:${userId}:${Date.now()}`;
@@ -393,6 +409,7 @@ export class AttendanceService
       matched,
       review,
       rejected,
+      ignored,
       missingFromAttendance,
     };
 
@@ -408,6 +425,7 @@ export class AttendanceService
       matched,
       review,
       rejected,
+      ignored,
       missingFromAttendance,
     };
   }
@@ -629,9 +647,19 @@ export class AttendanceService
     reviveMatchResultDates(cached.matched);
     reviveMatchResultDates(cached.review);
     reviveMatchResultDates(cached.rejected);
+    reviveMatchResultDates(cached.ignored ?? []);
 
-    const { month, year, fileName, matched, review, rejected, totalRows } =
-      cached;
+    const {
+      month,
+      year,
+      fileName,
+      matched,
+      review,
+      rejected,
+      ignored = [],
+      totalRows,
+      missingFromAttendance = [],
+    } = cached;
 
     const existing = await this.prisma.attendanceImportBatch.findUnique({
       where: {
@@ -738,9 +766,17 @@ export class AttendanceService
       (_, index) => !confirmedIndices.has(index),
     ).length;
 
-    type ImportRow = AttendanceMatchResult & { matchedEmployeeId: string };
+    type ImportRow = AttendanceMatchResult & {
+      matchedEmployeeId: string;
+      matchMethod: AttendanceMatchMethod;
+    };
     const rowsToImport: ImportRow[] = [];
     const takenEmployeeIds = new Set<string>();
+    const identitiesToUpsert: Array<{
+      attendanceId: string;
+      attendanceName: string;
+      userId: string;
+    }> = [];
 
     const claimEmployee = (id: string): void => {
       if (takenEmployeeIds.has(id)) {
@@ -749,6 +785,25 @@ export class AttendanceService
         );
       }
       takenEmployeeIds.add(id);
+    };
+
+    const confidenceToMatchMethod = (
+      confidence: AttendanceMatchResult['confidence'],
+    ): AttendanceMatchMethod => {
+      switch (confidence) {
+        case 'IDENTITY':
+          return AttendanceMatchMethod.IDENTITY;
+        case 'ID_MATCH':
+          return AttendanceMatchMethod.EMPLOYEE_ID;
+        case 'NAME_HIGH':
+          return AttendanceMatchMethod.NAME_HIGH;
+        case 'NAME_REVIEW':
+          return AttendanceMatchMethod.NAME_REVIEW;
+        case 'MANUAL':
+          return AttendanceMatchMethod.MANUAL;
+        default:
+          return AttendanceMatchMethod.MANUAL;
+      }
     };
 
     let autoMatchedCount = 0;
@@ -762,8 +817,16 @@ export class AttendanceService
       rowsToImport.push({
         ...row,
         matchedEmployeeId: row.matchedEmployeeId,
+        matchMethod: confidenceToMatchMethod(row.confidence),
       });
       autoMatchedCount += 1;
+      if (!row.identityId) {
+        identitiesToUpsert.push({
+          attendanceId: row.attendanceId,
+          attendanceName: row.attendanceName,
+          userId: row.matchedEmployeeId,
+        });
+      }
     }
 
     for (let index = 0; index < review.length; index += 1) {
@@ -771,6 +834,10 @@ export class AttendanceService
         continue;
       }
       const row = review[index];
+      if (row.confidence === 'MAPPED_INACTIVE' && !reviewAssignmentByIndex.has(index)) {
+        // Inactive mapped identity must be reassigned manually.
+        continue;
+      }
       const overrideId = reviewAssignmentByIndex.get(index);
       if (overrideId) {
         const employee = employeeById.get(overrideId);
@@ -787,22 +854,46 @@ export class AttendanceService
           matchedEmployeeErpId: employee.employeeId,
           confidence: 'MANUAL',
           score: 100,
+          matchMethod: AttendanceMatchMethod.MANUAL,
         });
         manualAssignedCount += 1;
+        identitiesToUpsert.push({
+          attendanceId: row.attendanceId,
+          attendanceName: row.attendanceName,
+          userId: employee.id,
+        });
       } else if (row.matchedEmployeeId) {
         claimEmployee(row.matchedEmployeeId);
         rowsToImport.push({
           ...row,
           matchedEmployeeId: row.matchedEmployeeId,
+          matchMethod: confidenceToMatchMethod(row.confidence),
         });
         autoMatchedCount += 1;
+        if (!row.identityId) {
+          identitiesToUpsert.push({
+            attendanceId: row.attendanceId,
+            attendanceName: row.attendanceName,
+            userId: row.matchedEmployeeId,
+          });
+        }
       }
     }
 
+    const ignoredByIndex = new Map(
+      (dto.ignoredRows ?? []).map((row) => [row.rowIndex, row.reason.trim()]),
+    );
     const stillRejected: AttendanceMatchResult[] = [];
+    const ignoredThisImport: Array<{
+      attendanceId: string;
+      attendanceName: string;
+      reason: string;
+    }> = [];
+
     for (let index = 0; index < rejected.length; index += 1) {
       const row = rejected[index];
       const assignedId = rejectedAssignmentByIndex.get(index);
+      const ignoreReason = ignoredByIndex.get(index);
       if (assignedId) {
         const employee = employeeById.get(assignedId);
         if (!employee) {
@@ -818,75 +909,127 @@ export class AttendanceService
           matchedEmployeeErpId: employee.employeeId,
           confidence: 'MANUAL',
           score: 100,
+          matchMethod: AttendanceMatchMethod.MANUAL,
         });
         manualAssignedCount += 1;
+        identitiesToUpsert.push({
+          attendanceId: row.attendanceId,
+          attendanceName: row.attendanceName,
+          userId: employee.id,
+        });
+      } else if (ignoreReason) {
+        ignoredThisImport.push({
+          attendanceId: row.attendanceId,
+          attendanceName: row.attendanceName,
+          reason: ignoreReason,
+        });
       } else {
         stillRejected.push(row);
       }
     }
 
     const missingById = new Map(
-      (cached.missingFromAttendance ?? []).map((row) => [row.id, row]),
+      missingFromAttendance.map((row) => [row.id, row]),
     );
     const missingActions = dto.missingEmployeeActions ?? [];
     const seenMissingActionIds = new Set<string>();
     for (const action of missingActions) {
       if (seenMissingActionIds.has(action.employeeId)) {
         throw new BadRequestException(
-          'Each missing employee can only have one presence action',
+          'Each missing employee can only have one resolution',
         );
       }
       seenMissingActionIds.add(action.employeeId);
-      const missing = missingById.get(action.employeeId);
-      if (!missing) {
+      if (!missingById.has(action.employeeId)) {
         throw new BadRequestException(
-          'Presence action refers to an employee who is not in the missing list',
+          'Resolution refers to an employee who is not in the missing list',
         );
       }
-      if (missing.isFreelancer) {
+      if (
+        action.resolution === 'MANUAL_PRESENT' &&
+        (!action.note || action.note.trim().length < 3)
+      ) {
         throw new BadRequestException(
-          'Freelancers are auto-marked present and do not need site/WFH actions',
-        );
-      }
-      if (action.action === 'SITE' && !action.siteName?.trim()) {
-        throw new BadRequestException(
-          'Site name is required for site assignment presence',
+          'A reason is required for "Present this month"',
         );
       }
     }
 
-    await this.applyMissingEmployeePresenceActions({
-      actions: missingActions,
-      companyId,
-      userId,
-      month,
-      year,
+    // EXEMPT employees (include freelancers) get full-presence records.
+    const exemptEmployees = await this.prisma.user.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        isActive: true,
+        includeInPayroll: true,
+        attendanceMode: AttendanceMode.EXEMPT,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        employeeId: true,
+      },
     });
 
-    const syntheticIds = new Set<string>();
-    for (const missing of missingById.values()) {
-      if (missing.isFreelancer) {
-        syntheticIds.add(missing.id);
-      }
-    }
-    for (const action of missingActions) {
-      syntheticIds.add(action.employeeId);
-    }
-
-    for (const employeeId of syntheticIds) {
-      if (takenEmployeeIds.has(employeeId)) {
+    for (const employee of exemptEmployees) {
+      if (takenEmployeeIds.has(employee.id)) {
         continue;
       }
-      const missing = missingById.get(employeeId);
-      claimEmployee(employeeId);
+      claimEmployee(employee.id);
+      const name = [employee.firstName, employee.middleName, employee.lastName]
+        .map((part) => part?.trim() ?? '')
+        .filter((part) => part.length > 0)
+        .join(' ');
+      rowsToImport.push({
+        attendanceName: name,
+        attendanceId: employee.employeeId ?? '-',
+        matchedEmployeeId: employee.id,
+        matchedEmployeeName: name,
+        matchedEmployeeErpId: employee.employeeId,
+        confidence: 'MANUAL',
+        score: 100,
+        identityId: null,
+        matchMethod: AttendanceMatchMethod.EXEMPT,
+        data: { payableHours: 0, dailyData: [] },
+      });
+    }
+
+    for (const action of missingActions) {
+      if (
+        action.resolution !== 'MARKED_EXEMPT' &&
+        action.resolution !== 'MANUAL_PRESENT'
+      ) {
+        continue;
+      }
+      if (takenEmployeeIds.has(action.employeeId)) {
+        continue;
+      }
+      const missing = missingById.get(action.employeeId);
+      claimEmployee(action.employeeId);
+      if (action.resolution === 'MARKED_EXEMPT') {
+        await this.prisma.user.update({
+          where: { id: action.employeeId },
+          data: {
+            attendanceMode: AttendanceMode.EXEMPT,
+            updatedBy: userId,
+          },
+        });
+      }
       rowsToImport.push({
         attendanceName: missing?.name ?? 'System employee',
         attendanceId: missing?.employeeId ?? '-',
-        matchedEmployeeId: employeeId,
+        matchedEmployeeId: action.employeeId,
         matchedEmployeeName: missing?.name ?? null,
         matchedEmployeeErpId: missing?.employeeId ?? null,
         confidence: 'MANUAL',
         score: 100,
+        identityId: null,
+        matchMethod:
+          action.resolution === 'MARKED_EXEMPT'
+            ? AttendanceMatchMethod.EXEMPT
+            : AttendanceMatchMethod.MANUAL_PRESENT,
         data: { payableHours: 0, dailyData: [] },
       });
       manualAssignedCount += 1;
@@ -1005,6 +1148,7 @@ export class AttendanceService
               importBatchId: batch.id,
               month,
               year,
+              matchMethod: item.row.matchMethod,
               scheduledDays: item.summary.scheduledDays,
               presentDays: item.summary.presentDays,
               absentDays: item.summary.absentDays,
@@ -1054,6 +1198,180 @@ export class AttendanceService
               data: dailyRows.slice(offset, offset + CHUNK),
             });
           }
+        }
+
+        const now = new Date();
+
+        for (const identity of identitiesToUpsert) {
+          const attendanceName = normaliseAttendanceName(identity.attendanceName);
+          await tx.attendanceIdentity.upsert({
+            where: {
+              companyId_attendanceId_attendanceName: {
+                companyId,
+                attendanceId: identity.attendanceId,
+                attendanceName,
+              },
+            },
+            create: {
+              id: randomUUID(),
+              companyId,
+              attendanceId: identity.attendanceId,
+              attendanceName,
+              status: AttendanceIdentityStatus.MAPPED,
+              userId: identity.userId,
+              reason: null,
+              decidedBy: userId,
+              decidedAt: now,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+            update: {
+              status: AttendanceIdentityStatus.MAPPED,
+              userId: identity.userId,
+              reason: null,
+              decidedBy: userId,
+              decidedAt: now,
+              updatedBy: userId,
+              deletedAt: null,
+              deletedBy: null,
+            },
+          });
+        }
+
+        for (const ignoredRow of ignoredThisImport) {
+          const attendanceName = normaliseAttendanceName(
+            ignoredRow.attendanceName,
+          );
+          await tx.attendanceIdentity.upsert({
+            where: {
+              companyId_attendanceId_attendanceName: {
+                companyId,
+                attendanceId: ignoredRow.attendanceId,
+                attendanceName,
+              },
+            },
+            create: {
+              id: randomUUID(),
+              companyId,
+              attendanceId: ignoredRow.attendanceId,
+              attendanceName,
+              status: AttendanceIdentityStatus.IGNORED,
+              userId: null,
+              reason: ignoredRow.reason,
+              decidedBy: userId,
+              decidedAt: now,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+            update: {
+              status: AttendanceIdentityStatus.IGNORED,
+              userId: null,
+              reason: ignoredRow.reason,
+              decidedBy: userId,
+              decidedAt: now,
+              updatedBy: userId,
+              deletedAt: null,
+              deletedBy: null,
+            },
+          });
+        }
+
+        const unmatchedRows: Array<{
+          id: string;
+          companyId: string;
+          batchId: string;
+          attendanceId: string;
+          attendanceName: string;
+          status: AttendanceUnmatchedStatus;
+        }> = [
+          ...stillRejected.map((row) => ({
+            id: randomUUID(),
+            companyId,
+            batchId: batch.id,
+            attendanceId: row.attendanceId,
+            attendanceName: row.attendanceName,
+            status: AttendanceUnmatchedStatus.UNMATCHED,
+          })),
+          ...ignoredThisImport.map((row) => ({
+            id: randomUUID(),
+            companyId,
+            batchId: batch.id,
+            attendanceId: row.attendanceId,
+            attendanceName: row.attendanceName,
+            status: AttendanceUnmatchedStatus.IGNORED,
+          })),
+          ...ignored.map((row) => ({
+            id: randomUUID(),
+            companyId,
+            batchId: batch.id,
+            attendanceId: row.attendanceId,
+            attendanceName: row.attendanceName,
+            status: AttendanceUnmatchedStatus.IGNORED,
+          })),
+        ];
+
+        if (unmatchedRows.length > 0) {
+          await tx.attendanceImportUnmatched.createMany({ data: unmatchedRows });
+        }
+
+        const missingActionByUser = new Map(
+          missingActions.map((action) => [action.employeeId, action]),
+        );
+        const missingRows = missingFromAttendance
+          .filter((employee) => !takenEmployeeIds.has(employee.id))
+          .map((employee) => {
+            const action = missingActionByUser.get(employee.id);
+            const resolution =
+              action?.resolution === 'NEEDS_ENROLMENT'
+                ? AttendanceMissingResolution.NEEDS_ENROLMENT
+                : action?.resolution === 'MARKED_EXEMPT'
+                  ? AttendanceMissingResolution.MARKED_EXEMPT
+                  : action?.resolution === 'MANUAL_PRESENT'
+                    ? AttendanceMissingResolution.MANUAL_PRESENT
+                    : AttendanceMissingResolution.PENDING;
+            const isResolved =
+              resolution !== AttendanceMissingResolution.PENDING;
+            return {
+              id: randomUUID(),
+              companyId,
+              batchId: batch.id,
+              userId: employee.id,
+              resolution,
+              note: action?.note?.trim() || null,
+              resolvedBy: isResolved ? userId : null,
+              resolvedAt: isResolved ? now : null,
+            };
+          });
+
+        // Also persist resolved missing employees who received a record this import
+        // (MARKED_EXEMPT / MANUAL_PRESENT) so the review page shows the outcome.
+        for (const action of missingActions) {
+          if (
+            action.resolution !== 'MARKED_EXEMPT' &&
+            action.resolution !== 'MANUAL_PRESENT'
+          ) {
+            continue;
+          }
+          if (missingRows.some((row) => row.userId === action.employeeId)) {
+            continue;
+          }
+          missingRows.push({
+            id: randomUUID(),
+            companyId,
+            batchId: batch.id,
+            userId: action.employeeId,
+            resolution:
+              action.resolution === 'MARKED_EXEMPT'
+                ? AttendanceMissingResolution.MARKED_EXEMPT
+                : AttendanceMissingResolution.MANUAL_PRESENT,
+            note: action.note?.trim() || null,
+            resolvedBy: userId,
+            resolvedAt: now,
+          });
+        }
+
+        if (missingRows.length > 0) {
+          await tx.attendanceImportMissing.createMany({ data: missingRows });
         }
       },
       {
@@ -1356,6 +1674,363 @@ export class AttendanceService
           select: { id: true, firstName: true, lastName: true },
         },
         _count: { select: { records: true } },
+        unmatchedRows: true,
+        missingRows: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                middleName: true,
+                lastName: true,
+                employeeId: true,
+                department: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Unmatched and missing rows for a single import batch (review page).
+   */
+  async getImportBatchDetails(
+    batchId: string,
+    companyId: string,
+  ): Promise<{
+    unmatched: unknown[];
+    missing: unknown[];
+  }> {
+    const batch = await this.prisma.attendanceImportBatch.findFirst({
+      where: { id: batchId, companyId },
+      select: { id: true },
+    });
+    if (!batch) {
+      throw new NotFoundException('Import batch not found');
+    }
+
+    const [unmatched, missing] = await Promise.all([
+      this.prisma.attendanceImportUnmatched.findMany({
+        where: { batchId, companyId },
+        orderBy: { attendanceName: 'asc' },
+      }),
+      this.prisma.attendanceImportMissing.findMany({
+        where: { batchId, companyId },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              employeeId: true,
+              department: { select: { name: true } },
+              attendanceMode: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return { unmatched, missing };
+  }
+
+  /**
+   * Lists attendance device identities for HR mapping maintenance.
+   */
+  async listIdentities(
+    companyId: string,
+    status?: 'MAPPED' | 'IGNORED',
+  ): Promise<unknown[]> {
+    return this.prisma.attendanceIdentity.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        ...(status
+          ? { status: status as AttendanceIdentityStatus }
+          : {}),
+      },
+      orderBy: [{ status: 'asc' }, { attendanceName: 'asc' }],
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            employeeId: true,
+            isActive: true,
+          },
+        },
+        decider: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+      },
+    });
+  }
+
+  /**
+   * Updates an attendance identity mapping or restores an ignored row.
+   */
+  async updateIdentity(
+    id: string,
+    dto: {
+      status?: 'MAPPED' | 'IGNORED';
+      userId?: string | null;
+      reason?: string | null;
+    },
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const identity = await this.prisma.attendanceIdentity.findFirst({
+      where: { id, companyId, deletedAt: null },
+    });
+    if (!identity) {
+      throw new NotFoundException('Attendance identity not found');
+    }
+
+    const nextStatus =
+      dto.status ??
+      (dto.userId
+        ? AttendanceIdentityStatus.MAPPED
+        : identity.status);
+
+    if (nextStatus === AttendanceIdentityStatus.MAPPED) {
+      const mappedUserId = dto.userId ?? identity.userId;
+      if (!mappedUserId) {
+        throw new BadRequestException(
+          'A mapped identity requires an ERP employee',
+        );
+      }
+      const employee = await this.prisma.user.findFirst({
+        where: { id: mappedUserId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!employee) {
+        throw new BadRequestException('Employee not found in this company');
+      }
+
+      return this.prisma.attendanceIdentity.update({
+        where: { id },
+        data: {
+          status: AttendanceIdentityStatus.MAPPED,
+          userId: mappedUserId,
+          reason: null,
+          decidedBy: userId,
+          decidedAt: new Date(),
+          updatedBy: userId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              employeeId: true,
+              isActive: true,
+            },
+          },
+        },
+      });
+    }
+
+    if (!dto.reason?.trim() && !identity.reason) {
+      throw new BadRequestException('A reason is required to ignore an identity');
+    }
+
+    return this.prisma.attendanceIdentity.update({
+      where: { id },
+      data: {
+        status: AttendanceIdentityStatus.IGNORED,
+        userId: null,
+        reason: dto.reason?.trim() || identity.reason,
+        decidedBy: userId,
+        decidedAt: new Date(),
+        updatedBy: userId,
+      },
+    });
+  }
+
+  /**
+   * Resolves a missing-from-file employee on an existing import batch.
+   */
+  async resolveImportMissing(
+    batchId: string,
+    missingId: string,
+    dto: {
+      resolution: 'MARKED_EXEMPT' | 'MANUAL_PRESENT' | 'NEEDS_ENROLMENT';
+      note?: string;
+    },
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const missing = await this.prisma.attendanceImportMissing.findFirst({
+      where: { id: missingId, batchId, companyId },
+      include: {
+        batch: { select: { month: true, year: true, id: true } },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            employeeId: true,
+          },
+        },
+      },
+    });
+    if (!missing) {
+      throw new NotFoundException('Missing employee row not found');
+    }
+
+    if (
+      dto.resolution === 'MANUAL_PRESENT' &&
+      (!dto.note || dto.note.trim().length < 3)
+    ) {
+      throw new BadRequestException(
+        'A reason is required for "Present this month"',
+      );
+    }
+
+    const now = new Date();
+    const { month, year } = missing.batch;
+
+    if (dto.resolution === 'NEEDS_ENROLMENT') {
+      return this.prisma.attendanceImportMissing.update({
+        where: { id: missing.id },
+        data: {
+          resolution: AttendanceMissingResolution.NEEDS_ENROLMENT,
+          note: dto.note?.trim() || missing.note,
+          resolvedBy: userId,
+          resolvedAt: now,
+        },
+      });
+    }
+
+    const matchMethod =
+      dto.resolution === 'MARKED_EXEMPT'
+        ? AttendanceMatchMethod.EXEMPT
+        : AttendanceMatchMethod.MANUAL_PRESENT;
+
+    if (dto.resolution === 'MARKED_EXEMPT') {
+      await this.prisma.user.update({
+        where: { id: missing.userId },
+        data: {
+          attendanceMode: AttendanceMode.EXEMPT,
+          updatedBy: userId,
+        },
+      });
+    }
+
+    const existingRecord = await this.prisma.attendanceRecord.findUnique({
+      where: {
+        companyId_employeeId_month_year: {
+          companyId,
+          employeeId: missing.userId,
+          month,
+          year,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!existingRecord) {
+      const name = [
+        missing.user.firstName,
+        missing.user.middleName,
+        missing.user.lastName,
+      ]
+        .map((part) => part?.trim() ?? '')
+        .filter((part) => part.length > 0)
+        .join(' ');
+
+      const { logs, summary } = await this.calculateDailyLogs(
+        missing.userId,
+        companyId,
+        [],
+        month,
+        year,
+        null,
+      );
+
+      const recordId = randomUUID();
+      await this.prisma.$transaction(async (tx) => {
+        await tx.attendanceRecord.create({
+          data: {
+            id: recordId,
+            companyId,
+            employeeId: missing.userId,
+            importBatchId: batchId,
+            month,
+            year,
+            matchMethod,
+            scheduledDays: summary.scheduledDays,
+            presentDays: summary.presentDays,
+            absentDays: summary.absentDays,
+            holidayDays: summary.holidayDays,
+            lateDays: summary.lateDays,
+            totalLateMinutes: summary.totalLateMinutes,
+            missingClockInDays: summary.missingClockInDays,
+            missingClockOutDays: summary.missingClockOutDays,
+            payableHours: summary.payableHours,
+            flaggedDays: summary.flaggedDays,
+            resolvedDays: 0,
+            importedAt: now,
+          },
+        });
+        if (logs.length > 0) {
+          await tx.attendanceDailyLog.createMany({
+            data: logs.map((log) => ({
+              id: randomUUID(),
+              attendanceRecordId: recordId,
+              date:
+                log.date instanceof Date
+                  ? log.date
+                  : new Date(String(log.date)),
+              clockInMachine: log.clockInMachine,
+              clockOutMachine: log.clockOutMachine,
+              clockInLocal: log.clockInLocal,
+              clockOutLocal: log.clockOutLocal,
+              isHoliday: log.isHoliday,
+              holidayName: log.holidayName,
+              isWeekend: log.isWeekend,
+              isHalfDay: log.isHalfDay,
+              wasPresent: log.wasPresent,
+              scheduledHours: log.scheduledHours,
+              recordedHours: log.recordedHours,
+              isLate: log.isLate,
+              lateMinutes: log.lateMinutes,
+              missingClockIn: log.missingClockIn,
+              missingClockOut: log.missingClockOut,
+              flag: log.flag,
+              isLastExportDay: log.isLastExportDay,
+            })),
+          });
+        }
+        void name;
+      });
+
+      await this.recalculateAttendanceRecord(
+        missing.userId,
+        companyId,
+        month,
+        year,
+      );
+    }
+
+    return this.prisma.attendanceImportMissing.update({
+      where: { id: missing.id },
+      data: {
+        resolution:
+          dto.resolution === 'MARKED_EXEMPT'
+            ? AttendanceMissingResolution.MARKED_EXEMPT
+            : AttendanceMissingResolution.MANUAL_PRESENT,
+        note: dto.note?.trim() || null,
+        resolvedBy: userId,
+        resolvedAt: now,
       },
     });
   }
@@ -2805,7 +3480,7 @@ export class AttendanceService
         id: true,
         departmentId: true,
         nationality: true,
-        employeeType: true,
+        attendanceMode: true,
       },
     });
     if (!employee) {
@@ -3385,123 +4060,6 @@ export class AttendanceService
     return { updated };
   }
 
-  /**
-   * Creates approved site assignments and/or WFH coverage for the import month
-   * for employees missing from the attendance file.
-   */
-  private async applyMissingEmployeePresenceActions(input: {
-    actions: Array<{
-      employeeId: string;
-      action: 'SITE' | 'WFH';
-      siteName?: string;
-    }>;
-    companyId: string;
-    userId: string;
-    month: number;
-    year: number;
-  }): Promise<void> {
-    if (input.actions.length === 0) {
-      return;
-    }
-
-    const monthStart = new Date(Date.UTC(input.year, input.month - 1, 1));
-    const monthEnd = new Date(Date.UTC(input.year, input.month, 0));
-    const now = new Date();
-
-    const siteActions = input.actions.filter((a) => a.action === 'SITE');
-    const wfhEmployeeIds = [
-      ...new Set(
-        input.actions
-          .filter((a) => a.action === 'WFH')
-          .map((a) => a.employeeId),
-      ),
-    ];
-
-    for (const action of siteActions) {
-      const siteName = action.siteName?.trim() ?? '';
-      const overlapping = await this.prisma.siteAssignment.findFirst({
-        where: {
-          companyId: input.companyId,
-          employeeId: action.employeeId,
-          status: SiteAssignmentStatus.APPROVED,
-          deletedAt: null,
-          startDate: { lte: monthEnd },
-          endDate: { gte: monthStart },
-        },
-        select: { id: true },
-      });
-      if (overlapping) {
-        continue;
-      }
-
-      const count = await this.prisma.siteAssignment.count({
-        where: { companyId: input.companyId },
-      });
-      await this.prisma.siteAssignment.create({
-        data: {
-          id: randomUUID(),
-          companyId: input.companyId,
-          requestNumber: `SA-${String(count + 1).padStart(4, '0')}`,
-          employeeId: action.employeeId,
-          siteName,
-          startDate: monthStart,
-          endDate: monthEnd,
-          reason: 'Created during attendance import',
-          status: SiteAssignmentStatus.APPROVED,
-          submittedAt: now,
-          completedAt: now,
-          createdBy: input.userId,
-          updatedBy: input.userId,
-        },
-      });
-    }
-
-    if (wfhEmployeeIds.length === 0) {
-      return;
-    }
-
-    const cursor = new Date(monthStart);
-    while (cursor.getTime() <= monthEnd.getTime()) {
-      if (cursor.getUTCDay() !== 0) {
-        const existing = await this.prisma.workFromHomeDay.findFirst({
-          where: {
-            companyId: input.companyId,
-            date: new Date(cursor),
-            deletedAt: null,
-          },
-        });
-
-        if (!existing) {
-          await this.prisma.workFromHomeDay.create({
-            data: {
-              id: randomUUID(),
-              companyId: input.companyId,
-              date: new Date(cursor),
-              reason: 'Attendance import — work from home',
-              scope: WorkFromHomeScope.EMPLOYEES,
-              employeeIds: wfhEmployeeIds,
-              createdBy: input.userId,
-              updatedBy: input.userId,
-            },
-          });
-        } else if (existing.scope === WorkFromHomeScope.ALL) {
-          // Already company-wide for this date.
-        } else {
-          const merged = [
-            ...new Set([...existing.employeeIds, ...wfhEmployeeIds]),
-          ];
-          await this.prisma.workFromHomeDay.update({
-            where: { id: existing.id },
-            data: {
-              employeeIds: merged,
-              updatedBy: input.userId,
-            },
-          });
-        }
-      }
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-    }
-  }
 }
 
 /**

@@ -25,8 +25,11 @@ export interface DayDeductionContext {
   siteNameForDate: (date: Date) => string | null;
   isOnApprovedLeave: (date: Date) => boolean;
   fieldMovementCoverage: (date: Date) => FieldMovementCoverage;
-  /** Freelancers do not clock in — treat duty days as full presence. */
-  isFreelancerEmployee?: () => boolean;
+  /**
+   * Attendance-exempt employees (no scanner) — treat duty days as full presence.
+   * Checked after paid categories (Sunday / holiday / WFH / site / leave).
+   */
+  isAttendanceExempt?: () => boolean;
 }
 
 export interface DayDeductionResult {
@@ -76,10 +79,11 @@ export function dayDeduction(
     return { deduction: 0, status: 'LEAVE' };
   }
 
+  if (context.isAttendanceExempt?.()) {
+    return { deduction: 0, status: 'PRESENT' };
+  }
+
   if (!hasClockIn && !hasClockOut) {
-    if (context.isFreelancerEmployee?.()) {
-      return { deduction: 0, status: 'PRESENT' };
-    }
     return { deduction: 1, status: 'ABSENT' };
   }
 

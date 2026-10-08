@@ -19,7 +19,7 @@ function emptyContext(overrides: Partial<DayDeductionContext> = {}): DayDeductio
     siteNameForDate: () => null,
     isOnApprovedLeave: () => false,
     fieldMovementCoverage: () => 'NONE',
-    isFreelancerEmployee: () => false,
+    isAttendanceExempt: () => false,
     ...overrides,
   };
 }
@@ -391,14 +391,28 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(r.status).toBe('HALF_ABSENT');
   });
 
-  it('freelancer with no scan → full presence (no deduction)', () => {
+  it('EXEMPT employee with no scan → full presence (no deduction)', () => {
     const date = d(2026, 8, 3);
     const r = dayDeduction(
       date,
       dayInput(date, { clockIn: null, clockOut: null }),
-      emptyContext({ isFreelancerEmployee: () => true }),
+      emptyContext({ isAttendanceExempt: () => true }),
     );
     expect(r.deduction).toBe(0);
     expect(r.status).toBe('PRESENT');
+  });
+
+  it('EXEMPT on approved leave → LEAVE (not generic present)', () => {
+    const date = d(2026, 8, 3);
+    const r = dayDeduction(
+      date,
+      dayInput(date, { clockIn: null, clockOut: null }),
+      emptyContext({
+        isAttendanceExempt: () => true,
+        isOnApprovedLeave: () => true,
+      }),
+    );
+    expect(r.deduction).toBe(0);
+    expect(r.status).toBe('LEAVE');
   });
 });

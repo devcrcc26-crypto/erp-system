@@ -267,6 +267,7 @@ export interface User {
   bankBranch?: string | null;
   bankAccountNumber?: string | null;
   includeInPayroll?: boolean;
+  attendanceMode?: 'SCANNER' | 'EXEMPT';
   isActive: boolean;
   mfaEnabled: boolean;
   emailVerifiedAt: string | null;
@@ -343,6 +344,7 @@ export interface CreateUserRequest {
   bankBranch?: string;
   bankAccountNumber?: string;
   includeInPayroll?: boolean;
+  attendanceMode?: 'SCANNER' | 'EXEMPT';
 }
 
 export interface UpdateUserRequest {
@@ -384,6 +386,7 @@ export interface UpdateUserRequest {
   bankBranch?: string;
   bankAccountNumber?: string;
   includeInPayroll?: boolean;
+  attendanceMode?: 'SCANNER' | 'EXEMPT';
 }
 
 export interface AssignUserRoleRequest {

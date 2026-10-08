@@ -58,6 +58,7 @@ export interface EmployeeProfileFormValues {
   bankBranch?: string;
   bankAccountNumber?: string;
   includeInPayroll?: boolean;
+  attendanceMode?: 'SCANNER' | 'EXEMPT';
 }
 
 export const GENDER_OPTIONS: Gender[] = ['MALE', 'FEMALE'];
@@ -425,6 +426,26 @@ export function EmployeeProfileFormFields({
               {t('users.form.includeInPayroll')}
             </Checkbox>
           </Form.Item>
+          <Form.Item
+            label={t('users.form.attendanceMode')}
+            name="attendanceMode"
+            initialValue="SCANNER"
+            extra={t('users.form.attendanceModeHint')}
+          >
+            <Select
+              disabled={!canEditHr}
+              options={[
+                {
+                  value: 'SCANNER',
+                  label: t('users.form.attendanceModeScanner'),
+                },
+                {
+                  value: 'EXEMPT',
+                  label: t('users.form.attendanceModeExempt'),
+                },
+              ]}
+            />
+          </Form.Item>
           <div className="erp-form-grid-3">
             <Form.Item label={t('users.form.bankName')} name="bankName">
               <Input maxLength={120} />
@@ -518,6 +539,7 @@ export function buildEmployeeProfilePayload(
   | 'bankBranch'
   | 'bankAccountNumber'
   | 'includeInPayroll'
+  | 'attendanceMode'
 > {
   return {
     employeeId: values.employeeId?.trim() || undefined,
@@ -544,6 +566,7 @@ export function buildEmployeeProfilePayload(
     bankBranch: values.bankBranch?.trim() || undefined,
     bankAccountNumber: values.bankAccountNumber?.trim() || undefined,
     includeInPayroll: values.includeInPayroll ?? true,
+    attendanceMode: values.attendanceMode ?? 'SCANNER',
   };
 }
 
@@ -563,7 +586,11 @@ function parseEmergencyContacts(value: User['emergencyContacts']): EmergencyCont
 
 export function employeeProfileInitialValues(user?: User | null): EmployeeProfileFormValues {
   if (!user) {
-    return { emergencyContacts: [], includeInPayroll: true };
+    return {
+      emergencyContacts: [],
+      includeInPayroll: true,
+      attendanceMode: 'SCANNER',
+    };
   }
   return {
     employeeId: user.employeeId ?? undefined,
@@ -592,6 +619,7 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     bankBranch: user.bankBranch ?? undefined,
     bankAccountNumber: user.bankAccountNumber ?? undefined,
     includeInPayroll: user.includeInPayroll ?? true,
+    attendanceMode: user.attendanceMode ?? 'SCANNER',
   };
 }
 

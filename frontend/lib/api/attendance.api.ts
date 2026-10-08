@@ -1,7 +1,10 @@
 import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from '@/lib/api/client';
 import type {
   AttendanceEmployeeSearchResult,
+  AttendanceIdentity,
   AttendanceImportBatch,
+  AttendanceImportBatchDetails,
+  AttendanceImportMissing,
   AttendanceImportSummary,
   AttendanceListParams,
   AttendanceListResponse,
@@ -110,6 +113,63 @@ export async function searchAttendanceEmployees(
   }
   return apiGet<AttendanceEmployeeSearchResult[]>(
     `${ATTENDANCE_PATH}/employees/search${toQueryString({ q: trimmed })}`,
+  );
+}
+
+/**
+ * List stored Deli attendance identities.
+ */
+export async function listAttendanceIdentities(params?: {
+  status?: 'MAPPED' | 'IGNORED';
+}): Promise<AttendanceIdentity[]> {
+  const status = params?.status;
+  const query =
+    status != null ? `?status=${encodeURIComponent(status)}` : '';
+  return apiGet<AttendanceIdentity[]>(`${ATTENDANCE_PATH}/identities${query}`);
+}
+
+/**
+ * Update a stored attendance identity.
+ */
+export async function updateAttendanceIdentity(
+  id: string,
+  dto: {
+    status?: 'MAPPED' | 'IGNORED';
+    userId?: string | null;
+    reason?: string | null;
+  },
+): Promise<AttendanceIdentity> {
+  return apiPatch<AttendanceIdentity>(
+    `${ATTENDANCE_PATH}/identities/${id}`,
+    dto,
+  );
+}
+
+/**
+ * Unmatched and missing rows for an import batch.
+ */
+export async function getAttendanceImportBatchDetails(
+  batchId: string,
+): Promise<AttendanceImportBatchDetails> {
+  return apiGet<AttendanceImportBatchDetails>(
+    `${ATTENDANCE_PATH}/imports/${batchId}/details`,
+  );
+}
+
+/**
+ * Resolve a missing-from-file employee on an existing batch.
+ */
+export async function resolveAttendanceImportMissing(
+  batchId: string,
+  missingId: string,
+  dto: {
+    resolution: 'MARKED_EXEMPT' | 'MANUAL_PRESENT' | 'NEEDS_ENROLMENT';
+    note?: string;
+  },
+): Promise<AttendanceImportMissing> {
+  return apiPost<AttendanceImportMissing>(
+    `${ATTENDANCE_PATH}/imports/${batchId}/missing/${missingId}/resolve`,
+    dto,
   );
 }
 

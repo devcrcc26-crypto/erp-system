@@ -325,6 +325,9 @@ model Company {
   attendanceImportBatches  AttendanceImportBatch[]
   attendanceRecords        AttendanceRecord[]
   attendanceMonthlyApprovals AttendanceMonthlyApproval[]
+  attendanceIdentities       AttendanceIdentity[]
+  attendanceImportUnmatched  AttendanceImportUnmatched[]
+  attendanceImportMissing    AttendanceImportMissing[]
   fieldMovementLogs          FieldMovementLog[]
   evaluationTemplates        EvaluationTemplate[]
   evaluationCycles           EvaluationCycle[]
@@ -646,6 +649,7 @@ model User {
   bankBranch          String?   @map("bank_branch")
   bankAccountNumber   String?   @map("bank_account_number")
   includeInPayroll    Boolean   @default(true) @map("include_in_payroll")
+  attendanceMode      AttendanceMode @default(SCANNER) @map("attendance_mode")
   isActive            Boolean   @default(true) @map("is_active")
   mfaEnabled          Boolean   @default(false) @map("mfa_enabled")
   emailVerifiedAt     DateTime? @map("email_verified_at")
@@ -829,6 +833,10 @@ model User {
   photoDocument                   Document?                 @relation("UserPhotoDocument", fields: [photoDocumentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   attendanceRecords               AttendanceRecord[]        @relation("AttendanceEmployee")
   attendanceImportBatches         AttendanceImportBatch[]   @relation("AttendanceImporter")
+  attendanceIdentitiesMapped      AttendanceIdentity[]      @relation("AttendanceIdentityUser")
+  attendanceIdentitiesDecided     AttendanceIdentity[]      @relation("AttendanceIdentityDecider")
+  attendanceImportMissing         AttendanceImportMissing[] @relation("AttendanceImportMissingUser")
+  attendanceImportMissingResolved AttendanceImportMissing[] @relation("AttendanceImportMissingResolver")
   fieldMovementLogs               FieldMovementLog[]        @relation("FieldMovementEmployee")
   fieldMovementLogsCreated        FieldMovementLog[]        @relation("FieldMovementCreator")
   siteAssignmentsAsEmployee       SiteAssignment[]          @relation("SiteAssignmentEmployee")
@@ -4145,6 +4153,67 @@ enum WorkFromHomeScope {
   EMPLOYEES
 }
 
+enum AttendanceMode {
+  SCANNER
+  EXEMPT
+}
+
+enum AttendanceIdentityStatus {
+  MAPPED
+  IGNORED
+}
+
+enum AttendanceMatchMethod {
+  IDENTITY
+  EMPLOYEE_ID
+  NAME_HIGH
+  NAME_REVIEW
+  MANUAL
+  EXEMPT
+  MANUAL_PRESENT
+}
+
+enum AttendanceUnmatchedStatus {
+  UNMATCHED
+  IGNORED
+}
+
+enum AttendanceMissingResolution {
+  PENDING
+  MARKED_EXEMPT
+  MANUAL_PRESENT
+  NEEDS_ENROLMENT
+}
+
+model AttendanceIdentity {
+  id             String                   @id @default(uuid())
+  companyId      String                   @map("company_id")
+  attendanceId   String                   @map("attendance_id")
+  attendanceName String                   @map("attendance_name")
+  status         AttendanceIdentityStatus
+  userId         String?                  @map("user_id")
+  reason         String?
+  decidedBy      String                   @map("decided_by")
+  decidedAt      DateTime                 @map("decided_at")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  createdBy      String                   @map("created_by")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+  updatedBy      String                   @map("updated_by")
+  deletedAt      DateTime?                @map("deleted_at")
+  deletedBy      String?                  @map("deleted_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User?   @relation("AttendanceIdentityUser", fields: [userId], references: [id])
+  decider User    @relation("AttendanceIdentityDecider", fields: [decidedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([companyId, attendanceId, attendanceName], map: "uq_attendance_identity_company_id_name")
+  @@index([companyId], map: "idx_attendance_identity_company")
+  @@index([companyId, deletedAt], map: "idx_attendance_identity_company_deleted")
+  @@index([companyId, status], map: "idx_attendance_identity_company_status")
+  @@index([userId], map: "idx_attendance_identity_user")
+  @@map("attendance_identity")
+}
+
 model AttendanceImportBatch {
   id            String   @id @default(uuid())
   companyId     String   @map("company_id")
@@ -4161,12 +4230,56 @@ model AttendanceImportBatch {
   company         Company                     @relation(fields: [companyId], references: [id])
   importer        User                        @relation("AttendanceImporter", fields: [importedBy], references: [id])
   records         AttendanceRecord[]
+  unmatchedRows   AttendanceImportUnmatched[]
+  missingRows     AttendanceImportMissing[]
   monthlyApproval AttendanceMonthlyApproval?
 
   @@unique([companyId, month, year])
   @@index([companyId], map: "idx_attendance_import_batch_company")
   @@index([importedBy], map: "idx_attendance_import_batch_importer")
   @@map("attendance_import_batch")
+}
+
+model AttendanceImportUnmatched {
+  id             String                    @id @default(uuid())
+  companyId      String                    @map("company_id")
+  batchId        String                    @map("batch_id")
+  attendanceId   String                    @map("attendance_id")
+  attendanceName String                    @map("attendance_name")
+  status         AttendanceUnmatchedStatus
+  createdAt      DateTime                  @default(now()) @map("created_at")
+
+  company Company               @relation(fields: [companyId], references: [id])
+  batch   AttendanceImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId], map: "idx_attendance_import_unmatched_batch")
+  @@index([companyId], map: "idx_attendance_import_unmatched_company")
+  @@map("attendance_import_unmatched")
+}
+
+model AttendanceImportMissing {
+  id         String                       @id @default(uuid())
+  companyId  String                       @map("company_id")
+  batchId    String                       @map("batch_id")
+  userId     String                       @map("user_id")
+  resolution AttendanceMissingResolution  @default(PENDING)
+  note       String?
+  resolvedBy String?                      @map("resolved_by")
+  resolvedAt DateTime?                    @map("resolved_at")
+  createdAt  DateTime                     @default(now()) @map("created_at")
+  updatedAt  DateTime                     @updatedAt @map("updated_at")
+
+  company  Company               @relation(fields: [companyId], references: [id])
+  batch    AttendanceImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  user     User                  @relation("AttendanceImportMissingUser", fields: [userId], references: [id])
+  resolver User?                 @relation("AttendanceImportMissingResolver", fields: [resolvedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([batchId, userId], map: "uq_attendance_import_missing_batch_user")
+  @@index([companyId], map: "idx_attendance_import_missing_company")
+  @@index([batchId], map: "idx_attendance_import_missing_batch")
+  @@index([userId], map: "idx_attendance_import_missing_user")
+  @@index([resolution], map: "idx_attendance_import_missing_resolution")
+  @@map("attendance_import_missing")
 }
 
 model AttendanceRecord {
@@ -4176,6 +4289,7 @@ model AttendanceRecord {
   importBatchId         String   @map("import_batch_id")
   month                 Int
   year                  Int
+  matchMethod           AttendanceMatchMethod @default(EMPLOYEE_ID) @map("match_method")
   scheduledDays         Decimal  @map("scheduled_days") @db.Decimal(4, 1)
   presentDays           Decimal  @map("present_days") @db.Decimal(4, 1)
   absentDays            Decimal  @map("absent_days") @db.Decimal(5, 2)

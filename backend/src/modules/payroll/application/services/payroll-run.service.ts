@@ -779,8 +779,13 @@ export class PayrollRunService {
 
     const employeeIds = employees.map((e) => e.id);
 
-    const [contracts, attendanceRecords, overtimeSheets, siteAssignments] =
-      await Promise.all([
+    const [
+      contracts,
+      attendanceRecords,
+      overtimeSheets,
+      siteAssignments,
+      missingAttendanceRows,
+    ] = await Promise.all([
       this.prisma.employeeContract.findMany({
         where: {
           companyId: ctx.companyId,
@@ -869,6 +874,17 @@ export class PayrollRunService {
           endDate: true,
         },
       }),
+      this.prisma.attendanceImportMissing.findMany({
+        where: {
+          companyId: ctx.companyId,
+          userId: { in: employeeIds },
+          batch: { month, year },
+        },
+        select: {
+          userId: true,
+          resolution: true,
+        },
+      }),
     ]);
 
     const contractsByEmployee = new Map<string, ContractSnapshot[]>();
@@ -902,6 +918,11 @@ export class PayrollRunService {
       siteByEmployee.set(row.employeeId, list);
     }
 
+    const missingResolutionByEmployee = new Map<string, string>();
+    for (const row of missingAttendanceRows) {
+      missingResolutionByEmployee.set(row.userId, row.resolution);
+    }
+
     const taxableThreshold = this.toNumber(run.taxableThreshold);
     const drafts: EntryDraft[] = [];
 
@@ -923,6 +944,8 @@ export class PayrollRunService {
           attendance,
           overtime: overtimeByEmployee.get(employee.id),
           siteAssignments: siteByEmployee.get(employee.id) ?? [],
+          missingAttendanceResolution:
+            missingResolutionByEmployee.get(employee.id) ?? null,
           taxableThreshold,
           bonusTopUp: topUp?.bonusTopUp ?? 0,
           bonusTopUpReason: topUp?.bonusTopUpReason ?? null,
@@ -948,6 +971,7 @@ export class PayrollRunService {
       startDate: Date;
       endDate: Date;
     }>;
+    missingAttendanceResolution?: string | null;
     taxableThreshold: number;
     bonusTopUp: number;
     bonusTopUpReason: string | null;
@@ -1069,7 +1093,22 @@ export class PayrollRunService {
       flagNote = 'No overlapping contract found for this month';
     } else if (sorted.length > 0 && !attendance) {
       flag = 'MISSING_ATTENDANCE';
-      flagNote = 'No attendance record found for this month';
+      const missingResolution = input.missingAttendanceResolution;
+      if (missingResolution === 'NEEDS_ENROLMENT') {
+        flagNote =
+          'No attendance record found for this month (Needs enrolment)';
+      } else if (missingResolution === 'PENDING') {
+        flagNote =
+          'No attendance record found for this month (Pending resolution)';
+      } else if (missingResolution === 'MARKED_EXEMPT') {
+        flagNote =
+          'No attendance record found for this month (Marked exempt)';
+      } else if (missingResolution === 'MANUAL_PRESENT') {
+        flagNote =
+          'No attendance record found for this month (Manual present)';
+      } else {
+        flagNote = 'No attendance record found for this month';
+      }
     } else if (monthEndBasic === 0) {
       flag = 'ZERO_SALARY';
       flagNote = 'Basic salary is zero on month-end contract';

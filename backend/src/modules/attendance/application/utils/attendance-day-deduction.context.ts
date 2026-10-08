@@ -18,7 +18,7 @@ export interface EmployeeDeductionProfile {
   id: string;
   departmentId: string | null;
   nationality: string | null;
-  employeeType?: string | null;
+  attendanceMode?: string | null;
 }
 
 interface LoadedDeductionData {
@@ -226,7 +226,7 @@ export function buildDayDeductionContext(
     isOnApprovedLeave: (date) => data.leaveDateKeys.has(dateToYyyyMmDd(date)),
     fieldMovementCoverage: (date) =>
       data.fieldMovementByDate.get(dateToYyyyMmDd(date)) ?? 'NONE',
-    isFreelancerEmployee: () => employee.employeeType === 'FREELANCER',
+    isAttendanceExempt: () => employee.attendanceMode === 'EXEMPT',
   };
 }
 

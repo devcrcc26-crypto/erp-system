@@ -52,11 +52,15 @@ function countByConfidence(
   results: AttendanceMatchResult[],
 ): Record<MatchConfidence, number> {
   return {
+    IDENTITY: results.filter((r) => r.confidence === 'IDENTITY').length,
     ID_MATCH: results.filter((r) => r.confidence === 'ID_MATCH').length,
     NAME_HIGH: results.filter((r) => r.confidence === 'NAME_HIGH').length,
     NAME_REVIEW: results.filter((r) => r.confidence === 'NAME_REVIEW').length,
+    MAPPED_INACTIVE: results.filter((r) => r.confidence === 'MAPPED_INACTIVE')
+      .length,
     MANUAL: results.filter((r) => r.confidence === 'MANUAL').length,
     NO_MATCH: results.filter((r) => r.confidence === 'NO_MATCH').length,
+    IGNORED: results.filter((r) => r.confidence === 'IGNORED').length,
   };
 }
 

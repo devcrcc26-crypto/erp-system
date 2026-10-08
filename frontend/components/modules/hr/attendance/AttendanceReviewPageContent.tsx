@@ -11,8 +11,10 @@ import {
   Form,
   Input,
   Modal,
+  Select,
   Space,
   Spin,
+  Table,
   Tag,
   Tooltip,
 } from 'antd';
@@ -28,13 +30,19 @@ import {
 } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AttendanceDailyLogsDrawer from '@/components/modules/hr/attendance/AttendanceDailyLogsDrawer';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import {
+  getAttendanceImportBatchDetails,
+  resolveAttendanceImportMissing,
+} from '@/lib/api/attendance.api';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
+  AttendanceImportMissing,
   AttendanceMonthStatus,
   AttendanceRecord,
 } from '@/lib/api/attendance.types';
@@ -165,10 +173,15 @@ export default function AttendanceReviewPageContent({
   const { t } = useEpcTranslation();
   const { message, modal } = App.useApp();
   const canViewHr = useCanViewHr();
+  const queryClient = useQueryClient();
 
   const [drawerEmployeeId, setDrawerEmployeeId] = useState<string | undefined>();
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [unlockForm] = Form.useForm<{ unlockReason: string }>();
+  const [missingNotes, setMissingNotes] = useState<Record<string, string>>({});
+  const [missingResolvingId, setMissingResolvingId] = useState<string | null>(
+    null,
+  );
 
   const monthName = t(`hr.months.${month}`);
   const listQuery = useAttendanceRecordsAll({ month, year }, canViewHr);
@@ -179,6 +192,19 @@ export default function AttendanceReviewPageContent({
 
   const records = listQuery.data ?? [];
   const approval = approvalQuery.data ?? null;
+  const batchId = approval?.importBatchId;
+
+  const batchDetailsQuery = useQuery({
+    queryKey: ['attendance-import-batch-details', batchId],
+    queryFn: () => getAttendanceImportBatchDetails(batchId as string),
+    enabled: Boolean(canViewHr && batchId),
+  });
+
+  const missingRows = batchDetailsQuery.data?.missing ?? [];
+  const unmatchedRows = batchDetailsQuery.data?.unmatched ?? [];
+  const pendingMissing = missingRows.filter(
+    (row) => row.resolution === 'PENDING' || row.resolution === 'NEEDS_ENROLMENT',
+  );
 
   const summary = useMemo(() => {
     const employeesWithFlags = records.filter(
@@ -765,6 +791,182 @@ export default function AttendanceReviewPageContent({
           />
         </div>
       </div>
+
+      {pendingMissing.length > 0 || unmatchedRows.length > 0 ? (
+        <div className="erp-pro-card mt-4">
+          <div className="erp-pro-card-toolbar">
+            <h3 className="erp-pro-card-toolbar-title">
+              {t('pages.hr.attendance.importModal.missingSection')} (
+              {pendingMissing.length})
+            </h3>
+          </div>
+          <div className="erp-pro-table-card-body space-y-4 p-3">
+            {pendingMissing.length > 0 ? (
+              <Table<AttendanceImportMissing>
+                size="small"
+                rowKey="id"
+                pagination={false}
+                dataSource={pendingMissing}
+                columns={[
+                  {
+                    title: t('pages.hr.attendance.importModal.colErpName'),
+                    key: 'name',
+                    render: (_: unknown, row: AttendanceImportMissing) =>
+                      `${row.user.firstName} ${row.user.lastName}`.trim(),
+                  },
+                  {
+                    title: t('pages.hr.attendance.importModal.colEmployeeId'),
+                    key: 'employeeId',
+                    render: (_: unknown, row: AttendanceImportMissing) =>
+                      row.user.employeeId ?? '—',
+                  },
+                  {
+                    title: t('pages.hr.attendance.importModal.colPresence'),
+                    key: 'actions',
+                    width: 360,
+                    render: (_: unknown, row: AttendanceImportMissing) => (
+                      <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+                        <Select
+                          size="small"
+                          style={{ width: '100%' }}
+                          placeholder={t(
+                            'pages.hr.attendance.importModal.missingActionNone',
+                          )}
+                          options={[
+                            {
+                              value: 'MARKED_EXEMPT',
+                              label: t(
+                                'pages.hr.attendance.importModal.missingActionExempt',
+                              ),
+                            },
+                            {
+                              value: 'MANUAL_PRESENT',
+                              label: t(
+                                'pages.hr.attendance.importModal.missingActionPresent',
+                              ),
+                            },
+                            {
+                              value: 'NEEDS_ENROLMENT',
+                              label: t(
+                                'pages.hr.attendance.importModal.missingActionEnrolment',
+                              ),
+                            },
+                          ]}
+                          loading={missingResolvingId === row.id}
+                          onChange={(resolution) => {
+                            void (async () => {
+                              if (!batchId) {
+                                return;
+                              }
+                              const note = missingNotes[row.id]?.trim() ?? '';
+                              if (
+                                resolution === 'MANUAL_PRESENT' &&
+                                note.length < 3
+                              ) {
+                                message.error(
+                                  t(
+                                    'pages.hr.attendance.importModal.missingPresentReasonRequired',
+                                  ),
+                                );
+                                return;
+                              }
+                              setMissingResolvingId(row.id);
+                              try {
+                                await resolveAttendanceImportMissing(
+                                  batchId,
+                                  row.id,
+                                  {
+                                    resolution,
+                                    ...(note ? { note } : {}),
+                                  },
+                                );
+                                message.success('Resolved');
+                                await queryClient.invalidateQueries({
+                                  queryKey: [
+                                    'attendance-import-batch-details',
+                                    batchId,
+                                  ],
+                                });
+                                await listQuery.refetch();
+                              } catch (error) {
+                                message.error(
+                                  error instanceof ApiRequestError
+                                    ? error.message
+                                    : 'Resolve failed',
+                                );
+                              } finally {
+                                setMissingResolvingId(null);
+                              }
+                            })();
+                          }}
+                        />
+                        <Input
+                          size="small"
+                          placeholder={t(
+                            'pages.hr.attendance.importModal.missingPresentReasonPlaceholder',
+                          )}
+                          value={missingNotes[row.id] ?? ''}
+                          onChange={(event) => {
+                            const note = event.target.value;
+                            setMissingNotes((prev) => ({
+                              ...prev,
+                              [row.id]: note,
+                            }));
+                          }}
+                        />
+                        <Link
+                          href="/approvals/new/site-assignment"
+                          target="_blank"
+                          className="text-[12px]"
+                        >
+                          {t(
+                            'pages.hr.attendance.importModal.submitSiteAssignment',
+                          )}
+                        </Link>
+                      </Space>
+                    ),
+                  },
+                ]}
+              />
+            ) : null}
+            {unmatchedRows.length > 0 ? (
+              <div>
+                <p className="mb-2 text-sm font-medium">
+                  {t('pages.hr.attendance.importModal.rejectedSection')} (
+                  {unmatchedRows.length})
+                </p>
+                <Table
+                  size="small"
+                  rowKey="id"
+                  pagination={false}
+                  dataSource={unmatchedRows}
+                  columns={[
+                    {
+                      title: t(
+                        'pages.hr.attendance.importModal.colAttendanceName',
+                      ),
+                      dataIndex: 'attendanceName',
+                      key: 'attendanceName',
+                    },
+                    {
+                      title: t(
+                        'pages.hr.attendance.importModal.colIdInSystem',
+                      ),
+                      dataIndex: 'attendanceId',
+                      key: 'attendanceId',
+                    },
+                    {
+                      title: t('pages.hr.attendance.importModal.colReason'),
+                      dataIndex: 'status',
+                      key: 'status',
+                    },
+                  ]}
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <AttendanceDailyLogsDrawer
         employeeId={drawerEmployeeId}

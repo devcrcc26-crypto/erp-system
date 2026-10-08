@@ -17,6 +17,7 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import {
+  AttendanceMode,
   EducationLevel,
   EmployeeType,
   Gender,
@@ -241,6 +242,16 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   includeInPayroll?: boolean;
+
+  @ApiPropertyOptional({
+    enum: AttendanceMode,
+    description:
+      'SCANNER: uses the attendance machine. EXEMPT: counted present every working day.',
+    default: AttendanceMode.SCANNER,
+  })
+  @IsOptional()
+  @IsEnum(AttendanceMode)
+  attendanceMode?: AttendanceMode;
 
   @ApiPropertyOptional()
   @IsOptional()

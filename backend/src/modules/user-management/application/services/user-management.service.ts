@@ -1026,6 +1026,7 @@ export class UserManagementService {
       bankBranch: true,
       bankAccountNumber: true,
       includeInPayroll: true,
+      attendanceMode: true,
       isActive: true,
       mfaEnabled: true,
       emailVerifiedAt: true,
@@ -1099,6 +1100,7 @@ export class UserManagementService {
     bankBranch?: string;
     bankAccountNumber?: string;
     includeInPayroll?: boolean;
+    attendanceMode?: CreateUserDto['attendanceMode'];
   }> {
     return {
       middleName: dto.middleName,
@@ -1124,6 +1126,7 @@ export class UserManagementService {
       bankBranch: dto.bankBranch,
       bankAccountNumber: dto.bankAccountNumber,
       includeInPayroll: dto.includeInPayroll,
+      attendanceMode: dto.attendanceMode,
     };
   }
 
@@ -1157,6 +1160,7 @@ export class UserManagementService {
       bankBranch?: string;
       bankAccountNumber?: string;
       includeInPayroll?: boolean;
+      attendanceMode?: CreateUserDto['attendanceMode'];
     }>,
   ): Promise<void> {
     const employeeId =
@@ -1216,6 +1220,9 @@ export class UserManagementService {
         bankBranch: profileInput.bankBranch?.trim() || null,
         bankAccountNumber: profileInput.bankAccountNumber?.trim() || null,
         includeInPayroll: profileInput.includeInPayroll ?? true,
+        attendanceMode:
+          (profileInput.attendanceMode as Prisma.UserUpdateInput['attendanceMode']) ??
+          (profileInput.employeeType === 'FREELANCER' ? 'EXEMPT' : 'SCANNER'),
         updatedBy: ctx.userId,
       },
     });
@@ -1309,6 +1316,7 @@ export class UserManagementService {
         | 'bankBranch'
         | 'bankAccountNumber'
         | 'includeInPayroll'
+        | 'attendanceMode'
       >
     >,
   ): Prisma.UserUncheckedUpdateInput {
@@ -1383,6 +1391,9 @@ export class UserManagementService {
     }
     if (rest.includeInPayroll !== undefined) {
       data.includeInPayroll = rest.includeInPayroll;
+    }
+    if (rest.attendanceMode !== undefined) {
+      data.attendanceMode = rest.attendanceMode;
     }
 
     return data;
