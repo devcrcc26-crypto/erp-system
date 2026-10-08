@@ -238,7 +238,7 @@ export default function OvertimeEntryForm({
                 type="info"
                 showIcon
                 className="md:col-span-2"
-                message={
+                title={
                   windows?.message ?? t('hr.labels.approvedLeaveNoOvertime')
                 }
               />
@@ -252,7 +252,7 @@ export default function OvertimeEntryForm({
                 type="warning"
                 showIcon
                 className="md:col-span-2"
-                message={t('hr.labels.noSelectableWindows')}
+                title={t('hr.labels.noSelectableWindows')}
               />
             ) : null}
 
@@ -320,7 +320,7 @@ export default function OvertimeEntryForm({
               type="info"
               showIcon
               className="!mt-3"
-              message={t('hr.labels.workedPastMidnight', {
+              title={t('hr.labels.workedPastMidnight', {
                 date: watchedDate.add(1, 'day').format('DD/MM/YYYY'),
               })}
               action={
@@ -434,7 +434,7 @@ export default function OvertimeEntryForm({
                   type="warning"
                   showIcon
                   className="!mt-3"
-                  message={preview.attendanceWarning}
+                  title={preview.attendanceWarning}
                 />
               ) : null}
               {preview.scheduleNote ? (

@@ -81,6 +81,7 @@ type UploadedFile = {
 const USER_SELECT = {
   id: true,
   firstName: true,
+  middleName: true,
   lastName: true,
   email: true,
   chineseName: true,
@@ -178,21 +179,23 @@ export class OvertimeService
       include: SHEET_DETAIL_INCLUDE,
     });
     if (existing) {
-      if (existing.status === OvertimeSheetStatus.CANCELLED) {
-        await this.prisma.overtimeSheet.update({
-          where: { id: existing.id },
-          data: {
-            status: OvertimeSheetStatus.DRAFT,
-            approvalRequestId: null,
-            submittedAt: null,
-            completedAt: null,
-            updatedBy: userId,
-          },
-        });
-        return this.getSheet(existing.id, companyId, userId);
-      }
-      await this.assertCanViewSheet(existing, companyId, userId);
-      return this.mapSheetWithHolidayNames(existing, companyId);
+      return this.reopenOrReturnSheet(existing, companyId, userId);
+    }
+
+    // Soft-deleted rows still hold the unique (company, employee, month, year)
+    // key — restore them instead of inserting a duplicate.
+    const softDeleted = await this.prisma.overtimeSheet.findFirst({
+      where: {
+        companyId,
+        employeeId,
+        month,
+        year,
+        deletedAt: { not: null },
+      },
+      include: SHEET_DETAIL_INCLUDE,
+    });
+    if (softDeleted) {
+      return this.restoreSoftDeletedSheet(softDeleted.id, companyId, userId);
     }
 
     const sheetId = randomUUID();
@@ -218,16 +221,72 @@ export class OvertimeService
         error.code === 'P2002'
       ) {
         const raced = await this.prisma.overtimeSheet.findFirst({
-          where: activeOnly({ companyId, employeeId, month, year }),
+          where: { companyId, employeeId, month, year },
           include: SHEET_DETAIL_INCLUDE,
         });
         if (raced) {
-          return this.mapSheetWithHolidayNames(raced, companyId);
+          if (raced.deletedAt) {
+            return this.restoreSoftDeletedSheet(raced.id, companyId, userId);
+          }
+          return this.reopenOrReturnSheet(raced, companyId, userId);
         }
       }
       throw error;
     }
 
+    return this.getSheet(sheetId, companyId, userId);
+  }
+
+  /**
+   * Returns an active sheet, reopening CANCELLED ones as DRAFT.
+   */
+  private async reopenOrReturnSheet(
+    existing: {
+      id: string;
+      status: OvertimeSheetStatus;
+      companyId: string;
+      employeeId: string;
+    } & Record<string, unknown>,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    if (existing.status === OvertimeSheetStatus.CANCELLED) {
+      await this.prisma.overtimeSheet.update({
+        where: { id: existing.id },
+        data: {
+          status: OvertimeSheetStatus.DRAFT,
+          approvalRequestId: null,
+          submittedAt: null,
+          completedAt: null,
+          updatedBy: userId,
+        },
+      });
+      return this.getSheet(existing.id, companyId, userId);
+    }
+    await this.assertCanViewSheet(existing, companyId, userId);
+    return this.mapSheetWithHolidayNames(existing, companyId);
+  }
+
+  /**
+   * Clears soft-delete and returns the sheet as a fresh DRAFT for editing.
+   */
+  private async restoreSoftDeletedSheet(
+    sheetId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    await this.prisma.overtimeSheet.update({
+      where: { id: sheetId },
+      data: {
+        deletedAt: null,
+        deletedBy: null,
+        status: OvertimeSheetStatus.DRAFT,
+        approvalRequestId: null,
+        submittedAt: null,
+        completedAt: null,
+        updatedBy: userId,
+      },
+    });
     return this.getSheet(sheetId, companyId, userId);
   }
 
@@ -1234,10 +1293,11 @@ export class OvertimeService
     entryId: string,
     endsAtEndOfDay: boolean,
   ): Promise<void> {
+    // id is text/varchar in Postgres (Prisma String), not uuid — do not cast.
     await tx.$executeRaw`
       UPDATE overtime_entry
       SET ends_at_end_of_day = ${endsAtEndOfDay}
-      WHERE id = ${entryId}::uuid
+      WHERE id = ${entryId}
     `;
   }
 
@@ -1247,7 +1307,7 @@ export class OvertimeService
     >`
       SELECT ends_at_end_of_day
       FROM overtime_entry
-      WHERE id = ${entryId}::uuid
+      WHERE id = ${entryId}
     `;
     return Boolean(rows[0]?.ends_at_end_of_day);
   }
@@ -1266,7 +1326,7 @@ export class OvertimeService
     >`
       SELECT id, ends_at_end_of_day
       FROM overtime_entry
-      WHERE id IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`))})
+      WHERE id IN (${Prisma.join(ids)})
     `;
     const flags = new Map(
       rows.map((row) => [row.id, Boolean(row.ends_at_end_of_day)]),

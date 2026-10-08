@@ -205,23 +205,23 @@ export default function OvertimeRequestDetail({
       <SummaryStrip
         items={[
           {
-            label: 'Regular',
+            label: t('hr.overtimeCategory.regular'),
             value: `${formatOvertimeHours(sheet.totalRegularHours)} hrs`,
           },
           {
-            label: 'Night',
+            label: t('hr.overtimeCategory.night'),
             value: `${formatOvertimeHours(sheet.totalNightHours)} hrs`,
           },
           {
-            label: 'Weekend',
+            label: t('hr.overtimeCategory.weekend'),
             value: `${formatOvertimeHours(sheet.totalWeekendHours)} hrs`,
           },
           {
-            label: 'Holiday',
+            label: t('hr.overtimeCategory.holiday'),
             value: `${formatOvertimeHours(sheet.totalHolidayHours)} hrs`,
           },
           {
-            label: 'Total',
+            label: t('hr.overtimeCategory.total'),
             value: `${formatOvertimeHours(sheet.totalHours)} hrs`,
             emphasize: true,
           },

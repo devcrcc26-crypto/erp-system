@@ -33,11 +33,16 @@ export function displayUserLabel(
  */
 export function formatUserName(user: {
   firstName?: string | null;
+  middleName?: string | null;
   lastName?: string | null;
   chineseName?: string | null;
   email?: string | null;
 }): string {
-  const english = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+  const english = [user.firstName, user.middleName, user.lastName]
+    .filter((part) => Boolean(part && String(part).trim()))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   const chinese = user.chineseName?.trim();
 
   if (english && chinese) {

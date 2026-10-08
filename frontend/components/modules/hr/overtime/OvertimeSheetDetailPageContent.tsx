@@ -586,10 +586,10 @@ export default function OvertimeSheetDetailPageContent({
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
               <h2 className="erp-users-name erp-employee-hero-name m-0">
-                {periodLabel}
+                {employeeName}
               </h2>
             </div>
-            <p className="erp-users-email m-0 mt-1.5">{employeeName}</p>
+            <p className="erp-users-email m-0 mt-1.5">{periodLabel}</p>
             <p className="erp-users-cell-sub m-0 mt-1">
               {`${t('hr.overtimeCategory.total')} ${formatOvertimeHours(sheet.totalHours)} hrs`}
             </p>
