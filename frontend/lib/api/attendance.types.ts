@@ -216,6 +216,7 @@ export interface AttendancePreviewRow {
   confidence: MatchConfidence;
   score: number | null;
   identityId?: string | null;
+  matchNote?: string | null;
   data: {
     payableHours: number;
     dailyData: AttendancePreviewDaily[];

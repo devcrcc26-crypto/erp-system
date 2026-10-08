@@ -991,6 +991,7 @@ export class AttendanceService
         confidence: 'MANUAL',
         score: 100,
         identityId: null,
+        matchNote: null,
         matchMethod: AttendanceMatchMethod.EXEMPT,
         data: { payableHours: 0, dailyData: [] },
       });
@@ -1026,6 +1027,7 @@ export class AttendanceService
         confidence: 'MANUAL',
         score: 100,
         identityId: null,
+        matchNote: null,
         matchMethod:
           action.resolution === 'MARKED_EXEMPT'
             ? AttendanceMatchMethod.EXEMPT

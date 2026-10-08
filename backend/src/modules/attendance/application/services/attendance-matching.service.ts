@@ -24,8 +24,10 @@ export interface AttendanceMatchResult {
   matchedEmployeeErpId: string | null;
   confidence: MatchConfidence;
   score: number | null;
-  /** True when a stored identity exists for this row. */
+  /** Stored identity used for this row, when applicable. */
   identityId: string | null;
+  /** HR-facing note (e.g. reused machine ID with a new name). */
+  matchNote: string | null;
   data: {
     payableHours: number;
     dailyData: AttendanceDailyRaw[];
@@ -50,6 +52,15 @@ type StoredIdentity = {
   userId: string | null;
 };
 
+type EmployeeRecord = {
+  id: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  employeeId: string | null;
+  isActive: boolean;
+};
+
 /**
  * Builds "First Middle Last", omitting blank middle names.
  */
@@ -72,8 +83,17 @@ export function normaliseAttendanceName(name: string): string {
 }
 
 /**
+ * Normalises a Deli attendance device id (`''` / null → `'-'`).
+ */
+export function normaliseAttendanceId(attendanceId: string | null | undefined): string {
+  const trimmed = attendanceId?.trim() ?? '';
+  return trimmed.length > 0 ? trimmed : '-';
+}
+
+/**
  * Matches Deli attendance rows to ERP employees:
- * stored identity → exact employeeId → fuzzy full name.
+ * exact identity (id+name, or name-only when id is blank) →
+ * reused machine-id conflict → exact employeeId → fuzzy full name.
  */
 @Injectable()
 export class AttendanceMatchingService {
@@ -112,19 +132,24 @@ export class AttendanceMatchingService {
     ]);
 
     const identityByKey = new Map<string, StoredIdentity>();
-    /** Same device id under a different name spelling still resolves. */
-    const identityByAttendanceId = new Map<string, StoredIdentity>();
+    /** Non-blank machine IDs → all stored identities sharing that ID. */
+    const identitiesByAttendanceId = new Map<string, StoredIdentity[]>();
     for (const identity of identities) {
+      const attendanceId = normaliseAttendanceId(identity.attendanceId);
+      const attendanceName = normaliseAttendanceName(identity.attendanceName);
+      const normalised: StoredIdentity = {
+        ...identity,
+        attendanceId,
+        attendanceName,
+      };
       identityByKey.set(
-        this.identityKey(identity.attendanceId, identity.attendanceName),
-        identity,
+        this.identityKey(attendanceId, attendanceName),
+        normalised,
       );
-      if (identity.attendanceId && identity.attendanceId !== '-') {
-        const existing = identityByAttendanceId.get(identity.attendanceId.trim());
-        // Prefer IGNORED so a left-company decision wins over an older map.
-        if (!existing || identity.status === 'IGNORED') {
-          identityByAttendanceId.set(identity.attendanceId.trim(), identity);
-        }
+      if (attendanceId !== '-') {
+        const list = identitiesByAttendanceId.get(attendanceId) ?? [];
+        list.push(normalised);
+        identitiesByAttendanceId.set(attendanceId, list);
       }
     }
 
@@ -151,7 +176,7 @@ export class AttendanceMatchingService {
       this.matchOne(
         row,
         identityByKey,
-        identityByAttendanceId,
+        identitiesByAttendanceId,
         employeeById,
         activeEmployees,
         fuseByName,
@@ -160,79 +185,52 @@ export class AttendanceMatchingService {
   }
 
   private identityKey(attendanceId: string, attendanceName: string): string {
-    return `${attendanceId.trim()}::${normaliseAttendanceName(attendanceName)}`;
+    return `${normaliseAttendanceId(attendanceId)}::${normaliseAttendanceName(attendanceName)}`;
   }
 
   private matchOne(
     row: AttendanceRawRow,
     identityByKey: Map<string, StoredIdentity>,
-    identityByAttendanceId: Map<string, StoredIdentity>,
-    employeeById: Map<
-      string,
-      {
-        id: string;
-        firstName: string;
-        middleName: string | null;
-        lastName: string;
-        employeeId: string | null;
-        isActive: boolean;
-      }
-    >,
-    activeEmployees: Array<{
-      id: string;
-      firstName: string;
-      middleName: string | null;
-      lastName: string;
-      employeeId: string | null;
-      isActive: boolean;
-    }>,
+    identitiesByAttendanceId: Map<string, StoredIdentity[]>,
+    employeeById: Map<string, EmployeeRecord>,
+    activeEmployees: EmployeeRecord[],
     fuseByName: Fuse<EmployeeMatchCandidate>,
   ): AttendanceMatchResult {
     const data = {
       payableHours: row.payableHours,
       dailyData: row.dailyData,
     };
-    const attendanceId =
-      row.attendanceId && row.attendanceId.trim().length > 0
-        ? row.attendanceId.trim()
-        : '-';
+    const attendanceId = normaliseAttendanceId(row.attendanceId);
     const attendanceName = normaliseAttendanceName(row.attendanceName);
 
-    const identity =
-      identityByKey.get(this.identityKey(attendanceId, attendanceName)) ??
-      (attendanceId !== '-'
-        ? identityByAttendanceId.get(attendanceId)
-        : undefined);
-    if (identity) {
-      if (identity.status === 'IGNORED') {
-        return {
-          attendanceName,
-          attendanceId,
-          matchedEmployeeId: null,
-          matchedEmployeeName: null,
-          matchedEmployeeErpId: null,
-          confidence: 'IGNORED',
-          score: null,
-          identityId: identity.id,
-          data,
-        };
-      }
+    const exactIdentity = identityByKey.get(
+      this.identityKey(attendanceId, attendanceName),
+    );
+    if (exactIdentity) {
+      return this.fromExactIdentity(
+        exactIdentity,
+        attendanceId,
+        attendanceName,
+        employeeById,
+        data,
+      );
+    }
 
-      if (identity.userId) {
-        const mapped = employeeById.get(identity.userId);
-        if (mapped) {
-          return {
-            attendanceName,
-            attendanceId,
-            matchedEmployeeId: mapped.id,
-            matchedEmployeeName: formatEmployeeFullName(mapped),
-            matchedEmployeeErpId: mapped.employeeId,
-            confidence: mapped.isActive ? 'IDENTITY' : 'MAPPED_INACTIVE',
-            score: mapped.isActive ? 100 : null,
-            identityId: identity.id,
-            data,
-          };
-        }
+    // Same machine ID, different name → Needs Review (do not auto IGNORED / IDENTITY).
+    if (attendanceId !== '-') {
+      const sameIdIdentities = identitiesByAttendanceId.get(attendanceId) ?? [];
+      const nameMismatch = sameIdIdentities.find(
+        (identity) =>
+          normaliseAttendanceName(identity.attendanceName) !== attendanceName,
+      );
+      if (nameMismatch) {
+        return this.fromReusedMachineId(
+          nameMismatch,
+          attendanceId,
+          attendanceName,
+          employeeById,
+          data,
+        );
       }
     }
 
@@ -250,6 +248,7 @@ export class AttendanceMatchingService {
           confidence: 'ID_MATCH',
           score: 100,
           identityId: null,
+          matchNote: null,
           data,
         };
       }
@@ -270,6 +269,7 @@ export class AttendanceMatchingService {
           confidence: 'NAME_HIGH',
           score,
           identityId: null,
+          matchNote: null,
           data,
         };
       }
@@ -284,6 +284,7 @@ export class AttendanceMatchingService {
           confidence: 'NAME_REVIEW',
           score,
           identityId: null,
+          matchNote: null,
           data,
         };
       }
@@ -298,6 +299,99 @@ export class AttendanceMatchingService {
       confidence: 'NO_MATCH',
       score: null,
       identityId: null,
+      matchNote: null,
+      data,
+    };
+  }
+
+  private fromExactIdentity(
+    identity: StoredIdentity,
+    attendanceId: string,
+    attendanceName: string,
+    employeeById: Map<string, EmployeeRecord>,
+    data: AttendanceMatchResult['data'],
+  ): AttendanceMatchResult {
+    if (identity.status === 'IGNORED') {
+      return {
+        attendanceName,
+        attendanceId,
+        matchedEmployeeId: null,
+        matchedEmployeeName: null,
+        matchedEmployeeErpId: null,
+        confidence: 'IGNORED',
+        score: null,
+        identityId: identity.id,
+        matchNote: null,
+        data,
+      };
+    }
+
+    if (identity.userId) {
+      const mapped = employeeById.get(identity.userId);
+      if (mapped) {
+        return {
+          attendanceName,
+          attendanceId,
+          matchedEmployeeId: mapped.id,
+          matchedEmployeeName: formatEmployeeFullName(mapped),
+          matchedEmployeeErpId: mapped.employeeId,
+          confidence: mapped.isActive ? 'IDENTITY' : 'MAPPED_INACTIVE',
+          score: mapped.isActive ? 100 : null,
+          identityId: identity.id,
+          matchNote: null,
+          data,
+        };
+      }
+    }
+
+    return {
+      attendanceName,
+      attendanceId,
+      matchedEmployeeId: null,
+      matchedEmployeeName: null,
+      matchedEmployeeErpId: null,
+      confidence: 'NO_MATCH',
+      score: null,
+      identityId: identity.id,
+      matchNote: null,
+      data,
+    };
+  }
+
+  private fromReusedMachineId(
+    prior: StoredIdentity,
+    attendanceId: string,
+    attendanceName: string,
+    employeeById: Map<string, EmployeeRecord>,
+    data: AttendanceMatchResult['data'],
+  ): AttendanceMatchResult {
+    const oldName = prior.attendanceName;
+    if (prior.status === 'IGNORED') {
+      return {
+        attendanceName,
+        attendanceId,
+        matchedEmployeeId: null,
+        matchedEmployeeName: null,
+        matchedEmployeeErpId: null,
+        confidence: 'NAME_REVIEW',
+        score: null,
+        identityId: prior.id,
+        matchNote: `Machine ID ${attendanceId} was previously ignored for ${oldName}`,
+        data,
+      };
+    }
+
+    const mapped = prior.userId ? employeeById.get(prior.userId) : undefined;
+    return {
+      attendanceName,
+      attendanceId,
+      matchedEmployeeId: mapped?.id ?? null,
+      matchedEmployeeName: mapped ? formatEmployeeFullName(mapped) : null,
+      matchedEmployeeErpId: mapped?.employeeId ?? null,
+      confidence: 'NAME_REVIEW',
+      score: null,
+      identityId: prior.id,
+      matchNote: `Machine ID ${attendanceId} was previously mapped for ${oldName}`,
       data,
     };
   }

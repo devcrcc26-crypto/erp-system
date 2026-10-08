@@ -644,7 +644,14 @@ export default function AttendanceImportModal({
             </span>
           );
         }
-        return row.matchedEmployeeName ?? '—';
+        return (
+          <Space orientation="vertical" size={0}>
+            <span>{row.matchedEmployeeName ?? '—'}</span>
+            {row.matchNote ? (
+              <span className="text-[11px] text-amber-700">{row.matchNote}</span>
+            ) : null}
+          </Space>
+        );
       },
     },
     {

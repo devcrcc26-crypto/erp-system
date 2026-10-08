@@ -34,7 +34,7 @@ describe('Attendance identity / mode / missing', () => {
     return new AttendanceMatchingService(prisma as never);
   }
 
-  it('maps month-2 row via identity even when name spelling differs', async () => {
+  it('exact id+name identity auto-matches in month 2', async () => {
     const prisma = {
       attendanceIdentity: {
         findMany: jest.fn().mockResolvedValue([
@@ -64,7 +64,7 @@ describe('Attendance identity / mode / missing', () => {
     const results = await service.matchRows(
       [
         {
-          attendanceName: 'Jon Smyth',
+          attendanceName: 'John Smith',
           attendanceId: 'D100',
           payableHours: 0,
           dailyData: [],
@@ -74,9 +74,10 @@ describe('Attendance identity / mode / missing', () => {
     );
     expect(results[0].confidence).toBe('IDENTITY');
     expect(results[0].matchedEmployeeId).toBe('user-1');
+    expect(results[0].matchNote).toBeNull();
   });
 
-  it('skips ignored identity in month 2 and marks IGNORED', async () => {
+  it('skips ignored identity only when id and name both match', async () => {
     const prisma = {
       attendanceIdentity: {
         findMany: jest.fn().mockResolvedValue([
@@ -107,6 +108,136 @@ describe('Attendance identity / mode / missing', () => {
     );
     expect(results[0].confidence).toBe('IGNORED');
     expect(results[0].matchedEmployeeId).toBeNull();
+  });
+
+  it('two blank-ID rows: ignored one stays ignored; the other is still processed', async () => {
+    const prisma = {
+      attendanceIdentity: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'id-blank-ignored',
+            attendanceId: '-',
+            attendanceName: 'Left Company',
+            status: AttendanceIdentityStatus.IGNORED,
+            userId: null,
+          },
+        ]),
+      },
+      user: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'user-active',
+            firstName: 'Still',
+            middleName: null,
+            lastName: 'Here',
+            employeeId: 'E050',
+            isActive: true,
+          },
+        ]),
+      },
+    };
+    const service = buildMatchingService(prisma);
+    const results = await service.matchRows(
+      [
+        {
+          attendanceName: 'Left Company',
+          attendanceId: '-',
+          payableHours: 0,
+          dailyData: [],
+        },
+        {
+          attendanceName: 'Still Here',
+          attendanceId: '',
+          payableHours: 0,
+          dailyData: [],
+        },
+      ],
+      companyId,
+    );
+    expect(results[0].confidence).toBe('IGNORED');
+    expect(results[1].confidence).not.toBe('IGNORED');
+    expect(results[1].matchedEmployeeId).toBe('user-active');
+  });
+
+  it('reused machine ID with a new name goes to Needs Review with a note', async () => {
+    const prisma = {
+      attendanceIdentity: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'id-ignored-old',
+            attendanceId: 'D777',
+            attendanceName: 'Old Person',
+            status: AttendanceIdentityStatus.IGNORED,
+            userId: null,
+          },
+        ]),
+      },
+      user: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const service = buildMatchingService(prisma);
+    const results = await service.matchRows(
+      [
+        {
+          attendanceName: 'New Person',
+          attendanceId: 'D777',
+          payableHours: 0,
+          dailyData: [],
+        },
+      ],
+      companyId,
+    );
+    expect(results[0].confidence).toBe('NAME_REVIEW');
+    expect(results[0].matchNote).toBe(
+      'Machine ID D777 was previously ignored for Old Person',
+    );
+    expect(results[0].matchedEmployeeId).toBeNull();
+  });
+
+  it('reused machine ID previously MAPPED goes to Needs Review (not auto-match)', async () => {
+    const prisma = {
+      attendanceIdentity: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'id-mapped-old',
+            attendanceId: 'D888',
+            attendanceName: 'Mapped Name',
+            status: AttendanceIdentityStatus.MAPPED,
+            userId: 'user-2',
+          },
+        ]),
+      },
+      user: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'user-2',
+            firstName: 'Mapped',
+            middleName: null,
+            lastName: 'Name',
+            employeeId: 'E002',
+            isActive: true,
+          },
+        ]),
+      },
+    };
+    const service = buildMatchingService(prisma);
+    const results = await service.matchRows(
+      [
+        {
+          attendanceName: 'Different Spelling',
+          attendanceId: 'D888',
+          payableHours: 0,
+          dailyData: [],
+        },
+      ],
+      companyId,
+    );
+    expect(results[0].confidence).toBe('NAME_REVIEW');
+    expect(results[0].matchNote).toBe(
+      'Machine ID D888 was previously mapped for Mapped Name',
+    );
+    expect(results[0].matchedEmployeeId).toBe('user-2');
   });
 
   it('undo-ignore path: IGNORED identity can be remapped to MAPPED', async () => {
