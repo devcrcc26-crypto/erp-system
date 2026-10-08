@@ -47,6 +47,15 @@ export interface PayrollSalaryPeriod {
   days: MoneyField;
   basicSalary: MoneyField;
   earnedSalary: MoneyField;
+  normalOtHours?: MoneyField;
+  eveningOtHours?: MoneyField;
+  sundayOtHours?: MoneyField;
+  holidayOtHours?: MoneyField;
+  normalOtPay?: MoneyField;
+  eveningOtPay?: MoneyField;
+  sundayOtPay?: MoneyField;
+  holidayOtPay?: MoneyField;
+  totalOtPay?: MoneyField;
 }
 
 export interface PayrollEntryEmployee {

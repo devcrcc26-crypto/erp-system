@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { PayrollEntryFlag, PayrollRunStatus } from '@prisma/client';
+import { Prisma, type PayrollEntryFlag, type PayrollRunStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -189,6 +189,15 @@ export interface PayrollExportSalaryPeriod {
   days: Numeric;
   basicSalary: Numeric;
   earnedSalary: Numeric;
+  normalOtHours?: Numeric;
+  normalOtPay?: Numeric;
+  eveningOtHours?: Numeric;
+  eveningOtPay?: Numeric;
+  sundayOtHours?: Numeric;
+  sundayOtPay?: Numeric;
+  holidayOtHours?: Numeric;
+  holidayOtPay?: Numeric;
+  totalOtPay?: Numeric;
 }
 
 /** Payroll entry shape consumed by the Excel export (Prisma result is assignable). */
@@ -308,6 +317,56 @@ export class PayrollExcelExportService {
   ) {}
 
   /**
+   * Attach per-period OT fields (raw SQL until Prisma client includes them).
+   */
+  private async hydrateSalaryPeriodOvertime(
+    entries: Array<{ salaryPeriods: Array<Record<string, unknown>> }>,
+  ): Promise<void> {
+    const periodIds = entries
+      .flatMap((e) => e.salaryPeriods.map((p) => p.id))
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    if (periodIds.length === 0) {
+      return;
+    }
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        normal_ot_hours: Decimal;
+        evening_ot_hours: Decimal;
+        sunday_ot_hours: Decimal;
+        holiday_ot_hours: Decimal;
+        normal_ot_pay: Decimal;
+        evening_ot_pay: Decimal;
+        sunday_ot_pay: Decimal;
+        holiday_ot_pay: Decimal;
+        total_ot_pay: Decimal;
+      }>
+    >`
+      SELECT id,
+             normal_ot_hours, evening_ot_hours, sunday_ot_hours, holiday_ot_hours,
+             normal_ot_pay, evening_ot_pay, sunday_ot_pay, holiday_ot_pay, total_ot_pay
+      FROM payroll_salary_period
+      WHERE id IN (${Prisma.join(periodIds)})
+    `;
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    for (const entry of entries) {
+      for (const period of entry.salaryPeriods) {
+        const ot = byId.get(String(period.id));
+        if (!ot) continue;
+        period.normalOtHours = ot.normal_ot_hours;
+        period.eveningOtHours = ot.evening_ot_hours;
+        period.sundayOtHours = ot.sunday_ot_hours;
+        period.holidayOtHours = ot.holiday_ot_hours;
+        period.normalOtPay = ot.normal_ot_pay;
+        period.eveningOtPay = ot.evening_ot_pay;
+        period.sundayOtPay = ot.sunday_ot_pay;
+        period.holidayOtPay = ot.holiday_ot_pay;
+        period.totalOtPay = ot.total_ot_pay;
+      }
+    }
+  }
+
+  /**
    * Builds an HR salary-sheet-compatible Excel workbook for a payroll run
    * (Data sheet + Payroll tax-declaration sheet).
    */
@@ -347,6 +406,8 @@ export class PayrollExcelExportService {
     if (run.status === 'CANCELLED') {
       throw new BadRequestException('Cannot export a cancelled payroll run');
     }
+
+    await this.hydrateSalaryPeriodOvertime(run.entries);
 
     const entries: PayrollExportEntry[] = [...run.entries].sort((a, b) => {
       const deptA = a.employee.department?.name ?? '';
@@ -729,27 +790,63 @@ export class PayrollExcelExportService {
         MONEY_FORMAT,
       );
 
-      // Everything else is entry-level: written once, on the last row.
-      if (isLast) {
-        set(COL.transport, toNumber(entry.transportAllowance), MONEY_FORMAT);
-        set(COL.taxableTransport, toNumber(entry.taxableTransport), MONEY_FORMAT);
-        setOt(set, COL.normalHr, COL.normalPay, entry.normalOtHours, entry.normalOtPay);
+      // Per-period OT on each salary-period row (HR two-row layout); entry OT
+      // totals also on the last row when multi-period so the sheet TOTAL matches.
+      if (multi && period) {
+        setOt(
+          set,
+          COL.normalHr,
+          COL.normalPay,
+          period.normalOtHours ?? 0,
+          period.normalOtPay ?? 0,
+        );
         setOt(
           set,
           COL.eveningHr,
           COL.eveningPay,
-          entry.eveningOtHours,
-          entry.eveningOtPay,
+          period.eveningOtHours ?? 0,
+          period.eveningOtPay ?? 0,
         );
-        setOt(set, COL.sundayHr, COL.sundayPay, entry.sundayOtHours, entry.sundayOtPay);
+        setOt(
+          set,
+          COL.sundayHr,
+          COL.sundayPay,
+          period.sundayOtHours ?? 0,
+          period.sundayOtPay ?? 0,
+        );
         setOt(
           set,
           COL.holidayHr,
           COL.holidayPay,
-          entry.holidayOtHours,
-          entry.holidayOtPay,
+          period.holidayOtHours ?? 0,
+          period.holidayOtPay ?? 0,
         );
-        set(COL.totalOt, blankIfZero(toNumber(entry.totalOtPay)), MONEY_FORMAT);
+        set(COL.totalOt, blankIfZero(toNumber(period.totalOtPay ?? 0)), MONEY_FORMAT);
+      }
+
+      // Everything else is entry-level: written once, on the last row.
+      if (isLast) {
+        set(COL.transport, toNumber(entry.transportAllowance), MONEY_FORMAT);
+        set(COL.taxableTransport, toNumber(entry.taxableTransport), MONEY_FORMAT);
+        if (!multi) {
+          setOt(set, COL.normalHr, COL.normalPay, entry.normalOtHours, entry.normalOtPay);
+          setOt(
+            set,
+            COL.eveningHr,
+            COL.eveningPay,
+            entry.eveningOtHours,
+            entry.eveningOtPay,
+          );
+          setOt(set, COL.sundayHr, COL.sundayPay, entry.sundayOtHours, entry.sundayOtPay);
+          setOt(
+            set,
+            COL.holidayHr,
+            COL.holidayPay,
+            entry.holidayOtHours,
+            entry.holidayOtPay,
+          );
+          set(COL.totalOt, blankIfZero(toNumber(entry.totalOtPay)), MONEY_FORMAT);
+        }
         set(
           COL.bones,
           toNumber(entry.monthlyBonus) + toNumber(entry.bonusTopUp),
@@ -762,7 +859,22 @@ export class PayrollExcelExportService {
         set(COL.totalDeduction, toNumber(entry.totalDeductions), MONEY_FORMAT);
         set(COL.netPay, totalNet, MONEY_FORMAT);
       } else {
+        const otCols = new Set<number>([
+          COL.normalHr,
+          COL.normalPay,
+          COL.eveningHr,
+          COL.eveningPay,
+          COL.sundayHr,
+          COL.sundayPay,
+          COL.holidayHr,
+          COL.holidayPay,
+          COL.totalOt,
+        ]);
         for (let col = COL.transport; col <= COL.netPay; col += 1) {
+          // OT columns already written for multi-period rows above.
+          if (multi && otCols.has(col)) {
+            continue;
+          }
           set(col, null);
         }
       }

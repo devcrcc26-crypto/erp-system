@@ -949,18 +949,24 @@ export default function PayrollRunDetailPageContent({
             <p className="erp-payroll-fact-value m-0">—</p>
           ) : (
             <ul className="erp-payroll-entry-periods">
-              {row.salaryPeriods.map((period) => (
-                <li key={period.id}>
-                  <span>
-                    {dayjs(period.periodStart).format('YYYY-MM-DD')} –{' '}
-                    {dayjs(period.periodEnd).format('YYYY-MM-DD')} ·{' '}
-                    {parsePayrollMoney(period.days)} {t('hr.payroll.entry.days')}
-                  </span>
-                  <span>
-                    {formatPayrollMoney(period.earnedSalary, { emptyZero: false })} ETB
-                  </span>
-                </li>
-              ))}
+              {row.salaryPeriods.map((period) => {
+                const periodOt = parsePayrollMoney(period.totalOtPay);
+                return (
+                  <li key={period.id}>
+                    <span>
+                      {dayjs(period.periodStart).format('YYYY-MM-DD')} –{' '}
+                      {dayjs(period.periodEnd).format('YYYY-MM-DD')} ·{' '}
+                      {parsePayrollMoney(period.days)} {t('hr.payroll.entry.days')}
+                      {periodOt > 0
+                        ? ` · OT ${formatPayrollMoney(period.totalOtPay, { emptyZero: false })} (${parsePayrollMoney(period.normalOtHours)}N/${parsePayrollMoney(period.eveningOtHours)}E/${parsePayrollMoney(period.sundayOtHours)}S/${parsePayrollMoney(period.holidayOtHours)}H)`
+                        : null}
+                    </span>
+                    <span>
+                      {formatPayrollMoney(period.earnedSalary, { emptyZero: false })} ETB
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
           {hasLinks ? (

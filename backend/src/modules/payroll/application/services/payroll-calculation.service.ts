@@ -31,6 +31,16 @@ export interface PayrollCalculationInput {
    */
   earnedSalary?: number;
   overtimeHours: OvertimeHours;
+  /**
+   * When set (e.g. multi-contract OT priced per period basic), use these pay
+   * amounts instead of recomputing from month-end basic × hours.
+   */
+  overtimePay?: {
+    normalOtPay: number;
+    eveningOtPay: number;
+    sundayOtPay: number;
+    holidayOtPay: number;
+  };
   taxableThreshold: number; // transport threshold, default 2200
   /** When false, employee and employer pension are 0. Defaults to true. */
   pensionApplicable?: boolean;
@@ -104,6 +114,7 @@ export class PayrollCalculationService {
       payrollDays: payrollDaysInput,
       earnedSalary: earnedSalaryOverride,
       overtimeHours,
+      overtimePay: overtimePayOverride,
       taxableThreshold,
       pensionApplicable = true,
       taxApplicable = true,
@@ -117,18 +128,25 @@ export class PayrollCalculationService {
     );
 
     // Overtime hourly base is contractual basic ÷ 192 (holiday ÷ 196), not earned.
+    // Multi-contract months pass pre-priced overtimePay (per period basics).
     const hourlyBase = basicSalary / 192;
     const holidayHourlyBase = basicSalary / 196;
 
-    const normalOtPay = this.round(hourlyBase * overtimeHours.normalHours * 1.5);
+    const normalOtPay = this.round(
+      overtimePayOverride?.normalOtPay ??
+        hourlyBase * overtimeHours.normalHours * 1.5,
+    );
     const eveningOtPay = this.round(
-      hourlyBase * overtimeHours.eveningHours * 1.75,
+      overtimePayOverride?.eveningOtPay ??
+        hourlyBase * overtimeHours.eveningHours * 1.75,
     );
     const sundayOtPay = this.round(
-      hourlyBase * overtimeHours.sundayHours * 2.0,
+      overtimePayOverride?.sundayOtPay ??
+        hourlyBase * overtimeHours.sundayHours * 2.0,
     );
     const holidayOtPay = this.round(
-      holidayHourlyBase * overtimeHours.holidayHours * 2.5,
+      overtimePayOverride?.holidayOtPay ??
+        holidayHourlyBase * overtimeHours.holidayHours * 2.5,
     );
     const totalOtPay = this.round(
       normalOtPay + eveningOtPay + sundayOtPay + holidayOtPay,

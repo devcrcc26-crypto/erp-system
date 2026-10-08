@@ -6,12 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  Prisma,
   type EmployeeContract,
   type EmployeeType,
   type PayrollEntry,
   type PayrollEntryFlag,
   type PayrollRun,
-  type Prisma,
 } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
@@ -26,13 +26,15 @@ import {
   allocateContractPayrollDays,
   employedPayrollDays,
 } from '../utils/payroll-days.util';
+import {
+  assignOvertimeToSalaryPeriods,
+  OT_FALLBACK_MONTH_END_NOTE,
+  OVERNIGHT_OT_DATE_ASSIGNMENT,
+  type DatedOvertimeEntry,
+} from '../utils/payroll-overtime.util';
 
-/**
- * Overtime pay uses month-end contract basic ÷ 192 (holiday ÷ 196).
- * Payroll currently consumes overtime *sheet totals*, not dated entries, so
- * the contract in effect on each OT date is not applied here.
- */
-export const PAYROLL_OT_BASIC_SOURCE = 'MONTH_END_CONTRACT' as const;
+/** Documented overnight assignment rule for payroll (see payroll-overtime.util). */
+export { OVERNIGHT_OT_DATE_ASSIGNMENT };
 
 interface ServiceContext {
   userId: string;
@@ -95,6 +97,14 @@ interface OvertimeSnapshot {
   totalNightHours: Decimal | null;
   totalWeekendHours: Decimal | null;
   totalHolidayHours: Decimal | null;
+  entries: Array<{
+    date: Date;
+    isOvernight: boolean;
+    regularHours: Decimal;
+    nightHours: Decimal;
+    weekendHours: Decimal;
+    holidayHours: Decimal;
+  }>;
 }
 
 interface SalaryPeriodDraft {
@@ -106,6 +116,15 @@ interface SalaryPeriodDraft {
   days: number;
   basicSalary: number;
   earnedSalary: number;
+  normalOtHours: number;
+  eveningOtHours: number;
+  sundayOtHours: number;
+  holidayOtHours: number;
+  normalOtPay: number;
+  eveningOtPay: number;
+  sundayOtPay: number;
+  holidayOtPay: number;
+  totalOtPay: number;
 }
 
 interface EntryDraft {
@@ -379,6 +398,58 @@ export class PayrollRunService {
   }
 
   /**
+   * Merge per-period OT columns onto salary periods (raw read until Prisma
+   * client is regenerated with the new PayrollSalaryPeriod fields).
+   */
+  private async hydrateSalaryPeriodOvertime<
+    T extends { entries: Array<{ salaryPeriods: Array<Record<string, unknown>> }> },
+  >(run: T): Promise<T> {
+    const periodIds = run.entries
+      .flatMap((e) => e.salaryPeriods.map((p) => p.id))
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    if (periodIds.length === 0) {
+      return run;
+    }
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        normal_ot_hours: Decimal;
+        evening_ot_hours: Decimal;
+        sunday_ot_hours: Decimal;
+        holiday_ot_hours: Decimal;
+        normal_ot_pay: Decimal;
+        evening_ot_pay: Decimal;
+        sunday_ot_pay: Decimal;
+        holiday_ot_pay: Decimal;
+        total_ot_pay: Decimal;
+      }>
+    >`
+      SELECT id,
+             normal_ot_hours, evening_ot_hours, sunday_ot_hours, holiday_ot_hours,
+             normal_ot_pay, evening_ot_pay, sunday_ot_pay, holiday_ot_pay, total_ot_pay
+      FROM payroll_salary_period
+      WHERE id IN (${Prisma.join(periodIds)})
+    `;
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    for (const entry of run.entries) {
+      for (const period of entry.salaryPeriods) {
+        const ot = byId.get(String(period.id));
+        if (!ot) continue;
+        period.normalOtHours = ot.normal_ot_hours;
+        period.eveningOtHours = ot.evening_ot_hours;
+        period.sundayOtHours = ot.sunday_ot_hours;
+        period.holidayOtHours = ot.holiday_ot_hours;
+        period.normalOtPay = ot.normal_ot_pay;
+        period.eveningOtPay = ot.evening_ot_pay;
+        period.sundayOtPay = ot.sunday_ot_pay;
+        period.holidayOtPay = ot.holiday_ot_pay;
+        period.totalOtPay = ot.total_ot_pay;
+      }
+    }
+    return run;
+  }
+
+  /**
    * Returns a payroll run with entries, employee org fields, and salary periods.
    */
   async getRun(
@@ -426,7 +497,7 @@ export class PayrollRunService {
       }
     }
 
-    return run;
+    return this.hydrateSalaryPeriodOvertime(run);
   }
 
   /**
@@ -863,6 +934,17 @@ export class PayrollRunService {
           totalNightHours: true,
           totalWeekendHours: true,
           totalHolidayHours: true,
+          entries: {
+            select: {
+              date: true,
+              isOvernight: true,
+              regularHours: true,
+              nightHours: true,
+              weekendHours: true,
+              holidayHours: true,
+            },
+            orderBy: { date: 'asc' },
+          },
         },
       }),
       this.prisma.siteAssignment.findMany({
@@ -1166,22 +1248,49 @@ export class PayrollRunService {
       flagNote = 'Basic salary is zero on month-end contract';
     }
 
-    const overtimeHours: OvertimeHours = {
+    const datedEntries: DatedOvertimeEntry[] = (overtime?.entries ?? []).map(
+      (e) => ({
+        date: e.date,
+        isOvernight: e.isOvernight,
+        normalHours: this.toNumber(e.regularHours),
+        eveningHours: this.toNumber(e.nightHours),
+        sundayHours: this.toNumber(e.weekendHours),
+        holidayHours: this.toNumber(e.holidayHours),
+      }),
+    );
+    const sheetTotals: OvertimeHours = {
       normalHours: this.toNumber(overtime?.totalRegularHours),
       eveningHours: this.toNumber(overtime?.totalNightHours),
       sundayHours: this.toNumber(overtime?.totalWeekendHours),
       holidayHours: this.toNumber(overtime?.totalHolidayHours),
     };
-    const hasOtHours =
-      overtimeHours.normalHours > 0 ||
-      overtimeHours.eveningHours > 0 ||
-      overtimeHours.sundayHours > 0 ||
-      overtimeHours.holidayHours > 0;
-    if (hasOtHours) {
-      noteParts.push(
-        `OT hourly base from month-end contract basic (${PAYROLL_OT_BASIC_SOURCE}); sheet totals are not dated per entry`,
-      );
+
+    const otPeriodWindows = periodDetails
+      .filter((p) => p.window != null)
+      .map((p) => ({
+        contractId: p.contract.id,
+        periodStart: p.window!.windowStart,
+        periodEnd: p.window!.windowEnd,
+        basicSalary: this.toNumber(p.contract.basicSalary),
+      }));
+
+    const assignedOt = assignOvertimeToSalaryPeriods({
+      entries: datedEntries,
+      periods: otPeriodWindows,
+      sheetTotals,
+      monthEndBasic,
+    });
+
+    if (assignedOt.usedMonthEndFallback) {
+      noteParts.push(OT_FALLBACK_MONTH_END_NOTE);
     }
+
+    const overtimeHours: OvertimeHours = {
+      normalHours: assignedOt.totals.normalHours,
+      eveningHours: assignedOt.totals.eveningHours,
+      sundayHours: assignedOt.totals.sundayHours,
+      holidayHours: assignedOt.totals.holidayHours,
+    };
 
     const result = this.calc.calculate({
       basicSalary: monthEndBasic,
@@ -1193,6 +1302,12 @@ export class PayrollRunService {
       payrollDays,
       earnedSalary: sumEarned,
       overtimeHours,
+      overtimePay: {
+        normalOtPay: assignedOt.totals.normalOtPay,
+        eveningOtPay: assignedOt.totals.eveningOtPay,
+        sundayOtPay: assignedOt.totals.sundayOtPay,
+        holidayOtPay: assignedOt.totals.holidayOtPay,
+      },
       taxableThreshold,
       pensionApplicable,
       taxApplicable,
@@ -1202,6 +1317,10 @@ export class PayrollRunService {
     const notesFromGenerate = noteParts.length > 0 ? noteParts.join('. ') : null;
     const notes = preservedNotes ?? notesFromGenerate;
 
+    const otByContractId = new Map(
+      assignedOt.periods.map((p) => [p.contractId, p]),
+    );
+
     const salaryPeriods: SalaryPeriodDraft[] = [];
     if (periodDetails.length > 1) {
       for (const period of periodDetails) {
@@ -1209,6 +1328,7 @@ export class PayrollRunService {
         if (!window) {
           continue;
         }
+        const ot = otByContractId.get(period.contract.id);
         salaryPeriods.push({
           id: randomUUID(),
           entryId,
@@ -1218,6 +1338,15 @@ export class PayrollRunService {
           days: this.round(period.days * earnedScale),
           basicSalary: this.toNumber(period.contract.basicSalary),
           earnedSalary: this.round(period.periodEarned * earnedScale),
+          normalOtHours: ot?.normalHours ?? 0,
+          eveningOtHours: ot?.eveningHours ?? 0,
+          sundayOtHours: ot?.sundayHours ?? 0,
+          holidayOtHours: ot?.holidayHours ?? 0,
+          normalOtPay: ot?.normalOtPay ?? 0,
+          eveningOtPay: ot?.eveningOtPay ?? 0,
+          sundayOtPay: ot?.sundayOtPay ?? 0,
+          holidayOtPay: ot?.holidayOtPay ?? 0,
+          totalOtPay: ot?.totalOtPay ?? 0,
         });
       }
     }
@@ -1295,6 +1424,8 @@ export class PayrollRunService {
 
       const periods = chunk.flatMap((d) => d.salaryPeriods);
       if (periods.length > 0) {
+        // Core columns via Prisma; OT columns via SQL so deploy works before
+        // `prisma generate` can refresh the client (engine often locked by Nest).
         await this.prisma.payrollSalaryPeriod.createMany({
           data: periods.map((p) => ({
             id: p.id,
@@ -1309,6 +1440,21 @@ export class PayrollRunService {
             updatedBy: ctx.userId,
           })),
         });
+        for (const p of periods) {
+          await this.prisma.$executeRaw`
+            UPDATE payroll_salary_period SET
+              normal_ot_hours = ${p.normalOtHours},
+              evening_ot_hours = ${p.eveningOtHours},
+              sunday_ot_hours = ${p.sundayOtHours},
+              holiday_ot_hours = ${p.holidayOtHours},
+              normal_ot_pay = ${p.normalOtPay},
+              evening_ot_pay = ${p.eveningOtPay},
+              sunday_ot_pay = ${p.sundayOtPay},
+              holiday_ot_pay = ${p.holidayOtPay},
+              total_ot_pay = ${p.totalOtPay}
+            WHERE id = ${p.id}::uuid
+          `;
+        }
       }
     }
   }
@@ -1331,6 +1477,7 @@ export class PayrollRunService {
       }
     }
 
+    // Preserve stored OT pay (may be multi-contract, priced per period basic).
     return this.calc.calculate({
       basicSalary: this.toNumber(entry.basicSalary),
       transportAllowance: this.toNumber(entry.transportAllowance),
@@ -1345,6 +1492,12 @@ export class PayrollRunService {
         eveningHours: this.toNumber(entry.eveningOtHours),
         sundayHours: this.toNumber(entry.sundayOtHours),
         holidayHours: this.toNumber(entry.holidayOtHours),
+      },
+      overtimePay: {
+        normalOtPay: this.toNumber(entry.normalOtPay),
+        eveningOtPay: this.toNumber(entry.eveningOtPay),
+        sundayOtPay: this.toNumber(entry.sundayOtPay),
+        holidayOtPay: this.toNumber(entry.holidayOtPay),
       },
       taxableThreshold: this.toNumber(run.taxableThreshold),
       pensionApplicable,

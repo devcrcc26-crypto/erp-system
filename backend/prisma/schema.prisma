@@ -6302,6 +6302,20 @@ model PayrollEntry {
   days          Decimal          @db.Decimal(5, 2)
   basicSalary   Decimal          @map("basic_salary") @db.Decimal(14, 2)
   earnedSalary  Decimal          @map("earned_salary") @db.Decimal(14, 2)
+
+  // Overtime hours attributed to this contract period (from dated entries)
+  normalOtHours   Decimal @default(0) @map("normal_ot_hours") @db.Decimal(6, 2)
+  eveningOtHours  Decimal @default(0) @map("evening_ot_hours") @db.Decimal(6, 2)
+  sundayOtHours   Decimal @default(0) @map("sunday_ot_hours") @db.Decimal(6, 2)
+  holidayOtHours  Decimal @default(0) @map("holiday_ot_hours") @db.Decimal(6, 2)
+
+  // Overtime pay priced from this period's basic ÷ 192 (holiday ÷ 196)
+  normalOtPay   Decimal @default(0) @map("normal_ot_pay") @db.Decimal(14, 2)
+  eveningOtPay  Decimal @default(0) @map("evening_ot_pay") @db.Decimal(14, 2)
+  sundayOtPay   Decimal @default(0) @map("sunday_ot_pay") @db.Decimal(14, 2)
+  holidayOtPay  Decimal @default(0) @map("holiday_ot_pay") @db.Decimal(14, 2)
+  totalOtPay    Decimal @default(0) @map("total_ot_pay") @db.Decimal(14, 2)
+
   createdAt     DateTime         @default(now()) @map("created_at")
   createdBy     String           @map("created_by")
   updatedAt     DateTime         @default(now()) @updatedAt   @map("updated_at")

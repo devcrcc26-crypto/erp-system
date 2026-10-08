@@ -124,6 +124,9 @@ function makeFixtureEntries(): PayrollExportEntry[] {
         days: dec(15),
         basicSalary: dec(10000),
         earnedSalary: dec(5000),
+        normalOtHours: dec(2),
+        normalOtPay: dec(100),
+        totalOtPay: dec(100),
       },
       {
         periodStart: utc(2026, 9, 16),
@@ -131,6 +134,9 @@ function makeFixtureEntries(): PayrollExportEntry[] {
         days: dec(15),
         basicSalary: dec(12000),
         earnedSalary: dec(6000),
+        normalOtHours: dec(2),
+        normalOtPay: dec(200.5),
+        totalOtPay: dec(200.5),
       },
     ],
   });
@@ -277,10 +283,11 @@ describe('PayrollExcelExportService — Data sheet', () => {
     expect(cellNumber(sheet, lastPeriodRow, DATA_COL.basic)).toBe(12000);
     expect(cellNumber(sheet, lastPeriodRow, DATA_COL.earned)).toBe(6000);
 
-    // Entry-level values only on the last period row.
+    // Entry-level tax/net only on the last period row; OT is per period.
     expect(sheet.getCell(firstPeriodRow, DATA_COL.netPay).value).toBeNull();
     expect(sheet.getCell(firstPeriodRow, DATA_COL.incomeTax).value).toBeNull();
-    expect(sheet.getCell(firstPeriodRow, DATA_COL.totalOt).value).toBeNull();
+    expect(cellNumber(sheet, firstPeriodRow, DATA_COL.totalOt)).toBe(100);
+    expect(cellNumber(sheet, lastPeriodRow, DATA_COL.totalOt)).toBe(200.5);
     expect(cellNumber(sheet, lastPeriodRow, DATA_COL.netPay)).toBe(9229.5);
     expect(cellNumber(sheet, lastPeriodRow, DATA_COL.incomeTax)).toBe(1800.5);
     expect(cellNumber(sheet, lastPeriodRow, DATA_COL.bones)).toBe(250);
