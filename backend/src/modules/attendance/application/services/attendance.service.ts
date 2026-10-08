@@ -94,6 +94,14 @@ const MONTH_NAMES = [
   'December',
 ] as const;
 
+/** Active ERP employee with no row in the uploaded attendance file. */
+export interface AttendanceMissingEmployee {
+  id: string;
+  name: string;
+  employeeId: string | null;
+  departmentName: string | null;
+}
+
 export interface AttendancePreviewResult {
   previewToken: string;
   month: number;
@@ -104,6 +112,8 @@ export interface AttendancePreviewResult {
   matched: AttendanceMatchResult[];
   review: AttendanceMatchResult[];
   rejected: AttendanceMatchResult[];
+  /** System employees not present in the attendance upload. */
+  missingFromAttendance: AttendanceMissingEmployee[];
 }
 
 export interface AttendanceImportSummary {
@@ -332,6 +342,38 @@ export class AttendanceService
       (row) => row.confidence === 'NO_MATCH',
     );
 
+    const foundEmployeeIds = new Set<string>();
+    for (const row of [...matched, ...review]) {
+      if (row.matchedEmployeeId) {
+        foundEmployeeIds.add(row.matchedEmployeeId);
+      }
+    }
+
+    const activeEmployees = await this.prisma.user.findMany({
+      where: { companyId, deletedAt: null, isActive: true },
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        employeeId: true,
+        department: { select: { name: true } },
+      },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    });
+
+    const missingFromAttendance: AttendanceMissingEmployee[] = activeEmployees
+      .filter((employee) => !foundEmployeeIds.has(employee.id))
+      .map((employee) => ({
+        id: employee.id,
+        name: [employee.firstName, employee.middleName, employee.lastName]
+          .map((part) => part?.trim() ?? '')
+          .filter((part) => part.length > 0)
+          .join(' '),
+        employeeId: employee.employeeId,
+        departmentName: employee.department?.name ?? null,
+      }));
+
     const previewToken = `attendance:preview:${companyId}:${userId}:${Date.now()}`;
     const preview: CachedAttendancePreview = {
       previewToken,
@@ -344,6 +386,7 @@ export class AttendanceService
       matched,
       review,
       rejected,
+      missingFromAttendance,
     };
 
     await this.previewCache.set(previewToken, preview);
@@ -358,6 +401,7 @@ export class AttendanceService
       matched,
       review,
       rejected,
+      missingFromAttendance,
     };
   }
 

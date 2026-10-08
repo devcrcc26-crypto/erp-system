@@ -197,6 +197,14 @@ export interface AttendancePreviewRow {
   };
 }
 
+/** Active ERP employee with no row in the uploaded attendance file. */
+export interface AttendanceMissingEmployee {
+  id: string;
+  name: string;
+  employeeId: string | null;
+  departmentName: string | null;
+}
+
 export interface AttendancePreviewResult {
   previewToken: string;
   month: number;
@@ -207,6 +215,8 @@ export interface AttendancePreviewResult {
   matched: AttendancePreviewRow[];
   review: AttendancePreviewRow[];
   rejected: AttendancePreviewRow[];
+  /** System employees not present in the attendance upload. */
+  missingFromAttendance: AttendanceMissingEmployee[];
 }
 
 export interface AttendanceImportSummary {

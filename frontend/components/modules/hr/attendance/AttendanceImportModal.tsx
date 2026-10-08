@@ -26,6 +26,7 @@ import {
   CloseCircleOutlined,
   ExclamationCircleOutlined,
   InboxOutlined,
+  UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -38,6 +39,7 @@ import type {
   AttendanceEmployeeSearchResult,
   AttendanceImportBatch,
   AttendanceImportSummary,
+  AttendanceMissingEmployee,
   AttendancePreviewResult,
   AttendancePreviewRow,
   ManualAssignmentDto,
@@ -63,8 +65,10 @@ export interface AttendanceImportModalProps {
 
 type ImportStep = 0 | 1 | 2;
 
+type MatchedRow = AttendancePreviewRow & { matchedIndex: number };
 type ReviewRow = AttendancePreviewRow & { reviewIndex: number };
 type RejectedRow = AttendancePreviewRow & { rejectedIndex: number };
+type MissingRow = AttendanceMissingEmployee;
 
 type EditingCell =
   | { bucket: 'review'; index: number }
@@ -628,6 +632,29 @@ export default function AttendanceImportModal({
     },
   ];
 
+  const missingColumns: ColumnsType<MissingRow> = [
+    {
+      title: t('pages.hr.attendance.importModal.colErpName'),
+      dataIndex: 'name',
+      key: 'name',
+      ellipsis: true,
+    },
+    {
+      title: t('pages.hr.attendance.importModal.colEmployeeId'),
+      dataIndex: 'employeeId',
+      key: 'employeeId',
+      width: 120,
+      render: (value: string | null) => value ?? '—',
+    },
+    {
+      title: t('pages.hr.attendance.importModal.colDepartment'),
+      dataIndex: 'departmentName',
+      key: 'departmentName',
+      ellipsis: true,
+      render: (value: string | null) => value ?? '—',
+    },
+  ];
+
   const rejectedColumns: ColumnsType<RejectedRow> = [
     {
       title: t('pages.hr.attendance.importModal.colAttendanceName'),
@@ -717,6 +744,13 @@ export default function AttendanceImportModal({
     },
   ];
 
+  const matchedRows: MatchedRow[] = (preview?.matched ?? []).map(
+    (row, index) => ({
+      ...row,
+      matchedIndex: index,
+    }),
+  );
+
   const reviewRows: ReviewRow[] = (preview?.review ?? []).map((row, index) => ({
     ...row,
     reviewIndex: index,
@@ -728,6 +762,8 @@ export default function AttendanceImportModal({
       rejectedIndex: index,
     }),
   );
+
+  const missingRows: MissingRow[] = preview?.missingFromAttendance ?? [];
 
   const collapseItems = preview
     ? [
@@ -745,12 +781,12 @@ export default function AttendanceImportModal({
             </span>
           ),
           children: (
-            <Table<AttendancePreviewRow>
+            <Table<MatchedRow>
               className="erp-data-table"
               size="small"
-              rowKey={(_, index) => `matched-${index}`}
+              rowKey={(row) => `matched-${row.matchedIndex}`}
               columns={matchedColumns}
-              dataSource={preview.matched}
+              dataSource={matchedRows}
               pagination={false}
               scroll={{ y: 220 }}
             />
@@ -823,6 +859,36 @@ export default function AttendanceImportModal({
             </div>
           ),
         },
+        {
+          key: 'missing',
+          label: (
+            <span className="inline-flex items-center gap-2">
+              <UserOutlined style={{ color: '#475569' }} />
+              {t('pages.hr.attendance.importModal.missingSection')}
+              <Badge
+                count={missingRows.length}
+                style={{ backgroundColor: '#475569' }}
+                showZero
+              />
+            </span>
+          ),
+          children: (
+            <div>
+              <Table<MissingRow>
+                className="erp-data-table"
+                size="small"
+                rowKey={(row) => `missing-${row.id}`}
+                columns={missingColumns}
+                dataSource={missingRows}
+                pagination={false}
+                scroll={{ y: 220 }}
+              />
+              <p className="m-0 mt-3 text-[12px] text-slate-600">
+                {t('pages.hr.attendance.importModal.missingNote')}
+              </p>
+            </div>
+          ),
+        },
       ]
     : [];
 
@@ -836,6 +902,9 @@ export default function AttendanceImportModal({
     }
     if (preview.rejected.length > 0) {
       keys.push('rejected');
+    }
+    if ((preview.missingFromAttendance?.length ?? 0) > 0) {
+      keys.push('missing');
     }
     return keys;
   }, [preview]);
