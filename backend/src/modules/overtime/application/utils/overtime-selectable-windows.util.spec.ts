@@ -49,7 +49,7 @@ describe('computeSelectableOvertimeWindows', () => {
     ).toBe(false);
   });
 
-  it('2 — Saturday half day: 00:00–08:30 and 12:30–24:00', () => {
+  it('2 — Saturday half day: 00:00–08:30 and 12:30–24:00 (pre-morning OT allowed)', () => {
     const result = computeSelectableOvertimeWindows(HALF);
     expect(result.dayKind).toBe('HALF_DAY');
     expect(result.windows).toEqual([
@@ -57,8 +57,17 @@ describe('computeSelectableOvertimeWindows', () => {
       { start: '12:30', end: '24:00' },
     ]);
     expect(
+      isIntervalInsideSelectableWindows('00:00', '06:00', result.windows),
+    ).toBe(true);
+    expect(
+      isIntervalInsideSelectableWindows('06:00', '08:00', result.windows),
+    ).toBe(true);
+    expect(
       isIntervalInsideSelectableWindows('13:00', '17:00', result.windows),
     ).toBe(true);
+    expect(
+      isIntervalInsideSelectableWindows('08:30', '12:30', result.windows),
+    ).toBe(false);
   });
 
   it('3 — Sunday / non-working: whole day', () => {

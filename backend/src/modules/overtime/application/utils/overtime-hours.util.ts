@@ -21,7 +21,7 @@ export const OUTSIDE_SELECTABLE_WINDOW_MESSAGE =
   'Overtime times must fall inside the selectable windows for this day (outside scheduled hours and lunch).';
 
 /**
- * Schedule-aware overtime hour splitter (15-minute blocks, Ethiopian local HH:mm).
+ * Schedule-aware overtime hour splitter (15-minute steps; last block may be shorter).
  *
  * Full working day priority per block:
  * 1. Public holiday → Holiday
@@ -30,12 +30,11 @@ export const OUTSIDE_SELECTABLE_WINDOW_MESSAGE =
  * 4. Night (22:00–06:00) → Night
  * 5. Else → Regular
  *
- * Half working day priority per block:
+ * Half working day (e.g. Saturday) priority per block:
  * 1. Holiday
- * 2. Non-working day → Weekend
- * 3. Inside morning window → skip
- * 4. Night (22:00–06:00) before morningStart → Night
- * 5. Outside morning (including evening/night after the half-day shift) → Weekend
+ * 2. Inside morning window → skip
+ * 3. At or after morningEnd → Weekend (takes precedence over Night)
+ * 4. Before morningStart: Night (22:00–06:00) then Regular (same as weekday)
  *
  * Overnight: each block uses the calendar day it falls on (start-day context, then
  * nextDayContext for minutes on the following day).
@@ -88,8 +87,10 @@ export function calculateOvertimeHours(
   context: OvertimeDayContext,
   isOvernight = false,
   nextDayContext?: OvertimeDayContext,
+  options?: { round?: boolean },
 ): OvertimeHoursBuckets {
   void date;
+  const shouldRound = options?.round !== false;
   const startMinutes = parseTimeToMinutes(startTime);
   let endMinutes = parseTimeToMinutes(endTime);
 
@@ -109,6 +110,7 @@ export function calculateOvertimeHours(
   };
 
   for (let m = startMinutes; m < endMinutes; m += BLOCK_MINUTES) {
+    const blockLength = Math.min(BLOCK_MINUTES, endMinutes - m);
     const dayIndex = Math.floor(m / MINUTES_PER_DAY) - startDayIndex;
     const blockContext = resolveBlockContext(
       dayIndex,
@@ -119,10 +121,13 @@ export function calculateOvertimeHours(
     const minutesInDay = ((m % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
     const category = classifyBlock(minutesInDay, blockContext);
     if (category) {
-      buckets[category] += BLOCK_MINUTES / 60;
+      buckets[category] += blockLength / 60;
     }
   }
 
+  if (!shouldRound) {
+    return { ...buckets };
+  }
   return {
     regularHours: roundHours(buckets.regularHours),
     nightHours: roundHours(buckets.nightHours),
@@ -177,7 +182,7 @@ export function buildOvertimeScheduleNote(
     return `${weekday} is a non-working day — hours classified as weekend`;
   }
   if (context.isHalfDay) {
-    return `${weekday} half day — time outside the morning shift classified as weekend`;
+    return `${weekday} half day — after morning ends classified as weekend; before morning uses night/regular rules`;
   }
   return null;
 }
@@ -218,10 +223,15 @@ function classifyBlock(
     if (isInsideWindow(minutesInDay, morningStart, morningEnd)) {
       return null;
     }
-    if (isHalfDayPreMorningNight(minutesInDay, morningStart)) {
+    // After the half-day morning ends → Weekend (incl. evening/night).
+    if (morningEnd != null && minutesInDay >= morningEnd) {
+      return 'weekendHours';
+    }
+    // Before morning: same as a weekday (Night then Regular).
+    if (isNightBlock(minutesInDay)) {
       return 'nightHours';
     }
-    return 'weekendHours';
+    return 'regularHours';
   }
 
   if (isInsideScheduledWorkingTime(minutesInDay, context)) {
@@ -274,19 +284,6 @@ function isInsideScheduledWorkingTime(
 function isNightBlock(minutesInDay: number): boolean {
   const hour = minutesInDay / 60;
   return hour >= 22 || hour < 6;
-}
-
-function isHalfDayPreMorningNight(
-  minutesInDay: number,
-  morningStart: number | null,
-): boolean {
-  if (!isNightBlock(minutesInDay)) {
-    return false;
-  }
-  if (morningStart == null) {
-    return true;
-  }
-  return minutesInDay < morningStart;
 }
 
 function isInsideWindow(

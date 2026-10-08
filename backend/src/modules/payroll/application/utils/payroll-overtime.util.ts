@@ -80,15 +80,30 @@ function dateInInclusiveRange(date: Date, start: Date, end: Date): boolean {
   return d >= toDateOnlyUtc(start).getTime() && d <= toDateOnlyUtc(end).getTime();
 }
 
+/**
+ * Sum hour buckets without intermediate rounding. Rounding hour totals before
+ * pay (e.g. 20+10/60 → 20.17) drifts OT pay vs HR's minute-precise sheet.
+ * Pay is still round2'd in {@link calculateOvertimePay}; hour display is
+ * rounded when building returned totals.
+ */
 function addHours(
   a: OvertimeHoursBuckets,
   b: OvertimeHoursBuckets,
 ): OvertimeHoursBuckets {
   return {
-    normalHours: round2(a.normalHours + b.normalHours),
-    eveningHours: round2(a.eveningHours + b.eveningHours),
-    sundayHours: round2(a.sundayHours + b.sundayHours),
-    holidayHours: round2(a.holidayHours + b.holidayHours),
+    normalHours: a.normalHours + b.normalHours,
+    eveningHours: a.eveningHours + b.eveningHours,
+    sundayHours: a.sundayHours + b.sundayHours,
+    holidayHours: a.holidayHours + b.holidayHours,
+  };
+}
+
+function roundHoursBuckets(h: OvertimeHoursBuckets): OvertimeHoursBuckets {
+  return {
+    normalHours: round2(h.normalHours),
+    eveningHours: round2(h.eveningHours),
+    sundayHours: round2(h.sundayHours),
+    holidayHours: round2(h.holidayHours),
   };
 }
 
@@ -238,20 +253,13 @@ export function assignOvertimeToSalaryPeriods(input: {
       periodStart: p.periodStart,
       periodEnd: p.periodEnd,
       basicSalary: p.basicSalary,
-      ...hours,
+      ...roundHoursBuckets(hours),
       ...pay,
     };
   });
 
-  const totalsHours = periodResults.reduce(
-    (acc, p) =>
-      addHours(acc, {
-        normalHours: p.normalHours,
-        eveningHours: p.eveningHours,
-        sundayHours: p.sundayHours,
-        holidayHours: p.holidayHours,
-      }),
-    { ...ZERO_HOURS },
+  const totalsHours = roundHoursBuckets(
+    periodHours.reduce((acc, h) => addHours(acc, h), { ...ZERO_HOURS }),
   );
   const totalsPay: OvertimePayAmounts = {
     normalOtPay: round2(

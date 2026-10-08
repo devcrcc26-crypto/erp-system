@@ -205,6 +205,48 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
     );
   });
 
+  it('minute-precise — 23:00–23:10 → 0.17 h Night', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-14'), '23:00', '23:10', WD),
+      { nightHours: 0.17 },
+    );
+  });
+
+  it('minute-precise — 17:30–19:20 → 1.83 h Regular', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-14'), '17:30', '19:20', WD),
+      { regularHours: 1.83 },
+    );
+  });
+
+  it('Sat 00:00–06:00 → 6 h Night (pre-morning weekday rules)', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-12'), '00:00', '06:00', HALF),
+      { nightHours: 6 },
+    );
+  });
+
+  it('Sat 06:00–08:00 → 2 h Regular', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-12'), '06:00', '08:00', HALF),
+      { regularHours: 2 },
+    );
+  });
+
+  it('Sat 13:00–15:00 → 2 h Weekend', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-12'), '13:00', '15:00', HALF),
+      { weekendHours: 2 },
+    );
+  });
+
+  it('Sat 22:00–24:00 → 2 h Weekend (weekend over night after morning)', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-12'), '22:00', '24:00', HALF),
+      { weekendHours: 2 },
+    );
+  });
+
   it('entry entirely inside schedule (09:00–12:00 weekday) → all zeros', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '09:00', '12:00', WD),
@@ -282,7 +324,7 @@ describe('totalOvertimeHours', () => {
 describe('buildOvertimeScheduleNote', () => {
   it('describes a Saturday half day', () => {
     expect(buildOvertimeScheduleNote(utcDate('2026-09-12'), HALF)).toBe(
-      'Saturday half day — time outside the morning shift classified as weekend',
+      'Saturday half day — after morning ends classified as weekend; before morning uses night/regular rules',
     );
   });
 

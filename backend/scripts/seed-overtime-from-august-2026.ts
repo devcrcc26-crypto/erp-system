@@ -45,6 +45,8 @@ const MONTH_START = utcDate(YEAR, MONTH, 1);
 const MONTH_END = utcDate(YEAR, MONTH, 31);
 const TASK =
   'Imported from HR August 2026 salary sheet';
+/** HR sheet hours exceed the short old contract window — spillover + exclude from pay compare. */
+const EXCLUDE_FROM_HR_COMPARE = new Set(['CC-0024']); // Habtamu Gizaw
 const SHEET_PATH = join(
   __dirname,
   '..',
@@ -83,11 +85,10 @@ const COL = {
   holidayPay: 20, // T
 } as const;
 
-const FORBIDDEN_ATTENDANCE = new Set<AttendanceDayStatus>([
-  AttendanceDayStatus.ABSENT,
-  AttendanceDayStatus.LEAVE,
-]);
-
+/**
+ * Absences do not block OT (may be worked from home). Only approved full-day
+ * leave is blocked (via leaveDates). Prefer present days when spreading.
+ */
 const PREFERRED_ATTENDANCE = new Set<AttendanceDayStatus>([
   AttendanceDayStatus.PRESENT,
   AttendanceDayStatus.WORK_FROM_HOME,
@@ -187,6 +188,15 @@ interface PlaceFailure {
   reason: string;
 }
 
+interface MovedHours {
+  employeeId: string | null;
+  name: string;
+  category: OtCategory;
+  hoursMoved: number;
+  fromLabel: string;
+  toLabel: string;
+}
+
 interface EmployeePlan {
   user: UserMatch;
   rows: SheetRow[];
@@ -198,6 +208,7 @@ interface EmployeePlan {
   }>;
   entries: PlannedEntry[];
   withoutAttendance: string[];
+  excludeFromHrCompare: boolean;
   payCompare: {
     computed: ReturnType<typeof calculateOvertimePay>;
     hr: {
@@ -384,7 +395,9 @@ function minutesToHours(minutes: number): number {
 }
 
 /**
- * Spread `neededHours` across day-slots, preferring present days, returning entries.
+ * Spread hours across day-slots (prefer present). Places as many minutes as
+ * fit; returns unplacedHours for spillover to the next contract period.
+ * Approved leave days are skipped; absences are allowed.
  */
 function placeCategoryHours(input: {
   neededHours: number;
@@ -400,24 +413,18 @@ function placeCategoryHours(input: {
   withoutAttendance: string[];
   failure: PlaceFailure | null;
   capacityAvailable: number;
+  placedHours: number;
+  unplacedHours: number;
 } {
   const neededMin = hoursToMinutes(input.neededHours);
   if (neededMin <= 0) {
-    return { entries: [], withoutAttendance: [], failure: null, capacityAvailable: 0 };
-  }
-  if (neededMin % 15 !== 0) {
     return {
       entries: [],
       withoutAttendance: [],
+      failure: null,
       capacityAvailable: 0,
-      failure: {
-        employeeId: null,
-        name: '',
-        category: input.category,
-        hoursNeeded: input.neededHours,
-        capacityAvailable: 0,
-        reason: `Hours ${input.neededHours} are not a multiple of 0.25 (15 minutes)`,
-      },
+      placedHours: 0,
+      unplacedHours: 0,
     };
   }
 
@@ -426,14 +433,12 @@ function placeCategoryHours(input: {
     const key = iso(date);
     if (input.leaveDates.has(key)) continue;
     const status = input.attendanceByDate.get(key);
-    if (status && FORBIDDEN_ATTENDANCE.has(status as AttendanceDayStatus)) {
-      continue;
-    }
+    // Absences are allowed (OT may be from home). Leave already skipped above.
     const preferred =
-      !status ||
-      status === 'UNKNOWN' ||
       status === 'PRESENT_FLAG' ||
-      PREFERRED_ATTENDANCE.has(status as AttendanceDayStatus);
+      (status != null &&
+        status !== 'UNKNOWN' &&
+        PREFERRED_ATTENDANCE.has(status as AttendanceDayStatus));
 
     for (const slot of categorySlots(input.category, date, input.holidayKeys)) {
       const ctx = dayContext(date, input.holidayKeys);
@@ -441,20 +446,31 @@ function placeCategoryHours(input: {
       if (
         !isIntervalInsideSelectableWindows(slot.start, slot.end, windows.windows)
       ) {
-        // Trim to intersection with first overlapping window if possible.
         continue;
       }
+      // Remaining free capacity after occupied intervals.
+      const occ = input.occupied.get(key) ?? [];
+      const slotStart = parseHhMm(slot.start);
+      const slotEnd = parseHhMm(slot.end);
+      let free = slotEnd - slotStart;
+      for (const w of occ) {
+        const overlap = Math.max(
+          0,
+          Math.min(slotEnd, w.end) - Math.max(slotStart, w.start),
+        );
+        free -= overlap;
+      }
+      if (free < 1) continue;
       daySlots.push({
         date,
         start: slot.start,
         end: slot.end,
-        capacityHours: slot.capacityHours,
+        capacityHours: minutesToHours(free),
         preferred,
       });
     }
   }
 
-  // Prefer present/preferred days first; within that, spread by date then evening-before-morning order already in slots.
   daySlots.sort((a, b) => {
     if (a.preferred !== b.preferred) return a.preferred ? -1 : 1;
     const da = a.date.getTime() - b.date.getTime();
@@ -465,26 +481,23 @@ function placeCategoryHours(input: {
   const capacityAvailable = round2(
     daySlots.reduce((sum, s) => sum + s.capacityHours, 0),
   );
-  if (hoursToMinutes(capacityAvailable) < neededMin) {
+  const placeMin = Math.min(neededMin, hoursToMinutes(capacityAvailable));
+  const unplacedMin = neededMin - placeMin;
+
+  if (placeMin <= 0) {
     return {
       entries: [],
       withoutAttendance: [],
+      failure: null,
       capacityAvailable,
-      failure: {
-        employeeId: null,
-        name: '',
-        category: input.category,
-        hoursNeeded: input.neededHours,
-        capacityAvailable,
-        reason: `Not enough capacity in placement window ${iso(input.windowStart)}–${iso(input.windowEnd)}`,
-      },
+      placedHours: 0,
+      unplacedHours: minutesToHours(unplacedMin),
     };
   }
 
-  // Even spread: target per distinct day, then fill slots.
   const preferredSlots = daySlots.filter((s) => s.preferred);
   const pool = preferredSlots.length > 0 ? preferredSlots : daySlots;
-  const uniqueDays = [...new Set(pool.map((s) => iso(s.date)))];
+  let uniqueDays = [...new Set(pool.map((s) => iso(s.date)))];
   const remainingBySlot = new Map<string, number>();
   for (const s of daySlots) {
     remainingBySlot.set(
@@ -494,50 +507,32 @@ function placeCategoryHours(input: {
   }
 
   const allocMinBySlot = new Map<string, number>();
-  let remaining = neededMin;
+  let remaining = placeMin;
 
-  // Round-robin 1h (60m) chunks, then 15m.
-  const chunkSizes = [60, 15];
-  for (const chunk of chunkSizes) {
+  const tryAllocate = (chunk: number, days: string[]): boolean => {
+    for (const dayKey of days) {
+      if (remaining < chunk) return false;
+      const slotsForDay = daySlots.filter((s) => iso(s.date) === dayKey);
+      for (const slot of slotsForDay) {
+        const id = `${iso(slot.date)}|${slot.start}`;
+        const left = remainingBySlot.get(id) ?? 0;
+        if (left < chunk) continue;
+        remainingBySlot.set(id, left - chunk);
+        allocMinBySlot.set(id, (allocMinBySlot.get(id) ?? 0) + chunk);
+        remaining -= chunk;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  for (const chunk of [60, 15, 1]) {
     let progress = true;
     while (remaining >= chunk && progress) {
-      progress = false;
-      for (const dayKey of uniqueDays) {
-        if (remaining < chunk) break;
-        const slotsForDay = daySlots.filter((s) => iso(s.date) === dayKey);
-        for (const slot of slotsForDay) {
-          const id = `${iso(slot.date)}|${slot.start}`;
-          const left = remainingBySlot.get(id) ?? 0;
-          if (left < chunk) continue;
-          // Prefer preferred pool first.
-          if (preferredSlots.length > 0 && !slot.preferred && remaining > 0) {
-            // only use non-preferred after preferred exhausted — handled by uniqueDays from pool
-          }
-          remainingBySlot.set(id, left - chunk);
-          allocMinBySlot.set(id, (allocMinBySlot.get(id) ?? 0) + chunk);
-          remaining -= chunk;
-          progress = true;
-          break;
-        }
-      }
-      // If preferred days exhausted mid-loop, expand uniqueDays to all.
-      if (!progress && preferredSlots.length > 0 && remaining >= chunk) {
-        const allDays = [...new Set(daySlots.map((s) => iso(s.date)))];
-        for (const dayKey of allDays) {
-          if (remaining < chunk) break;
-          const slotsForDay = daySlots.filter((s) => iso(s.date) === dayKey);
-          for (const slot of slotsForDay) {
-            const id = `${iso(slot.date)}|${slot.start}`;
-            const left = remainingBySlot.get(id) ?? 0;
-            if (left < chunk) continue;
-            remainingBySlot.set(id, left - chunk);
-            allocMinBySlot.set(id, (allocMinBySlot.get(id) ?? 0) + chunk);
-            remaining -= chunk;
-            progress = true;
-            break;
-          }
-          if (progress) break;
-        }
+      progress = tryAllocate(chunk, uniqueDays);
+      if (!progress && preferredSlots.length > 0) {
+        uniqueDays = [...new Set(daySlots.map((s) => iso(s.date)))];
+        progress = tryAllocate(chunk, uniqueDays);
       }
     }
   }
@@ -546,7 +541,6 @@ function placeCategoryHours(input: {
     return {
       entries: [],
       withoutAttendance: [],
-      capacityAvailable,
       failure: {
         employeeId: null,
         name: '',
@@ -555,6 +549,9 @@ function placeCategoryHours(input: {
         capacityAvailable,
         reason: `Could not distribute ${minutesToHours(remaining)} h after slot fill`,
       },
+      capacityAvailable,
+      placedHours: 0,
+      unplacedHours: input.neededHours,
     };
   }
 
@@ -566,35 +563,35 @@ function placeCategoryHours(input: {
     const alloc = allocMinBySlot.get(id) ?? 0;
     if (alloc <= 0) continue;
 
-    const startMin = parseHhMm(slot.start);
+    const slotStart = parseHhMm(slot.start);
+    const slotEnd = parseHhMm(slot.end);
+    const occupied = input.occupied.get(iso(slot.date)) ?? [];
+    const startMin = firstFreeStart(slotStart, slotEnd, occupied, alloc);
+    if (startMin == null) {
+      return {
+        entries: [],
+        withoutAttendance: [],
+        capacityAvailable,
+        failure: {
+          employeeId: null,
+          name: '',
+          category: input.category,
+          hoursNeeded: input.neededHours,
+          capacityAvailable,
+          reason: `No free contiguous ${alloc}m in ${iso(slot.date)} ${slot.start}–${slot.end}`,
+        },
+        placedHours: 0,
+        unplacedHours: input.neededHours,
+      };
+    }
     const endMin = startMin + alloc;
+    const startTime = formatHhMm(startMin);
     const endTime = formatHhMm(endMin);
     const endsAtEndOfDay = endTime === '24:00';
 
-    // Overlap guard within day.
-    const occupied = input.occupied.get(iso(slot.date)) ?? [];
-    const overlaps = occupied.some(
-      (w) => startMin < w.end && endMin > w.start,
-    );
-    if (overlaps) {
-      return {
-        entries: [],
-        withoutAttendance: [],
-        capacityAvailable,
-        failure: {
-          employeeId: null,
-          name: '',
-          category: input.category,
-          hoursNeeded: input.neededHours,
-          capacityAvailable,
-          reason: `Overlap on ${iso(slot.date)} ${slot.start}–${endTime}`,
-        },
-      };
-    }
-
     const ctx = dayContext(slot.date, input.holidayKeys);
     const windows = computeSelectableOvertimeWindows(selectableInput(ctx));
-    if (!isIntervalInsideSelectableWindows(slot.start, endTime, windows.windows)) {
+    if (!isIntervalInsideSelectableWindows(startTime, endTime, windows.windows)) {
       return {
         entries: [],
         withoutAttendance: [],
@@ -605,14 +602,16 @@ function placeCategoryHours(input: {
           category: input.category,
           hoursNeeded: input.neededHours,
           capacityAvailable,
-          reason: `Interval ${slot.start}–${endTime} on ${iso(slot.date)} outside selectable windows`,
+          reason: `Interval ${startTime}–${endTime} on ${iso(slot.date)} outside selectable windows`,
         },
+        placedHours: 0,
+        unplacedHours: input.neededHours,
       };
     }
 
     const classified = calculateOvertimeHours(
       slot.date,
-      slot.start,
+      startTime,
       endTime,
       ctx,
       false,
@@ -635,8 +634,10 @@ function placeCategoryHours(input: {
           category: input.category,
           hoursNeeded: input.neededHours,
           capacityAvailable,
-          reason: `Classification mismatch on ${iso(slot.date)} ${slot.start}–${endTime}: wanted ${hours} ${input.category}, got N=${classified.regularHours} E=${classified.nightHours} W=${classified.weekendHours} H=${classified.holidayHours}`,
+          reason: `Classification mismatch on ${iso(slot.date)} ${startTime}–${endTime}: wanted ${hours} ${input.category}, got N=${classified.regularHours} E=${classified.nightHours} W=${classified.weekendHours} H=${classified.holidayHours}`,
         },
+        placedHours: 0,
+        unplacedHours: input.neededHours,
       };
     }
 
@@ -647,10 +648,9 @@ function placeCategoryHours(input: {
       (att != null &&
         att !== 'UNKNOWN' &&
         PREFERRED_ATTENDANCE.has(att as AttendanceDayStatus));
-    // Only flag days when an August attendance import exists but this day was not present.
     if (hasAttendanceImport && !isPresent) {
       withoutAttendance.push(
-        `${iso(slot.date)} ${slot.start}–${endTime} (${input.category} ${hours}h)`,
+        `${iso(slot.date)} ${startTime}–${endTime} (${input.category} ${hours}h)`,
       );
     }
 
@@ -659,7 +659,7 @@ function placeCategoryHours(input: {
 
     entries.push({
       date: slot.date,
-      startTime: slot.start,
+      startTime,
       endTime,
       endsAtEndOfDay,
       isHoliday: input.category === 'holiday' || ctx.isHoliday,
@@ -670,7 +670,34 @@ function placeCategoryHours(input: {
     });
   }
 
-  return { entries, withoutAttendance, failure: null, capacityAvailable };
+  return {
+    entries,
+    withoutAttendance,
+    failure: null,
+    capacityAvailable,
+    placedHours: minutesToHours(placeMin),
+    unplacedHours: minutesToHours(unplacedMin),
+  };
+}
+
+/** First minute in [slotStart, slotEnd) with `alloc` contiguous free minutes. */
+function firstFreeStart(
+  slotStart: number,
+  slotEnd: number,
+  occupied: Array<{ start: number; end: number }>,
+  alloc: number,
+): number | null {
+  let cursor = slotStart;
+  const sorted = [...occupied].sort((a, b) => a.start - b.start);
+  for (const w of sorted) {
+    if (w.end <= cursor) continue;
+    if (w.start > cursor && w.start - cursor >= alloc) {
+      return cursor;
+    }
+    cursor = Math.max(cursor, w.end);
+  }
+  if (slotEnd - cursor >= alloc) return cursor;
+  return null;
 }
 
 function timeUtc(hhmm: string): Date {
@@ -709,14 +736,14 @@ async function main(): Promise<void> {
       excelRow: r,
       sn: Number.isFinite(snNum as number) ? (snNum as number) : null,
       name,
-      normalHours: round2(cellNumber(row.getCell(COL.normalHr).value)),
-      eveningHours: round2(cellNumber(row.getCell(COL.eveningHr).value)),
-      sundayHours: round2(cellNumber(row.getCell(COL.sundayHr).value)),
-      holidayHours: round2(cellNumber(row.getCell(COL.holidayHr).value)),
-      normalPay: round2(cellNumber(row.getCell(COL.normalPay).value)),
-      eveningPay: round2(cellNumber(row.getCell(COL.eveningPay).value)),
-      sundayPay: round2(cellNumber(row.getCell(COL.sundayPay).value)),
-      holidayPay: round2(cellNumber(row.getCell(COL.holidayPay).value)),
+      normalHours: cellNumber(row.getCell(COL.normalHr).value),
+      eveningHours: cellNumber(row.getCell(COL.eveningHr).value),
+      sundayHours: cellNumber(row.getCell(COL.sundayHr).value),
+      holidayHours: cellNumber(row.getCell(COL.holidayHr).value),
+      normalPay: cellNumber(row.getCell(COL.normalPay).value),
+      eveningPay: cellNumber(row.getCell(COL.eveningPay).value),
+      sundayPay: cellNumber(row.getCell(COL.sundayPay).value),
+      holidayPay: cellNumber(row.getCell(COL.holidayPay).value),
     });
   }
 
@@ -841,11 +868,13 @@ async function main(): Promise<void> {
     };
 
     const couldNotPlace: PlaceFailure[] = [];
+    const movedHoursList: MovedHours[] = [];
     const classificationMismatches: string[] = [];
     const dualRowNotes: string[] = [];
     const unmatched: string[] = [];
     const plans: EmployeePlan[] = [];
     const allWithoutAttendance: string[] = [];
+    const excludedFromCompare: string[] = [];
 
     for (const group of groups) {
       if (!group.some(hasOt)) continue;
@@ -926,25 +955,6 @@ async function main(): Promise<void> {
         );
       }
 
-      // Holiday hours vs available holiday days in each window.
-      for (const w of windows) {
-        if (w.row.holidayHours <= 0) continue;
-        const holDays = eachDate(w.windowStart, w.windowEnd).filter((d) =>
-          holidayKeys.has(iso(d)),
-        );
-        const maxHol = holDays.length * 24;
-        if (w.row.holidayHours > maxHol + 0.01) {
-          couldNotPlace.push({
-            employeeId: user.employeeId,
-            name: primary.name,
-            category: 'holiday',
-            hoursNeeded: w.row.holidayHours,
-            capacityAvailable: maxHol,
-            reason: `Holiday hours exceed ${holDays.length} holiday day(s) × 24 in ${w.label}`,
-          });
-        }
-      }
-
       const attendanceRecord = await prisma.attendanceRecord.findFirst({
         where: {
           companyId: COMPANY_ID,
@@ -1010,14 +1020,19 @@ async function main(): Promise<void> {
         { key: 'normal', hours: (r) => r.normalHours },
       ];
 
-      for (const w of windows) {
+      for (let wi = 0; wi < windows.length; wi += 1) {
+        const w = windows[wi]!;
         if (!hasOt(w.row)) continue;
         if (w.windowStart.getTime() > w.windowEnd.getTime()) {
           couldNotPlace.push({
             employeeId: user.employeeId,
             name: primary.name,
             category: 'normal',
-            hoursNeeded: w.row.normalHours + w.row.eveningHours + w.row.sundayHours + w.row.holidayHours,
+            hoursNeeded:
+              w.row.normalHours +
+              w.row.eveningHours +
+              w.row.sundayHours +
+              w.row.holidayHours,
             capacityAvailable: 0,
             reason: `Empty date window (${w.label})`,
           });
@@ -1026,30 +1041,64 @@ async function main(): Promise<void> {
         }
 
         for (const cat of categories) {
-          const needed = cat.hours(w.row);
-          if (needed <= 0) continue;
-          const placed = placeCategoryHours({
-            neededHours: needed,
-            category: cat.key,
-            windowStart: w.windowStart,
-            windowEnd: w.windowEnd,
-            holidayKeys,
-            attendanceByDate,
-            leaveDates,
-            occupied,
-          });
-          if (placed.failure) {
-            couldNotPlace.push({
-              ...placed.failure,
-              employeeId: user.employeeId,
-              name: primary.name,
-              reason: `${w.label}: ${placed.failure.reason}`,
+          let remaining = cat.hours(w.row);
+          if (remaining <= 0) continue;
+
+          let periodIndex = wi;
+          while (remaining > 0.009 && periodIndex < windows.length) {
+            const target = windows[periodIndex]!;
+            const placed = placeCategoryHours({
+              neededHours: remaining,
+              category: cat.key,
+              windowStart: target.windowStart,
+              windowEnd: target.windowEnd,
+              holidayKeys,
+              attendanceByDate,
+              leaveDates,
+              occupied,
             });
-            failed = true;
-            break;
+            if (placed.failure) {
+              couldNotPlace.push({
+                ...placed.failure,
+                employeeId: user.employeeId,
+                name: primary.name,
+                reason: `${target.label}: ${placed.failure.reason}`,
+              });
+              failed = true;
+              break;
+            }
+            allEntries.push(...placed.entries);
+            withoutAttendance.push(...placed.withoutAttendance);
+            if (periodIndex > wi && placed.placedHours > 0.009) {
+              movedHoursList.push({
+                employeeId: user.employeeId,
+                name: primary.name,
+                category: cat.key,
+                hoursMoved: placed.placedHours,
+                fromLabel: w.label,
+                toLabel: target.label,
+              });
+            }
+            remaining = round2(placed.unplacedHours);
+            if (remaining > 0.009) {
+              if (periodIndex + 1 >= windows.length) {
+                couldNotPlace.push({
+                  employeeId: user.employeeId,
+                  name: primary.name,
+                  category: cat.key,
+                  hoursNeeded: remaining,
+                  capacityAvailable: placed.capacityAvailable,
+                  reason: `Unplaced ${remaining} h after ${target.label} (no further contract period)`,
+                });
+                failed = true;
+                break;
+              }
+              periodIndex += 1;
+            } else {
+              break;
+            }
           }
-          allEntries.push(...placed.entries);
-          withoutAttendance.push(...placed.withoutAttendance);
+          if (failed) break;
         }
         if (failed) break;
       }
@@ -1084,55 +1133,73 @@ async function main(): Promise<void> {
         continue;
       }
 
-      // Pay comparison (amounts only in report)
-      const periods: SalaryPeriodWindow[] = contracts.map((c) => ({
-        contractId: c.id,
-        periodStart: maxDate(c.startDate, MONTH_START),
-        periodEnd: c.endDate ? minDate(c.endDate, MONTH_END) : MONTH_END,
-        basicSalary: Number(c.basicSalary),
-      }));
-      const dated: DatedOvertimeEntry[] = allEntries.map((e) => ({
-        date: e.date,
-        isOvernight: false,
-        normalHours: e.regularHours,
-        eveningHours: e.nightHours,
-        sundayHours: e.weekendHours,
-        holidayHours: e.holidayHours,
-      }));
-      const monthEndBasic = Number(contracts[contracts.length - 1]!.basicSalary);
-      const assigned = assignOvertimeToSalaryPeriods({
-        entries: dated,
-        periods,
-        monthEndBasic,
-      });
-      const hr = {
-        normalPay: round2(group.reduce((s, r) => s + r.normalPay, 0)),
-        eveningPay: round2(group.reduce((s, r) => s + r.eveningPay, 0)),
-        sundayPay: round2(group.reduce((s, r) => s + r.sundayPay, 0)),
-        holidayPay: round2(group.reduce((s, r) => s + r.holidayPay, 0)),
-      };
-      const diffs: string[] = [];
-      const pairs: Array<[string, number, number]> = [
-        ['Normal', assigned.totals.normalOtPay, hr.normalPay],
-        ['Evening', assigned.totals.eveningOtPay, hr.eveningPay],
-        ['Weekend', assigned.totals.sundayOtPay, hr.sundayPay],
-        ['Holiday', assigned.totals.holidayOtPay, hr.holidayPay],
-      ];
-      for (const [label, computed, hrAmt] of pairs) {
-        if (Math.abs(computed - hrAmt) > 0.05) {
-          diffs.push(
-            `${label}: computed ${computed.toFixed(2)} vs HR ${hrAmt.toFixed(2)} (Δ ${(computed - hrAmt).toFixed(2)})`,
-          );
-        }
+      const excludeFromHrCompare = Boolean(
+        user.employeeId && EXCLUDE_FROM_HR_COMPARE.has(user.employeeId),
+      );
+      if (excludeFromHrCompare) {
+        excludedFromCompare.push(
+          `- **${primary.name}** (${user.employeeId}): Excluded: hours exceed what the old contract period allows`,
+        );
       }
 
-      plans.push({
-        user,
-        rows: group,
-        windows,
-        entries: allEntries,
-        withoutAttendance,
-        payCompare: {
+      // Pay comparison (amounts only in report); skipped for excluded employees.
+      let payCompare: EmployeePlan['payCompare'] = null;
+      if (!excludeFromHrCompare) {
+        const periods: SalaryPeriodWindow[] = contracts.map((c) => ({
+          contractId: c.id,
+          periodStart: maxDate(c.startDate, MONTH_START),
+          periodEnd: c.endDate ? minDate(c.endDate, MONTH_END) : MONTH_END,
+          basicSalary: Number(c.basicSalary),
+        }));
+        // Unrounded minute-precise hours so fractional Excel values match HR pay.
+        const dated: DatedOvertimeEntry[] = allEntries.map((e) => {
+          const raw = calculateOvertimeHours(
+            e.date,
+            e.startTime,
+            e.endTime,
+            dayContext(e.date, holidayKeys),
+            false,
+            undefined,
+            { round: false },
+          );
+          return {
+            date: e.date,
+            isOvernight: false,
+            normalHours: raw.regularHours,
+            eveningHours: raw.nightHours,
+            sundayHours: raw.weekendHours,
+            holidayHours: raw.holidayHours,
+          };
+        });
+        const monthEndBasic = Number(
+          contracts[contracts.length - 1]!.basicSalary,
+        );
+        const assigned = assignOvertimeToSalaryPeriods({
+          entries: dated,
+          periods,
+          monthEndBasic,
+        });
+        const hr = {
+          normalPay: round2(group.reduce((s, r) => s + r.normalPay, 0)),
+          eveningPay: round2(group.reduce((s, r) => s + r.eveningPay, 0)),
+          sundayPay: round2(group.reduce((s, r) => s + r.sundayPay, 0)),
+          holidayPay: round2(group.reduce((s, r) => s + r.holidayPay, 0)),
+        };
+        const diffs: string[] = [];
+        const pairs: Array<[string, number, number]> = [
+          ['Normal', assigned.totals.normalOtPay, hr.normalPay],
+          ['Evening', assigned.totals.eveningOtPay, hr.eveningPay],
+          ['Weekend', assigned.totals.sundayOtPay, hr.sundayPay],
+          ['Holiday', assigned.totals.holidayOtPay, hr.holidayPay],
+        ];
+        for (const [label, computed, hrAmt] of pairs) {
+          if (Math.abs(computed - hrAmt) > 0.05) {
+            diffs.push(
+              `${label}: computed ${computed.toFixed(2)} vs HR ${hrAmt.toFixed(2)} (Δ ${(computed - hrAmt).toFixed(2)})`,
+            );
+          }
+        }
+        payCompare = {
           computed: {
             normalOtPay: assigned.totals.normalOtPay,
             eveningOtPay: assigned.totals.eveningOtPay,
@@ -1142,7 +1209,17 @@ async function main(): Promise<void> {
           },
           hr,
           diffs,
-        },
+        };
+      }
+
+      plans.push({
+        user,
+        rows: group,
+        windows,
+        entries: allEntries,
+        withoutAttendance,
+        excludeFromHrCompare,
+        payCompare,
       });
       for (const line of withoutAttendance) {
         allWithoutAttendance.push(`- **${primary.name}**: ${line}`);
@@ -1284,6 +1361,25 @@ async function main(): Promise<void> {
     }
     report.push('');
 
+    report.push('## Moved to the next contract period');
+    report.push('');
+    if (movedHoursList.length === 0) {
+      report.push('_None_');
+    } else {
+      for (const m of movedHoursList) {
+        report.push(
+          `- **${m.name}** (${m.employeeId ?? '—'}) · ${m.category}: **${m.hoursMoved} h** moved from ${m.fromLabel} → ${m.toLabel}`,
+        );
+      }
+    }
+    report.push('');
+
+    report.push('## Excluded from HR OT comparison');
+    report.push('');
+    if (excludedFromCompare.length === 0) report.push('_None_');
+    else report.push(...excludedFromCompare);
+    report.push('');
+
     report.push('## Classification mismatches');
     report.push('');
     if (classificationMismatches.length === 0) report.push('_None_');
@@ -1299,13 +1395,27 @@ async function main(): Promise<void> {
     }
     report.push('');
 
+    report.push('## API / form attendance check');
+    report.push('');
+    report.push(
+      '- Overtime **save/preview reject only approved full-day leave** (`FULL_DAY_LEAVE_MESSAGE`). Absences are **not** rejected.',
+    );
+    report.push(
+      '- Attendance mismatches produce a **non-blocking warning** (`buildAttendanceWarning`) only.',
+    );
+    report.push(
+      '- Entry form selectable windows come from the server; leave blocks times, absence does not.',
+    );
+    report.push('');
+
     report.push('## OT pay comparison (computed vs HR)');
     report.push('');
     report.push(
       '| Employee | ID | Comp N | HR N | Comp E | HR E | Comp W | HR W | Comp H | HR H | Diffs |',
     );
     report.push('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|');
-    for (const plan of plans) {
+    const compared = plans.filter((p) => p.payCompare != null);
+    for (const plan of compared) {
       const pc = plan.payCompare!;
       const name = [plan.user.firstName, plan.user.middleName, plan.user.lastName]
         .filter(Boolean)
@@ -1316,9 +1426,10 @@ async function main(): Promise<void> {
     }
     report.push('');
 
-    const payOk = plans.filter((p) => (p.payCompare?.diffs.length ?? 0) === 0).length;
+    const payOk = compared.filter((p) => (p.payCompare?.diffs.length ?? 0) === 0)
+      .length;
     report.push(
-      `Pay matches (±0.05): **${payOk}** / **${plans.length}**. Likely causes for diffs: HR used earned salary instead of contractual basic; hour rounding; transport/bonus inclusion.`,
+      `Pay matches (±0.05): **${payOk}** / **${compared.length}** compared (excluded ${plans.length - compared.length}).`,
     );
     report.push('');
     report.push('_Dry-run complete — review before `--apply`._');
@@ -1328,7 +1439,7 @@ async function main(): Promise<void> {
 
     console.log(`[ot-seed] Report: ${REPORT_PATH}`);
     console.log(
-      `[ot-seed] Planned ${plans.length} sheets / ${totalEntries} entries; could-not-place ${couldNotPlace.length}; pay OK ${payOk}/${plans.length}; holiday ${[...holidayKeys].join(',') || 'none'}`,
+      `[ot-seed] Planned ${plans.length} sheets / ${totalEntries} entries; could-not-place ${couldNotPlace.length}; moved ${movedHoursList.length}; pay OK ${payOk}/${compared.length}; holiday ${[...holidayKeys].join(',') || 'none'}`,
     );
   } finally {
     await prisma.$disconnect();

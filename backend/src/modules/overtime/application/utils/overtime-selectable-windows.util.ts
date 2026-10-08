@@ -147,7 +147,8 @@ export function computeSelectableOvertimeWindows(
   let base: Array<{ start: number; end: number }> = [];
 
   if (input.isHalfDay) {
-    // Half day: before morning + after morning end through 24:00.
+    // Half day: OT before morning (Night/Regular classification) + after morning
+    // end through 24:00 (Weekend). Morning itself is not selectable.
     if (morningStart != null && morningStart > 0) {
       base.push({ start: 0, end: morningStart });
     }
