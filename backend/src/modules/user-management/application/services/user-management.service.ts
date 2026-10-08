@@ -188,7 +188,7 @@ export class UserManagementService {
 
     const sharedInput = {
       firstName,
-      lastName,
+      lastName: lastName?.trim() ?? '',
       chineseName,
       phone: rest.phone,
       branchId: rest.branchId,
@@ -226,7 +226,7 @@ export class UserManagementService {
       ctx,
       provisionedUser.id,
       firstName,
-      lastName,
+      lastName?.trim() ?? '',
       requestedEmployeeId,
       profileInput,
     );
@@ -1266,7 +1266,8 @@ export class UserManagementService {
   ): Prisma.UserUncheckedUpdateInput {
     return {
       firstName: rest.firstName?.trim() || undefined,
-      lastName: rest.lastName?.trim() || undefined,
+      lastName:
+        rest.lastName !== undefined ? rest.lastName.trim() : undefined,
       chineseName: rest.chineseName?.trim() || undefined,
       phone: rest.phone?.trim() || undefined,
       branchId: rest.branchId,

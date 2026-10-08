@@ -305,7 +305,7 @@ export interface UsersQueryParams extends PaginationParams {
 export interface CreateUserRequest {
   email?: string;
   firstName: string;
-  lastName: string;
+  lastName?: string;
   chineseName?: string;
   password?: string;
   phone?: string;

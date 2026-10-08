@@ -131,13 +131,14 @@ export class CreateUserDto {
   @Matches(USER_NAME_PATTERN, { message: NAME_MESSAGE })
   firstName!: string;
 
-  @ApiProperty({ maxLength: USER_NAME_MAX })
+  @ApiPropertyOptional({ maxLength: USER_NAME_MAX })
+  @IsOptional()
+  @IsOptionalText()
   @Transform(trimString)
   @IsString()
-  @IsNotEmpty()
   @MaxLength(USER_NAME_MAX)
   @Matches(USER_NAME_PATTERN, { message: NAME_MESSAGE })
-  lastName!: string;
+  lastName?: string;
 
   @ApiPropertyOptional({ description: 'Chinese full name (中文姓名)', maxLength: CHINESE_NAME_MAX })
   @IsOptional()

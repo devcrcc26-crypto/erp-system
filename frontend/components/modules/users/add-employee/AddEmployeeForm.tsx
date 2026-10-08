@@ -315,7 +315,7 @@ export default function AddEmployeeForm({
       const invitedAddress = values.email?.trim().toLowerCase() || undefined;
       const body: CreateUserRequest = {
         firstName: values.firstName.trim(),
-        lastName: values.lastName.trim(),
+        lastName: (values.lastName ?? '').trim(),
         chineseName: values.chineseName?.trim() || undefined,
         phone: values.phone?.trim() || undefined,
         departmentId: values.departmentId,
@@ -404,10 +404,7 @@ export default function AddEmployeeForm({
                 <Form.Item
                   label={t('users.form.lastName')}
                   name="lastName"
-                  rules={nameFieldRules(t, {
-                    required: true,
-                    requiredMessage: t('common.requiredLastName'),
-                  })}
+                  rules={nameFieldRules(t, { required: false })}
                 >
                   <Input />
                 </Form.Item>
