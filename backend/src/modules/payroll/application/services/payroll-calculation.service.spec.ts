@@ -166,4 +166,85 @@ describe('PayrollCalculationService', () => {
       expect(result.incomeTax).toBe(0);
     });
   });
+
+  describe('overtime from basic (not earned)', () => {
+    it('basic 15,000, earned 12,000, 8 h Normal → 937.50 (not 750)', () => {
+      const result = calc.calculate({
+        basicSalary: 15000,
+        transportAllowance: 0,
+        monthlyBonus: 0,
+        bonusTopUp: 0,
+        payrollDays: 24,
+        earnedSalary: 12000,
+        overtimeHours: {
+          normalHours: 8,
+          eveningHours: 0,
+          sundayHours: 0,
+          holidayHours: 0,
+        },
+        taxableThreshold: 2200,
+      });
+      // 15000/192 × 8 × 1.5 = 937.5
+      expect(result.normalOtPay).toBeCloseTo(937.5, 2);
+      expect(result.normalOtPay).not.toBeCloseTo(750, 2);
+    });
+  });
+
+  describe('pension on earned salary', () => {
+    it('basic 15,000, paid days 24 → earned 12,000 → 7% = 840, 11% = 1,320', () => {
+      const result = calc.calculate({
+        basicSalary: 15000,
+        transportAllowance: 0,
+        monthlyBonus: 0,
+        bonusTopUp: 0,
+        payrollDays: 24,
+        overtimeHours: ZERO_OT,
+        taxableThreshold: 2200,
+        pensionApplicable: true,
+      });
+      expect(result.earnedSalary).toBeCloseTo(12000, 2);
+      expect(result.pensionEmployee).toBeCloseTo(840, 2);
+      expect(result.pensionEmployer).toBeCloseTo(1320, 2);
+    });
+  });
+
+  describe('transport and bonus paid in full', () => {
+    it('joiner Sep 5 (26 paid days): transport 2,000 and bonus 5,000 unpaid-prorated', () => {
+      const result = calc.calculate({
+        basicSalary: 15000,
+        transportAllowance: 2000,
+        monthlyBonus: 5000,
+        bonusTopUp: 0,
+        payrollDays: 26,
+        overtimeHours: ZERO_OT,
+        taxableThreshold: 2200,
+      });
+      expect(result.nonTaxableTransport).toBeCloseTo(2000, 2);
+      expect(result.grossIncome).toBeCloseTo(
+        result.earnedSalary + 2000 + 5000,
+        2,
+      );
+    });
+  });
+
+  describe('tax once on whole month taxable income', () => {
+    it('salary change: taxable income is sum of both periods, taxed once', () => {
+      const earned = 68000; // 50k/30×3 + 70k/30×27
+      const result = calc.calculate({
+        basicSalary: 70000,
+        transportAllowance: 0,
+        monthlyBonus: 0,
+        bonusTopUp: 0,
+        payrollDays: 30,
+        earnedSalary: earned,
+        overtimeHours: ZERO_OT,
+        taxableThreshold: 2200,
+      });
+      expect(result.taxableIncome).toBeCloseTo(earned, 2);
+      expect(result.incomeTax).toBeCloseTo(
+        calc.calculateIncomeTax(earned),
+        2,
+      );
+    });
+  });
 });

@@ -23,9 +23,16 @@ import {
   type PayrollCalculationResult,
 } from './payroll-calculation.service';
 import {
-  employedCalendarWindow,
+  allocateContractPayrollDays,
   employedPayrollDays,
 } from '../utils/payroll-days.util';
+
+/**
+ * Overtime pay uses month-end contract basic ÷ 192 (holiday ÷ 196).
+ * Payroll currently consumes overtime *sheet totals*, not dated entries, so
+ * the contract in effect on each OT date is not applied here.
+ */
+export const PAYROLL_OT_BASIC_SOURCE = 'MONTH_END_CONTRACT' as const;
 
 interface ServiceContext {
   userId: string;
@@ -1012,37 +1019,82 @@ export class PayrollRunService {
     let totalEmployedDays = 0;
     const windows: DateWindow[] = [];
 
-    for (const contract of sorted) {
-      const employed = employedPayrollDays(
-        run.month,
-        run.year,
-        contract.startDate,
-        contract.endDate,
-      );
-      const window = employedCalendarWindow(
-        run.month,
-        run.year,
-        contract.startDate,
-        contract.endDate,
-      );
+    // Joiner/leaver status from the employee's employment span this month
+    // (earliest overlapping contract start → latest end), not each renewal alone.
+    const employmentStart =
+      sorted.length > 0
+        ? sorted.reduce(
+            (min, c) => (c.startDate.getTime() < min.getTime() ? c.startDate : min),
+            sorted[0].startDate,
+          )
+        : monthStart;
+    const employmentEnd = (() => {
+      if (sorted.length === 0) {
+        return null;
+      }
+      let openEnded = false;
+      let maxEnd: Date | null = null;
+      for (const contract of sorted) {
+        if (!contract.endDate) {
+          openEnded = true;
+          break;
+        }
+        if (!maxEnd || contract.endDate.getTime() > maxEnd.getTime()) {
+          maxEnd = contract.endDate;
+        }
+      }
+      return openEnded ? null : maxEnd;
+    })();
+
+    const employmentDays = employedPayrollDays(
+      run.month,
+      run.year,
+      employmentStart,
+      employmentEnd,
+    );
+    totalEmployedDays = employmentDays.days;
+
+    const allocations = allocateContractPayrollDays(
+      run.month,
+      run.year,
+      sorted.map((c) => ({
+        id: c.id,
+        startDate: c.startDate,
+        endDate: c.endDate,
+      })),
+      employmentStart,
+      employmentEnd,
+    );
+    const contractById = new Map(sorted.map((c) => [c.id, c]));
+
+    const lastDayOfMonth = monthEnd.getUTCDate();
+    for (const allocation of allocations) {
+      const contract = contractById.get(allocation.contractId);
+      if (!contract || allocation.days <= 0) {
+        continue;
+      }
+      const calendarStartDay =
+        allocation.startDay >= 31 ? lastDayOfMonth : allocation.startDay;
+      const calendarEndDay =
+        allocation.endDay >= 30
+          ? lastDayOfMonth
+          : Math.min(allocation.endDay, lastDayOfMonth);
+      const resolvedWindow: DateWindow = {
+        windowStart: new Date(
+          Date.UTC(run.year, run.month - 1, calendarStartDay),
+        ),
+        windowEnd: new Date(Date.UTC(run.year, run.month - 1, calendarEndDay)),
+      };
       const basic = this.toNumber(contract.basicSalary);
-      const periodEarned =
-        employed.days > 0 ? this.round((basic / 30) * employed.days) : 0;
-
-      if (employed.days > 0) {
-        totalEmployedDays += employed.days;
-        periodDetails.push({
-          contract,
-          days: employed.days,
-          window,
-          periodEarned,
-        });
-      }
-      if (window) {
-        windows.push(window);
-      }
+      const periodEarned = this.round((basic / 30) * allocation.days);
+      periodDetails.push({
+        contract,
+        days: allocation.days,
+        window: resolvedWindow,
+        periodEarned,
+      });
+      windows.push(resolvedWindow);
     }
-
     let absentInWindow = 0;
     let payrollDays = totalEmployedDays;
     const noteParts: string[] = [];
@@ -1120,6 +1172,16 @@ export class PayrollRunService {
       sundayHours: this.toNumber(overtime?.totalWeekendHours),
       holidayHours: this.toNumber(overtime?.totalHolidayHours),
     };
+    const hasOtHours =
+      overtimeHours.normalHours > 0 ||
+      overtimeHours.eveningHours > 0 ||
+      overtimeHours.sundayHours > 0 ||
+      overtimeHours.holidayHours > 0;
+    if (hasOtHours) {
+      noteParts.push(
+        `OT hourly base from month-end contract basic (${PAYROLL_OT_BASIC_SOURCE}); sheet totals are not dated per entry`,
+      );
+    }
 
     const result = this.calc.calculate({
       basicSalary: monthEndBasic,

@@ -116,7 +116,9 @@ export class PayrollCalculationService {
         : (basicSalary / 30) * payrollDays,
     );
 
-    const hourlyBase = earnedSalary / 192;
+    // Overtime hourly base is contractual basic ÷ 192 (holiday ÷ 196), not earned.
+    const hourlyBase = basicSalary / 192;
+    const holidayHourlyBase = basicSalary / 196;
 
     const normalOtPay = this.round(hourlyBase * overtimeHours.normalHours * 1.5);
     const eveningOtPay = this.round(
@@ -125,7 +127,6 @@ export class PayrollCalculationService {
     const sundayOtPay = this.round(
       hourlyBase * overtimeHours.sundayHours * 2.0,
     );
-    const holidayHourlyBase = earnedSalary / 196;
     const holidayOtPay = this.round(
       holidayHourlyBase * overtimeHours.holidayHours * 2.5,
     );
@@ -133,6 +134,7 @@ export class PayrollCalculationService {
       normalOtPay + eveningOtPay + sundayOtPay + holidayOtPay,
     );
 
+    // Transport and (taxable) bonus are paid in full — not prorated by paid days.
     // CCECC rule: transportation allowance is fully non-taxable (no taxable portion).
     const taxableTransport = 0;
     const nonTaxableTransport = this.round(transportAllowance);
@@ -142,15 +144,17 @@ export class PayrollCalculationService {
       earnedSalary + totalOtPay + totalBonus + transportAllowance,
     );
 
+    // Tax is calculated once on the whole month's taxable income.
     const taxableIncome = this.round(
       earnedSalary + totalOtPay + totalBonus + taxableTransport,
     );
 
+    // Pension is 7% / 11% of earned salary (expatriates/freelancers: caller sets pensionApplicable false).
     const pensionEmployee = pensionApplicable
-      ? this.round(basicSalary * 0.07)
+      ? this.round(earnedSalary * 0.07)
       : 0;
     const pensionEmployer = pensionApplicable
-      ? this.round(basicSalary * 0.11)
+      ? this.round(earnedSalary * 0.11)
       : 0;
     const incomeTax = taxApplicable
       ? this.round(this.calculateIncomeTax(taxableIncome))
