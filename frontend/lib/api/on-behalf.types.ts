@@ -22,6 +22,7 @@ export type OnBehalfModuleCode =
 export interface OnBehalfEligibleEmployee {
   id: string;
   firstName: string;
+  middleName: string | null;
   lastName: string;
   employeeId: string | null;
   department: string | null;

@@ -653,7 +653,7 @@ export class PayrollExcelExportService {
       {
         start: COL.sundayHr,
         end: COL.sundayPay,
-        title: 'Sunday',
+        title: 'Weekend',
         left: 'HR',
         right: '2',
       },

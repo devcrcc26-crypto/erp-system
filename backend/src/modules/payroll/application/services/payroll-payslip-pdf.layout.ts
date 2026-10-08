@@ -204,7 +204,7 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
   const overtime: Array<{ label: string; hours: number; rate: string; amount: number }> = [
     { label: 'Normal', hours: model.normalOtHours, rate: '1.5', amount: model.normalOtPay },
     { label: 'Evening', hours: model.eveningOtHours, rate: '1.75', amount: model.eveningOtPay },
-    { label: 'Sunday', hours: model.sundayOtHours, rate: '2.0', amount: model.sundayOtPay },
+    { label: 'Weekend', hours: model.sundayOtHours, rate: '2.0', amount: model.sundayOtPay },
     { label: 'Holiday', hours: model.holidayOtHours, rate: '2.5', amount: model.holidayOtPay },
   ];
   const overtimeRows = overtime.filter((row) => row.hours > 0);

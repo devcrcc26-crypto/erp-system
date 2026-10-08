@@ -21,6 +21,8 @@ import type {
   OvertimeSheetListItem,
   PreviewOvertimeEntryPayload,
   PreviewOvertimeEntryResult,
+  SelectableOvertimeWindowsParams,
+  SelectableOvertimeWindowsResult,
   UpsertOvertimeEntryPayload,
 } from '@/lib/api/overtime.types';
 import type {
@@ -330,6 +332,23 @@ export function usePreviewOvertimeEntry() {
         `${OVERTIME_PATH}/preview-entry`,
         payload,
       ),
+  });
+}
+
+/**
+ * Selectable same-day overtime windows for the entry time pickers.
+ */
+export function useSelectableOvertimeWindows() {
+  return useMutation({
+    mutationFn: (params: SelectableOvertimeWindowsParams) => {
+      const search = new URLSearchParams({
+        employeeId: params.employeeId,
+        date: params.date,
+      });
+      return apiGet<SelectableOvertimeWindowsResult>(
+        `${OVERTIME_PATH}/selectable-windows?${search.toString()}`,
+      );
+    },
   });
 }
 

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Drawer, Form, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import OvertimeEntryForm, {
-  endsAtOrBeforeStart,
   type OvertimeEntryFormValues,
 } from '@/components/modules/hr/overtime/OvertimeEntryForm';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -12,11 +11,13 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   OvertimeEntry,
   PreviewOvertimeEntryResult,
+  SelectableOvertimeWindowsResult,
   UpsertOvertimeEntryPayload,
 } from '@/lib/api/overtime.types';
 import {
   useAddOvertimeEntry,
   usePreviewOvertimeEntry,
+  useSelectableOvertimeWindows,
   useUpdateOvertimeEntry,
 } from '@/lib/query/overtime';
 import { detailDrawerStyles } from '@/lib/theme/layout';
@@ -50,10 +51,13 @@ export default function OvertimeEntryFormDrawer({
   const addMutation = useAddOvertimeEntry(sheetId);
   const updateMutation = useUpdateOvertimeEntry(sheetId);
   const previewMutation = usePreviewOvertimeEntry();
+  const windowsMutation = useSelectableOvertimeWindows();
   const saving = addMutation.isPending || updateMutation.isPending;
   const [preview, setPreview] = useState<PreviewOvertimeEntryResult | null>(
     null,
   );
+  const [windows, setWindows] =
+    useState<SelectableOvertimeWindowsResult | null>(null);
 
   const periodLabel = useMemo(() => {
     const monthName = t(`hr.months.${sheetMonth}`);
@@ -65,7 +69,6 @@ export default function OvertimeEntryFormDrawer({
       if (!current) {
         return false;
       }
-      // Must fall in the sheet's month, and overtime cannot be claimed for days not yet worked.
       return (
         current.isAfter(dayjs().endOf('day')) ||
         current.month() + 1 !== sheetMonth ||
@@ -78,10 +81,6 @@ export default function OvertimeEntryFormDrawer({
   const watchedDate = Form.useWatch('date', form);
   const watchedStart = Form.useWatch('startTime', form);
   const watchedEnd = Form.useWatch('endTime', form);
-  const watchedOvernight = Form.useWatch('isOvernight', form);
-  // An unflagged overnight entry is invalid (the end time field shows why) — no preview.
-  const previewBlocked =
-    endsAtOrBeforeStart(watchedStart, watchedEnd) && !watchedOvernight;
 
   useEffect(() => {
     if (!open) {
@@ -90,25 +89,68 @@ export default function OvertimeEntryFormDrawer({
     if (editingEntry) {
       form.setFieldsValue({
         date: dayjs(editingEntry.date),
-        startTime: dayjs(editingEntry.startTime, 'HH:mm'),
-        endTime: dayjs(editingEntry.endTime, 'HH:mm'),
-        isOvernight: editingEntry.isOvernight ?? false,
+        startTime: editingEntry.startTime,
+        endTime: editingEntry.endTime,
         taskDescription: editingEntry.taskDescription,
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({
-        isOvernight: false,
-      });
       setPreview(null);
+      setWindows(null);
     }
   }, [open, editingEntry, form, sheetMonth, sheetYear]);
 
   useEffect(() => {
-    if (!open || !employeeId || !watchedDate || !watchedStart || !watchedEnd) {
+    if (!open || !employeeId || !watchedDate) {
       return;
     }
-    if (previewBlocked) {
+
+    const handle = window.setTimeout(() => {
+      void windowsMutation
+        .mutateAsync({
+          employeeId,
+          date: watchedDate.format('YYYY-MM-DD'),
+        })
+        .then((result) => {
+          setWindows(result);
+          const start = form.getFieldValue('startTime') as string | undefined;
+          const end = form.getFieldValue('endTime') as string | undefined;
+          if (start && !result.windows.some((w) => {
+            const toMin = (v: string): number =>
+              v === '24:00' ? 1440 : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
+            const s = toMin(start);
+            return s >= toMin(w.start) && s < toMin(w.end);
+          })) {
+            form.setFieldsValue({ startTime: undefined, endTime: undefined });
+          } else if (
+            end &&
+            start &&
+            !result.windows.some((w) => {
+              const toMin = (v: string): number =>
+                v === '24:00'
+                  ? 1440
+                  : Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
+              const s = toMin(start);
+              const e = toMin(end);
+              return s >= toMin(w.start) && e <= toMin(w.end) && e > s;
+            })
+          ) {
+            form.setFieldValue('endTime', undefined);
+          }
+        })
+        .catch(() => {
+          setWindows(null);
+        });
+    }, PREVIEW_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(handle);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, employeeId, watchedDate]);
+
+  useEffect(() => {
+    if (!open || !employeeId || !watchedDate || !watchedStart || !watchedEnd) {
       return;
     }
 
@@ -117,9 +159,8 @@ export default function OvertimeEntryFormDrawer({
         .mutateAsync({
           employeeId,
           date: watchedDate.format('YYYY-MM-DD'),
-          startTime: watchedStart.format('HH:mm'),
-          endTime: watchedEnd.format('HH:mm'),
-          isOvernight: Boolean(watchedOvernight),
+          startTime: watchedStart,
+          endTime: watchedEnd,
         })
         .then((result) => {
           setPreview(result);
@@ -132,26 +173,14 @@ export default function OvertimeEntryFormDrawer({
     return () => {
       window.clearTimeout(handle);
     };
-    // previewMutation identity is unstable; depend on the watched fields only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    open,
-    employeeId,
-    watchedDate,
-    watchedStart,
-    watchedEnd,
-    watchedOvernight,
-    previewBlocked,
-  ]);
+  }, [open, employeeId, watchedDate, watchedStart, watchedEnd]);
 
   async function handleSubmit(values: OvertimeEntryFormValues): Promise<void> {
     const payload: UpsertOvertimeEntryPayload = {
       date: values.date.format('YYYY-MM-DD'),
-      startTime: values.startTime.format('HH:mm'),
-      endTime: values.endTime.format('HH:mm'),
-      isOvernight:
-        Boolean(values.isOvernight) &&
-        endsAtOrBeforeStart(values.startTime, values.endTime),
+      startTime: values.startTime,
+      endTime: values.endTime,
       taskDescription: values.taskDescription.trim(),
     };
 
@@ -170,6 +199,23 @@ export default function OvertimeEntryFormDrawer({
     } catch (error: unknown) {
       notifyApiError(error, t('hr.messages.failedToSaveOvertimeEntry'), messageApi);
     }
+  }
+
+  function handleAddNextDay(nextDate: Dayjs): void {
+    if (
+      nextDate.month() + 1 !== sheetMonth ||
+      nextDate.year() !== sheetYear ||
+      nextDate.isAfter(dayjs().endOf('day'))
+    ) {
+      messageApi.warning(t('hr.messages.nextDayOutsideSheet'));
+      return;
+    }
+    form.setFieldsValue({
+      date: nextDate,
+      startTime: '00:00',
+      endTime: undefined,
+    });
+    setPreview(null);
   }
 
   const title = editingEntry
@@ -203,6 +249,7 @@ export default function OvertimeEntryFormDrawer({
             type="primary"
             loading={saving}
             onClick={() => form.submit()}
+            disabled={windows?.blockedReason === 'FULL_DAY_LEAVE'}
           >
             {t('hr.buttons.save')}
           </Button>
@@ -219,10 +266,13 @@ export default function OvertimeEntryFormDrawer({
       <OvertimeEntryForm
         form={form}
         disabledDate={disabledDate}
-        preview={previewBlocked ? null : preview}
+        preview={preview}
         previewLoading={previewMutation.isPending}
         periodLabel={periodLabel}
+        windows={windows}
+        windowsLoading={windowsMutation.isPending}
         onFinish={handleSubmit}
+        onAddNextDay={handleAddNextDay}
       />
     </Drawer>
   );

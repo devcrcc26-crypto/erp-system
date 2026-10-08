@@ -50,7 +50,9 @@ export interface OvertimeEntry {
   sheetId: string;
   date: string;
   startTime: string;
+  /** HH:mm, or "24:00" when endsAtEndOfDay is true. */
   endTime: string;
+  endsAtEndOfDay?: boolean;
   isHoliday: boolean;
   isOvernight?: boolean;
   regularHours: number;
@@ -110,8 +112,8 @@ export interface ListOvertimeSheetsParams {
 export interface UpsertOvertimeEntryPayload {
   date: string;
   startTime: string;
+  /** HH:mm or 24:00 (end of calendar day). */
   endTime: string;
-  isOvernight?: boolean;
   taskDescription: string;
 }
 
@@ -120,7 +122,6 @@ export interface PreviewOvertimeEntryPayload {
   date: string;
   startTime: string;
   endTime: string;
-  isOvernight?: boolean;
 }
 
 export interface PreviewOvertimeEntryResult {
@@ -134,4 +135,21 @@ export interface PreviewOvertimeEntryResult {
   isHalfDay: boolean;
   scheduleNote: string | null;
   attendanceWarning: string | null;
+}
+
+export interface SelectableOvertimeWindowsParams {
+  employeeId: string;
+  date: string;
+}
+
+export interface SelectableOvertimeWindowsResult {
+  dayKind:
+    | 'FULL_WORKING'
+    | 'HALF_DAY'
+    | 'NON_WORKING'
+    | 'HOLIDAY'
+    | 'FULL_DAY_LEAVE';
+  windows: Array<{ start: string; end: string }>;
+  blockedReason: 'FULL_DAY_LEAVE' | null;
+  message: string | null;
 }

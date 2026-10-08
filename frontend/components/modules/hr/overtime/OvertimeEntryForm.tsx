@@ -1,48 +1,83 @@
 'use client';
 
+import { useMemo } from 'react';
 import {
   Alert,
-  Checkbox,
+  Button,
   DatePicker,
   Form,
   Input,
+  Select,
   Spin,
   Tag,
-  TimePicker,
 } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import type { PreviewOvertimeEntryResult } from '@/lib/api/overtime.types';
+import type {
+  PreviewOvertimeEntryResult,
+  SelectableOvertimeWindowsResult,
+} from '@/lib/api/overtime.types';
 import { formatOvertimeHours } from '@/lib/utils/overtime-display';
 
 export interface OvertimeEntryFormValues {
   date: Dayjs;
-  startTime: Dayjs;
-  endTime: Dayjs;
-  isOvernight?: boolean;
+  startTime: string;
+  endTime: string;
   taskDescription: string;
 }
 
-function minutesOfDay(value: Dayjs | undefined): number | null {
-  return value ? value.hour() * 60 + value.minute() : null;
+const END_OF_DAY = '24:00';
+
+function parseHhMmToMinutes(value: string): number {
+  if (value === END_OF_DAY) {
+    return 24 * 60;
+  }
+  const [h, m] = value.split(':').map(Number);
+  return h * 60 + m;
 }
 
-/** True when the end time is at or before the start time (entry would cross midnight). */
-export function endsAtOrBeforeStart(
-  start: Dayjs | undefined,
-  end: Dayjs | undefined,
-): boolean {
-  const s = minutesOfDay(start);
-  const e = minutesOfDay(end);
-  return s !== null && e !== null && e <= s;
+/** End times strictly after start, within the same selectable window, 15-min steps. */
+export function enumerateEndTimes(
+  startTime: string,
+  windows: Array<{ start: string; end: string }>,
+): string[] {
+  const start = parseHhMmToMinutes(startTime);
+  const window = windows.find((w) => {
+    const ws = parseHhMmToMinutes(w.start);
+    const we = parseHhMmToMinutes(w.end);
+    return start >= ws && start < we;
+  });
+  if (!window) {
+    return [];
+  }
+  const we = parseHhMmToMinutes(window.end);
+  const times: string[] = [];
+  for (let m = start + 15; m <= we; m += 15) {
+    times.push(
+      m >= 24 * 60
+        ? END_OF_DAY
+        : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`,
+    );
+  }
+  return times;
 }
 
-/** Duration in hours for an overnight entry (end on the next day). */
-function overnightHours(start: Dayjs, end: Dayjs): number {
-  const s = minutesOfDay(start) ?? 0;
-  const e = minutesOfDay(end) ?? 0;
-  return Math.round(((e + 24 * 60 - s) / 60) * 100) / 100;
+/** Start times inside windows (exclusive of window end), 15-min steps. */
+export function enumerateStartTimes(
+  windows: Array<{ start: string; end: string }>,
+): string[] {
+  const times = new Set<string>();
+  for (const window of windows) {
+    const ws = parseHhMmToMinutes(window.start);
+    const we = parseHhMmToMinutes(window.end);
+    for (let m = ws; m < we; m += 15) {
+      times.add(
+        `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`,
+      );
+    }
+  }
+  return [...times].sort((a, b) => parseHhMmToMinutes(a) - parseHhMmToMinutes(b));
 }
 
 interface OvertimeEntryFormProps {
@@ -52,7 +87,10 @@ interface OvertimeEntryFormProps {
   preview: PreviewOvertimeEntryResult | null;
   previewLoading: boolean;
   periodLabel: string;
+  windows: SelectableOvertimeWindowsResult | null;
+  windowsLoading: boolean;
   onFinish?: (values: OvertimeEntryFormValues) => void | Promise<void>;
+  onAddNextDay?: (nextDate: Dayjs) => void;
 }
 
 function DrawerSection({
@@ -113,7 +151,7 @@ function HoursPreviewChip({
 }
 
 /**
- * Overtime sheet entry fields with live hours preview from the schedule engine.
+ * Overtime sheet entry fields: same-day only, windows from the server, live hours preview.
  */
 export default function OvertimeEntryForm({
   form,
@@ -122,13 +160,39 @@ export default function OvertimeEntryForm({
   preview,
   previewLoading,
   periodLabel,
+  windows,
+  windowsLoading,
   onFinish,
+  onAddNextDay,
 }: OvertimeEntryFormProps): React.ReactNode {
   const { t } = useEpcTranslation();
+  const watchedDate = Form.useWatch('date', form);
   const watchedStart = Form.useWatch('startTime', form);
   const watchedEnd = Form.useWatch('endTime', form);
-  const watchedOvernight = Form.useWatch('isOvernight', form);
-  const crossesMidnight = endsAtOrBeforeStart(watchedStart, watchedEnd);
+
+  const startOptions = useMemo(() => {
+    if (!windows?.windows?.length) {
+      return [];
+    }
+    return enumerateStartTimes(windows.windows).map((value) => ({
+      value,
+      label: value,
+    }));
+  }, [windows]);
+
+  const endOptions = useMemo(() => {
+    if (!watchedStart || !windows?.windows?.length) {
+      return [];
+    }
+    return enumerateEndTimes(watchedStart, windows.windows).map((value) => ({
+      value,
+      label: value,
+    }));
+  }, [watchedStart, windows]);
+
+  const blockedLeave = windows?.blockedReason === 'FULL_DAY_LEAVE';
+  const timesDisabled =
+    blockedLeave || windowsLoading || !windows?.windows?.length;
 
   return (
     <Form<OvertimeEntryFormValues>
@@ -160,6 +224,38 @@ export default function OvertimeEntryForm({
               />
             </Form.Item>
 
+            {windowsLoading ? (
+              <div className="md:col-span-2 flex items-center gap-2 py-1">
+                <Spin size="small" />
+                <span className="text-[13px] text-[var(--color-text-secondary)]">
+                  {t('hr.labels.selectableWindowsLoading')}
+                </span>
+              </div>
+            ) : null}
+
+            {blockedLeave ? (
+              <Alert
+                type="info"
+                showIcon
+                className="md:col-span-2"
+                message={
+                  windows?.message ?? t('hr.labels.approvedLeaveNoOvertime')
+                }
+              />
+            ) : null}
+
+            {!windowsLoading &&
+            windows &&
+            !blockedLeave &&
+            windows.windows.length === 0 ? (
+              <Alert
+                type="warning"
+                showIcon
+                className="md:col-span-2"
+                message={t('hr.labels.noSelectableWindows')}
+              />
+            ) : null}
+
             <Form.Item
               name="startTime"
               label={t('hr.form.startTime')}
@@ -170,46 +266,76 @@ export default function OvertimeEntryForm({
                 },
               ]}
             >
-              <TimePicker className="w-full" format="HH:mm" minuteStep={15} />
+              <Select
+                className="w-full"
+                showSearch
+                options={startOptions}
+                disabled={timesDisabled}
+                placeholder={t('hr.placeholder.selectStartTime')}
+                onChange={() => {
+                  form.setFieldValue('endTime', undefined);
+                }}
+              />
             </Form.Item>
 
             <Form.Item
               name="endTime"
               label={t('hr.form.endTime')}
-              dependencies={['startTime', 'isOvernight']}
+              dependencies={['startTime']}
               rules={[
                 {
                   required: true,
                   message: t('hr.validation.endTimeRequired'),
                 },
                 ({ getFieldValue }) => ({
-                  validator: (_rule, value: Dayjs | undefined) =>
-                    endsAtOrBeforeStart(getFieldValue('startTime'), value) &&
-                    !getFieldValue('isOvernight')
-                      ? Promise.reject(
-                          new Error(t('hr.dateRules.overnightRequired')),
-                        )
-                      : Promise.resolve(),
+                  validator: (_rule, value: string | undefined) => {
+                    const start = getFieldValue('startTime') as
+                      | string
+                      | undefined;
+                    if (!start || !value) {
+                      return Promise.resolve();
+                    }
+                    if (parseHhMmToMinutes(value) <= parseHhMmToMinutes(start)) {
+                      return Promise.reject(
+                        new Error(t('hr.dateRules.endAfterStart')),
+                      );
+                    }
+                    return Promise.resolve();
+                  },
                 }),
               ]}
             >
-              <TimePicker className="w-full" format="HH:mm" minuteStep={15} />
-            </Form.Item>
-            <Form.Item
-              name="isOvernight"
-              valuePropName="checked"
-              className="md:col-span-2 !mb-0"
-              extra={
-                watchedOvernight && crossesMidnight && watchedStart && watchedEnd
-                  ? t('hr.dateRules.overnightNote', {
-                      hours: overnightHours(watchedStart, watchedEnd),
-                    })
-                  : undefined
-              }
-            >
-              <Checkbox>{t('hr.dateRules.overnight')}</Checkbox>
+              <Select
+                className="w-full"
+                showSearch
+                options={endOptions}
+                disabled={timesDisabled || !watchedStart}
+                placeholder={t('hr.placeholder.selectEndTime')}
+              />
             </Form.Item>
           </div>
+
+          {watchedEnd === END_OF_DAY && watchedDate ? (
+            <Alert
+              type="info"
+              showIcon
+              className="!mt-3"
+              message={t('hr.labels.workedPastMidnight', {
+                date: watchedDate.add(1, 'day').format('DD/MM/YYYY'),
+              })}
+              action={
+                onAddNextDay ? (
+                  <Button
+                    size="small"
+                    type="link"
+                    onClick={() => onAddNextDay(watchedDate.add(1, 'day'))}
+                  >
+                    {t('hr.buttons.addNextDayEntry')}
+                  </Button>
+                ) : null
+              }
+            />
+          ) : null}
 
           {watchedStart && watchedEnd ? (
             <div

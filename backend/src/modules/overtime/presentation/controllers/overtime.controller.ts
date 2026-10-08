@@ -33,6 +33,7 @@ import {
   ListOvertimeSheetsDto,
   OpenOvertimeSheetDto,
   PreviewOvertimeEntryDto,
+  SelectableOvertimeWindowsQueryDto,
   UpsertOvertimeEntryDto,
 } from '../../application/dtos/overtime.dtos';
 import { OvertimeImportService } from '../../application/services/overtime-import.service';
@@ -111,6 +112,23 @@ export class OvertimeController {
   ): Promise<unknown> {
     return this.overtimeEntryService.previewEntry(
       dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Get('selectable-windows')
+  @ApiOperation({
+    summary:
+      'Selectable same-day overtime time windows for an employee on a date (15-minute pickers)',
+  })
+  selectableWindows(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: SelectableOvertimeWindowsQueryDto,
+  ): Promise<unknown> {
+    return this.overtimeEntryService.getSelectableWindows(
+      query,
       companyId,
       user.userId,
     );

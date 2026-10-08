@@ -1,13 +1,24 @@
 import { BadRequestException } from '@nestjs/common';
+import {
+  END_OF_DAY_HHMM,
+  END_OF_DAY_MINUTES,
+  LUNCH_COUNTS_AS_OVERTIME,
+} from './overtime-selectable-windows.util';
 
 export const OVERNIGHT_REQUIRED_MESSAGE =
   'End time is before start time. If this entry crosses midnight, mark it as overnight.';
+
+export const SAME_DAY_END_BEFORE_START_MESSAGE =
+  'End time must be after start time on the same calendar day.';
 
 export const WITHIN_SCHEDULE_MESSAGE =
   'These hours are within your normal working hours.';
 
 export const OVERNIGHT_NEXT_DAY_CONTEXT_MESSAGE =
   'Overnight entries that cross midnight require the next calendar day schedule context.';
+
+export const OUTSIDE_SELECTABLE_WINDOW_MESSAGE =
+  'Overtime times must fall inside the selectable windows for this day (outside scheduled hours and lunch).';
 
 /**
  * Schedule-aware overtime hour splitter (15-minute blocks, Ethiopian local HH:mm).
@@ -84,7 +95,7 @@ export function calculateOvertimeHours(
 
   if (endMinutes <= startMinutes) {
     if (!isOvernight) {
-      throw new BadRequestException(OVERNIGHT_REQUIRED_MESSAGE);
+      throw new BadRequestException(SAME_DAY_END_BEFORE_START_MESSAGE);
     }
     endMinutes += MINUTES_PER_DAY;
   }
@@ -239,6 +250,15 @@ function isInsideScheduledWorkingTime(
   if (isInsideWindow(minutesInDay, afternoonStart, afternoonEnd)) {
     return true;
   }
+  // Lunch gap between morning and afternoon is not overtime when the flag is off.
+  if (
+    !LUNCH_COUNTS_AS_OVERTIME &&
+    morningEnd != null &&
+    afternoonStart != null &&
+    isInsideWindow(minutesInDay, morningEnd, afternoonStart)
+  ) {
+    return true;
+  }
   if (context.excludedWindows?.length) {
     for (const window of context.excludedWindows) {
       const start = parseHhMmToMinutes(window.start);
@@ -281,11 +301,22 @@ function isInsideWindow(
 }
 
 function parseTimeToMinutes(value: string): number {
+  if (value === END_OF_DAY_HHMM || value === '24:00') {
+    return END_OF_DAY_MINUTES;
+  }
   const match = /^(\d{2}):(\d{2})$/.exec(value);
   if (!match) {
     throw new BadRequestException(`Invalid time: ${value}`);
   }
-  return Number(match[1]) * 60 + Number(match[2]);
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours === 24 && minutes === 0) {
+    return END_OF_DAY_MINUTES;
+  }
+  if (hours > 23 || minutes > 59) {
+    throw new BadRequestException(`Invalid time: ${value}`);
+  }
+  return hours * 60 + minutes;
 }
 
 function parseHhMmToMinutes(value: string | null): number | null {

@@ -17,13 +17,26 @@ import {
 import { useCurrentUser } from '@/lib/query/profile';
 
 export function formatOnBehalfEmployeeName(
-  employee: Pick<OnBehalfEligibleEmployee, 'firstName' | 'lastName'>,
+  employee: Pick<
+    OnBehalfEligibleEmployee,
+    'firstName' | 'middleName' | 'lastName' | 'employeeId'
+  >,
+  options?: { includeEmployeeId?: boolean },
 ): string {
-  return `${employee.firstName} ${employee.lastName}`.trim();
+  const name = [employee.firstName, employee.middleName, employee.lastName]
+    .filter((part) => Boolean(part && String(part).trim()))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (options?.includeEmployeeId !== false && employee.employeeId) {
+    return `${name} · ${employee.employeeId}`;
+  }
+  return name;
 }
 
 function initials(employee: OnBehalfEligibleEmployee): string {
-  return `${employee.firstName.charAt(0)}${employee.lastName.charAt(0)}`.toUpperCase();
+  const last = employee.lastName || employee.middleName || '';
+  return `${employee.firstName.charAt(0)}${last.charAt(0)}`.toUpperCase();
 }
 
 /**
@@ -107,11 +120,21 @@ export default function OnBehalfSelector({
   const options = useMemo(
     () =>
       employees.map((employee) => {
-        const name = formatOnBehalfEmployeeName(employee);
+        const label = formatOnBehalfEmployeeName(employee);
+        const nameOnly = formatOnBehalfEmployeeName(employee, {
+          includeEmployeeId: false,
+        });
         return {
           value: employee.id,
-          label: name,
-          searchText: [name, employee.employeeId, employee.department]
+          label,
+          searchText: [
+            nameOnly,
+            employee.firstName,
+            employee.middleName,
+            employee.lastName,
+            employee.employeeId,
+            employee.department,
+          ]
             .filter(Boolean)
             .join(' ')
             .toLowerCase(),
@@ -173,7 +196,9 @@ export default function OnBehalfSelector({
                       <Avatar size="small">{initials(employee)}</Avatar>
                       <div className="min-w-0">
                         <div className="truncate">
-                          {formatOnBehalfEmployeeName(employee)}
+                          {formatOnBehalfEmployeeName(employee, {
+                            includeEmployeeId: false,
+                          })}
                         </div>
                         <div className="truncate text-xs opacity-60">
                           {[employee.employeeId, employee.department]

@@ -958,7 +958,7 @@ export default function PayrollRunDetailPageContent({
                       {dayjs(period.periodEnd).format('YYYY-MM-DD')} ·{' '}
                       {parsePayrollMoney(period.days)} {t('hr.payroll.entry.days')}
                       {periodOt > 0
-                        ? ` · OT ${formatPayrollMoney(period.totalOtPay, { emptyZero: false })} (${parsePayrollMoney(period.normalOtHours)}N/${parsePayrollMoney(period.eveningOtHours)}E/${parsePayrollMoney(period.sundayOtHours)}S/${parsePayrollMoney(period.holidayOtHours)}H)`
+                        ? ` · OT ${formatPayrollMoney(period.totalOtPay, { emptyZero: false })} (${parsePayrollMoney(period.normalOtHours)}N/${parsePayrollMoney(period.eveningOtHours)}E/${parsePayrollMoney(period.sundayOtHours)}W/${parsePayrollMoney(period.holidayOtHours)}H)`
                         : null}
                     </span>
                     <span>

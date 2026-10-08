@@ -54,14 +54,22 @@ import {
   UpsertOvertimeEntryDto,
 } from '../dtos/overtime.dtos';
 import {
+  SAME_DAY_END_BEFORE_START_MESSAGE,
   overtimeEntrySpanMinutes,
   WITHIN_SCHEDULE_MESSAGE,
 } from '../utils/overtime-hours.util';
 import { PAYROLL_LOCKED_MESSAGE } from '../utils/overtime-entry-guards.util';
 import {
+  END_OF_DAY_HHMM,
+  END_OF_DAY_MINUTES,
+} from '../utils/overtime-selectable-windows.util';
+import {
   OvertimeEntryService,
   type ClassifiedOvertimeEntry,
 } from './overtime-entry.service';
+
+const NEW_OVERNIGHT_NOT_ALLOWED_MESSAGE =
+  'Overnight entries are no longer accepted. End at 24:00 and add a second entry on the next day starting at 00:00.';
 
 type UploadedFile = {
   originalname: string;
@@ -369,13 +377,22 @@ export class OvertimeService
     dto: UpsertOvertimeEntryDto,
     companyId: string,
     userId: string,
-    options?: { allowHolidayOverride?: boolean },
+    options?: { allowHolidayOverride?: boolean; allowOvernight?: boolean },
   ): Promise<unknown> {
     const sheet = await this.requireEditableSheet(sheetId, companyId, userId);
     const date = this.parseDateOnly(dto.date);
     this.assertEntryInSheetMonth(date, sheet.month, sheet.year);
+
+    const isOvernight = Boolean(dto.isOvernight);
+    if (isOvernight && !options?.allowOvernight) {
+      throw new BadRequestException(NEW_OVERNIGHT_NOT_ALLOWED_MESSAGE);
+    }
+
+    const endsAtEndOfDay = this.isEndOfDayTime(dto.endTime);
     const startTime = this.parseTimeOfDay(dto.startTime);
-    const endTime = this.parseTimeOfDay(dto.endTime);
+    const endTime = this.parseTimeOfDay(
+      endsAtEndOfDay ? '00:00' : dto.endTime,
+    );
     const classified = await this.overtimeEntryService.classifyEntry(
       sheet.employeeId,
       companyId,
@@ -384,14 +401,14 @@ export class OvertimeService
       dto.endTime,
       {
         holidayOverride: Boolean(options?.allowHolidayOverride && dto.isHoliday),
-        isOvernight: dto.isOvernight,
+        isOvernight,
       },
     );
     this.assertClassifiedHasOvertimeHours(
       classified,
       dto.startTime,
       dto.endTime,
-      Boolean(dto.isOvernight),
+      isOvernight,
     );
 
     await this.assertNoOverlap(
@@ -399,20 +416,23 @@ export class OvertimeService
       date,
       startTime,
       endTime,
+      endsAtEndOfDay,
+      isOvernight,
       undefined,
     );
 
+    const entryId = randomUUID();
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.overtimeEntry.create({
           data: {
-            id: randomUUID(),
+            id: entryId,
             sheetId,
             date,
             startTime,
             endTime,
             isHoliday: classified.isHoliday,
-            isOvernight: Boolean(dto.isOvernight),
+            isOvernight,
             regularHours: new Prisma.Decimal(classified.regularHours),
             nightHours: new Prisma.Decimal(classified.nightHours),
             weekendHours: new Prisma.Decimal(classified.weekendHours),
@@ -421,6 +441,7 @@ export class OvertimeService
             attendanceWarning: classified.attendanceWarning,
           },
         });
+        await this.persistEndsAtEndOfDay(tx, entryId, endsAtEndOfDay);
         await this.recalculateSheetTotals(sheetId, tx);
         await tx.overtimeSheet.update({
           where: { id: sheetId },
@@ -454,24 +475,41 @@ export class OvertimeService
 
     const date = this.parseDateOnly(dto.date);
     this.assertEntryInSheetMonth(date, sheet.month, sheet.year);
+
+    const isOvernight = Boolean(dto.isOvernight);
+    if (isOvernight && !entry.isOvernight) {
+      throw new BadRequestException(NEW_OVERNIGHT_NOT_ALLOWED_MESSAGE);
+    }
+
+    const endsAtEndOfDay = this.isEndOfDayTime(dto.endTime);
     const startTime = this.parseTimeOfDay(dto.startTime);
-    const endTime = this.parseTimeOfDay(dto.endTime);
+    const endTime = this.parseTimeOfDay(
+      endsAtEndOfDay ? '00:00' : dto.endTime,
+    );
     const classified = await this.overtimeEntryService.classifyEntry(
       sheet.employeeId,
       companyId,
       date,
       dto.startTime,
       dto.endTime,
-      { isOvernight: dto.isOvernight },
+      { isOvernight },
     );
     this.assertClassifiedHasOvertimeHours(
       classified,
       dto.startTime,
       dto.endTime,
-      Boolean(dto.isOvernight),
+      isOvernight,
     );
 
-    await this.assertNoOverlap(sheetId, date, startTime, endTime, entryId);
+    await this.assertNoOverlap(
+      sheetId,
+      date,
+      startTime,
+      endTime,
+      endsAtEndOfDay,
+      isOvernight,
+      entryId,
+    );
 
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -482,7 +520,7 @@ export class OvertimeService
             startTime,
             endTime,
             isHoliday: classified.isHoliday,
-            isOvernight: Boolean(dto.isOvernight),
+            isOvernight,
             regularHours: new Prisma.Decimal(classified.regularHours),
             nightHours: new Prisma.Decimal(classified.nightHours),
             weekendHours: new Prisma.Decimal(classified.weekendHours),
@@ -491,6 +529,7 @@ export class OvertimeService
             attendanceWarning: classified.attendanceWarning,
           },
         });
+        await this.persistEndsAtEndOfDay(tx, entryId, endsAtEndOfDay);
         await this.recalculateSheetTotals(sheetId, tx);
         await tx.overtimeSheet.update({
           where: { id: sheetId },
@@ -1122,6 +1161,8 @@ export class OvertimeService
     date: Date,
     startTime: Date,
     endTime: Date,
+    endsAtEndOfDay: boolean,
+    isOvernight: boolean,
     excludeEntryId: string | undefined,
   ): Promise<void> {
     const existing = await this.prisma.overtimeEntry.findMany({
@@ -1133,24 +1174,107 @@ export class OvertimeService
     });
 
     const newStart = this.timeToMinutes(startTime);
-    let newEnd = this.timeToMinutes(endTime);
-    if (newEnd <= newStart) {
-      newEnd += 24 * 60;
-    }
+    const newEnd = this.resolveEndMinutes(
+      endTime,
+      endsAtEndOfDay,
+      isOvernight,
+      newStart,
+    );
 
     for (const entry of existing) {
       const existStart = this.timeToMinutes(entry.startTime);
-      let existEnd = this.timeToMinutes(entry.endTime);
-      if (existEnd <= existStart) {
-        existEnd += 24 * 60;
-      }
+      const existEndsAtEndOfDay = await this.readEndsAtEndOfDay(entry.id);
+      const existEnd = this.resolveEndMinutes(
+        entry.endTime,
+        existEndsAtEndOfDay,
+        entry.isOvernight,
+        existStart,
+      );
       if (newStart < existEnd && newEnd > existStart) {
+        const endLabel = existEndsAtEndOfDay
+          ? END_OF_DAY_HHMM
+          : this.formatTimeOfDay(entry.endTime);
         throw new ConflictException(
           `Overlapping overtime entry on ${this.formatDateOnly(date)} ` +
-            `(${this.formatTimeOfDay(entry.startTime)}–${this.formatTimeOfDay(entry.endTime)})`,
+            `(${this.formatTimeOfDay(entry.startTime)}–${endLabel})`,
         );
       }
     }
+  }
+
+  private resolveEndMinutes(
+    endTime: Date,
+    endsAtEndOfDay: boolean,
+    isOvernight: boolean,
+    startMinutes: number,
+  ): number {
+    const endMinutes = this.timeToMinutes(endTime);
+    // Same-day 24:00 is stored as 00:00 with endsAtEndOfDay (or inferred when not overnight).
+    if (endsAtEndOfDay || (!isOvernight && endMinutes === 0)) {
+      return END_OF_DAY_MINUTES;
+    }
+    if (endMinutes <= startMinutes) {
+      if (!isOvernight) {
+        throw new BadRequestException(SAME_DAY_END_BEFORE_START_MESSAGE);
+      }
+      return endMinutes + END_OF_DAY_MINUTES;
+    }
+    return endMinutes;
+  }
+
+  private isEndOfDayTime(value: string): boolean {
+    return value === END_OF_DAY_HHMM || value === '24:00';
+  }
+
+  /**
+   * Writes ends_at_end_of_day via raw SQL so the column works before prisma generate.
+   */
+  private async persistEndsAtEndOfDay(
+    tx: Prisma.TransactionClient,
+    entryId: string,
+    endsAtEndOfDay: boolean,
+  ): Promise<void> {
+    await tx.$executeRaw`
+      UPDATE overtime_entry
+      SET ends_at_end_of_day = ${endsAtEndOfDay}
+      WHERE id = ${entryId}::uuid
+    `;
+  }
+
+  private async readEndsAtEndOfDay(entryId: string): Promise<boolean> {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ ends_at_end_of_day: boolean }>
+    >`
+      SELECT ends_at_end_of_day
+      FROM overtime_entry
+      WHERE id = ${entryId}::uuid
+    `;
+    return Boolean(rows[0]?.ends_at_end_of_day);
+  }
+
+  private async hydrateEndsAtEndOfDay(
+    entries: Array<Record<string, unknown>>,
+  ): Promise<Array<Record<string, unknown>>> {
+    const ids = entries
+      .map((entry) => entry.id)
+      .filter((id): id is string => typeof id === 'string');
+    if (ids.length === 0) {
+      return entries;
+    }
+    const rows = await this.prisma.$queryRaw<
+      Array<{ id: string; ends_at_end_of_day: boolean }>
+    >`
+      SELECT id, ends_at_end_of_day
+      FROM overtime_entry
+      WHERE id IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`))})
+    `;
+    const flags = new Map(
+      rows.map((row) => [row.id, Boolean(row.ends_at_end_of_day)]),
+    );
+    return entries.map((entry) => ({
+      ...entry,
+      endsAtEndOfDay: flags.get(String(entry.id)) ?? false,
+    }));
   }
 
   private rethrowEntryConflict(error: unknown): never {
@@ -1205,6 +1329,9 @@ export class OvertimeService
   }
 
   private parseTimeOfDay(value: string): Date {
+    if (value === END_OF_DAY_HHMM || value === '24:00') {
+      return new Date(Date.UTC(1970, 0, 1, 0, 0, 0));
+    }
     const match = /^(\d{2}):(\d{2})$/.exec(value);
     if (!match) {
       throw new BadRequestException(`Invalid time: ${value}`);
@@ -1262,10 +1389,12 @@ export class OvertimeService
         row.startTime instanceof Date || typeof row.startTime === 'string'
           ? this.formatTimeOfDay(row.startTime as Date | string)
           : row.startTime,
-      endTime:
-        row.endTime instanceof Date || typeof row.endTime === 'string'
+      endTime: Boolean(row.endsAtEndOfDay)
+        ? END_OF_DAY_HHMM
+        : row.endTime instanceof Date || typeof row.endTime === 'string'
           ? this.formatTimeOfDay(row.endTime as Date | string)
           : row.endTime,
+      endsAtEndOfDay: Boolean(row.endsAtEndOfDay),
       regularHours: this.decimalToNumber(row.regularHours),
       nightHours: this.decimalToNumber(row.nightHours),
       weekendHours: this.decimalToNumber(row.weekendHours),
@@ -1338,7 +1467,14 @@ export class OvertimeService
     row: Record<string, unknown>,
     companyId: string,
   ): Promise<Record<string, unknown>> {
-    const mapped = this.mapSheet(row);
+    const rawEntries = Array.isArray(row.entries)
+      ? (row.entries as Record<string, unknown>[])
+      : [];
+    const hydratedEntries =
+      rawEntries.length > 0
+        ? await this.hydrateEndsAtEndOfDay(rawEntries)
+        : rawEntries;
+    const mapped = this.mapSheet({ ...row, entries: hydratedEntries });
     const entries = mapped.entries as
       | Array<Record<string, unknown>>
       | undefined;

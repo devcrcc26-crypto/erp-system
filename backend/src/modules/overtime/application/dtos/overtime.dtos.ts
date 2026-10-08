@@ -76,9 +76,14 @@ export class UpsertOvertimeEntryDto {
   @Matches(/^\d{2}:\d{2}$/, { message: 'startTime must be HH:mm' })
   startTime!: string;
 
-  @ApiProperty({ example: '21:00', description: 'HH:mm (24h)' })
+  @ApiProperty({
+    example: '21:00',
+    description: 'HH:mm (24h). Use 24:00 for end of calendar day.',
+  })
   @IsString()
-  @Matches(/^\d{2}:\d{2}$/, { message: 'endTime must be HH:mm' })
+  @Matches(/^(?:[01]\d|2[0-3]):[0-5]\d|24:00$/, {
+    message: 'endTime must be HH:mm or 24:00',
+  })
   endTime!: string;
 
   @ApiPropertyOptional({
@@ -94,7 +99,7 @@ export class UpsertOvertimeEntryDto {
   @ApiPropertyOptional({
     default: false,
     description:
-      'Entry crosses midnight. Required when endTime is at or before startTime.',
+      'Legacy overnight flag for existing entries only. New entries must be same-day (use 24:00 + a next-day entry).',
   })
   @IsOptional()
   @IsBoolean()
@@ -121,15 +126,33 @@ export class PreviewOvertimeEntryDto {
   @Matches(/^\d{2}:\d{2}$/, { message: 'startTime must be HH:mm' })
   startTime!: string;
 
-  @ApiProperty({ example: '21:00', description: 'HH:mm (24h)' })
+  @ApiProperty({
+    example: '21:00',
+    description: 'HH:mm (24h). Use 24:00 for end of calendar day.',
+  })
   @IsString()
-  @Matches(/^\d{2}:\d{2}$/, { message: 'endTime must be HH:mm' })
+  @Matches(/^(?:[01]\d|2[0-3]):[0-5]\d|24:00$/, {
+    message: 'endTime must be HH:mm or 24:00',
+  })
   endTime!: string;
 
-  @ApiPropertyOptional({ default: false, description: 'Entry crosses midnight' })
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Legacy overnight flag (existing entries only)',
+  })
   @IsOptional()
   @IsBoolean()
   isOvernight?: boolean;
+}
+
+export class SelectableOvertimeWindowsQueryDto {
+  @ApiProperty({ description: 'Employee whose schedule to resolve' })
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({ example: '2026-10-08' })
+  @IsDateString()
+  date!: string;
 }
 
 /**

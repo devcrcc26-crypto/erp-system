@@ -4067,6 +4067,11 @@ model OvertimeEntry {
   date            DateTime @db.Date
   startTime       DateTime @map("start_time") @db.Time(0)
   endTime         DateTime @map("end_time") @db.Time(0)
+  /**
+   * When true, endTime is stored as 00:00 but means calendar end-of-day (24:00).
+   * Distinguishes "24:00" from "00:00" of the same day. New same-day entries only.
+   */
+  endsAtEndOfDay  Boolean  @default(false) @map("ends_at_end_of_day")
   isHoliday       Boolean  @default(false) @map("is_holiday")
   isOvernight     Boolean  @default(false) @map("is_overnight")
   regularHours    Decimal  @default(0) @map("regular_hours") @db.Decimal(5, 2)

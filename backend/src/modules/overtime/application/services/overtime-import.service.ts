@@ -362,7 +362,10 @@ export class OvertimeImportService {
           dto,
           ctx.companyId,
           ctx.userId,
-          { allowHolidayOverride: Boolean(dto.isHoliday) },
+          {
+            allowHolidayOverride: Boolean(dto.isHoliday),
+            allowOvernight: Boolean(dto.isOvernight),
+          },
         );
         created += 1;
       } catch (error) {

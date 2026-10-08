@@ -111,6 +111,9 @@ function normalizeHhMm(value: string): string {
 
 function hhmmToMinutes(value: string): number {
   const normalized = normalizeHhMm(value);
+  if (normalized === '24:00') {
+    return 24 * 60;
+  }
   const [h, m] = normalized.split(':').map(Number);
   return h * 60 + m;
 }

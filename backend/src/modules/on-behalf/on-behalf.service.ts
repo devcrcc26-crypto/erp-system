@@ -18,6 +18,7 @@ import {
 export interface OnBehalfEligibleEmployee {
   id: string;
   firstName: string;
+  middleName: string | null;
   lastName: string;
   employeeId: string | null;
   department: string | null;
@@ -117,6 +118,7 @@ export class OnBehalfService {
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         lastName: true,
         employeeId: true,
         department: { select: { name: true } },
@@ -128,6 +130,7 @@ export class OnBehalfService {
     return users.map((user) => ({
       id: user.id,
       firstName: user.firstName,
+      middleName: user.middleName,
       lastName: user.lastName,
       employeeId: user.employeeId,
       department: user.department?.name ?? null,

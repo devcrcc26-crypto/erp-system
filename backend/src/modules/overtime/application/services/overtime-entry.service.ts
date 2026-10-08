@@ -14,10 +14,14 @@ import {
   parseDateOnly,
   toUtcDateOnly,
 } from '../../../work-schedule/application/services/work-schedule.dates';
-import { PreviewOvertimeEntryDto } from '../dtos/overtime.dtos';
+import {
+  PreviewOvertimeEntryDto,
+  SelectableOvertimeWindowsQueryDto,
+} from '../dtos/overtime.dtos';
 import {
   buildOvertimeScheduleNote,
   calculateOvertimeHours,
+  OUTSIDE_SELECTABLE_WINDOW_MESSAGE,
   overtimeEntrySpanMinutes,
   totalOvertimeHours,
   WITHIN_SCHEDULE_MESSAGE,
@@ -26,9 +30,16 @@ import {
 } from '../utils/overtime-hours.util';
 import {
   buildAttendanceWarning,
-  collectLeaveExcludedWindows,
+  buildLeaveExcludedWindows,
+  FULL_DAY_LEAVE_MESSAGE,
+  type LeaveDayPortionInput,
   type WeekdayScheduleSlice,
 } from '../utils/overtime-entry-guards.util';
+import {
+  computeSelectableOvertimeWindows,
+  isIntervalInsideSelectableWindows,
+  type SelectableWindowsResult,
+} from '../utils/overtime-selectable-windows.util';
 
 export interface ClassifiedOvertimeEntry extends OvertimeHoursBuckets {
   isHoliday: boolean;
@@ -91,17 +102,47 @@ export class OvertimeEntryService {
     const weekday = schedule.days.find(
       (row) => row.dayOfWeek === onDate.getUTCDay(),
     );
-    const leaveWindowsStart = await this.resolveLeaveExcludedWindows(
+    const leaveResolved = await this.resolveLeaveForDate(
       employeeId,
       companyId,
       onDate,
       weekday,
     );
+    if (leaveResolved.hasFullDayLeave && !isOvernight) {
+      throw new BadRequestException(FULL_DAY_LEAVE_MESSAGE);
+    }
+    const leaveWindowsStart = leaveResolved.excludedWindows;
     const context = this.buildDayContext(
       weekday,
       isHoliday,
       leaveWindowsStart,
     );
+
+    if (!isOvernight) {
+      const selectable = computeSelectableOvertimeWindows({
+        isHoliday,
+        isWorkingDay: context.isWorkingDay,
+        isHalfDay: context.isHalfDay,
+        morningStart: context.morningStart,
+        morningEnd: context.morningEnd,
+        afternoonStart: context.afternoonStart,
+        afternoonEnd: context.afternoonEnd,
+        leaveExcludedWindows: leaveWindowsStart,
+        hasFullDayLeave: leaveResolved.hasFullDayLeave,
+      });
+      if (
+        selectable.blockedReason === 'FULL_DAY_LEAVE' ||
+        !isIntervalInsideSelectableWindows(
+          startTime,
+          endTime,
+          selectable.windows,
+        )
+      ) {
+        throw new BadRequestException(
+          selectable.message ?? OUTSIDE_SELECTABLE_WINDOW_MESSAGE,
+        );
+      }
+    }
 
     let nextDayContext: OvertimeDayContext | undefined;
     if (isOvernight && this.crossesMidnight(startTime, endTime)) {
@@ -119,7 +160,7 @@ export class OvertimeEntryService {
       const nextWeekday = nextSchedule.days.find(
         (row) => row.dayOfWeek === nextDate.getUTCDay(),
       );
-      const leaveWindowsNext = await this.resolveLeaveExcludedWindows(
+      const leaveNext = await this.resolveLeaveForDate(
         employeeId,
         companyId,
         nextDate,
@@ -128,7 +169,7 @@ export class OvertimeEntryService {
       nextDayContext = this.buildDayContext(
         nextWeekday,
         nextCalendar.isHoliday,
-        leaveWindowsNext,
+        leaveNext.excludedWindows,
       );
     }
 
@@ -174,6 +215,67 @@ export class OvertimeEntryService {
       scheduleNote,
       attendanceWarning,
     };
+  }
+
+  /**
+   * Selectable same-day overtime windows for the entry form time pickers.
+   * Non-HR callers may only query their own schedule.
+   */
+  async getSelectableWindows(
+    dto: SelectableOvertimeWindowsQueryDto,
+    companyId: string,
+    actorUserId: string,
+  ): Promise<SelectableWindowsResult> {
+    const employeeId = await this.resolvePreviewEmployee(
+      dto.employeeId,
+      companyId,
+      actorUserId,
+    );
+    const onDate = parseDateOnly(dto.date);
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { id: true, nationality: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const calendar = await this.workScheduleService.isHolidayForEmployee(
+      companyId,
+      employee.nationality,
+      onDate,
+    );
+    const schedule = await this.workScheduleService.getActiveSchedule(
+      employeeId,
+      companyId,
+      onDate,
+    );
+    const weekday = schedule.days.find(
+      (row) => row.dayOfWeek === onDate.getUTCDay(),
+    );
+    const leaveResolved = await this.resolveLeaveForDate(
+      employeeId,
+      companyId,
+      onDate,
+      weekday,
+    );
+    const context = this.buildDayContext(
+      weekday,
+      calendar.isHoliday,
+      leaveResolved.excludedWindows,
+    );
+
+    return computeSelectableOvertimeWindows({
+      isHoliday: calendar.isHoliday,
+      isWorkingDay: context.isWorkingDay,
+      isHalfDay: context.isHalfDay,
+      morningStart: context.morningStart,
+      morningEnd: context.morningEnd,
+      afternoonStart: context.afternoonStart,
+      afternoonEnd: context.afternoonEnd,
+      leaveExcludedWindows: leaveResolved.excludedWindows,
+      hasFullDayLeave: leaveResolved.hasFullDayLeave,
+    });
   }
 
   /**
@@ -289,12 +391,15 @@ export class OvertimeEntryService {
     };
   }
 
-  private async resolveLeaveExcludedWindows(
+  private async resolveLeaveForDate(
     employeeId: string,
     companyId: string,
     onDate: Date,
     weekday: WeekdayScheduleSlice | undefined,
-  ): Promise<Array<{ start: string; end: string }>> {
+  ): Promise<{
+    hasFullDayLeave: boolean;
+    excludedWindows: Array<{ start: string; end: string }>;
+  }> {
     const periods = await this.prisma.leaveRequestPeriod.findMany({
       where: {
         startDate: { lte: onDate },
@@ -308,7 +413,20 @@ export class OvertimeEntryService {
       },
       select: { dayPortion: true },
     });
-    return collectLeaveExcludedWindows(periods, weekday);
+
+    let hasFullDayLeave = false;
+    const excludedWindows: Array<{ start: string; end: string }> = [];
+    for (const period of periods) {
+      const portion = period.dayPortion as LeaveDayPortionInput;
+      if (portion === 'FULL') {
+        hasFullDayLeave = true;
+        continue;
+      }
+      if (portion === 'MORNING' || portion === 'AFTERNOON') {
+        excludedWindows.push(buildLeaveExcludedWindows(portion, weekday));
+      }
+    }
+    return { hasFullDayLeave, excludedWindows };
   }
 
   private async findAttendanceDailyLog(

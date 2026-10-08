@@ -95,10 +95,10 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
     );
   });
 
-  it('4 — Mon 09:00–17:00 weekday → 1 h Regular (lunch gap only)', () => {
+  it('4 — Mon 09:00–17:00 weekday → 0 h (schedule + lunch excluded)', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '09:00', '17:00', WD),
-      { regularHours: 1 },
+      {},
     );
   });
 
@@ -109,10 +109,10 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
     );
   });
 
-  it('6 — Mon 12:30–13:30 lunch gap → 1 h Regular', () => {
+  it('6 — Mon 12:30–13:30 lunch gap → 0 h (lunch not OT)', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '12:30', '13:30', WD),
-      { regularHours: 1 },
+      {},
     );
   });
 
@@ -215,7 +215,42 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
   it('rejects end at or before start unless overnight', () => {
     expect(() =>
       calculateOvertimeHours(utcDate('2026-09-14'), '09:00', '08:00', WD),
-    ).toThrow('mark it as overnight');
+    ).toThrow('after start time on the same calendar day');
+  });
+
+  it('Fri 22:00–24:00 → 2 h Night', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-11'), '22:00', '24:00', WD),
+      { nightHours: 2 },
+    );
+  });
+
+  it('Sat 00:00–02:00 → 2 h Night (half-day pre-morning night)', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-12'), '00:00', '02:00', HALF),
+      { nightHours: 2 },
+    );
+  });
+
+  it('Sat 23:00–24:00 → 1 h Weekend', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-12'), '23:00', '24:00', HALF),
+      { weekendHours: 1 },
+    );
+  });
+
+  it('Sun 00:00–01:00 → 1 h Weekend', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-13'), '00:00', '01:00', OFF),
+      { weekendHours: 1 },
+    );
+  });
+
+  it('holiday 00:00–01:00 → 1 h Holiday', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-11'), '00:00', '01:00', HOLIDAY),
+      { holidayHours: 1 },
+    );
   });
 
   it('overnight without nextDayContext throws', () => {
