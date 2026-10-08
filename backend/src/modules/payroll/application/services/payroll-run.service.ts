@@ -9,6 +9,7 @@ import {
   Prisma,
   type EmployeeContract,
   type EmployeeType,
+  type Nationality,
   type PayrollEntry,
   type PayrollEntryFlag,
   type PayrollRun,
@@ -26,11 +27,17 @@ import {
   allocateContractPayrollDays,
   employedPayrollDays,
 } from '../utils/payroll-days.util';
+import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import {
   assignOvertimeToSalaryPeriods,
+  buildOvertimeDayContext,
+  datedEntryFromExactMinutes,
+  formatOvertimeTimeHhMm,
   OT_FALLBACK_MONTH_END_NOTE,
   OVERNIGHT_OT_DATE_ASSIGNMENT,
+  overtimeEndTimeLabel,
   type DatedOvertimeEntry,
+  type OvertimeWeekdaySlice,
 } from '../utils/payroll-overtime.util';
 
 /** Documented overnight assignment rule for payroll (see payroll-overtime.util). */
@@ -77,6 +84,7 @@ interface EmployeeSnapshot {
   lastName: string;
   employeeId: string | null;
   employeeType: EmployeeType | null;
+  nationality: Nationality | null;
   bankName: string | null;
   bankAccountNumber: string | null;
 }
@@ -99,6 +107,10 @@ interface OvertimeSnapshot {
   totalHolidayHours: Decimal | null;
   entries: Array<{
     date: Date;
+    startTime: Date;
+    endTime: Date;
+    endsAtEndOfDay: boolean;
+    isHoliday: boolean;
     isOvernight: boolean;
     regularHours: Decimal;
     nightHours: Decimal;
@@ -162,6 +174,7 @@ export class PayrollRunService {
     private readonly prisma: PrismaService,
     private readonly calc: PayrollCalculationService,
     private readonly notifications: NotificationService,
+    private readonly workScheduleService: WorkScheduleService,
   ) {}
 
   /**
@@ -846,6 +859,7 @@ export class PayrollRunService {
         lastName: true,
         employeeId: true,
         employeeType: true,
+        nationality: true,
         bankName: true,
         bankAccountNumber: true,
       },
@@ -937,6 +951,10 @@ export class PayrollRunService {
           entries: {
             select: {
               date: true,
+              startTime: true,
+              endTime: true,
+              endsAtEndOfDay: true,
+              isHoliday: true,
               isOvernight: true,
               regularHours: true,
               nightHours: true,
@@ -1025,7 +1043,7 @@ export class PayrollRunService {
 
       const topUp = capturedTopUps.get(employee.id);
       drafts.push(
-        this.computeEntryDraft({
+        await this.computeEntryDraft({
           run,
           ctx,
           employee,
@@ -1048,7 +1066,125 @@ export class PayrollRunService {
     return drafts;
   }
 
-  private computeEntryDraft(input: {
+  /**
+   * Reclassify approved OT entries from start/end times (exact minutes).
+   * Stored Decimal(5,2) hour columns are display-only for payroll pricing.
+   */
+  private async datedOtEntriesFromTimes(
+    companyId: string,
+    employee: EmployeeSnapshot,
+    overtime: OvertimeSnapshot | undefined,
+  ): Promise<DatedOvertimeEntry[]> {
+    const rows = overtime?.entries ?? [];
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const scheduleCache = new Map<
+      string,
+      Awaited<ReturnType<WorkScheduleService['getActiveSchedule']>>
+    >();
+    const holidayCache = new Map<string, boolean>();
+
+    const dateKey = (d: Date): string => d.toISOString().slice(0, 10);
+
+    const loadSchedule = async (onDate: Date) => {
+      const key = dateKey(onDate);
+      let schedule = scheduleCache.get(key);
+      if (!schedule) {
+        schedule = await this.workScheduleService.getActiveSchedule(
+          employee.id,
+          companyId,
+          onDate,
+        );
+        scheduleCache.set(key, schedule);
+      }
+      return schedule;
+    };
+
+    const loadHoliday = async (onDate: Date): Promise<boolean> => {
+      const key = dateKey(onDate);
+      const cached = holidayCache.get(key);
+      if (cached !== undefined) {
+        return cached;
+      }
+      const calendar = await this.workScheduleService.isHolidayForEmployee(
+        companyId,
+        employee.nationality as Nationality | null,
+        onDate,
+      );
+      holidayCache.set(key, calendar.isHoliday);
+      return calendar.isHoliday;
+    };
+
+    const weekdaySlice = (
+      schedule: Awaited<ReturnType<WorkScheduleService['getActiveSchedule']>>,
+      onDate: Date,
+    ): OvertimeWeekdaySlice | undefined => {
+      const row = schedule.days.find(
+        (day) => day.dayOfWeek === onDate.getUTCDay(),
+      );
+      if (!row) {
+        return undefined;
+      }
+      return {
+        isWorkingDay: row.isWorkingDay,
+        isHalfDay: row.isHalfDay,
+        morningStart: row.morningStart,
+        morningEnd: row.morningEnd,
+        afternoonStart: row.afternoonStart,
+        afternoonEnd: row.afternoonEnd,
+      };
+    };
+
+    const dated: DatedOvertimeEntry[] = [];
+    for (const entry of rows) {
+      const onDate = new Date(
+        Date.UTC(
+          entry.date.getUTCFullYear(),
+          entry.date.getUTCMonth(),
+          entry.date.getUTCDate(),
+        ),
+      );
+      const schedule = await loadSchedule(onDate);
+      const isHoliday =
+        entry.isHoliday || (await loadHoliday(onDate));
+      const context = buildOvertimeDayContext(
+        weekdaySlice(schedule, onDate),
+        isHoliday,
+      );
+
+      let nextDayContext: ReturnType<typeof buildOvertimeDayContext> | undefined;
+      if (entry.isOvernight) {
+        const nextDate = new Date(onDate.getTime());
+        nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+        const nextSchedule = await loadSchedule(nextDate);
+        const nextHoliday = await loadHoliday(nextDate);
+        nextDayContext = buildOvertimeDayContext(
+          weekdaySlice(nextSchedule, nextDate),
+          nextHoliday,
+        );
+      }
+
+      dated.push(
+        datedEntryFromExactMinutes({
+          date: onDate,
+          startTime: formatOvertimeTimeHhMm(entry.startTime),
+          endTime: overtimeEndTimeLabel(
+            entry.endTime,
+            entry.endsAtEndOfDay,
+            entry.isOvernight,
+          ),
+          isOvernight: entry.isOvernight,
+          context,
+          nextDayContext,
+        }),
+      );
+    }
+    return dated;
+  }
+
+  private async computeEntryDraft(input: {
     run: PayrollRun;
     ctx: ServiceContext;
     employee: EmployeeSnapshot;
@@ -1067,7 +1203,7 @@ export class PayrollRunService {
     netTopUp: number;
     netTopUpReason: string | null;
     preservedNotes: string | null;
-  }): EntryDraft {
+  }): Promise<EntryDraft> {
     const {
       run,
       ctx,
@@ -1248,16 +1384,8 @@ export class PayrollRunService {
       flagNote = 'Basic salary is zero on month-end contract';
     }
 
-    const datedEntries: DatedOvertimeEntry[] = (overtime?.entries ?? []).map(
-      (e) => ({
-        date: e.date,
-        isOvernight: e.isOvernight,
-        normalHours: this.toNumber(e.regularHours),
-        eveningHours: this.toNumber(e.nightHours),
-        sundayHours: this.toNumber(e.weekendHours),
-        holidayHours: this.toNumber(e.holidayHours),
-      }),
-    );
+    const datedEntries: DatedOvertimeEntry[] =
+      await this.datedOtEntriesFromTimes(ctx.companyId, employee, overtime);
     const sheetTotals: OvertimeHours = {
       normalHours: this.toNumber(overtime?.totalRegularHours),
       eveningHours: this.toNumber(overtime?.totalNightHours),

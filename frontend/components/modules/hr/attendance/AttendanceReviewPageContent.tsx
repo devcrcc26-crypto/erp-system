@@ -285,32 +285,12 @@ export default function AttendanceReviewPageContent({
         },
       },
       {
-        title: t('pages.hr.attendance.columns.scheduledDays'),
-        key: 'scheduledDays',
-        width: 120,
-        align: 'right',
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-att-num erp-att-num--muted">
-            {formatNumber(row.scheduledDays)}
-          </span>
-        ),
-      },
-      {
         title: t('pages.hr.attendance.columns.presentDays'),
         key: 'presentDays',
         width: 110,
         align: 'right',
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-att-num">{formatNumber(row.presentDays)}</span>
-        ),
-      },
-      {
-        title: t('pages.hr.attendance.columns.paidDays'),
-        key: 'paidDays',
-        width: 110,
-        align: 'right',
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-att-num">{formatNumber(row.paidDays ?? 0)}</span>
         ),
       },
       {
@@ -346,22 +326,20 @@ export default function AttendanceReviewPageContent({
         },
       },
       {
-        title: t('pages.hr.attendance.review.columns.siteDays'),
-        key: 'siteDays',
-        width: 180,
+        title: t('pages.hr.attendance.columns.lateDays'),
+        key: 'lateDays',
+        width: 100,
+        align: 'right',
         render: (_: unknown, row: AttendanceRecord) => {
-          const sites = row.siteDaysThisMonth ?? [];
-          if (sites.length === 0) {
-            return <span className="erp-att-dash">—</span>;
-          }
+          const value = row.lateDays;
           return (
-            <div className="flex flex-col gap-0.5">
-              {sites.map((entry) => (
-                <span key={entry.siteName} className="erp-att-stat-hint">
-                  {entry.siteName} ({formatNumber(entry.days)})
-                </span>
-              ))}
-            </div>
+            <span
+              className={
+                value > 0 ? 'erp-att-num erp-att-num--warn' : 'erp-att-dash'
+              }
+            >
+              {value > 0 ? value : '—'}
+            </span>
           );
         },
       },
@@ -395,65 +373,6 @@ export default function AttendanceReviewPageContent({
                 <span className="erp-att-stat-hint">{resolved} resolved</span>
               ) : null}
             </div>
-          );
-        },
-      },
-      {
-        title: t('pages.hr.attendance.review.columns.resolved'),
-        key: 'resolved',
-        width: 110,
-        render: (_: unknown, row: AttendanceRecord) => {
-          const flagged = toNumber(row.flaggedDays);
-          const resolved = toNumber(row.resolvedDays);
-          if (flagged <= 0) {
-            return <span className="erp-att-dash">—</span>;
-          }
-          const percent = Math.round((resolved / flagged) * 100);
-          return (
-            <div className="w-20">
-              <div className="erp-att-stat-hint mb-0.5 flex justify-between">
-                <span>{resolved}</span>
-                <span>{flagged}</span>
-              </div>
-              <div className="erp-attendance-progress-track">
-                <div
-                  className="erp-attendance-progress-fill"
-                  style={{
-                    width: `${percent}%`,
-                    background:
-                      resolved === flagged ? '#1d9e75' : '#ba7517',
-                  }}
-                />
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        title: t('pages.hr.attendance.review.columns.status'),
-        key: 'flagStatus',
-        width: 140,
-        render: (_: unknown, row: AttendanceRecord) => {
-          const flagged = toNumber(row.flaggedDays);
-          const resolved = toNumber(row.resolvedDays);
-          if (flagged === 0 || resolved >= flagged) {
-            return (
-              <span className="erp-att-num erp-att-num--teal text-xs">
-                {flagged === 0 ? '✓ Complete' : '✓ All Resolved'}
-              </span>
-            );
-          }
-          if (resolved > 0) {
-            return (
-              <span className="erp-att-num erp-att-num--warn text-xs">
-                Partial
-              </span>
-            );
-          }
-          return (
-            <span className="erp-att-num erp-att-num--danger text-xs">
-              Needs Attention
-            </span>
           );
         },
       },

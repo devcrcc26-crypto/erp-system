@@ -6,7 +6,17 @@
  * hour buckets (classification already spans midnight). Hours are not split
  * into separate calendar-day entries, so payroll assigns overnight OT by the
  * entry's start date ({@link OVERNIGHT_OT_DATE_ASSIGNMENT}).
+ *
+ * Payroll generate/recalculate must price from entry start/end times (exact
+ * minutes via {@link datedEntriesFromExactMinutes}), not from stored Decimal(5,2)
+ * hour columns — those are display-rounded and drift pay (e.g. 20h10m → 20.17).
  */
+
+import {
+  calculateOvertimeHours,
+  type OvertimeDayContext,
+} from '../../../overtime/application/utils/overtime-hours.util';
+import { END_OF_DAY_HHMM } from '../../../overtime/application/utils/overtime-selectable-windows.util';
 
 export const OVERNIGHT_OT_DATE_ASSIGNMENT = 'START_DATE' as const;
 
@@ -35,6 +45,25 @@ export interface DatedOvertimeEntry {
   eveningHours: number;
   sundayHours: number;
   holidayHours: number;
+}
+
+/** Weekday row from the employee's active work schedule. */
+export interface OvertimeWeekdaySlice {
+  isWorkingDay: boolean;
+  isHalfDay: boolean;
+  morningStart: string | null;
+  morningEnd: string | null;
+  afternoonStart: string | null;
+  afternoonEnd: string | null;
+}
+
+export interface TimedOvertimeEntryInput {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  isOvernight: boolean;
+  context: OvertimeDayContext;
+  nextDayContext?: OvertimeDayContext;
 }
 
 export interface SalaryPeriodWindow {
@@ -114,6 +143,92 @@ function hasHours(h: OvertimeHoursBuckets): boolean {
     h.sundayHours > 0 ||
     h.holidayHours > 0
   );
+}
+
+/**
+ * Format a Prisma TIME / Date as HH:mm (UTC).
+ */
+export function formatOvertimeTimeHhMm(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return `${date.getUTCHours().toString().padStart(2, '0')}:${date
+    .getUTCMinutes()
+    .toString()
+    .padStart(2, '0')}`;
+}
+
+/**
+ * Resolve end-time label for classification (24:00 when endsAtEndOfDay).
+ */
+export function overtimeEndTimeLabel(
+  endTime: Date | string,
+  endsAtEndOfDay: boolean,
+  isOvernight: boolean,
+): string {
+  if (endsAtEndOfDay) {
+    return END_OF_DAY_HHMM;
+  }
+  const label = formatOvertimeTimeHhMm(endTime);
+  if (!isOvernight && label === '00:00') {
+    return END_OF_DAY_HHMM;
+  }
+  return label;
+}
+
+/**
+ * Build day context for OT classification from a schedule weekday + holiday flag.
+ */
+export function buildOvertimeDayContext(
+  weekday: OvertimeWeekdaySlice | undefined,
+  isHoliday: boolean,
+): OvertimeDayContext {
+  const isWorkingDay = Boolean(weekday?.isWorkingDay);
+  const isHalfDay = Boolean(weekday?.isWorkingDay && weekday?.isHalfDay);
+  return {
+    isHoliday,
+    isWorkingDay,
+    isHalfDay,
+    morningStart: weekday?.morningStart ?? null,
+    morningEnd: weekday?.morningEnd ?? null,
+    afternoonStart:
+      isWorkingDay && !isHalfDay ? weekday?.afternoonStart ?? null : null,
+    afternoonEnd:
+      isWorkingDay && !isHalfDay ? weekday?.afternoonEnd ?? null : null,
+  };
+}
+
+/**
+ * Classify one entry from start/end times with minute precision (no 2-decimal
+ * rounding). Used by payroll generate/recalculate.
+ */
+export function datedEntryFromExactMinutes(
+  input: TimedOvertimeEntryInput,
+): DatedOvertimeEntry {
+  const raw = calculateOvertimeHours(
+    input.date,
+    input.startTime,
+    input.endTime,
+    input.context,
+    input.isOvernight,
+    input.nextDayContext,
+    { round: false },
+  );
+  return {
+    date: input.date,
+    isOvernight: input.isOvernight,
+    normalHours: raw.regularHours,
+    eveningHours: raw.nightHours,
+    sundayHours: raw.weekendHours,
+    holidayHours: raw.holidayHours,
+  };
+}
+
+/**
+ * Map timed entries to dated hour buckets using exact minutes.
+ */
+export function datedEntriesFromExactMinutes(
+  entries: TimedOvertimeEntryInput[],
+): DatedOvertimeEntry[] {
+  return entries.map(datedEntryFromExactMinutes);
 }
 
 /**

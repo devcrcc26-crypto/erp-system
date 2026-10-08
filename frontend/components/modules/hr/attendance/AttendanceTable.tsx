@@ -66,7 +66,7 @@ function compareText(a: string, b: string): number {
 }
 
 /**
- * Attendance records table — theme-token numeric styling and flag badges.
+ * Attendance records table — present / absent / leave / late / flagged + actions.
  */
 export default function AttendanceTable({
   records,
@@ -110,18 +110,6 @@ export default function AttendanceTable({
             </div>
           );
         },
-      },
-      {
-        title: t('pages.hr.attendance.columns.scheduledDays'),
-        key: 'scheduledDays',
-        width: 120,
-        align: 'right',
-        sorter: (a, b) => toNumber(a.scheduledDays) - toNumber(b.scheduledDays),
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-att-num erp-att-num--muted">
-            {formatNumber(row.scheduledDays)}
-          </span>
-        ),
       },
       {
         title: t('pages.hr.attendance.columns.presentDays'),
@@ -230,37 +218,6 @@ export default function AttendanceTable({
         },
       },
       {
-        title: t('pages.hr.attendance.columns.missingClockOut'),
-        key: 'missingClockOutDays',
-        width: 140,
-        align: 'right',
-        sorter: (a, b) => a.missingClockOutDays - b.missingClockOutDays,
-        render: (_: unknown, row: AttendanceRecord) => {
-          const value = row.missingClockOutDays;
-          return (
-            <span
-              className={
-                value > 0 ? 'erp-att-num erp-att-num--warn' : 'erp-att-dash'
-              }
-            >
-              {value > 0 ? value : '—'}
-            </span>
-          );
-        },
-      },
-      {
-        title: t('pages.hr.attendance.columns.payableHours'),
-        key: 'payableHours',
-        width: 120,
-        align: 'right',
-        sorter: (a, b) => toNumber(a.payableHours) - toNumber(b.payableHours),
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-att-num erp-att-num--teal">
-            {formatNumber(row.payableHours)}h
-          </span>
-        ),
-      },
-      {
         title: t('pages.hr.attendance.review.columns.flaggedDays'),
         key: 'flaggedDays',
         width: 140,
@@ -323,7 +280,7 @@ export default function AttendanceTable({
       columns={columns}
       dataSource={records}
       loading={loading}
-      scroll={{ x: 1350 }}
+      scroll={{ x: 980 }}
       locale={emptyText ? { emptyText } : undefined}
       pagination={{
         current: pagination.current,

@@ -1,6 +1,8 @@
+import type { OvertimeDayContext } from '../../../overtime/application/utils/overtime-hours.util';
 import {
   assignOvertimeToSalaryPeriods,
   calculateOvertimePay,
+  datedEntriesFromExactMinutes,
   OVERNIGHT_OT_DATE_ASSIGNMENT,
   OT_FALLBACK_MONTH_END_NOTE,
 } from './payroll-overtime.util';
@@ -8,6 +10,26 @@ import {
 function utc(y: number, m: number, d: number): Date {
   return new Date(Date.UTC(y, m - 1, d));
 }
+
+const OFF_DAY: OvertimeDayContext = {
+  isHoliday: false,
+  isWorkingDay: false,
+  isHalfDay: false,
+  morningStart: null,
+  morningEnd: null,
+  afternoonStart: null,
+  afternoonEnd: null,
+};
+
+const WD: OvertimeDayContext = {
+  isHoliday: false,
+  isWorkingDay: true,
+  isHalfDay: false,
+  morningStart: '08:30',
+  morningEnd: '12:30',
+  afternoonStart: '13:30',
+  afternoonEnd: '17:30',
+};
 
 describe('calculateOvertimePay', () => {
   it('renewal Aug 24, 50,000 → 8 h Normal → 3,125.00', () => {
@@ -191,5 +213,112 @@ describe('assignOvertimeToSalaryPeriods', () => {
     expect(result.totals.normalOtPay).toBeCloseTo(4375, 2);
     expect(result.periods[1]!.normalOtPay).toBeCloseTo(4375, 2);
     expect(result.periods[0]!.normalOtPay).toBe(0);
+  });
+});
+
+describe('datedEntriesFromExactMinutes (payroll pricing)', () => {
+  it('20 h 10 min entry: prices from exact minutes, not stored 20.17', () => {
+    // Sunday 00:00–20:10 → 20 h 10 min Weekend (entire span is OT).
+    const exactHours = 20 + 10 / 60;
+    const dated = datedEntriesFromExactMinutes([
+      {
+        date: utc(2026, 8, 2),
+        startTime: '00:00',
+        endTime: '20:10',
+        isOvernight: false,
+        context: OFF_DAY,
+      },
+    ]);
+    expect(dated[0]!.sundayHours).toBeCloseTo(exactHours, 10);
+    expect(dated[0]!.sundayHours).not.toBe(20.17);
+
+    const single = [
+      {
+        contractId: 'only',
+        periodStart: utc(2026, 8, 1),
+        periodEnd: utc(2026, 8, 31),
+        basicSalary: 30000,
+      },
+    ];
+    const fromTimes = assignOvertimeToSalaryPeriods({
+      entries: dated,
+      periods: single,
+      monthEndBasic: 30000,
+    });
+    const exactPay = calculateOvertimePay(30000, {
+      normalHours: 0,
+      eveningHours: 0,
+      sundayHours: exactHours,
+      holidayHours: 0,
+    });
+    const fromStoredRounded = calculateOvertimePay(30000, {
+      normalHours: 0,
+      eveningHours: 0,
+      sundayHours: 20.17,
+      holidayHours: 0,
+    });
+
+    expect(fromTimes.totals.sundayOtPay).toBe(exactPay.sundayOtPay);
+    // 30000/192 × (20+10/60) × 2 = 6302.08; 20.17 would be 6303.13
+    expect(fromTimes.totals.sundayOtPay).toBe(6302.08);
+    expect(fromStoredRounded.sundayOtPay).toBe(6303.13);
+    expect(fromTimes.totals.sundayOtPay).not.toBe(
+      fromStoredRounded.sundayOtPay,
+    );
+  });
+
+  it('20 h 10 min Normal OT at 30,000 basic → 4,726.56 (not 4,727.34 from 20.17)', () => {
+    // Lakew sheet: Normal 20+10/60. Payroll must price exact minutes after
+    // timed classification (stored column would be 20.17).
+    const exactHours = 20 + 10 / 60;
+    const exactPay = calculateOvertimePay(30000, {
+      normalHours: exactHours,
+      eveningHours: 0,
+      sundayHours: 0,
+      holidayHours: 0,
+    });
+    const roundedPay = calculateOvertimePay(30000, {
+      normalHours: 20.17,
+      eveningHours: 0,
+      sundayHours: 0,
+      holidayHours: 0,
+    });
+    expect(exactPay.normalOtPay).toBe(4726.56);
+    expect(roundedPay.normalOtPay).toBe(4727.34);
+
+    const fromTimes = assignOvertimeToSalaryPeriods({
+      entries: [
+        {
+          date: utc(2026, 8, 12),
+          isOvernight: false,
+          normalHours: exactHours,
+          eveningHours: 0,
+          sundayHours: 0,
+          holidayHours: 0,
+        },
+      ],
+      periods: [
+        {
+          contractId: 'only',
+          periodStart: utc(2026, 8, 1),
+          periodEnd: utc(2026, 8, 31),
+          basicSalary: 30000,
+        },
+      ],
+      monthEndBasic: 30000,
+    });
+    expect(fromTimes.totals.normalOtPay).toBe(4726.56);
+
+    // Weekday evening slice still classifies with minute precision.
+    const evening = datedEntriesFromExactMinutes([
+      {
+        date: utc(2026, 8, 3), // Monday
+        startTime: '17:30',
+        endTime: '19:20',
+        isOvernight: false,
+        context: WD,
+      },
+    ]);
+    expect(evening[0]!.normalHours).toBeCloseTo(1 + 50 / 60, 10);
   });
 });
