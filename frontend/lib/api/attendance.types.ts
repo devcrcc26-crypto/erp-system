@@ -94,6 +94,8 @@ export interface AttendanceDailyLog {
   missingClockOut: boolean;
   isEarlyLeave?: boolean;
   earlyLeaveMinutes?: number;
+  earlyDepartureBand?: string | null;
+  earlyDepartureWouldDeduct?: number;
   flag: AttendanceDayFlag;
   flagResolved: boolean;
   flagResolvedAt: string | null;
@@ -136,6 +138,13 @@ export interface AttendanceRecord {
   flaggedDays: number;
   resolvedDays: number;
   earlyLeaveDays?: number;
+  earlyDepartureCount?: number;
+  earlyDepartureDeductedDays?: number;
+  earlyDepartureWouldDeductDays?: number;
+  earlyDepartureWouldDeductNote?: string | null;
+  forgotToClockCount?: number;
+  forgotToClockFlagThreshold?: number;
+  approvedFieldMovementCount?: number;
   attendanceRate: number | null;
   importedAt: string;
   employee: {
@@ -470,8 +479,11 @@ export interface EmployeeDailyLogsResponse extends AttendanceRecord {
 export type FieldMovementReason =
   | 'FIELD_VISIT'
   | 'EARLY_LEAVE'
+  | 'FORGOT_TO_CLOCK'
   | 'FORGOT_CLOCK_IN'
   | 'FORGOT_CLOCK_OUT';
+
+export type FieldMovementForgotDirection = 'IN' | 'OUT' | 'BOTH';
 
 export type FieldMovementStatus =
   | 'DRAFT'
@@ -515,12 +527,15 @@ export interface CreateFieldMovementEntryDto {
   destination?: string;
   departureTime?: string;
   returnTime?: string;
+  forgotDirection?: FieldMovementForgotDirection;
   notes?: string;
 }
 
 export interface CreateFieldMovementLogDto {
   entries: CreateFieldMovementEntryDto[];
   notes?: string;
+  onBehalfOfEmployeeId?: string;
+  autoApproveTier?: boolean;
 }
 
 export interface FieldMovementLogEntry {
@@ -531,6 +546,7 @@ export interface FieldMovementLogEntry {
   destination: string | null;
   departureTime: string | null;
   returnTime: string | null;
+  forgotDirection?: FieldMovementForgotDirection | null;
   notes: string | null;
   dailyLog?: {
     date: string;

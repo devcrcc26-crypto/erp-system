@@ -277,7 +277,7 @@ export class CreateFieldMovementEntryDto {
   destination?: string;
 
   @ApiPropertyOptional({
-    description: 'Departure time in HH:mm local format',
+    description: 'Departure / time-out in HH:mm — required for FIELD_VISIT and EARLY_LEAVE',
   })
   @IsOptional()
   @IsString()
@@ -293,9 +293,20 @@ export class CreateFieldMovementEntryDto {
   @Matches(/^\d{2}:\d{2}$/, { message: 'Time must be in HH:mm format' })
   returnTime?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Required when reason is FORGOT_TO_CLOCK',
+    enum: ['IN', 'OUT', 'BOTH'],
+  })
+  @IsOptional()
+  @IsIn(['IN', 'OUT', 'BOTH'])
+  forgotDirection?: 'IN' | 'OUT' | 'BOTH';
+
+  @ApiPropertyOptional({
+    description: 'Reason / note (required on the entry or the parent log)',
+  })
   @IsOptional()
   @IsString()
+  @MinLength(3)
   notes?: string;
 }
 
@@ -310,7 +321,20 @@ export class CreateFieldMovementLogDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MinLength(3)
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'HR / lead submitting on behalf of this employee',
+  })
+  @IsOptional()
+  @IsUUID()
+  onBehalfOfEmployeeId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  autoApproveTier?: boolean;
 }
 
 export class UpdateFieldMovementLogDto {

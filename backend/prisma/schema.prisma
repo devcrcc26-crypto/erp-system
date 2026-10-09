@@ -4126,6 +4126,14 @@ enum FieldMovementReason {
   EARLY_LEAVE
   FORGOT_CLOCK_IN
   FORGOT_CLOCK_OUT
+  /// Preferred unified forgot-to-clock reason; use forgotDirection on the entry.
+  FORGOT_TO_CLOCK
+}
+
+enum FieldMovementForgotDirection {
+  IN
+  OUT
+  BOTH
 }
 
 enum FieldMovementStatus {
@@ -4318,6 +4326,11 @@ model AttendanceRecord {
   payableHours          Decimal  @map("payable_hours") @db.Decimal(6, 2)
   flaggedDays           Int      @default(0) @map("flagged_days")
   resolvedDays          Int      @default(0) @map("resolved_days")
+  earlyDepartureCount   Int      @default(0) @map("early_departure_count")
+  earlyDepartureDeductedDays Decimal @default(0) @map("early_departure_deducted_days") @db.Decimal(5, 2)
+  earlyDepartureWouldDeductDays Decimal @default(0) @map("early_departure_would_deduct_days") @db.Decimal(5, 2)
+  forgotToClockCount    Int      @default(0) @map("forgot_to_clock_count")
+  approvedFieldMovementCount Int @default(0) @map("approved_field_movement_count")
   importedAt            DateTime @default(now()) @map("imported_at")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
@@ -4356,6 +4369,8 @@ model AttendanceDailyLog {
   missingClockOut          Boolean           @default(false) @map("missing_clock_out")
   isEarlyLeave             Boolean           @default(false) @map("is_early_leave")
   earlyLeaveMinutes        Int               @default(0) @map("early_leave_minutes")
+  earlyDepartureBand       String?           @map("early_departure_band")
+  earlyDepartureWouldDeduct Decimal          @default(0) @map("early_departure_would_deduct") @db.Decimal(3, 2)
   flag                     AttendanceDayFlag @default(NONE)
   flagResolved             Boolean           @default(false) @map("flag_resolved")
   flagResolvedAt           DateTime?         @map("flag_resolved_at")
@@ -4452,6 +4467,7 @@ model FieldMovementEntry {
   destination   String?
   departureTime String?             @map("departure_time")
   returnTime    String?             @map("return_time")
+  forgotDirection FieldMovementForgotDirection? @map("forgot_direction")
   notes         String?
   createdAt     DateTime            @default(now()) @map("created_at")
 

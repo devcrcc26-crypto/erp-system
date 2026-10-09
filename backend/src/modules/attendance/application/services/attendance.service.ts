@@ -42,6 +42,7 @@ import {
 import { ApprovalDecisionRegistry } from '../../../approvals/application/services/approval-decision-registry.service';
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
+import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import {
   holidayAppliesToNationality,
@@ -76,6 +77,11 @@ import {
   markAttendanceMonthRecalcStale,
   markPayrollAttendanceSnapshotStale,
 } from '../utils/attendance-recalc-policy.util';
+import { FORGOT_TO_CLOCK_FLAG_THRESHOLD } from '../utils/attendance-policy.constants';
+import {
+  evaluateEarlyDeparture,
+  isLateAfterGrace,
+} from '../utils/early-departure.util';
 import { dateToYyyyMmDd } from './attendance-leave.util';
 import type { AttendanceDailyRaw } from '../../utils/attendance-excel.parser';
 import { parseAttendanceExcel } from '../../utils/attendance-excel.parser';
@@ -246,6 +252,7 @@ type DailyLogFlagSource = {
 
 /**
  * Resolves the HR review flag for a single duty day from effective punch times.
+ * Early leave uses the 15-minute grace (flag only when earlier than end − 15).
  */
 function resolveAttendanceDayFlag(params: {
   isHoliday: boolean;
@@ -264,13 +271,15 @@ function resolveAttendanceDayFlag(params: {
   if (!params.clockOut && !params.isLastExportDay) {
     return AttendanceDayFlag.MISSING_CLOCK_OUT;
   }
-  if (
-    params.clockIn &&
-    params.clockOut &&
-    params.scheduledEnd &&
-    isBeforeTime(params.clockOut, params.scheduledEnd)
-  ) {
-    return AttendanceDayFlag.EARLY_LEAVE;
+  if (params.clockIn && params.clockOut && params.scheduledEnd) {
+    const early = evaluateEarlyDeparture({
+      clockOut: params.clockOut,
+      scheduledEnd: params.scheduledEnd,
+      fieldMovement: 'NONE',
+    });
+    if (early.isEarlyLeaveFlag) {
+      return AttendanceDayFlag.EARLY_LEAVE;
+    }
   }
   return AttendanceDayFlag.NONE;
 }
@@ -336,6 +345,7 @@ export class AttendanceService
     private readonly approvalsService: ApprovalsService,
     private readonly hrApprovalChain: HrApprovalChainService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
+    private readonly onBehalfService: OnBehalfService,
   ) {}
 
   onModuleInit(): void {
@@ -641,20 +651,19 @@ export class AttendanceService
 
       let isLate = false;
       let lateMinutes = 0;
-      // Late detection MUST use Ethiopia-local clock-in, never machine CST.
+      // Late flag only (15-min grace); never a pay deduction.
       if (
         wasPresent &&
         isDutyDay &&
         scheduleDay?.morningStart &&
         day.clockInLocal
       ) {
-        isLate = isAfterTime(day.clockInLocal, scheduleDay.morningStart);
-        if (isLate) {
-          lateMinutes = minutesBetween(
-            scheduleDay.morningStart,
-            day.clockInLocal,
-          );
-        }
+        const late = isLateAfterGrace(
+          day.clockInLocal,
+          scheduleDay.morningStart,
+        );
+        isLate = late.isLate;
+        lateMinutes = late.lateMinutes;
       }
 
       // Missing punches only apply on scheduled duty days (not holidays/weekends).
@@ -1756,6 +1765,11 @@ export class AttendanceService
       leaveDaysThisMonth: leaveDaysByRecord.get(row.id) ?? 0,
       siteDaysThisMonth: siteSummaryByRecord.get(row.id) ?? [],
       workFromHomeDaysThisMonth: wfhDaysByRecord.get(row.id) ?? 0,
+      forgotToClockFlagThreshold: FORGOT_TO_CLOCK_FLAG_THRESHOLD,
+      earlyDepartureWouldDeductNote:
+        Number(row.earlyDepartureWouldDeductDays) > 0
+          ? `Would deduct ${Number(row.earlyDepartureWouldDeductDays)} day(s) (not applied)`
+          : null,
     }));
 
     return buildPaginatedResult(enriched, total, page, limit);
@@ -3063,12 +3077,14 @@ export class AttendanceService
       if (day.flag === 'MISSING_CLOCK_IN') {
         availableReasons.push(
           FieldMovementReason.FIELD_VISIT,
+          FieldMovementReason.FORGOT_TO_CLOCK,
           FieldMovementReason.FORGOT_CLOCK_IN,
         );
       } else if (day.flag === 'MISSING_CLOCK_OUT') {
         availableReasons.push(
           FieldMovementReason.FIELD_VISIT,
           FieldMovementReason.EARLY_LEAVE,
+          FieldMovementReason.FORGOT_TO_CLOCK,
           FieldMovementReason.FORGOT_CLOCK_OUT,
         );
       } else if (day.flag === 'EARLY_LEAVE') {
@@ -3108,17 +3124,31 @@ export class AttendanceService
   }
 
   /**
-   * Creates a draft field movement / early departure log for the signed-in employee.
+   * Creates a draft field movement / early departure log for the actor or
+   * an on-behalf employee (HR / lead with on-behalf permission).
    */
   async createFieldMovementLog(
     dto: CreateFieldMovementLogDto,
     companyId: string,
     userId: string,
   ): Promise<unknown> {
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+
     const dailyLogIds = dto.entries.map((entry) => entry.dailyLogId);
     const uniqueIds = [...new Set(dailyLogIds)];
     if (uniqueIds.length !== dailyLogIds.length) {
       throw new BadRequestException('Duplicate daily log entries are not allowed');
+    }
+
+    const parentNote = dto.notes?.trim() ?? '';
+    if (parentNote.length < 3 && dto.entries.every((e) => !e.notes?.trim())) {
+      throw new BadRequestException(
+        'A reason / note is required on the log or each entry',
+      );
     }
 
     const dailyLogs = await this.prisma.attendanceDailyLog.findMany({
@@ -3143,9 +3173,9 @@ export class AttendanceService
       if (log.record.companyId !== companyId) {
         throw new ForbiddenException('Daily log does not belong to this company');
       }
-      if (log.record.employeeId !== userId) {
+      if (log.record.employeeId !== employeeId) {
         throw new ForbiddenException(
-          'You can only submit logs for your own attendance',
+          'Daily logs must belong to the target employee',
         );
       }
       if (log.flag === 'NONE') {
@@ -3201,6 +3231,11 @@ export class AttendanceService
             `Destination must be at least 3 characters for field visit on ${dateLabel}`,
           );
         }
+        if (!entry.departureTime) {
+          throw new BadRequestException(
+            `Time out is required for field visit on ${dateLabel}`,
+          );
+        }
       }
       if (
         entry.reason === FieldMovementReason.EARLY_LEAVE &&
@@ -3209,6 +3244,13 @@ export class AttendanceService
         throw new BadRequestException(
           'Departure time is required for early leave entries',
         );
+      }
+      if (entry.reason === FieldMovementReason.FORGOT_TO_CLOCK) {
+        if (!entry.forgotDirection) {
+          throw new BadRequestException(
+            `forgotDirection (IN | OUT | BOTH) is required for FORGOT_TO_CLOCK on ${dateLabel}`,
+          );
+        }
       }
     }
 
@@ -3231,12 +3273,12 @@ export class AttendanceService
 
     const requestNumber = await this.nextFieldMovementNumber();
 
-    return this.prisma.fieldMovementLog.create({
+    const created = await this.prisma.fieldMovementLog.create({
       data: {
         id: randomUUID(),
         companyId,
         requestNumber,
-        employeeId: userId,
+        employeeId,
         month,
         year,
         status: FieldMovementStatus.DRAFT,
@@ -3257,6 +3299,7 @@ export class AttendanceService
               destination: entry.destination ?? null,
               departureTime: entry.departureTime ?? null,
               returnTime: entry.returnTime ?? null,
+              forgotDirection: entry.forgotDirection ?? null,
               notes: entry.notes ?? null,
             };
           }),
@@ -3268,6 +3311,18 @@ export class AttendanceService
         },
       },
     });
+
+    await this.onBehalfService.recordOnBehalfCreate({
+      moduleCode: 'FIELD_MOVEMENT_LOG',
+      companyId,
+      actorUserId: userId,
+      employeeId,
+      recordId: created.id,
+      recordReference: requestNumber,
+      autoApproveTier: dto.autoApproveTier,
+    });
+
+    return created;
   }
 
   /**
@@ -3286,8 +3341,12 @@ export class AttendanceService
     if (!log) {
       throw new NotFoundException('Field movement log not found');
     }
-    if (log.employeeId !== userId) {
-      throw new ForbiddenException('Only the owner can submit this log');
+    const canSubmit =
+      log.employeeId === userId || log.createdBy === userId;
+    if (!canSubmit) {
+      throw new ForbiddenException(
+        'Only the employee or the creator can submit this log',
+      );
     }
     if (
       log.status !== FieldMovementStatus.DRAFT &&
@@ -3303,7 +3362,7 @@ export class AttendanceService
 
     const resolvedTiers =
       await this.hrApprovalChain.buildFieldMovementApprovalChain(
-        userId,
+        log.employeeId,
         companyId,
       );
 
@@ -3550,6 +3609,13 @@ export class AttendanceService
       }
     });
 
+    await this.recalculateCompanyAttendanceMonth(
+      companyId,
+      log.month,
+      log.year,
+      log.employeeId,
+    );
+
     return this.getFieldMovementLog(logId, companyId, userId);
   }
 
@@ -3607,6 +3673,12 @@ export class AttendanceService
           updatedBy: log.employeeId,
         },
       });
+      await this.recalculateCompanyAttendanceMonth(
+        log.companyId,
+        log.month,
+        log.year,
+        log.employeeId,
+      );
     } else if (decision === 'RETURNED') {
       await this.prisma.fieldMovementLog.update({
         where: { id: log.id },
@@ -3699,7 +3771,31 @@ export class AttendanceService
         data.missingClockIn = false;
         break;
 
+      case FieldMovementReason.FORGOT_TO_CLOCK: {
+        const direction =
+          (entry as { forgotDirection?: string | null }).forgotDirection ??
+          'BOTH';
+        if (direction === 'IN' || direction === 'BOTH') {
+          data.correctedClockInLocal =
+            dailyLog.correctedClockInLocal ??
+            dailyLog.clockInLocal ??
+            scheduledStart;
+          data.missingClockIn = false;
+        }
+        if (direction === 'OUT' || direction === 'BOTH') {
+          data.correctedClockOutLocal =
+            dailyLog.correctedClockOutLocal ??
+            dailyLog.clockOutLocal ??
+            scheduledEnd;
+          data.missingClockOut = false;
+        }
+        break;
+      }
+
       case FieldMovementReason.EARLY_LEAVE:
+        // Approved early leave is paid; keep the recorded departure for audit
+        // but clear the unresolved early-leave flag. Deduction is waived via
+        // fieldMovementCoverage APPROVED in dayDeduction.
         data.isEarlyLeave = true;
         if (entry.departureTime) {
           data.correctedClockOutLocal = entry.departureTime;
@@ -4008,11 +4104,21 @@ export class AttendanceService
         ...log,
         scheduledEnd,
       });
-      const { deduction, status, siteName } = dayDeduction(
-        log.date,
-        input,
-        context,
-      );
+      const dayResult =
+        monthSummary.byDate.get(key) ??
+        dayDeduction(log.date, input, context);
+      const { deduction, status, siteName } = dayResult;
+      const earlyBand = dayResult.earlyDepartureBand ?? 'NONE';
+      const earlyWould = dayResult.earlyDepartureWouldDeduct ?? 0;
+      const isEarlyLeave =
+        earlyBand === 'FLAG' ||
+        earlyBand === 'OVER_1H' ||
+        earlyBand === 'PENDING_APPROVAL' ||
+        earlyBand === 'COVERED_APPROVED';
+      const earlyLeaveMinutes =
+        isEarlyLeave && clockOut && scheduledEnd
+          ? this.calculateEarlyLeaveMinutes(clockOut, scheduledEnd)
+          : 0;
       const inEmployedWindow = monthSummary.byDate.has(key);
       const flag = resolveAttendanceDayFlag({
         isHoliday,
@@ -4048,6 +4154,10 @@ export class AttendanceService
           scheduledHours,
           dayStatus: status,
           dayDeduction: inEmployedWindow ? deduction : 0,
+          isEarlyLeave,
+          earlyLeaveMinutes,
+          earlyDepartureBand: earlyBand === 'NONE' ? null : earlyBand,
+          earlyDepartureWouldDeduct: earlyWould,
           flag,
           flagResolved:
             flag === AttendanceDayFlag.NONE ? true : log.flagResolved,
@@ -4069,6 +4179,10 @@ export class AttendanceService
       log.scheduledHours = scheduledHours as never;
       log.dayStatus = status;
       log.dayDeduction = (inEmployedWindow ? deduction : 0) as never;
+      log.isEarlyLeave = isEarlyLeave;
+      log.earlyLeaveMinutes = earlyLeaveMinutes;
+      log.earlyDepartureBand = earlyBand === 'NONE' ? null : earlyBand;
+      log.earlyDepartureWouldDeduct = earlyWould as never;
       log.flag = flag;
     }
 
@@ -4106,6 +4220,38 @@ export class AttendanceService
 
     const resolvedDays = dailyLogs.filter((log) => log.flagResolved).length;
 
+    const approvedFieldMovements =
+      await writeDb.fieldMovementEntry.count({
+        where: {
+          dailyLogId: { in: dailyLogs.map((log) => log.id) },
+          log: {
+            companyId,
+            employeeId,
+            status: FieldMovementStatus.APPROVED,
+            deletedAt: null,
+          },
+        },
+      });
+
+    const forgotToClockCount = await writeDb.fieldMovementEntry.count({
+      where: {
+        dailyLogId: { in: dailyLogs.map((log) => log.id) },
+        reason: {
+          in: [
+            FieldMovementReason.FORGOT_TO_CLOCK,
+            FieldMovementReason.FORGOT_CLOCK_IN,
+            FieldMovementReason.FORGOT_CLOCK_OUT,
+          ],
+        },
+        log: {
+          companyId,
+          employeeId,
+          status: FieldMovementStatus.APPROVED,
+          deletedAt: null,
+        },
+      },
+    });
+
     let payableHours = 0;
     for (const log of dailyLogs) {
       const wouldBeWorkingDay = !log.isWeekend;
@@ -4137,6 +4283,12 @@ export class AttendanceService
         flaggedDays,
         resolvedDays,
         payableHours: Math.round(payableHours * 100) / 100,
+        earlyDepartureCount: monthSummary.earlyDepartureCount,
+        earlyDepartureDeductedDays: monthSummary.earlyDepartureDeductedDays,
+        earlyDepartureWouldDeductDays:
+          monthSummary.earlyDepartureWouldDeductDays,
+        forgotToClockCount,
+        approvedFieldMovementCount: approvedFieldMovements,
       },
     });
   }
@@ -4297,10 +4449,9 @@ export class AttendanceService
           scheduleDay?.morningStart &&
           clockIn
         ) {
-          isLate = isAfterTime(clockIn, scheduleDay.morningStart);
-          if (isLate) {
-            lateMinutes = minutesBetween(scheduleDay.morningStart, clockIn);
-          }
+          const late = isLateAfterGrace(clockIn, scheduleDay.morningStart);
+          isLate = late.isLate;
+          lateMinutes = late.lateMinutes;
         }
 
         const missingClockIn =

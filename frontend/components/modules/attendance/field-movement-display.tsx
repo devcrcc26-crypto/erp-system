@@ -29,6 +29,7 @@ import './field-movement.css';
 export const REASON_LABELS: Record<FieldMovementReason, string> = {
   FIELD_VISIT: 'Field visit',
   EARLY_LEAVE: 'Left early',
+  FORGOT_TO_CLOCK: 'Forgot to clock',
   FORGOT_CLOCK_IN: 'Forgot to clock in',
   FORGOT_CLOCK_OUT: 'Forgot to clock out',
 };
@@ -36,6 +37,7 @@ export const REASON_LABELS: Record<FieldMovementReason, string> = {
 export const REASON_ICONS: Record<FieldMovementReason, LucideIcon> = {
   FIELD_VISIT: MapPin,
   EARLY_LEAVE: DoorOpen,
+  FORGOT_TO_CLOCK: AlarmClock,
   FORGOT_CLOCK_IN: AlarmClock,
   FORGOT_CLOCK_OUT: AlarmClock,
 };

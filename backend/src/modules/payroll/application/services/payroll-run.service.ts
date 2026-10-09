@@ -105,6 +105,8 @@ interface AttendanceSnapshot {
   paidDays: Decimal;
   /** NEEDS_ENROLMENT → counted present, non-blocking note on the entry. */
   matchMethod: string;
+  /** REPORT_ONLY early-departure would-deduct total (not applied to paid days). */
+  earlyDepartureWouldDeductDays?: Decimal | number | null;
   /** Daily logs used to detect fully-absent Mon–Sat months. */
   dailyLogs: Array<{
     date: Date;
@@ -979,6 +981,7 @@ export class PayrollRunService {
           absentDays: true,
           paidDays: true,
           matchMethod: true,
+          earlyDepartureWouldDeductDays: true,
           dailyLogs: {
             select: {
               date: true,
@@ -1404,6 +1407,14 @@ export class PayrollRunService {
     if (attendance) {
       absentInWindow = this.toNumber(attendance.absentDays);
       payrollDays = this.toNumber(attendance.paidDays);
+      const wouldDeduct = this.toNumber(
+        attendance.earlyDepartureWouldDeductDays,
+      );
+      if (wouldDeduct > 0) {
+        noteParts.push(
+          `Would deduct ${wouldDeduct} day(s) for early departure (not applied)`,
+        );
+      }
     }
 
     const fullyAbsentWorkingDays = this.isFullyAbsentWorkingMonth(

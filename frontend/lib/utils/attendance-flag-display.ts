@@ -16,6 +16,7 @@ const UNRESOLVED_FLAG_LABEL: Record<
 const RESOLVED_REASON_LABEL: Record<FieldMovementReason, string> = {
   FIELD_VISIT: 'Field visit',
   EARLY_LEAVE: 'Confirmed early leave',
+  FORGOT_TO_CLOCK: 'Forgot to clock',
   FORGOT_CLOCK_IN: 'Forgot to scan in',
   FORGOT_CLOCK_OUT: 'Forgot to scan out',
 };

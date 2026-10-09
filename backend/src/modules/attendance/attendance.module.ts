@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '../../shared/prisma/prisma.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
+import { OnBehalfModule } from '../on-behalf/on-behalf.module';
 import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
 import { AttendanceMatchingService } from './application/services/attendance-matching.service';
 import { AttendancePreviewCache } from './application/services/attendance-preview.cache';
@@ -17,6 +18,7 @@ import { AttendanceController } from './presentation/attendance.controller';
     forwardRef(() => WorkScheduleModule),
     ApprovalsModule,
     HrSharedModule,
+    OnBehalfModule,
   ],
   controllers: [AttendanceController],
   providers: [

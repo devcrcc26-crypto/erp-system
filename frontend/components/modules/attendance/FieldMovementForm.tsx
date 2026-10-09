@@ -70,11 +70,13 @@ type ReasonOption = {
 const REASON_OPTIONS: Record<AttendanceDayFlag, ReasonOption[]> = {
   MISSING_CLOCK_IN: [
     { value: 'FIELD_VISIT', label: 'I was on a field / site visit' },
+    { value: 'FORGOT_TO_CLOCK', label: 'I forgot to clock (in / out / both)' },
     { value: 'FORGOT_CLOCK_IN', label: 'I forgot to clock in' },
   ],
   MISSING_CLOCK_OUT: [
     { value: 'FIELD_VISIT', label: 'I left for a field / site visit' },
     { value: 'EARLY_LEAVE', label: 'I left early' },
+    { value: 'FORGOT_TO_CLOCK', label: 'I forgot to clock (in / out / both)' },
     { value: 'FORGOT_CLOCK_OUT', label: 'I forgot to clock out' },
   ],
   EARLY_LEAVE: [
@@ -87,6 +89,8 @@ const REASON_OPTIONS: Record<AttendanceDayFlag, ReasonOption[]> = {
 const REASON_HINTS: Record<FieldMovementReason, string> = {
   FIELD_VISIT: 'You were working away from the office. Tell us where.',
   EARLY_LEAVE: 'You left before your scheduled end time. Tell us when and why.',
+  FORGOT_TO_CLOCK:
+    'A scan was missed. Choose whether IN, OUT, or both were forgotten.',
   FORGOT_CLOCK_IN: 'You were at work but the clock-in was not recorded.',
   FORGOT_CLOCK_OUT: 'You were at work but the clock-out was not recorded.',
 };
@@ -96,6 +100,11 @@ const BULK_REASON_CATALOG: ReasonOption[] = [
     value: 'FIELD_VISIT',
     label: 'Field visit',
     hint: 'Works for every type of flagged day.',
+  },
+  {
+    value: 'FORGOT_TO_CLOCK',
+    label: 'Forgot to clock',
+    hint: 'For missing clock-in or clock-out days.',
   },
   {
     value: 'FORGOT_CLOCK_IN',

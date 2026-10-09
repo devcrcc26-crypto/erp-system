@@ -4,6 +4,11 @@ import {
   employedPayrollDays,
 } from '../../../payroll/application/utils/payroll-days.util';
 import { dateToYyyyMmDd } from '../services/attendance-leave.util';
+import { EARLY_DEPARTURE_DEDUCTION_MODE } from './attendance-policy.constants';
+import {
+  evaluateEarlyDeparture,
+  type EarlyDepartureBand,
+} from './early-departure.util';
 
 export type DayDeductionValue = 0 | 0.5 | 1;
 
@@ -36,6 +41,8 @@ export interface DayDeductionContext {
    * Checked after paid categories (Sunday / holiday / WFH / site / leave).
    */
   isAttendanceExempt?: () => boolean;
+  /** Override EARLY_DEPARTURE_DEDUCTION_MODE for tests / company settings. */
+  earlyDepartureMode?: 'REPORT_ONLY' | 'ENFORCED';
 }
 
 export interface DayDeductionResult {
@@ -43,16 +50,13 @@ export interface DayDeductionResult {
   status: AttendanceDayStatus;
   /** Set when present on a site day (HQ scan) or ON_SITE. */
   siteName?: string | null;
+  earlyDepartureBand?: EarlyDepartureBand;
+  /** Would-deduct amount for REPORT_ONLY review (never stacked with missing punch). */
+  earlyDepartureWouldDeduct?: 0 | 0.5;
 }
 
 function roundDays(value: number): number {
   return Math.round(value * 100) / 100;
-}
-
-function isBeforeTime(actual: string, scheduled: string): boolean {
-  const [aH, aM] = actual.split(':').map(Number);
-  const [sH, sM] = scheduled.split(':').map(Number);
-  return (aH ?? 0) * 60 + (aM ?? 0) < (sH ?? 0) * 60 + (sM ?? 0);
 }
 
 /**
@@ -101,28 +105,70 @@ export function dayDeduction(
   const missingClockIn = !hasClockIn && hasClockOut;
   const missingClockOut =
     hasClockIn && !hasClockOut && !day.isLastExportDay;
-  const earlyDeparture =
-    hasClockIn &&
-    hasClockOut &&
-    day.scheduledEnd != null &&
-    day.clockOut != null &&
-    isBeforeTime(day.clockOut, day.scheduledEnd);
+  const fm = context.fieldMovementCoverage(date);
 
-  if (missingClockIn || missingClockOut || earlyDeparture) {
-    const fm = context.fieldMovementCoverage(date);
+  // Missing punch: 0.5 unless APPROVED field movement covers the day.
+  // Never stack with early-departure on the same day.
+  if (missingClockIn || missingClockOut) {
     if (fm === 'APPROVED') {
-      return { deduction: 0, status: 'PRESENT', siteName: siteName ?? null };
+      return {
+        deduction: 0,
+        status: 'PRESENT',
+        siteName: siteName ?? null,
+        earlyDepartureBand: 'COVERED_APPROVED',
+        earlyDepartureWouldDeduct: 0,
+      };
     }
     if (fm === 'PENDING') {
-      return { deduction: 0.5, status: 'FIELD_MOVEMENT_PENDING' };
+      return {
+        deduction: 0.5,
+        status: 'FIELD_MOVEMENT_PENDING',
+        earlyDepartureBand: 'PENDING_APPROVAL',
+        earlyDepartureWouldDeduct: 0.5,
+      };
     }
-    return { deduction: 0.5, status: 'HALF_ABSENT' };
+    return {
+      deduction: 0.5,
+      status: 'HALF_ABSENT',
+      earlyDepartureBand: 'NONE',
+      earlyDepartureWouldDeduct: 0,
+    };
+  }
+
+  // Both punches present — tiered early departure (grace / flag / >1h).
+  const early = evaluateEarlyDeparture({
+    clockOut: day.clockOut,
+    scheduledEnd: day.scheduledEnd,
+    fieldMovement: fm,
+    mode: context.earlyDepartureMode ?? EARLY_DEPARTURE_DEDUCTION_MODE,
+  });
+
+  if (early.band === 'PENDING_APPROVAL') {
+    return {
+      deduction: early.appliedDeduction,
+      status: 'FIELD_MOVEMENT_PENDING',
+      siteName: siteName ?? null,
+      earlyDepartureBand: early.band,
+      earlyDepartureWouldDeduct: early.wouldDeduct,
+    };
+  }
+
+  if (early.appliedDeduction > 0) {
+    return {
+      deduction: early.appliedDeduction,
+      status: 'HALF_ABSENT',
+      siteName: siteName ?? null,
+      earlyDepartureBand: early.band,
+      earlyDepartureWouldDeduct: early.wouldDeduct,
+    };
   }
 
   return {
     deduction: 0,
     status: 'PRESENT',
     siteName: siteName ?? null,
+    earlyDepartureBand: early.band,
+    earlyDepartureWouldDeduct: early.wouldDeduct,
   };
 }
 
@@ -155,8 +201,15 @@ export interface MonthAbsenceSummary {
   /**
    * True when every Mon–Sat non-holiday day in the employment window has
    * deduction 1 (full absence). Paid days are then forced to 0.
+   * Half-day early-departure deductions never trigger this rule.
    */
   fullyAbsentWorkingDays: boolean;
+  /** Days with an early-departure flag (FLAG / OVER_1H / pending / covered). */
+  earlyDepartureCount: number;
+  /** Applied early-departure deduction days (ENFORCED only). */
+  earlyDepartureDeductedDays: number;
+  /** Would-deduct early-departure days (REPORT_ONLY or ENFORCED). */
+  earlyDepartureWouldDeductDays: number;
   byDate: Map<string, DayDeductionResult>;
 }
 
@@ -276,6 +329,9 @@ export function summarizeMonthAbsence(
 
   let absentDays = 0;
   let leaveDays = 0;
+  let earlyDepartureCount = 0;
+  let earlyDepartureDeductedDays = 0;
+  let earlyDepartureWouldDeductDays = 0;
   const byDate = new Map<string, DayDeductionResult>();
 
   for (const date of dates) {
@@ -292,6 +348,25 @@ export function summarizeMonthAbsence(
     absentDays += result.deduction;
     if (result.status === 'LEAVE') {
       leaveDays += 1;
+    }
+    const band = result.earlyDepartureBand;
+    if (
+      band === 'FLAG' ||
+      band === 'OVER_1H' ||
+      band === 'PENDING_APPROVAL' ||
+      band === 'COVERED_APPROVED'
+    ) {
+      earlyDepartureCount += 1;
+    }
+    if (band === 'OVER_1H' || band === 'PENDING_APPROVAL') {
+      const would = result.earlyDepartureWouldDeduct ?? 0;
+      earlyDepartureWouldDeductDays += would;
+      if (result.deduction === 0.5 && would === 0.5 && band === 'OVER_1H') {
+        earlyDepartureDeductedDays += result.deduction;
+      }
+      if (band === 'PENDING_APPROVAL' && result.deduction === 0.5) {
+        earlyDepartureDeductedDays += result.deduction;
+      }
     }
   }
 
@@ -315,6 +390,8 @@ export function summarizeMonthAbsence(
 
   // Normal: paid = employed − absent. Fully absent Mon–Sat month → 0
   // (do not leave Sunday/holiday remainder as paid days).
+  // Early-departure 0.5 days are included in absentRounded when ENFORCED /
+  // pending, and never alone force the fully-absent zero-pay rule.
   const paidDays = fullyAbsentWorkingDays
     ? 0
     : roundDays(Math.max(0, employedDays - absentRounded));
@@ -327,6 +404,9 @@ export function summarizeMonthAbsence(
     paidDays,
     leaveDays: roundDays(leaveDays),
     fullyAbsentWorkingDays,
+    earlyDepartureCount,
+    earlyDepartureDeductedDays: roundDays(earlyDepartureDeductedDays),
+    earlyDepartureWouldDeductDays: roundDays(earlyDepartureWouldDeductDays),
     byDate,
   };
 }
