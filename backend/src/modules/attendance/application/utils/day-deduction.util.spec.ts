@@ -23,6 +23,7 @@ function emptyContext(overrides: Partial<DayDeductionContext> = {}): DayDeductio
     isOnApprovedLeave: () => false,
     isOnUnpaidLeave: () => false,
     fieldMovementCoverage: () => 'NONE',
+    earlyDepartureWaiver: () => 'NONE',
     isAttendanceExempt: () => false,
     ...overrides,
   };
@@ -267,7 +268,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(result.absentDays).toBe(0.5);
   });
 
-  it('early departure, field movement pending → paid 29.5', () => {
+  it('early departure, FM pending, REPORT_ONLY → paid unchanged, wouldDeduct 0.5', () => {
     const day = d(2026, 8, 5);
     const key = dateToYyyyMmDd(day);
     const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
@@ -282,7 +283,33 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
       contracts: [{ startDate: fullContractStart, endDate: null }],
       dailyLogsByDate: daily,
       context: emptyContext({
-        fieldMovementCoverage: (date) =>
+        earlyDepartureMode: 'REPORT_ONLY',
+        earlyDepartureWaiver: (date) =>
+          dateToYyyyMmDd(date) === key ? 'PENDING' : 'NONE',
+      }),
+    });
+    expect(result.paidDays).toBe(30);
+    expect(result.byDate.get(key)?.earlyDepartureWouldDeduct).toBe(0.5);
+    expect(result.byDate.get(key)?.status).toBe('FIELD_MOVEMENT_PENDING');
+  });
+
+  it('early departure, FM pending, ENFORCED → paid 29.5', () => {
+    const day = d(2026, 8, 5);
+    const key = dateToYyyyMmDd(day);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockOut: '15:00' });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        earlyDepartureMode: 'ENFORCED',
+        earlyDepartureWaiver: (date) =>
           dateToYyyyMmDd(date) === key ? 'PENDING' : 'NONE',
       }),
     });
@@ -374,7 +401,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(result.paidDays).toBe(30);
   });
 
-  it('FORGOT_TO_CLOCK OUT approved (missing out covered) → 0', () => {
+  it('FORGOT_CLOCK_OUT approved fills missing out (coverage) → 0 while still missing', () => {
     const day = d(2026, 8, 6);
     const key = dateToYyyyMmDd(day);
     const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
@@ -393,6 +420,126 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
           dateToYyyyMmDd(date) === key ? 'APPROVED' : 'NONE',
       }),
     });
+    expect(result.byDate.get(key)?.deduction).toBe(0);
+  });
+
+  it('FORGOT_CLOCK_OUT stated 15:00 (no early waiver) REPORT_ONLY → wouldDeduct 0.5, paid unchanged', () => {
+    const day = d(2026, 8, 5);
+    const key = dateToYyyyMmDd(day);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockOut: '15:00' });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        earlyDepartureMode: 'REPORT_ONLY',
+        fieldMovementCoverage: () => 'APPROVED',
+        earlyDepartureWaiver: () => 'NONE',
+      }),
+    });
+    expect(result.paidDays).toBe(30);
+    expect(result.byDate.get(key)?.earlyDepartureWouldDeduct).toBe(0.5);
+    expect(result.byDate.get(key)?.deduction).toBe(0);
+  });
+
+  it('FORGOT_CLOCK_OUT stated 15:00 ENFORCED → 0.5 (forgot does not waive early departure)', () => {
+    const day = d(2026, 8, 5);
+    const key = dateToYyyyMmDd(day);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockOut: '15:00' });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        earlyDepartureMode: 'ENFORCED',
+        fieldMovementCoverage: () => 'APPROVED',
+        earlyDepartureWaiver: () => 'NONE',
+      }),
+    });
+    expect(result.byDate.get(key)?.deduction).toBe(0.5);
+    expect(result.paidDays).toBe(29.5);
+  });
+
+  it('FORGOT_CLOCK_OUT stated 17:30 → nothing', () => {
+    const day = d(2026, 8, 5);
+    const key = dateToYyyyMmDd(day);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockOut: '17:30' });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        earlyDepartureMode: 'ENFORCED',
+        earlyDepartureWaiver: () => 'NONE',
+      }),
+    });
+    expect(result.byDate.get(key)?.deduction).toBe(0);
+    expect(result.byDate.get(key)?.earlyDepartureWouldDeduct).toBe(0);
+    expect(result.paidDays).toBe(30);
+  });
+
+  it('FORGOT_CLOCK_OUT 15:00 + EARLY_LEAVE approved → 0', () => {
+    const day = d(2026, 8, 5);
+    const key = dateToYyyyMmDd(day);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockOut: '15:00' });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        earlyDepartureMode: 'ENFORCED',
+        fieldMovementCoverage: () => 'APPROVED',
+        earlyDepartureWaiver: (date) =>
+          dateToYyyyMmDd(date) === key ? 'APPROVED' : 'NONE',
+      }),
+    });
+    expect(result.byDate.get(key)?.deduction).toBe(0);
+    expect(result.paidDays).toBe(30);
+  });
+
+  it('last OUT 15:00, no FM, REPORT_ONLY → paid unchanged, would-deduct 0.5', () => {
+    const day = d(2026, 8, 5);
+    const key = dateToYyyyMmDd(day);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockOut: '15:00' });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({ earlyDepartureMode: 'REPORT_ONLY' }),
+    });
+    expect(result.paidDays).toBe(30);
+    expect(result.absentDays).toBe(0);
+    expect(result.byDate.get(key)?.earlyDepartureWouldDeduct).toBe(0.5);
     expect(result.byDate.get(key)?.deduction).toBe(0);
   });
 

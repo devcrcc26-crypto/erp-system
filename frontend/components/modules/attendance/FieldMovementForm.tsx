@@ -32,8 +32,8 @@ import { ApiRequestError } from '@/lib/api/errors';
 import { getMyAttendance, getMyFlaggedDays } from '@/lib/api/attendance.api';
 import type {
   AttendanceDayFlag,
+  CreateFieldMovementEntryDto,
   CreateFieldMovementLogDto,
-  FieldMovementForgotDirection,
   FieldMovementReason,
   FlaggedDay,
 } from '@/lib/api/attendance.types';
@@ -62,8 +62,11 @@ const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   label: new Date(2026, i, 1).toLocaleString('en', { month: 'long' }),
 }));
 
+/** UI-only "Both" expands to FORGOT_CLOCK_IN + FORGOT_CLOCK_OUT entries. */
+type UiReason = FieldMovementReason | 'FORGOT_BOTH';
+
 type ReasonOption = {
-  value: FieldMovementReason;
+  value: UiReason;
   label: string;
   hint?: string;
 };
@@ -71,14 +74,14 @@ type ReasonOption = {
 const REASON_OPTIONS: Record<AttendanceDayFlag, ReasonOption[]> = {
   MISSING_CLOCK_IN: [
     { value: 'FIELD_VISIT', label: 'I was on a field / site visit' },
-    { value: 'FORGOT_TO_CLOCK', label: 'I forgot to clock (in / out / both)' },
     { value: 'FORGOT_CLOCK_IN', label: 'I forgot to clock in' },
+    { value: 'FORGOT_BOTH', label: 'I forgot both clock-in and clock-out' },
   ],
   MISSING_CLOCK_OUT: [
     { value: 'FIELD_VISIT', label: 'I left for a field / site visit' },
     { value: 'EARLY_LEAVE', label: 'I left early' },
-    { value: 'FORGOT_TO_CLOCK', label: 'I forgot to clock (in / out / both)' },
     { value: 'FORGOT_CLOCK_OUT', label: 'I forgot to clock out' },
+    { value: 'FORGOT_BOTH', label: 'I forgot both clock-in and clock-out' },
   ],
   EARLY_LEAVE: [
     { value: 'FIELD_VISIT', label: 'I left for a field / site visit' },
@@ -87,13 +90,14 @@ const REASON_OPTIONS: Record<AttendanceDayFlag, ReasonOption[]> = {
   NONE: [],
 };
 
-const REASON_HINTS: Record<FieldMovementReason, string> = {
+const REASON_HINTS: Record<UiReason, string> = {
   FIELD_VISIT: 'You were working away from the office. Tell us where.',
   EARLY_LEAVE: 'You left before your scheduled end time. Tell us when and why.',
-  FORGOT_TO_CLOCK:
-    'A scan was missed. Choose whether IN, OUT, or both were forgotten.',
   FORGOT_CLOCK_IN: 'You were at work but the clock-in was not recorded.',
-  FORGOT_CLOCK_OUT: 'You were at work but the clock-out was not recorded.',
+  FORGOT_CLOCK_OUT:
+    'You were at work but the clock-out was not recorded. Enter the time you left.',
+  FORGOT_BOTH:
+    'Creates one forgot-in and one forgot-out explanation. Enter the stated clock-out time.',
 };
 
 const BULK_REASON_CATALOG: ReasonOption[] = [
@@ -101,11 +105,6 @@ const BULK_REASON_CATALOG: ReasonOption[] = [
     value: 'FIELD_VISIT',
     label: 'Field visit',
     hint: 'Works for every type of flagged day.',
-  },
-  {
-    value: 'FORGOT_TO_CLOCK',
-    label: 'Forgot to clock',
-    hint: 'For missing clock-in or clock-out days.',
   },
   {
     value: 'FORGOT_CLOCK_IN',
@@ -118,11 +117,21 @@ const BULK_REASON_CATALOG: ReasonOption[] = [
     hint: 'Only for days with a missing clock-out.',
   },
   {
+    value: 'FORGOT_BOTH',
+    label: 'Forgot both scans',
+    hint: 'Creates IN + OUT entries for the same day.',
+  },
+  {
     value: 'EARLY_LEAVE',
     label: 'Left early',
     hint: 'Only for early departure or missing clock-out days.',
   },
 ];
+
+const UI_REASON_LABELS: Record<UiReason, string> = {
+  ...REASON_LABELS,
+  FORGOT_BOTH: 'Forgot both scans',
+};
 
 type FetchState =
   | 'idle'
@@ -140,7 +149,6 @@ type DayErrors = Partial<
     | 'departureTime'
     | 'returnTime'
     | 'earlyLeaveReason'
-    | 'forgotDirection'
     | 'notes',
     string
   >
@@ -162,12 +170,11 @@ type DayEntry = {
     pendingApproverName: string | null;
   } | null;
   selected: boolean;
-  selectedReason: FieldMovementReason | null;
+  selectedReason: UiReason | null;
   destination: string;
   departureTime: string;
   didReturn: boolean;
   returnTime: string;
-  forgotDirection: FieldMovementForgotDirection | null;
   notes: string;
   earlyLeaveReason: string;
   errors: DayErrors;
@@ -220,12 +227,6 @@ function toDayEntry(day: FlaggedDay): DayEntry {
     departureTime: '',
     didReturn: false,
     returnTime: '',
-    forgotDirection:
-      day.flag === 'MISSING_CLOCK_IN'
-        ? 'IN'
-        : day.flag === 'MISSING_CLOCK_OUT'
-          ? 'OUT'
-          : null,
     notes: '',
     earlyLeaveReason: '',
     errors: {},
@@ -233,23 +234,21 @@ function toDayEntry(day: FlaggedDay): DayEntry {
   };
 }
 
-function getValidBulkReasons(
-  selectedDays: DayEntry[],
-): FieldMovementReason[] {
+function getValidBulkReasons(selectedDays: DayEntry[]): UiReason[] {
   const flags = new Set(selectedDays.map((d) => d.flag));
-  const reasons: FieldMovementReason[] = ['FIELD_VISIT'];
+  const reasons: UiReason[] = ['FIELD_VISIT'];
 
-  if (
-    !flags.has('EARLY_LEAVE') &&
-    (flags.has('MISSING_CLOCK_IN') || flags.has('MISSING_CLOCK_OUT'))
-  ) {
-    reasons.push('FORGOT_TO_CLOCK');
-  }
   if (!flags.has('MISSING_CLOCK_OUT') && !flags.has('EARLY_LEAVE')) {
     reasons.push('FORGOT_CLOCK_IN');
   }
   if (!flags.has('MISSING_CLOCK_IN') && !flags.has('EARLY_LEAVE')) {
     reasons.push('FORGOT_CLOCK_OUT');
+  }
+  if (
+    !flags.has('EARLY_LEAVE') &&
+    (flags.has('MISSING_CLOCK_IN') || flags.has('MISSING_CLOCK_OUT'))
+  ) {
+    reasons.push('FORGOT_BOTH');
   }
   if (!flags.has('MISSING_CLOCK_IN')) {
     reasons.push('EARLY_LEAVE');
@@ -271,8 +270,11 @@ function dayIsFullyExplained(day: DayEntry): boolean {
   if (day.selectedReason === 'EARLY_LEAVE') {
     return Boolean(day.departureTime) && day.earlyLeaveReason.trim().length > 0;
   }
-  if (day.selectedReason === 'FORGOT_TO_CLOCK') {
-    return Boolean(day.forgotDirection) && day.notes.trim().length >= 3;
+  if (
+    day.selectedReason === 'FORGOT_CLOCK_OUT' ||
+    day.selectedReason === 'FORGOT_BOTH'
+  ) {
+    return Boolean(day.departureTime) && day.notes.trim().length >= 3;
   }
   return true;
 }
@@ -302,7 +304,7 @@ function daySummary(day: DayEntry): string {
   if (!day.selectedReason) {
     return '';
   }
-  const parts = [REASON_LABELS[day.selectedReason]];
+  const parts = [UI_REASON_LABELS[day.selectedReason]];
   if (day.destination) {
     parts.push(day.destination);
   }
@@ -406,9 +408,9 @@ function ReasonChoices({
   name: string;
   legend: string;
   options: ReasonOption[];
-  value: FieldMovementReason | null;
+  value: UiReason | null;
   error?: string;
-  onChange: (value: FieldMovementReason) => void;
+  onChange: (value: UiReason) => void;
 }): React.ReactNode {
   const errorId = error ? `${name}-error` : undefined;
   return (
@@ -419,7 +421,10 @@ function ReasonChoices({
       <legend className="fm-choices__legend">{legend}</legend>
       <div className="fm-choices__list">
         {options.map((option) => {
-          const Icon = REASON_ICONS[option.value];
+          const Icon =
+            option.value === 'FORGOT_BOTH'
+              ? REASON_ICONS.FORGOT_CLOCK_IN
+              : REASON_ICONS[option.value];
           return (
             <label key={option.value} className="fm-choice">
               <input
@@ -547,9 +552,7 @@ export default function FieldMovementForm(): React.ReactNode {
     requestNumber: string;
   } | null>(null);
   const [stepOneError, setStepOneError] = useState<string | null>(null);
-  const [bulkReason, setBulkReason] = useState<FieldMovementReason | null>(
-    null,
-  );
+  const [bulkReason, setBulkReason] = useState<UiReason | null>(null);
   const [bulkDestination, setBulkDestination] = useState('');
   const [bulkDepartureTime, setBulkDepartureTime] = useState('');
   const [bulkDidReturn, setBulkDidReturn] = useState(false);
@@ -640,6 +643,14 @@ export default function FieldMovementForm(): React.ReactNode {
         bulkEarlyLeaveReason.trim().length > 0
       );
     }
+    if (
+      bulkReason === 'FORGOT_CLOCK_OUT' ||
+      bulkReason === 'FORGOT_BOTH'
+    ) {
+      return (
+        Boolean(parseTime(bulkDepartureTime)) && bulkNotes.trim().length >= 3
+      );
+    }
     return true;
   }, [
     bulkReason,
@@ -649,6 +660,7 @@ export default function FieldMovementForm(): React.ReactNode {
     bulkReturnTime,
     bulkDepartureTime,
     bulkEarlyLeaveReason,
+    bulkNotes,
   ]);
 
   function clearBulkFields(): void {
@@ -747,7 +759,10 @@ export default function FieldMovementForm(): React.ReactNode {
     const destination =
       reason === 'FIELD_VISIT' ? bulkDestination.trim() : '';
     const departureTime =
-      reason === 'FIELD_VISIT' || reason === 'EARLY_LEAVE'
+      reason === 'FIELD_VISIT' ||
+      reason === 'EARLY_LEAVE' ||
+      reason === 'FORGOT_CLOCK_OUT' ||
+      reason === 'FORGOT_BOTH'
         ? bulkDepartureTime
         : '';
     const didReturn = reason === 'FIELD_VISIT' ? bulkDidReturn : false;
@@ -769,7 +784,12 @@ export default function FieldMovementForm(): React.ReactNode {
         if (!validReasons.includes(reason)) {
           return day;
         }
-        if (!day.availableReasons.includes(reason)) {
+        const apiReasonsOk =
+          reason === 'FORGOT_BOTH'
+            ? day.availableReasons.includes('FORGOT_CLOCK_IN') ||
+              day.availableReasons.includes('FORGOT_CLOCK_OUT')
+            : day.availableReasons.includes(reason);
+        if (!apiReasonsOk) {
           return day;
         }
         return {
@@ -954,9 +974,14 @@ export default function FieldMovementForm(): React.ReactNode {
             }
           }
         }
-        if (day.selectedReason === 'FORGOT_TO_CLOCK') {
-          if (!day.forgotDirection) {
-            errors.forgotDirection = 'Select whether IN, OUT, or both were missed';
+        if (
+          day.selectedReason === 'FORGOT_CLOCK_OUT' ||
+          day.selectedReason === 'FORGOT_BOTH'
+        ) {
+          if (!day.departureTime || !parseTime(day.departureTime)) {
+            errors.departureTime = day.departureTime
+              ? 'Use HH:mm format'
+              : 'Stated clock-out time is required';
             valid = false;
             needsExpand.add(index);
           }
@@ -1004,32 +1029,48 @@ export default function FieldMovementForm(): React.ReactNode {
   }
 
   function buildDto(): CreateFieldMovementLogDto {
-    return {
-      notes: overallNotes.trim() || undefined,
-      entries: selectedDays.map((day) => {
-        const reason = day.selectedReason!;
-        return {
+    const entries: CreateFieldMovementEntryDto[] = [];
+    for (const day of selectedDays) {
+      const reason = day.selectedReason!;
+      const notes =
+        reason === 'EARLY_LEAVE'
+          ? day.earlyLeaveReason.trim() || undefined
+          : day.notes.trim() || undefined;
+      if (reason === 'FORGOT_BOTH') {
+        entries.push({
           dailyLogId: day.id,
-          reason,
-          destination:
-            reason === 'FIELD_VISIT' ? day.destination.trim() : undefined,
-          departureTime: ['FIELD_VISIT', 'EARLY_LEAVE'].includes(reason)
+          reason: 'FORGOT_CLOCK_IN',
+          notes,
+        });
+        entries.push({
+          dailyLogId: day.id,
+          reason: 'FORGOT_CLOCK_OUT',
+          departureTime: day.departureTime || undefined,
+          notes,
+        });
+        continue;
+      }
+      entries.push({
+        dailyLogId: day.id,
+        reason,
+        destination:
+          reason === 'FIELD_VISIT' ? day.destination.trim() : undefined,
+        departureTime:
+          reason === 'FIELD_VISIT' ||
+          reason === 'EARLY_LEAVE' ||
+          reason === 'FORGOT_CLOCK_OUT'
             ? day.departureTime || undefined
             : undefined,
-          returnTime:
-            reason === 'FIELD_VISIT' && day.didReturn
-              ? day.returnTime
-              : undefined,
-          forgotDirection:
-            reason === 'FORGOT_TO_CLOCK'
-              ? day.forgotDirection ?? undefined
-              : undefined,
-          notes:
-            reason === 'EARLY_LEAVE'
-              ? day.earlyLeaveReason.trim() || undefined
-              : day.notes.trim() || undefined,
-        };
-      }),
+        returnTime:
+          reason === 'FIELD_VISIT' && day.didReturn
+            ? day.returnTime
+            : undefined,
+        notes,
+      });
+    }
+    return {
+      notes: overallNotes.trim() || undefined,
+      entries,
     };
   }
 
@@ -1557,6 +1598,32 @@ export default function FieldMovementForm(): React.ReactNode {
                         </>
                       ) : null}
 
+                      {bulkReason === 'FORGOT_CLOCK_OUT' ||
+                      bulkReason === 'FORGOT_BOTH' ? (
+                        <Field
+                          id="fm-bulk-forgot-out"
+                          label="Stated clock-out time"
+                          required
+                          hint="Applies to every selected day. Early-departure rules use this time."
+                        >
+                          {(a11y) => (
+                            <TimePicker
+                              {...a11y}
+                              size="large"
+                              format="HH:mm"
+                              needConfirm={false}
+                              className="w-full sm:max-w-xs"
+                              value={parseTime(bulkDepartureTime)}
+                              onChange={(value) =>
+                                setBulkDepartureTime(
+                                  value ? value.format('HH:mm') : '',
+                                )
+                              }
+                            />
+                          )}
+                        </Field>
+                      ) : null}
+
                       {bulkReason === 'EARLY_LEAVE' ? (
                         <>
                           <Field
@@ -1656,7 +1723,11 @@ export default function FieldMovementForm(): React.ReactNode {
               <ul className="fm-day-list">
                 {dayEntries.map((day, index) => {
                   const reasonOptions = REASON_OPTIONS[day.flag].filter(
-                    (option) => day.availableReasons.includes(option.value),
+                    (option) =>
+                      option.value === 'FORGOT_BOTH'
+                        ? day.availableReasons.includes('FORGOT_CLOCK_IN') ||
+                          day.availableReasons.includes('FORGOT_CLOCK_OUT')
+                        : day.availableReasons.includes(option.value),
                   );
                   const state = dayState(day);
                   const showBody = expandedDays.has(index) && day.selected;
@@ -1729,14 +1800,6 @@ export default function FieldMovementForm(): React.ReactNode {
                               departureTime: '',
                               didReturn: false,
                               returnTime: '',
-                              forgotDirection:
-                                value === 'FORGOT_TO_CLOCK'
-                                  ? day.flag === 'MISSING_CLOCK_IN'
-                                    ? 'IN'
-                                    : day.flag === 'MISSING_CLOCK_OUT'
-                                      ? 'OUT'
-                                      : 'BOTH'
-                                  : day.forgotDirection,
                               earlyLeaveReason: '',
                               filledViaBulk: false,
                               errors: {},
@@ -1899,30 +1962,31 @@ export default function FieldMovementForm(): React.ReactNode {
                           </>
                         ) : null}
 
-                        {day.selectedReason === 'FORGOT_TO_CLOCK' ? (
+                        {day.selectedReason === 'FORGOT_CLOCK_OUT' ||
+                        day.selectedReason === 'FORGOT_BOTH' ? (
                           <Field
-                            id={fieldId('forgot-direction')}
-                            label="Which scan was missed?"
+                            id={fieldId('forgot-out')}
+                            label="Stated clock-out time"
                             required
-                            error={day.errors.forgotDirection}
+                            hint="Early-departure rules apply to this time unless an approved early leave or field visit also covers the day."
+                            error={day.errors.departureTime}
                           >
                             {(a11y) => (
-                              <Select
+                              <TimePicker
                                 {...a11y}
                                 size="large"
+                                format="HH:mm"
+                                needConfirm={false}
                                 className="w-full sm:max-w-xs"
-                                value={day.forgotDirection}
-                                options={[
-                                  { value: 'IN', label: 'Clock-in only' },
-                                  { value: 'OUT', label: 'Clock-out only' },
-                                  { value: 'BOTH', label: 'Both scans' },
-                                ]}
-                                onChange={(value: FieldMovementForgotDirection) => {
+                                value={parseTime(day.departureTime)}
+                                onChange={(value) => {
                                   updateDay(day.id, {
-                                    forgotDirection: value,
+                                    departureTime: value
+                                      ? value.format('HH:mm')
+                                      : '',
                                     filledViaBulk: false,
                                   });
-                                  clearDayError(day.id, 'forgotDirection');
+                                  clearDayError(day.id, 'departureTime');
                                 }}
                               />
                             )}
@@ -1931,11 +1995,12 @@ export default function FieldMovementForm(): React.ReactNode {
 
                         {day.selectedReason === 'FORGOT_CLOCK_IN' ||
                         day.selectedReason === 'FORGOT_CLOCK_OUT' ||
-                        day.selectedReason === 'FORGOT_TO_CLOCK' ? (
+                        day.selectedReason === 'FORGOT_BOTH' ? (
                           <p className="fm-note">
                             <Info size={16} aria-hidden className="mt-0.5 shrink-0" />
-                            Your attendance will be marked as present for this
-                            day once approved.
+                            Forgot-to-clock fills the missing scan once approved.
+                            Early departure is only waived by an approved early
+                            leave or field visit.
                           </p>
                         ) : null}
 
@@ -1946,11 +2011,13 @@ export default function FieldMovementForm(): React.ReactNode {
                             label="Reason / note"
                             required={
                               day.selectedReason === 'FIELD_VISIT' ||
-                              day.selectedReason === 'FORGOT_TO_CLOCK'
+                              day.selectedReason === 'FORGOT_CLOCK_OUT' ||
+                              day.selectedReason === 'FORGOT_BOTH'
                             }
                             optional={
                               day.selectedReason !== 'FIELD_VISIT' &&
-                              day.selectedReason !== 'FORGOT_TO_CLOCK'
+                              day.selectedReason !== 'FORGOT_CLOCK_OUT' &&
+                              day.selectedReason !== 'FORGOT_BOTH'
                             }
                             error={day.errors.notes}
                           >
@@ -2027,8 +2094,11 @@ export default function FieldMovementForm(): React.ReactNode {
             <ul className="fm-review-list">
               {Object.entries(reviewGroups).map(([key, days]) => {
                 const [reasonKey, destination] = key.split('||');
-                const reason = reasonKey as FieldMovementReason;
-                const Icon = REASON_ICONS[reason] ?? Info;
+                const reason = reasonKey as UiReason;
+                const Icon =
+                  reason === 'FORGOT_BOTH'
+                    ? REASON_ICONS.FORGOT_CLOCK_IN
+                    : (REASON_ICONS[reason] ?? Info);
                 return (
                   <li key={key} className="fm-review-item">
                     <span className="fm-card__icon" aria-hidden>
@@ -2036,7 +2106,7 @@ export default function FieldMovementForm(): React.ReactNode {
                     </span>
                     <div className="fm-review-item__body">
                       <p className="fm-review-item__title">
-                        {REASON_LABELS[reason] ?? reason}
+                        {UI_REASON_LABELS[reason] ?? reason}
                         {destination ? ` — ${destination}` : ''}
                       </p>
                       <p className="fm-review-item__dates">

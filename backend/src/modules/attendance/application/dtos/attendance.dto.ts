@@ -277,7 +277,8 @@ export class CreateFieldMovementEntryDto {
   destination?: string;
 
   @ApiPropertyOptional({
-    description: 'Departure / time-out in HH:mm — required for FIELD_VISIT and EARLY_LEAVE',
+    description:
+      'Departure / time-out in HH:mm — required for FIELD_VISIT, EARLY_LEAVE, and FORGOT_CLOCK_OUT',
   })
   @IsOptional()
   @IsString()
@@ -292,14 +293,6 @@ export class CreateFieldMovementEntryDto {
   @IsString()
   @Matches(/^\d{2}:\d{2}$/, { message: 'Time must be in HH:mm format' })
   returnTime?: string;
-
-  @ApiPropertyOptional({
-    description: 'Required when reason is FORGOT_TO_CLOCK',
-    enum: ['IN', 'OUT', 'BOTH'],
-  })
-  @IsOptional()
-  @IsIn(['IN', 'OUT', 'BOTH'])
-  forgotDirection?: 'IN' | 'OUT' | 'BOTH';
 
   @ApiPropertyOptional({
     description: 'Reason / note (required on the entry or the parent log)',

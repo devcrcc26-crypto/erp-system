@@ -24,5 +24,5 @@ export type EarlyDepartureDeductionMode = 'REPORT_ONLY' | 'ENFORCED';
 export const EARLY_DEPARTURE_DEDUCTION_MODE: EarlyDepartureDeductionMode =
   'REPORT_ONLY';
 
-/** Monthly FORGOT_TO_CLOCK (incl. legacy IN/OUT) count that flags an employee on review. */
+/** Monthly FORGOT_CLOCK_IN + FORGOT_CLOCK_OUT approved count that flags review. */
 export const FORGOT_TO_CLOCK_FLAG_THRESHOLD = 3;

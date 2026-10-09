@@ -98,7 +98,7 @@ describe('evaluateEarlyDeparture', () => {
     expect(r.wouldDeduct).toBe(0);
   });
 
-  it('15:00 + pending EARLY_LEAVE → 0.5', () => {
+  it('15:00 + pending EARLY_LEAVE ENFORCED → 0.5', () => {
     const r = evaluateEarlyDeparture({
       clockOut: '15:00',
       scheduledEnd: weekdayEnd,
@@ -107,6 +107,18 @@ describe('evaluateEarlyDeparture', () => {
     });
     expect(r.band).toBe('PENDING_APPROVAL');
     expect(r.appliedDeduction).toBe(0.5);
+  });
+
+  it('15:00 + pending EARLY_LEAVE REPORT_ONLY → applied 0, would 0.5', () => {
+    const r = evaluateEarlyDeparture({
+      clockOut: '15:00',
+      scheduledEnd: weekdayEnd,
+      fieldMovement: 'PENDING',
+      mode: 'REPORT_ONLY',
+    });
+    expect(r.band).toBe('PENDING_APPROVAL');
+    expect(r.appliedDeduction).toBe(0);
+    expect(r.wouldDeduct).toBe(0.5);
   });
 
   it('15:00 + rejected (NONE) EARLY_LEAVE → 0.5 ENFORCED', () => {

@@ -37,6 +37,11 @@ export interface DayDeductionContext {
   isOnUnpaidLeave?: (date: Date) => boolean;
   fieldMovementCoverage: (date: Date) => FieldMovementCoverage;
   /**
+   * Approved / pending FIELD_VISIT or EARLY_LEAVE only — waives early-departure
+   * deduction. FORGOT_CLOCK_* never waives early departure.
+   */
+  earlyDepartureWaiver?: (date: Date) => FieldMovementCoverage;
+  /**
    * Attendance-exempt employees (no scanner) — treat duty days as full presence.
    * Checked after paid categories (Sunday / holiday / WFH / site / leave).
    */
@@ -136,10 +141,12 @@ export function dayDeduction(
   }
 
   // Both punches present — tiered early departure (grace / flag / >1h).
+  // Only FIELD_VISIT / EARLY_LEAVE waive; FORGOT_CLOCK_* does not.
+  const earlyWaiver = context.earlyDepartureWaiver?.(date) ?? 'NONE';
   const early = evaluateEarlyDeparture({
     clockOut: day.clockOut,
     scheduledEnd: day.scheduledEnd,
-    fieldMovement: fm,
+    fieldMovement: earlyWaiver,
     mode: context.earlyDepartureMode ?? EARLY_DEPARTURE_DEDUCTION_MODE,
   });
 

@@ -127,23 +127,25 @@ export function evaluateEarlyDeparture(input: {
     };
   }
 
-  // OUT < end − 60: pending FM does not waive — still deduct (even in REPORT_ONLY)
-  // until approved; REPORT_ONLY without FM only stores would-deduct.
+  // OUT < end − 60. REPORT_ONLY never changes paid days (appliedDeduction 0);
+  // ENFORCED applies 0.5. Pending EARLY_LEAVE/FIELD_VISIT does not waive.
+  const wouldDeduct = 0.5 as const;
+  const applied: 0 | 0.5 = mode === 'ENFORCED' ? 0.5 : 0;
+
   if (input.fieldMovement === 'PENDING') {
     return {
       band: 'PENDING_APPROVAL',
       minutesEarly,
-      appliedDeduction: 0.5,
-      wouldDeduct: 0.5,
+      appliedDeduction: applied,
+      wouldDeduct,
       isEarlyLeaveFlag: true,
     };
   }
 
-  const wouldDeduct = 0.5 as const;
   return {
     band: 'OVER_1H',
     minutesEarly,
-    appliedDeduction: mode === 'ENFORCED' ? 0.5 : 0,
+    appliedDeduction: applied,
     wouldDeduct,
     isEarlyLeaveFlag: true,
   };

@@ -3077,14 +3077,12 @@ export class AttendanceService
       if (day.flag === 'MISSING_CLOCK_IN') {
         availableReasons.push(
           FieldMovementReason.FIELD_VISIT,
-          FieldMovementReason.FORGOT_TO_CLOCK,
           FieldMovementReason.FORGOT_CLOCK_IN,
         );
       } else if (day.flag === 'MISSING_CLOCK_OUT') {
         availableReasons.push(
           FieldMovementReason.FIELD_VISIT,
           FieldMovementReason.EARLY_LEAVE,
-          FieldMovementReason.FORGOT_TO_CLOCK,
           FieldMovementReason.FORGOT_CLOCK_OUT,
         );
       } else if (day.flag === 'EARLY_LEAVE') {
@@ -3139,10 +3137,32 @@ export class AttendanceService
     );
 
     const dailyLogIds = dto.entries.map((entry) => entry.dailyLogId);
-    const uniqueIds = [...new Set(dailyLogIds)];
-    if (uniqueIds.length !== dailyLogIds.length) {
-      throw new BadRequestException('Duplicate daily log entries are not allowed');
+    const entriesByDailyLog = new Map<string, typeof dto.entries>();
+    for (const entry of dto.entries) {
+      const list = entriesByDailyLog.get(entry.dailyLogId) ?? [];
+      list.push(entry);
+      entriesByDailyLog.set(entry.dailyLogId, list);
     }
+    for (const [dailyLogId, list] of entriesByDailyLog.entries()) {
+      if (list.length === 1) {
+        continue;
+      }
+      if (list.length > 2) {
+        throw new BadRequestException(
+          'At most two explanations are allowed for the same day',
+        );
+      }
+      const reasons = new Set(list.map((e) => e.reason));
+      const complementaryForgot =
+        reasons.has(FieldMovementReason.FORGOT_CLOCK_IN) &&
+        reasons.has(FieldMovementReason.FORGOT_CLOCK_OUT);
+      if (!complementaryForgot || reasons.size !== 2) {
+        throw new BadRequestException(
+          `Duplicate entries for daily log ${dailyLogId} are only allowed as FORGOT_CLOCK_IN + FORGOT_CLOCK_OUT`,
+        );
+      }
+    }
+    const uniqueIds = [...entriesByDailyLog.keys()];
 
     const parentNote = dto.notes?.trim() ?? '';
     if (parentNote.length < 3 && dto.entries.every((e) => !e.notes?.trim())) {
@@ -3245,12 +3265,13 @@ export class AttendanceService
           'Departure time is required for early leave entries',
         );
       }
-      if (entry.reason === FieldMovementReason.FORGOT_TO_CLOCK) {
-        if (!entry.forgotDirection) {
-          throw new BadRequestException(
-            `forgotDirection (IN | OUT | BOTH) is required for FORGOT_TO_CLOCK on ${dateLabel}`,
-          );
-        }
+      if (
+        entry.reason === FieldMovementReason.FORGOT_CLOCK_OUT &&
+        !entry.departureTime
+      ) {
+        throw new BadRequestException(
+          `Stated clock-out time is required for FORGOT_CLOCK_OUT on ${dateLabel}`,
+        );
       }
     }
 
@@ -3299,7 +3320,6 @@ export class AttendanceService
               destination: entry.destination ?? null,
               departureTime: entry.departureTime ?? null,
               returnTime: entry.returnTime ?? null,
-              forgotDirection: entry.forgotDirection ?? null,
               notes: entry.notes ?? null,
             };
           }),
@@ -3762,7 +3782,14 @@ export class AttendanceService
         break;
 
       case FieldMovementReason.FORGOT_CLOCK_OUT:
-        data.correctedClockOutLocal = scheduledEnd;
+        // Stated out time is inserted; early-departure rules then apply to it.
+        // Only EARLY_LEAVE / FIELD_VISIT waive early-departure deduction.
+        if (!entry.departureTime) {
+          throw new BadRequestException(
+            'Stated clock-out time is required for FORGOT_CLOCK_OUT',
+          );
+        }
+        data.correctedClockOutLocal = entry.departureTime;
         data.missingClockOut = false;
         break;
 
@@ -3771,31 +3798,9 @@ export class AttendanceService
         data.missingClockIn = false;
         break;
 
-      case FieldMovementReason.FORGOT_TO_CLOCK: {
-        const direction =
-          (entry as { forgotDirection?: string | null }).forgotDirection ??
-          'BOTH';
-        if (direction === 'IN' || direction === 'BOTH') {
-          data.correctedClockInLocal =
-            dailyLog.correctedClockInLocal ??
-            dailyLog.clockInLocal ??
-            scheduledStart;
-          data.missingClockIn = false;
-        }
-        if (direction === 'OUT' || direction === 'BOTH') {
-          data.correctedClockOutLocal =
-            dailyLog.correctedClockOutLocal ??
-            dailyLog.clockOutLocal ??
-            scheduledEnd;
-          data.missingClockOut = false;
-        }
-        break;
-      }
-
       case FieldMovementReason.EARLY_LEAVE:
-        // Approved early leave is paid; keep the recorded departure for audit
-        // but clear the unresolved early-leave flag. Deduction is waived via
-        // fieldMovementCoverage APPROVED in dayDeduction.
+        // Approved early leave is paid; keep the recorded departure for audit.
+        // earlyDepartureWaiver (FIELD_VISIT / EARLY_LEAVE) waives deduction.
         data.isEarlyLeave = true;
         if (entry.departureTime) {
           data.correctedClockOutLocal = entry.departureTime;
@@ -4238,7 +4243,6 @@ export class AttendanceService
         dailyLogId: { in: dailyLogs.map((log) => log.id) },
         reason: {
           in: [
-            FieldMovementReason.FORGOT_TO_CLOCK,
             FieldMovementReason.FORGOT_CLOCK_IN,
             FieldMovementReason.FORGOT_CLOCK_OUT,
           ],

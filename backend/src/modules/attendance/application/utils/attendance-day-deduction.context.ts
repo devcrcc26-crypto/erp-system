@@ -39,6 +39,8 @@ interface LoadedDeductionData {
   /** Approved UNPAID leave dates — absence, not coverage. */
   unpaidLeaveDateKeys: Set<string>;
   fieldMovementByDate: Map<string, FieldMovementCoverage>;
+  /** FIELD_VISIT / EARLY_LEAVE only — used for early-departure waiver. */
+  earlyDepartureWaiverByDate: Map<string, FieldMovementCoverage>;
   siteAssignments: Array<{
     startDate: Date;
     endDate: Date;
@@ -128,28 +130,39 @@ export async function loadDeductionDataForMonth(
 
   const dailyLogIds = [...dailyLogIdsByDate.values()];
   const fieldMovementByDate = new Map<string, FieldMovementCoverage>();
+  const earlyDepartureWaiverByDate = new Map<string, FieldMovementCoverage>();
   if (dailyLogIds.length > 0) {
     const entries = await db.fieldMovementEntry.findMany({
       where: { dailyLogId: { in: dailyLogIds } },
       select: {
         dailyLogId: true,
+        reason: true,
         log: { select: { status: true } },
       },
     });
     for (const [dateKey, logId] of dailyLogIdsByDate.entries()) {
       const related = entries.filter((e) => e.dailyLogId === logId);
       let coverage: FieldMovementCoverage = 'NONE';
+      let waiver: FieldMovementCoverage = 'NONE';
       for (const entry of related) {
         const next = fieldMovementCoverageFromStatus(entry.log.status);
         if (next === 'APPROVED') {
           coverage = 'APPROVED';
-          break;
-        }
-        if (next === 'PENDING') {
+        } else if (next === 'PENDING' && coverage !== 'APPROVED') {
           coverage = 'PENDING';
+        }
+        const isEarlyWaiver =
+          entry.reason === 'FIELD_VISIT' || entry.reason === 'EARLY_LEAVE';
+        if (isEarlyWaiver) {
+          if (next === 'APPROVED') {
+            waiver = 'APPROVED';
+          } else if (next === 'PENDING' && waiver !== 'APPROVED') {
+            waiver = 'PENDING';
+          }
         }
       }
       fieldMovementByDate.set(dateKey, coverage);
+      earlyDepartureWaiverByDate.set(dateKey, waiver);
     }
   }
 
@@ -175,6 +188,7 @@ export async function loadDeductionDataForMonth(
     leaveDateKeys,
     unpaidLeaveDateKeys,
     fieldMovementByDate,
+    earlyDepartureWaiverByDate,
     siteAssignments: siteRows.map((row) => ({
       startDate: row.startDate,
       endDate: row.endDate,
@@ -251,6 +265,8 @@ export function buildDayDeductionContext(
       data.unpaidLeaveDateKeys.has(dateToYyyyMmDd(date)),
     fieldMovementCoverage: (date) =>
       data.fieldMovementByDate.get(dateToYyyyMmDd(date)) ?? 'NONE',
+    earlyDepartureWaiver: (date) =>
+      data.earlyDepartureWaiverByDate.get(dateToYyyyMmDd(date)) ?? 'NONE',
     isAttendanceExempt: () => employee.attendanceMode === 'EXEMPT',
   };
 }

@@ -4126,14 +4126,6 @@ enum FieldMovementReason {
   EARLY_LEAVE
   FORGOT_CLOCK_IN
   FORGOT_CLOCK_OUT
-  /// Preferred unified forgot-to-clock reason; use forgotDirection on the entry.
-  FORGOT_TO_CLOCK
-}
-
-enum FieldMovementForgotDirection {
-  IN
-  OUT
-  BOTH
 }
 
 enum FieldMovementStatus {
@@ -4467,14 +4459,14 @@ model FieldMovementEntry {
   destination   String?
   departureTime String?             @map("departure_time")
   returnTime    String?             @map("return_time")
-  forgotDirection FieldMovementForgotDirection? @map("forgot_direction")
   notes         String?
   createdAt     DateTime            @default(now()) @map("created_at")
 
   log      FieldMovementLog   @relation(fields: [logId], references: [id], onDelete: Cascade)
   dailyLog AttendanceDailyLog @relation(fields: [dailyLogId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([logId, dailyLogId])
+  /// Same day may have complementary FORGOT_CLOCK_IN + FORGOT_CLOCK_OUT entries.
+  @@unique([logId, dailyLogId, reason], map: "uq_field_movement_entry_log_day_reason")
   @@index([logId], map: "idx_field_movement_entry_log")
   @@index([dailyLogId], map: "idx_field_movement_entry_daily_log")
   @@map("field_movement_entry")

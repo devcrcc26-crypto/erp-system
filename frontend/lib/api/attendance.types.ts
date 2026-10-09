@@ -479,11 +479,8 @@ export interface EmployeeDailyLogsResponse extends AttendanceRecord {
 export type FieldMovementReason =
   | 'FIELD_VISIT'
   | 'EARLY_LEAVE'
-  | 'FORGOT_TO_CLOCK'
   | 'FORGOT_CLOCK_IN'
   | 'FORGOT_CLOCK_OUT';
-
-export type FieldMovementForgotDirection = 'IN' | 'OUT' | 'BOTH';
 
 export type FieldMovementStatus =
   | 'DRAFT'
@@ -527,7 +524,6 @@ export interface CreateFieldMovementEntryDto {
   destination?: string;
   departureTime?: string;
   returnTime?: string;
-  forgotDirection?: FieldMovementForgotDirection;
   notes?: string;
 }
 
@@ -546,7 +542,6 @@ export interface FieldMovementLogEntry {
   destination: string | null;
   departureTime: string | null;
   returnTime: string | null;
-  forgotDirection?: FieldMovementForgotDirection | null;
   notes: string | null;
   dailyLog?: {
     date: string;
