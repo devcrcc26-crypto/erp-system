@@ -635,6 +635,9 @@ model User {
   employeeType          EmployeeType?   @map("employee_type")
   educationLevel        EducationLevel? @map("education_level")
   fieldOfStudy          String?         @map("field_of_study")
+  /// Company hire / employment start date (payroll & attendance joiner window).
+  employmentDate        DateTime?       @map("employment_date") @db.Date
+  /// Career experience start (years-of-experience display), not company hire date.
   experienceStartDate   DateTime?       @map("experience_start_date") @db.Date
   emergencyContacts     Json?           @map("emergency_contacts")
   leavePolicyId         String?         @map("leave_policy_id")

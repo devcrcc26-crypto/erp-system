@@ -61,6 +61,7 @@ import {
   loadDeductionDataForMonth,
   matchedPublicHolidayForEmployee,
 } from '../utils/attendance-day-deduction.context';
+import { resolveEmploymentSegmentsForMonth } from '../../../payroll/application/utils/payroll-days.util';
 import {
   dayDeduction,
   employedCalendarDatesForContracts,
@@ -3649,6 +3650,7 @@ export class AttendanceService
         departmentId: true,
         nationality: true,
         attendanceMode: true,
+        employmentDate: true,
       },
     });
     if (!employee) {
@@ -3668,13 +3670,31 @@ export class AttendanceService
       select: { startDate: true, endDate: true },
       orderBy: { startDate: 'asc' },
     });
-    const contractSegments =
-      contracts.length > 0
-        ? contracts.map((c) => ({
-            startDate: c.startDate,
-            endDate: c.endDate,
-          }))
-        : [{ startDate: monthStart, endDate: null }];
+
+    let employmentEndDate: Date | null = null;
+    if (contracts.length === 0) {
+      const latestEnded = await this.prisma.employeeContract.findFirst({
+        where: {
+          companyId,
+          employeeId,
+          deletedAt: null,
+          OR: [{ endDate: { not: null } }, { terminatedAt: { not: null } }],
+        },
+        select: { endDate: true, terminatedAt: true },
+        orderBy: [{ terminatedAt: 'desc' }, { endDate: 'desc' }],
+      });
+      employmentEndDate =
+        latestEnded?.terminatedAt ?? latestEnded?.endDate ?? null;
+    }
+
+    const contractSegments = resolveEmploymentSegmentsForMonth({
+      overlappingContracts: contracts.map((c) => ({
+        startDate: c.startDate,
+        endDate: c.endDate,
+      })),
+      employmentDate: employee.employmentDate,
+      employmentEndDate,
+    });
 
     let dailyLogs = record.dailyLogs;
 

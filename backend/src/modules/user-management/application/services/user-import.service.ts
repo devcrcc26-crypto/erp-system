@@ -128,13 +128,14 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   experiencestartdate: 'experienceStartDate',
   'experience start date': 'experienceStartDate',
   experience_start_date: 'experienceStartDate',
-  'date of employment': 'experienceStartDate',
-  'date of employmt': 'experienceStartDate',
-  'date of employt': 'experienceStartDate',
-  'employment date': 'experienceStartDate',
-  'employment start date': 'experienceStartDate',
-  hiredate: 'experienceStartDate',
-  'hire date': 'experienceStartDate',
+  employmentdate: 'employmentDate',
+  'employment date': 'employmentDate',
+  'employment start date': 'employmentDate',
+  'date of employment': 'employmentDate',
+  'date of employmt': 'employmentDate',
+  'date of employt': 'employmentDate',
+  hiredate: 'employmentDate',
+  'hire date': 'employmentDate',
   leavepolicy: 'leavePolicy',
   'leave policy': 'leavePolicy',
   leave_policy: 'leavePolicy',
@@ -231,6 +232,7 @@ interface ParsedImportRow {
   tin?: string;
   educationLevel?: string;
   fieldOfStudy?: string;
+  employmentDate?: string;
   experienceStartDate?: string;
   leavePolicy?: string;
 }
@@ -289,6 +291,7 @@ export class UserImportService {
       { header: 'tin', key: 'tin', width: 14 },
       { header: 'educationLevel', key: 'educationLevel', width: 14 },
       { header: 'fieldOfStudy', key: 'fieldOfStudy', width: 18 },
+      { header: 'employmentDate', key: 'employmentDate', width: 18 },
       { header: 'experienceStartDate', key: 'experienceStartDate', width: 18 },
       { header: 'addressCountry', key: 'addressCountry', width: 14 },
       { header: 'addressRegion', key: 'addressRegion', width: 14 },
@@ -319,6 +322,7 @@ export class UserImportService {
       tin: '',
       educationLevel: 'BSC',
       fieldOfStudy: 'Civil Engineering',
+      employmentDate: '2024-03-01',
       experienceStartDate: '2015-01-01',
       addressCountry: 'Ethiopia',
       addressRegion: 'Addis Ababa',
@@ -348,6 +352,7 @@ export class UserImportService {
       tin: '',
       educationLevel: 'MSC',
       fieldOfStudy: '',
+      employmentDate: '',
       experienceStartDate: '',
       addressCountry: '',
       addressRegion: '',
@@ -412,9 +417,14 @@ export class UserImportService {
     ]);
     instructions.addRow(['fieldOfStudy', 'No', '']);
     instructions.addRow([
+      'employmentDate',
+      'No',
+      'YYYY-MM-DD or DD/MM/YYYY (aliases: hire date, date of employment)',
+    ]);
+    instructions.addRow([
       'experienceStartDate',
       'No',
-      'YYYY-MM-DD or DD/MM/YYYY (aliases: Date of Employment)',
+      'YYYY-MM-DD or DD/MM/YYYY (career experience since)',
     ]);
     instructions.addRow(['addressCountry', 'No', '']);
     instructions.addRow(['addressRegion', 'No', '']);
@@ -488,6 +498,7 @@ export class UserImportService {
           nationalId: row.nationalId,
           tin: row.tin,
           fieldOfStudy: row.fieldOfStudy,
+          employmentDate: row.employmentDate,
           experienceStartDate: row.experienceStartDate,
           addressCountry: row.addressCountry,
           addressRegion: row.addressRegion,
@@ -600,7 +611,9 @@ export class UserImportService {
       columnMap.forEach((field, colNumber) => {
         const cellValue = row.getCell(colNumber).value;
         const isDateField =
-          field === 'dateOfBirth' || field === 'experienceStartDate';
+          field === 'dateOfBirth' ||
+          field === 'employmentDate' ||
+          field === 'experienceStartDate';
         const value = isDateField
           ? this.cellToDateString(cellValue).trim()
           : this.cellToString(cellValue).trim();
@@ -680,6 +693,9 @@ export class UserImportService {
             break;
           case 'fieldOfStudy':
             parsed.fieldOfStudy = value || undefined;
+            break;
+          case 'employmentDate':
+            parsed.employmentDate = value || undefined;
             break;
           case 'experienceStartDate':
             parsed.experienceStartDate = value || undefined;
@@ -769,6 +785,7 @@ export class UserImportService {
       employeeType: row.employeeType as ImportRowPreviewDto['employeeType'],
       educationLevel: row.educationLevel as ImportRowPreviewDto['educationLevel'],
       dateOfBirth: row.dateOfBirth,
+      employmentDate: row.employmentDate,
       experienceStartDate: row.experienceStartDate,
       discipline: row.discipline as ImportRowPreviewDto['discipline'],
       nationalId: row.nationalId,
@@ -841,6 +858,18 @@ export class UserImportService {
     );
     if (!dateOfBirthResult.ok) {
       return { ...base, status: 'error', message: dateOfBirthResult.message };
+    }
+
+    const employmentDateResult = this.parseImportDate(
+      row.employmentDate,
+      'employmentDate',
+    );
+    if (!employmentDateResult.ok) {
+      return {
+        ...base,
+        status: 'error',
+        message: employmentDateResult.message,
+      };
     }
 
     const experienceStartDateResult = this.parseImportDate(
@@ -953,6 +982,7 @@ export class UserImportService {
       employeeType: employeeTypeResult.value,
       educationLevel: educationLevelResult.value,
       dateOfBirth: dateOfBirthResult.value,
+      employmentDate: employmentDateResult.value,
       experienceStartDate: experienceStartDateResult.value,
     };
 

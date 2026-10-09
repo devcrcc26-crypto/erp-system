@@ -266,3 +266,8 @@ export function experienceStartDateRules(t: Translate): Rule[] {
     }),
   ];
 }
+
+/** Same date rules as experience since (not future, not before DOB). */
+export function employmentDateRules(t: Translate): Rule[] {
+  return experienceStartDateRules(t);
+}

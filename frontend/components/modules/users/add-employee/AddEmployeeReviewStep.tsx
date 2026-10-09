@@ -458,6 +458,14 @@ export default function AddEmployeeReviewStep({
               }
             />
             <ReviewField
+              label={t('users.form.employmentDate')}
+              value={
+                values.employmentDate
+                  ? dayjs(values.employmentDate).format('YYYY-MM-DD')
+                  : '-'
+              }
+            />
+            <ReviewField
               label={t('users.form.department')}
               value={departmentName}
             />

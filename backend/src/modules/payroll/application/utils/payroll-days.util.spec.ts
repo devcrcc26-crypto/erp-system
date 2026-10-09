@@ -2,6 +2,7 @@ import {
   PAYROLL_MONTH_DAYS,
   allocateContractPayrollDays,
   employedPayrollDays,
+  resolveEmploymentSegmentsForMonth,
 } from './payroll-days.util';
 
 function d(year: number, month: number, day: number): Date {
@@ -44,6 +45,37 @@ describe('employedPayrollDays', () => {
 
   it('returns 0 when employment does not overlap the month', () => {
     expect(employedPayrollDays(8, 2026, d(2026, 9, 1), null).days).toBe(0);
+  });
+});
+
+describe('resolveEmploymentSegmentsForMonth', () => {
+  it('uses overlapping contracts when present', () => {
+    const segments = resolveEmploymentSegmentsForMonth({
+      overlappingContracts: [{ startDate: d(2026, 8, 1), endDate: null }],
+      employmentDate: d(2026, 8, 17),
+    });
+    expect(segments).toEqual([{ startDate: d(2026, 8, 1), endDate: null }]);
+  });
+
+  it('falls back to employmentDate when no contract (not whole month)', () => {
+    const segments = resolveEmploymentSegmentsForMonth({
+      overlappingContracts: [],
+      employmentDate: d(2026, 8, 17),
+    });
+    expect(segments).toEqual([{ startDate: d(2026, 8, 17), endDate: null }]);
+    expect(
+      employedPayrollDays(8, 2026, segments[0].startDate, segments[0].endDate)
+        .days,
+    ).toBe(14);
+  });
+
+  it('returns empty when no contract and no employmentDate', () => {
+    expect(
+      resolveEmploymentSegmentsForMonth({
+        overlappingContracts: [],
+        employmentDate: null,
+      }),
+    ).toEqual([]);
   });
 });
 

@@ -133,6 +133,7 @@ export interface UserProfile {
   gender?: 'MALE' | 'FEMALE' | null;
   educationLevel?: 'PHD' | 'MSC' | 'BSC' | 'DIPLOMA' | 'CERTIFICATE' | 'OTHER' | null;
   fieldOfStudy?: string | null;
+  employmentDate?: string | null;
   experienceStartDate?: string | null;
   addressCountry?: string | null;
   addressRegion?: string | null;
@@ -246,6 +247,7 @@ export interface User {
   employeeType?: EmployeeType | null;
   educationLevel?: EducationLevel | null;
   fieldOfStudy?: string | null;
+  employmentDate?: string | null;
   experienceStartDate?: string | null;
   yearsOfExperience?: number | null;
   emergencyContacts?: EmergencyContact[] | null;
@@ -336,6 +338,7 @@ export interface CreateUserRequest {
   employeeType?: EmployeeType;
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
+  employmentDate?: string;
   experienceStartDate?: string;
   emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
@@ -380,6 +383,7 @@ export interface UpdateUserRequest {
   employeeType?: EmployeeType;
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
+  employmentDate?: string;
   experienceStartDate?: string;
   emergencyContacts?: EmergencyContact[];
   bankName?: string;

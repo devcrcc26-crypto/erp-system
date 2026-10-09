@@ -127,6 +127,9 @@ export class ProfileResponseDto {
   @ApiProperty({ nullable: true })
   fieldOfStudy!: string | null;
 
+  @ApiProperty({ nullable: true, example: '2024-03-01' })
+  employmentDate!: string | null;
+
   @ApiProperty({ nullable: true, example: '2015-09-01' })
   experienceStartDate!: string | null;
 

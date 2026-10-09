@@ -124,7 +124,7 @@ interface UserMatch {
   lastName: string;
   employeeId: string | null;
   employeeType: EmployeeType | null;
-  experienceStartDate: Date | null;
+  employmentDate: Date | null;
 }
 
 interface PlannedContract {
@@ -816,7 +816,7 @@ async function main(): Promise<void> {
   console.log(`[seed] ${mode} against ${host}/${database}`);
   console.log(`[seed] Input: ${SHEET_PATH}`);
   console.log(`[seed] Directory: ${DIRECTORY_PATH}`);
-  console.log(`[seed] Employment date field: User.experienceStartDate`);
+  console.log(`[seed] Employment date field: User.employmentDate`);
 
   const sheetRows = await readSheetRows();
   const groups = groupEmployees(sheetRows);
@@ -833,7 +833,7 @@ async function main(): Promise<void> {
     contractsToCreateActive: 0,
     contractsToCreateSuperseded: 0,
     contractsSoftDeleted: 0,
-    employmentDateField: 'User.experienceStartDate',
+    employmentDateField: 'User.employmentDate';
     fuzzyCandidates: [],
     unmatchedNames: [],
     correctedDates: [],
@@ -859,7 +859,7 @@ async function main(): Promise<void> {
         lastName: true,
         employeeId: true,
         employeeType: true,
-        experienceStartDate: true,
+        employmentDate: true,
       },
     });
 
@@ -1311,7 +1311,7 @@ async function main(): Promise<void> {
           await tx.user.update({
             where: { id: entry.user.id },
             data: {
-              experienceStartDate: entry.employment,
+              employmentDate: entry.employment,
               updatedBy: ACTOR_ID,
             },
           });

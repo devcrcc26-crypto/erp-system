@@ -301,3 +301,33 @@ export function contractOverlapsMonth(
 ): boolean {
   return employedPayrollDays(month, year, contractStart, contractEnd).days > 0;
 }
+
+export interface EmploymentSegment {
+  startDate: Date;
+  endDate: Date | null;
+}
+
+/**
+ * Segments used for monthly paid/absent windows.
+ * When there is no overlapping contract, fall back to employmentDate (+ optional
+ * end/termination) instead of assuming the whole month.
+ */
+export function resolveEmploymentSegmentsForMonth(params: {
+  overlappingContracts: ReadonlyArray<EmploymentSegment>;
+  employmentDate: Date | null | undefined;
+  /** Latest known employment end (contract endDate or terminatedAt), if any. */
+  employmentEndDate?: Date | null;
+}): EmploymentSegment[] {
+  if (params.overlappingContracts.length > 0) {
+    return [...params.overlappingContracts];
+  }
+  if (!params.employmentDate) {
+    return [];
+  }
+  return [
+    {
+      startDate: params.employmentDate,
+      endDate: params.employmentEndDate ?? null,
+    },
+  ];
+}

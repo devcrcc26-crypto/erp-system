@@ -506,6 +506,7 @@ export class ProfileService {
       gender: user.gender,
       educationLevel: user.educationLevel,
       fieldOfStudy: user.fieldOfStudy,
+      employmentDate: toDateOnly(user.employmentDate),
       experienceStartDate: toDateOnly(user.experienceStartDate),
       addressCountry: user.addressCountry,
       addressRegion: user.addressRegion,

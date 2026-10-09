@@ -675,6 +675,11 @@ export default function EmployeeDetailPageContent({
                         ? t(`hr.employeeType.${user.employeeType}`)
                         : '-'}
                     </MetaItem>
+                    <MetaItem label={t('users.form.employmentDate')}>
+                      {user.employmentDate
+                        ? formatProjectDate(user.employmentDate)
+                        : '-'}
+                    </MetaItem>
                     <MetaItem label={t('common.department')}>
                       {displayValue(user.department?.name)}
                     </MetaItem>

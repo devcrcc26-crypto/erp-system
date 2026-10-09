@@ -383,6 +383,35 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(result.paidDays).toBe(0);
   });
 
+  it('no contract, employment date Aug 17, present → paid 14 (not 30)', () => {
+    const join = d(2026, 8, 17);
+    const daily = logsForMonth(8, 2026, join, null, (date) => dayInput(date));
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      // Same shape attendance uses after resolveEmploymentSegmentsForMonth
+      // when there is no overlapping contract.
+      contracts: [{ startDate: join, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext(),
+    });
+    expect(result.employedDays).toBe(14);
+    expect(result.paidDays).toBe(14);
+    expect(result.paidDays).not.toBe(30);
+  });
+
+  it('no contract and no employment window → paid 0 (not whole month)', () => {
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [],
+      dailyLogsByDate: new Map(),
+      context: emptyContext(),
+    });
+    expect(result.employedDays).toBe(0);
+    expect(result.paidDays).toBe(0);
+  });
+
   it('joined June 8, no scan on June 10 → paid 22', () => {
     const join = d(2026, 6, 8);
     const miss = d(2026, 6, 10);

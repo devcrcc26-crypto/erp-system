@@ -384,6 +384,17 @@ export class CreateUserDto {
   @MaxLength(FIELD_OF_STUDY_MAX)
   fieldOfStudy?: string;
 
+  @ApiPropertyOptional({
+    example: '2024-03-01',
+    description: 'Company hire / employment start date',
+  })
+  @IsOptional()
+  @IsOptionalText()
+  @IsDateString()
+  @IsNotFutureDate()
+  @IsNotBeforeProperty('dateOfBirth')
+  employmentDate?: string;
+
   @ApiPropertyOptional({ example: '2015-06-01' })
   @IsOptional()
   @IsOptionalText()

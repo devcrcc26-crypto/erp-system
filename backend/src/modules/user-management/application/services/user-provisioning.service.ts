@@ -41,6 +41,7 @@ export interface ProvisionInvitedUserInput {
   employeeType?: EmployeeType;
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
+  employmentDate?: Date | string;
   experienceStartDate?: Date | string;
   addressCountry?: string;
   addressRegion?: string;
@@ -320,6 +321,7 @@ export class UserProvisioningService {
     | 'employeeType'
     | 'educationLevel'
     | 'fieldOfStudy'
+    | 'employmentDate'
     | 'experienceStartDate'
     | 'addressCountry'
     | 'addressRegion'
@@ -340,6 +342,7 @@ export class UserProvisioningService {
       employeeType: input.employeeType ?? null,
       educationLevel: input.educationLevel ?? null,
       fieldOfStudy: input.fieldOfStudy?.trim() || null,
+      employmentDate: this.toNullableDate(input.employmentDate),
       experienceStartDate: this.toNullableDate(input.experienceStartDate),
       addressCountry: input.addressCountry?.trim() || null,
       addressRegion: input.addressRegion?.trim() || null,

@@ -121,6 +121,9 @@ export default function ProfileAccountDetails({
             <ProfileField label={t('users.form.employeeType')}>
               {profile.employeeType ? t(`hr.employeeType.${profile.employeeType}`) : '—'}
             </ProfileField>
+            <ProfileField label={t('users.form.employmentDate')}>
+              {formatDateWithPattern(profile.employmentDate, dateFormat)}
+            </ProfileField>
           </div>
         </ProfileSection>
 

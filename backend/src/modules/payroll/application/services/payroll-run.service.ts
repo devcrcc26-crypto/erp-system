@@ -31,6 +31,7 @@ import { resolveEntryAttendanceFlag } from '../utils/payroll-attendance-flag.uti
 import {
   allocateContractPayrollDays,
   employedPayrollDays,
+  resolveEmploymentSegmentsForMonth,
 } from '../utils/payroll-days.util';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import {
@@ -90,6 +91,7 @@ interface EmployeeSnapshot {
   employeeId: string | null;
   employeeType: EmployeeType | null;
   nationality: Nationality | null;
+  employmentDate: Date | null;
   bankName: string | null;
   bankAccountNumber: string | null;
 }
@@ -873,6 +875,7 @@ export class PayrollRunService {
         employeeId: true,
         employeeType: true,
         nationality: true,
+        employmentDate: true,
         bankName: true,
         bankAccountNumber: true,
       },
@@ -886,6 +889,7 @@ export class PayrollRunService {
 
     const [
       contracts,
+      endedContractsForEmployment,
       attendanceRecords,
       overtimeSheets,
       siteAssignments,
@@ -929,6 +933,20 @@ export class PayrollRunService {
           taxApplicable: true,
         },
         orderBy: { startDate: 'asc' },
+      }),
+      this.prisma.employeeContract.findMany({
+        where: {
+          companyId: ctx.companyId,
+          employeeId: { in: employeeIds },
+          deletedAt: null,
+          OR: [{ endDate: { not: null } }, { terminatedAt: { not: null } }],
+        },
+        select: {
+          employeeId: true,
+          endDate: true,
+          terminatedAt: true,
+        },
+        orderBy: [{ terminatedAt: 'desc' }, { endDate: 'desc' }],
       }),
       this.prisma.attendanceRecord.findMany({
         where: {
@@ -1022,6 +1040,18 @@ export class PayrollRunService {
       contractsByEmployee.set(contract.employeeId, list);
     }
 
+    /** Latest known end/termination per employee (for no-overlapping-contract windows). */
+    const employmentEndByEmployee = new Map<string, Date>();
+    for (const row of endedContractsForEmployment) {
+      if (employmentEndByEmployee.has(row.employeeId)) {
+        continue;
+      }
+      const end = row.terminatedAt ?? row.endDate;
+      if (end) {
+        employmentEndByEmployee.set(row.employeeId, end);
+      }
+    }
+
     const attendanceByEmployee = new Map<string, AttendanceSnapshot>();
     for (const record of attendanceRecords) {
       attendanceByEmployee.set(record.employeeId, record);
@@ -1069,6 +1099,7 @@ export class PayrollRunService {
           ctx,
           employee,
           contracts: overlapping,
+          employmentEndDate: employmentEndByEmployee.get(employee.id) ?? null,
           attendance,
           overtime: overtimeByEmployee.get(employee.id),
           siteAssignments: siteByEmployee.get(employee.id) ?? [],
@@ -1210,6 +1241,8 @@ export class PayrollRunService {
     ctx: ServiceContext;
     employee: EmployeeSnapshot;
     contracts: ContractSnapshot[];
+    /** End/termination when there is no overlapping contract this month. */
+    employmentEndDate?: Date | null;
     attendance: AttendanceSnapshot | undefined;
     overtime: OvertimeSnapshot | undefined;
     siteAssignments: Array<{
@@ -1258,18 +1291,27 @@ export class PayrollRunService {
     let totalEmployedDays = 0;
     const windows: DateWindow[] = [];
 
-    // Joiner/leaver status from the employee's employment span this month
-    // (earliest overlapping contract start → latest end), not each renewal alone.
+    // Joiner/leaver: overlapping contracts when present; otherwise employmentDate
+    // (+ optional end/termination). Never assume the whole month with no contract.
+    const fallbackSegments = resolveEmploymentSegmentsForMonth({
+      overlappingContracts: sorted.map((c) => ({
+        startDate: c.startDate,
+        endDate: c.endDate,
+      })),
+      employmentDate: employee.employmentDate,
+      employmentEndDate: input.employmentEndDate ?? null,
+    });
     const employmentStart =
       sorted.length > 0
         ? sorted.reduce(
-            (min, c) => (c.startDate.getTime() < min.getTime() ? c.startDate : min),
+            (min, c) =>
+              c.startDate.getTime() < min.getTime() ? c.startDate : min,
             sorted[0].startDate,
           )
-        : monthStart;
+        : (fallbackSegments[0]?.startDate ?? null);
     const employmentEnd = (() => {
       if (sorted.length === 0) {
-        return null;
+        return fallbackSegments[0]?.endDate ?? null;
       }
       let openEnded = false;
       let maxEnd: Date | null = null;
@@ -1285,25 +1327,30 @@ export class PayrollRunService {
       return openEnded ? null : maxEnd;
     })();
 
-    const employmentDays = employedPayrollDays(
-      run.month,
-      run.year,
-      employmentStart,
-      employmentEnd,
-    );
-    totalEmployedDays = employmentDays.days;
+    if (employmentStart) {
+      const employmentDays = employedPayrollDays(
+        run.month,
+        run.year,
+        employmentStart,
+        employmentEnd,
+      );
+      totalEmployedDays = employmentDays.days;
+    }
 
-    const allocations = allocateContractPayrollDays(
-      run.month,
-      run.year,
-      sorted.map((c) => ({
-        id: c.id,
-        startDate: c.startDate,
-        endDate: c.endDate,
-      })),
-      employmentStart,
-      employmentEnd,
-    );
+    const allocations =
+      sorted.length > 0 && employmentStart
+        ? allocateContractPayrollDays(
+            run.month,
+            run.year,
+            sorted.map((c) => ({
+              id: c.id,
+              startDate: c.startDate,
+              endDate: c.endDate,
+            })),
+            employmentStart,
+            employmentEnd,
+          )
+        : [];
     const contractById = new Map(sorted.map((c) => [c.id, c]));
 
     const lastDayOfMonth = monthEnd.getUTCDate();

@@ -1006,6 +1006,7 @@ export class UserManagementService {
       employeeType: true,
       educationLevel: true,
       fieldOfStudy: true,
+      employmentDate: true,
       experienceStartDate: true,
       emergencyContacts: true,
       leavePolicyId: true,
@@ -1092,6 +1093,7 @@ export class UserManagementService {
     employeeType?: CreateUserDto['employeeType'];
     educationLevel?: CreateUserDto['educationLevel'];
     fieldOfStudy?: string;
+    employmentDate?: string;
     experienceStartDate?: string;
     emergencyContacts?: CreateUserDto['emergencyContacts'];
     leavePolicyId?: string;
@@ -1118,6 +1120,7 @@ export class UserManagementService {
       employeeType: dto.employeeType,
       educationLevel: dto.educationLevel,
       fieldOfStudy: dto.fieldOfStudy,
+      employmentDate: dto.employmentDate,
       experienceStartDate: dto.experienceStartDate,
       emergencyContacts: dto.emergencyContacts,
       leavePolicyId: dto.leavePolicyId,
@@ -1152,6 +1155,7 @@ export class UserManagementService {
       employeeType?: CreateUserDto['employeeType'];
       educationLevel?: CreateUserDto['educationLevel'];
       fieldOfStudy?: string;
+      employmentDate?: string;
       experienceStartDate?: string;
       emergencyContacts?: CreateUserDto['emergencyContacts'];
       leavePolicyId?: string;
@@ -1211,6 +1215,9 @@ export class UserManagementService {
         educationLevel:
           profileInput.educationLevel as Prisma.UserUpdateInput['educationLevel'],
         fieldOfStudy: profileInput.fieldOfStudy?.trim() || null,
+        employmentDate: profileInput.employmentDate
+          ? this.parseDateOnly(profileInput.employmentDate)
+          : null,
         experienceStartDate: profileInput.experienceStartDate
           ? this.parseDateOnly(profileInput.experienceStartDate)
           : null,
@@ -1265,6 +1272,7 @@ export class UserManagementService {
       | 'employeeType'
       | 'educationLevel'
       | 'fieldOfStudy'
+      | 'employmentDate'
       | 'experienceStartDate'
       | 'emergencyContacts'
       | 'leavePolicyId'
@@ -1309,6 +1317,7 @@ export class UserManagementService {
         | 'employeeType'
         | 'educationLevel'
         | 'fieldOfStudy'
+        | 'employmentDate'
         | 'experienceStartDate'
         | 'emergencyContacts'
         | 'leavePolicyId'
@@ -1368,6 +1377,11 @@ export class UserManagementService {
     }
     if (rest.fieldOfStudy !== undefined) {
       data.fieldOfStudy = rest.fieldOfStudy?.trim() || null;
+    }
+    if (rest.employmentDate !== undefined) {
+      data.employmentDate = rest.employmentDate
+        ? this.parseDateOnly(rest.employmentDate)
+        : null;
     }
     if (rest.experienceStartDate !== undefined) {
       data.experienceStartDate = rest.experienceStartDate

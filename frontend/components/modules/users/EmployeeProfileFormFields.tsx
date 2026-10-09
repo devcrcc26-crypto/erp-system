@@ -28,6 +28,7 @@ import {
   disableExperienceDates,
   disableFutureDates,
   employeeIdRules,
+  employmentDateRules,
   experienceStartDateRules,
   fieldOfStudyRules,
   nationalIdRules,
@@ -50,6 +51,7 @@ export interface EmployeeProfileFormValues {
   employeeType?: EmployeeType;
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
+  employmentDate?: Dayjs;
   experienceStartDate?: Dayjs;
   emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
@@ -315,6 +317,17 @@ export function EmployeeProfileFormFields({
                 }))}
               />
             </Form.Item>
+            <Form.Item
+              label={t('users.form.employmentDate')}
+              name="employmentDate"
+              dependencies={['dateOfBirth']}
+              rules={employmentDateRules(t)}
+            >
+              <DatePicker
+                style={{ width: '100%' }}
+                disabledDate={disableExperienceDates(dateOfBirth)}
+              />
+            </Form.Item>
           </div>
         </SectionShell>
       ) : null}
@@ -531,6 +544,7 @@ export function buildEmployeeProfilePayload(
   | 'employeeType'
   | 'educationLevel'
   | 'fieldOfStudy'
+  | 'employmentDate'
   | 'experienceStartDate'
   | 'emergencyContacts'
   | 'leavePolicyId'
@@ -558,6 +572,7 @@ export function buildEmployeeProfilePayload(
     employeeType: values.employeeType,
     educationLevel: values.educationLevel,
     fieldOfStudy: values.fieldOfStudy?.trim() || undefined,
+    employmentDate: formatFormDate(values.employmentDate),
     experienceStartDate: formatFormDate(values.experienceStartDate),
     emergencyContacts: normalizeEmergencyContacts(values.emergencyContacts),
     leavePolicyId: values.leavePolicyId,
@@ -609,6 +624,7 @@ export function employeeProfileInitialValues(user?: User | null): EmployeeProfil
     employeeType: user.employeeType ?? undefined,
     educationLevel: user.educationLevel ?? undefined,
     fieldOfStudy: user.fieldOfStudy ?? undefined,
+    employmentDate: user.employmentDate ? dayjs(user.employmentDate) : undefined,
     experienceStartDate: user.experienceStartDate
       ? dayjs(user.experienceStartDate)
       : undefined,

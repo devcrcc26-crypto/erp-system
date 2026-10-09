@@ -251,14 +251,16 @@ async function main(): Promise<void> {
           id: true,
           firstName: true,
           lastName: true,
+          employmentDate: true,
           experienceStartDate: true,
         },
       });
       if (!user) {
         throw new Error(`User ${employeeCode} not found`);
       }
-      if (!user.experienceStartDate) {
-        throw new Error(`${employeeCode} has no experience_start_date`);
+      const hireDate = user.employmentDate ?? user.experienceStartDate;
+      if (!hireDate) {
+        throw new Error(`${employeeCode} has no employment_date`);
       }
 
       await prisma.user.update({
@@ -267,7 +269,7 @@ async function main(): Promise<void> {
       });
       gendersUpdated += 1;
 
-      const firstStart = toDateOnlyUtc(user.experienceStartDate);
+      const firstStart = toDateOnlyUtc(hireDate);
       const hasDual = row.contracts.length > 1;
       if (hasDual) dualEmployees += 1;
 

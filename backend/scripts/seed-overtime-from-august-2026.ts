@@ -150,6 +150,7 @@ interface UserMatch {
   middleName: string | null;
   lastName: string;
   employeeId: string | null;
+  employmentDate: Date | null;
   experienceStartDate: Date | null;
 }
 
@@ -826,6 +827,7 @@ async function main(): Promise<void> {
         middleName: true,
         lastName: true,
         employeeId: true,
+        employmentDate: true,
         experienceStartDate: true,
       },
     });
@@ -915,7 +917,10 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const employment = user.experienceStartDate ?? contracts[0]!.startDate;
+      const employment =
+        user.employmentDate ??
+        user.experienceStartDate ??
+        contracts[0]!.startDate;
       const windows: EmployeePlan['windows'] = [];
 
       if (group.length === 1) {

@@ -87,6 +87,9 @@ export class ImportRowPreviewDto {
   @ApiPropertyOptional()
   fieldOfStudy?: string;
 
+  @ApiPropertyOptional({ description: 'Company hire date ISO YYYY-MM-DD' })
+  employmentDate?: string;
+
   @ApiPropertyOptional({ description: 'ISO date YYYY-MM-DD' })
   experienceStartDate?: string;
 

@@ -229,6 +229,7 @@ export class LeavePolicyService {
       where: { id: employeeId, companyId, deletedAt: null },
       select: {
         leavePolicyId: true,
+        employmentDate: true,
         experienceStartDate: true,
         leavePolicy: {
           where: activeOnly({}),
@@ -253,6 +254,7 @@ export class LeavePolicyService {
     const serviceStart = await this.resolveServiceStartDate(
       employeeId,
       companyId,
+      employee.employmentDate,
       employee.experienceStartDate,
     );
     const yearsOfService = this.calculateYearsOfService(serviceStart, year);
@@ -271,6 +273,7 @@ export class LeavePolicyService {
       where: { id: employeeId, companyId, deletedAt: null },
       select: {
         leavePolicyId: true,
+        employmentDate: true,
         experienceStartDate: true,
         leavePolicy: {
           where: activeOnly({ isActive: true }),
@@ -285,6 +288,7 @@ export class LeavePolicyService {
     const serviceStart = await this.resolveServiceStartDate(
       employeeId,
       companyId,
+      employee.employmentDate,
       employee.experienceStartDate,
     );
     const yearsOfService = this.calculateYearsOfService(serviceStart, year);
@@ -339,6 +343,7 @@ export class LeavePolicyService {
     const employee = await this.prisma.user.findFirst({
       where: { id: employeeId, companyId, deletedAt: null },
       select: {
+        employmentDate: true,
         experienceStartDate: true,
         leavePolicy: {
           where: activeOnly({ isActive: true }),
@@ -355,6 +360,7 @@ export class LeavePolicyService {
       (await this.resolveServiceStartDate(
         employeeId,
         companyId,
+        employee.employmentDate,
         employee.experienceStartDate,
       ));
     const yearsOfService = this.calculateYearsOfService(serviceStart, year);
@@ -431,6 +437,7 @@ export class LeavePolicyService {
       },
       select: {
         id: true,
+        employmentDate: true,
         experienceStartDate: true,
       },
     });
@@ -454,7 +461,7 @@ export class LeavePolicyService {
         employee.id,
         companyId,
         year,
-        employee.experienceStartDate ?? undefined,
+        employee.employmentDate ?? employee.experienceStartDate ?? undefined,
       );
       refreshed += 1;
     }
@@ -566,7 +573,8 @@ export class LeavePolicyService {
   private async resolveServiceStartDate(
     employeeId: string,
     companyId: string,
-    experienceStartDate: Date | null,
+    employmentDate: Date | null,
+    experienceStartDate?: Date | null,
   ): Promise<Date | null> {
     const firstContract = await this.prisma.employeeContract.findFirst({
       where: {
@@ -577,7 +585,12 @@ export class LeavePolicyService {
       orderBy: { startDate: 'asc' },
       select: { startDate: true },
     });
-    return firstContract?.startDate ?? experienceStartDate ?? null;
+    return (
+      firstContract?.startDate ??
+      employmentDate ??
+      experienceStartDate ??
+      null
+    );
   }
 
   private assertValidRules(rules: LeavePolicyRuleDto[]): void {
