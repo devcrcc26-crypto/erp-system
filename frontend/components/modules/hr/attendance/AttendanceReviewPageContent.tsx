@@ -393,6 +393,78 @@ export default function AttendanceReviewPageContent({
         },
       },
       {
+        title: t('pages.hr.attendance.review.columns.earlyDeparture'),
+        key: 'earlyDeparture',
+        width: 140,
+        align: 'right',
+        render: (_: unknown, row: AttendanceRecord) => {
+          const count = toNumber(row.earlyDepartureCount);
+          const would = toNumber(row.earlyDepartureWouldDeductDays);
+          const deducted = toNumber(row.earlyDepartureDeductedDays);
+          if (count === 0 && would === 0 && deducted === 0) {
+            return <span className="erp-att-dash">—</span>;
+          }
+          return (
+            <div className="flex flex-col items-end gap-0.5 text-[12px]">
+              <span className="erp-att-num">{count}</span>
+              {would > 0 ? (
+                <span className="erp-att-stat-hint text-amber-700">
+                  {t('pages.hr.attendance.review.wouldDeduct', {
+                    days: formatNumber(would),
+                  })}
+                </span>
+              ) : null}
+              {deducted > 0 ? (
+                <span className="erp-att-stat-hint text-red-700">
+                  {t('pages.hr.attendance.review.deducted', {
+                    days: formatNumber(deducted),
+                  })}
+                </span>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        title: t('pages.hr.attendance.review.columns.fieldMovements'),
+        key: 'approvedFieldMovements',
+        width: 110,
+        align: 'right',
+        render: (_: unknown, row: AttendanceRecord) => {
+          const value = toNumber(row.approvedFieldMovementCount);
+          return value > 0 ? (
+            <span className="erp-att-num">{value}</span>
+          ) : (
+            <span className="erp-att-dash">—</span>
+          );
+        },
+      },
+      {
+        title: t('pages.hr.attendance.review.columns.forgotToClock'),
+        key: 'forgotToClock',
+        width: 120,
+        align: 'right',
+        render: (_: unknown, row: AttendanceRecord) => {
+          const value = toNumber(row.forgotToClockCount);
+          const threshold =
+            row.forgotToClockFlagThreshold ?? 3;
+          if (value === 0) {
+            return <span className="erp-att-dash">—</span>;
+          }
+          return (
+            <Tag
+              color={value >= threshold ? 'error' : 'default'}
+              className="m-0 rounded-full"
+            >
+              {value}
+              {value >= threshold
+                ? ` ≥ ${threshold}`
+                : ''}
+            </Tag>
+          );
+        },
+      },
+      {
         title: t('pages.hr.attendance.review.columns.flaggedDays'),
         key: 'flaggedDays',
         width: 160,

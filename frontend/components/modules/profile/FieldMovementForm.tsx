@@ -40,11 +40,13 @@ const REASON_OPTIONS: Record<
 > = {
   MISSING_CLOCK_IN: [
     { value: 'FIELD_VISIT', label: 'I was on a field / site visit' },
+    { value: 'FORGOT_TO_CLOCK', label: 'I forgot to clock (in / out / both)' },
     { value: 'FORGOT_CLOCK_IN', label: 'I forgot to clock in' },
   ],
   MISSING_CLOCK_OUT: [
     { value: 'FIELD_VISIT', label: 'I left for a field / site visit' },
     { value: 'EARLY_LEAVE', label: 'I left early' },
+    { value: 'FORGOT_TO_CLOCK', label: 'I forgot to clock (in / out / both)' },
     { value: 'FORGOT_CLOCK_OUT', label: 'I forgot to clock out' },
   ],
   EARLY_LEAVE: [
@@ -64,6 +66,7 @@ const FLAG_LABELS: Record<AttendanceDayFlag, string> = {
 const REASON_SUMMARY: Record<FieldMovementReason, string> = {
   FIELD_VISIT: 'Field visit',
   EARLY_LEAVE: 'Left early',
+  FORGOT_TO_CLOCK: 'Forgot to clock',
   FORGOT_CLOCK_IN: 'Forgot to clock in',
   FORGOT_CLOCK_OUT: 'Forgot to clock out',
 };
@@ -75,6 +78,10 @@ const BULK_REASON_CATALOG: Array<{
   {
     value: 'FIELD_VISIT',
     label: '🏗️ Field visit (applies to all flag types)',
+  },
+  {
+    value: 'FORGOT_TO_CLOCK',
+    label: '⏰ Forgot to clock (missing in / out days)',
   },
   {
     value: 'FORGOT_CLOCK_IN',
@@ -96,6 +103,7 @@ interface EntryDraft {
   departureTime?: string;
   didReturn?: boolean;
   returnTime?: string;
+  forgotDirection?: 'IN' | 'OUT' | 'BOTH';
   notes?: string;
   earlyLeaveReason?: string;
 }
@@ -396,17 +404,27 @@ export default function FieldMovementForm({
   function buildEntries(): CreateFieldMovementEntryDto[] {
     return selectedDays.map((day) => {
       const draft = entryDrafts[day.id]!;
+      const reason = draft.reason!;
       return {
         dailyLogId: day.id,
-        reason: draft.reason!,
+        reason,
         destination: draft.destination?.trim() || undefined,
         departureTime: draft.departureTime || undefined,
         returnTime:
-          draft.reason === 'FIELD_VISIT' && draft.didReturn
+          reason === 'FIELD_VISIT' && draft.didReturn
             ? draft.returnTime || undefined
             : draft.returnTime || undefined,
+        forgotDirection:
+          reason === 'FORGOT_TO_CLOCK'
+            ? draft.forgotDirection ??
+              (day.flag === 'MISSING_CLOCK_IN'
+                ? 'IN'
+                : day.flag === 'MISSING_CLOCK_OUT'
+                  ? 'OUT'
+                  : 'BOTH')
+            : undefined,
         notes:
-          draft.reason === 'EARLY_LEAVE'
+          reason === 'EARLY_LEAVE'
             ? draft.earlyLeaveReason?.trim() || draft.notes?.trim() || undefined
             : draft.notes?.trim() || undefined,
       };

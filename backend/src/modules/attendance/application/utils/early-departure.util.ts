@@ -107,7 +107,8 @@ export function evaluateEarlyDeparture(input: {
     };
   }
 
-  if (minutesEarly < deductAt) {
+  // end − 60 <= OUT < end − 15 → flag only (exactly 60 min early is still FLAG).
+  if (minutesEarly <= deductAt) {
     if (input.fieldMovement === 'PENDING') {
       return {
         band: 'PENDING_APPROVAL',
@@ -126,7 +127,7 @@ export function evaluateEarlyDeparture(input: {
     };
   }
 
-  // Over 1h early: pending FM does not waive — still deduct (even in REPORT_ONLY)
+  // OUT < end − 60: pending FM does not waive — still deduct (even in REPORT_ONLY)
   // until approved; REPORT_ONLY without FM only stores would-deduct.
   if (input.fieldMovement === 'PENDING') {
     return {

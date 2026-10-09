@@ -804,12 +804,19 @@
             "onLeaveHint": "Approved leave days this month"
           },
           "importMeta": "Imported on {{date}} from {{file}} · {{count}} employees processed",
+          "wouldDeduct": "Would deduct {{days}}d (not applied)",
+          "deducted": "Deducted {{days}}d",
+          "earlyDeparturePending": "Early departure — approval pending",
           "columns": {
             "flaggedDays": "Flagged Days",
             "resolved": "Resolved",
             "status": "Status",
             "flag": "Flag",
-            "flagResolved": "Resolved"
+            "flagResolved": "Resolved",
+            "siteDays": "Site",
+            "earlyDeparture": "Early departure",
+            "fieldMovements": "Field movements",
+            "forgotToClock": "Forgot to clock"
           },
           "flagStatus": {
             "none": "No Flags",
@@ -837,13 +844,6 @@
             "alsoOnSite": "also on site",
             "LEAVE": "Leave",
             "FIELD_MOVEMENT_PENDING": "Field movement pending"
-          },
-          "columns": {
-            "siteDays": "Site",
-            "flag": "Flag",
-            "flaggedDays": "Flagged days",
-            "resolved": "Resolved",
-            "status": "Status"
           }
         },
         "importModal": {

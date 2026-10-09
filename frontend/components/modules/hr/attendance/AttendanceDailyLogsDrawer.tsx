@@ -549,6 +549,19 @@ export default function AttendanceDailyLogsDrawer({
                   {t('pages.hr.attendance.dailyDrawer.noFieldMovement')}
                 </span>
               ) : null}
+              {row.earlyDepartureBand === 'PENDING_APPROVAL' ? (
+                <span className="text-xs text-amber-700">
+                  {t('pages.hr.attendance.review.earlyDeparturePending')}
+                </span>
+              ) : null}
+              {Number(row.earlyDepartureWouldDeduct ?? 0) > 0 &&
+              Number(row.dayDeduction ?? 0) === 0 ? (
+                <span className="text-xs text-amber-700">
+                  {t('pages.hr.attendance.review.wouldDeduct', {
+                    days: Number(row.earlyDepartureWouldDeduct),
+                  })}
+                </span>
+              ) : null}
             </div>
           );
         },
