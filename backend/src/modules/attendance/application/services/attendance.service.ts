@@ -25,6 +25,7 @@ import {
   AttendanceMissingResolution,
   AttendanceMode,
   AttendanceUnmatchedStatus,
+  Nationality,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -67,6 +68,14 @@ import {
   employedCalendarDatesForContracts,
   summarizeMonthAbsence,
 } from '../utils/day-deduction.util';
+import { summarizeMissingEmployeeCoverage } from '../utils/attendance-import-coverage.util';
+import {
+  clearAttendanceMonthRecalcStale,
+  isAttendanceMonthApproved,
+  isPayrollMonthLocked,
+  markAttendanceMonthRecalcStale,
+  markPayrollAttendanceSnapshotStale,
+} from '../utils/attendance-recalc-policy.util';
 import { dateToYyyyMmDd } from './attendance-leave.util';
 import type { AttendanceDailyRaw } from '../../utils/attendance-excel.parser';
 import { parseAttendanceExcel } from '../../utils/attendance-excel.parser';
@@ -122,7 +131,15 @@ export interface AttendanceMissingEmployee {
    */
   notEnrolledMonth?: number;
   /** Pre-selected resolution in the preview. */
-  suggestedResolution?: 'NEEDS_ENROLMENT';
+  suggestedResolution?: 'NEEDS_ENROLMENT' | 'COVERED';
+  totalWorkingDays?: number;
+  coveredWorkingDays?: number;
+  fullyCovered?: boolean;
+  coverageLabel?: string | null;
+  coverageTag?: 'SITE' | 'WFH' | 'LEAVE' | 'MIXED' | null;
+  siteCoverageDays?: number;
+  wfhCoverageDays?: number;
+  leaveCoverageDays?: number;
 }
 
 export interface AwaitingEnrolmentEmployee extends AwaitingEnrolmentEntry {
@@ -401,6 +418,9 @@ export class AttendanceService
         lastName: true,
         employeeId: true,
         attendanceMode: true,
+        departmentId: true,
+        nationality: true,
+        employmentDate: true,
         department: { select: { name: true } },
       },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
@@ -432,6 +452,21 @@ export class AttendanceService
       enrolmentMonthsByEmployee.set(record.employeeId, list);
     }
 
+    const coverageByEmployee =
+      missingEmployees.length > 0
+        ? await this.buildMissingCoverageByEmployee(
+            companyId,
+            missingEmployees.map((e) => ({
+              id: e.id,
+              departmentId: e.departmentId,
+              nationality: e.nationality,
+              employmentDate: e.employmentDate,
+            })),
+            month,
+            year,
+          )
+        : new Map();
+
     const missingFromAttendance: AttendanceMissingEmployee[] =
       missingEmployees.map((employee) => {
         const previous = previousNotEnrolledMonths(
@@ -439,6 +474,8 @@ export class AttendanceService
           year,
           enrolmentMonthsByEmployee.get(employee.id) ?? [],
         );
+        const coverage = coverageByEmployee.get(employee.id);
+        const fullyCovered = coverage?.fullyCovered === true;
         return {
           id: employee.id,
           name: [employee.firstName, employee.middleName, employee.lastName]
@@ -448,12 +485,26 @@ export class AttendanceService
           employeeId: employee.employeeId,
           departmentName: employee.department?.name ?? null,
           attendanceMode: employee.attendanceMode,
-          ...(previous > 0
+          ...(coverage
             ? {
-                notEnrolledMonth: previous + 1,
-                suggestedResolution: 'NEEDS_ENROLMENT' as const,
+                totalWorkingDays: coverage.totalWorkingDays,
+                coveredWorkingDays: coverage.coveredWorkingDays,
+                fullyCovered: coverage.fullyCovered,
+                coverageLabel: coverage.coverageLabel,
+                coverageTag: coverage.coverageTag,
+                siteCoverageDays: coverage.siteDays,
+                wfhCoverageDays: coverage.wfhDays,
+                leaveCoverageDays: coverage.leaveDays,
               }
             : {}),
+          ...(fullyCovered
+            ? { suggestedResolution: 'COVERED' as const }
+            : previous > 0
+              ? {
+                  notEnrolledMonth: previous + 1,
+                  suggestedResolution: 'NEEDS_ENROLMENT' as const,
+                }
+              : {}),
         };
       });
 
@@ -1057,6 +1108,26 @@ export class AttendanceService
       });
     }
 
+    for (const missing of missingFromAttendance) {
+      if (!missing.fullyCovered || takenEmployeeIds.has(missing.id)) {
+        continue;
+      }
+      claimEmployee(missing.id);
+      rowsToImport.push({
+        attendanceName: missing.name,
+        attendanceId: missing.employeeId ?? '-',
+        matchedEmployeeId: missing.id,
+        matchedEmployeeName: missing.name,
+        matchedEmployeeErpId: missing.employeeId,
+        confidence: 'MANUAL',
+        score: 100,
+        identityId: null,
+        matchNote: null,
+        matchMethod: AttendanceMatchMethod.COVERED,
+        data: { payableHours: 0, dailyData: [] },
+      });
+    }
+
     for (const action of missingActions) {
       if (takenEmployeeIds.has(action.employeeId)) {
         continue;
@@ -1380,13 +1451,15 @@ export class AttendanceService
           .map((employee) => {
             const action = missingActionByUser.get(employee.id);
             const resolution =
-              action?.resolution === 'NEEDS_ENROLMENT'
-                ? AttendanceMissingResolution.NEEDS_ENROLMENT
-                : action?.resolution === 'MARKED_EXEMPT'
-                  ? AttendanceMissingResolution.MARKED_EXEMPT
-                  : action?.resolution === 'MANUAL_PRESENT'
-                    ? AttendanceMissingResolution.MANUAL_PRESENT
-                    : AttendanceMissingResolution.PENDING;
+              employee.fullyCovered
+                ? AttendanceMissingResolution.COVERED
+                : action?.resolution === 'NEEDS_ENROLMENT'
+                  ? AttendanceMissingResolution.NEEDS_ENROLMENT
+                  : action?.resolution === 'MARKED_EXEMPT'
+                    ? AttendanceMissingResolution.MARKED_EXEMPT
+                    : action?.resolution === 'MANUAL_PRESENT'
+                      ? AttendanceMissingResolution.MANUAL_PRESENT
+                      : AttendanceMissingResolution.PENDING;
             const isResolved =
               resolution !== AttendanceMissingResolution.PENDING;
             return {
@@ -1396,10 +1469,12 @@ export class AttendanceService
               userId: employee.id,
               resolution,
               note:
-                action?.note?.trim() ||
-                (resolution === AttendanceMissingResolution.NEEDS_ENROLMENT
-                  ? NOT_ENROLLED_RECORD_NOTE
-                  : null),
+                employee.fullyCovered
+                  ? (employee.coverageLabel ?? 'Fully covered by schedule')
+                  : action?.note?.trim() ||
+                    (resolution === AttendanceMissingResolution.NEEDS_ENROLMENT
+                      ? NOT_ENROLLED_RECORD_NOTE
+                      : null),
               resolvedBy: isResolved ? userId : null,
               resolvedAt: isResolved ? now : null,
             };
@@ -1408,6 +1483,25 @@ export class AttendanceService
         // Also persist resolved missing employees who received a record this
         // import (Exempt / Present this month / Needs enrolment) so the review
         // page shows the outcome.
+        for (const missing of missingFromAttendance) {
+          if (!missing.fullyCovered) {
+            continue;
+          }
+          if (missingRows.some((row) => row.userId === missing.id)) {
+            continue;
+          }
+          missingRows.push({
+            id: randomUUID(),
+            companyId,
+            batchId: batch.id,
+            userId: missing.id,
+            resolution: AttendanceMissingResolution.COVERED,
+            note: missing.coverageLabel ?? 'Fully covered by schedule',
+            resolvedBy: userId,
+            resolvedAt: now,
+          });
+        }
+
         for (const action of missingActions) {
           if (missingRows.some((row) => row.userId === action.employeeId)) {
             continue;
@@ -1642,10 +1736,26 @@ export class AttendanceService
       siteSummaryByRecord.set(log.attendanceRecordId, list);
     }
 
+    const wfhGroups =
+      recordIds.length > 0
+        ? await this.prisma.attendanceDailyLog.groupBy({
+            by: ['attendanceRecordId'],
+            where: {
+              attendanceRecordId: { in: recordIds },
+              dayStatus: 'WORK_FROM_HOME',
+            },
+            _count: { _all: true },
+          })
+        : [];
+    const wfhDaysByRecord = new Map(
+      wfhGroups.map((g) => [g.attendanceRecordId, g._count._all]),
+    );
+
     const enriched = rows.map((row) => ({
       ...row,
       leaveDaysThisMonth: leaveDaysByRecord.get(row.id) ?? 0,
       siteDaysThisMonth: siteSummaryByRecord.get(row.id) ?? [],
+      workFromHomeDaysThisMonth: wfhDaysByRecord.get(row.id) ?? 0,
     }));
 
     return buildPaginatedResult(enriched, total, page, limit);
@@ -2421,15 +2531,31 @@ export class AttendanceService
       );
     }
 
-    return this.prisma.attendanceMonthlyApproval.update({
+    const unlocked = await this.prisma.attendanceMonthlyApproval.update({
       where: { id: dto.monthlyApprovalId },
       data: {
         status: 'UNLOCKED',
         unlockedAt: new Date(),
         unlockedBy: userId,
         unlockReason: dto.unlockReason,
-      },
+        attendanceRecalcStale: false,
+      } as Prisma.AttendanceMonthlyApprovalUpdateInput,
     });
+
+    // Apply any site/WFH/leave approvals that could not run while locked.
+    await this.recalculateCompanyAttendanceMonth(
+      companyId,
+      approval.month,
+      approval.year,
+    );
+    await clearAttendanceMonthRecalcStale(
+      this.prisma,
+      companyId,
+      approval.month,
+      approval.year,
+    );
+
+    return unlocked;
   }
 
   /**
@@ -4103,6 +4229,12 @@ export class AttendanceService
       const status = record.importBatch.monthlyApproval?.status;
       if (status === 'APPROVED') {
         skippedLockedMonths += 1;
+        await markAttendanceMonthRecalcStale(
+          this.prisma,
+          companyId,
+          record.month,
+          record.year,
+        );
         continue;
       }
 
@@ -4291,7 +4423,37 @@ export class AttendanceService
     month: number,
     year: number,
     employeeId?: string,
-  ): Promise<{ updated: number }> {
+  ): Promise<{
+    updated: number;
+    skippedPayrollLocked?: boolean;
+    skippedAttendanceApproved?: boolean;
+  }> {
+    if (await isPayrollMonthLocked(this.prisma, companyId, month, year)) {
+      await markPayrollAttendanceSnapshotStale(
+        this.prisma,
+        companyId,
+        month,
+        year,
+      );
+      return { updated: 0, skippedPayrollLocked: true };
+    }
+
+    if (await isAttendanceMonthApproved(this.prisma, companyId, month, year)) {
+      await markAttendanceMonthRecalcStale(
+        this.prisma,
+        companyId,
+        month,
+        year,
+      );
+      await markPayrollAttendanceSnapshotStale(
+        this.prisma,
+        companyId,
+        month,
+        year,
+      );
+      return { updated: 0, skippedAttendanceApproved: true };
+    }
+
     const records = await this.prisma.attendanceRecord.findMany({
       where: {
         companyId,
@@ -4311,7 +4473,216 @@ export class AttendanceService
       );
       updated += 1;
     }
+
+    if (updated > 0) {
+      await markPayrollAttendanceSnapshotStale(
+        this.prisma,
+        companyId,
+        month,
+        year,
+      );
+      await clearAttendanceMonthRecalcStale(
+        this.prisma,
+        companyId,
+        month,
+        year,
+      );
+    }
+
     return { updated };
+  }
+
+  /**
+   * Loads approved site / WFH / leave coverage for missing-from-file employees.
+   */
+  private async buildMissingCoverageByEmployee(
+    companyId: string,
+    employees: ReadonlyArray<{
+      id: string;
+      departmentId: string | null;
+      nationality: Nationality | null;
+      employmentDate: Date | null;
+    }>,
+    month: number,
+    year: number,
+  ): Promise<
+    Map<
+      string,
+      ReturnType<typeof summarizeMissingEmployeeCoverage>
+    >
+  > {
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const monthEnd = new Date(Date.UTC(year, month, 0));
+    const employeeIds = employees.map((e) => e.id);
+
+    const [holidays, wfhDays, leaveRows, siteRows] = await Promise.all([
+      this.prisma.publicHoliday.findMany({
+        where: { companyId, isActive: true, deletedAt: null },
+        select: {
+          name: true,
+          date: true,
+          isRecurring: true,
+          appliesToNationality: true,
+        },
+      }),
+      this.prisma.workFromHomeDay.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          date: { gte: monthStart, lte: monthEnd },
+        },
+        select: {
+          date: true,
+          scope: true,
+          departmentIds: true,
+          employeeIds: true,
+        },
+      }),
+      this.prisma.leaveRequest.findMany({
+        where: {
+          companyId,
+          employeeId: { in: employeeIds },
+          status: 'APPROVED',
+          // UNPAID leave is absence, not schedule coverage for COVERED.
+          leaveType: { not: 'UNPAID' },
+          deletedAt: null,
+          periods: {
+            some: {
+              startDate: { lte: monthEnd },
+              endDate: { gte: monthStart },
+            },
+          },
+        },
+        select: {
+          employeeId: true,
+          periods: { select: { startDate: true, endDate: true } },
+        },
+      }),
+      this.prisma.siteAssignment.findMany({
+        where: {
+          companyId,
+          employeeId: { in: employeeIds },
+          status: 'APPROVED',
+          deletedAt: null,
+          startDate: { lte: monthEnd },
+          endDate: { gte: monthStart },
+        },
+        select: {
+          employeeId: true,
+          startDate: true,
+          endDate: true,
+          siteName: true,
+        },
+      }),
+    ]);
+
+    const leaveKeysByEmployee = new Map<string, Set<string>>();
+    for (const leave of leaveRows) {
+      const set = leaveKeysByEmployee.get(leave.employeeId) ?? new Set();
+      for (const period of leave.periods) {
+        const cursor = new Date(
+          Math.max(period.startDate.getTime(), monthStart.getTime()),
+        );
+        const end = Math.min(period.endDate.getTime(), monthEnd.getTime());
+        while (cursor.getTime() <= end) {
+          set.add(dateToYyyyMmDd(cursor));
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+      }
+      leaveKeysByEmployee.set(leave.employeeId, set);
+    }
+
+    const sitesByEmployee = new Map<
+      string,
+      Array<{ startDate: Date; endDate: Date; siteName: string }>
+    >();
+    for (const site of siteRows) {
+      const list = sitesByEmployee.get(site.employeeId) ?? [];
+      list.push({
+        startDate: site.startDate,
+        endDate: site.endDate,
+        siteName: site.siteName,
+      });
+      sitesByEmployee.set(site.employeeId, list);
+    }
+
+    const contractsByEmployee = await this.prisma.employeeContract.findMany({
+      where: {
+        companyId,
+        employeeId: { in: employeeIds },
+        deletedAt: null,
+        startDate: { lte: monthEnd },
+        OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+      },
+      select: {
+        employeeId: true,
+        startDate: true,
+        endDate: true,
+        terminatedAt: true,
+      },
+      orderBy: { startDate: 'asc' },
+    });
+
+    const contractsGrouped = new Map<
+      string,
+      Array<{ startDate: Date; endDate: Date | null }>
+    >();
+    for (const contract of contractsByEmployee) {
+      const list = contractsGrouped.get(contract.employeeId) ?? [];
+      list.push({
+        startDate: contract.startDate,
+        endDate: contract.endDate,
+      });
+      contractsGrouped.set(contract.employeeId, list);
+    }
+
+    const result = new Map<
+      string,
+      ReturnType<typeof summarizeMissingEmployeeCoverage>
+    >();
+
+    for (const employee of employees) {
+      const overlapping = contractsGrouped.get(employee.id) ?? [];
+      let employmentEndDate: Date | null = null;
+      if (overlapping.length === 0) {
+        const latestEnded = await this.prisma.employeeContract.findFirst({
+          where: {
+            companyId,
+            employeeId: employee.id,
+            deletedAt: null,
+            OR: [{ endDate: { not: null } }, { terminatedAt: { not: null } }],
+          },
+          select: { endDate: true, terminatedAt: true },
+          orderBy: [{ terminatedAt: 'desc' }, { endDate: 'desc' }],
+        });
+        employmentEndDate =
+          latestEnded?.terminatedAt ?? latestEnded?.endDate ?? null;
+      }
+
+      const segments = resolveEmploymentSegmentsForMonth({
+        overlappingContracts: overlapping,
+        employmentDate: employee.employmentDate,
+        employmentEndDate,
+      });
+
+      const summary = summarizeMissingEmployeeCoverage({
+        month,
+        year,
+        contractSegments: segments,
+        employee: {
+          id: employee.id,
+          departmentId: employee.departmentId,
+          nationality: employee.nationality,
+        },
+        holidays,
+        approvedSites: sitesByEmployee.get(employee.id) ?? [],
+        wfhDays,
+        leaveDateKeys: leaveKeysByEmployee.get(employee.id) ?? new Set(),
+      });
+      result.set(employee.id, summary);
+    }
+
+    return result;
   }
 
 }

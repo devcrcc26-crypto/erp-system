@@ -32,6 +32,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AttendanceDailyLogsDrawer from '@/components/modules/hr/attendance/AttendanceDailyLogsDrawer';
+import AttendanceMissingScheduleDrawer from '@/components/modules/hr/attendance/AttendanceMissingScheduleDrawer';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -182,6 +183,10 @@ export default function AttendanceReviewPageContent({
   const [missingResolvingId, setMissingResolvingId] = useState<string | null>(
     null,
   );
+  const [missingScheduleTarget, setMissingScheduleTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const monthName = t(`hr.months.${month}`);
   const listQuery = useAttendanceRecordsAll({ month, year }, canViewHr);
@@ -333,6 +338,39 @@ export default function AttendanceReviewPageContent({
           }
           return (
             <span className="erp-att-num">{formatNumber(leaveDays)}</span>
+          );
+        },
+      },
+      {
+        title: t('pages.hr.attendance.columns.scheduleCoverage'),
+        key: 'scheduleCoverage',
+        width: 180,
+        render: (_: unknown, row: AttendanceRecord) => {
+          if (row.matchMethod === 'COVERED') {
+            return (
+              <Tag color="blue" className="m-0 rounded-full">
+                {t('pages.hr.attendance.importModal.matchMethodCovered')}
+              </Tag>
+            );
+          }
+          const siteDays = row.siteDaysThisMonth ?? [];
+          const wfhDays = row.workFromHomeDaysThisMonth ?? 0;
+          if (siteDays.length === 0 && wfhDays === 0) {
+            return <span className="erp-att-dash">—</span>;
+          }
+          return (
+            <div className="flex flex-col gap-0.5 text-[12px]">
+              {siteDays.map((entry) => (
+                <Tag key={entry.siteName} className="m-0 w-fit">
+                  {entry.siteName}: {entry.days}d
+                </Tag>
+              ))}
+              {wfhDays > 0 ? (
+                <Tag color="geekblue" className="m-0 w-fit">
+                  WFH: {wfhDays}d
+                </Tag>
+              ) : null}
+            </div>
           );
         },
       },
@@ -653,6 +691,15 @@ export default function AttendanceReviewPageContent({
             title={banner.message}
           />
         ) : null}
+
+        {approval?.attendanceRecalcStale ? (
+          <Alert
+            type="warning"
+            showIcon
+            icon={<WarningOutlined />}
+            title={t('pages.hr.attendance.review.banner.recalcStale')}
+          />
+        ) : null}
       </section>
 
       <div className="erp-users-stat-bar">
@@ -751,6 +798,22 @@ export default function AttendanceReviewPageContent({
                       row.user.employeeId ?? '—',
                   },
                   {
+                    title: t(
+                      'pages.hr.attendance.importModal.missingCoverageColumn',
+                    ),
+                    key: 'coverage',
+                    width: 200,
+                    render: (_: unknown, row: AttendanceImportMissing) => {
+                      const note = row.note?.trim();
+                      if (note) {
+                        return (
+                          <Tag className="m-0 rounded-full">{note}</Tag>
+                        );
+                      }
+                      return '—';
+                    },
+                  },
+                  {
                     title: t('pages.hr.attendance.importModal.colPresence'),
                     key: 'actions',
                     width: 360,
@@ -844,15 +907,21 @@ export default function AttendanceReviewPageContent({
                             }));
                           }}
                         />
-                        <Link
-                          href="/approvals/new/site-assignment"
-                          target="_blank"
-                          className="text-[12px]"
+                        <Button
+                          type="link"
+                          size="small"
+                          className="h-auto p-0 text-[12px]"
+                          onClick={() => {
+                            setMissingScheduleTarget({
+                              id: row.userId,
+                              name: `${row.user.firstName} ${row.user.lastName}`.trim(),
+                            });
+                          }}
                         >
                           {t(
                             'pages.hr.attendance.importModal.submitSiteAssignment',
                           )}
-                        </Link>
+                        </Button>
                       </Space>
                     ),
                   },
@@ -905,6 +974,21 @@ export default function AttendanceReviewPageContent({
         canCorrect={canCorrect}
         onClose={() => setDrawerEmployeeId(undefined)}
       />
+
+      {missingScheduleTarget ? (
+        <AttendanceMissingScheduleDrawer
+          open
+          employeeId={missingScheduleTarget.id}
+          employeeName={missingScheduleTarget.name}
+          month={month}
+          year={year}
+          onClose={() => setMissingScheduleTarget(null)}
+          onSubmitted={() => {
+            void batchDetailsQuery.refetch();
+            void listQuery.refetch();
+          }}
+        />
+      ) : null}
 
       <Modal
         rootClassName="erp-att-correct-modal"

@@ -37,6 +37,10 @@ export class SubmitSiteAssignmentDto {
 
   @IsOptional()
   autoApproveTier?: boolean;
+
+  /** Set when HR submits from the not-in-attendance-file flow. */
+  @IsOptional()
+  createdFromAttendanceImport?: boolean;
 }
 
 export class ListSiteAssignmentsDto {

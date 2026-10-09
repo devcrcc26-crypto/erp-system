@@ -93,6 +93,9 @@ export class RequestWorkFromHomeDayDto {
   @IsOptional()
   @IsUUID('4')
   onBehalfOfEmployeeId?: string;
+
+  @IsOptional()
+  createdFromAttendanceImport?: boolean;
 }
 
 export class ListWorkFromHomeDaysDto {

@@ -28,6 +28,7 @@ function contextFor(
     isWorkFromHome: () => false,
     siteNameForDate: () => null,
     isOnApprovedLeave: () => false,
+    isOnUnpaidLeave: () => false,
     fieldMovementCoverage: () => 'NONE',
     isAttendanceExempt: () => isCountedPresentMatchMethod(matchMethod),
     ...overrides,
@@ -41,11 +42,47 @@ describe('Needs enrolment — counted present', () => {
     expect(isCountedPresentMatchMethod('NEEDS_ENROLMENT')).toBe(true);
     expect(isCountedPresentMatchMethod('MANUAL_PRESENT')).toBe(true);
     expect(isCountedPresentMatchMethod('EXEMPT')).toBe(true);
+    expect(isCountedPresentMatchMethod('COVERED')).toBe(false);
     expect(isCountedPresentMatchMethod('IDENTITY')).toBe(false);
     expect(isCountedPresentMatchMethod('EMPLOYEE_ID')).toBe(false);
     expect(NOT_ENROLLED_RECORD_NOTE).toBe(
       'Not yet enrolled on the attendance machine',
     );
+  });
+
+  it('recalc preserves EXEMPT / MANUAL_PRESENT / NEEDS_ENROLMENT / COVERED semantics', () => {
+    // Counted-present methods force exempt presence without scans.
+    for (const method of ['EXEMPT', 'MANUAL_PRESENT', 'NEEDS_ENROLMENT'] as const) {
+      const result = summarizeMonthAbsence({
+        month: 8,
+        year: 2026,
+        contracts: fullContract,
+        dailyLogsByDate: new Map(),
+        context: contextFor(method),
+      });
+      expect(result.paidDays).toBe(30);
+      expect(result.fullyAbsentWorkingDays).toBe(false);
+    }
+    // COVERED relies on site/WFH/paid leave, not the counted-present shortcut.
+    const coveredWithoutSchedule = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: fullContract,
+      dailyLogsByDate: new Map(),
+      context: contextFor('COVERED'),
+    });
+    expect(coveredWithoutSchedule.fullyAbsentWorkingDays).toBe(true);
+    expect(coveredWithoutSchedule.paidDays).toBe(0);
+
+    const coveredWithSite = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: fullContract,
+      dailyLogsByDate: new Map(),
+      context: contextFor('COVERED', { siteNameForDate: () => 'Camp' }),
+    });
+    expect(coveredWithSite.paidDays).toBe(30);
+    expect(coveredWithSite.fullyAbsentWorkingDays).toBe(false);
   });
 
   it('full month, no scans → paid 30, absent 0 (Feb, Aug, Sep)', () => {

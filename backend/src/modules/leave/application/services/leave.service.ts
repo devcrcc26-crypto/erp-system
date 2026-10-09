@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
   Inject,
   Injectable,
   Logger,
@@ -38,6 +39,8 @@ import type {
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import { AttendanceService } from '../../../attendance/application/services/attendance.service';
+import { monthsTouchedByRange } from '../../../site-assignment/application/utils/site-assignment.util';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import { formatDateOnly } from '../../../work-schedule/application/services/work-schedule.dates';
 import {
@@ -116,6 +119,8 @@ export class LeaveService
     private readonly permissionService: PermissionService,
     private readonly workScheduleService: WorkScheduleService,
     private readonly onBehalfService: OnBehalfService,
+    @Inject(forwardRef(() => AttendanceService))
+    private readonly attendanceService: AttendanceService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
   ) {}
@@ -865,6 +870,9 @@ export class LeaveService
   ): Promise<void> {
     const leave = await this.prisma.leaveRequest.findFirst({
       where: activeOnly({ approvalRequestId }),
+      include: {
+        periods: { select: { startDate: true, endDate: true } },
+      },
     });
     if (!leave) {
       return;
@@ -928,6 +936,39 @@ export class LeaveService
         -days,
         leave.companyId,
       );
+    }
+
+    await this.recalculateAttendanceForLeavePeriods(
+      leave.companyId,
+      leave.employeeId,
+      leave.periods,
+    );
+  }
+
+  /**
+   * Recomputes imported attendance months touched by leave periods.
+   */
+  private async recalculateAttendanceForLeavePeriods(
+    companyId: string,
+    employeeId: string,
+    periods: ReadonlyArray<{ startDate: Date; endDate: Date }>,
+  ): Promise<void> {
+    const seen = new Set<string>();
+    for (const period of periods) {
+      const months = monthsTouchedByRange(period.startDate, period.endDate);
+      for (const { month, year } of months) {
+        const key = `${year}-${month}`;
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        await this.attendanceService.recalculateCompanyAttendanceMonth(
+          companyId,
+          month,
+          year,
+          employeeId,
+        );
+      }
     }
   }
 

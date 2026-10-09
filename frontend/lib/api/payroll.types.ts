@@ -32,6 +32,7 @@ export interface PayrollRunListItem {
   totalPensionEmr: MoneyField;
   totalTax: MoneyField;
   notes: string | null;
+  attendanceSnapshotStale?: boolean;
   createdAt: string;
   updatedAt: string;
   _count: { entries: number };
@@ -194,6 +195,7 @@ export interface PayrollRunDetail {
   totalPensionEmr: MoneyField;
   totalTax: MoneyField;
   notes: string | null;
+  attendanceSnapshotStale?: boolean;
   submittedAt: string | null;
   submittedBy: string | null;
   approvedAt: string | null;

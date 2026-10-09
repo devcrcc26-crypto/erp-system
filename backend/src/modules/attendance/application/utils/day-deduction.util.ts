@@ -23,7 +23,13 @@ export interface DayDeductionContext {
   isWorkFromHome: (date: Date) => boolean;
   /** Approved site assignment covering this date, if any. */
   siteNameForDate: (date: Date) => string | null;
+  /** Approved paid leave (not UNPAID) — counts as present for pay. */
   isOnApprovedLeave: (date: Date) => boolean;
+  /**
+   * Approved UNPAID leave — full absence (deduction 1), including Saturday.
+   * Checked before WFH / site / paid leave so unpaid never produces coverage.
+   */
+  isOnUnpaidLeave?: (date: Date) => boolean;
   fieldMovementCoverage: (date: Date) => FieldMovementCoverage;
   /**
    * Attendance-exempt employees (no scanner) — treat duty days as full presence.
@@ -62,6 +68,10 @@ export function dayDeduction(
   }
   if (context.isPublicHoliday(date)) {
     return { deduction: 0, status: 'HOLIDAY' };
+  }
+  // Unpaid leave is absence even when a site/WFH row also exists that day.
+  if (context.isOnUnpaidLeave?.(date)) {
+    return { deduction: 1, status: 'ABSENT' };
   }
   if (context.isWorkFromHome(date)) {
     return { deduction: 0, status: 'WORK_FROM_HOME' };

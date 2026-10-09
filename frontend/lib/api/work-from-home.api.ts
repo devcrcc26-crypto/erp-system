@@ -23,6 +23,7 @@ export interface RequestWorkFromHomeDayDto {
   date: string;
   reason: string;
   onBehalfOfEmployeeId?: string;
+  createdFromAttendanceImport?: boolean;
 }
 
 export interface WorkFromHomeAssignableEmployee {

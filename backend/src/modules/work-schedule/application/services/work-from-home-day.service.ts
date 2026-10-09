@@ -419,6 +419,7 @@ export class WorkFromHomeDayService
         date,
         reason,
         userId,
+        dto.createdFromAttendanceImport === true,
       );
       await this.onBehalfService.recordOnBehalfCreate({
         moduleCode: 'WORK_FROM_HOME',
@@ -443,6 +444,8 @@ export class WorkFromHomeDayService
           date: dateKey,
           reason,
           employeeId,
+          createdFromAttendanceImport:
+            dto.createdFromAttendanceImport === true,
         },
       },
       companyId,
@@ -472,7 +475,7 @@ export class WorkFromHomeDayService
     approvalRequestId: string,
     decision: ApprovalFinalDecision,
   ): Promise<void> {
-    if (decision !== 'APPROVED') {
+    if (decision !== 'APPROVED' && decision !== 'REJECTED') {
       return;
     }
 
@@ -491,6 +494,7 @@ export class WorkFromHomeDayService
       date?: string;
       reason?: string;
       employeeId?: string;
+      createdFromAttendanceImport?: boolean;
     };
 
     if (!formData.date || !formData.employeeId) {
@@ -500,12 +504,23 @@ export class WorkFromHomeDayService
       return;
     }
 
-    await this.applyEmployeeDay(
+    if (decision === 'APPROVED') {
+      await this.applyEmployeeDay(
+        approval.companyId,
+        formData.employeeId,
+        parseDateOnly(formData.date),
+        (formData.reason ?? 'Approved work-from-home request').trim(),
+        approval.createdBy,
+        formData.createdFromAttendanceImport === true,
+      );
+      return;
+    }
+
+    const date = parseDateOnly(formData.date);
+    await this.recalculateMonth(
       approval.companyId,
+      date,
       formData.employeeId,
-      parseDateOnly(formData.date),
-      (formData.reason ?? 'Approved work-from-home request').trim(),
-      approval.createdBy,
     );
   }
 
@@ -515,6 +530,7 @@ export class WorkFromHomeDayService
     date: Date,
     reason: string,
     actorUserId: string,
+    createdFromAttendanceImport = false,
   ): Promise<void> {
     if (await this.employeeAlreadyCovered(companyId, employeeId, date)) {
       return;
@@ -534,11 +550,12 @@ export class WorkFromHomeDayService
           scope: WorkFromHomeScope.EMPLOYEES,
           departmentIds: [],
           employeeIds: [employeeId],
+          createdFromAttendanceImport,
           createdBy: actorUserId,
           updatedBy: actorUserId,
         },
       });
-      await this.recalculateMonth(companyId, date);
+      await this.recalculateMonth(companyId, date, employeeId);
       return;
     }
 
@@ -567,10 +584,13 @@ export class WorkFromHomeDayService
         where: { id: existing.id },
         data: {
           employeeIds: [...existing.employeeIds, employeeId],
+          ...(createdFromAttendanceImport
+            ? { createdFromAttendanceImport: true }
+            : {}),
           updatedBy: actorUserId,
         },
       });
-      await this.recalculateMonth(companyId, date);
+      await this.recalculateMonth(companyId, date, employeeId);
     }
   }
 
@@ -757,13 +777,18 @@ export class WorkFromHomeDayService
     return row;
   }
 
-  private async recalculateMonth(companyId: string, date: Date): Promise<void> {
+  private async recalculateMonth(
+    companyId: string,
+    date: Date,
+    employeeId?: string,
+  ): Promise<void> {
     const month = date.getUTCMonth() + 1;
     const year = date.getUTCFullYear();
     await this.attendanceService.recalculateCompanyAttendanceMonth(
       companyId,
       month,
       year,
+      employeeId,
     );
   }
 
@@ -775,6 +800,9 @@ export class WorkFromHomeDayService
       scope: row.scope,
       departmentIds: row.departmentIds,
       employeeIds: row.employeeIds,
+      createdFromAttendanceImport:
+        (row as { createdFromAttendanceImport?: boolean })
+          .createdFromAttendanceImport === true,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

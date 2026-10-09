@@ -166,6 +166,8 @@ export interface AttendanceRecord {
   }>;
   leaveDaysThisMonth?: number;
   siteDaysThisMonth?: Array<{ siteName: string; days: number }>;
+  workFromHomeDaysThisMonth?: number;
+  matchMethod?: string;
 }
 
 export interface AttendanceListParams {
@@ -236,7 +238,15 @@ export interface AttendanceMissingEmployee {
   /** nth consecutive month not enrolled (2 = second month); absent the first time. */
   notEnrolledMonth?: number;
   /** Pre-selected resolution for the preview. */
-  suggestedResolution?: 'NEEDS_ENROLMENT';
+  suggestedResolution?: 'NEEDS_ENROLMENT' | 'COVERED';
+  totalWorkingDays?: number;
+  coveredWorkingDays?: number;
+  fullyCovered?: boolean;
+  coverageLabel?: string | null;
+  coverageTag?: 'SITE' | 'WFH' | 'LEAVE' | 'MIXED' | null;
+  siteCoverageDays?: number;
+  wfhCoverageDays?: number;
+  leaveCoverageDays?: number;
 }
 
 /** Employee on the open enrolment list (Needs enrolment, no later scan). */
@@ -402,6 +412,8 @@ export interface AttendanceMonthlyApproval {
   unlockedBy: string | null;
   unlockReason: string | null;
   notificationsSentAt: string | null;
+  /** Site/WFH/leave approved while this month was locked — unlock to apply. */
+  attendanceRecalcStale?: boolean;
   createdAt: string;
   updatedAt: string;
   importBatch?: {

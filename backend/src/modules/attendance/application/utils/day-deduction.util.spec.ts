@@ -21,6 +21,7 @@ function emptyContext(overrides: Partial<DayDeductionContext> = {}): DayDeductio
     isWorkFromHome: () => false,
     siteNameForDate: () => null,
     isOnApprovedLeave: () => false,
+    isOnUnpaidLeave: () => false,
     fieldMovementCoverage: () => 'NONE',
     isAttendanceExempt: () => false,
     ...overrides,
@@ -319,6 +320,166 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
       dailyLogsByDate: daily,
       context: emptyContext({ siteNameForDate: () => 'Dire Dawa' }),
     });
+    expect(result.paidDays).toBe(30);
+    expect(result.fullyAbsentWorkingDays).toBe(false);
+    expect(result.absentDays).toBe(0);
+  });
+
+  it('COVERED-style full-month site: no scans → paid 30, not fully absent (payroll keeps transport/bonus)', () => {
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date) =>
+      dayInput(date, { clockIn: null, clockOut: null }),
+    );
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({ siteNameForDate: () => 'Camp' }),
+    });
+    expect(result.fullyAbsentWorkingDays).toBe(false);
+    expect(result.paidDays).toBe(30);
+    expect(
+      isFullyAbsentFromStoredLogs(
+        result.paidDays,
+        [...result.byDate.entries()].map(([key, day]) => ({
+          date: d(2026, 8, Number(key.slice(8, 10))),
+          dayDeduction: day.deduction,
+          isHoliday: day.status === 'HOLIDAY',
+        })),
+        [{ windowStart: d(2026, 8, 1), windowEnd: d(2026, 8, 31) }],
+      ),
+    ).toBe(false);
+  });
+
+  it('no scans + no coverage → paid 0 and fully absent', () => {
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date) =>
+      dayInput(date, { clockIn: null, clockOut: null }),
+    );
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext(),
+    });
+    expect(result.fullyAbsentWorkingDays).toBe(true);
+    expect(result.paidDays).toBe(0);
+  });
+
+  it('unpaid leave day with no scan → deduction 1 (Saturday included as full day)', () => {
+    const unpaidSat = d(2026, 8, 8); // Saturday
+    const key = dateToYyyyMmDd(unpaidSat);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockIn: null, clockOut: null });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        isOnUnpaidLeave: (date) => dateToYyyyMmDd(date) === key,
+      }),
+    });
+    expect(result.byDate.get(key)?.deduction).toBe(1);
+    expect(result.byDate.get(key)?.status).toBe('ABSENT');
+    expect(result.paidDays).toBe(29);
+  });
+
+  it('unpaid leave overrides site coverage that day', () => {
+    const day = d(2026, 8, 5);
+    const key = dateToYyyyMmDd(day);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockIn: null, clockOut: null });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        siteNameForDate: () => 'Camp',
+        isOnUnpaidLeave: (date) => dateToYyyyMmDd(date) === key,
+      }),
+    });
+    expect(result.byDate.get(key)?.status).toBe('ABSENT');
+    expect(result.byDate.get(key)?.deduction).toBe(1);
+  });
+
+  it('approved site Mon–Wed only, no scans those days → 0 deduction on site days', () => {
+    const mon = d(2026, 8, 3);
+    const wed = d(2026, 8, 5);
+    const thu = d(2026, 8, 6);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date) =>
+      dayInput(date, { clockIn: null, clockOut: null }),
+    );
+    const siteOnly = (date: Date): string | null => {
+      const t = date.getTime();
+      if (t >= mon.getTime() && t <= wed.getTime()) {
+        return 'Camp';
+      }
+      return null;
+    };
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({ siteNameForDate: siteOnly }),
+    });
+    expect(result.byDate.get(dateToYyyyMmDd(mon))?.status).toBe('ON_SITE');
+    expect(result.byDate.get(dateToYyyyMmDd(wed))?.status).toBe('ON_SITE');
+    expect(result.byDate.get(dateToYyyyMmDd(thu))?.status).toBe('ABSENT');
+    expect(result.paidDays).toBeGreaterThan(0);
+    expect(result.paidDays).toBeLessThan(30);
+  });
+
+  it('pending site (not in context) + no scan → full absence that day', () => {
+    const day = d(2026, 8, 4);
+    const key = dateToYyyyMmDd(day);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockIn: null, clockOut: null });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({ siteNameForDate: () => null }),
+    });
+    expect(result.byDate.get(key)?.deduction).toBe(1);
+    expect(result.byDate.get(key)?.status).toBe('ABSENT');
+  });
+
+  it('WFH approved + missing punch → paid, status WORK_FROM_HOME', () => {
+    const wfh = d(2026, 8, 12);
+    const key = dateToYyyyMmDd(wfh);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (k === key) {
+        return dayInput(date, { clockIn: null, clockOut: null });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        isWorkFromHome: (date) => dateToYyyyMmDd(date) === key,
+      }),
+    });
+    expect(result.byDate.get(key)?.status).toBe('WORK_FROM_HOME');
+    expect(result.byDate.get(key)?.deduction).toBe(0);
     expect(result.paidDays).toBe(30);
   });
 

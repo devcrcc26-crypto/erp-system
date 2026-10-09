@@ -74,6 +74,7 @@ type ImportStep = 0 | 1 | 2;
 type MatchedRow = AttendancePreviewRow & { matchedIndex: number };
 type ReviewRow = AttendancePreviewRow & { reviewIndex: number };
 type RejectedRow = AttendancePreviewRow & { rejectedIndex: number };
+type IgnoredPreviewRow = AttendancePreviewRow & { ignoredIndex: number };
 type MissingRow = AttendanceMissingEmployee;
 type MissingResolution =
   | 'NONE'
@@ -752,6 +753,14 @@ export default function AttendanceImportModal({
               })}
             </span>
           ) : null}
+          {row.fullyCovered && row.coverageLabel ? (
+            <Tag color="blue" className="m-0 rounded-full">
+              {row.coverageLabel}
+            </Tag>
+          ) : null}
+          {!row.fullyCovered && row.coverageLabel ? (
+            <Tag className="m-0 rounded-full">{row.coverageLabel}</Tag>
+          ) : null}
         </div>
       ),
     },
@@ -774,6 +783,13 @@ export default function AttendanceImportModal({
       key: 'presence',
       width: 320,
       render: (_: unknown, row: MissingRow) => {
+        if (row.fullyCovered) {
+          return (
+            <span className="text-[12px] text-slate-600">
+              {t('pages.hr.attendance.importModal.coveredAutoImport')}
+            </span>
+          );
+        }
         const state = missingResolutions[row.id] ?? {
           resolution: 'NONE' as MissingResolution,
           note: '',
@@ -1011,7 +1027,12 @@ export default function AttendanceImportModal({
     }))
     .filter((row) => ignoredReasons[row.rejectedIndex] != null);
 
-  const previewIgnoredRows = preview?.ignored ?? [];
+  const previewIgnoredRows: IgnoredPreviewRow[] = (preview?.ignored ?? []).map(
+    (row, index) => ({
+      ...row,
+      ignoredIndex: index,
+    }),
+  );
   const missingRows: MissingRow[] = preview?.missingFromAttendance ?? [];
 
   const collapseItems = preview
@@ -1156,12 +1177,10 @@ export default function AttendanceImportModal({
           children: (
             <div className="space-y-3">
               {previewIgnoredRows.length > 0 ? (
-                <Table<AttendancePreviewRow>
+                <Table<IgnoredPreviewRow>
                   className="erp-data-table"
                   size="small"
-                  rowKey={(row, index) =>
-                    `ignored-preview-${row.attendanceId}-${index}`
-                  }
+                  rowKey={(row) => `ignored-preview-${row.ignoredIndex}`}
                   pagination={false}
                   dataSource={previewIgnoredRows}
                   columns={[

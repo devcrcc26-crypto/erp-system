@@ -182,6 +182,8 @@ export class SiteAssignmentService
           status: SiteAssignmentStatus.APPROVED,
           submittedAt: now,
           completedAt: now,
+          createdFromAttendanceImport:
+            dto.createdFromAttendanceImport === true,
           createdBy: userId,
           updatedBy: userId,
         },
@@ -246,6 +248,8 @@ export class SiteAssignmentService
           status: SiteAssignmentStatus.SUBMITTED,
           approvalRequestId: approval.id,
           submittedAt: now,
+          createdFromAttendanceImport:
+            dto.createdFromAttendanceImport === true,
           createdBy: userId,
           updatedBy: userId,
         },
@@ -604,7 +608,7 @@ export class SiteAssignmentService
       },
     });
 
-    if (decision === 'APPROVED') {
+    if (decision === 'APPROVED' || decision === 'REJECTED') {
       await this.recalculateForRange(
         row.companyId,
         row.employeeId,

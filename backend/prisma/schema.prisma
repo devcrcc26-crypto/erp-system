@@ -3819,6 +3819,7 @@ model WorkFromHomeDay {
   scope         WorkFromHomeScope @default(ALL)
   departmentIds String[]          @default([]) @map("department_ids")
   employeeIds   String[]          @default([]) @map("employee_ids")
+  createdFromAttendanceImport Boolean @default(false) @map("created_from_attendance_import")
   createdAt     DateTime          @default(now()) @map("created_at")
   createdBy     String            @map("created_by")
   updatedAt     DateTime          @updatedAt @map("updated_at")
@@ -3855,6 +3856,7 @@ model SiteAssignment {
   updatedBy         String               @map("updated_by")
   deletedAt         DateTime?            @map("deleted_at")
   deletedBy         String?              @map("deleted_by")
+  createdFromAttendanceImport Boolean    @default(false) @map("created_from_attendance_import")
 
   company         Company          @relation(fields: [companyId], references: [id])
   employee        User             @relation("SiteAssignmentEmployee", fields: [employeeId], references: [id])
@@ -4181,6 +4183,8 @@ enum AttendanceMatchMethod {
   MANUAL_PRESENT
   /// Not yet enrolled on the attendance machine — counted present.
   NEEDS_ENROLMENT
+  /// Missing from file but every working day covered by approved site / WFH / leave.
+  COVERED
 }
 
 enum AttendanceUnmatchedStatus {
@@ -4193,6 +4197,7 @@ enum AttendanceMissingResolution {
   MARKED_EXEMPT
   MANUAL_PRESENT
   NEEDS_ENROLMENT
+  COVERED
 }
 
 model AttendanceIdentity {
@@ -4387,6 +4392,8 @@ model AttendanceMonthlyApproval {
   unlockedBy          String?               @map("unlocked_by")
   unlockReason        String?               @map("unlock_reason")
   notificationsSentAt DateTime?             @map("notifications_sent_at")
+  /// Set when site/WFH/leave approval could not recalculate because this month is APPROVED.
+  attendanceRecalcStale Boolean             @default(false) @map("attendance_recalc_stale")
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
 
@@ -6158,6 +6165,7 @@ model PayrollRun{
   taxableThreshold        Decimal                             @default(2200) @map("taxable_threshold") @db.Decimal(10, 2)
   bankLetterRefNo         String?                             @map("bank_letter_ref_no")
   notes                   String?
+  attendanceSnapshotStale Boolean                             @default(false) @map("attendance_snapshot_stale")
   submittedAt             DateTime?                           @map("submitted_at")
   submittedBy             String?                             @map("submitted_by")
   approvedAt              DateTime?                           @map("approved_at")

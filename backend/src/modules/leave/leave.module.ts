@@ -1,5 +1,6 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, forwardRef } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
+import { AttendanceModule } from '../attendance/attendance.module';
 import { HrSharedModule } from '../hr-shared/hr-shared.module';
 import { LeavePolicyModule } from '../leave-policy/leave-policy.module';
 import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
@@ -15,6 +16,7 @@ import { LeaveController } from './presentation/controllers/leave.controller';
 @Module({
   imports: [
     ApprovalsModule,
+    forwardRef(() => AttendanceModule),
     HrSharedModule,
     LeavePolicyModule,
     WorkScheduleModule,

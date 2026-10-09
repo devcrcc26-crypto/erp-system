@@ -302,6 +302,14 @@ export class PayrollRunService {
     await this.persistEntryDrafts(drafts, ctx);
     await this.updateRunTotals(runId, ctx);
 
+    await this.prisma.payrollRun.update({
+      where: { id: runId },
+      data: {
+        attendanceSnapshotStale: false,
+        updatedBy: ctx.userId,
+      } as Prisma.PayrollRunUpdateInput,
+    });
+
     const elapsedMs = Date.now() - started;
     this.logger.log(
       `[PayrollRun] Generated ${drafts.length} entries for ${run.runNumber} in ${elapsedMs}ms`,
@@ -416,6 +424,14 @@ export class PayrollRunService {
     }
 
     await this.updateRunTotals(runId, ctx);
+
+    await this.prisma.payrollRun.update({
+      where: { id: runId },
+      data: {
+        attendanceSnapshotStale: false,
+        updatedBy: ctx.userId,
+      } as Prisma.PayrollRunUpdateInput,
+    });
 
     const elapsedMs = Date.now() - started;
     this.logger.log(

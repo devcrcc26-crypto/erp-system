@@ -34,7 +34,10 @@ interface LoadedDeductionData {
     departmentIds: string[];
     employeeIds: string[];
   }>;
+  /** Approved paid leave dates (excludes UNPAID). */
   leaveDateKeys: Set<string>;
+  /** Approved UNPAID leave dates — absence, not coverage. */
+  unpaidLeaveDateKeys: Set<string>;
   fieldMovementByDate: Map<string, FieldMovementCoverage>;
   siteAssignments: Array<{
     startDate: Date;
@@ -99,6 +102,7 @@ export async function loadDeductionDataForMonth(
       },
     },
     select: {
+      leaveType: true,
       periods: {
         select: { startDate: true, endDate: true },
       },
@@ -106,14 +110,17 @@ export async function loadDeductionDataForMonth(
   });
 
   const leaveDateKeys = new Set<string>();
+  const unpaidLeaveDateKeys = new Set<string>();
   for (const leave of leaveRows) {
+    const target =
+      leave.leaveType === 'UNPAID' ? unpaidLeaveDateKeys : leaveDateKeys;
     for (const period of leave.periods) {
       const cursor = new Date(
         Math.max(period.startDate.getTime(), monthStart.getTime()),
       );
       const end = Math.min(period.endDate.getTime(), monthEnd.getTime());
       while (cursor.getTime() <= end) {
-        leaveDateKeys.add(dateToYyyyMmDd(cursor));
+        target.add(dateToYyyyMmDd(cursor));
         cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
     }
@@ -166,6 +173,7 @@ export async function loadDeductionDataForMonth(
     holidays,
     wfhDays,
     leaveDateKeys,
+    unpaidLeaveDateKeys,
     fieldMovementByDate,
     siteAssignments: siteRows.map((row) => ({
       startDate: row.startDate,
@@ -239,6 +247,8 @@ export function buildDayDeductionContext(
     siteNameForDate: (date) =>
       resolveSiteNameForDate(date, data.siteAssignments),
     isOnApprovedLeave: (date) => data.leaveDateKeys.has(dateToYyyyMmDd(date)),
+    isOnUnpaidLeave: (date) =>
+      data.unpaidLeaveDateKeys.has(dateToYyyyMmDd(date)),
     fieldMovementCoverage: (date) =>
       data.fieldMovementByDate.get(dateToYyyyMmDd(date)) ?? 'NONE',
     isAttendanceExempt: () => employee.attendanceMode === 'EXEMPT',

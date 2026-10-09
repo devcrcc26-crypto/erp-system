@@ -1553,6 +1553,19 @@ export default function PayrollRunDetailPageContent({
           {renderActionButtons(run.status)}
         </div>
 
+        {run.attendanceSnapshotStale ? (
+          <Alert
+            className="mt-3"
+            type="warning"
+            showIcon
+            title={
+              run.status === 'DRAFT' || run.status === 'REVIEWED'
+                ? t('hr.payroll.actions.attendanceStaleDraft')
+                : t('hr.payroll.actions.attendanceStaleApproved')
+            }
+          />
+        ) : null}
+
         <div className="erp-payroll-steps">
           <Steps
             size="small"
