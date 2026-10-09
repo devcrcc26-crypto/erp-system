@@ -68,7 +68,9 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  @ApiOperation({ summary: 'Authenticate with email and password' })
+  @ApiOperation({
+    summary: 'Authenticate with full name (OA login name) or email and password',
+  })
   @ApiResponse({ status: 201, type: AuthTokensDto })
   @ApiResponse({ status: 401, type: ApiErrorResponseDto })
   async login(
@@ -77,7 +79,7 @@ export class AuthController {
   ): Promise<AuthTokensDto> {
     return this.commandBus.execute(
       new LoginCommand(
-        dto.email,
+        dto.identifier,
         dto.password,
         dto.deviceInfo,
         req.ip,

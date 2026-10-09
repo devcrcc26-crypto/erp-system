@@ -13,6 +13,7 @@ import {
   Dropdown,
   Grid,
   Input,
+  Modal,
   Popover,
   Select,
   Spin,
@@ -30,6 +31,7 @@ import {
   ClockCircleOutlined,
   EditOutlined,
   FilterOutlined,
+  KeyOutlined,
   MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -54,6 +56,7 @@ import {
   SYSTEM_ADMINISTRATOR_ROLE,
 } from '@/lib/constants/protected-accounts';
 import {
+  useAdminResetPassword,
   useAllUsers,
   useDeleteUser,
   useResendInvitation,
@@ -311,6 +314,11 @@ export default function UsersPageContent(): React.ReactNode {
   const usersQuery = useAllUsers();
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
+  const adminResetPassword = useAdminResetPassword();
+  const [tempPasswordModal, setTempPasswordModal] = useState<{
+    name: string;
+    temporaryPassword: string;
+  } | null>(null);
   const { options: disciplineFilterOptions, nameById: disciplineNameById } =
     useEngineeringDisciplineOptions(true);
   const departmentsQuery = useDepartments({ page: 1, limit: 100 });
@@ -493,6 +501,25 @@ export default function UsersPageContent(): React.ReactNode {
     }
   }
 
+  async function handleAdminResetPassword(user: User): Promise<void> {
+    setActionMessage(null);
+    try {
+      const result = await adminResetPassword.mutateAsync(user.id);
+      setTempPasswordModal({
+        name: formatUserName(user),
+        temporaryPassword: result.temporaryPassword,
+      });
+    } catch (error) {
+      setActionMessage({
+        type: 'error',
+        text:
+          error instanceof ApiRequestError
+            ? error.message
+            : 'Could not reset password',
+      });
+    }
+  }
+
   async function handleDeleteUser(): Promise<void> {
     if (!deletingUser) {
       return;
@@ -545,6 +572,15 @@ export default function UsersPageContent(): React.ReactNode {
         icon: <ReloadOutlined />,
         label: t('users.resendVerification'),
         onClick: () => void handleResendVerification(user),
+      });
+    }
+
+    if (user.isActive) {
+      items.push({
+        key: 'reset-password',
+        icon: <KeyOutlined />,
+        label: 'Reset password',
+        onClick: () => void handleAdminResetPassword(user),
       });
     }
 
@@ -601,6 +637,30 @@ export default function UsersPageContent(): React.ReactNode {
         onConfirm={() => void handleDeleteUser()}
         onCancel={() => setDeletingUser(null)}
       />
+
+      <Modal
+        open={Boolean(tempPasswordModal)}
+        title="Temporary password"
+        okText="I have copied it"
+        cancelButtonProps={{ style: { display: 'none' } }}
+        onOk={() => setTempPasswordModal(null)}
+        onCancel={() => setTempPasswordModal(null)}
+        destroyOnHidden
+      >
+        {tempPasswordModal ? (
+          <div className="space-y-3">
+            <p className="m-0 text-sm text-slate-600">
+              Shown once for {tempPasswordModal.name}. The user must change this
+              password on next sign-in.
+            </p>
+            <Input.Password
+              value={tempPasswordModal.temporaryPassword}
+              readOnly
+              size="large"
+            />
+          </div>
+        ) : null}
+      </Modal>
 
       {actionMessage ? (
         <Alert

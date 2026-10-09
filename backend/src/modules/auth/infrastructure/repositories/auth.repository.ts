@@ -35,6 +35,23 @@ export class AuthRepository implements IAuthRepository {
     });
   }
 
+  async findActiveUserByLoginNameNormalized(
+    loginNameNormalized: string,
+  ): Promise<UserWithCompany | null> {
+    if (!loginNameNormalized) {
+      return null;
+    }
+
+    return this.prisma.user.findFirst({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        loginNameNormalized,
+      },
+      include: this.userCompanyInclude(),
+    });
+  }
+
   async findUserForPasswordReset(email: string): Promise<UserWithCompany | null> {
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) {
@@ -141,7 +158,12 @@ export class AuthRepository implements IAuthRepository {
   async updateUserPassword(userId: string, passwordHash: string): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        mustChangePassword: false,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
     });
   }
 

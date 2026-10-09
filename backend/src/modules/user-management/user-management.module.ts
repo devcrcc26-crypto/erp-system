@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { DocumentsModule } from '../documents/documents.module';
 import { LeavePolicyModule } from '../leave-policy/leave-policy.module';
@@ -12,7 +13,13 @@ import { UsersImportController } from './presentation/controllers/users-import.c
 import { UsersController } from './presentation/controllers/users.controller';
 
 @Module({
-  imports: [AuthModule, DocumentsModule, LeavePolicyModule, WorkScheduleModule],
+  imports: [
+    AuditModule,
+    AuthModule,
+    DocumentsModule,
+    LeavePolicyModule,
+    WorkScheduleModule,
+  ],
   controllers: [UsersImportController, UsersController, RolesController],
   providers: [
     UserManagementService,

@@ -248,6 +248,19 @@ export class UsersController {
     return this.userManagementService.resendInvitation(this.ctx(user), id);
   }
 
+  @Post(':id/reset-password')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({
+    summary:
+      'Admin/HR password reset — returns a temporary password once; forces mustChangePassword',
+  })
+  resetPassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<{ temporaryPassword: string; mustChangePassword: true }> {
+    return this.userManagementService.adminResetPassword(this.ctx(user), id);
+  }
+
   @Post(':id/roles')
   @RequirePermission('users', 'edit')
   assignRole(

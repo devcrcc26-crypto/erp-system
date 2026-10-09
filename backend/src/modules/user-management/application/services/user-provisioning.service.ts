@@ -20,6 +20,9 @@ export interface ProvisionInvitedUserInput {
   firstName: string;
   lastName: string;
   chineseName?: string;
+  /** OA login name (exact). When set, loginNameNormalized must also be set. */
+  loginName?: string | null;
+  loginNameNormalized?: string | null;
   phone?: string;
   branchId?: string;
   departmentId?: string;
@@ -102,6 +105,8 @@ export class UserProvisioningService {
         firstName: input.firstName.trim(),
         lastName: input.lastName.trim(),
         chineseName: input.chineseName?.trim() || null,
+        loginName: input.loginName ?? null,
+        loginNameNormalized: input.loginNameNormalized ?? null,
         phone: input.phone?.trim() || null,
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
@@ -151,6 +156,8 @@ export class UserProvisioningService {
         firstName: input.firstName.trim(),
         lastName: input.lastName.trim(),
         chineseName: input.chineseName?.trim() || null,
+        loginName: input.loginName ?? null,
+        loginNameNormalized: input.loginNameNormalized ?? null,
         phone: input.phone?.trim() || null,
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
@@ -198,6 +205,8 @@ export class UserProvisioningService {
         firstName: input.firstName.trim(),
         lastName: input.lastName.trim(),
         chineseName: input.chineseName?.trim() || null,
+        loginName: input.loginName ?? null,
+        loginNameNormalized: input.loginNameNormalized ?? null,
         phone: input.phone?.trim() || null,
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,
@@ -282,6 +291,8 @@ export class UserProvisioningService {
         firstName: input.firstName.trim(),
         lastName: input.lastName.trim(),
         chineseName: input.chineseName?.trim() || null,
+        loginName: input.loginName ?? null,
+        loginNameNormalized: input.loginNameNormalized ?? null,
         phone: input.phone?.trim() || null,
         branchId: input.branchId ?? null,
         departmentId: input.departmentId ?? null,

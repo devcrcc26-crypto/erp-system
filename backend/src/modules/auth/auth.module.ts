@@ -16,6 +16,7 @@ import { ResendActivationHandler } from './application/commands/resend-activatio
 import { ResetPasswordHandler } from './application/commands/reset-password.handler';
 import { AccountActivationService } from './application/services/account-activation.service';
 import { AuthMailService } from './application/services/auth-mail.service';
+import { LoginLockoutService } from './application/services/login-lockout.service';
 import { PasswordService } from './application/services/password.service';
 import { ProfileService } from './application/services/profile.service';
 import { SessionCapabilitiesService } from './application/services/session-capabilities.service';
@@ -52,6 +53,7 @@ const CommandHandlers = [
     ...CommandHandlers,
     TokenService,
     PasswordService,
+    LoginLockoutService,
     AuthMailService,
     AccountActivationService,
     ProfileService,

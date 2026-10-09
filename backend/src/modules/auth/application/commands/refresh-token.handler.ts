@@ -79,6 +79,7 @@ export class RefreshTokenHandler
       user: {
         id: user.id,
         email: user.email ?? '',
+        loginName: user.loginName,
         firstName: user.firstName,
         lastName: user.lastName,
         chineseName: user.chineseName,
@@ -91,6 +92,7 @@ export class RefreshTokenHandler
         preferredDateFormat:
           user.preferredDateFormat ?? user.company.defaultDateFormat,
         emailVerifiedAt: user.emailVerifiedAt,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }

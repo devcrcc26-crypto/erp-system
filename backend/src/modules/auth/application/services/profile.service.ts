@@ -21,6 +21,7 @@ import {
   ProfileResponseDto,
   UpdateProfileDto,
 } from '../dtos/profile.dto';
+import { assertPasswordPolicy } from '../utils/password-policy.util';
 import { AuthMailService } from './auth-mail.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
@@ -342,6 +343,8 @@ export class ProfileService {
       throw new NotFoundException('User not found');
     }
 
+    assertPasswordPolicy(newPassword, user.loginName);
+
     const valid = await this.passwordService.verify(
       currentPassword,
       user.passwordHash,
@@ -474,10 +477,12 @@ export class ProfileService {
     return {
       id: user.id,
       email: user.email ?? '',
+      loginName: user.loginName,
       pendingEmail: user.pendingEmail,
       firstName: user.firstName,
       lastName: user.lastName,
       chineseName: user.chineseName,
+      mustChangePassword: user.mustChangePassword,
       phone: user.phone,
       companyId: user.companyId,
       companyName: user.company.legalName,

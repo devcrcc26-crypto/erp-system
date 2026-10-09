@@ -39,6 +39,9 @@ export interface CreateEmailVerificationInput {
 
 export interface IAuthRepository {
   findActiveUserByEmail(email: string): Promise<UserWithCompany | null>;
+  findActiveUserByLoginNameNormalized(
+    loginNameNormalized: string,
+  ): Promise<UserWithCompany | null>;
   findUserForPasswordReset(email: string): Promise<UserWithCompany | null>;
   findActiveUserById(userId: string): Promise<UserWithCompany | null>;
   findSessionById(sessionId: string): Promise<UserSession | null>;

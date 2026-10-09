@@ -5,9 +5,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { FolderContextType, Prisma } from '@prisma/client';
+import { AuditLogSource, FolderContextType, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { AuditService } from '../../../audit/application/services/audit.service';
+import { AUTH_AUDIT_MODULE } from '../../../auth/application/constants/login-security.constants';
 import { PasswordService } from '../../../auth/application/services/password.service';
+import {
+  assertPasswordPolicy,
+  generateTemporaryPassword,
+} from '../../../auth/application/utils/password-policy.util';
+import {
+  formatDisplayFullName,
+  normalizeLoginName,
+} from '../../../auth/application/utils/login-name.util';
 import { DocumentService } from '../../../documents/application/services/document.service';
 import { LeavePolicyService } from '../../../leave-policy/application/services/leave-policy.service';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
@@ -40,6 +50,8 @@ import { UserProvisioningService } from './user-provisioning.service';
 
 type AuditContext = { companyId: string; userId: string };
 
+const LOGIN_NAME_CONFLICT = 'Another user already has this login name';
+
 /** Masks account numbers for viewers without hr.view (and not the employee). */
 function maskBankAccountNumber(
   account: string | null | undefined,
@@ -67,6 +79,7 @@ export class UserManagementService {
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
     private readonly userProvisioningService: UserProvisioningService,
+    private readonly auditService: AuditService,
     private readonly documentService: DocumentService,
     private readonly leavePolicyService: LeavePolicyService,
     private readonly workScheduleService: WorkScheduleService,
@@ -172,11 +185,36 @@ export class UserManagementService {
       firstName,
       lastName,
       chineseName,
+      loginName: dtoLoginName,
       employeeId: requestedEmployeeId,
       ...rest
     } = dto;
 
     const profileInput = this.extractProfileInput(dto);
+    const middleName =
+      typeof profileInput.middleName === 'string'
+        ? profileInput.middleName
+        : null;
+
+    const resolvedLoginName = (
+      dtoLoginName?.trim() ||
+      formatDisplayFullName({
+        firstName,
+        middleName,
+        lastName: lastName?.trim() ?? '',
+      })
+    ).trim();
+
+    if (!resolvedLoginName) {
+      throw new BadRequestException('Login name is required');
+    }
+
+    const loginNameNormalized = normalizeLoginName(resolvedLoginName);
+    await this.assertLoginNameAvailable(loginNameNormalized);
+
+    if (password) {
+      assertPasswordPolicy(password, resolvedLoginName);
+    }
 
     if (rest.reportsToUserId) {
       await this.assertValidReportsTo(
@@ -190,6 +228,8 @@ export class UserManagementService {
       firstName,
       lastName: lastName?.trim() ?? '',
       chineseName,
+      loginName: resolvedLoginName,
+      loginNameNormalized,
       phone: rest.phone,
       branchId: rest.branchId,
       departmentId: rest.departmentId,
@@ -256,6 +296,58 @@ export class UserManagementService {
   /**
    * Resends the account activation email for an unverified user.
    */
+  /**
+   * Admin/HR reset: sets a random temporary password shown once to the caller,
+   * forces mustChangePassword, and audit-logs the action (password never logged).
+   */
+  async adminResetPassword(
+    ctx: AuditContext,
+    id: string,
+  ): Promise<{ temporaryPassword: string; mustChangePassword: true }> {
+    const user = await this.prisma.user.findFirst({
+      where: activeOnly({ id, companyId: ctx.companyId }),
+      select: { id: true, loginName: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    let temporaryPassword = generateTemporaryPassword(12);
+    // Avoid accidental equality with login name (extremely unlikely).
+    while (
+      user.loginName &&
+      normalizeLoginName(temporaryPassword) ===
+        normalizeLoginName(user.loginName)
+    ) {
+      temporaryPassword = generateTemporaryPassword(12);
+    }
+
+    const passwordHash = await this.passwordService.hash(temporaryPassword);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        mustChangePassword: true,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    await this.auditService.create({
+      userId: ctx.userId,
+      companyId: ctx.companyId,
+      module: AUTH_AUDIT_MODULE,
+      action: 'ADMIN_PASSWORD_RESET',
+      recordType: 'User',
+      recordId: user.id,
+      afterValue: { mustChangePassword: true },
+      source: AuditLogSource.USER_ACTION,
+    });
+
+    return { temporaryPassword, mustChangePassword: true };
+  }
+
   async resendInvitation(
     ctx: AuditContext,
     id: string,
@@ -302,7 +394,13 @@ export class UserManagementService {
   ): Promise<unknown> {
     const existing = await this.prisma.user.findFirst({
       where: activeOnly({ id, companyId: ctx.companyId }),
-      select: { id: true, employeeId: true, leavePolicyId: true, workScheduleId: true },
+      select: {
+        id: true,
+        employeeId: true,
+        leavePolicyId: true,
+        workScheduleId: true,
+        loginName: true,
+      },
     });
     if (!existing) {
       throw new NotFoundException('User not found');
@@ -313,7 +411,13 @@ export class UserManagementService {
       await this.assertCanDeactivateOrDeleteUser(ctx, id);
     }
 
-    const { password, employeeId: dtoEmployeeId, workScheduleId, ...rest } = dto;
+    const {
+      password,
+      employeeId: dtoEmployeeId,
+      workScheduleId,
+      loginName: dtoLoginName,
+      ...rest
+    } = dto;
 
     if (rest.leavePolicyId) {
       await this.assertLeavePolicy(ctx.companyId, rest.leavePolicyId);
@@ -334,6 +438,17 @@ export class UserManagementService {
       updatedBy: ctx.userId,
     };
 
+    if (dtoLoginName !== undefined) {
+      const trimmed = dtoLoginName?.trim() ?? '';
+      if (!trimmed) {
+        throw new BadRequestException('Login name is required');
+      }
+      const loginNameNormalized = normalizeLoginName(trimmed);
+      await this.assertLoginNameAvailable(loginNameNormalized, id);
+      data.loginName = trimmed;
+      data.loginNameNormalized = loginNameNormalized;
+    }
+
     if (dtoEmployeeId !== undefined && !existing.employeeId) {
       const trimmed = dtoEmployeeId.trim();
       if (trimmed) {
@@ -343,6 +458,11 @@ export class UserManagementService {
     }
 
     if (password) {
+      const effectiveLoginName =
+        typeof data.loginName === 'string'
+          ? data.loginName
+          : existing.loginName;
+      assertPasswordPolicy(password, effectiveLoginName);
       data.passwordHash = await this.passwordService.hash(password);
     }
 
@@ -951,6 +1071,22 @@ export class UserManagementService {
     await this.documentService.deleteDocument(ctx, documentId);
   }
 
+  private async assertLoginNameAvailable(
+    loginNameNormalized: string,
+    excludeUserId?: string,
+  ): Promise<void> {
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        loginNameNormalized,
+        ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException(LOGIN_NAME_CONFLICT);
+    }
+  }
+
   private async assertUserRole(
     ctx: AuditContext,
     userRoleId: string,
@@ -1018,6 +1154,7 @@ export class UserManagementService {
       firstName: true,
       lastName: true,
       chineseName: true,
+      loginName: true,
       email: true,
       phone: true,
       preferredLanguage: true,
@@ -1030,6 +1167,7 @@ export class UserManagementService {
       attendanceMode: true,
       isActive: true,
       mfaEnabled: true,
+      mustChangePassword: true,
       emailVerifiedAt: true,
       pendingEmail: true,
       lastLogin: true,

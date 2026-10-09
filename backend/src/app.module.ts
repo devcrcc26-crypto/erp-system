@@ -39,6 +39,7 @@ import { envValidationSchema } from './shared/config/env.validation';
 import { RequestContextMiddleware } from './shared/context/request-context.middleware';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
+import { MustChangePasswordGuard } from './shared/guards/must-change-password.guard';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { ResponseEnvelopeInterceptor } from './shared/interceptors/response-envelope.interceptor';
 import { CurrencyModule } from './shared/currency/currency.module';
@@ -133,6 +134,10 @@ import { AnnouncementsModule } from './modules/announcements/announcements.modul
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: MustChangePasswordGuard,
     },
     {
       provide: APP_GUARD,

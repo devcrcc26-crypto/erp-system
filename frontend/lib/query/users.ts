@@ -311,6 +311,21 @@ export function useResendInvitation() {
   });
 }
 
+export function useAdminResetPassword() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiPost<{ temporaryPassword: string; mustChangePassword: true }>(
+        `/users/${userId}/reset-password`,
+      ),
+    onSuccess: (_data, userId) => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: userKeys.detail(userId) });
+    },
+  });
+}
+
 export function useUpdateUser() {
   const queryClient = useQueryClient();
 

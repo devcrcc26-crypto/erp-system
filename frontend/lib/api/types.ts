@@ -39,6 +39,7 @@ export interface PaginationParams {
 export interface AuthUser {
   id: string;
   email: string;
+  loginName?: string | null;
   firstName: string;
   lastName: string;
   chineseName: string | null;
@@ -47,6 +48,7 @@ export interface AuthUser {
   preferredLanguage: string | null;
   preferredTimezone: string | null;
   preferredDateFormat: string | null;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthTokens {
@@ -58,9 +60,12 @@ export interface AuthTokens {
 }
 
 export interface LoginRequest {
-  email: string;
+  /** Full name (OA login) or email when the value contains "@". */
+  identifier: string;
   password: string;
   deviceInfo?: string;
+  /** @deprecated Prefer identifier */
+  email?: string;
 }
 
 export interface RefreshTokenRequest {
@@ -260,6 +265,7 @@ export interface User {
   firstName: string;
   lastName: string;
   chineseName: string | null;
+  loginName?: string | null;
   email: string | null;
   phone: string | null;
   preferredLanguage: string | null;
@@ -272,6 +278,7 @@ export interface User {
   attendanceMode?: 'SCANNER' | 'EXEMPT';
   isActive: boolean;
   mfaEnabled: boolean;
+  mustChangePassword?: boolean;
   emailVerifiedAt: string | null;
   lastLogin: string | null;
   createdAt: string;

@@ -3,15 +3,21 @@ import {
   Inject,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import {
   AUTH_REPOSITORY,
   IAuthRepository,
   UserWithCompany,
 } from '../../domain/repositories/auth.repository.interface';
+import {
+  AUTH_ACCOUNT_LOCKED_MESSAGE,
+  AUTH_INVALID_CREDENTIALS_MESSAGE,
+} from '../constants/login-security.constants';
+import { AuthTokensDto } from '../dtos/auth-response.dto';
+import { LoginLockoutService } from '../services/login-lockout.service';
 import { PasswordService } from '../services/password.service';
 import { TokenService } from '../services/token.service';
-import { AuthTokensDto } from '../dtos/auth-response.dto';
 import { LoginCommand } from './login.command';
 
 @CommandHandler(LoginCommand)
@@ -21,16 +27,42 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
     private readonly authRepository: IAuthRepository,
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
+    private readonly loginLockoutService: LoginLockoutService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
-   * Authenticates a user and issues access + refresh tokens with a new session.
+   * Authenticates by login name or email and issues access + refresh tokens.
    */
   async execute(command: LoginCommand): Promise<AuthTokensDto> {
-    const user = await this.authRepository.findActiveUserByEmail(command.email);
+    const user =
+      command.identifierKind === 'email'
+        ? await this.authRepository.findActiveUserByEmail(command.email ?? '')
+        : await this.authRepository.findActiveUserByLoginNameNormalized(
+            command.loginNameNormalized ?? '',
+          );
 
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException(AUTH_INVALID_CREDENTIALS_MESSAGE);
+    }
+
+    if (this.loginLockoutService.isLocked(user.lockedUntil)) {
+      await this.loginLockoutService.auditLockedAttempt(
+        user.id,
+        user.companyId,
+        command.ipAddress,
+      );
+      throw new UnauthorizedException(AUTH_ACCOUNT_LOCKED_MESSAGE);
+    }
+
+    if (!user.passwordHash) {
+      await this.loginLockoutService.recordFailedAttempt(
+        user.id,
+        user.companyId,
+        user.failedLoginAttempts,
+        command.ipAddress,
+      );
+      throw new UnauthorizedException(AUTH_INVALID_CREDENTIALS_MESSAGE);
     }
 
     const passwordValid = await this.passwordService.verify(
@@ -39,16 +71,33 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
     );
 
     if (!passwordValid) {
-      throw new UnauthorizedException('Invalid email or password');
+      await this.loginLockoutService.recordFailedAttempt(
+        user.id,
+        user.companyId,
+        user.failedLoginAttempts,
+        command.ipAddress,
+      );
+      throw new UnauthorizedException(AUTH_INVALID_CREDENTIALS_MESSAGE);
     }
 
-    if (!user.emailVerifiedAt) {
+    // Email verification stays in code; enforced only when email sending is enabled.
+    const emailDisabled = this.configService.get<string>('EMAIL_DISABLED');
+    const emailVerificationRequired =
+      emailDisabled !== 'true' && emailDisabled !== '1';
+
+    if (
+      emailVerificationRequired &&
+      user.email &&
+      !user.emailVerifiedAt
+    ) {
       throw new ForbiddenException({
         message:
           'Email address not verified. Please check your inbox for the activation link.',
         error: 'EMAIL_NOT_VERIFIED',
       });
     }
+
+    await this.loginLockoutService.clearFailures(user.id);
 
     const refreshToken = this.tokenService.generateRefreshToken();
     const refreshTokenHash = await this.tokenService.hashToken(refreshToken);
@@ -88,6 +137,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
       user: {
         id: user.id,
         email: user.email ?? '',
+        loginName: user.loginName,
         firstName: user.firstName,
         lastName: user.lastName,
         chineseName: user.chineseName,
@@ -100,6 +150,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
         preferredDateFormat:
           user.preferredDateFormat ?? user.company.defaultDateFormat,
         emailVerifiedAt: user.emailVerifiedAt,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }

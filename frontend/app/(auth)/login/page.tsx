@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Form, Input, Spin } from 'antd';
 import { DemoLoginCredentials } from '@/components/auth/DemoLoginCredentials';
@@ -14,8 +14,24 @@ import { ApiRequestError } from '@/lib/api/errors';
 import { tokens } from '@/lib/theme/tokens';
 
 interface LoginFormValues {
-  email: string;
+  identifier: string;
   password: string;
+}
+
+function useLoginLabels(): { fullName: string; subtitle: string } {
+  return useMemo(() => {
+    const lang =
+      typeof document !== 'undefined'
+        ? document.documentElement.lang || navigator.language
+        : 'en';
+    const isZh = lang.toLowerCase().startsWith('zh');
+    return {
+      fullName: isZh ? '姓名' : 'Full name',
+      subtitle: isZh
+        ? '请输入姓名和密码以继续'
+        : 'Enter your full name and password to continue',
+    };
+  }, []);
 }
 
 function LoginForm(): React.ReactNode {
@@ -25,6 +41,7 @@ function LoginForm(): React.ReactNode {
   const resendActivation = useResendActivation();
   const [form] = Form.useForm<LoginFormValues>();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const labels = useLoginLabels();
 
   const activated = searchParams.get('activated') === '1';
   const reset = searchParams.get('reset') === '1';
@@ -53,7 +70,7 @@ function LoginForm(): React.ReactNode {
   }, [hasExplicitLoginIntent]);
 
   function handleSelectDemoAccount(email: string, password: string): void {
-    form.setFieldsValue({ email, password });
+    form.setFieldsValue({ identifier: email, password });
     setErrorMessage(null);
     setInfoMessage(null);
   }
@@ -64,9 +81,16 @@ function LoginForm(): React.ReactNode {
     setShowResendActivation(false);
 
     try {
-      const tokensResponse = await login.mutateAsync(values);
+      const tokensResponse = await login.mutateAsync({
+        identifier: values.identifier,
+        password: values.password,
+      });
       setAuth(tokensResponse);
       completeLocalSignIn();
+      if (tokensResponse.user.mustChangePassword) {
+        router.replace('/change-password');
+        return;
+      }
       const redirectTo = searchParams.get('from') ?? '/';
       router.replace(redirectTo);
     } catch (error) {
@@ -82,8 +106,8 @@ function LoginForm(): React.ReactNode {
   }
 
   async function handleResendActivation(): Promise<void> {
-    const email = form.getFieldValue('email');
-    if (!email) {
+    const identifier = form.getFieldValue('identifier') as string | undefined;
+    if (!identifier?.includes('@')) {
       setErrorMessage('Enter your email address first.');
       return;
     }
@@ -92,7 +116,7 @@ function LoginForm(): React.ReactNode {
     setInfoMessage(null);
 
     try {
-      const result = await resendActivation.mutateAsync({ email });
+      const result = await resendActivation.mutateAsync({ email: identifier });
       setInfoMessage(result.message);
     } catch (error) {
       if (error instanceof ApiRequestError) {
@@ -140,9 +164,7 @@ function LoginForm(): React.ReactNode {
               >
                 Sign in
               </h1>
-              <p className="mt-2 text-sm text-slate-500">
-                Enter your email and password to continue
-              </p>
+              <p className="mt-2 text-sm text-slate-500">{labels.subtitle}</p>
 
               <Form<LoginFormValues>
                 form={form}
@@ -152,16 +174,15 @@ function LoginForm(): React.ReactNode {
                 onFinish={(values: LoginFormValues) => void handleSubmit(values)}
               >
                 <Form.Item
-                  label="Email"
-                  name="email"
+                  label={labels.fullName}
+                  name="identifier"
                   rules={[
-                    { required: true, message: 'Email is required' },
-                    { type: 'email', message: 'Enter a valid email' },
+                    { required: true, message: `${labels.fullName} is required` },
                   ]}
                 >
                   <Input
-                    placeholder="name@company.com"
-                    autoComplete="email"
+                    placeholder={labels.fullName}
+                    autoComplete="username"
                     size="large"
                   />
                 </Form.Item>
@@ -247,8 +268,8 @@ export default function LoginPage(): React.ReactNode {
   return (
     <Suspense
       fallback={
-        <div className="erp-login-page flex min-h-dvh items-center justify-center">
-          <Spin size="large" />
+        <div className="flex min-h-dvh items-center justify-center">
+          <Spin />
         </div>
       }
     >

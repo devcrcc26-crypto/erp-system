@@ -152,6 +152,18 @@ export class CreateUserDto {
   })
   chineseName?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'OA login name. Defaults to the displayed full name (first + middle + last). Editable by HR/admin only.',
+    maxLength: USER_NAME_MAX * 3,
+  })
+  @IsOptional()
+  @IsOptionalText()
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(USER_NAME_MAX * 3)
+  loginName?: string;
+
   @ApiPropertyOptional({ description: 'Omit to send an email activation invite instead' })
   @IsOptional()
   @IsString()

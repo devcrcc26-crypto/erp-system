@@ -40,6 +40,9 @@ export class ProfileResponseDto {
   email!: string;
 
   @ApiProperty({ nullable: true })
+  loginName!: string | null;
+
+  @ApiProperty({ nullable: true })
   pendingEmail!: string | null;
 
   @ApiProperty()
@@ -50,6 +53,9 @@ export class ProfileResponseDto {
 
   @ApiProperty({ nullable: true })
   chineseName!: string | null;
+
+  @ApiProperty()
+  mustChangePassword!: boolean;
 
   @ApiProperty({ nullable: true })
   phone!: string | null;

@@ -618,6 +618,10 @@ model User {
   lastName            String    @map("last_name")
   middleName            String?         @map("middle_name")
   chineseName         String?   @map("chinese_name")
+  /// OA login name (exact full name as used in company OA). Nullable until backfilled.
+  loginName           String?   @unique(map: "uq_user_login_name") @map("login_name")
+  /// Normalised loginName for case/whitespace-insensitive exact match.
+  loginNameNormalized String?   @unique(map: "uq_user_login_name_normalized") @map("login_name_normalized")
   email               String?
   pendingEmail        String?   @map("pending_email")
   phone               String?
@@ -655,6 +659,9 @@ model User {
   attendanceMode      AttendanceMode @default(SCANNER) @map("attendance_mode")
   isActive            Boolean   @default(true) @map("is_active")
   mfaEnabled          Boolean   @default(false) @map("mfa_enabled")
+  mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
   emailVerifiedAt     DateTime? @map("email_verified_at")
   lastLogin           DateTime? @map("last_login")
   createdAt           DateTime  @default(now()) @map("created_at")

@@ -7,6 +7,9 @@ export class AuthUserDto {
   @ApiProperty()
   email!: string;
 
+  @ApiProperty({ nullable: true })
+  loginName!: string | null;
+
   @ApiProperty()
   firstName!: string;
 
@@ -33,6 +36,9 @@ export class AuthUserDto {
 
   @ApiProperty({ nullable: true })
   emailVerifiedAt!: Date | null;
+
+  @ApiProperty()
+  mustChangePassword!: boolean;
 }
 
 export class AuthTokensDto {
