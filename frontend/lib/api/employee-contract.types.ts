@@ -16,7 +16,9 @@ export type EmployeeContractCurrency = 'ETB' | 'USD' | 'CNY';
 export interface EmployeeContractUserSummary {
   id: string;
   firstName: string;
+  middleName?: string | null;
   lastName: string;
+  chineseName?: string | null;
   email?: string | null;
 }
 

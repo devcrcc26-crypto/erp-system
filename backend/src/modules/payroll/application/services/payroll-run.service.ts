@@ -973,6 +973,7 @@ export class PayrollRunService {
           month,
           year,
         },
+        // earlyDepartureWouldDeductDays from 20261009160000 — cast until client regen
         select: {
           id: true,
           employeeId: true,
@@ -989,7 +990,7 @@ export class PayrollRunService {
               isHoliday: true,
             },
           },
-        },
+        } as Prisma.AttendanceRecordSelect,
       }),
       this.prisma.overtimeSheet.findMany({
         where: {
@@ -1072,7 +1073,7 @@ export class PayrollRunService {
     }
 
     const attendanceByEmployee = new Map<string, AttendanceSnapshot>();
-    for (const record of attendanceRecords) {
+    for (const record of attendanceRecords as AttendanceSnapshot[]) {
       attendanceByEmployee.set(record.employeeId, record);
     }
 

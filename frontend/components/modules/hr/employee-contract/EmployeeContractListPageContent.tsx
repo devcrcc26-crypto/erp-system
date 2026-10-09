@@ -279,11 +279,11 @@ export default function EmployeeContractListPageContent(): React.ReactNode {
             {
               title: t('hr.table.employee'),
               key: 'employee',
-              width: 220,
+              width: 280,
               responsive: ['md'] as const,
               render: (_: unknown, row: EmployeeContractListItem) => (
                 <div className="min-w-0">
-                  <p className="erp-users-cell-strong m-0">
+                  <p className="erp-users-cell-strong m-0 whitespace-normal break-words">
                     {formatEmployeeContractEmployeeName(row.employee)}
                   </p>
                   {row.employee?.email ? (

@@ -43,10 +43,12 @@ type UploadedFile = {
 
 const DEFAULT_TAXABLE_THRESHOLD = 2200;
 
-const USER_SELECT ={
+const USER_SELECT = {
     id: true,
     firstName: true,
+    middleName: true,
     lastName: true,
+    chineseName: true,
     email: true,
 } as const;
 

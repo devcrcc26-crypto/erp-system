@@ -72,7 +72,7 @@ import {
   paginateUsers,
   type UsersListSortField,
 } from '@/lib/utils/users-list-filter';
-import { pickTopLevelRoleName } from '@/lib/utils/user-display';
+import { formatUserName, pickTopLevelRoleName } from '@/lib/utils/user-display';
 import { getRoleColor, formatRoleDisplayName } from '@/lib/utils/role-colors';
 import {
   userStatusLabel,
@@ -133,7 +133,7 @@ function UserListAvatar({ user }: { user: User }): React.ReactNode {
   return (
     <ImagePreviewTrigger
       src={photoQuery.data?.url}
-      alt={`${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()}
+      alt={formatUserName(user)}
       className="!rounded-md"
     >
       <Avatar
@@ -503,7 +503,7 @@ export default function UsersPageContent(): React.ReactNode {
       setActionMessage({
         type: 'success',
         text: t('users.deactivated', {
-          name: `${deletingUser.firstName} ${deletingUser.lastName}`,
+          name: formatUserName(deletingUser),
         }),
       });
       setDeletingUser(null);
@@ -590,7 +590,7 @@ export default function UsersPageContent(): React.ReactNode {
         description={
           deletingUser
             ? t('users.deleteDescription', {
-                name: `${deletingUser.firstName} ${deletingUser.lastName}`,
+                name: formatUserName(deletingUser),
                 email: deletingUser.email ?? t('users.noEmailNoLogin'),
               })
             : undefined
@@ -882,9 +882,9 @@ export default function UsersPageContent(): React.ReactNode {
                 key: 'name',
                 sorter: true,
                 fixed: isCompact ? undefined : 'left',
-                width: isCompact ? 240 : 250,
+                width: isCompact ? 280 : 300,
                 render: (_, record) => {
-                  const fullName = `${record.firstName} ${record.lastName}`.trim();
+                  const fullName = formatUserName(record);
 
                   return (
                     <div className="flex min-w-0 items-center gap-3">
@@ -893,14 +893,8 @@ export default function UsersPageContent(): React.ReactNode {
                         <div className="flex min-w-0 items-baseline gap-1.5">
                           <TruncateText
                             value={fullName}
-                            className="erp-users-name"
+                            className="erp-users-name whitespace-normal break-words"
                           />
-                          {record.chineseName && !isNarrow ? (
-                            <TruncateText
-                              value={record.chineseName}
-                              className="erp-users-name-alt max-w-[38%]"
-                            />
-                          ) : null}
                         </div>
                         {record.email ? (
                           <TruncateText
@@ -1065,7 +1059,7 @@ export default function UsersPageContent(): React.ReactNode {
                         size="small"
                         icon={<MoreOutlined />}
                         aria-label={t('users.actionsFor', {
-                          name: `${record.firstName} ${record.lastName}`,
+                          name: formatUserName(record),
                         })}
                       />
                     </Dropdown>

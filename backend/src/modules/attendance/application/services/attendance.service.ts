@@ -1760,17 +1760,24 @@ export class AttendanceService
       wfhGroups.map((g) => [g.attendanceRecordId, g._count._all]),
     );
 
-    const enriched = rows.map((row) => ({
-      ...row,
-      leaveDaysThisMonth: leaveDaysByRecord.get(row.id) ?? 0,
-      siteDaysThisMonth: siteSummaryByRecord.get(row.id) ?? [],
-      workFromHomeDaysThisMonth: wfhDaysByRecord.get(row.id) ?? 0,
-      forgotToClockFlagThreshold: FORGOT_TO_CLOCK_FLAG_THRESHOLD,
-      earlyDepartureWouldDeductNote:
-        Number(row.earlyDepartureWouldDeductDays) > 0
-          ? `Would deduct ${Number(row.earlyDepartureWouldDeductDays)} day(s) (not applied)`
-          : null,
-    }));
+    const enriched = rows.map((row) => {
+      // Fields added in 20261009160000; cast until prisma generate refreshes the client.
+      const earlyFields = row as typeof row & {
+        earlyDepartureWouldDeductDays?: Prisma.Decimal | number | null;
+      };
+      const wouldDays = Number(earlyFields.earlyDepartureWouldDeductDays ?? 0);
+      return {
+        ...row,
+        leaveDaysThisMonth: leaveDaysByRecord.get(row.id) ?? 0,
+        siteDaysThisMonth: siteSummaryByRecord.get(row.id) ?? [],
+        workFromHomeDaysThisMonth: wfhDaysByRecord.get(row.id) ?? 0,
+        forgotToClockFlagThreshold: FORGOT_TO_CLOCK_FLAG_THRESHOLD,
+        earlyDepartureWouldDeductNote:
+          wouldDays > 0
+            ? `Would deduct ${wouldDays} day(s) (not applied)`
+            : null,
+      };
+    });
 
     return buildPaginatedResult(enriched, total, page, limit);
   }
@@ -4161,8 +4168,6 @@ export class AttendanceService
           dayDeduction: inEmployedWindow ? deduction : 0,
           isEarlyLeave,
           earlyLeaveMinutes,
-          earlyDepartureBand: earlyBand === 'NONE' ? null : earlyBand,
-          earlyDepartureWouldDeduct: earlyWould,
           flag,
           flagResolved:
             flag === AttendanceDayFlag.NONE ? true : log.flagResolved,
@@ -4175,6 +4180,11 @@ export class AttendanceService
           siteAssignmentName:
             siteName ??
             (status === 'ON_SITE' ? context.siteNameForDate(log.date) : null),
+          // earlyDeparture* columns from 20261009160000 — cast until client regen
+          ...({
+            earlyDepartureBand: earlyBand === 'NONE' ? null : earlyBand,
+            earlyDepartureWouldDeduct: earlyWould,
+          } as Prisma.AttendanceDailyLogUpdateInput),
         },
       });
 
@@ -4186,8 +4196,10 @@ export class AttendanceService
       log.dayDeduction = (inEmployedWindow ? deduction : 0) as never;
       log.isEarlyLeave = isEarlyLeave;
       log.earlyLeaveMinutes = earlyLeaveMinutes;
-      log.earlyDepartureBand = earlyBand === 'NONE' ? null : earlyBand;
-      log.earlyDepartureWouldDeduct = earlyWould as never;
+      Object.assign(log, {
+        earlyDepartureBand: earlyBand === 'NONE' ? null : earlyBand,
+        earlyDepartureWouldDeduct: earlyWould,
+      });
       log.flag = flag;
     }
 
@@ -4287,12 +4299,15 @@ export class AttendanceService
         flaggedDays,
         resolvedDays,
         payableHours: Math.round(payableHours * 100) / 100,
-        earlyDepartureCount: monthSummary.earlyDepartureCount,
-        earlyDepartureDeductedDays: monthSummary.earlyDepartureDeductedDays,
-        earlyDepartureWouldDeductDays:
-          monthSummary.earlyDepartureWouldDeductDays,
-        forgotToClockCount,
-        approvedFieldMovementCount: approvedFieldMovements,
+        // earlyDeparture* / forgotToClock* from 20261009160000 — cast until client regen
+        ...({
+          earlyDepartureCount: monthSummary.earlyDepartureCount,
+          earlyDepartureDeductedDays: monthSummary.earlyDepartureDeductedDays,
+          earlyDepartureWouldDeductDays:
+            monthSummary.earlyDepartureWouldDeductDays,
+          forgotToClockCount,
+          approvedFieldMovementCount: approvedFieldMovements,
+        } as Prisma.AttendanceRecordUpdateInput),
       },
     });
   }
