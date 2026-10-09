@@ -326,6 +326,39 @@ export function useAdminResetPassword() {
   });
 }
 
+export function useUpdateLoginName() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      loginName,
+    }: {
+      userId: string;
+      loginName: string;
+    }) => apiPatch<User>(`/users/${userId}/login-name`, { loginName }),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: userKeys.detail(variables.userId),
+      });
+    },
+  });
+}
+
+export function useSetLoginNameToFullName() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiPost<User>(`/users/${userId}/login-name/use-full-name`),
+    onSuccess: (_data, userId) => {
+      void queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: userKeys.detail(userId) });
+    },
+  });
+}
+
 export function useUpdateUser() {
   const queryClient = useQueryClient();
 

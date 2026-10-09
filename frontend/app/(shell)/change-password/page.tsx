@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation';
 import { Button, Form, Input } from 'antd';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
 import { ApiRequestError } from '@/lib/api/errors';
+import {
+  clearPendingTemporaryPassword,
+  peekPendingTemporaryPassword,
+} from '@/lib/auth/pending-temporary-password';
 import { useChangePassword } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
 import { tokens } from '@/lib/theme/tokens';
 
 interface FormValues {
-  currentPassword: string;
+  currentPassword?: string;
   newPassword: string;
   confirmPassword: string;
 }
@@ -21,6 +25,11 @@ export default function ForceChangePasswordPage(): React.ReactNode {
   const updateUser = useAuthStore((s) => s.updateUser);
   const loginName = useAuthStore((s) => s.user?.loginName);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // The temporary password just used to sign in (memory only). While we have
+  // it, the user is not asked to type it again.
+  const [signInPassword, setSignInPassword] = useState<string | null>(() =>
+    peekPendingTemporaryPassword(),
+  );
 
   async function handleSubmit(values: FormValues): Promise<void> {
     setErrorMessage(null);
@@ -38,14 +47,20 @@ export default function ForceChangePasswordPage(): React.ReactNode {
 
     try {
       await changePassword.mutateAsync({
-        currentPassword: values.currentPassword,
+        currentPassword: signInPassword ?? values.currentPassword ?? '',
         newPassword: values.newPassword,
       });
+      clearPendingTemporaryPassword();
       updateUser({ mustChangePassword: false });
       router.replace('/');
     } catch (error) {
       if (error instanceof ApiRequestError) {
         setErrorMessage(error.message);
+        if (signInPassword && /current password/i.test(error.message)) {
+          // Fall back to asking for it explicitly.
+          clearPendingTemporaryPassword();
+          setSignInPassword(null);
+        }
       } else {
         setErrorMessage('Could not change password. Please try again.');
       }
@@ -69,13 +84,17 @@ export default function ForceChangePasswordPage(): React.ReactNode {
         className="mt-6"
         onFinish={(values) => void handleSubmit(values)}
       >
-        <Form.Item
-          label="Current temporary password"
-          name="currentPassword"
-          rules={[{ required: true, message: 'Required' }]}
-        >
-          <Input.Password autoComplete="current-password" size="large" />
-        </Form.Item>
+        {signInPassword ? null : (
+          <Form.Item
+            label="Current temporary password"
+            name="currentPassword"
+            extra="The temporary password HR gave you (the one you just signed in with)."
+            rules={[{ required: true, message: 'Required' }]}
+          >
+            {/* No autofill: a saved password for another account was being filled in here. */}
+            <Input.Password autoComplete="off" size="large" />
+          </Form.Item>
+        )}
         <Form.Item
           label="New password"
           name="newPassword"

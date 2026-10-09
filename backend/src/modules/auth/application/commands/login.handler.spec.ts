@@ -248,16 +248,42 @@ describe('LoginHandler', () => {
     expect(result.user.mustChangePassword).toBe(true);
   });
 
-  it('enforces email verification only when EMAIL_DISABLED is off', async () => {
-    configService.get.mockReturnValue('false');
-    authRepository.findActiveUserByEmail.mockResolvedValue({
-      ...mockUser,
-      emailVerifiedAt: null,
+  describe('when EMAIL_DISABLED is false', () => {
+    beforeEach(() => {
+      configService.get.mockReturnValue('false');
     });
-    passwordService.verify.mockResolvedValue(true);
 
-    await expect(
-      handler.execute(new LoginCommand('user@test.local', 'password')),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    it('blocks unverified users who have an email', async () => {
+      authRepository.findActiveUserByEmail.mockResolvedValue({
+        ...mockUser,
+        email: 'user@test.local',
+        emailVerifiedAt: null,
+      });
+      passwordService.verify.mockResolvedValue(true);
+
+      await expect(
+        handler.execute(new LoginCommand('user@test.local', 'password')),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('allows full-name login for users with email = null (never treated as unverified)', async () => {
+      authRepository.findActiveUserByLoginNameNormalized.mockResolvedValue({
+        ...mockUser,
+        email: null,
+        emailVerifiedAt: null,
+      });
+      passwordService.verify.mockResolvedValue(true);
+      authRepository.createSession.mockResolvedValue({
+        id: 'session-1',
+      } as Awaited<ReturnType<IAuthRepository['createSession']>>);
+
+      const result = await handler.execute(
+        new LoginCommand('Abebe Bekele Kebede', 'password'),
+      );
+
+      expect(result.accessToken).toBe('access-token');
+      expect(result.user.email).toBe('');
+    });
   });
 });
+

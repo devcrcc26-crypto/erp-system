@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { resolveSeedAdminPassword } from '../src/shared/script-guards/seed-admin-password';
 import { seedPmDemoData } from './seed-pm-demo';
 
 const prisma = new PrismaClient();
@@ -55,7 +56,7 @@ async function main(): Promise<void> {
   });
   const roleMap = new Map(roles.map((role) => [role.name, role.id]));
 
-  const defaultPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@12345';
+  const defaultPassword = resolveSeedAdminPassword();
 
   await seedPmDemoData({
     prisma,

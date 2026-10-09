@@ -1,12 +1,29 @@
 import * as bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
+import {
+  isLocalDatabaseHost,
+  resolveSeedAdminPassword,
+  seedAdminPasswordSourceLabel,
+} from '../../src/shared/script-guards/seed-admin-password';
 
 const COMPANY_ID = '00000000-0000-4000-8000-000000000001';
 const SYSTEM_USER_ID = '00000000-0000-4000-8000-000000000001';
 
+function databaseHost(): string | null {
+  const raw = process.env.DATABASE_URL;
+  if (!raw) {
+    return null;
+  }
+  try {
+    return new URL(raw).hostname;
+  } catch {
+    return null;
+  }
+}
+
 async function main(): Promise<void> {
   const email = process.argv[2];
-  const password = process.argv[3] ?? 'Admin@12345';
+  const passwordArg = process.argv[3];
   const firstName = process.argv[4] ?? 'Samuel';
   const lastName = process.argv[5] ?? 'Hailemariam';
 
@@ -14,6 +31,18 @@ async function main(): Promise<void> {
     throw new Error(
       'Usage: ts-node prisma/scripts/create-admin-user.ts <email> [password] [firstName] [lastName]',
     );
+  }
+
+  let password: string;
+  if (passwordArg) {
+    password = passwordArg;
+  } else if (isLocalDatabaseHost(databaseHost())) {
+    password = resolveSeedAdminPassword();
+  } else {
+    console.error(
+      'Refused: password argument or SEED_ADMIN_PASSWORD is required when DATABASE_URL is not localhost.',
+    );
+    process.exit(1);
   }
 
   const prisma = new PrismaClient();
@@ -97,7 +126,9 @@ async function main(): Promise<void> {
 
     console.log('System Administrator created/updated successfully.');
     console.log(`  Email   : ${email}`);
-    console.log(`  Password: ${password}`);
+    console.log(
+      `  Password: ${passwordArg ? '(from argv)' : seedAdminPasswordSourceLabel()}`,
+    );
     console.log(`  User ID : ${user.id}`);
     console.log(`  Role    : System Administrator`);
   } finally {

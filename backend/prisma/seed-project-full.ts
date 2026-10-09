@@ -23,6 +23,7 @@ import {
   WorkflowEntityType,
   WorkflowEventPhase,
 } from '@prisma/client';
+import { resolveSeedAdminPassword } from '../src/shared/script-guards/seed-admin-password';
 import {
   type DemoProjectDef,
   type PmSeedContext,
@@ -67,7 +68,7 @@ export async function buildPmSeedContextFromDb(
   prisma: PrismaClient,
 ): Promise<PmSeedContext> {
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@company.local';
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@12345';
+  const adminPassword = resolveSeedAdminPassword();
 
   const company = await prisma.company.findUniqueOrThrow({
     where: { id: DEFAULT_COMPANY_ID },

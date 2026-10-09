@@ -109,6 +109,7 @@ export interface ProfileRole {
 export interface UserProfile {
   id: string;
   email: string;
+  loginName?: string | null;
   pendingEmail: string | null;
   firstName: string;
   lastName: string;

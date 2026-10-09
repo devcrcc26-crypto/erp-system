@@ -1,3 +1,7 @@
+/**
+ * Dev/staging demo login only. Never import from production entry points —
+ * load via DemoLoginPanel (dynamic import behind NEXT_PUBLIC_ENABLE_DEMO_LOGIN).
+ */
 export const DEMO_PASSWORD = 'Admin@12345';
 
 export interface DemoLoginAccount {

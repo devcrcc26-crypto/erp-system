@@ -122,9 +122,18 @@ export class UserManagementService {
       this.prisma.user.count({ where }),
     ]);
     const canViewBank = await this.canViewFullBankDetails(ctx, null);
+    // listUsers requires users.view (HR/admin) — loginName is allowed for the optional column.
+    const canViewLoginName = await this.canViewLoginName(ctx, null);
     return buildPaginatedResult(
       data.map((row) =>
-        this.applyBankVisibility(this.mapUserResponse(row), canViewBank, false),
+        this.applyLoginNameVisibility(
+          this.applyBankVisibility(
+            this.mapUserResponse(row),
+            canViewBank,
+            false,
+          ),
+          canViewLoginName,
+        ),
       ),
       total,
       query.page,
@@ -175,7 +184,13 @@ export class UserManagementService {
     }
     const mapped = this.mapUserResponse(user);
     const canViewBank = await this.canViewFullBankDetails(ctx, id);
-    return this.applyBankVisibility(mapped, canViewBank, id === ctx.userId);
+    const withBank = this.applyBankVisibility(
+      mapped,
+      canViewBank,
+      id === ctx.userId,
+    );
+    const canViewLoginName = await this.canViewLoginName(ctx, id);
+    return this.applyLoginNameVisibility(withBank, canViewLoginName);
   }
 
   async createUser(ctx: AuditContext, dto: CreateUserDto): Promise<unknown> {
@@ -287,10 +302,14 @@ export class UserManagementService {
     });
 
     const mapped = this.mapUserResponse(created!);
+    const visible = this.applyLoginNameVisibility(
+      mapped,
+      await this.canViewLoginName(ctx, provisionedUser.id),
+    );
     if (email && !password) {
-      return { ...mapped, invitationSent: true };
+      return { ...visible, invitationSent: true };
     }
-    return mapped;
+    return visible;
   }
 
   /**
@@ -438,15 +457,16 @@ export class UserManagementService {
       updatedBy: ctx.userId,
     };
 
+    // loginName is never auto-derived from first/middle/last on profile edits.
+    let nextLoginName: string | null = existing.loginName;
     if (dtoLoginName !== undefined) {
-      const trimmed = dtoLoginName?.trim() ?? '';
-      if (!trimmed) {
-        throw new BadRequestException('Login name is required');
-      }
-      const loginNameNormalized = normalizeLoginName(trimmed);
-      await this.assertLoginNameAvailable(loginNameNormalized, id);
-      data.loginName = trimmed;
-      data.loginNameNormalized = loginNameNormalized;
+      const prepared = await this.prepareLoginNameUpdate(
+        id,
+        dtoLoginName,
+      );
+      data.loginName = prepared.loginName;
+      data.loginNameNormalized = prepared.loginNameNormalized;
+      nextLoginName = prepared.loginName;
     }
 
     if (dtoEmployeeId !== undefined && !existing.employeeId) {
@@ -458,11 +478,7 @@ export class UserManagementService {
     }
 
     if (password) {
-      const effectiveLoginName =
-        typeof data.loginName === 'string'
-          ? data.loginName
-          : existing.loginName;
-      assertPasswordPolicy(password, effectiveLoginName);
+      assertPasswordPolicy(password, nextLoginName);
       data.passwordHash = await this.passwordService.hash(password);
     }
 
@@ -471,6 +487,18 @@ export class UserManagementService {
       data,
       select: this.userSelect(),
     });
+
+    if (
+      dtoLoginName !== undefined &&
+      existing.loginName !== nextLoginName
+    ) {
+      await this.auditLoginNameChange(
+        ctx,
+        id,
+        existing.loginName,
+        nextLoginName,
+      );
+    }
 
     const nextPolicyId =
       rest.leavePolicyId !== undefined
@@ -501,11 +529,91 @@ export class UserManagementService {
           })
         : updated;
 
-    return this.applyBankVisibility(
-      this.mapUserResponse(withSchedule),
-      await this.canViewFullBankDetails(ctx, id),
-      id === ctx.userId,
+    return this.applyLoginNameVisibility(
+      this.applyBankVisibility(
+        this.mapUserResponse(withSchedule),
+        await this.canViewFullBankDetails(ctx, id),
+        id === ctx.userId,
+      ),
+      await this.canViewLoginName(ctx, id),
     );
+  }
+
+  /**
+   * Sets or replaces the OA login name (HR/admin). Audited. Does not touch name fields.
+   */
+  async updateLoginName(
+    ctx: AuditContext,
+    id: string,
+    loginName: string,
+  ): Promise<unknown> {
+    const existing = await this.prisma.user.findFirst({
+      where: activeOnly({ id, companyId: ctx.companyId }),
+      select: { id: true, loginName: true },
+    });
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    const prepared = await this.prepareLoginNameUpdate(id, loginName);
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        loginName: prepared.loginName,
+        loginNameNormalized: prepared.loginNameNormalized,
+        updatedBy: ctx.userId,
+      },
+      select: this.userSelect(),
+    });
+
+    await this.auditLoginNameChange(
+      ctx,
+      id,
+      existing.loginName,
+      prepared.loginName,
+    );
+
+    return this.applyLoginNameVisibility(
+      this.applyBankVisibility(
+        this.mapUserResponse(updated),
+        await this.canViewFullBankDetails(ctx, id),
+        id === ctx.userId,
+      ),
+      true,
+    );
+  }
+
+  /**
+   * Sets loginName to the displayed full name (first + middle + last). Audited.
+   */
+  async setLoginNameToFullName(
+    ctx: AuditContext,
+    id: string,
+  ): Promise<unknown> {
+    const existing = await this.prisma.user.findFirst({
+      where: activeOnly({ id, companyId: ctx.companyId }),
+      select: {
+        id: true,
+        loginName: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+      },
+    });
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    const fullName = formatDisplayFullName({
+      firstName: existing.firstName,
+      middleName: existing.middleName,
+      lastName: existing.lastName,
+    });
+    if (!fullName) {
+      throw new BadRequestException('Cannot derive login name from empty full name');
+    }
+
+    return this.updateLoginName(ctx, id, fullName);
   }
 
   async deleteUser(ctx: AuditContext, id: string): Promise<void> {
@@ -1085,6 +1193,78 @@ export class UserManagementService {
     if (existing) {
       throw new ConflictException(LOGIN_NAME_CONFLICT);
     }
+  }
+
+  private async prepareLoginNameUpdate(
+    userId: string,
+    rawLoginName: string,
+  ): Promise<{ loginName: string; loginNameNormalized: string }> {
+    const loginName = rawLoginName.trim();
+    if (!loginName) {
+      throw new BadRequestException('Login name is required');
+    }
+    const loginNameNormalized = normalizeLoginName(loginName);
+    await this.assertLoginNameAvailable(loginNameNormalized, userId);
+    return { loginName, loginNameNormalized };
+  }
+
+  private async auditLoginNameChange(
+    ctx: AuditContext,
+    userId: string,
+    before: string | null,
+    after: string | null,
+  ): Promise<void> {
+    await this.auditService.create({
+      userId: ctx.userId,
+      companyId: ctx.companyId,
+      module: AUTH_AUDIT_MODULE,
+      action: 'LOGIN_NAME_UPDATED',
+      recordType: 'User',
+      recordId: userId,
+      beforeValue: { loginName: before },
+      afterValue: { loginName: after },
+      source: AuditLogSource.USER_ACTION,
+    });
+  }
+
+  /**
+   * Login name is visible to HR/admin (users.view or hr.view) and to the employee themself.
+   * Pass targetUserId=null for list endpoints (viewer permissions only).
+   */
+  private async canViewLoginName(
+    ctx: AuditContext,
+    targetUserId: string | null,
+  ): Promise<boolean> {
+    if (targetUserId != null && targetUserId === ctx.userId) {
+      return true;
+    }
+    const [usersView, hrView] = await Promise.all([
+      this.permissionService.hasPermission(
+        ctx.userId,
+        ctx.companyId,
+        'users',
+        'view',
+      ),
+      this.permissionService.hasPermission(
+        ctx.userId,
+        ctx.companyId,
+        'hr',
+        'view',
+      ),
+    ]);
+    return usersView || hrView;
+  }
+
+  private applyLoginNameVisibility<
+    T extends { loginName?: string | null } | null,
+  >(user: T, canView: boolean): T {
+    if (!user || canView) {
+      return user;
+    }
+    const { loginName: _omit, ...rest } = user as {
+      loginName?: string | null;
+    } & Record<string, unknown>;
+    return rest as T;
   }
 
   private async assertUserRole(

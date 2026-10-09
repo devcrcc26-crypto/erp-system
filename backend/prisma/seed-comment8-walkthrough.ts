@@ -392,7 +392,9 @@ async function reinforceDisciplineLeads(ctx: PmSeedContext): Promise<void> {
 }
 
 function printWalkthroughSummary(): void {
-  console.log('\n=== Comment 8 Walkthrough — Demo Accounts (password: Admin@12345) ===');
+  console.log(
+    '\n=== Comment 8 Walkthrough — Demo Accounts (password: (from SEED_ADMIN_PASSWORD)) ===',
+  );
   console.table([
     { account: 'admin@company.local', focus: 'Settings → Departments, Disciplines, full access' },
     { account: 'pm@company.local', focus: 'LJZ-2024-001 project hub, schedule, exports' },

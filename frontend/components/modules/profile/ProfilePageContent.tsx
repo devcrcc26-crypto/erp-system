@@ -434,6 +434,15 @@ export default function ProfilePageContent(): React.ReactNode {
                   <MetaItem label={t('common.email')}>
                     <span className="break-all">{displayText(profile.email)}</span>
                   </MetaItem>
+                  <div className="mt-3">
+                    <MetaItem label={t('users.loginName')}>
+                      <span className="break-all">
+                        {profile.loginName?.trim()
+                          ? profile.loginName
+                          : t('users.loginNameNotSet')}
+                      </span>
+                    </MetaItem>
+                  </div>
                   <div className="mt-2">
                     <StatusBadge
                       label={

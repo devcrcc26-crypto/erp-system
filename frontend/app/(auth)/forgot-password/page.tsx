@@ -46,8 +46,9 @@ export default function ForgotPasswordPage(): React.ReactNode {
           Forgot password
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          Enter the exact email address on your account. We will send a reset
-          link if it matches an active user.
+          Enter the email address on your account. We will send a reset link if
+          it matches. If your account has no email, ask HR to reset your
+          password.
         </p>
       </div>
 
@@ -93,7 +94,11 @@ export default function ForgotPasswordPage(): React.ReactNode {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-500">
+      <p className="mt-4 text-center text-sm text-slate-600">
+        No email on your account? Ask HR to reset your password.
+      </p>
+
+      <p className="mt-4 text-center text-sm text-slate-500">
         <Link href="/login" className="font-medium text-[#1D9E75] hover:underline">
           Back to sign in
         </Link>

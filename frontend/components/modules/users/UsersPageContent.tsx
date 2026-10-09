@@ -274,6 +274,12 @@ export default function UsersPageContent(): React.ReactNode {
     Nationality | undefined
   >();
   const [filterNoRole, setFilterNoRole] = useState(false);
+  const [showLoginNameColumn, setShowLoginNameColumn] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.localStorage.getItem('erp.users.showLoginName') === '1';
+  });
   const [sortBy, setSortBy] = useState<UsersListSortField | undefined>();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | undefined>();
 
@@ -768,6 +774,19 @@ export default function UsersPageContent(): React.ReactNode {
             aria-label={t('users.searchPlaceholder')}
           />
           <span className="erp-users-filter-spacer" aria-hidden />
+          <Checkbox
+            checked={showLoginNameColumn}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              setShowLoginNameColumn(checked);
+              window.localStorage.setItem(
+                'erp.users.showLoginName',
+                checked ? '1' : '0',
+              );
+            }}
+          >
+            {t('users.showLoginNameColumn')}
+          </Checkbox>
           <Select
             placeholder={t('users.filterDepartment')}
             className="erp-users-filter-select"
@@ -984,6 +1003,27 @@ export default function UsersPageContent(): React.ReactNode {
                     <span className="erp-users-dash">-</span>
                   ),
               },
+              ...(showLoginNameColumn
+                ? [
+                    {
+                      title: t('users.loginNameColumn'),
+                      dataIndex: 'loginName' as const,
+                      key: 'loginName',
+                      width: 180,
+                      render: (value: string | null | undefined) =>
+                        value?.trim() ? (
+                          <TruncateText
+                            value={value}
+                            className="erp-users-cell-strong"
+                          />
+                        ) : (
+                          <span className="erp-users-dash">
+                            {t('users.loginNameNotSet')}
+                          </span>
+                        ),
+                    },
+                  ]
+                : []),
               {
                 title: t('common.position'),
                 key: 'position',

@@ -49,7 +49,10 @@ export function useSessionCapabilities(enabled: boolean): UseQueryResult<Capabil
     enabled: sessionEnabled,
     staleTime: SESSION_CAPABILITIES_STALE_MS,
     retry: (failureCount, error) => {
-      if (error instanceof ApiRequestError && error.status === 401) {
+      if (
+        error instanceof ApiRequestError &&
+        (error.status === 401 || error.status === 403)
+      ) {
         return false;
       }
       return failureCount < 2;

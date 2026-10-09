@@ -130,7 +130,12 @@ async function syncUserRoles(params: {
 
 export interface AddEmployeeFormProps {
   userId?: string;
-  onSuccess: (result: { userId: string; email: string | null }) => void;
+  onSuccess: (result: {
+    userId: string;
+    email: string | null;
+    /** Shown when name fields changed but loginName was left alone. */
+    loginNameUnchangedToast?: string | null;
+  }) => void;
 }
 
 export default function AddEmployeeForm({
@@ -305,9 +310,32 @@ export default function AddEmployeeForm({
           await uploadPhoto.mutateAsync({ userId, file: pendingPhoto });
         }
 
+        const previous = userQuery.data;
+        const newFullName = [
+          (values.firstName ?? '').trim(),
+          (values.middleName ?? '').trim(),
+          (values.lastName ?? '').trim(),
+        ]
+          .filter(Boolean)
+          .join(' ');
+        const loginName = previous?.loginName?.trim() ?? '';
+        const normalize = (value: string): string =>
+          value
+            .normalize('NFC')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ' ');
+        const loginNameUnchangedToast =
+          loginName &&
+          newFullName &&
+          normalize(loginName) !== normalize(newFullName)
+            ? t('users.loginNameNotChangedToast', { loginName })
+            : null;
+
         onSuccess({
           userId,
           email: userQuery.data?.email ?? values.email?.trim().toLowerCase() ?? null,
+          loginNameUnchangedToast,
         });
         return;
       }

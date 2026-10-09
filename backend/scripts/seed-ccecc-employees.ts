@@ -5,18 +5,28 @@
  *   $env:SEED_MODE='true'
  *   npx ts-node --transpile-only scripts/seed-ccecc-employees.ts
  *
- * Default password for new accounts (except Samuel): Welcome@CCECC1
+ * New accounts get a random temporary password (mustChangePassword=true),
+ * written only to backend/data/private/initial-credentials.csv (never printed).
  * Samuel (list #59) is matched to the existing System Administrator and only
  * gets employeeId updated to CC-0059.
  */
 import { randomUUID } from 'crypto';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import * as bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
+import { generateTemporaryPassword } from '../src/modules/auth/application/utils/password-policy.util';
+import {
+  formatDisplayFullName,
+  normalizeLoginName,
+} from '../src/modules/auth/application/utils/login-name.util';
+import { assertCredentialsPathGitignored } from '../src/shared/script-guards/login-setup-guards';
+import { appendInitialCredentials } from './lib/credentials-csv';
 import { assertLocalhostSeedGuards } from './lib/localhost-seed-guard';
 
 const COMPANY_ID = '00000000-0000-4000-8000-000000000001';
 const SAMUEL_ID = '16040ab7-b923-4fe4-87cf-cc3a916c7325';
-const DEFAULT_PASSWORD = 'Welcome@CCECC1';
+const BCRYPT_ROUNDS = 12;
 
 /**
  * Roster in image order. Spellings prefer pwf_test canon where confidently matched;
@@ -148,6 +158,18 @@ async function main(): Promise<void> {
     throw new Error('Employee list exceeds CC-0150 capacity');
   }
 
+  const rootGitignore = join(__dirname, '..', '..', '.gitignore');
+  assertCredentialsPathGitignored(
+    readFileSync(rootGitignore, 'utf8'),
+    'backend/data/private/initial-credentials.csv',
+  );
+
+  const privateDir = join(__dirname, '..', 'data', 'private');
+  const credentialRows: Array<{
+    loginName: string;
+    temporaryPassword: string;
+  }> = [];
+
   const prisma = new PrismaClient();
   try {
     const actor = await prisma.user.findUniqueOrThrow({
@@ -172,7 +194,6 @@ async function main(): Promise<void> {
       select: { id: true },
     });
 
-    const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 12);
     let created = 0;
     let updated = 0;
     let skipped = 0;
@@ -181,9 +202,12 @@ async function main(): Promise<void> {
     console.log(`(ID namespace reserved through CC-0150)\n`);
 
     for (let i = 0; i < EMPLOYEES.length; i += 1) {
-      const row = EMPLOYEES[i];
+      const row = EMPLOYEES[i]!;
       const employeeId = employeeIdForIndex(i);
-      const fullName = `${row.firstName} ${row.lastName}`;
+      const fullName = formatDisplayFullName({
+        firstName: row.firstName,
+        lastName: row.lastName,
+      });
 
       if (isSamuelRow(row)) {
         await prisma.user.update({
@@ -208,6 +232,15 @@ async function main(): Promise<void> {
         continue;
       }
 
+      let temporaryPassword = generateTemporaryPassword(12);
+      while (
+        normalizeLoginName(temporaryPassword) === normalizeLoginName(fullName)
+      ) {
+        temporaryPassword = generateTemporaryPassword(12);
+      }
+      const passwordHash = await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS);
+      const loginNameNormalized = normalizeLoginName(fullName);
+
       const userId = randomUUID();
       await prisma.user.create({
         data: {
@@ -216,8 +249,11 @@ async function main(): Promise<void> {
           employeeId,
           firstName: row.firstName,
           lastName: row.lastName,
+          loginName: fullName,
+          loginNameNormalized,
           email: placeholderEmail(employeeId),
           passwordHash,
+          mustChangePassword: true,
           preferredLanguage: 'en',
           isActive: true,
           mfaEnabled: false,
@@ -241,8 +277,20 @@ async function main(): Promise<void> {
         },
       });
 
+      credentialRows.push({
+        loginName: fullName,
+        temporaryPassword,
+      });
+
       console.log(`${employeeId}  ${fullName}`);
       created += 1;
+    }
+
+    if (credentialRows.length > 0) {
+      appendInitialCredentials(privateDir, credentialRows);
+      console.log(
+        `Wrote ${credentialRows.length} temporary credentials to backend/data/private/initial-credentials.csv`,
+      );
     }
 
     // Keep auto EMP- sequence clear of CC range; app uses EMP- prefix separately.
@@ -260,7 +308,9 @@ async function main(): Promise<void> {
     console.log(`Updated: ${updated}`);
     console.log(`Skipped: ${skipped}`);
     console.log(`Active users now: ${totalUsers}`);
-    console.log(`Default password for new accounts: ${DEFAULT_PASSWORD}`);
+    console.log(
+      'Temporary passwords: backend/data/private/initial-credentials.csv (not printed)',
+    );
     console.log('Emails: cc-0001@ccecc.local … (Samuel keeps his real email)');
   } finally {
     await prisma.$disconnect();

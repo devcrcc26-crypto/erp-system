@@ -351,7 +351,9 @@ export class ProfileService {
     );
 
     if (!valid) {
-      throw new UnauthorizedException('Current password is incorrect');
+      // 400, not 401: the session is valid. A 401 makes the client refresh the
+      // session and resend the change (and log the user out if that fails).
+      throw new BadRequestException('Current password is incorrect');
     }
 
     const passwordHash = await this.passwordService.hash(newPassword);

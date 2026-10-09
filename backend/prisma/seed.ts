@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import {
+  resolveSeedAdminPassword,
+  seedAdminPasswordSourceLabel,
+} from '../src/shared/script-guards/seed-admin-password';
 import { seedPmDemoData } from './seed-pm-demo';
 import { seedAllProjectTypes } from './seed-all-project-types';
 import { appendRichDemoProjects } from './seed-demo-projects';
@@ -1204,8 +1208,7 @@ async function waitForDatabase(maxAttempts = 6, delayMs = 10_000): Promise<void>
 async function main(): Promise<void> {
   const adminEmail =
     process.env.SEED_ADMIN_EMAIL ?? 'admin@company.local';
-  const adminPassword =
-    process.env.SEED_ADMIN_PASSWORD ?? 'Admin@12345';
+  const adminPassword = resolveSeedAdminPassword();
 
   console.log('Waiting for database connection...');
   await waitForDatabase();
@@ -2355,7 +2358,7 @@ async function main(): Promise<void> {
   console.log('Seed completed successfully.');
   console.log(`  Company ID : ${company.id}`);
   console.log(`  Admin email: ${adminEmail}`);
-  console.log(`  Admin password: (from SEED_ADMIN_PASSWORD env or default)`);
+  console.log(`  Admin password: ${seedAdminPasswordSourceLabel()}`);
   console.log(`  Roles seeded: ${CORE_ROLES.length}`);
   console.log(`  Permissions seeded: ${permissions.length}`);
 
@@ -2393,7 +2396,9 @@ async function main(): Promise<void> {
     await seedAllProjectTypes(pmCtx);
     await appendRichDemoProjects(pmCtx);
     // await seedComment8Walkthrough(pmCtx);
-    console.log('  Demo password for all seeded accounts: Admin@12345 (or SEED_ADMIN_PASSWORD)');
+    console.log(
+      `  Demo password for all seeded accounts: ${seedAdminPasswordSourceLabel()}`,
+    );
   }
 
   console.log('Seeding evaluation template...');

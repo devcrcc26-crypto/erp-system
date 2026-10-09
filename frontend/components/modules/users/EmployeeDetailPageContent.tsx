@@ -22,6 +22,7 @@ import EmployeeWorkScheduleSection from '@/components/modules/hr/work-schedule/E
 import EmployeePerDiemRatesSection from '@/components/modules/hr/per-diem/EmployeePerDiemRatesSection';
 import EmployeePayslipsSection from '@/components/modules/hr/payroll/EmployeePayslipsSection';
 import EmployeeAttendanceProfileSection from '@/components/modules/profile/EmployeeAttendanceProfileSection';
+import EmployeeLoginNameField from '@/components/modules/users/EmployeeLoginNameField';
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import EmployeeRolesCard from '@/components/modules/users/EmployeeRolesCard';
@@ -746,6 +747,14 @@ export default function EmployeeDetailPageContent({
                     <MetaItem label={t('users.form.email')}>
                       {displayValue(user.email)}
                     </MetaItem>
+                    <EmployeeLoginNameField
+                      userId={user.id}
+                      loginName={user.loginName}
+                      firstName={user.firstName}
+                      middleName={user.middleName}
+                      lastName={user.lastName}
+                      canEdit={canViewHr}
+                    />
                     <MetaItem label={t('common.status')}>
                       <UserStatusIndicator user={user} t={t} />
                     </MetaItem>

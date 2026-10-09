@@ -12,7 +12,9 @@ interface DemoLoginCredentialsProps {
 }
 
 /**
- * Always-visible demo-account picker for local / staging enterprise login.
+ * Demo-account picker for local / staging login.
+ * Loaded only via DemoLoginPanel when NODE_ENV !== 'production' and
+ * NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true' — do not import from production routes.
  */
 export function DemoLoginCredentials({
   onSelectAccount,

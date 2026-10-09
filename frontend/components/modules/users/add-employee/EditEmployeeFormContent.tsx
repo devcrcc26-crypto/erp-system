@@ -18,11 +18,18 @@ export default function EditEmployeeFormContent({
   const messageApi = useAppMessage();
   const userQuery = useUser(userId);
 
-  function handleSuccess(result: { userId: string; email: string | null }): void {
+  function handleSuccess(result: {
+    userId: string;
+    email: string | null;
+    loginNameUnchangedToast?: string | null;
+  }): void {
     const name = userQuery.data
       ? `${userQuery.data.firstName} ${userQuery.data.lastName}`
       : result.userId;
     messageApi.success(t('users.updated', { name }));
+    if (result.loginNameUnchangedToast) {
+      messageApi.warning(result.loginNameUnchangedToast);
+    }
     router.push(`/users/${result.userId}`);
   }
 

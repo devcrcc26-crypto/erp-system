@@ -80,14 +80,17 @@ export class LoginHandler implements ICommandHandler<LoginCommand, AuthTokensDto
       throw new UnauthorizedException(AUTH_INVALID_CREDENTIALS_MESSAGE);
     }
 
-    // Email verification stays in code; enforced only when email sending is enabled.
+    // When EMAIL_DISABLED is off, verification applies only to users who have an
+    // email. Users with email = null (full-name OA login) are never blocked for
+    // being unverified.
     const emailDisabled = this.configService.get<string>('EMAIL_DISABLED');
     const emailVerificationRequired =
       emailDisabled !== 'true' && emailDisabled !== '1';
 
     if (
       emailVerificationRequired &&
-      user.email &&
+      user.email != null &&
+      user.email.length > 0 &&
       !user.emailVerifiedAt
     ) {
       throw new ForbiddenException({

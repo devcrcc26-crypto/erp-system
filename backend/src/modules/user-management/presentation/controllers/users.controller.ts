@@ -22,6 +22,7 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequirePermission } from '../../../../shared/permissions/require-permission.decorator';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
+import { UpdateLoginNameDto } from '../../application/dtos/update-login-name.dto';
 import {
   AssignUserRoleDto,
   CreateUserDto,
@@ -259,6 +260,36 @@ export class UsersController {
     @Param('id') id: string,
   ): Promise<{ temporaryPassword: string; mustChangePassword: true }> {
     return this.userManagementService.adminResetPassword(this.ctx(user), id);
+  }
+
+  @Patch(':id/login-name')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({ summary: 'Update OA login name (HR/admin)' })
+  updateLoginName(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateLoginNameDto,
+  ): Promise<unknown> {
+    return this.userManagementService.updateLoginName(
+      this.ctx(user),
+      id,
+      dto.loginName,
+    );
+  }
+
+  @Post(':id/login-name/use-full-name')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({
+    summary: 'Set login name to the current displayed full name (HR/admin)',
+  })
+  setLoginNameToFullName(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.userManagementService.setLoginNameToFullName(
+      this.ctx(user),
+      id,
+    );
   }
 
   @Post(':id/roles')

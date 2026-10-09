@@ -57,17 +57,21 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Configure the Swagger documentation
+  const nodeEnv = config.get<string>('NODE_ENV', 'development');
+  const swaggerExplicit = config.get<boolean>('SWAGGER_ENABLED') === true;
+  const swaggerEnabled = nodeEnv !== 'production' || swaggerExplicit;
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Construction ERP API')
-    .setDescription('Core Foundation module REST API')
-    .setVersion('0.1.0')
-    .addBearerAuth()
-    .build();
+  if (swaggerEnabled) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Construction ERP API')
+      .setDescription('Core Foundation module REST API')
+      .setVersion('0.1.0')
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
+  }
 
   const autoApprove = getAutoApproveModeFromEnv();
   if (autoApprove.ignoredNonLocal) {
@@ -84,7 +88,14 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(port, '0.0.0.0');
   Logger.log(`Backend running on http://localhost:${port}/${apiPrefix}`, 'Bootstrap');
-  Logger.log(`Swagger docs at http://localhost:${port}/${apiPrefix}/docs`, 'Bootstrap');
+  if (swaggerEnabled) {
+    Logger.log(
+      `Swagger docs at http://localhost:${port}/${apiPrefix}/docs`,
+      'Bootstrap',
+    );
+  } else {
+    Logger.log('Swagger docs disabled (production without SWAGGER_ENABLED)', 'Bootstrap');
+  }
 }
 
 void bootstrap();

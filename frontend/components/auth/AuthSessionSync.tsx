@@ -8,6 +8,7 @@ import {
 import { AUTH_PERSIST_KEY } from '@/stores/auth.store';
 import { getQueryClient } from '@/lib/query/query-client-ref';
 import { clearAuthCookie, setAuthCookie } from '@/lib/auth/session';
+import { ApiRequestError } from '@/lib/api/errors';
 import { useSessionCapabilities } from '@/lib/query/auth';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -25,10 +26,17 @@ function SessionCapabilitiesSync({
     if (!enabled || !query.isError) {
       return;
     }
+    // Sign out only when the session itself is gone (401 after the client's
+    // refresh attempt). A 403 — e.g. MUST_CHANGE_PASSWORD on the forced
+    // change-password screen — or a network error must not wipe the tokens,
+    // or the very next request (changing the password) goes out unauthenticated.
+    if (!(query.error instanceof ApiRequestError && query.error.status === 401)) {
+      return;
+    }
     useAuthStore.getState().clearAuth();
     clearAuthCookie();
     getQueryClient()?.clear();
-  }, [enabled, query.isError]);
+  }, [enabled, query.isError, query.error]);
 
   return null;
 }
@@ -40,6 +48,11 @@ export function AuthSessionSync(): React.ReactNode {
   const [hydrated, setHydrated] = useState(false);
   const accessToken = useAuthStore((state) => state.accessToken);
   const sessionId = useAuthStore((state) => state.sessionId);
+  // Until the password is changed the backend answers 403 to everything but
+  // the change itself, so there are no capabilities to load.
+  const mustChangePassword = useAuthStore(
+    (state) => state.user?.mustChangePassword === true,
+  );
 
   useEffect(() => {
     if (useAuthStore.getState().accessToken) {
@@ -114,7 +127,12 @@ export function AuthSessionSync(): React.ReactNode {
 
   return (
     <SessionCapabilitiesSync
-      enabled={hydrated && Boolean(accessToken) && Boolean(sessionId)}
+      enabled={
+        hydrated &&
+        Boolean(accessToken) &&
+        Boolean(sessionId) &&
+        !mustChangePassword
+      }
     />
   );
 }

@@ -5,8 +5,10 @@ import Image from 'next/image';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Form, Input, Spin } from 'antd';
-import { DemoLoginCredentials } from '@/components/auth/DemoLoginCredentials';
+import { DemoLoginPanel } from '@/components/auth/DemoLoginPanel';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
+import { isDemoLoginEnabled } from '@/lib/auth/demo-login-enabled';
+import { setPendingTemporaryPassword } from '@/lib/auth/pending-temporary-password';
 import { useLogin, useResendActivation } from '@/lib/query/auth';
 import { signOutLocally, completeLocalSignIn } from '@/lib/auth/sign-out-locally';
 import { useAuthStore } from '@/stores/auth.store';
@@ -88,6 +90,7 @@ function LoginForm(): React.ReactNode {
       setAuth(tokensResponse);
       completeLocalSignIn();
       if (tokensResponse.user.mustChangePassword) {
+        setPendingTemporaryPassword(values.password);
         router.replace('/change-password');
         return;
       }
@@ -248,12 +251,17 @@ function LoginForm(): React.ReactNode {
                   Forgot password?
                 </Link>
               </p>
+              <p className="mt-2 text-center text-xs text-slate-500">
+                No email on your account? Ask HR to reset your password.
+              </p>
             </div>
           </div>
 
-          <aside className="erp-login-demo-panel" aria-label="Demo access">
-            <DemoLoginCredentials onSelectAccount={handleSelectDemoAccount} />
-          </aside>
+          {isDemoLoginEnabled() ? (
+            <aside className="erp-login-demo-panel" aria-label="Demo access">
+              <DemoLoginPanel onSelectAccount={handleSelectDemoAccount} />
+            </aside>
+          ) : null}
         </div>
       </main>
 
