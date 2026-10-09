@@ -123,6 +123,8 @@ export interface UserProfile {
   emailVerifiedAt: string | null;
   photoDocumentId?: string | null;
   roles: ProfileRole[];
+  /** Approver-only account: no HR processes of their own (no self field movement, leave …). */
+  excludedFromHrProcesses?: boolean;
   // Read-only employment record returned by GET /auth/me (dates are YYYY-MM-DD).
   employeeId?: string | null;
   middleName?: string | null;

@@ -57,6 +57,12 @@ export class ProfileResponseDto {
   @ApiProperty()
   mustChangePassword!: boolean;
 
+  @ApiProperty({
+    description:
+      'Approver-only account: takes no part in HR processes (no own leave, overtime, attendance or field movement)',
+  })
+  excludedFromHrProcesses!: boolean;
+
   @ApiProperty({ nullable: true })
   phone!: string | null;
 

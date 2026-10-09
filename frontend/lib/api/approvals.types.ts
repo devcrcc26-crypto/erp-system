@@ -118,6 +118,14 @@ export interface ApprovalRequestListItem {
 
 export interface ApprovalRequestDetail extends ApprovalRequestListItem {
   formData: Record<string, unknown>;
+  /**
+   * Field movement filed on someone's behalf: who filed it, and whether the
+   * viewer is that person (they may not approve it).
+   */
+  onBehalf?: {
+    submittedBy: { id: string; name: string };
+    viewerIsSubmitter: boolean;
+  } | null;
   notes?: string | null;
   attachmentFolderId?: string | null;
   category?: ApprovalCategorySummary;

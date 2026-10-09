@@ -1031,7 +1031,11 @@
         "explainedDays": "说明的日期",
         "noEntries": "此说明单没有明细。",
         "loadFailed": "加载外勤说明失败",
-        "notFound": "未找到外勤说明"
+        "notFound": "未找到外勤说明",
+        "add": "新增",
+        "addOnBehalf": "代他人新增",
+        "submittedOnBehalf": "由 {{name}} 代为提交",
+        "submitterCannotApprove": "此申请由您代员工提交，须由其他审批人批准。您仍可退回或拒绝。"
       },
       "flight": {
         "new": "新建机票申请",

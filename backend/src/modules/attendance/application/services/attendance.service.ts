@@ -3142,6 +3142,9 @@ export class AttendanceService
       companyId,
       dto.onBehalfOfEmployeeId,
     );
+    // Self-submissions skip the on-behalf checks; approver-only accounts have
+    // no attendance of their own to explain either way.
+    await this.onBehalfService.assertTakesPartInHrProcesses(employeeId, companyId);
 
     const dailyLogIds = dto.entries.map((entry) => entry.dailyLogId);
     const entriesByDailyLog = new Map<string, typeof dto.entries>();
@@ -3346,7 +3349,9 @@ export class AttendanceService
       employeeId,
       recordId: created.id,
       recordReference: requestNumber,
-      autoApproveTier: dto.autoApproveTier,
+      // Field movement filed on behalf goes through the employee's normal chain;
+      // the creator never approves it (see approvals: on-behalf creator block).
+      autoApproveTier: false,
     });
 
     return created;
@@ -3458,8 +3463,17 @@ export class AttendanceService
           select: {
             id: true,
             firstName: true,
+            middleName: true,
             lastName: true,
             employeeId: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
           },
         },
         entries: {
@@ -3506,15 +3520,49 @@ export class AttendanceService
       'view',
     );
     const isOwner = log.employeeId === userId;
+    const isCreator = log.createdBy === userId;
     const isApprover =
       log.approvalRequest?.tiers?.some((tier) => tier.approverId === userId) ??
       false;
 
-    if (!isHr && !isOwner && !isApprover) {
+    if (!isHr && !isOwner && !isCreator && !isApprover) {
       throw new ForbiddenException('You do not have access to this log');
     }
 
-    return log;
+    return { ...log, submittedOnBehalf: log.createdBy !== log.employeeId };
+  }
+
+  /**
+   * Flagged days for an employee the actor may file field movement for (self,
+   * or on behalf). Approver-only employees are rejected.
+   */
+  async getFlaggedDaysOnBehalf(
+    actorUserId: string,
+    employeeId: string,
+    month: number,
+    year: number,
+    companyId: string,
+  ): Promise<unknown> {
+    if (
+      employeeId !== actorUserId &&
+      !(await this.onBehalfService.isEligibleFor(actorUserId, employeeId, companyId))
+    ) {
+      throw new ForbiddenException(
+        'You do not have permission to submit on behalf of this employee',
+      );
+    }
+    await this.onBehalfService.assertTakesPartInHrProcesses(employeeId, companyId);
+
+    const [flags, record] = await Promise.all([
+      this.getFlaggedDaysForEmployee(employeeId, month, year, companyId),
+      this.prisma.attendanceRecord.findUnique({
+        where: {
+          companyId_employeeId_month_year: { companyId, employeeId, month, year },
+        },
+        select: { id: true },
+      }),
+    ]);
+    return { ...flags, hasRecord: record !== null };
   }
 
   /**

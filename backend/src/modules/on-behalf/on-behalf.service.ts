@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -27,6 +28,9 @@ export interface OnBehalfEligibleEmployee {
 
 export const ON_BEHALF_AUTO_APPROVE_COMMENT =
   'Auto-approved by creator (on-behalf submission)';
+
+export const EXCLUDED_FROM_HR_MESSAGE =
+  'This employee is approver-only and does not take part in HR processes';
 
 const CREATE_ON_BEHALF_ACTION = 'CREATE_ON_BEHALF';
 const AUTO_APPROVE_ACTION = 'ON_BEHALF_AUTO_APPROVE';
@@ -88,6 +92,7 @@ const MODULE_AUDIT: Record<
  *   Departments are flat today; when sub-departments exist, extend `ledDepartmentIds`.
  * - Discipline lead (Discipline.leaderId): employees of the disciplines they lead.
  * - Everyone else: nobody. The actor is never eligible as their own on-behalf target.
+ * - Approver-only accounts (excludedFromHrProcesses) are never a target.
  */
 @Injectable()
 export class OnBehalfService {
@@ -200,10 +205,13 @@ export class OnBehalfService {
     }
     const employee = await this.prisma.user.findFirst({
       where: activeOnly({ id: onBehalfOfEmployeeId, companyId }),
-      select: { id: true },
+      select: { id: true, excludedFromHrProcesses: true },
     });
     if (!employee) {
       throw new NotFoundException('Employee not found');
+    }
+    if (employee.excludedFromHrProcesses) {
+      throw new BadRequestException(EXCLUDED_FROM_HR_MESSAGE);
     }
     if (!(await this.isEligibleFor(actorUserId, onBehalfOfEmployeeId, companyId))) {
       throw new ForbiddenException(
@@ -211,6 +219,26 @@ export class OnBehalfService {
       );
     }
     return onBehalfOfEmployeeId;
+  }
+
+  /**
+   * Throws when the employee is an approver-only account (no HR processes of
+   * their own) — used for self-submissions, which skip the on-behalf checks.
+   */
+  async assertTakesPartInHrProcesses(
+    employeeId: string,
+    companyId: string,
+  ): Promise<void> {
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: { excludedFromHrProcesses: true },
+    });
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+    if (employee.excludedFromHrProcesses) {
+      throw new BadRequestException(EXCLUDED_FROM_HR_MESSAGE);
+    }
   }
 
   /**
@@ -347,6 +375,7 @@ export class OnBehalfService {
     const base = activeOnly({
       companyId,
       isActive: true,
+      excludedFromHrProcesses: false,
       id: { not: userId },
     });
 

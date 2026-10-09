@@ -657,6 +657,10 @@ model User {
   bankAccountNumber   String?   @map("bank_account_number")
   includeInPayroll    Boolean   @default(true) @map("include_in_payroll")
   attendanceMode      AttendanceMode @default(SCANNER) @map("attendance_mode")
+  /// Approver-only accounts: never an HR-process subject (no leave, overtime,
+  /// attendance or field movement of their own; not an on-behalf target).
+  excludedFromHrProcesses Boolean @default(false) @map("excluded_from_hr_processes")
+  excludedReason          String? @map("excluded_reason")
   isActive            Boolean   @default(true) @map("is_active")
   mfaEnabled          Boolean   @default(false) @map("mfa_enabled")
   mustChangePassword  Boolean   @default(false) @map("must_change_password")

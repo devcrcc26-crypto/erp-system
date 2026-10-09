@@ -485,6 +485,7 @@ export class ProfileService {
       lastName: user.lastName,
       chineseName: user.chineseName,
       mustChangePassword: user.mustChangePassword,
+      excludedFromHrProcesses: user.excludedFromHrProcesses,
       phone: user.phone,
       companyId: user.companyId,
       companyName: user.company.legalName,

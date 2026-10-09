@@ -322,6 +322,8 @@ export default function ApprovalDetailPageContent({
   }, [currentTier]);
 
   const actionsDisabled = hasUnresolvedConditions;
+  // Filed on the employee's behalf by the viewer: another approver decides.
+  const approveBlocked = request?.onBehalf?.viewerIsSubmitter === true;
 
   const unresolvedConditions = useMemo(() => {
     if (
@@ -455,14 +457,14 @@ export default function ApprovalDetailPageContent({
         key: 'approve',
         icon: <CheckOutlined />,
         label: t('hr.buttons.approve'),
-        disabled: actionsDisabled,
+        disabled: actionsDisabled || approveBlocked,
         onClick: () => setActionModal('approve'),
       },
       {
         key: 'conditional',
         icon: <WarningOutlined />,
         label: t('hr.buttons.conditionallyApprove'),
-        disabled: actionsDisabled,
+        disabled: actionsDisabled || approveBlocked,
         onClick: () => setActionModal('conditional'),
       },
       {
@@ -482,7 +484,7 @@ export default function ApprovalDetailPageContent({
         onClick: () => setActionModal('reject'),
       },
     ],
-    [actionsDisabled, t],
+    [actionsDisabled, approveBlocked, t],
   );
 
   if (detailQuery.isLoading && !request) {

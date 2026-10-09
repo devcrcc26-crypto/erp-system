@@ -29,7 +29,14 @@ import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 import { ApiRequestError } from '@/lib/api/errors';
-import { getMyAttendance, getMyFlaggedDays } from '@/lib/api/attendance.api';
+import {
+  getEmployeeFlaggedDays,
+  getMyAttendance,
+  getMyFlaggedDays,
+} from '@/lib/api/attendance.api';
+import { formatOnBehalfEmployeeName } from '@/components/shared/OnBehalfSelector';
+import { useOnBehalfEligibleEmployees } from '@/lib/query/on-behalf';
+import { useCurrentUser } from '@/lib/query/profile';
 import type {
   AttendanceDayFlag,
   CreateFieldMovementEntryDto,
@@ -533,9 +540,27 @@ function Notice({
 /**
  * Full-page New Request form for Field Movement / Early Departure Log.
  */
-export default function FieldMovementForm(): React.ReactNode {
+export default function FieldMovementForm({
+  onBehalf = false,
+}: {
+  /** "Add on behalf": pick the employee, then explain their flagged days. */
+  onBehalf?: boolean;
+} = {}): React.ReactNode {
   const router = useRouter();
   const messageApi = useAppMessage();
+  const currentUser = useCurrentUser();
+  const eligibleQuery = useOnBehalfEligibleEmployees(
+    currentUser.data?.id,
+    currentUser.data?.companyId,
+    onBehalf,
+  );
+  const [targetEmployeeId, setTargetEmployeeId] = useState<string | undefined>();
+  const targetEmployee = eligibleQuery.data?.find(
+    (employee) => employee.id === targetEmployeeId,
+  );
+  const targetName = targetEmployee
+    ? formatOnBehalfEmployeeName(targetEmployee, { includeEmployeeId: false })
+    : null;
   const createMutation = useCreateFieldMovementLog();
   const submitMutation = useSubmitFieldMovementLog();
   const cancelMutation = useCancelFieldMovementLog();
@@ -847,16 +872,30 @@ export default function FieldMovementForm(): React.ReactNode {
       setFetchState('idle');
       return;
     }
+    if (onBehalf && !targetEmployeeId) {
+      setStepOneError('Choose the employee first.');
+      setFetchState('idle');
+      return;
+    }
     setFetchState('loading');
     clearBulkFields();
     try {
-      const [flags, yearAttendance] = await Promise.all([
-        getMyFlaggedDays(month, year),
-        getMyAttendance(year),
-      ]);
-      const hasMonthRecord = yearAttendance.records.some(
-        (record) => record.month === month && record.year === year,
-      );
+      let flags: { flaggedDays: FlaggedDay[] };
+      let hasMonthRecord: boolean;
+      if (onBehalf && targetEmployeeId) {
+        const result = await getEmployeeFlaggedDays(targetEmployeeId, month, year);
+        flags = result;
+        hasMonthRecord = result.hasRecord;
+      } else {
+        const [own, yearAttendance] = await Promise.all([
+          getMyFlaggedDays(month, year),
+          getMyAttendance(year),
+        ]);
+        flags = own;
+        hasMonthRecord = yearAttendance.records.some(
+          (record) => record.month === month && record.year === year,
+        );
+      }
       if (!hasMonthRecord) {
         setDayEntries([]);
         setFetchState('not-approved');
@@ -883,6 +922,10 @@ export default function FieldMovementForm(): React.ReactNode {
   }
 
   function validateStep1(): boolean {
+    if (onBehalf && !targetEmployeeId) {
+      setStepOneError('Choose the employee first.');
+      return false;
+    }
     if (
       month == null ||
       year == null ||
@@ -1071,6 +1114,9 @@ export default function FieldMovementForm(): React.ReactNode {
     return {
       notes: overallNotes.trim() || undefined,
       entries,
+      ...(onBehalf && targetEmployeeId
+        ? { onBehalfOfEmployeeId: targetEmployeeId, autoApproveTier: false }
+        : {}),
     };
   }
 
@@ -1153,9 +1199,20 @@ export default function FieldMovementForm(): React.ReactNode {
             Explanation sent for approval
           </h2>
           <p className="fm-success__text">
-            <strong>{submittedLog.requestNumber}</strong> has been submitted.
-            Your supervisor will review it, and you can track its status in
-            Approvals → My Requests.
+            {onBehalf && targetName ? (
+              <>
+                <strong>{submittedLog.requestNumber}</strong> has been submitted
+                on behalf of <strong>{targetName}</strong>. It goes through their
+                normal approval chain; you can track it in Approvals → My
+                Requests.
+              </>
+            ) : (
+              <>
+                <strong>{submittedLog.requestNumber}</strong> has been submitted.
+                Your supervisor will review it, and you can track its status in
+                Approvals → My Requests.
+              </>
+            )}
           </p>
           <div className="fm-success__actions">
             <Button
@@ -1209,15 +1266,48 @@ export default function FieldMovementForm(): React.ReactNode {
             </span>
             <div>
               <h2 id="fm-period-title" className="fm-card__title">
-                Which month do you want to explain?
+                {onBehalf
+                  ? 'Which employee and month do you want to explain?'
+                  : 'Which month do you want to explain?'}
               </h2>
               <p className="fm-card__subtitle">
-                We will find the days where your attendance was flagged, such
-                as a missing clock-in or an early departure.
+                {onBehalf
+                  ? 'Entering a paper form for someone else. We will find the days where their attendance was flagged; past months are fine.'
+                  : 'We will find the days where your attendance was flagged, such as a missing clock-in or an early departure.'}
               </p>
             </div>
           </div>
           <div className="fm-card__body">
+            {onBehalf ? (
+              <div className="mb-4">
+                <Field id="fm-employee" label="Employee" required>
+                  {(a11y) => (
+                    <Select
+                      {...a11y}
+                      size="large"
+                      showSearch
+                      allowClear
+                      className="w-full"
+                      placeholder="Search by name or employee ID"
+                      loading={eligibleQuery.isLoading}
+                      value={targetEmployeeId}
+                      optionFilterProp="label"
+                      options={(eligibleQuery.data ?? []).map((employee) => ({
+                        value: employee.id,
+                        // Full name incl. middle name, then the employee ID.
+                        label: formatOnBehalfEmployeeName(employee),
+                      }))}
+                      onChange={(value: string | undefined) => {
+                        setTargetEmployeeId(value);
+                        setFetchState('idle');
+                        setDayEntries([]);
+                        setStepOneError(null);
+                      }}
+                    />
+                  )}
+                </Field>
+              </div>
+            ) : null}
             <div className="fm-grid-2">
               <Field id="fm-month" label="Month" required>
                 {(a11y) => (
@@ -1300,7 +1390,11 @@ export default function FieldMovementForm(): React.ReactNode {
               {fetchState === 'has-flags' ? (
                 <Notice
                   tone="warning"
-                  title={`You have ${plural(selectableDays.length, 'day')} to explain for ${periodLabel}.`}
+                  title={
+                    onBehalf && targetName
+                      ? `${targetName} has ${plural(selectableDays.length, 'day')} to explain for ${periodLabel}.`
+                      : `You have ${plural(selectableDays.length, 'day')} to explain for ${periodLabel}.`
+                  }
                 >
                   <div className="fm-badge-row mt-2">
                     {(Object.keys(flagCounts) as AttendanceDayFlag[]).map(

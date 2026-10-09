@@ -58,6 +58,10 @@ import {
 } from '../../../../shared/config/auto-approve.mode';
 import { ApprovalDecisionRegistry } from './approval-decision-registry.service';
 import {
+  isOnBehalfCreator,
+  ON_BEHALF_CREATOR_APPROVAL_MESSAGE,
+} from '../utils/on-behalf-approval.util';
+import {
   ApprovalResolverService,
   type MatchedApprovalRule,
   type ResolvedApprovalTier,
@@ -116,7 +120,14 @@ const REQUEST_DETAIL_INCLUDE = {
   projectSeal: { select: { id: true } },
   exitPermit: { select: { id: true } },
   siteAssignment: { select: { id: true } },
-  fieldMovementLog: { select: { id: true } },
+  fieldMovementLog: {
+    select: {
+      id: true,
+      employeeId: true,
+      createdBy: true,
+      creator: { select: { id: true, firstName: true, middleName: true, lastName: true } },
+    },
+  },
   responses: {
     include: {
       responder: { select: USER_SELECT },
@@ -469,10 +480,31 @@ export class ApprovalsService {
       request.fieldMovementLog?.id ??
       null; 
 
+    // Field movement filed on someone's behalf: who filed it, and whether the
+    // viewer is that person (they may not approve it — see approveTier).
+    const fieldMovement = request.fieldMovementLog;
+    const onBehalf =
+      fieldMovement && fieldMovement.createdBy !== fieldMovement.employeeId
+        ? {
+            submittedBy: {
+              id: fieldMovement.creator.id,
+              name: [
+                fieldMovement.creator.firstName,
+                fieldMovement.creator.middleName,
+                fieldMovement.creator.lastName,
+              ]
+                .filter((part) => Boolean(part && part.trim()))
+                .join(' '),
+            },
+            viewerIsSubmitter: isOnBehalfCreator(fieldMovement, userId),
+          }
+        : null;
+
     return {
       ...request,
       categoryCode: request.category?.code ?? null,
       sourceId,
+      onBehalf,
       leaveRequest: undefined,
       overtimeSheet: undefined,
       flightApplication: undefined,
@@ -899,6 +931,9 @@ export class ApprovalsService {
     );
     this.assertPendingWorkflow(request.status);
     this.assertCurrentTier(request.currentTier, tier.tierOrder);
+    if (options?.bypassApproverCheck !== true) {
+      await this.assertNotOnBehalfCreator(request.id, userId);
+    }
 
     const conditions = this.parseConditions(tier.conditions);
     const unresolved = conditions.filter((c) => !c.resolved);
@@ -1974,6 +2009,24 @@ export class ApprovalsService {
     >(`SELECT nextval('approval_request_number_seq') as nextval`);
     const next = Number(result[0]?.nextval ?? 1);
     return `${prefix}-${String(next).padStart(4, '0')}`;
+  }
+
+  /**
+   * The person who filed a field movement log on someone's behalf may not
+   * approve it, even when they hold a tier in that employee's chain.
+   * (AUTO_APPROVE_ALL bypasses approver checks and is unaffected.)
+   */
+  private async assertNotOnBehalfCreator(
+    requestId: string,
+    userId: string,
+  ): Promise<void> {
+    const fieldMovement = await this.prisma.fieldMovementLog.findFirst({
+      where: { approvalRequestId: requestId },
+      select: { createdBy: true, employeeId: true },
+    });
+    if (isOnBehalfCreator(fieldMovement, userId)) {
+      throw new ForbiddenException(ON_BEHALF_CREATOR_APPROVAL_MESSAGE);
+    }
   }
 
   private async loadTierForAction(

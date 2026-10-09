@@ -518,6 +518,11 @@ export interface FlaggedDaysResponse {
   year: number;
 }
 
+/** Flagged days for another employee (on behalf); hasRecord = month imported. */
+export interface EmployeeFlaggedDaysResponse extends FlaggedDaysResponse {
+  hasRecord: boolean;
+}
+
 export interface CreateFieldMovementEntryDto {
   dailyLogId: string;
   reason: FieldMovementReason;
@@ -574,9 +579,19 @@ export interface FieldMovementLog {
   employee?: {
     id: string;
     firstName: string;
+    middleName?: string | null;
     lastName: string;
     employeeId: string | null;
   };
+  /** Who filed it; differs from employee when submitted on behalf. */
+  createdBy?: string;
+  creator?: {
+    id: string;
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+  };
+  submittedOnBehalf?: boolean;
   entries?: FieldMovementLogEntry[];
   approvalRequest?: {
     id: string;

@@ -328,6 +328,13 @@ export default function FieldMovementLogDetailPageContent({
                 <span className="erp-users-id-chip">{employeeCode}</span>
                 <span>{periodLabel}</span>
               </p>
+              {log?.submittedOnBehalf && log.creator ? (
+                <p className="m-0 mt-1 text-[13px] text-slate-600">
+                  {t('pages.hr.fieldMovementLogs.submittedOnBehalf', {
+                    name: formatUserName(log.creator),
+                  })}
+                </p>
+              ) : null}
             </div>
           </div>
           {log?.approvalRequestId ? (

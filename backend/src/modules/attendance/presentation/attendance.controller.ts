@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -274,6 +275,27 @@ export class AttendanceController {
   ): Promise<unknown> {
     return this.attendanceService.getFlaggedDaysForEmployee(
       user.userId,
+      query.month,
+      query.year,
+      companyId,
+    );
+  }
+
+  @Get('flagged-days/employee/:employeeId')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Unresolved flagged days for an employee the caller may file field movement for (self or on behalf)',
+  })
+  getEmployeeFlaggedDays(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('employeeId', ParseUUIDPipe) employeeId: string,
+    @Query() query: GetFlaggedDaysDto,
+  ): Promise<unknown> {
+    return this.attendanceService.getFlaggedDaysOnBehalf(
+      user.userId,
+      employeeId,
       query.month,
       query.year,
       companyId,

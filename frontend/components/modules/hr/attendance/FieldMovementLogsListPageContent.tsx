@@ -17,7 +17,9 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   InboxOutlined,
+  PlusOutlined,
   ReloadOutlined,
+  UserAddOutlined,
 } from '@ant-design/icons';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -35,6 +37,9 @@ import type {
 } from '@/lib/api/attendance.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import { useFieldMovementLogsAll } from '@/lib/query/attendance';
+import { useOnBehalfEligibleEmployees } from '@/lib/query/on-behalf';
+import { useCurrentUser } from '@/lib/query/profile';
+import { fieldMovementCreateActions } from '@/lib/utils/field-movement-actions';
 import { useUsersDirectory } from '@/lib/query/users';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatUserName } from '@/lib/utils/user-display';
@@ -89,6 +94,16 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
   const router = useRouter();
   const canViewHr = useCanViewHr();
   const { params, resetPage, bindMeta } = useTablePagination(20);
+  const currentUser = useCurrentUser();
+  const eligibleQuery = useOnBehalfEligibleEmployees(
+    currentUser.data?.id,
+    currentUser.data?.companyId,
+  );
+  const { canAddSelf, canAddOnBehalf } = fieldMovementCreateActions({
+    employeeId: currentUser.data?.employeeId,
+    excludedFromHrProcesses: currentUser.data?.excludedFromHrProcesses,
+    eligibleEmployeeCount: eligibleQuery.data?.length ?? 0,
+  });
 
   const now = useMemo(() => new Date(), []);
   const defaultMonth = now.getMonth() + 1;
@@ -456,15 +471,36 @@ export default function FieldMovementLogsListPageContent(): React.ReactNode {
               {monthName} {year}
             </p>
           </div>
-          <Tooltip title={t('common.refresh')}>
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              loading={listQuery.isFetching && !listQuery.isLoading}
-              onClick={() => void listQuery.refetch()}
-              aria-label={t('common.refresh')}
-            />
-          </Tooltip>
+          <div className="flex flex-wrap items-center gap-2">
+            <Tooltip title={t('common.refresh')}>
+              <Button
+                type="text"
+                icon={<ReloadOutlined />}
+                loading={listQuery.isFetching && !listQuery.isLoading}
+                onClick={() => void listQuery.refetch()}
+                aria-label={t('common.refresh')}
+              />
+            </Tooltip>
+            {canAddOnBehalf ? (
+              <Button
+                icon={<UserAddOutlined />}
+                onClick={() =>
+                  router.push('/approvals/new/field-movement-log?onBehalf=1')
+                }
+              >
+                {t('pages.hr.fieldMovementLogs.addOnBehalf')}
+              </Button>
+            ) : null}
+            {canAddSelf ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => router.push('/approvals/new/field-movement-log')}
+              >
+                {t('pages.hr.fieldMovementLogs.add')}
+              </Button>
+            ) : null}
+          </div>
         </div>
         <div className="erp-users-filter-bar">
           <Select

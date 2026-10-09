@@ -2,6 +2,7 @@ import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from '@/lib/a
 import type {
   AttendanceEmployeeSearchResult,
   AwaitingEnrolmentEmployee,
+  EmployeeFlaggedDaysResponse,
   AttendanceIdentity,
   AttendanceImportBatch,
   AttendanceImportBatchDetails,
@@ -277,6 +278,20 @@ export async function getMyFlaggedDays(
 ): Promise<FlaggedDaysResponse> {
   return apiGet<FlaggedDaysResponse>(
     `${ATTENDANCE_PATH}/flagged-days/me${toQueryString({ month, year })}`,
+  );
+}
+
+/**
+ * Flagged days for an employee the caller may file field movement for
+ * (self or on behalf). Includes whether the month has been imported.
+ */
+export async function getEmployeeFlaggedDays(
+  employeeId: string,
+  month: number,
+  year: number,
+): Promise<EmployeeFlaggedDaysResponse> {
+  return apiGet<EmployeeFlaggedDaysResponse>(
+    `${ATTENDANCE_PATH}/flagged-days/employee/${encodeURIComponent(employeeId)}?month=${month}&year=${year}`,
   );
 }
 
