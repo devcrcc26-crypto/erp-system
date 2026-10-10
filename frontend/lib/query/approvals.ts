@@ -23,6 +23,7 @@ import type {
 } from '@/lib/api/approvals.types';
 import type { PaginationMeta } from '@/lib/api/types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
+import { attendanceKeys } from '@/lib/query/attendance';
 
 type PaginatedResult<T> = { data: T[]; meta: PaginationMeta };
 
@@ -194,6 +195,7 @@ function invalidateApprovalQueries(
   void queryClient.invalidateQueries({
     queryKey: approvalKeys.detail(requestId),
   });
+  void queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
 }
 
 export function useApproveApprovalTier(requestId: string) {

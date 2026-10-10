@@ -454,7 +454,7 @@ export function isFullyAbsentFromStoredLogs(
   );
 }
 
-/** Maps field movement log status to coverage used by dayDeduction. */
+/** Maps field movement approval status to coverage used by dayDeduction. */
 export function fieldMovementCoverageFromStatus(
   status: FieldMovementStatus | null | undefined,
 ): FieldMovementCoverage {

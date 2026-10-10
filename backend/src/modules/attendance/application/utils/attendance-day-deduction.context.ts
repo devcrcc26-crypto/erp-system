@@ -6,11 +6,14 @@ import {
 import { dateToYyyyMmDd } from '../services/attendance-leave.util';
 import { siteNameForDate as resolveSiteNameForDate } from '../../../site-assignment/application/utils/site-assignment.util';
 import {
-  fieldMovementCoverageFromStatus,
   type DayDeductionContext,
   type DayDeductionDayInput,
   type FieldMovementCoverage,
 } from './day-deduction.util';
+import {
+  fieldMovementCoverageFromEntryStatus,
+  mergeFieldMovementCoverage,
+} from './field-movement-entry-status.util';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -137,6 +140,7 @@ export async function loadDeductionDataForMonth(
       select: {
         dailyLogId: true,
         reason: true,
+        status: true,
         log: { select: { status: true } },
       },
     });
@@ -145,20 +149,13 @@ export async function loadDeductionDataForMonth(
       let coverage: FieldMovementCoverage = 'NONE';
       let waiver: FieldMovementCoverage = 'NONE';
       for (const entry of related) {
-        const next = fieldMovementCoverageFromStatus(entry.log.status);
-        if (next === 'APPROVED') {
-          coverage = 'APPROVED';
-        } else if (next === 'PENDING' && coverage !== 'APPROVED') {
-          coverage = 'PENDING';
-        }
+        const entryStatus = entry.status ?? entry.log.status;
+        const next = fieldMovementCoverageFromEntryStatus(entryStatus);
+        coverage = mergeFieldMovementCoverage(coverage, next);
         const isEarlyWaiver =
           entry.reason === 'FIELD_VISIT' || entry.reason === 'EARLY_LEAVE';
         if (isEarlyWaiver) {
-          if (next === 'APPROVED') {
-            waiver = 'APPROVED';
-          } else if (next === 'PENDING' && waiver !== 'APPROVED') {
-            waiver = 'PENDING';
-          }
+          waiver = mergeFieldMovementCoverage(waiver, next);
         }
       }
       fieldMovementByDate.set(dateKey, coverage);

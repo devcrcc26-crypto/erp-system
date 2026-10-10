@@ -3502,14 +3502,20 @@ export class AttendanceService
       },
     )) as { id: string };
 
-    await this.prisma.fieldMovementLog.update({
-      where: { id: logId },
-      data: {
-        status: FieldMovementStatus.SUBMITTED,
-        approvalRequestId: approval.id,
-        submittedAt: new Date(),
-        updatedBy: userId,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.fieldMovementLog.update({
+        where: { id: logId },
+        data: {
+          status: FieldMovementStatus.SUBMITTED,
+          approvalRequestId: approval.id,
+          submittedAt: new Date(),
+          updatedBy: userId,
+        },
+      });
+      await tx.fieldMovementEntry.updateMany({
+        where: { logId },
+        data: { status: FieldMovementStatus.SUBMITTED },
+      });
     });
 
     return this.getFieldMovementLog(logId, companyId, userId);
@@ -3743,6 +3749,10 @@ export class AttendanceService
           updatedBy: userId,
         },
       });
+      await tx.fieldMovementEntry.updateMany({
+        where: { logId },
+        data: { status: FieldMovementStatus.CANCELLED },
+      });
       if (log.approvalRequestId) {
         await tx.approvalRequest.update({
           where: { id: log.approvalRequestId },
@@ -3807,14 +3817,14 @@ export class AttendanceService
     if (decision === 'APPROVED') {
       await this.applyFieldMovementCorrections(log, now);
     } else if (decision === 'REJECTED') {
-      await this.prisma.fieldMovementLog.update({
-        where: { id: log.id },
-        data: {
-          status: FieldMovementStatus.REJECTED,
+      await this.finalizeFieldMovementLogStatus(
+        log.id,
+        FieldMovementStatus.REJECTED,
+        {
           completedAt: now,
           updatedBy: log.employeeId,
         },
-      });
+      );
       await this.recalculateCompanyAttendanceMonth(
         log.companyId,
         log.month,
@@ -3822,18 +3832,37 @@ export class AttendanceService
         log.employeeId,
       );
     } else if (decision === 'RETURNED') {
-      await this.prisma.fieldMovementLog.update({
-        where: { id: log.id },
-        data: {
-          status: FieldMovementStatus.RETURNED,
-          updatedBy: log.employeeId,
-        },
-      });
+      await this.finalizeFieldMovementLogStatus(
+        log.id,
+        FieldMovementStatus.RETURNED,
+        { updatedBy: log.employeeId },
+      );
     }
   }
 
   /**
-   * Approves a field movement log and applies daily-log corrections in one transaction.
+   * Sets log + all entry statuses in one transaction (approval source of truth).
+   */
+  private async finalizeFieldMovementLogStatus(
+    logId: string,
+    status: FieldMovementStatus,
+    logData: Prisma.FieldMovementLogUpdateInput,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.fieldMovementLog.update({
+        where: { id: logId },
+        data: { ...logData, status },
+      });
+      await tx.fieldMovementEntry.updateMany({
+        where: { logId },
+        data: { status },
+      });
+    });
+  }
+
+  /**
+   * Approves a field movement log: statuses + scan corrections in a transaction,
+   * then recalculates attendance for that employee after commit.
    */
   private async applyFieldMovementCorrections(
     log: FieldMovementLog & {
@@ -3850,19 +3879,22 @@ export class AttendanceService
           updatedBy: log.employeeId,
         },
       });
+      await tx.fieldMovementEntry.updateMany({
+        where: { logId: log.id },
+        data: { status: FieldMovementStatus.APPROVED },
+      });
 
       for (const entry of log.entries) {
         await this.applyEntryCorrection(tx, entry, log.employeeId, now);
       }
-
-      await this.recalculateAttendanceRecord(
-        log.employeeId,
-        log.companyId,
-        log.month,
-        log.year,
-        tx,
-      );
     });
+
+    await this.recalculateCompanyAttendanceMonth(
+      log.companyId,
+      log.month,
+      log.year,
+      log.employeeId,
+    );
   }
 
   /**
@@ -3976,7 +4008,8 @@ export class AttendanceService
     tx?: Prisma.TransactionClient,
   ): Promise<void> {
     const writeDb = tx ?? this.prisma;
-    const record = await this.prisma.attendanceRecord.findUnique({
+    const readDb = writeDb;
+    const record = await readDb.attendanceRecord.findUnique({
       where: {
         companyId_employeeId_month_year: {
           companyId,
@@ -3994,7 +4027,7 @@ export class AttendanceService
       return;
     }
 
-    const employee = await this.prisma.user.findFirst({
+    const employee = await readDb.user.findFirst({
       where: { id: employeeId, companyId, deletedAt: null },
       select: {
         id: true,
@@ -4010,7 +4043,7 @@ export class AttendanceService
 
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
     const monthEnd = new Date(Date.UTC(year, month, 0));
-    const contracts = await this.prisma.employeeContract.findMany({
+    const contracts = await readDb.employeeContract.findMany({
       where: {
         companyId,
         employeeId,
@@ -4024,7 +4057,7 @@ export class AttendanceService
 
     let employmentEndDate: Date | null = null;
     if (contracts.length === 0) {
-      const latestEnded = await this.prisma.employeeContract.findFirst({
+      const latestEnded = await readDb.employeeContract.findFirst({
         where: {
           companyId,
           employeeId,
@@ -4101,7 +4134,7 @@ export class AttendanceService
     );
 
     if (missingDates.length > 0) {
-      const holidays = await this.prisma.publicHoliday.findMany({
+      const holidays = await readDb.publicHoliday.findMany({
         where: {
           companyId,
           isActive: true,
@@ -4190,7 +4223,7 @@ export class AttendanceService
     }
 
     const deductionData = await loadDeductionDataForMonth(
-      this.prisma,
+      readDb,
       companyId,
       employee,
       month,

@@ -4467,6 +4467,7 @@ model FieldMovementEntry {
   dailyLogId    String              @map("daily_log_id")
   date          DateTime            @db.Date
   reason        FieldMovementReason
+  status        FieldMovementStatus @default(DRAFT)
   destination   String?
   departureTime String?             @map("departure_time")
   returnTime    String?             @map("return_time")
@@ -4480,6 +4481,7 @@ model FieldMovementEntry {
   @@unique([logId, dailyLogId, reason], map: "uq_field_movement_entry_log_day_reason")
   @@index([logId], map: "idx_field_movement_entry_log")
   @@index([dailyLogId], map: "idx_field_movement_entry_daily_log")
+  @@index([status], map: "idx_field_movement_entry_status")
   @@map("field_movement_entry")
 }
 
