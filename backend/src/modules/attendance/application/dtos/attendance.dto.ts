@@ -287,7 +287,7 @@ export class CreateFieldMovementEntryDto {
 
   @ApiPropertyOptional({
     description:
-      'Return time in HH:mm local format — omit if did not return to office',
+      'Return time in HH:mm local format — omit if did not return to office. For FORGOT_CLOCK_IN: the stated clock-in time (required when paired with FORGOT_CLOCK_OUT, i.e. "forgot both").',
   })
   @IsOptional()
   @IsString()

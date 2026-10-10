@@ -69,6 +69,11 @@ import {
   employedCalendarDatesForContracts,
   summarizeMonthAbsence,
 } from '../utils/day-deduction.util';
+import { DayCoverageService } from '../../../hr-shared/application/services/day-coverage.service';
+import {
+  dateKey as coverDateKey,
+  dayCoverMessage,
+} from '../../../hr-shared/application/utils/day-coverage.util';
 import { summarizeMissingEmployeeCoverage } from '../utils/attendance-import-coverage.util';
 import {
   clearAttendanceMonthRecalcStale,
@@ -346,6 +351,7 @@ export class AttendanceService
     private readonly hrApprovalChain: HrApprovalChainService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly onBehalfService: OnBehalfService,
+    private readonly dayCoverage: DayCoverageService,
   ) {}
 
   onModuleInit(): void {
@@ -2999,6 +3005,8 @@ export class AttendanceService
         pendingTierLabel: string | null;
         pendingApproverName: string | null;
       } | null;
+      /** Set when a pending leave / site assignment / WFH request covers the day. */
+      coverMessage: string | null;
     }>;
     month: number;
     year: number;
@@ -3069,6 +3077,20 @@ export class AttendanceService
       },
     });
 
+    // Days covered by approved leave, a site assignment or work from home need
+    // no explanation — leave them out. Days with such a request still pending
+    // stay in the list, locked, with the reason.
+    const covers = await this.dayCoverage.findCovers(
+      companyId,
+      employeeId,
+      flaggedDays.map((day) => ({ date: day.date })),
+      ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME'],
+    );
+    const coverByDate = new Map(covers.map((cover) => [cover.date, cover]));
+    const uncoveredDays = flaggedDays.filter(
+      (day) => coverByDate.get(coverDateKey(day.date))?.state !== 'APPROVED',
+    );
+
     /** Active logs still block a new explanation for that day. */
     const blockingStatuses = new Set<FieldMovementStatus>([
       FieldMovementStatus.DRAFT,
@@ -3078,7 +3100,7 @@ export class AttendanceService
       FieldMovementStatus.APPROVED,
     ]);
 
-    const flaggedDaysWithOptions = flaggedDays.map((day) => {
+    const flaggedDaysWithOptions = uncoveredDays.map((day) => {
       const availableReasons: FieldMovementReason[] = [];
 
       if (day.flag === 'MISSING_CLOCK_IN') {
@@ -3108,10 +3130,14 @@ export class AttendanceService
         ? `${pendingTier.approver.firstName} ${pendingTier.approver.lastName}`.trim()
         : null;
 
+      const pendingCover = coverByDate.get(coverDateKey(day.date));
+      const coverMessage = pendingCover ? dayCoverMessage(pendingCover) : null;
+
       return {
         ...day,
         availableReasons,
-        alreadySubmitted: activeLog != null,
+        alreadySubmitted: activeLog != null || coverMessage !== null,
+        coverMessage,
         submittedLog: activeLog
           ? {
               id: activeLog.id,
@@ -3195,7 +3221,8 @@ export class AttendanceService
       },
     });
 
-    if (dailyLogs.length !== dailyLogIds.length) {
+    // Compare with distinct days: "forgot both" sends two entries for one day.
+    if (dailyLogs.length !== uniqueIds.length) {
       throw new BadRequestException('One or more daily logs were not found');
     }
 
@@ -3214,6 +3241,46 @@ export class AttendanceService
         );
       }
     }
+
+    // "Forgot both" (FORGOT_CLOCK_IN + FORGOT_CLOCK_OUT on one day): only when
+    // neither scan exists, with a stated clock-in before the stated clock-out.
+    for (const [dailyLogId, list] of entriesByDailyLog.entries()) {
+      if (list.length !== 2) {
+        continue;
+      }
+      const log = dailyLogs.find((row) => row.id === dailyLogId);
+      const dateLabel = log ? log.date.toISOString().split('T')[0] : dailyLogId;
+      const clockIn = list.find((e) => e.reason === FieldMovementReason.FORGOT_CLOCK_IN);
+      const clockOut = list.find((e) => e.reason === FieldMovementReason.FORGOT_CLOCK_OUT);
+      if (
+        log &&
+        ((log.correctedClockInLocal ?? log.clockInLocal) ||
+          (log.correctedClockOutLocal ?? log.clockOutLocal))
+      ) {
+        throw new BadRequestException(
+          `"Forgot both" is only for days with neither scan — ${dateLabel} already has a recorded scan`,
+        );
+      }
+      if (!clockIn?.returnTime) {
+        throw new BadRequestException(
+          `Stated clock-in time is required for "forgot both" on ${dateLabel}`,
+        );
+      }
+      if (clockOut?.departureTime && clockIn.returnTime >= clockOut.departureTime) {
+        throw new BadRequestException(
+          `Stated clock-in must be before the stated clock-out on ${dateLabel}`,
+        );
+      }
+    }
+
+    // Not for days covered by leave, a site assignment or work from home
+    // (approved or requested).
+    await this.dayCoverage.assertUncovered(
+      companyId,
+      employeeId,
+      dailyLogs.map((log) => ({ date: log.date })),
+      ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME'],
+    );
 
     const existingBlockingEntries = await this.prisma.fieldMovementEntry.findMany({
       where: {
@@ -3849,7 +3916,9 @@ export class AttendanceService
         break;
 
       case FieldMovementReason.FORGOT_CLOCK_IN:
-        data.correctedClockInLocal = scheduledStart;
+        // Stated clock-in ("forgot both" carries it in returnTime); otherwise
+        // the scheduled start.
+        data.correctedClockInLocal = entry.returnTime ?? scheduledStart;
         data.missingClockIn = false;
         break;
 

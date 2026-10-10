@@ -163,10 +163,10 @@ export default function FieldMovementLogDetailPageContent({
         render: (value: string | null) => value?.trim() || '—',
       },
       {
-        title: 'Departure',
+        title: 'Departure / out',
         dataIndex: 'departureTime',
         key: 'departureTime',
-        width: 100,
+        width: 120,
         render: (value: string | null) =>
           value ? (
             <span className="erp-fml-time">{value}</span>
@@ -175,10 +175,11 @@ export default function FieldMovementLogDetailPageContent({
           ),
       },
       {
-        title: 'Return',
+        // Return time; for "forgot to clock in" it holds the stated clock-in.
+        title: 'Return / in',
         dataIndex: 'returnTime',
         key: 'returnTime',
-        width: 100,
+        width: 120,
         render: (value: string | null) =>
           value ? (
             <span className="erp-fml-time">{value}</span>

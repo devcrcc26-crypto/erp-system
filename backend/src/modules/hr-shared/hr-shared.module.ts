@@ -2,6 +2,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { OnBehalfModule } from '../on-behalf/on-behalf.module';
 import { HrApprovalChainService } from './application/services/hr-approval-chain.service';
 import { HrExcelImportService } from './application/import-export/hr-excel-import.service';
+import { DayCoverageService } from './application/services/day-coverage.service';
 
 /**
  * Shared HR helpers (org approval chain, Excel import parsing, on-behalf submission)
@@ -9,7 +10,12 @@ import { HrExcelImportService } from './application/import-export/hr-excel-impor
  */
 @Module({
   imports: [forwardRef(() => OnBehalfModule)],
-  providers: [HrApprovalChainService, HrExcelImportService],
-  exports: [HrApprovalChainService, HrExcelImportService, OnBehalfModule],
+  providers: [HrApprovalChainService, HrExcelImportService, DayCoverageService],
+  exports: [
+    HrApprovalChainService,
+    HrExcelImportService,
+    DayCoverageService,
+    OnBehalfModule,
+  ],
 })
 export class HrSharedModule {}

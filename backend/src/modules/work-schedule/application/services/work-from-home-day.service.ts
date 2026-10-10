@@ -28,6 +28,7 @@ import { ApprovalDecisionRegistry } from '../../../approvals/application/service
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import { DayCoverageService } from '../../../hr-shared/application/services/day-coverage.service';
 import type {
   CreateWorkFromHomeDayDto,
   RequestWorkFromHomeDayDto,
@@ -71,6 +72,7 @@ export class WorkFromHomeDayService
     private readonly approvalsService: ApprovalsService,
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly onBehalfService: OnBehalfService,
+    private readonly dayCoverage: DayCoverageService,
   ) {}
 
   onModuleInit(): void {
@@ -403,6 +405,14 @@ export class WorkFromHomeDayService
     }
 
     await this.assertNoPendingRequest(companyId, employeeId, dateKey);
+    // Not on a day with leave, a site assignment, a field movement (approved or
+    // requested) or attendance scans.
+    await this.dayCoverage.assertUncovered(
+      companyId,
+      employeeId,
+      [{ date }],
+      ['LEAVE', 'SITE_ASSIGNMENT', 'FIELD_MOVEMENT', 'ATTENDANCE'],
+    );
 
     const resolvedTiers =
       await this.hrApprovalChain.buildSiteAssignmentApprovalChain(

@@ -104,7 +104,7 @@ const REASON_HINTS: Record<UiReason, string> = {
   FORGOT_CLOCK_OUT:
     'You were at work but the clock-out was not recorded. Enter the time you left.',
   FORGOT_BOTH:
-    'Creates one forgot-in and one forgot-out explanation. Enter the stated clock-out time.',
+    'Neither scan was recorded. Enter the time you arrived and the time you left.',
 };
 
 const BULK_REASON_CATALOG: ReasonOption[] = [
@@ -126,7 +126,7 @@ const BULK_REASON_CATALOG: ReasonOption[] = [
   {
     value: 'FORGOT_BOTH',
     label: 'Forgot both scans',
-    hint: 'Creates IN + OUT entries for the same day.',
+    hint: 'Only for days with neither a clock-in nor a clock-out.',
   },
   {
     value: 'EARLY_LEAVE',
@@ -155,6 +155,7 @@ type DayErrors = Partial<
     | 'destination'
     | 'departureTime'
     | 'returnTime'
+    | 'clockInTime'
     | 'earlyLeaveReason'
     | 'notes',
     string
@@ -176,6 +177,12 @@ type DayEntry = {
     pendingTierLabel: string | null;
     pendingApproverName: string | null;
   } | null;
+  /** Locked because another request covers the day. */
+  coverMessage: string | null;
+  /** Neither a clock-in nor a clock-out recorded — only then "forgot both" applies. */
+  bothScansMissing: boolean;
+  /** Stated clock-in time (forgot both). */
+  clockInTime: string;
   selected: boolean;
   selectedReason: UiReason | null;
   destination: string;
@@ -210,7 +217,7 @@ function scheduledEndTime(dateStr: string, isHalfDay: boolean): string {
   return new Date(dateStr).getDay() === 6 ? '12:30' : '17:30';
 }
 
-function toDayEntry(day: FlaggedDay): DayEntry {
+export function toDayEntry(day: FlaggedDay): DayEntry {
   return {
     id: day.id,
     date: day.date,
@@ -228,6 +235,11 @@ function toDayEntry(day: FlaggedDay): DayEntry {
           pendingApproverName: day.submittedLog.pendingApproverName,
         }
       : null,
+    coverMessage: day.coverMessage ?? null,
+    bothScansMissing:
+      !(day.correctedClockInLocal ?? day.clockInLocal) &&
+      !(day.correctedClockOutLocal ?? day.clockOutLocal),
+    clockInTime: '',
     selected: !day.alreadySubmitted,
     selectedReason: null,
     destination: '',
@@ -241,7 +253,7 @@ function toDayEntry(day: FlaggedDay): DayEntry {
   };
 }
 
-function getValidBulkReasons(selectedDays: DayEntry[]): UiReason[] {
+export function getValidBulkReasons(selectedDays: DayEntry[]): UiReason[] {
   const flags = new Set(selectedDays.map((d) => d.flag));
   const reasons: UiReason[] = ['FIELD_VISIT'];
 
@@ -253,7 +265,7 @@ function getValidBulkReasons(selectedDays: DayEntry[]): UiReason[] {
   }
   if (
     !flags.has('EARLY_LEAVE') &&
-    (flags.has('MISSING_CLOCK_IN') || flags.has('MISSING_CLOCK_OUT'))
+    selectedDays.some((day) => day.bothScansMissing)
   ) {
     reasons.push('FORGOT_BOTH');
   }
@@ -277,10 +289,15 @@ function dayIsFullyExplained(day: DayEntry): boolean {
   if (day.selectedReason === 'EARLY_LEAVE') {
     return Boolean(day.departureTime) && day.earlyLeaveReason.trim().length > 0;
   }
-  if (
-    day.selectedReason === 'FORGOT_CLOCK_OUT' ||
-    day.selectedReason === 'FORGOT_BOTH'
-  ) {
+  if (day.selectedReason === 'FORGOT_BOTH') {
+    return (
+      Boolean(day.clockInTime) &&
+      Boolean(day.departureTime) &&
+      day.clockInTime < day.departureTime &&
+      day.notes.trim().length >= 3
+    );
+  }
+  if (day.selectedReason === 'FORGOT_CLOCK_OUT') {
     return Boolean(day.departureTime) && day.notes.trim().length >= 3;
   }
   return true;
@@ -314,6 +331,9 @@ function daySummary(day: DayEntry): string {
   const parts = [UI_REASON_LABELS[day.selectedReason]];
   if (day.destination) {
     parts.push(day.destination);
+  }
+  if (day.selectedReason === 'FORGOT_BOTH' && day.clockInTime) {
+    parts.push(`in ${day.clockInTime}`);
   }
   if (day.departureTime) {
     parts.push(`left ${day.departureTime}`);
@@ -465,6 +485,14 @@ function ReasonChoices({
 
 function DayStatusBadge({ day }: { day: DayEntry }): React.ReactNode {
   const state = dayState(day);
+  if (state === 'locked' && day.coverMessage) {
+    return (
+      <span className="fm-badge fm-badge--amber" title={day.coverMessage}>
+        <Lock size={13} aria-hidden />
+        {day.coverMessage}
+      </span>
+    );
+  }
   if (state === 'locked' && day.submittedLog) {
     return (
       <span className="fm-badge fm-badge--blue">
@@ -582,6 +610,7 @@ export default function FieldMovementForm({
   const [bulkDepartureTime, setBulkDepartureTime] = useState('');
   const [bulkDidReturn, setBulkDidReturn] = useState(false);
   const [bulkReturnTime, setBulkReturnTime] = useState('');
+  const [bulkClockInTime, setBulkClockInTime] = useState('');
   const [bulkEarlyLeaveReason, setBulkEarlyLeaveReason] = useState('');
   const [bulkNotes, setBulkNotes] = useState('');
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
@@ -668,10 +697,15 @@ export default function FieldMovementForm({
         bulkEarlyLeaveReason.trim().length > 0
       );
     }
-    if (
-      bulkReason === 'FORGOT_CLOCK_OUT' ||
-      bulkReason === 'FORGOT_BOTH'
-    ) {
+    if (bulkReason === 'FORGOT_BOTH') {
+      return (
+        Boolean(parseTime(bulkClockInTime)) &&
+        Boolean(parseTime(bulkDepartureTime)) &&
+        bulkClockInTime < bulkDepartureTime &&
+        bulkNotes.trim().length >= 3
+      );
+    }
+    if (bulkReason === 'FORGOT_CLOCK_OUT') {
       return (
         Boolean(parseTime(bulkDepartureTime)) && bulkNotes.trim().length >= 3
       );
@@ -683,6 +717,7 @@ export default function FieldMovementForm({
     bulkDestination,
     bulkDidReturn,
     bulkReturnTime,
+    bulkClockInTime,
     bulkDepartureTime,
     bulkEarlyLeaveReason,
     bulkNotes,
@@ -694,6 +729,7 @@ export default function FieldMovementForm({
     setBulkDepartureTime('');
     setBulkDidReturn(false);
     setBulkReturnTime('');
+    setBulkClockInTime('');
     setBulkEarlyLeaveReason('');
     setBulkNotes('');
   }
@@ -811,8 +847,7 @@ export default function FieldMovementForm({
         }
         const apiReasonsOk =
           reason === 'FORGOT_BOTH'
-            ? day.availableReasons.includes('FORGOT_CLOCK_IN') ||
-              day.availableReasons.includes('FORGOT_CLOCK_OUT')
+            ? day.bothScansMissing
             : day.availableReasons.includes(reason);
         if (!apiReasonsOk) {
           return day;
@@ -821,6 +856,7 @@ export default function FieldMovementForm({
           ...day,
           selectedReason: reason,
           destination: reason === 'FIELD_VISIT' ? destination : '',
+          clockInTime: reason === 'FORGOT_BOTH' ? bulkClockInTime : '',
           departureTime,
           didReturn,
           returnTime,
@@ -1017,6 +1053,19 @@ export default function FieldMovementForm({
             }
           }
         }
+        if (day.selectedReason === 'FORGOT_BOTH') {
+          if (!day.clockInTime || !parseTime(day.clockInTime)) {
+            errors.clockInTime = day.clockInTime
+              ? 'Use HH:mm format'
+              : 'Stated clock-in time is required';
+            valid = false;
+            needsExpand.add(index);
+          } else if (day.departureTime && day.clockInTime >= day.departureTime) {
+            errors.clockInTime = 'Clock-in must be before clock-out';
+            valid = false;
+            needsExpand.add(index);
+          }
+        }
         if (
           day.selectedReason === 'FORGOT_CLOCK_OUT' ||
           day.selectedReason === 'FORGOT_BOTH'
@@ -1083,6 +1132,8 @@ export default function FieldMovementForm({
         entries.push({
           dailyLogId: day.id,
           reason: 'FORGOT_CLOCK_IN',
+          // Stated clock-in time for a forgot-in entry.
+          returnTime: day.clockInTime || undefined,
           notes,
         });
         entries.push({
@@ -1692,6 +1743,31 @@ export default function FieldMovementForm({
                         </>
                       ) : null}
 
+                      {bulkReason === 'FORGOT_BOTH' ? (
+                        <Field
+                          id="fm-bulk-forgot-in"
+                          label="Stated clock-in time"
+                          required
+                          hint="Applies to every selected day with both scans missing."
+                        >
+                          {(a11y) => (
+                            <TimePicker
+                              {...a11y}
+                              size="large"
+                              format="HH:mm"
+                              needConfirm={false}
+                              className="w-full sm:max-w-xs"
+                              value={parseTime(bulkClockInTime)}
+                              onChange={(value) =>
+                                setBulkClockInTime(
+                                  value ? value.format('HH:mm') : '',
+                                )
+                              }
+                            />
+                          )}
+                        </Field>
+                      ) : null}
+
                       {bulkReason === 'FORGOT_CLOCK_OUT' ||
                       bulkReason === 'FORGOT_BOTH' ? (
                         <Field
@@ -1819,8 +1895,7 @@ export default function FieldMovementForm({
                   const reasonOptions = REASON_OPTIONS[day.flag].filter(
                     (option) =>
                       option.value === 'FORGOT_BOTH'
-                        ? day.availableReasons.includes('FORGOT_CLOCK_IN') ||
-                          day.availableReasons.includes('FORGOT_CLOCK_OUT')
+                        ? day.bothScansMissing
                         : day.availableReasons.includes(option.value),
                   );
                   const state = dayState(day);
@@ -2054,6 +2129,36 @@ export default function FieldMovementForm({
                               )}
                             </Field>
                           </>
+                        ) : null}
+
+                        {day.selectedReason === 'FORGOT_BOTH' ? (
+                          <Field
+                            id={fieldId('forgot-in')}
+                            label="Stated clock-in time"
+                            required
+                            hint="The time you arrived. Late-arrival rules apply to it."
+                            error={day.errors.clockInTime}
+                          >
+                            {(a11y) => (
+                              <TimePicker
+                                {...a11y}
+                                size="large"
+                                format="HH:mm"
+                                needConfirm={false}
+                                className="w-full sm:max-w-xs"
+                                value={parseTime(day.clockInTime)}
+                                onChange={(value) => {
+                                  updateDay(day.id, {
+                                    clockInTime: value
+                                      ? value.format('HH:mm')
+                                      : '',
+                                    filledViaBulk: false,
+                                  });
+                                  clearDayError(day.id, 'clockInTime');
+                                }}
+                              />
+                            )}
+                          </Field>
                         ) : null}
 
                         {day.selectedReason === 'FORGOT_CLOCK_OUT' ||

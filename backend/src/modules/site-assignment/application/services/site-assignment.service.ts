@@ -29,6 +29,8 @@ import type {
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import { DayCoverageService } from '../../../hr-shared/application/services/day-coverage.service';
+import { eachDay } from '../../../hr-shared/application/utils/day-coverage.util';
 import { formatDateOnly } from '../../../work-schedule/application/services/work-schedule.dates';
 import {
   ListSiteAssignmentsDto,
@@ -109,6 +111,7 @@ export class SiteAssignmentService
     private readonly onBehalfService: OnBehalfService,
     private readonly permissionService: PermissionService,
     private readonly attendanceService: AttendanceService,
+    private readonly dayCoverage: DayCoverageService,
   ) {}
 
   onModuleInit(): void {
@@ -154,6 +157,14 @@ export class SiteAssignmentService
     }
 
     await this.assertNoOverlap(employeeId, companyId, startDate, endDate);
+    // Not over days already covered by leave, work from home or a field
+    // movement (approved or requested). HQ scans on site days stay allowed.
+    await this.dayCoverage.assertUncovered(
+      companyId,
+      employeeId,
+      eachDay(startDate, endDate),
+      ['LEAVE', 'WORK_FROM_HOME', 'FIELD_MOVEMENT'],
+    );
 
     const days = calendarDaysInclusive(startDate, endDate);
     const resolvedTiers =

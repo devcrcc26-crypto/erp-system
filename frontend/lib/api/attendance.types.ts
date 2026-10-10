@@ -510,6 +510,12 @@ export interface FlaggedDay {
     pendingTierLabel: string | null;
     pendingApproverName: string | null;
   } | null;
+  /**
+   * Set when a pending leave / site assignment / work-from-home request covers
+   * the day, e.g. "Leave has been requested for this day (2026-08-04)."
+   * The day is then locked (alreadySubmitted).
+   */
+  coverMessage?: string | null;
 }
 
 export interface FlaggedDaysResponse {

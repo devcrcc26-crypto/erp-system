@@ -39,6 +39,11 @@ import type {
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import { DayCoverageService } from '../../../hr-shared/application/services/day-coverage.service';
+import {
+  dateKey as coverDateKey,
+  eachDay,
+} from '../../../hr-shared/application/utils/day-coverage.util';
 import { AttendanceService } from '../../../attendance/application/services/attendance.service';
 import { monthsTouchedByRange } from '../../../site-assignment/application/utils/site-assignment.util';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
@@ -123,6 +128,7 @@ export class LeaveService
     private readonly attendanceService: AttendanceService,
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
+    private readonly dayCoverage: DayCoverageService,
   ) {}
    
   onModuleInit(): void {
@@ -202,6 +208,33 @@ export class LeaveService
     const endDate = resolved.endDate;
     const year = startDate.getUTCFullYear();
     const days = resolved.days;
+
+    // A leave day must not already be covered by leave, a site assignment,
+    // work from home, a field movement or attendance scans (approved or requested).
+    // Half-day leave: the other half may be another half-day leave or scans.
+    const halfDayKeys = new Set<string>();
+    for (const period of resolved.periodRows) {
+      if (period.dayPortion !== 'FULL') {
+        for (const day of eachDay(period.startDate, period.endDate)) {
+          halfDayKeys.add(coverDateKey(day.date));
+        }
+      }
+    }
+    const leaveDays = resolved.breakdown
+      .filter((day) => day.weight > 0)
+      .map((day) => ({ date: day.date, halfDay: halfDayKeys.has(coverDateKey(day.date)) }));
+    await this.dayCoverage.assertUncovered(
+      companyId,
+      employeeId,
+      leaveDays.filter((day) => !day.halfDay),
+      ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME', 'FIELD_MOVEMENT', 'ATTENDANCE'],
+    );
+    await this.dayCoverage.assertUncovered(
+      companyId,
+      employeeId,
+      leaveDays.filter((day) => day.halfDay),
+      ['SITE_ASSIGNMENT', 'WORK_FROM_HOME', 'FIELD_MOVEMENT'],
+    );
 
     // Step 1 — resolve chain for the leave owner (not necessarily the actor)
     // Leave: Discipline Lead → HR Officer (no General Manager tier)

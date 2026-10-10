@@ -143,12 +143,26 @@ export default function FieldMovementDetail({
                 {sample?.departureTime || sample?.returnTime || sample?.notes ? (
                   <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
                     {sample.departureTime ? (
-                      <MetaItem label="Departed">
+                      <MetaItem
+                        label={
+                          reason === 'FORGOT_CLOCK_OUT'
+                            ? 'Stated clock-out'
+                            : 'Departed'
+                        }
+                      >
                         {sample.departureTime}
                       </MetaItem>
                     ) : null}
                     {sample.returnTime ? (
-                      <MetaItem label="Returned">{sample.returnTime}</MetaItem>
+                      <MetaItem
+                        label={
+                          reason === 'FORGOT_CLOCK_IN'
+                            ? 'Stated clock-in'
+                            : 'Returned'
+                        }
+                      >
+                        {sample.returnTime}
+                      </MetaItem>
                     ) : null}
                     {sample.notes?.trim() ? (
                       <MetaItem label="Notes">{sample.notes.trim()}</MetaItem>
