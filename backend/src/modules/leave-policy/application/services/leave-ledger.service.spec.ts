@@ -44,6 +44,12 @@ function createFakePrisma(seed: {
         if ('lt' in c) {
           return (value as Date).getTime() < (c.lt as Date).getTime();
         }
+        if ('startsWith' in c) {
+          return (
+            typeof value === 'string' &&
+            value.startsWith(String(c.startsWith))
+          );
+        }
         return true;
       }
       if (condition instanceof Date) {
@@ -73,7 +79,13 @@ function createFakePrisma(seed: {
         contracts.filter((c) => matches(c, where) && c.deletedAt == null).length,
     },
     leaveRequest: {
-      findFirst: async ({ where }: { where: Row }) => leaves.find((l) => l.id === where.id) ?? null,
+      findFirst: async ({ where }: { where: Row }) => {
+        const leave = leaves.find((l) => l.id === where.id) ?? null;
+        if (!leave) {
+          return null;
+        }
+        return { ...leave, periods: (leave.periods as Row[]) ?? [] };
+      },
     },
     leaveBalanceEntry: {
       create: async ({ data }: { data: Row }) => {

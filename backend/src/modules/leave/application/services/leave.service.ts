@@ -224,13 +224,13 @@ export class LeaveService
     );
     const startDate = resolved.startDate;
     const endDate = resolved.endDate;
-    // Balance bucket: the employee's leave year containing the start date.
-    const year = await this.leaveBalanceService.yearLabelForDate(
+    const days = resolved.days;
+    // Charge each working day to the leave year that contains it (split on anniversary).
+    const yearCharges = await this.leaveBalanceService.chargeDaysByLeaveYear(
       employeeId,
       companyId,
-      startDate,
+      resolved.breakdown,
     );
-    const days = resolved.days;
 
     // A leave day must not already be covered by leave, a site assignment,
     // work from home, a field movement or attendance scans (approved or requested).
@@ -267,16 +267,21 @@ export class LeaveService
       false,
     );
 
-    // Step 2 — initialize balance if needed (outside transaction)
-    await this.leaveBalanceService.ensureBalance(employeeId, year, companyId);
+    // Step 2 — initialize balance for each leave year touched (outside transaction)
+    for (const charge of yearCharges) {
+      await this.leaveBalanceService.ensureBalance(
+        employeeId,
+        charge.year.label,
+        companyId,
+      );
+    }
 
-    // Step 3 — check balance (outside transaction)
-    await this.leaveBalanceService.assertSufficientBalance(
+    // Step 3 — check balance per leave year (outside transaction)
+    await this.leaveBalanceService.assertSufficientBalanceForCharges(
       employeeId,
-      dto.leaveType,
-      year,
-      days,
       companyId,
+      dto.leaveType,
+      yearCharges,
     );
 
     const title = `${this.formatLeaveType(dto.leaveType)} leave — ${formatDateOnly(startDate)} to ${formatDateOnly(endDate)}`;
@@ -405,14 +410,16 @@ export class LeaveService
         await this.attachFiles(leaveId, companyId, actorUserId, files);
       }
 
-      await this.leaveBalanceService.adjustBalance(
-        employeeId,
-        dto.leaveType,
-        year,
-        'pending',
-        days,
-        companyId,
-      );
+      for (const charge of yearCharges) {
+        await this.leaveBalanceService.adjustBalance(
+          employeeId,
+          dto.leaveType,
+          charge.year.label,
+          'pending',
+          charge.days,
+          companyId,
+        );
+      }
     } catch (error: unknown) {
       this.logger.error(
         `Leave create failed after approval ${approval.id}; cancelling approval`,

@@ -24,6 +24,8 @@ import {
   leaveYearFor,
   planCarryOver,
   roundDays,
+  splitRangeByLeaveYears,
+  toDateOnlyKey,
   toDateOnlyUtc,
   type LeaveYear,
 } from '../utils/leave-year.util';
@@ -76,12 +78,33 @@ export interface LeaveYearView {
   end: string;
 }
 
+/** Ledger-derived balance for one leave type on the leave year containing `date`. */
+export interface LeaveBalanceView {
+  employeeId: string;
+  leaveType: LeaveType;
+  year: LeaveYearView;
+  entitled: number;
+  broughtForward: number;
+  used: number;
+  pending: number;
+  remaining: number;
+  /** Policy id when the employee is on a leave policy; otherwise null. */
+  leavePolicyId: string | null;
+}
+
 function toLeaveYearView(year: LeaveYear): LeaveYearView {
   return {
     label: year.label,
-    start: dateOnlyKey(year.start),
-    end: dateOnlyKey(year.end),
+    start: toDateOnlyKey(year.start),
+    end: toDateOnlyKey(year.end),
   };
+}
+
+function matchesLeaveYearStart(
+  stored: Date,
+  yearStart: Date,
+): boolean {
+  return toDateOnlyKey(stored) === toDateOnlyKey(yearStart);
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -373,7 +396,10 @@ export class LeaveLedgerService {
 
   // ─── Used days (approved leave) ───────────────────────────────────────────
 
-  /** Approved leave → USED (−days) in the leave year of its start date. */
+  /**
+   * Approved leave → USED (−days) per leave year touched by the request
+   * periods (split on employment anniversary).
+   */
   async recordLeaveUsed(leaveRequestId: string): Promise<void> {
     const leave = await this.prisma.leaveRequest.findFirst({
       where: { id: leaveRequestId },
@@ -385,57 +411,152 @@ export class LeaveLedgerService {
         startDate: true,
         days: true,
         requestNumber: true,
+        periods: {
+          select: { startDate: true, endDate: true, days: true },
+          orderBy: { startDate: 'asc' },
+        },
       },
     });
     if (!leave?.startDate) {
       return;
     }
-    const days = Number(leave.days ?? 0);
-    if (!(days > 0)) {
-      return;
-    }
     const employee = await this.loadEmployee(leave.employeeId, leave.companyId);
-    const year = leaveYearFor(employee.anchor, leave.startDate);
     const leaveType = getBalanceLeaveType(leave.leaveType);
-    await this.createEntry(this.prisma, {
-      employee,
-      leaveType,
-      year,
-      kind: LeaveBalanceEntryKind.USED,
-      days: -days,
-      reason: `Leave ${leave.requestNumber} approved`,
-      dedupeKey: `USED:${leave.id}`,
-      sourceLeaveRequestId: leave.id,
-      actorUserId: null,
+    const charges = this.allocateChargesByYear(employee.anchor, {
+      startDate: leave.startDate,
+      days: leave.days,
+      periods: leave.periods,
     });
-    await this.syncCache(employee, year, [leaveType]);
+
+    for (const charge of charges) {
+      if (!(charge.days > 0)) {
+        continue;
+      }
+      await this.createEntry(this.prisma, {
+        employee,
+        leaveType,
+        year: charge.year,
+        kind: LeaveBalanceEntryKind.USED,
+        days: -charge.days,
+        reason: `Leave ${leave.requestNumber} approved`,
+        dedupeKey: `USED:${leave.id}:${charge.year.label}`,
+        sourceLeaveRequestId: leave.id,
+        actorUserId: null,
+      });
+      await this.syncCache(employee, charge.year, [leaveType]);
+    }
   }
 
-  /** Cancelled / deleted approved leave → reverse its USED entry once. */
+  /** Cancelled / deleted approved leave → reverse its USED entries once. */
   async reverseLeaveUsed(
     leaveRequestId: string,
     actorUserId: string | null,
   ): Promise<void> {
-    const used = await this.prisma.leaveBalanceEntry.findUnique({
-      where: { dedupeKey: `USED:${leaveRequestId}` },
+    const usedRows = await this.prisma.leaveBalanceEntry.findMany({
+      where: {
+        sourceLeaveRequestId: leaveRequestId,
+        kind: LeaveBalanceEntryKind.USED,
+        OR: [
+          { dedupeKey: `USED:${leaveRequestId}` },
+          { dedupeKey: { startsWith: `USED:${leaveRequestId}:` } },
+        ],
+      },
     });
-    if (!used) {
+    if (usedRows.length === 0) {
       return;
     }
-    const employee = await this.loadEmployee(used.employeeId, used.companyId);
-    const year = leaveYearFor(employee.anchor, used.leaveYearStart);
-    await this.createEntry(this.prisma, {
-      employee,
-      leaveType: used.leaveType,
-      year,
-      kind: LeaveBalanceEntryKind.USED,
-      days: -Number(used.days),
-      reason: `Reversal: ${used.reason ?? 'leave'} cancelled`,
-      dedupeKey: `USED_REVERSAL:${leaveRequestId}`,
-      sourceLeaveRequestId: leaveRequestId,
-      actorUserId,
-    });
-    await this.syncCache(employee, year, [used.leaveType]);
+    for (const used of usedRows) {
+      if (used.dedupeKey?.startsWith('USED_REVERSAL:')) {
+        continue;
+      }
+      const employee = await this.loadEmployee(used.employeeId, used.companyId);
+      const year = leaveYearFor(employee.anchor, used.leaveYearStart);
+      await this.createEntry(this.prisma, {
+        employee,
+        leaveType: used.leaveType,
+        year,
+        kind: LeaveBalanceEntryKind.USED,
+        days: -Number(used.days),
+        reason: `Reversal: ${used.reason ?? 'leave'} cancelled`,
+        dedupeKey: `USED_REVERSAL:${leaveRequestId}:${toDateOnlyKey(used.leaveYearStart)}`,
+        sourceLeaveRequestId: leaveRequestId,
+        actorUserId,
+      });
+      await this.syncCache(employee, year, [used.leaveType]);
+    }
+  }
+
+  /**
+   * Allocate leave request days across leave years using period date ranges.
+   * Single-year periods keep their stored days; cross-anniversary periods are
+   * split by calendar-day share of the period.
+   */
+  private allocateChargesByYear(
+    anchor: Date | null,
+    leave: {
+      startDate: Date;
+      days: Prisma.Decimal | number | null;
+      periods?: Array<{ startDate: Date; endDate: Date; days: Prisma.Decimal }>;
+    },
+  ): Array<{ year: LeaveYear; days: number }> {
+    const byLabel = new Map<number, { year: LeaveYear; days: number }>();
+    const add = (year: LeaveYear, days: number): void => {
+      const existing = byLabel.get(year.label);
+      if (existing) {
+        existing.days = roundDays(existing.days + days);
+      } else {
+        byLabel.set(year.label, { year, days: roundDays(days) });
+      }
+    };
+
+    const periods =
+      leave.periods && leave.periods.length > 0
+        ? leave.periods
+        : [
+            {
+              startDate: leave.startDate,
+              endDate: leave.startDate,
+              days: new Prisma.Decimal(Number(leave.days ?? 0)),
+            },
+          ];
+
+    for (const period of periods) {
+      const periodDays = Number(period.days);
+      if (!(periodDays > 0)) {
+        continue;
+      }
+      const segments = splitRangeByLeaveYears(
+        anchor,
+        period.startDate,
+        period.endDate,
+      );
+      if (segments.length === 0) {
+        continue;
+      }
+      if (segments.length === 1) {
+        add(segments[0]!.year, periodDays);
+        continue;
+      }
+      const totalDays = segments.reduce((sum, segment) => {
+        const start = toDateOnlyUtc(segment.start).getTime();
+        const end = toDateOnlyUtc(segment.end).getTime();
+        return sum + Math.floor((end - start) / 86_400_000) + 1;
+      }, 0);
+      let allocated = 0;
+      segments.forEach((segment, index) => {
+        const start = toDateOnlyUtc(segment.start).getTime();
+        const end = toDateOnlyUtc(segment.end).getTime();
+        const calendarDays = Math.floor((end - start) / 86_400_000) + 1;
+        const share =
+          index === segments.length - 1
+            ? roundDays(periodDays - allocated)
+            : roundDays((periodDays * calendarDays) / totalDays);
+        allocated = roundDays(allocated + share);
+        add(segment.year, share);
+      });
+    }
+
+    return [...byLabel.values()].sort((a, b) => a.year.label - b.year.label);
   }
 
   // ─── HR entries ───────────────────────────────────────────────────────────
@@ -696,9 +817,33 @@ export class LeaveLedgerService {
     actorUserId: string | null;
   }): Promise<void> {
     const { employee, year, leaveType } = input;
-    const yearKey = dateOnlyKey(year.start);
+    const yearStart = toDateOnlyUtc(year.start);
+    const yearEnd = toDateOnlyUtc(year.end);
+    const yearKey = toDateOnlyKey(yearStart);
+    const yearForWrite: LeaveYear = {
+      label: year.label,
+      start: yearStart,
+      end: yearEnd,
+    };
 
-    const currentEntitled = await this.sumEntries(employee.id, leaveType, year, [
+    // HR absolute snapshot owns the year: clear prior year-close artefacts so
+    // entitled / brought-forward / used are the source of truth.
+    await this.prisma.leaveBalanceEntry.deleteMany({
+      where: {
+        employeeId: employee.id,
+        leaveType,
+        leaveYearStart: yearStart,
+        OR: [
+          { kind: LeaveBalanceEntryKind.EXPIRED },
+          {
+            kind: LeaveBalanceEntryKind.CARRY_OVER,
+            dedupeKey: { startsWith: 'CARRY_OUT:' },
+          },
+        ],
+      },
+    });
+
+    const currentEntitled = await this.sumEntries(employee.id, leaveType, yearForWrite, [
       LeaveBalanceEntryKind.ENTITLEMENT,
       LeaveBalanceEntryKind.OPENING_BALANCE,
       LeaveBalanceEntryKind.ADJUSTMENT,
@@ -707,23 +852,21 @@ export class LeaveLedgerService {
     const currentBroughtForward = await this.sumEntries(
       employee.id,
       leaveType,
-      year,
+      yearForWrite,
       [LeaveBalanceEntryKind.CARRY_OVER],
     );
-    const systemUsed = roundDays(
-      -(
-        await this.prisma.leaveBalanceEntry.aggregate({
-          where: {
-            employeeId: employee.id,
-            leaveType,
-            leaveYearStart: year.start,
-            kind: LeaveBalanceEntryKind.USED,
-            sourceLeaveRequestId: { not: null },
-          },
-          _sum: { days: true },
-        })
-      )._sum.days ?? 0,
-    );
+    const systemUsedAgg = await this.prisma.leaveBalanceEntry.aggregate({
+      where: {
+        employeeId: employee.id,
+        leaveType,
+        leaveYearStart: yearStart,
+        kind: LeaveBalanceEntryKind.USED,
+        sourceLeaveRequestId: { not: null },
+      },
+      _sum: { days: true },
+    });
+    // USED entries are stored as negative days; expose as a positive "used" total.
+    const systemUsed = roundDays(-Number(systemUsedAgg._sum.days ?? 0));
     if (input.used < systemUsed) {
       throw new BadRequestException(
         `${leaveType}: used (${input.used}) cannot be less than days already taken on approved leave requests (${systemUsed})`,
@@ -736,7 +879,7 @@ export class LeaveLedgerService {
         where: {
           employeeId: employee.id,
           leaveType,
-          leaveYearStart: year.start,
+          leaveYearStart: yearStart,
           kind: {
             in: [
               LeaveBalanceEntryKind.OPENING_BALANCE,
@@ -750,7 +893,7 @@ export class LeaveLedgerService {
         await this.createEntry(this.prisma, {
           employee,
           leaveType,
-          year,
+          year: yearForWrite,
           kind: LeaveBalanceEntryKind.OPENING_BALANCE,
           days: input.entitled,
           reason: input.reason,
@@ -761,7 +904,7 @@ export class LeaveLedgerService {
         await this.createEntry(this.prisma, {
           employee,
           leaveType,
-          year,
+          year: yearForWrite,
           kind: LeaveBalanceEntryKind.ADJUSTMENT,
           days: entitledDelta,
           reason: input.reason,
@@ -772,20 +915,17 @@ export class LeaveLedgerService {
     }
 
     const carryDedupe = `CARRY_OVER:SNAPSHOT:${employee.id}:${leaveType}:${yearKey}`;
-    const systemCarry = roundDays(
-      (
-        await this.prisma.leaveBalanceEntry.aggregate({
-          where: {
-            employeeId: employee.id,
-            leaveType,
-            leaveYearStart: year.start,
-            kind: LeaveBalanceEntryKind.CARRY_OVER,
-            NOT: { dedupeKey: carryDedupe },
-          },
-          _sum: { days: true },
-        })
-      )._sum.days ?? 0,
-    );
+    const systemCarryAgg = await this.prisma.leaveBalanceEntry.aggregate({
+      where: {
+        employeeId: employee.id,
+        leaveType,
+        leaveYearStart: yearStart,
+        kind: LeaveBalanceEntryKind.CARRY_OVER,
+        NOT: { dedupeKey: carryDedupe },
+      },
+      _sum: { days: true },
+    });
+    const systemCarry = roundDays(Number(systemCarryAgg._sum.days ?? 0));
     if (input.broughtForward < systemCarry) {
       throw new BadRequestException(
         `${leaveType}: brought forward (${input.broughtForward}) cannot be less than system carry-over (${systemCarry})`,
@@ -795,7 +935,7 @@ export class LeaveLedgerService {
       where: {
         employeeId: employee.id,
         leaveType,
-        leaveYearStart: year.start,
+        leaveYearStart: yearStart,
         kind: LeaveBalanceEntryKind.CARRY_OVER,
         dedupeKey: carryDedupe,
       },
@@ -805,7 +945,7 @@ export class LeaveLedgerService {
       await this.createEntry(this.prisma, {
         employee,
         leaveType,
-        year,
+        year: yearForWrite,
         kind: LeaveBalanceEntryKind.CARRY_OVER,
         days: snapshotCarry,
         reason: input.reason,
@@ -820,7 +960,7 @@ export class LeaveLedgerService {
       where: {
         employeeId: employee.id,
         leaveType,
-        leaveYearStart: year.start,
+        leaveYearStart: yearStart,
         kind: LeaveBalanceEntryKind.USED,
         dedupeKey: goLiveDedupe,
       },
@@ -829,7 +969,7 @@ export class LeaveLedgerService {
       await this.createEntry(this.prisma, {
         employee,
         leaveType,
-        year,
+        year: yearForWrite,
         kind: LeaveBalanceEntryKind.USED,
         days: -goLiveUsedTarget,
         reason: input.reason,
@@ -883,7 +1023,7 @@ export class LeaveLedgerService {
     };
   }
 
-  /** Sum of all entries for a leave year (the ledger balance). */
+  /** Sum of all ledger entries for a leave year (no lazy year open). */
   async balance(
     employeeId: string,
     companyId: string,
@@ -896,6 +1036,85 @@ export class LeaveLedgerService {
       leaveType,
       leaveYearByLabel(employee.anchor, yearLabel),
     );
+  }
+
+  /**
+   * Single source of truth for validator and UI: ledger sums for the leave
+   * year containing `date`, plus pending from the cache row.
+   */
+  async getLeaveBalance(
+    employeeId: string,
+    companyId: string,
+    leaveType: LeaveType,
+    date: Date | string,
+  ): Promise<LeaveBalanceView> {
+    const employee = await this.loadEmployee(employeeId, companyId);
+    const year = leaveYearFor(employee.anchor, date);
+    const yearStart = toDateOnlyUtc(year.start);
+    const yearEnd = toDateOnlyUtc(year.end);
+    const normalized: LeaveYear = {
+      label: year.label,
+      start: yearStart,
+      end: yearEnd,
+    };
+    await this.ensureLeaveYear(employeeId, companyId, normalized.label);
+
+    const balanceLeaveType = getBalanceLeaveType(leaveType);
+    const startKey = toDateOnlyKey(yearStart);
+    const entries = await this.prisma.leaveBalanceEntry.findMany({
+      where: {
+        companyId,
+        employeeId: employee.id,
+        leaveType: balanceLeaveType,
+      },
+      select: { leaveYearStart: true, kind: true, days: true },
+    });
+    const yearEntries = entries.filter((row) =>
+      matchesLeaveYearStart(row.leaveYearStart, yearStart),
+    );
+
+    const sumKinds = (kinds: LeaveBalanceEntryKind[]): number =>
+      roundDays(
+        yearEntries
+          .filter((row) => kinds.includes(row.kind))
+          .reduce((total, row) => total + Number(row.days), 0),
+      );
+
+    const entitled = sumKinds([
+      LeaveBalanceEntryKind.ENTITLEMENT,
+      LeaveBalanceEntryKind.OPENING_BALANCE,
+      LeaveBalanceEntryKind.ADJUSTMENT,
+      LeaveBalanceEntryKind.EXPIRED,
+    ]);
+    const broughtForward = sumKinds([LeaveBalanceEntryKind.CARRY_OVER]);
+    const used = roundDays(-sumKinds([LeaveBalanceEntryKind.USED]));
+
+    const cache = await this.prisma.leaveBalance.findUnique({
+      where: {
+        companyId_employeeId_year_leaveType: {
+          companyId,
+          employeeId: employee.id,
+          year: normalized.label,
+          leaveType: balanceLeaveType,
+        },
+      },
+      select: { pending: true },
+    });
+    const pending = roundDays(Number(cache?.pending ?? 0));
+    // Keep the leave_balance cache aligned with the ledger read.
+    await this.syncCache(employee, normalized, [balanceLeaveType]);
+
+    return {
+      employeeId: employee.id,
+      leaveType: balanceLeaveType,
+      year: toLeaveYearView(normalized),
+      entitled,
+      broughtForward,
+      used,
+      pending,
+      remaining: roundDays(entitled + broughtForward - used - pending),
+      leavePolicyId: employee.policyId,
+    };
   }
 
   // ─── Internals ────────────────────────────────────────────────────────────
@@ -939,14 +1158,15 @@ export class LeaveLedgerService {
           kind: LeaveBalanceEntryKind.ENTITLEMENT,
           days: this.entitlementFor(employee, leaveType, year),
           reason: `${options.reason} — ${serviceYears} service year(s)`,
-          dedupeKey: `ENTITLEMENT:${employee.id}:${leaveType}:${startKey}`,
           sourceContractId: options.sourceContractId,
+          dedupeKey: `ENTITLEMENT:${employee.id}:${leaveType}:${startKey}`,
           actorUserId: options.actorUserId,
         });
-      }
-
-      if (CARRY_OVER_LEAVE_TYPES.includes(leaveType)) {
-        await this.closePreviousYear(employee, leaveType, year, options);
+        // Carry / expiry only when a new leave year is first opened — never
+        // mid-year against an already-open current year.
+        if (CARRY_OVER_LEAVE_TYPES.includes(leaveType)) {
+          await this.closePreviousYear(employee, leaveType, year, options);
+        }
       }
     }
     await this.syncCache(employee, year, options.leaveTypes);
@@ -963,8 +1183,8 @@ export class LeaveLedgerService {
     options: { sourceContractId: string | null; actorUserId: string | null },
   ): Promise<void> {
     const previous = leaveYearByLabel(employee.anchor, year.label - 1);
-    const prevKey = dateOnlyKey(previous.start);
-    const carryInKey = `CARRY_IN:${employee.id}:${leaveType}:${dateOnlyKey(year.start)}`;
+    const prevKey = toDateOnlyKey(previous.start);
+    const carryInKey = `CARRY_IN:${employee.id}:${leaveType}:${toDateOnlyKey(year.start)}`;
     const already = await this.prisma.leaveBalanceEntry.findUnique({
       where: { dedupeKey: carryInKey },
       select: { id: true },
@@ -977,8 +1197,35 @@ export class LeaveLedgerService {
     if (already || alreadyExpired) {
       return;
     }
+
+    // HR go-live / snapshot owns this leave year — do not auto carry/expire.
+    const hrManaged = await this.prisma.leaveBalanceEntry.count({
+      where: {
+        employeeId: employee.id,
+        leaveType,
+        leaveYearStart: previous.start,
+        kind: {
+          in: [
+            LeaveBalanceEntryKind.OPENING_BALANCE,
+            LeaveBalanceEntryKind.ADJUSTMENT,
+          ],
+        },
+        createdById: { not: null },
+      },
+    });
+    if (hrManaged > 0) {
+      this.logger.log(
+        `Skipping auto close of leave year ${prevKey} for ${employee.id}/${leaveType}: HR-managed balance`,
+      );
+      return;
+    }
+
     const previousEntries = await this.prisma.leaveBalanceEntry.count({
-      where: { employeeId: employee.id, leaveType, leaveYearStart: previous.start },
+      where: {
+        employeeId: employee.id,
+        leaveType,
+        leaveYearStart: previous.start,
+      },
     });
     if (previousEntries === 0) {
       return;
@@ -1147,8 +1394,8 @@ export class LeaveLedgerService {
           companyId: input.employee.companyId,
           employeeId: input.employee.id,
           leaveType: input.leaveType,
-          leaveYearStart: input.year.start,
-          leaveYearEnd: input.year.end,
+          leaveYearStart: toDateOnlyUtc(input.year.start),
+          leaveYearEnd: toDateOnlyUtc(input.year.end),
           kind: input.kind,
           days: new Prisma.Decimal(roundDays(input.days)),
           reason: input.reason,
@@ -1173,16 +1420,19 @@ export class LeaveLedgerService {
     year: LeaveYear,
     kinds?: LeaveBalanceEntryKind[],
   ): Promise<number> {
-    const result = await this.prisma.leaveBalanceEntry.aggregate({
+    const yearStart = toDateOnlyUtc(year.start);
+    const rows = await this.prisma.leaveBalanceEntry.findMany({
       where: {
         employeeId,
         leaveType,
-        leaveYearStart: year.start,
         ...(kinds ? { kind: { in: kinds } } : {}),
       },
-      _sum: { days: true },
+      select: { leaveYearStart: true, days: true },
     });
-    return roundDays(Number(result._sum.days ?? 0));
+    const total = rows
+      .filter((row) => matchesLeaveYearStart(row.leaveYearStart, yearStart))
+      .reduce((sum, row) => sum + Number(row.days), 0);
+    return roundDays(total);
   }
 
   /** Rewrites the leave_balance cache rows from ledger sums (pending kept). */
@@ -1191,21 +1441,26 @@ export class LeaveLedgerService {
     year: LeaveYear,
     leaveTypes: ReadonlyArray<LeaveType>,
   ): Promise<void> {
-    const grouped = await this.prisma.leaveBalanceEntry.groupBy({
-      by: ['leaveType', 'kind'],
+    const yearStart = toDateOnlyUtc(year.start);
+    const yearEnd = toDateOnlyUtc(year.end);
+    const rows = await this.prisma.leaveBalanceEntry.findMany({
       where: {
         employeeId: employee.id,
-        leaveYearStart: year.start,
         leaveType: { in: [...leaveTypes] },
       },
-      _sum: { days: true },
+      select: { leaveType: true, kind: true, leaveYearStart: true, days: true },
     });
+    const yearRows = rows.filter((row) =>
+      matchesLeaveYearStart(row.leaveYearStart, yearStart),
+    );
     for (const leaveType of leaveTypes) {
       const sum = (kinds: LeaveBalanceEntryKind[]): number =>
         roundDays(
-          grouped
-            .filter((row) => row.leaveType === leaveType && kinds.includes(row.kind))
-            .reduce((total, row) => total + Number(row._sum.days ?? 0), 0),
+          yearRows
+            .filter(
+              (row) => row.leaveType === leaveType && kinds.includes(row.kind),
+            )
+            .reduce((total, row) => total + Number(row.days), 0),
         );
       const entitled = sum([
         LeaveBalanceEntryKind.ENTITLEMENT,

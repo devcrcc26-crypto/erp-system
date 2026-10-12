@@ -167,7 +167,10 @@ export function LeaveBalanceWidget({
     >
       <ul className="dv2-list">
         {balances.map((balance) => (
-          <li key={balance.id} className="dv2-list-row dv2-list-row--static">
+          <li
+            key={`${balance.year}-${balance.leaveType}`}
+            className="dv2-list-row dv2-list-row--static"
+          >
             <span className="dv2-list-title">
               {formatLeaveType(balance.leaveType, t)}
             </span>

@@ -10,22 +10,35 @@ import {
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import {
+  formatLeaveYearRange,
+  leaveYearByLabel,
+  leaveYearFor,
+  roundDays,
+  splitRangeByLeaveYears,
+  toDateOnlyUtc,
+  type LeaveYear,
+} from '../../../leave-policy/application/utils/leave-year.util';
 import { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 import { ListLeaveBalancesDto } from '../dtos/leave.dtos';
 import {
   OWN_BALANCE_LEAVE_TYPES,
   resolveBalanceLeaveType,
 } from './leave-balance-rules';
-import { roundDays } from '../../../leave-policy/application/utils/leave-year.util';
 
 /** Only pending days are kept on leave_balance directly; the rest is ledger. */
 export type LeaveBalanceField = 'pending';
 
+export interface LeaveYearCharge {
+  year: LeaveYear;
+  days: number;
+}
+
 /**
  * Leave balance rows per employee / leave year (employment anniversary) /
- * leave type. Entitled, brought-forward and used are a cache of the
- * LeaveBalanceEntry ledger (see LeaveLedgerService); pending days live here.
- * `year` is the calendar year in which the leave year starts.
+ * leave type. Entitled, brought-forward and used are read from the
+ * LeaveBalanceEntry ledger via LeaveLedgerService.getLeaveBalance; pending
+ * days live on leave_balance.
  */
 @Injectable()
 export class LeaveBalanceService {
@@ -53,6 +66,49 @@ export class LeaveBalanceService {
     date: Date,
   ): Promise<number> {
     return this.leaveLedger.yearLabelForDate(employeeId, companyId, date);
+  }
+
+  /**
+   * Shared balance read for validator and UI — ledger for the leave year
+   * containing `date`, never a stale generated remaining column alone.
+   */
+  async getLeaveBalance(
+    employeeId: string,
+    companyId: string,
+    leaveType: LeaveType,
+    date: Date | string,
+  ): Promise<{
+    employeeId: string;
+    leaveType: LeaveType;
+    year: number;
+    leaveYearStart: string;
+    leaveYearEnd: string;
+    entitled: number;
+    broughtForward: number;
+    used: number;
+    pending: number;
+    remaining: number;
+    leavePolicyId: string | null;
+  }> {
+    const view = await this.leaveLedger.getLeaveBalance(
+      employeeId,
+      companyId,
+      leaveType,
+      date,
+    );
+    return {
+      employeeId: view.employeeId,
+      leaveType: view.leaveType,
+      year: view.year.label,
+      leaveYearStart: view.year.start,
+      leaveYearEnd: view.year.end,
+      entitled: view.entitled,
+      broughtForward: view.broughtForward,
+      used: view.used,
+      pending: view.pending,
+      remaining: view.remaining,
+      leavePolicyId: view.leavePolicyId,
+    };
   }
 
   /**
@@ -111,6 +167,7 @@ export class LeaveBalanceService {
           email: true,
           chineseName: true,
           gender: true,
+          employmentDate: true,
         },
       }),
       this.prisma.user.count({ where: userWhere }),
@@ -120,13 +177,15 @@ export class LeaveBalanceService {
       return buildPaginatedResult([], total, page, limit);
     }
 
+    // One ensure + one batched cache read per page — not 3× getLeaveBalance
+    // per employee (that exhausted the Postgres pool / reset connections).
     const yearByEmployee = new Map<string, number>();
     for (const employee of employees) {
-      const year =
+      const resolved =
         query.year ??
-        (await this.leaveLedger.currentYearLabel(employee.id, companyId));
-      yearByEmployee.set(employee.id, year);
-      await this.ensureBalance(employee.id, year, companyId);
+        leaveYearFor(employee.employmentDate, new Date()).label;
+      yearByEmployee.set(employee.id, resolved);
+      await this.ensureBalance(employee.id, resolved, companyId);
     }
 
     const balanceRows = await this.prisma.leaveBalance.findMany({
@@ -141,18 +200,28 @@ export class LeaveBalanceService {
     });
 
     const data = employees.map((employee) => {
+      const year = yearByEmployee.get(employee.id)!;
       const rows = balanceRows.filter(
-        (row) => row.employeeId === employee.id,
+        (row) => row.employeeId === employee.id && row.year === year,
       );
-      const findRow = (leaveType: LeaveType): Record<string, unknown> | null => {
+      const findRow = (
+        leaveType: LeaveType,
+      ): Record<string, unknown> | null => {
         const row = rows.find((item) => item.leaveType === leaveType);
-        return row ? this.mapBalance(row) : null;
+        return row ? this.mapCacheBalance(row) : null;
       };
 
       return {
         employeeId: employee.id,
-        employee,
-        year: yearByEmployee.get(employee.id),
+        employee: {
+          id: employee.id,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          email: employee.email,
+          chineseName: employee.chineseName,
+          gender: employee.gender,
+        },
+        year,
         annual: findRow(LeaveType.ANNUAL),
         maternity: findRow(LeaveType.MATERNITY),
         sick: findRow(LeaveType.SICK),
@@ -164,6 +233,7 @@ export class LeaveBalanceService {
 
   /**
    * All leave-type balances for an employee leave year (default: current).
+   * Uses getLeaveBalance (ledger) — same source as validation.
    */
   async getBalance(
     employeeId: string,
@@ -172,14 +242,27 @@ export class LeaveBalanceService {
   ): Promise<unknown[]> {
     const label =
       year ?? (await this.leaveLedger.currentYearLabel(employeeId, companyId));
-    await this.ensureBalance(employeeId, label, companyId);
-
-    const rows = await this.prisma.leaveBalance.findMany({
-      where: { companyId, employeeId, year: label },
-      orderBy: { leaveType: 'asc' },
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { employmentDate: true },
     });
-
-    return rows.map((row) => this.mapBalance(row));
+    const leaveYear = leaveYearByLabel(employee?.employmentDate ?? null, label);
+    // Only own-balance buckets (ANNUAL / SICK / MATERNITY). Iterating every
+    // LeaveType would map STUDY/EMERGENCY/… onto ANNUAL and duplicate keys.
+    const rows = await Promise.all(
+      OWN_BALANCE_LEAVE_TYPES.map(async (leaveType) => {
+        const row = await this.getLeaveBalance(
+          employeeId,
+          companyId,
+          leaveType,
+          leaveYear.start,
+        );
+        return this.mapLedgerBalance(row);
+      }),
+    );
+    return rows.sort((a, b) =>
+      String(a.leaveType).localeCompare(String(b.leaveType)),
+    );
   }
 
   /** Kept for callers: same as ensureBalance. */
@@ -228,12 +311,22 @@ export class LeaveBalanceService {
       );
     }
 
-    const updated = await this.prisma.leaveBalance.update({
+    await this.prisma.leaveBalance.update({
       where: { id: row.id },
       data: { [field]: new Prisma.Decimal(next) },
     });
 
-    return this.mapBalance(updated);
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { employmentDate: true },
+    });
+    const leaveYear = leaveYearByLabel(employee?.employmentDate ?? null, year);
+    return this.getLeaveBalance(
+      employeeId,
+      companyId,
+      balanceLeaveType,
+      leaveYear.start,
+    ).then((balance) => this.mapLedgerBalance(balance));
   }
 
   /** Pending-days delta for the leave year containing `date`. */
@@ -256,7 +349,135 @@ export class LeaveBalanceService {
   }
 
   /**
-   * Ensures enough remaining balance exists before submitting leave.
+   * Release or reserve pending days split by leave year (anniversary-aware).
+   * `sign` is +1 to reserve, −1 to release. Uses stored period days.
+   */
+  async adjustPendingForLeavePeriods(
+    employeeId: string,
+    companyId: string,
+    leaveType: LeaveType,
+    periods: ReadonlyArray<{ startDate: Date; endDate: Date; days: number }>,
+    sign: 1 | -1,
+    fallbackStart?: Date,
+    fallbackDays?: number,
+  ): Promise<void> {
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { employmentDate: true },
+    });
+    const charges = await this.chargeDaysByLeaveYear(
+      employeeId,
+      companyId,
+      this.periodDaysAsBreakdown(
+        employee?.employmentDate ?? null,
+        periods,
+        fallbackStart,
+        fallbackDays,
+      ),
+    );
+    for (const charge of charges) {
+      await this.adjustBalance(
+        employeeId,
+        leaveType,
+        charge.year.label,
+        'pending',
+        roundDays(charge.days * sign),
+        companyId,
+      );
+    }
+  }
+
+  /**
+   * Approximate day weights from stored period days for pending release when
+   * the original schedule breakdown is no longer available.
+   */
+  private periodDaysAsBreakdown(
+    anchor: Date | null,
+    periods: ReadonlyArray<{ startDate: Date; endDate: Date; days: number }>,
+    fallbackStart?: Date,
+    fallbackDays?: number,
+  ): Array<{ date: Date; weight: number }> {
+    const rows: Array<{ date: Date; weight: number }> = [];
+    const source =
+      periods.length > 0
+        ? periods
+        : fallbackStart != null && fallbackDays != null
+          ? [
+              {
+                startDate: fallbackStart,
+                endDate: fallbackStart,
+                days: fallbackDays,
+              },
+            ]
+          : [];
+    for (const period of source) {
+      if (!(period.days > 0)) {
+        continue;
+      }
+      const segments = splitRangeByLeaveYears(
+        anchor,
+        period.startDate,
+        period.endDate,
+      );
+      if (segments.length === 0) {
+        continue;
+      }
+      if (segments.length === 1) {
+        rows.push({ date: segments[0]!.year.start, weight: period.days });
+        continue;
+      }
+      const totalDays = segments.reduce((sum, segment) => {
+        const start = toDateOnlyUtc(segment.start).getTime();
+        const end = toDateOnlyUtc(segment.end).getTime();
+        return sum + Math.floor((end - start) / 86_400_000) + 1;
+      }, 0);
+      let allocated = 0;
+      segments.forEach((segment, index) => {
+        const start = toDateOnlyUtc(segment.start).getTime();
+        const end = toDateOnlyUtc(segment.end).getTime();
+        const calendarDays = Math.floor((end - start) / 86_400_000) + 1;
+        const share =
+          index === segments.length - 1
+            ? roundDays(period.days - allocated)
+            : roundDays((period.days * calendarDays) / totalDays);
+        allocated = roundDays(allocated + share);
+        rows.push({ date: segment.year.start, weight: share });
+      });
+    }
+    return rows;
+  }
+
+  /**
+   * Group charged day weights by leave year (for ranges that cross an anniversary).
+   */
+  async chargeDaysByLeaveYear(
+    employeeId: string,
+    companyId: string,
+    breakdown: ReadonlyArray<{ date: Date; weight: number }>,
+  ): Promise<LeaveYearCharge[]> {
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { employmentDate: true },
+    });
+    const anchor = employee?.employmentDate ?? null;
+    const byLabel = new Map<number, LeaveYearCharge>();
+    for (const day of breakdown) {
+      if (!(day.weight > 0)) {
+        continue;
+      }
+      const year = leaveYearFor(anchor, day.date);
+      const existing = byLabel.get(year.label);
+      if (existing) {
+        existing.days = roundDays(existing.days + day.weight);
+      } else {
+        byLabel.set(year.label, { year, days: roundDays(day.weight) });
+      }
+    }
+    return [...byLabel.values()].sort((a, b) => a.year.label - b.year.label);
+  }
+
+  /**
+   * Ensures enough remaining balance exists for each leave-year bucket.
    */
   async assertSufficientBalance(
     employeeId: string,
@@ -265,17 +486,63 @@ export class LeaveBalanceService {
     days: number,
     companyId: string,
   ): Promise<void> {
-    const balanceLeaveType = resolveBalanceLeaveType(leaveType);
-    const balances = await this.getBalance(employeeId, year, companyId);
-    const row = (balances as Array<{ leaveType: string; remaining: number }>).find(
-      (b) => b.leaveType === balanceLeaveType,
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { employmentDate: true },
+    });
+    const leaveYear = leaveYearByLabel(employee?.employmentDate ?? null, year);
+    await this.assertSufficientBalanceForYear(
+      employeeId,
+      companyId,
+      leaveType,
+      leaveYear,
+      days,
     );
-    const remaining = row?.remaining ?? 0;
+  }
+
+  /**
+   * Validates each leave-year segment of a request against getLeaveBalance.
+   */
+  async assertSufficientBalanceForCharges(
+    employeeId: string,
+    companyId: string,
+    leaveType: LeaveType,
+    charges: LeaveYearCharge[],
+  ): Promise<void> {
+    for (const charge of charges) {
+      await this.assertSufficientBalanceForYear(
+        employeeId,
+        companyId,
+        leaveType,
+        charge.year,
+        charge.days,
+      );
+    }
+  }
+
+  private async assertSufficientBalanceForYear(
+    employeeId: string,
+    companyId: string,
+    leaveType: LeaveType,
+    year: LeaveYear,
+    days: number,
+  ): Promise<void> {
+    const balanceLeaveType = resolveBalanceLeaveType(leaveType);
+    const balance = await this.getLeaveBalance(
+      employeeId,
+      companyId,
+      balanceLeaveType,
+      year.start,
+    );
     const requested = roundDays(days);
-    const available = roundDays(remaining);
+    const available = roundDays(balance.remaining);
     if (requested > available) {
+      const typeLabel = balanceLeaveType
+        .toLowerCase()
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
       throw new BadRequestException(
-        `Insufficient ${balanceLeaveType.toLowerCase()} leave balance. Remaining: ${available}, requested: ${requested}`,
+        `Insufficient leave balance for ${typeLabel} in leave year ${formatLeaveYearRange(year)}. Remaining: ${available}, requested: ${requested}`,
       );
     }
   }
@@ -314,21 +581,54 @@ export class LeaveBalanceService {
       actorUserId,
     });
 
-    const row = await this.prisma.leaveBalance.findUniqueOrThrow({
-      where: {
-        companyId_employeeId_year_leaveType: {
-          companyId,
-          employeeId,
-          year,
-          leaveType,
-        },
-      },
+    const employee = await this.prisma.user.findFirst({
+      where: { id: employeeId, companyId, deletedAt: null },
+      select: { employmentDate: true },
     });
+    const leaveYear = leaveYearByLabel(employee?.employmentDate ?? null, year);
+    const balance = await this.getLeaveBalance(
+      employeeId,
+      companyId,
+      leaveType,
+      leaveYear.start,
+    );
 
-    return { created: result.created, balance: this.mapBalance(row) };
+    return {
+      created: result.created,
+      balance: this.mapLedgerBalance(balance),
+    };
   }
 
-  private mapBalance(row: {
+  private mapLedgerBalance(row: {
+    employeeId: string;
+    leaveType: LeaveType;
+    year: number;
+    leaveYearStart: string;
+    leaveYearEnd: string;
+    entitled: number;
+    broughtForward: number;
+    used: number;
+    pending: number;
+    remaining: number;
+  }): Record<string, unknown> {
+    return {
+      // Stable client key (cache row id is not required for display/validation).
+      id: `${row.employeeId}:${row.year}:${row.leaveType}`,
+      employeeId: row.employeeId,
+      year: row.year,
+      leaveType: row.leaveType,
+      leaveYearStart: row.leaveYearStart,
+      leaveYearEnd: row.leaveYearEnd,
+      entitled: row.entitled,
+      broughtForward: row.broughtForward,
+      used: row.used,
+      pending: row.pending,
+      remaining: row.remaining,
+    };
+  }
+
+  /** Map a leave_balance cache row (list endpoint; synced via ensureBalance). */
+  private mapCacheBalance(row: {
     id: string;
     companyId: string;
     employeeId: string;
@@ -339,8 +639,6 @@ export class LeaveBalanceService {
     used: Prisma.Decimal;
     pending: Prisma.Decimal;
     remaining: Prisma.Decimal | null;
-    createdAt: Date;
-    updatedAt: Date;
   }): Record<string, unknown> {
     const entitled = Number(row.entitled);
     const broughtForward = Number(row.broughtForward);
@@ -350,7 +648,6 @@ export class LeaveBalanceService {
       row.remaining != null
         ? Number(row.remaining)
         : entitled + broughtForward - used - pending;
-
     return {
       id: row.id,
       companyId: row.companyId,
@@ -362,8 +659,6 @@ export class LeaveBalanceService {
       used,
       pending,
       remaining,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
     };
   }
 }

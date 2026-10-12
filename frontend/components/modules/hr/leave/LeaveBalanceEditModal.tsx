@@ -99,6 +99,7 @@ export default function LeaveBalanceEditModal({
   const snapshotMutation = useSetLeaveBalanceSnapshot();
   const watchedRows = Form.useWatch('rows', form);
 
+  // Seed year + reason when the modal opens for an employee.
   useEffect(() => {
     if (!open || !employeeSummary) {
       return;
@@ -106,27 +107,30 @@ export default function LeaveBalanceEditModal({
     form.setFieldsValue({
       year: defaultYear,
       reason: '',
+      rows: rowsFromBalances(leaveTypes, undefined, employeeSummary),
+    });
+  }, [open, employeeSummary?.employeeId, defaultYear, leaveTypes, form]);
+
+  // Refresh row values when balances for the selected year load.
+  useEffect(() => {
+    if (!open || !employeeSummary || !balancesQuery.data) {
+      return;
+    }
+    form.setFieldsValue({
       rows: rowsFromBalances(
         leaveTypes,
         balancesQuery.data,
         employeeSummary,
       ),
     });
-  }, [
-    open,
-    employeeSummary,
-    defaultYear,
-    leaveTypes,
-    balancesQuery.data,
-    form,
-  ]);
+  }, [open, employeeSummary, leaveTypes, balancesQuery.data, form]);
 
   async function submit(): Promise<void> {
     if (!employeeId) {
       return;
     }
-    const values = await form.validateFields();
     try {
+      const values = await form.validateFields();
       await snapshotMutation.mutateAsync({
         employeeId,
         year: values.year,
@@ -142,6 +146,14 @@ export default function LeaveBalanceEditModal({
       messageApi.success(t(`${KEY}.saved`));
       onClose();
     } catch (error: unknown) {
+      // Ant Design validateFields rejects with a plain object ({ errorFields }).
+      if (
+        error &&
+        typeof error === 'object' &&
+        'errorFields' in error
+      ) {
+        return;
+      }
       notifyApiError(error, t(`${KEY}.saveFailed`), messageApi, t);
     }
   }
@@ -158,7 +170,7 @@ export default function LeaveBalanceEditModal({
       cancelText={t('common.cancel')}
       confirmLoading={snapshotMutation.isPending}
       width={720}
-      onOk={() => void submit()}
+      onOk={submit}
       onCancel={onClose}
       destroyOnHidden
     >
