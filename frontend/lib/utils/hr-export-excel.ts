@@ -149,14 +149,19 @@ export function exportBoolean(value: boolean | null | undefined): string {
 /** `Abebe Kebede` from a user summary, falling back to the email. */
 export function exportPersonName(
   person:
-    | { firstName?: string | null; lastName?: string | null; email?: string | null }
+    | {
+        firstName?: string | null;
+        middleName?: string | null;
+        lastName?: string | null;
+        email?: string | null;
+      }
     | null
     | undefined,
 ): string {
   if (!person) {
     return '';
   }
-  const name = [person.firstName, person.lastName]
+  const name = [person.firstName, person.middleName, person.lastName]
     .filter((part) => Boolean(part?.trim()))
     .join(' ')
     .trim();

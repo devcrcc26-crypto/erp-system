@@ -56,6 +56,7 @@ import {
 } from '@/lib/query/attendance';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { formatOrdinal } from '@/lib/utils/ordinal';
+import { formatUserName } from '@/lib/utils/user-display';
 import {
   DRAWER_WIDTH_SUBMITTAL,
   detailDrawerStyles,
@@ -99,10 +100,12 @@ type EmployeeLabel = {
 
 function formatEmployeeLabel(employee: {
   firstName: string;
+  middleName?: string | null;
   lastName: string;
+  chineseName?: string | null;
   employeeId: string | null;
 }): string {
-  const name = `${employee.firstName} ${employee.lastName}`.trim();
+  const name = formatUserName(employee);
   return employee.employeeId ? `${name} (${employee.employeeId})` : name;
 }
 
@@ -347,7 +350,7 @@ export default function AttendanceImportModal({
       ...prev,
       [employee.id]: {
         id: employee.id,
-        name: `${employee.firstName} ${employee.lastName}`.trim(),
+        name: formatUserName(employee),
         employeeId: employee.employeeId,
       },
     }));

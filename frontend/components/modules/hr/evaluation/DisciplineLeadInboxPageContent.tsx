@@ -40,6 +40,7 @@ import {
   getScoreColor,
   getScoreLabel,
 } from '@/lib/utils/evaluation-status';
+import { formatUserName } from '@/lib/utils/user-display';
 import EvaluationListAvatar from './EvaluationListAvatar';
 import EvaluationStat from './EvaluationStat';
 
@@ -139,7 +140,7 @@ function matchesSearch(row: EmployeeEvaluation, q: string): boolean {
     return true;
   }
   const name =
-    `${row.employee.firstName} ${row.employee.lastName}`.toLowerCase();
+    formatUserName(row.employee).toLowerCase();
   const empId = (row.employee.employeeId ?? '').toLowerCase();
   return name.includes(q) || empId.includes(q);
 }
@@ -236,7 +237,7 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
         width: isCompact ? 220 : 260,
         render: (_value, row) => {
           const fullName =
-            `${row.employee.firstName} ${row.employee.lastName}`.trim();
+            formatUserName(row.employee);
           return (
             <div className="flex min-w-0 items-center gap-3">
               <EvaluationListAvatar

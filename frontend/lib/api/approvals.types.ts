@@ -19,6 +19,7 @@ export type ApprovalTierDecision =
 export interface ApprovalUserSummary {
   id: string;
   firstName: string;
+  middleName?: string | null;
   lastName: string;
   email: string | null;
 }

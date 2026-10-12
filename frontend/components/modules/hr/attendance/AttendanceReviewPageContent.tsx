@@ -862,7 +862,7 @@ export default function AttendanceReviewPageContent({
                     title: t('pages.hr.attendance.importModal.colErpName'),
                     key: 'name',
                     render: (_: unknown, row: AttendanceImportMissing) =>
-                      `${row.user.firstName} ${row.user.lastName}`.trim(),
+                      formatUserName(row.user),
                   },
                   {
                     title: t('pages.hr.attendance.importModal.colEmployeeId'),
@@ -987,7 +987,7 @@ export default function AttendanceReviewPageContent({
                           onClick={() => {
                             setMissingScheduleTarget({
                               id: row.userId,
-                              name: `${row.user.firstName} ${row.user.lastName}`.trim(),
+                              name: formatUserName(row.user),
                             });
                           }}
                         >

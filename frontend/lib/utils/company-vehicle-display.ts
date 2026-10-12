@@ -6,6 +6,7 @@ import type {
   VehicleType,
 } from '@/lib/api/company-vehicle.types';
 import type { User } from '@/lib/api/types';
+import { formatUserName } from '@/lib/utils/user-display';
 
 type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -128,7 +129,7 @@ export function formatDriverName(
   driver?: CompanyVehicleDriverSummary | null,
 ): string {
   if (!driver) return '-';
-  return `${driver.firstName} ${driver.lastName}`;
+  return formatUserName(driver);
 }
 
 /** Users whose position title includes the word Driver. */
@@ -146,7 +147,7 @@ export function toDriverSelectOptions(
   return users
     .filter((user) => isDriverUser(user) || include.has(user.id))
     .map((user) => {
-      const name = `${user.firstName} ${user.lastName}`.trim();
+      const name = formatUserName(user);
       const position = user.position?.title?.trim();
       return {
         value: user.id,

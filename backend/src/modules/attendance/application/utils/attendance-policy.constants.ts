@@ -4,8 +4,8 @@
  */
 
 /**
- * Working days from hire date until first scanner punch that are not counted
- * absent (enrolment grace). Shown on attendance daily logs as ENROLMENT_GRACE.
+ * @deprecated Enrolment grace is hire date → day after first scan (see enrolment-grace.util).
+ * Kept for docs / future company settings only.
  */
 export const ENROLMENT_GRACE_WORKING_DAYS = 3;
 

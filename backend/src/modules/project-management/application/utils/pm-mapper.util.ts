@@ -44,6 +44,7 @@ import {
   SourceEntitySummary,
 } from './source-entity.util';
 import { formatDisciplineNumber } from '../../../../shared/discipline-number.util';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 
 /**
  * Formats a date as an ISO date string (YYYY-MM-DD).
@@ -1801,6 +1802,7 @@ export function mapTask(task: Task): MappedTask {
 type TaskDisciplineUserSummary = {
   id: string;
   firstName: string;
+  middleName?: string | null;
   lastName: string;
   chineseName?: string | null;
 };
@@ -1816,13 +1818,7 @@ function mapDisciplineUserSummary(
   if (!user) {
     return null;
   }
-  const english = `${user.firstName} ${user.lastName}`.trim();
-  const chinese = user.chineseName?.trim();
-  const name =
-    english && chinese
-      ? `${english} (${chinese})`
-      : english || chinese || 'Unknown user';
-  return { id: user.id, name };
+  return { id: user.id, name: formatUserDisplayName(user) };
 }
 
 /**

@@ -512,7 +512,9 @@ export class PayrollRunService {
               select: {
                 id: true,
                 firstName: true,
+                middleName: true,
                 lastName: true,
+                chineseName: true,
                 employeeId: true,
                 department: { select: { id: true, name: true } },
                 engineeringDiscipline: { select: { id: true, name: true } },

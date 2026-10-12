@@ -44,6 +44,7 @@ import {
   getScoreColor,
   getScoreLabel,
 } from '@/lib/utils/evaluation-status';
+import { formatUserName } from '@/lib/utils/user-display';
 import EvaluationListAvatar from './EvaluationListAvatar';
 import EvaluationStat from './EvaluationStat';
 
@@ -95,7 +96,7 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
     const q = search.toLowerCase();
     return rows.filter((ev) => {
       const name =
-        `${ev.employee.firstName} ${ev.employee.lastName}`.toLowerCase();
+        formatUserName(ev.employee).toLowerCase();
       const empId = (ev.employee.employeeId ?? '').toLowerCase();
       return name.includes(q) || empId.includes(q);
     });
@@ -130,7 +131,7 @@ export default function EvaluationsOverviewPageContent(): React.ReactNode {
         width: isCompact ? 220 : 260,
         render: (_value, row) => {
           const fullName =
-            `${row.employee.firstName} ${row.employee.lastName}`.trim();
+            formatUserName(row.employee);
           return (
             <div className="flex min-w-0 items-center gap-3">
               <EvaluationListAvatar

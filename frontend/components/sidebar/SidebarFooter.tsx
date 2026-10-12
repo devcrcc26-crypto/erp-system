@@ -8,6 +8,7 @@ import type { SidebarLink } from '@/components/sidebar/sidebar-model';
 import { getNavIcon } from '@/lib/navigation/nav-icons';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useAuthStore } from '@/stores/auth.store';
+import { formatUserName } from '@/lib/utils/user-display';
 
 type TooltipSide = 'top' | 'right';
 
@@ -185,7 +186,7 @@ function useAccountIdentity(): {
   if (!user) {
     return { subtitle: null, name: '', initials: '' };
   }
-  const name = `${user.firstName} ${user.lastName}`.trim();
+  const name = formatUserName(user);
   const initials =
     `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() ||
     user.email.charAt(0).toUpperCase();

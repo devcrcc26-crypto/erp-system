@@ -54,6 +54,7 @@ import {
   detailDrawerStyles,
   responsiveDetailDrawerClassName,
 } from '@/lib/theme/layout';
+import { formatUserName } from '@/lib/utils/user-display';
 
 type ImportStep = 'upload' | 'preview' | 'result';
 type RowFilter = 'all' | 'ok' | 'error' | 'duplicate';
@@ -760,8 +761,7 @@ export default function UserImportModal({
           })
         : t('users.import.headerUpload');
   const editingName = editingRow
-    ? `${editingRow.firstName ?? ''} ${editingRow.lastName ?? ''}`.trim() ||
-      t('users.import.unnamed')
+    ? formatUserName(editingRow) || t('users.import.unnamed')
     : '';
 
   const footer = (
@@ -1108,7 +1108,7 @@ export default function UserImportModal({
                       width: 160,
                       render: (_, row) => (
                         <span className="erp-users-cell-strong">
-                          {`${row.firstName} ${row.lastName}`.trim() || '-'}
+                          {formatUserName(row) || '-'}
                         </span>
                       ),
                     },

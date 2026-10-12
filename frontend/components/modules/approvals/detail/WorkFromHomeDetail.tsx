@@ -54,7 +54,10 @@ export default function WorkFromHomeDetail({
   const [cancelReason, setCancelReason] = useState('');
 
   const form = (request.formData ?? {}) as WorkFromHomeRequestForm;
-  const dates = form.dates ?? (form.date ? [form.date] : []);
+  const dates = useMemo(
+    () => form.dates ?? (form.date ? [form.date] : []),
+    [form.dates, form.date],
+  );
   const startDate = form.startDate ?? form.date ?? dates[0] ?? null;
   const endDate = form.endDate ?? form.date ?? dates[dates.length - 1] ?? null;
 

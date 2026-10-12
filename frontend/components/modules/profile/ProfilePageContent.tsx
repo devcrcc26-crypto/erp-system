@@ -55,6 +55,7 @@ import {
   useUpdateProfile,
 } from '@/lib/query/profile';
 import type { UserProfile } from '@/lib/api/types';
+import { formatUserName } from '@/lib/utils/user-display';
 
 interface PreferencesFormValues {
   preferredLanguage: string;
@@ -248,7 +249,7 @@ export default function ProfilePageContent(): React.ReactNode {
   }
 
   const isEmailVerified = Boolean(profile.emailVerifiedAt);
-  const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+  const fullName = formatUserName(profile);
   const department = localizedName(
     locale,
     profile.departmentName,

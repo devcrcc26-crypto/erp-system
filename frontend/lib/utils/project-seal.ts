@@ -1,5 +1,6 @@
 import { StatusBadgeVariant } from "@/components/ui/StatusBadge/StatusBadge";
 import { ProjectSealStatus, ProjectSealUrgency, ProjectSealUserSummary } from "../api/project-seal.types";
+import { formatUserName } from '@/lib/utils/user-display';
 
 type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -56,12 +57,11 @@ export function projectSealStatusVariant(
     }
 }
 
-
 export function formatProjectSealEmployeeName(
     user?: ProjectSealUserSummary | null,
 ): string {
     if(!user) return '';
-    return `${user.firstName} ${user.lastName}`;
+    return formatUserName(user);
 }
 
 export function formatProjectSealUrgency(urgency: string, t?: TFn): string {

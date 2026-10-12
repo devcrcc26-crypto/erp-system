@@ -135,11 +135,25 @@ export interface EmployeeEvaluation {
   employee: {
     id: string;
     firstName: string;
+    middleName?: string | null;
     lastName: string;
+    chineseName?: string | null;
     employeeId: string | null;
   };
-  teamLead: { id: string; firstName: string; lastName: string } | null;
-  disciplineLead: { id: string; firstName: string; lastName: string } | null;
+  teamLead: {
+    id: string;
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+    chineseName?: string | null;
+  } | null;
+  disciplineLead: {
+    id: string;
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+    chineseName?: string | null;
+  } | null;
   assessments?: EvaluationAssessment[];
   disputes?: EvaluationDispute[];
   _count?: { assessments: number; disputes: number };

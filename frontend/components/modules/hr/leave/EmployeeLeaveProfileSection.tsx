@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Button, InputNumber, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
@@ -175,8 +175,8 @@ export default function EmployeeLeaveProfileSection({
   const canViewHr = useCanViewHr();
   const canEditHr = useCanEditHr();
   const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear);
-  const [yearTouched, setYearTouched] = useState(false);
+  /** Year picked in the control; null = follow the current leave year. */
+  const [pickedYear, setPickedYear] = useState<number | null>(null);
   const [historyPage, setHistoryPage] = useState(1);
 
   const isSelf = mode === 'self';
@@ -189,12 +189,8 @@ export default function EmployeeLeaveProfileSection({
     undefined,
     isSelf || employeeEnabled,
   );
-  const currentLeaveYear = ledgerQuery.data?.currentLeaveYear;
-  useEffect(() => {
-    if (currentLeaveYear && !yearTouched) {
-      setYear(currentLeaveYear.label);
-    }
-  }, [currentLeaveYear, yearTouched]);
+  const year =
+    pickedYear ?? ledgerQuery.data?.currentLeaveYear.label ?? currentYear;
 
   const myBalancesQuery = useMyLeaveBalances(year, isSelf);
   const employeeBalancesQuery = useLeaveBalances(
@@ -383,8 +379,7 @@ export default function EmployeeLeaveProfileSection({
               value={year}
               onChange={(value) => {
                 if (typeof value === 'number') {
-                  setYear(value);
-                  setYearTouched(true);
+                  setPickedYear(value);
                 }
               }}
               size="small"

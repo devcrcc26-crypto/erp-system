@@ -40,14 +40,18 @@ export function useUserDisplayResolver(): (
 
   return useCallback(
     (userId, apiName, emptyLabel = 'Unassigned') => {
-      if (apiName?.trim()) {
-        return apiName;
-      }
       if (!userId) {
         return emptyLabel;
       }
       const map = buildUserNameMap(users);
-      return displayUserLabel(userId, map.get(userId), emptyLabel);
+      const directoryName = map.get(userId);
+      if (directoryName) {
+        return directoryName;
+      }
+      if (apiName?.trim()) {
+        return apiName;
+      }
+      return displayUserLabel(userId, undefined, emptyLabel);
     },
     [users],
   );

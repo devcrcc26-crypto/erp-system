@@ -16,6 +16,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import type {
   CreateEmployeeEvaluationDto,
   DisputeEvaluationDto,
@@ -89,9 +90,11 @@ export class EvaluationService {
 
   private employeeName(employee: {
     firstName: string;
+    middleName?: string | null;
     lastName: string;
+    chineseName?: string | null;
   }): string {
-    return `${employee.firstName} ${employee.lastName}`;
+    return formatUserDisplayName(employee);
   }
 
   private formatScore(
@@ -140,7 +143,9 @@ export class EvaluationService {
           select: {
             id: true,
             firstName: true,
+            middleName: true,
             lastName: true,
+            chineseName: true,
             employeeId: true,
           },
         },
@@ -148,7 +153,9 @@ export class EvaluationService {
           select: {
             id: true,
             firstName: true,
+            middleName: true,
             lastName: true,
+            chineseName: true,
             employeeId: true,
           },
         },
@@ -156,7 +163,9 @@ export class EvaluationService {
           select: {
             id: true,
             firstName: true,
+            middleName: true,
             lastName: true,
+            chineseName: true,
             employeeId: true,
           },
         },
@@ -330,7 +339,9 @@ export class EvaluationService {
           select: {
             id: true,
             firstName: true,
+            middleName: true,
             lastName: true,
+            chineseName: true,
             employeeId: true,
           },
         },
@@ -485,7 +496,9 @@ export class EvaluationService {
           select: {
             id: true,
             firstName: true,
+            middleName: true,
             lastName: true,
+            chineseName: true,
             employeeId: true,
           },
         },

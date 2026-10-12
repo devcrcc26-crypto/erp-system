@@ -31,6 +31,7 @@ export async function loadUserDisplayNameMap(
     select: {
       id: true,
       firstName: true,
+      middleName: true,
       lastName: true,
       chineseName: true,
       email: true,

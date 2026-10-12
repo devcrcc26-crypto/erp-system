@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { HrReportQueryDto } from '../dtos/hr-report.dtos';
 
@@ -287,7 +288,13 @@ export class HrReportService {
           status: true,
           days: true,
           employee: {
-            select: { firstName: true, lastName: true, departmentId: true },
+            select: {
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              chineseName: true,
+              departmentId: true,
+            },
           },
         },
       }),
@@ -309,7 +316,13 @@ export class HrReportService {
           totalHolidayHours: true,
           totalHours: true,
           employee: {
-            select: { firstName: true, lastName: true, departmentId: true },
+            select: {
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              chineseName: true,
+              departmentId: true,
+            },
           },
         },
       }),
@@ -504,7 +517,9 @@ export class HrReportService {
       days: Prisma.Decimal | null;
       employee: {
         firstName: string;
+        middleName?: string | null;
         lastName: string;
+        chineseName?: string | null;
         departmentId: string | null;
       };
     }>,
@@ -537,7 +552,7 @@ export class HrReportService {
 
       const employee = employeeTotals.get(row.employeeId) ?? {
         employeeId: row.employeeId,
-        employeeName: `${row.employee.firstName} ${row.employee.lastName}`.trim(),
+        employeeName: formatUserDisplayName(row.employee),
         department: row.employee.departmentId
           ? (departmentNameById.get(row.employee.departmentId) ?? null)
           : null,
@@ -579,7 +594,9 @@ export class HrReportService {
       totalHours: Prisma.Decimal | null;
       employee: {
         firstName: string;
+        middleName?: string | null;
         lastName: string;
+        chineseName?: string | null;
         departmentId: string | null;
       };
     }>,
@@ -611,7 +628,7 @@ export class HrReportService {
 
       const employee = employeeTotals.get(row.employeeId) ?? {
         employeeId: row.employeeId,
-        employeeName: `${row.employee.firstName} ${row.employee.lastName}`.trim(),
+        employeeName: formatUserDisplayName(row.employee),
         department: row.employee.departmentId
           ? (departmentNameById.get(row.employee.departmentId) ?? null)
           : null,

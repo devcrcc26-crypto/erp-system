@@ -3,6 +3,8 @@
  * bilingual lines, omitted zeros, and money formatting stay in one place.
  */
 
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
+
 const MONTHS = [
   'January',
   'February',
@@ -126,15 +128,11 @@ export function formatGeneratedDate(date: Date): string {
  */
 export function formatEmployeeName(employee: {
   firstName: string;
+  middleName?: string | null;
   lastName: string;
   chineseName?: string | null;
 }): string {
-  const western = `${employee.firstName} ${employee.lastName}`.trim();
-  const chinese = employee.chineseName?.trim();
-  if (chinese) {
-    return western.length > 0 ? `${western} (${chinese})` : chinese;
-  }
-  return western;
+  return formatUserDisplayName(employee);
 }
 
 /**

@@ -199,13 +199,25 @@ export class ListLeaveRequestsDto {
 }
 
 export class LeaveBalanceQueryDto {
-  @ApiPropertyOptional({ description: 'Calendar year (defaults to current)' })
+  @ApiPropertyOptional({
+    description:
+      'Leave year label (employment anniversary year). Defaults to the employee\'s current leave year.',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(2000)
   @Max(2100)
   year?: number;
+
+  @ApiPropertyOptional({
+    example: '2026-02-10',
+    description:
+      'Resolve the leave year from this date (same rule as leave submit). Overrides `year` when set.',
+  })
+  @IsOptional()
+  @IsDateString()
+  forDate?: string;
 
   @ApiPropertyOptional({
     description:

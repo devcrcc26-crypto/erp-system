@@ -147,8 +147,7 @@ export function LeaveBalanceWidget({
   span?: WidgetSpan;
 }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
-  const { year } = addisParts();
-  const query = useMyLeaveBalances(year, enabled);
+  const query = useMyLeaveBalances({ enabled });
   const balances = (query.data ?? []).filter(
     (balance) =>
       balance.entitled + balance.broughtForward > 0 || balance.remaining > 0,

@@ -71,8 +71,13 @@ export default function LeaveRequestFormDrawer({
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<LeaveFormValues>();
-  const year = new Date().getFullYear();
-  const balancesQuery = useMyLeaveBalances(year, open);
+  const dateRange = Form.useWatch('dateRange', form) as [Dayjs, Dayjs] | undefined;
+  const balanceForDate = dateRange?.[0]?.format('YYYY-MM-DD');
+
+  const balancesQuery = useMyLeaveBalances({
+    forDate: balanceForDate,
+    enabled: open,
+  });
   const submitMutation = useSubmitLeaveRequest();
 
   const leaveType = Form.useWatch('leaveType', form) as LeaveType | undefined;

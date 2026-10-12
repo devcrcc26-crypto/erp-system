@@ -91,6 +91,7 @@ type UploadedFile = {
 const USER_SELECT = {
   id: true,
   firstName: true,
+  middleName: true,
   lastName: true,
   email: true,
 } as const;

@@ -27,6 +27,7 @@ import {
   getScoreColor,
   getScoreLabel,
 } from '@/lib/utils/evaluation-status';
+import { formatUserName } from '@/lib/utils/user-display';
 import AssessmentForm from './AssessmentForm';
 import DisputePanel from './DisputePanel';
 import EvaluationListAvatar from './EvaluationListAvatar';
@@ -105,7 +106,7 @@ export default function EvaluationDetailPageContent({
 
   const finalScore = evaluation.adjustedScore ?? evaluation.finalScore;
   const employeeName =
-    `${evaluation.employee.firstName} ${evaluation.employee.lastName}`.trim();
+    formatUserName(evaluation.employee);
   const stagesDone = STAGE_ORDER.filter((stage) =>
     assessments.some((a) => a.stage === stage && a.submittedAt !== null),
   ).length;

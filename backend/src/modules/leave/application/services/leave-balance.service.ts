@@ -16,6 +16,7 @@ import {
   OWN_BALANCE_LEAVE_TYPES,
   resolveBalanceLeaveType,
 } from './leave-balance-rules';
+import { roundDays } from '../../../leave-policy/application/utils/leave-year.util';
 
 /** Only pending days are kept on leave_balance directly; the rest is ledger. */
 export type LeaveBalanceField = 'pending';
@@ -269,9 +270,11 @@ export class LeaveBalanceService {
       (b) => b.leaveType === balanceLeaveType,
     );
     const remaining = row?.remaining ?? 0;
-    if (days > remaining) {
+    const requested = roundDays(days);
+    const available = roundDays(remaining);
+    if (requested > available) {
       throw new BadRequestException(
-        `Insufficient ${balanceLeaveType.toLowerCase()} leave balance. Remaining: ${remaining}, requested: ${days}`,
+        `Insufficient ${balanceLeaveType.toLowerCase()} leave balance. Remaining: ${available}, requested: ${requested}`,
       );
     }
   }

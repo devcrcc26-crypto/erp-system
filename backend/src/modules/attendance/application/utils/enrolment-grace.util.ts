@@ -1,9 +1,22 @@
 import { dateToYyyyMmDd } from '../services/attendance-leave.util';
-import { ENROLMENT_GRACE_WORKING_DAYS } from './attendance-policy.constants';
+
+function utcDateOnly(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+}
+
+function addUtcDays(date: Date, days: number): Date {
+  const next = utcDateOnly(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
 
 /**
- * First N Mon–Sat non-holiday days from hire, before the first scanner punch,
- * are enrolment grace (not absent). Same window on weekdays and Saturdays.
+ * Enrolment grace for employees not yet on the scanner (or just enrolled):
+ * from signed/hire date through the calendar day after the first scan.
+ * No-scan Mon–Sat non-holiday days in that window → ENROLMENT_GRACE (not absent).
+ * If there is no scan yet, grace runs through `throughDate`.
  */
 export function enrolmentGraceDateKeys(params: {
   hireDate: Date;
@@ -12,50 +25,32 @@ export function enrolmentGraceDateKeys(params: {
   /** Inclusive upper bound when listing keys (typically month end). */
   throughDate: Date;
   isPublicHoliday: (date: Date) => boolean;
-  graceWorkingDays?: number;
 }): Set<string> {
-  const graceDays = params.graceWorkingDays ?? ENROLMENT_GRACE_WORKING_DAYS;
   const keys = new Set<string>();
-  if (graceDays <= 0) {
+  const hire = utcDateOnly(params.hireDate);
+  const through = utcDateOnly(params.throughDate);
+
+  let graceEnd: Date;
+  if (params.firstScanDate) {
+    graceEnd = addUtcDays(utcDateOnly(params.firstScanDate), 1);
+  } else {
+    graceEnd = through;
+  }
+
+  if (graceEnd.getTime() < hire.getTime()) {
     return keys;
   }
 
-  const hireKey = dateToYyyyMmDd(params.hireDate);
-  const firstScanKey = params.firstScanDate
-    ? dateToYyyyMmDd(params.firstScanDate)
-    : null;
-  const throughKey = dateToYyyyMmDd(params.throughDate);
+  const effectiveEnd =
+    graceEnd.getTime() <= through.getTime() ? graceEnd : through;
 
-  const cursor = new Date(
-    Date.UTC(
-      params.hireDate.getUTCFullYear(),
-      params.hireDate.getUTCMonth(),
-      params.hireDate.getUTCDate(),
-    ),
-  );
-  let counted = 0;
-
-  while (counted < graceDays) {
-    const key = dateToYyyyMmDd(cursor);
-    if (key > throughKey) {
-      break;
-    }
-    // Grace only applies before the first scan day (scan day itself is normal).
-    if (firstScanKey != null && key >= firstScanKey) {
-      break;
-    }
-
+  const cursor = new Date(hire.getTime());
+  while (cursor.getTime() <= effectiveEnd.getTime()) {
     const isSunday = cursor.getUTCDay() === 0;
     if (!isSunday && !params.isPublicHoliday(cursor)) {
-      keys.add(key);
-      counted += 1;
+      keys.add(dateToYyyyMmDd(cursor));
     }
-
     cursor.setUTCDate(cursor.getUTCDate() + 1);
-    // Safety: do not walk forever if hire is far in the past without scans.
-    if (key < hireKey) {
-      break;
-    }
   }
 
   return keys;

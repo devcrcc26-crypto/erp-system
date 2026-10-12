@@ -181,8 +181,23 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   const [preview, setPreview] = useState<PreviewDaysResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const year = new Date().getFullYear();
-  const balancesQuery = useMyLeaveBalances(year, true, onBehalf.employeeId);
+  const balanceForDate = useMemo(() => {
+    const inputs = toPeriodInputs(periods);
+    if (inputs.length === 0) {
+      return undefined;
+    }
+    return inputs.reduce(
+      (earliest, period) =>
+        period.startDate < earliest ? period.startDate : earliest,
+      inputs[0].startDate,
+    );
+  }, [periods]);
+
+  const balancesQuery = useMyLeaveBalances({
+    forDate: balanceForDate,
+    enabled: true,
+    employeeId: onBehalf.employeeId,
+  });
   const submitMutation = useSubmitLeaveRequest();
   const previewMutation = usePreviewLeaveDays();
 
@@ -292,6 +307,19 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       setFormError(t('hr.form.periodNoWorkingDays'));
       return false;
     }
+    if (
+      selectedBalance &&
+      Math.round(preview.totalDays * 10) / 10 >
+        Math.round(selectedBalance.remaining * 10) / 10
+    ) {
+      setFormError(
+        t('hr.messages.insufficientLeaveBalance', {
+          remaining: selectedBalance.remaining,
+          requested: preview.totalDays,
+        }),
+      );
+      return false;
+    }
     captureSnapshot();
     return true;
   }
@@ -324,6 +352,19 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     }
     if (!preview || preview.totalDays <= 0) {
       setFormError(t('hr.form.periodNoWorkingDays'));
+      return;
+    }
+    if (
+      selectedBalance &&
+      Math.round(preview.totalDays * 10) / 10 >
+        Math.round(selectedBalance.remaining * 10) / 10
+    ) {
+      setFormError(
+        t('hr.messages.insufficientLeaveBalance', {
+          remaining: selectedBalance.remaining,
+          requested: preview.totalDays,
+        }),
+      );
       return;
     }
 

@@ -58,8 +58,24 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { tokens } from '@/lib/theme/tokens';
+import { formatUserName } from '@/lib/utils/user-display';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+
+function displayEmployeeName(
+  user?: {
+    firstName?: string | null;
+    middleName?: string | null;
+    lastName?: string | null;
+    chineseName?: string | null;
+    email?: string | null;
+  } | null,
+): string {
+  if (!user) {
+    return '—';
+  }
+  return formatUserName(user);
+}
 interface IssueAssetFormValues {
   employeeId?: string;
   notes?: string;
@@ -166,16 +182,6 @@ export default function CompanyAssetDetailPageContent({
     [t],
   );
 
-  function formatUserName(user?: {
-    firstName: string;
-    lastName: string;
-  } | null): string {
-    if (!user) {
-      return '—';
-    }
-    return `${user.firstName} ${user.lastName}`;
-  }
-
   function renderAssignmentFields(
     assignment: CompanyAssetAssignmentListItem,
     options?: { includeReturnFields?: boolean },
@@ -188,7 +194,7 @@ export default function CompanyAssetDetailPageContent({
         <MetaItem label={t('hr.assetLabels.assignedTo')}>
           <div>
             <p className="erp-users-cell-strong m-0">
-              {formatUserName(assignment.employee)}
+              {displayEmployeeName(assignment.employee)}
             </p>
             {assignment.employee.email ? (
               <p className="erp-users-email m-0 mt-0.5">
@@ -201,7 +207,7 @@ export default function CompanyAssetDetailPageContent({
           {formatProjectDate(assignment.assignedAt)}
         </MetaItem>
         <MetaItem label={t('hr.assetLabels.issuedBy')}>
-          {formatUserName(assignment.issuedBy)}
+          {displayEmployeeName(assignment.issuedBy)}
         </MetaItem>
         {assignment.notes ? (
           <div className="md:col-span-2">
@@ -218,7 +224,7 @@ export default function CompanyAssetDetailPageContent({
               {formatProjectDate(assignment.returnedAt ?? null)}
             </MetaItem>
             <MetaItem label={t('hr.assetLabels.returnedBy')}>
-              {formatUserName(assignment.returnedBy)}
+              {displayEmployeeName(assignment.returnedBy)}
             </MetaItem>
             <MetaItem label={t('hr.assetLabels.returnedTo')}>
               {assignment.returnedTo?.trim() || '—'}
@@ -519,7 +525,7 @@ export default function CompanyAssetDetailPageContent({
             <p className="erp-users-email m-0 mt-1.5 break-words sm:text-left">
               {asset.type} · {asset.year} · {asset.color}
               {activeAssignment
-                ? ` · ${formatUserName(activeAssignment.employee)}`
+                ? ` · ${displayEmployeeName(activeAssignment.employee)}`
                 : null}
             </p>
           </div>
@@ -552,7 +558,7 @@ export default function CompanyAssetDetailPageContent({
             </p>
             <p className="erp-employee-meta-value truncate">
               {activeAssignment
-                ? formatUserName(activeAssignment.employee)
+                ? displayEmployeeName(activeAssignment.employee)
                 : '—'}
             </p>
           </div>
@@ -712,7 +718,7 @@ export default function CompanyAssetDetailPageContent({
                   >
                     <div className="mb-4 flex flex-wrap items-center gap-2">
                       <span className="erp-users-cell-strong">
-                        {formatUserName(assignment.employee)}
+                        {displayEmployeeName(assignment.employee)}
                       </span>
                       <StatusBadge
                         label={t('hr.assetStatus.AVAILABLE')}
@@ -900,7 +906,7 @@ export default function CompanyAssetDetailPageContent({
                 {t('hr.assetLabels.assignedTo')}
               </p>
               <p className="erp-users-cell-strong m-0">
-                {formatUserName(activeAssignment.employee)}
+                {displayEmployeeName(activeAssignment.employee)}
               </p>
               {activeAssignment.employee.email ? (
                 <p className="erp-users-email m-0 mt-0.5">

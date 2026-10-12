@@ -328,7 +328,7 @@ export default function PayrollRunDetailPageContent({
       if (!q) {
         return true;
       }
-      const name = `${entry.employee.firstName} ${entry.employee.lastName}`.toLowerCase();
+      const name = formatUserName(entry.employee).toLowerCase();
       const empId = (entry.employee.employeeId ?? '').toLowerCase();
       return name.includes(q) || empId.includes(q);
     });
@@ -580,7 +580,7 @@ export default function PayrollRunDetailPageContent({
         render: (_, row) => (
           <div className="min-w-[160px]">
             <p className="erp-payroll-employee-name truncate">
-              {row.employee.firstName} {row.employee.lastName}
+              {formatUserName(row.employee)}
             </p>
             <p className="erp-payroll-employee-id">
               {row.employee.employeeId ?? '—'}
@@ -804,7 +804,7 @@ export default function PayrollRunDetailPageContent({
         <div className="erp-payroll-entry-card-head">
           <div className="min-w-0">
             <p className="erp-payroll-employee-name truncate">
-              {entry.employee.firstName} {entry.employee.lastName}
+              {formatUserName(entry.employee)}
             </p>
             <p className="erp-payroll-employee-id">{entry.employee.employeeId ?? '—'}</p>
           </div>

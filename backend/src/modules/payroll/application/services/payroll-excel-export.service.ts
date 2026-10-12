@@ -7,6 +7,7 @@ import { Prisma, type PayrollEntryFlag, type PayrollRunStatus } from '@prisma/cl
 import { Decimal } from '@prisma/client/runtime/library';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import {
   PayrollCompanySettings,
   PayrollCompanySettingsService,
@@ -253,7 +254,9 @@ export interface DataSheetTotals {
 
 interface PersonName {
   firstName: string;
+  middleName?: string | null;
   lastName: string;
+  chineseName?: string | null;
 }
 
 interface ResignedEmployeeRow {
@@ -1432,7 +1435,7 @@ function roundMoney(value: number): number {
 }
 
 function fullName(person: PersonName): string {
-  return `${person.firstName} ${person.lastName}`.trim();
+  return formatUserDisplayName(person);
 }
 
 function formatDdMmYyyy(date: Date): string {

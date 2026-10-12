@@ -15,6 +15,7 @@ import {
   SubmittalStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { subtaskRoleOr } from '../../../project-management/domain/task-access-scope.util';
 import {
@@ -1162,9 +1163,11 @@ export class DashboardService {
 
 function formatPersonName(user: {
   firstName: string;
+  middleName?: string | null;
   lastName: string;
+  chineseName?: string | null;
   email: string | null;
 }): string {
-  const full = `${user.firstName} ${user.lastName}`.trim();
-  return full || user.email || 'Someone';
+  const full = formatUserDisplayName(user);
+  return full === 'Unknown user' ? user.email || 'Someone' : full;
 }

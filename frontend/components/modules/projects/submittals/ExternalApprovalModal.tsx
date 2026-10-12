@@ -4,6 +4,7 @@ import { Alert, DatePicker, Form, Input, Modal, Typography } from 'antd';
 import dayjs from 'dayjs';
 import DocumentAttachmentPanel from '@/components/ui/DocumentAttachmentPanel/DocumentAttachmentPanel';
 import { useAuthStore } from '@/stores/auth.store';
+import { formatUserName } from '@/lib/utils/user-display';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import {
@@ -41,9 +42,7 @@ export default function ExternalApprovalModal({
   const [form] = Form.useForm<ApprovalFormValues>();
   const messageApi = useAppMessage();
   const user = useAuthStore((state) => state.user);
-  const recordedByName = user
-    ? `${user.firstName} ${user.lastName}`.trim()
-    : '';
+  const recordedByName = user ? formatUserName(user) : '';
 
   const recordSiteApproval = useRecordSiteApproval();
   const recordConsultantApproval = useRecordConsultantApproval();

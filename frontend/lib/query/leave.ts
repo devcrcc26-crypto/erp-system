@@ -50,7 +50,18 @@ export const leaveKeys = {
   details: () => [...leaveKeys.all, 'detail'] as const,
   detail: (id: string) => [...leaveKeys.details(), id] as const,
   balances: () => [...leaveKeys.all, 'balances'] as const,
-  myBalances: (year: number) => [...leaveKeys.balances(), 'me', year] as const,
+  myBalances: (params: {
+    year?: number;
+    forDate?: string;
+    employeeId?: string;
+  }) =>
+    [
+      ...leaveKeys.balances(),
+      'me',
+      params.employeeId ?? 'self',
+      params.forDate ?? '',
+      params.year ?? 'current',
+    ] as const,
   employeeBalances: (employeeId: string, year: number) =>
     [...leaveKeys.balances(), 'employee', employeeId, year] as const,
   companyBalances: (params: ListLeaveBalancesParams) =>
@@ -223,24 +234,52 @@ export function useLeaveRequest(id: string, enabled = true) {
   });
 }
 
+export type MyLeaveBalancesParams = {
+  /** Leave year label; omit for the employee's current leave year. */
+  year?: number;
+  /** Resolve leave year from this date (same as leave submit). */
+  forDate?: string;
+  employeeId?: string;
+  enabled?: boolean;
+};
+
+function buildMyLeaveBalancesQuery(params: MyLeaveBalancesParams): string {
+  const search = new URLSearchParams();
+  if (params.forDate) {
+    search.set('forDate', params.forDate);
+  } else if (params.year != null) {
+    search.set('year', String(params.year));
+  }
+  if (params.employeeId) {
+    search.set('employeeId', params.employeeId);
+  }
+  const qs = search.toString();
+  return qs ? `${LEAVE_PATH}/balance?${qs}` : `${LEAVE_PATH}/balance`;
+}
+
 /**
- * Current user's leave balances for a calendar year (auth-only endpoint).
+ * Current user's leave balances (auth-only). Uses employment leave year, not calendar year.
  */
 export function useMyLeaveBalances(
-  year: number,
+  yearOrParams?: number | MyLeaveBalancesParams,
   enabled = true,
-  /** On-behalf target; omitted = the signed-in user. */
   employeeId?: string,
 ) {
+  const params: MyLeaveBalancesParams =
+    typeof yearOrParams === 'number'
+      ? { year: yearOrParams, enabled, employeeId }
+      : { enabled, employeeId, ...yearOrParams };
+
+  const queryEnabled = params.enabled ?? enabled;
+
   return useQuery({
-    queryKey: employeeId
-      ? leaveKeys.employeeBalances(employeeId, year)
-      : leaveKeys.myBalances(year),
-    queryFn: () =>
-      apiGet<LeaveBalance[]>(
-        `${LEAVE_PATH}/balance?year=${year}${employeeId ? `&employeeId=${employeeId}` : ''}`,
-      ),
-    enabled,
+    queryKey: leaveKeys.myBalances({
+      year: params.year,
+      forDate: params.forDate,
+      employeeId: params.employeeId,
+    }),
+    queryFn: () => apiGet<LeaveBalance[]>(buildMyLeaveBalancesQuery(params)),
+    enabled: queryEnabled,
     retry: false,
   });
 }
@@ -421,10 +460,13 @@ export function useLeaveBalanceLedger(
     queryKey: leaveKeys.ledger(employeeId, year),
     queryFn: () =>
       apiGet<LeaveBalanceLedger>(
-        `${LEAVE_PATH}/balance-ledger${toQueryString({
-          ...(employeeId ? { employeeId } : {}),
-          ...(year != null ? { year } : {}),
-        })}`,
+        `${LEAVE_PATH}/balance-ledger${(() => {
+          const search = new URLSearchParams();
+          if (employeeId) search.set('employeeId', employeeId);
+          if (year != null) search.set('year', String(year));
+          const query = search.toString();
+          return query ? `?${query}` : '';
+        })()}`,
       ),
     enabled,
     retry: false,

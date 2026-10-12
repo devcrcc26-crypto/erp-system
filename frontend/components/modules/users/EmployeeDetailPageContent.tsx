@@ -246,7 +246,7 @@ export default function EmployeeDetailPageContent({
       await deleteUser.mutateAsync(user.id);
       messageApi.success(
         t('users.deactivated', {
-          name: `${user.firstName} ${user.lastName}`,
+          name: formatUserName(user),
         }),
       );
       router.push('/users');
@@ -298,7 +298,7 @@ export default function EmployeeDetailPageContent({
     );
   }
 
-  const fullName = `${user.firstName} ${user.lastName}`.trim();
+  const fullName = formatUserName(user);
   const emergencyContacts = user.emergencyContacts ?? [];
   const primaryRole =
     user.userRoles.find((assignment) => assignment.isPrimary)?.role.name ??

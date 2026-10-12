@@ -36,6 +36,7 @@ import {
   buildPrismaPagination,
   PaginatedResult,
 } from '../../../../shared/utils/pagination.util';
+import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import {
   ApprovalDecisionListener,
   ApprovalFinalDecision,
@@ -1068,7 +1069,7 @@ export class AttendanceService
         rowsToImport.push({
           ...row,
           matchedEmployeeId: employee.id,
-          matchedEmployeeName: `${employee.firstName} ${employee.lastName}`,
+          matchedEmployeeName: formatUserDisplayName(employee),
           matchedEmployeeErpId: employee.employeeId,
           confidence: 'MANUAL',
           score: 100,
@@ -1123,7 +1124,7 @@ export class AttendanceService
         rowsToImport.push({
           ...row,
           matchedEmployeeId: employee.id,
-          matchedEmployeeName: `${employee.firstName} ${employee.lastName}`,
+          matchedEmployeeName: formatUserDisplayName(employee),
           matchedEmployeeErpId: employee.employeeId,
           confidence: 'MANUAL',
           score: 100,
@@ -2838,7 +2839,9 @@ export class AttendanceService
             employee: {
               select: {
                 firstName: true,
+                middleName: true,
                 lastName: true,
+                chineseName: true,
                 employeeId: true,
                 department: { select: { name: true } },
               },
@@ -2846,19 +2849,16 @@ export class AttendanceService
           },
         },
         scanReviewedBy: {
-          select: { id: true, firstName: true, lastName: true },
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            chineseName: true,
+          },
         },
       },
     });
-
-    const fullName = (person: {
-      firstName: string | null;
-      lastName: string | null;
-    }): string =>
-      [person.firstName, person.lastName]
-        .map((part) => part?.trim() ?? '')
-        .filter((part) => part.length > 0)
-        .join(' ');
 
     const counts = new Map<
       string,
@@ -2876,7 +2876,7 @@ export class AttendanceService
       const employeeId = row.record.employeeId;
       const entry = counts.get(employeeId) ?? {
         employeeId,
-        employeeName: fullName(row.record.employee),
+        employeeName: formatUserDisplayName(row.record.employee),
         employeeCode: row.record.employee.employeeId,
         total: 0,
         pending: 0,
@@ -2909,7 +2909,7 @@ export class AttendanceService
       .map((row) => ({
         dailyLogId: row.id,
         employeeId: row.record.employeeId,
-        employeeName: fullName(row.record.employee),
+        employeeName: formatUserDisplayName(row.record.employee),
         employeeCode: row.record.employee.employeeId,
         departmentName: row.record.employee.department?.name ?? null,
         date: dateToYyyyMmDd(row.date),
@@ -2918,7 +2918,10 @@ export class AttendanceService
         decision: row.scanReviewDecision,
         note: row.scanReviewNote,
         reviewedBy: row.scanReviewedBy
-          ? { id: row.scanReviewedBy.id, name: fullName(row.scanReviewedBy) }
+          ? {
+              id: row.scanReviewedBy.id,
+              name: formatUserDisplayName(row.scanReviewedBy),
+            }
           : null,
         reviewedAt: row.scanReviewedAt,
       }));

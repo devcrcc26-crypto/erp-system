@@ -8,8 +8,7 @@ function d(y: number, m: number, day: number): Date {
 describe('enrolmentGraceDateKeys', () => {
   const noHoliday = (): boolean => false;
 
-  it('hire Mon → first 3 working days before first scan', () => {
-    // Mon 17 Aug 2026, first scan Thu 20 → grace Mon–Wed
+  it('hire Mon, first scan Thu → grace Mon–Fri (through day after scan)', () => {
     const keys = enrolmentGraceDateKeys({
       hireDate: d(2026, 8, 17),
       firstScanDate: d(2026, 8, 20),
@@ -20,45 +19,46 @@ describe('enrolmentGraceDateKeys', () => {
       '2026-08-17',
       '2026-08-18',
       '2026-08-19',
+      '2026-08-20',
+      '2026-08-21',
     ]);
   });
 
-  it('no first scan yet → still only 3 working days from hire', () => {
+  it('no first scan yet → grace from hire through month end (working days)', () => {
     const keys = enrolmentGraceDateKeys({
       hireDate: d(2026, 8, 17),
       firstScanDate: null,
-      throughDate: d(2026, 8, 31),
+      throughDate: d(2026, 8, 21),
       isPublicHoliday: noHoliday,
     });
     expect([...keys].sort()).toEqual([
       '2026-08-17',
       '2026-08-18',
       '2026-08-19',
+      '2026-08-20',
+      '2026-08-21',
     ]);
   });
 
-  it('first scan on hire day → no grace days', () => {
+  it('first scan on hire day → grace hire day and day after only', () => {
     const keys = enrolmentGraceDateKeys({
       hireDate: d(2026, 8, 17),
       firstScanDate: d(2026, 8, 17),
       throughDate: d(2026, 8, 31),
       isPublicHoliday: noHoliday,
     });
-    expect(keys.size).toBe(0);
+    expect([...keys].sort()).toEqual(['2026-08-17', '2026-08-18']);
   });
 
-  it('skips Sunday when counting grace working days', () => {
-    // Fri 14 Aug 2026 hire; Sun 16 skipped → Fri, Sat, Mon
+  it('skips Sunday within the grace window', () => {
     const keys = enrolmentGraceDateKeys({
       hireDate: d(2026, 8, 14),
-      firstScanDate: null,
+      firstScanDate: d(2026, 8, 18),
       throughDate: d(2026, 8, 31),
       isPublicHoliday: noHoliday,
     });
-    expect([...keys].sort()).toEqual([
-      '2026-08-14',
-      '2026-08-15',
-      '2026-08-17',
-    ]);
+    expect(keys.has('2026-08-16')).toBe(false);
+    expect(keys.has('2026-08-14')).toBe(true);
+    expect(keys.has('2026-08-19')).toBe(true);
   });
 });

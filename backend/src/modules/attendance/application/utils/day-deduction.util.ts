@@ -52,7 +52,7 @@ export interface DayDeductionContext {
    */
   isAttendanceExempt?: () => boolean;
   /**
-   * Hire → first-scan enrolment grace (first N working days). Not absent;
+   * Hire through day after first scan (no-scan working days). Not absent;
    * shown as ENROLMENT_GRACE on the daily log.
    */
   isEnrolmentGrace?: (date: Date) => boolean;

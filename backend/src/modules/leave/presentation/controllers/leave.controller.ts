@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -40,6 +41,19 @@ import { LeaveBalanceService } from '../../application/services/leave-balance.se
 import { LeaveService } from '../../application/services/leave.service';
 import { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import { toDateOnlyUtc } from '../../../leave-policy/application/utils/leave-year.util';
+
+function parseDateOnlyUtc(value: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) {
+    throw new BadRequestException(`Invalid date: ${value}`);
+  }
+  return toDateOnlyUtc(
+    new Date(
+      Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+    ),
+  );
+}
 
 @ApiTags('HR Leave Requests')
 @ApiBearerAuth()
@@ -142,12 +156,16 @@ export class LeaveController {
       companyId,
       query.employeeId,
     );
-    // No year → the employee's current leave year (employment anniversary).
-    return this.leaveBalanceService.getBalance(
-      employeeId,
-      query.year,
-      companyId,
-    );
+    let year = query.year;
+    if (query.forDate) {
+      year = await this.leaveBalanceService.yearLabelForDate(
+        employeeId,
+        companyId,
+        parseDateOnlyUtc(query.forDate),
+      );
+    }
+    // No year / forDate → the employee's current leave year (employment anniversary).
+    return this.leaveBalanceService.getBalance(employeeId, year, companyId);
   }
 
   @Get('balances/me')

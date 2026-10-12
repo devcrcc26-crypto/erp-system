@@ -41,9 +41,7 @@ export default function PersonalDashboard({
   const { t, locale } = useEpcTranslation();
   const user = useAuthStore((state) => state.user);
   const canAccessOvertime = useCanAccessOvertime();
-  const year = new Date().getFullYear();
-
-  const balancesQuery = useMyLeaveBalances(year, enabled);
+  const balancesQuery = useMyLeaveBalances({ enabled });
   const recentLeaveQuery = useMyLeaveRequests(
     { page: 1, limit: 8 },
     enabled,

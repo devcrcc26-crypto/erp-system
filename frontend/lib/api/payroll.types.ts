@@ -62,7 +62,9 @@ export interface PayrollSalaryPeriod {
 export interface PayrollEntryEmployee {
   id: string;
   firstName: string;
+  middleName?: string | null;
   lastName: string;
+  chineseName?: string | null;
   employeeId: string | null;
   department: { id: string; name: string } | null;
   engineeringDiscipline: { id: string; name: string } | null;

@@ -16,6 +16,7 @@ import { useEmployeeContracts } from '@/lib/query/employee-contract';
 import type { EvaluationStatus } from '@/lib/api/evaluation.types';
 import { useEvaluations } from '@/lib/query/evaluation';
 import { formatEmployeeContractEmployeeName } from '@/lib/utils/employee-contract-display';
+import { formatUserName } from '@/lib/utils/user-display';
 import WidgetCard, { WidgetFigure, type WidgetSpan } from './WidgetCard';
 import { formatCount, formatMonthYear, formatShortDate } from './format';
 
@@ -82,7 +83,7 @@ export function EvaluationInboxWidget({
           <li key={item.id}>
             <Link href={`/hr/evaluations/${item.id}`} className="dv2-list-row">
               <span className="dv2-list-title">
-                {`${item.employee.firstName} ${item.employee.lastName}`.trim()}
+                {formatUserName(item.employee)}
               </span>
               <span className="dv2-list-meta">
                 {t(`${HOME}.evaluation.cycle`, {

@@ -7,6 +7,7 @@ import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useUser } from '@/lib/query/users';
+import { formatUserName } from '@/lib/utils/user-display';
 
 export default function EditEmployeeFormContent({
   userId,
@@ -24,7 +25,7 @@ export default function EditEmployeeFormContent({
     loginNameUnchangedToast?: string | null;
   }): void {
     const name = userQuery.data
-      ? `${userQuery.data.firstName} ${userQuery.data.lastName}`
+      ? formatUserName(userQuery.data)
       : result.userId;
     messageApi.success(t('users.updated', { name }));
     if (result.loginNameUnchangedToast) {

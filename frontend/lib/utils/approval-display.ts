@@ -8,6 +8,7 @@ import type {
   ApprovalTierDecision,
   ApprovalUserSummary,
 } from '@/lib/api/approvals.types';
+import { formatUserName } from '@/lib/utils/user-display';
 
 type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -17,8 +18,7 @@ export function formatApprovalUserName(
   if (!user) {
     return '—';
   }
-  const name = `${user.firstName} ${user.lastName}`.trim();
-  return name || user.email || '—';
+  return formatUserName(user) || user.email || '—';
 }
 
 export function formatApprovalStatus(status: string, t?: TFn): string {
