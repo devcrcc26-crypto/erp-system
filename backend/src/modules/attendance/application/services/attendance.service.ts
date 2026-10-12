@@ -315,8 +315,15 @@ function resolveAttendanceDayFlag(params: {
   scheduledEnd: string | null;
   /** SCAN_ONLY schedule: no missing-punch or early-leave flags. */
   scanOnly?: boolean;
+  /** Hire-to-first-scan grace: not absent and no field-movement flags. */
+  enrolmentGrace?: boolean;
 }): AttendanceDayFlag {
-  if (params.isHoliday || params.isWeekend || params.scanOnly) {
+  if (
+    params.isHoliday ||
+    params.isWeekend ||
+    params.scanOnly ||
+    params.enrolmentGrace
+  ) {
     return AttendanceDayFlag.NONE;
   }
   if (!params.clockIn) {
@@ -3319,6 +3326,8 @@ export class AttendanceService
         attendanceRecordId: record.id,
         flag: { not: 'NONE' },
         flagResolved: false,
+        // Enrolment grace days are paid present — no field-movement explanation.
+        dayStatus: { not: 'ENROLMENT_GRACE' },
       },
       orderBy: { date: 'asc' },
       select: {
@@ -3521,6 +3530,11 @@ export class AttendanceService
       if (log.record.employeeId !== employeeId) {
         throw new ForbiddenException(
           'Daily logs must belong to the target employee',
+        );
+      }
+      if (log.dayStatus === 'ENROLMENT_GRACE') {
+        throw new BadRequestException(
+          `Day ${log.date.toISOString().split('T')[0]} is within enrolment grace — no explanation needed`,
         );
       }
       if (log.flag === 'NONE') {
@@ -3852,6 +3866,7 @@ export class AttendanceService
             firstName: true,
             middleName: true,
             lastName: true,
+            chineseName: true,
             employeeId: true,
           },
         },
@@ -3861,6 +3876,7 @@ export class AttendanceService
             firstName: true,
             middleName: true,
             lastName: true,
+            chineseName: true,
           },
         },
         entries: {
@@ -3886,7 +3902,13 @@ export class AttendanceService
             tiers: {
               include: {
                 approver: {
-                  select: { id: true, firstName: true, lastName: true },
+                  select: {
+                    id: true,
+                    firstName: true,
+                    middleName: true,
+                    lastName: true,
+                    chineseName: true,
+                  },
                 },
               },
               orderBy: { tierOrder: 'asc' },
@@ -3991,7 +4013,9 @@ export class AttendanceService
             select: {
               id: true,
               firstName: true,
+              middleName: true,
               lastName: true,
+              chineseName: true,
               employeeId: true,
             },
           },
@@ -4634,6 +4658,9 @@ export class AttendanceService
           : 0;
       const inEmployedWindow = monthSummary.byDate.has(key);
       const scanOnly = scanOnlyRuleByDate.has(key);
+      const enrolmentGrace =
+        status === 'ENROLMENT_GRACE' ||
+        enrolmentGraceKeys?.has(key) === true;
       const flag = resolveAttendanceDayFlag({
         isHoliday,
         isWeekend: log.isWeekend,
@@ -4642,6 +4669,7 @@ export class AttendanceService
         isLastExportDay: log.isLastExportDay,
         scheduledEnd,
         scanOnly,
+        enrolmentGrace,
       });
       const scanReview = resolveScanReviewFields(
         log,

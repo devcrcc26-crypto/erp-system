@@ -593,6 +593,7 @@ export interface FieldMovementLog {
     firstName: string;
     middleName?: string | null;
     lastName: string;
+    chineseName?: string | null;
     employeeId: string | null;
   };
   /** Who filed it; differs from employee when submitted on behalf. */
@@ -602,6 +603,7 @@ export interface FieldMovementLog {
     firstName: string;
     middleName?: string | null;
     lastName: string;
+    chineseName?: string | null;
   };
   submittedOnBehalf?: boolean;
   entries?: FieldMovementLogEntry[];

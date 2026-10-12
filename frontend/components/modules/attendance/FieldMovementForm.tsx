@@ -159,7 +159,8 @@ type DayErrors = Partial<
     | 'returnTime'
     | 'clockInTime'
     | 'earlyLeaveReason'
-    | 'notes',
+    | 'notes'
+    | 'lateReason',
     string
   >
 >;
@@ -193,6 +194,8 @@ type DayEntry = {
   returnTime: string;
   notes: string;
   earlyLeaveReason: string;
+  /** Per-day late-entry reason (past months); filled individually or via bulk Apply. */
+  lateReason: string;
   errors: DayErrors;
   filledViaBulk: boolean;
 };
@@ -250,6 +253,7 @@ export function toDayEntry(day: FlaggedDay): DayEntry {
     returnTime: '',
     notes: '',
     earlyLeaveReason: '',
+    lateReason: '',
     errors: {},
     filledViaBulk: false,
   };
@@ -277,39 +281,65 @@ export function getValidBulkReasons(selectedDays: DayEntry[]): UiReason[] {
   return reasons;
 }
 
-function dayIsFullyExplained(day: DayEntry): boolean {
+function dayIsFullyExplained(
+  day: DayEntry,
+  requireLateReason = false,
+): boolean {
   if (!day.selected || !day.selectedReason) {
     return false;
   }
+  let reasonOk = false;
   if (day.selectedReason === 'FIELD_VISIT') {
-    return (
+    reasonOk =
       day.destination.trim().length >= 3 &&
       Boolean(day.departureTime) &&
-      day.notes.trim().length >= 3
-    );
-  }
-  if (day.selectedReason === 'EARLY_LEAVE') {
-    return Boolean(day.departureTime) && day.earlyLeaveReason.trim().length > 0;
-  }
-  if (day.selectedReason === 'FORGOT_BOTH') {
-    return (
+      day.notes.trim().length >= 3;
+  } else if (day.selectedReason === 'EARLY_LEAVE') {
+    reasonOk =
+      Boolean(day.departureTime) && day.earlyLeaveReason.trim().length > 0;
+  } else if (day.selectedReason === 'FORGOT_BOTH') {
+    reasonOk =
       Boolean(day.clockInTime) &&
       Boolean(day.departureTime) &&
       day.clockInTime < day.departureTime &&
-      day.notes.trim().length >= 3
-    );
+      day.notes.trim().length >= 3;
+  } else if (day.selectedReason === 'FORGOT_CLOCK_OUT') {
+    reasonOk = Boolean(day.departureTime) && day.notes.trim().length >= 3;
+  } else {
+    reasonOk = true;
   }
-  if (day.selectedReason === 'FORGOT_CLOCK_OUT') {
-    return Boolean(day.departureTime) && day.notes.trim().length >= 3;
+  if (!reasonOk) {
+    return false;
+  }
+  if (requireLateReason && day.lateReason.trim().length < 3) {
+    return false;
   }
   return true;
 }
 
-function dayNeedsAttention(day: DayEntry): boolean {
+function dayNeedsAttention(
+  day: DayEntry,
+  requireLateReason = false,
+): boolean {
   if (!day.selected || day.alreadySubmitted) {
     return false;
   }
-  return !dayIsFullyExplained(day);
+  return !dayIsFullyExplained(day, requireLateReason);
+}
+
+/** Log-level late reason from per-day values (API stores one string on the log). */
+export function combineLateReasons(days: DayEntry[]): string | undefined {
+  const unique = [
+    ...new Set(
+      days
+        .map((day) => day.lateReason.trim())
+        .filter((value) => value.length > 0),
+    ),
+  ];
+  if (unique.length === 0) {
+    return undefined;
+  }
+  return unique.join('\n');
 }
 
 function blockingLogLabel(log: NonNullable<DayEntry['submittedLog']>): string {
@@ -351,7 +381,7 @@ function daySummary(day: DayEntry): string {
 
 type DayState = 'locked' | 'excluded' | 'error' | 'ready' | 'pending';
 
-function dayState(day: DayEntry): DayState {
+function dayState(day: DayEntry, requireLateReason = false): DayState {
   if (day.alreadySubmitted) {
     return 'locked';
   }
@@ -361,7 +391,7 @@ function dayState(day: DayEntry): DayState {
   if (Object.keys(day.errors).length > 0) {
     return 'error';
   }
-  return dayIsFullyExplained(day) ? 'ready' : 'pending';
+  return dayIsFullyExplained(day, requireLateReason) ? 'ready' : 'pending';
 }
 
 type FieldA11y = {
@@ -485,8 +515,14 @@ function ReasonChoices({
   );
 }
 
-function DayStatusBadge({ day }: { day: DayEntry }): React.ReactNode {
-  const state = dayState(day);
+function DayStatusBadge({
+  day,
+  requireLateReason = false,
+}: {
+  day: DayEntry;
+  requireLateReason?: boolean;
+}): React.ReactNode {
+  const state = dayState(day, requireLateReason);
   if (state === 'locked' && day.coverMessage) {
     return (
       <span className="fm-badge fm-badge--amber" title={day.coverMessage}>
@@ -606,12 +642,8 @@ export default function FieldMovementForm({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [dayEntries, setDayEntries] = useState<DayEntry[]>([]);
   const [overallNotes, setOverallNotes] = useState('');
-  const [lateReason, setLateReason] = useState('');
+  const [bulkLateReason, setBulkLateReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [submittedLog, setSubmittedLog] = useState<{
-    id: string;
-    requestNumber: string;
-  } | null>(null);
   const [stepOneError, setStepOneError] = useState<string | null>(null);
   const [bulkReason, setBulkReason] = useState<UiReason | null>(null);
   const [bulkDestination, setBulkDestination] = useState('');
@@ -643,8 +675,6 @@ export default function FieldMovementForm({
     [dayEntries],
   );
   const selectedCount = selectedDays.length;
-  const filledCount = selectedDays.filter((day) => dayIsFullyExplained(day))
-    .length;
   const now = dayjs();
   const isBeforeCurrentMonth =
     month != null &&
@@ -654,6 +684,9 @@ export default function FieldMovementForm({
   const needsLateReason =
     earliestQuery.data?.requiresLateReasonWhenBeforeCurrentMonth === true &&
     isBeforeCurrentMonth;
+  const filledCount = selectedDays.filter((day) =>
+    dayIsFullyExplained(day, needsLateReason),
+  ).length;
   const allSelected =
     selectableDays.length > 0 &&
     selectableDays.every((day) => day.selected);
@@ -693,6 +726,9 @@ export default function FieldMovementForm({
 
   const canApplyBulk = useMemo((): boolean => {
     if (!bulkReason || selectedCount === 0) {
+      return false;
+    }
+    if (needsLateReason && bulkLateReason.trim().length < 3) {
       return false;
     }
     if (bulkReason === 'FIELD_VISIT') {
@@ -741,6 +777,8 @@ export default function FieldMovementForm({
   }, [
     bulkReason,
     selectedCount,
+    needsLateReason,
+    bulkLateReason,
     bulkDestination,
     bulkDidReturn,
     bulkReturnTime,
@@ -753,6 +791,9 @@ export default function FieldMovementForm({
   const bulkApplyBlockedHint = useMemo((): string | null => {
     if (!bulkReason || selectedCount === 0 || canApplyBulk) {
       return null;
+    }
+    if (needsLateReason && bulkLateReason.trim().length < 3) {
+      return 'Enter a late entry reason (at least 3 characters) to enable Apply.';
     }
     if (bulkReason === 'FIELD_VISIT') {
       if (bulkDestination.trim().length < 3) {
@@ -795,6 +836,8 @@ export default function FieldMovementForm({
     bulkReason,
     selectedCount,
     canApplyBulk,
+    needsLateReason,
+    bulkLateReason,
     bulkDestination,
     bulkDepartureTime,
     bulkNotes,
@@ -813,33 +856,17 @@ export default function FieldMovementForm({
     setBulkClockInTime('');
     setBulkEarlyLeaveReason('');
     setBulkNotes('');
+    setBulkLateReason('');
   }
 
   const canProceedToStep3 =
     selectedCount > 0 &&
-    dayEntries.every((day) => {
-      if (!day.selected) {
-        return true;
-      }
-      if (!day.selectedReason) {
-        return false;
-      }
-      if (
-        day.selectedReason === 'FIELD_VISIT' &&
-        day.destination.trim().length < 3
-      ) {
-        return false;
-      }
-      if (day.selectedReason === 'EARLY_LEAVE') {
-        if (!day.departureTime || !day.earlyLeaveReason.trim()) {
-          return false;
-        }
-      }
-      return true;
-    });
+    dayEntries.every(
+      (day) => !day.selected || dayIsFullyExplained(day, needsLateReason),
+    );
 
   const unfilledSelectedCount = dayEntries.filter(
-    (day) => day.selected && !dayIsFullyExplained(day),
+    (day) => day.selected && !dayIsFullyExplained(day, needsLateReason),
   ).length;
 
   const reviewGroups = useMemo(() => {
@@ -914,6 +941,8 @@ export default function FieldMovementForm({
       reason === 'EARLY_LEAVE' ? bulkEarlyLeaveReason.trim() : '';
     const notes =
       reason === 'EARLY_LEAVE' ? '' : bulkNotes.trim();
+    const lateReason =
+      needsLateReason ? bulkLateReason.trim() : '';
 
     setDayEntries((prev) =>
       prev.map((day) => {
@@ -943,6 +972,7 @@ export default function FieldMovementForm({
           returnTime,
           earlyLeaveReason,
           notes: reason === 'EARLY_LEAVE' ? '' : notes,
+          lateReason: needsLateReason ? lateReason : day.lateReason,
           filledViaBulk: true,
           errors: {},
         };
@@ -1085,12 +1115,6 @@ export default function FieldMovementForm({
       messageApi.warning('Select at least one day to explain.');
       return false;
     }
-    if (needsLateReason && lateReason.trim().length < 3) {
-      messageApi.warning(
-        'Late entry reason is required when entering dates before the current month.',
-      );
-      return false;
-    }
     let valid = true;
     const needsExpand = new Set<number>();
     setDayEntries((prev) =>
@@ -1101,6 +1125,12 @@ export default function FieldMovementForm({
         const errors: DayErrors = {};
         if (!day.selectedReason) {
           errors.selectedReason = 'Reason is required';
+          valid = false;
+          needsExpand.add(index);
+        }
+        if (needsLateReason && day.lateReason.trim().length < 3) {
+          errors.lateReason =
+            'Late entry reason is required (at least 3 characters)';
           valid = false;
           needsExpand.add(index);
         }
@@ -1249,9 +1279,12 @@ export default function FieldMovementForm({
         notes,
       });
     }
+    const logLateReason = needsLateReason
+      ? combineLateReasons(selectedDays)
+      : undefined;
     return {
       notes: overallNotes.trim() || undefined,
-      lateReason: needsLateReason ? lateReason.trim() || undefined : undefined,
+      lateReason: logLateReason,
       entries,
       ...(onBehalf && targetEmployeeId
         ? { onBehalfOfEmployeeId: targetEmployeeId, autoApproveTier: false }
@@ -1263,9 +1296,12 @@ export default function FieldMovementForm({
     if (!validateStep2()) {
       return;
     }
-    if (needsLateReason && lateReason.trim().length < 3) {
+    if (
+      needsLateReason &&
+      selectedDays.some((day) => day.lateReason.trim().length < 3)
+    ) {
       messageApi.warning(
-        'Late entry reason is required when entering dates before the current month.',
+        'Late entry reason is required on each selected day when entering dates before the current month.',
       );
       return;
     }
@@ -1274,15 +1310,14 @@ export default function FieldMovementForm({
     try {
       const created = await createMutation.mutateAsync(buildDto());
       createdId = created.id;
-      const submitted = await submitMutation.mutateAsync({
+      await submitMutation.mutateAsync({
         id: created.id,
-        lateReason: needsLateReason ? lateReason.trim() : undefined,
-      });
-      setSubmittedLog({
-        id: submitted.id,
-        requestNumber: submitted.requestNumber,
+        lateReason: needsLateReason
+          ? combineLateReasons(selectedDays)
+          : undefined,
       });
       messageApi.success('Field movement log submitted.');
+      router.push('/approvals?tab=my-requests');
     } catch (error) {
       if (createdId) {
         try {
@@ -1323,8 +1358,6 @@ export default function FieldMovementForm({
     setFetchError(null);
     setDayEntries([]);
     setOverallNotes('');
-    setLateReason('');
-    setSubmittedLog(null);
     setStepOneError(null);
     clearBulkFields();
     setExpandedDays(new Set());
@@ -1332,53 +1365,6 @@ export default function FieldMovementForm({
 
   const pageClassName =
     'fm-page erp-pro-list-page erp-users-page erp-employee-form-page erp-leave-form-page';
-
-  if (submittedLog) {
-    return (
-      <div className={pageClassName}>
-        <section
-          className="fm-card fm-success"
-          aria-labelledby="fm-success-title"
-          role="status"
-        >
-          <span className="fm-success__icon" aria-hidden>
-            <CircleCheck size={32} />
-          </span>
-          <h2 id="fm-success-title" className="fm-success__title">
-            Explanation sent for approval
-          </h2>
-          <p className="fm-success__text">
-            {onBehalf && targetName ? (
-              <>
-                <strong>{submittedLog.requestNumber}</strong> has been submitted
-                on behalf of <strong>{targetName}</strong>. It goes through their
-                normal approval chain; you can track it in Approvals → My
-                Requests.
-              </>
-            ) : (
-              <>
-                <strong>{submittedLog.requestNumber}</strong> has been submitted.
-                Your supervisor will review it, and you can track its status in
-                Approvals → My Requests.
-              </>
-            )}
-          </p>
-          <div className="fm-success__actions">
-            <Button
-              type="primary"
-              size="large"
-              onClick={() => router.push('/approvals?tab=my-requests')}
-            >
-              View in My Requests
-            </Button>
-            <Button size="large" onClick={resetToStep1}>
-              Explain another month
-            </Button>
-          </div>
-        </section>
-      </div>
-    );
-  }
 
   const bulkRequiresReturn = bulkReason === 'FIELD_VISIT' && bulkDidReturn;
   const allFilled = selectedCount > 0 && filledCount === selectedCount;
@@ -1959,16 +1945,16 @@ export default function FieldMovementForm({
                           id="fm-bulk-late-reason"
                           label={t('pages.hr.siteAssignments.form.lateReason')}
                           required
-                          hint="Required because this log covers dates before the current month."
+                          hint="Applied to each selected day when you click Apply — same as the other bulk fields."
                         >
                           {(a11y) => (
                             <Input.TextArea
                               {...a11y}
                               rows={3}
                               maxLength={2000}
-                              value={lateReason}
+                              value={bulkLateReason}
                               onChange={(event) =>
-                                setLateReason(event.target.value)
+                                setBulkLateReason(event.target.value)
                               }
                               placeholder={t(
                                 'pages.hr.siteAssignments.form.lateReasonPlaceholder',
@@ -2026,7 +2012,7 @@ export default function FieldMovementForm({
                         ? day.bothScansMissing
                         : day.availableReasons.includes(option.value),
                   );
-                  const state = dayState(day);
+                  const state = dayState(day, needsLateReason);
                   const showBody = expandedDays.has(index) && day.selected;
                   const longDate = formatLongDate(day.date);
                   const summary = daySummary(day);
@@ -2055,7 +2041,10 @@ export default function FieldMovementForm({
                           <h3 className="fm-day__title">{longDate}</h3>
                           <div className="fm-badge-row">
                             <FlagBadge flag={day.flag} />
-                            <DayStatusBadge day={day} />
+                            <DayStatusBadge
+                              day={day}
+                              requireLateReason={needsLateReason}
+                            />
                           </div>
                           {summary && !showBody ? (
                             <p className="fm-day__summary">{summary}</p>
@@ -2364,6 +2353,35 @@ export default function FieldMovementForm({
                             )}
                           </Field>
                         ) : null}
+
+                        {needsLateReason && day.selectedReason ? (
+                          <Field
+                            id={fieldId('late-reason')}
+                            label={t('pages.hr.siteAssignments.form.lateReason')}
+                            required
+                            hint="Required for this day because the period is before the current month."
+                            error={day.errors.lateReason}
+                          >
+                            {(a11y) => (
+                              <Input.TextArea
+                                {...a11y}
+                                rows={3}
+                                maxLength={2000}
+                                value={day.lateReason}
+                                onChange={(event) => {
+                                  updateDay(day.id, {
+                                    lateReason: event.target.value,
+                                    filledViaBulk: false,
+                                  });
+                                  clearDayError(day.id, 'lateReason');
+                                }}
+                                placeholder={t(
+                                  'pages.hr.siteAssignments.form.lateReasonPlaceholder',
+                                )}
+                              />
+                            )}
+                          </Field>
+                        ) : null}
                       </div>
                     </li>
                   );
@@ -2449,23 +2467,25 @@ export default function FieldMovementForm({
             </ul>
 
             {needsLateReason ? (
-              <Field
-                id="fm-late-reason"
-                label={t('pages.hr.siteAssignments.form.lateReason')}
-              >
-                {(a11y) => (
-                  <Input.TextArea
-                    {...a11y}
-                    rows={3}
-                    maxLength={2000}
-                    value={lateReason}
-                    onChange={(event) => setLateReason(event.target.value)}
-                    placeholder={t(
-                      'pages.hr.siteAssignments.form.lateReasonPlaceholder',
-                    )}
-                  />
-                )}
-              </Field>
+              <div className="mb-4">
+                <h3 className="fm-field__label mb-2">
+                  {t('pages.hr.siteAssignments.form.lateReason')}
+                </h3>
+                <ul className="fm-review-list">
+                  {selectedDays.map((day) => (
+                    <li key={`late-${day.id}`} className="fm-review-item">
+                      <div className="fm-review-item__body">
+                        <p className="fm-review-item__title">
+                          {formatLongDate(day.date)}
+                        </p>
+                        <p className="fm-review-item__dates">
+                          {day.lateReason.trim() || '—'}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : null}
 
             <Field
