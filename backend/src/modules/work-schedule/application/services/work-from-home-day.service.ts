@@ -86,11 +86,31 @@ interface AssignerContext {
 interface AssignableEmployee {
   id: string;
   firstName: string;
+  middleName: string | null;
   lastName: string;
+  chineseName: string | null;
   employeeId: string | null;
   department: string | null;
   discipline: string | null;
 }
+
+interface WfhEmployeeSummary {
+  id: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  chineseName: string | null;
+  employeeId: string | null;
+}
+
+const WFH_USER_NAME_SELECT = {
+  id: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
+  chineseName: true,
+  employeeId: true,
+} as const;
 
 /**
  * Work-from-home calendar days (attendance credit).
@@ -146,7 +166,46 @@ export class WorkFromHomeDayService
       where,
       orderBy: { date: 'asc' },
     });
-    return rows.map((row) => this.mapRow(row));
+    const employeeIds = [
+      ...new Set(rows.flatMap((row) => row.employeeIds)),
+    ];
+    const employeesById = await this.loadEmployeeSummaries(
+      companyId,
+      employeeIds,
+    );
+    return rows.map((row) =>
+      this.mapRow(
+        row,
+        row.employeeIds
+          .map((id) => employeesById.get(id))
+          .filter((user): user is WfhEmployeeSummary => Boolean(user)),
+      ),
+    );
+  }
+
+  private async loadEmployeeSummaries(
+    companyId: string,
+    employeeIds: string[],
+  ): Promise<Map<string, WfhEmployeeSummary>> {
+    const map = new Map<string, WfhEmployeeSummary>();
+    if (employeeIds.length === 0) {
+      return map;
+    }
+    const users = await this.prisma.user.findMany({
+      where: { companyId, id: { in: employeeIds } },
+      select: WFH_USER_NAME_SELECT,
+    });
+    for (const user of users) {
+      map.set(user.id, {
+        id: user.id,
+        firstName: user.firstName,
+        middleName: user.middleName,
+        lastName: user.lastName,
+        chineseName: user.chineseName,
+        employeeId: user.employeeId,
+      });
+    }
+    return map;
   }
 
   /**
@@ -192,10 +251,7 @@ export class WorkFromHomeDayService
     const users = await this.prisma.user.findMany({
       where,
       select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        employeeId: true,
+        ...WFH_USER_NAME_SELECT,
         department: { select: { name: true } },
         engineeringDiscipline: { select: { name: true } },
       },
@@ -208,7 +264,9 @@ export class WorkFromHomeDayService
       employees: users.map((user) => ({
         id: user.id,
         firstName: user.firstName,
+        middleName: user.middleName,
         lastName: user.lastName,
+        chineseName: user.chineseName,
         employeeId: user.employeeId,
         department: user.department?.name ?? null,
         discipline: user.engineeringDiscipline?.name ?? null,
@@ -1103,7 +1161,10 @@ export class WorkFromHomeDayService
     );
   }
 
-  private mapRow(row: Prisma.WorkFromHomeDayGetPayload<object>): unknown {
+  private mapRow(
+    row: Prisma.WorkFromHomeDayGetPayload<object>,
+    employees: WfhEmployeeSummary[] = [],
+  ): unknown {
     return {
       id: row.id,
       date: row.date.toISOString().slice(0, 10),
@@ -1111,6 +1172,7 @@ export class WorkFromHomeDayService
       scope: row.scope,
       departmentIds: row.departmentIds,
       employeeIds: row.employeeIds,
+      employees,
       createdFromAttendanceImport:
         (row as { createdFromAttendanceImport?: boolean })
           .createdFromAttendanceImport === true,

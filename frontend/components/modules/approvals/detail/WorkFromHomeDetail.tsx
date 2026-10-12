@@ -21,6 +21,7 @@ import {
 } from '@/lib/api/work-from-home.api';
 import { approvalKeys } from '@/lib/query/approvals';
 import { useCurrentUser } from '@/lib/query/profile';
+import { formatApprovalUserName } from '@/lib/utils/approval-display';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
@@ -81,6 +82,17 @@ export default function WorkFromHomeDetail({
         )})`
       : '—';
 
+  const employeeName = (() => {
+    const fromRequester = formatApprovalUserName(request.requester);
+    if (fromRequester !== '—') {
+      return fromRequester;
+    }
+    if (form.employeeId) {
+      return lookupUserName(form.employeeId);
+    }
+    return '—';
+  })();
+
   const viewerId = currentUser.data?.id;
   const createdBy = (request as { createdBy?: string }).createdBy;
   const isOpen = OPEN_STATUSES.includes(request.status);
@@ -115,7 +127,7 @@ export default function WorkFromHomeDetail({
           { label: t(`${KEY}.period`), value: rangeLabel, emphasize: true },
           {
             label: t('hr.table.employee'),
-            value: form.employeeId ? lookupUserName(form.employeeId) : '—',
+            value: employeeName,
           },
           {
             label: t(`${KEY}.workingDays`),

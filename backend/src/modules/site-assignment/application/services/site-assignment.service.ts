@@ -50,6 +50,7 @@ import {
 const USER_SELECT = {
   id: true,
   firstName: true,
+  middleName: true,
   lastName: true,
   email: true,
   employeeId: true,

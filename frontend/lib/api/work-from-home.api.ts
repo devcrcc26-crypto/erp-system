@@ -2,6 +2,15 @@ import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api/client';
 
 export type WorkFromHomeScope = 'ALL' | 'DEPARTMENTS' | 'EMPLOYEES';
 
+export interface WorkFromHomeEmployeeSummary {
+  id: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  chineseName?: string | null;
+  employeeId: string | null;
+}
+
 export interface WorkFromHomeDay {
   id: string;
   date: string;
@@ -9,6 +18,8 @@ export interface WorkFromHomeDay {
   scope: WorkFromHomeScope;
   departmentIds: string[];
   employeeIds: string[];
+  /** Resolved names for employeeIds (EMPLOYEES scope). */
+  employees?: WorkFromHomeEmployeeSummary[];
 }
 
 export interface CreateWorkFromHomeDayDto {
@@ -40,7 +51,9 @@ export interface RequestWorkFromHomeDayDto {
 export interface WorkFromHomeAssignableEmployee {
   id: string;
   firstName: string;
+  middleName?: string | null;
   lastName: string;
+  chineseName?: string | null;
   employeeId: string | null;
   department: string | null;
   discipline: string | null;

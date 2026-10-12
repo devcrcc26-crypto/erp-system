@@ -18,6 +18,7 @@ export interface SiteAssignmentProject {
 export interface SiteAssignmentEmployee {
   id: string;
   firstName: string;
+  middleName?: string | null;
   lastName: string;
   email: string;
   employeeId: string | null;

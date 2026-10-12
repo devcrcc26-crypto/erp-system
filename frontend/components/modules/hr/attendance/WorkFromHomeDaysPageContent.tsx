@@ -174,17 +174,6 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
     return map;
   }, [departmentsQuery.data?.data]);
 
-  const employeeLabelById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const user of assignableQuery.data?.employees ?? []) {
-      map.set(
-        user.id,
-        `${formatUserName(user)}${user.employeeId ? ` · ${user.employeeId}` : ''}`,
-      );
-    }
-    return map;
-  }, [assignableQuery.data?.employees]);
-
   const departmentOptions = useMemo(
     () =>
       (departmentsQuery.data?.data ?? []).map((row) => ({
@@ -204,6 +193,21 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   );
 
   const rows = listQuery.data ?? [];
+
+  const employeeLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const user of assignableQuery.data?.employees ?? []) {
+      map.set(user.id, formatUserName(user));
+    }
+    for (const row of rows) {
+      for (const user of row.employees ?? []) {
+        if (!map.has(user.id)) {
+          map.set(user.id, formatUserName(user));
+        }
+      }
+    }
+    return map;
+  }, [assignableQuery.data?.employees, rows]);
 
   const scopeCounts = useMemo(
     () => ({
@@ -299,21 +303,19 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
       }
       return names.join(', ');
     }
-    const names = row.employeeIds
-      .map((id) => employeeLabelById.get(id))
-      .filter((name): name is string => Boolean(name));
+    const fromRow = (row.employees ?? []).map((user) => formatUserName(user));
+    const names =
+      fromRow.length > 0
+        ? fromRow
+        : row.employeeIds
+            .map((id) => employeeLabelById.get(id))
+            .filter((name): name is string => Boolean(name));
     if (names.length === 0) {
       return t('pages.hr.workFromHome.scopeDetail.employeesCount', {
         count: row.employeeIds.length,
       });
     }
-    if (names.length <= 2) {
-      return names.join(', ');
-    }
-    return t('pages.hr.workFromHome.scopeDetail.employeesNamed', {
-      names: names.slice(0, 2).join(', '),
-      count: names.length - 2,
-    });
+    return names.join(', ');
   }
 
   function closeDrawer(): void {
