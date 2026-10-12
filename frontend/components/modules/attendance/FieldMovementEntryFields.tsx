@@ -1,8 +1,7 @@
 'use client';
 
-import { Input, Radio, TimePicker } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
-import type { ReactNode } from 'react';
+import { Input, Radio, Select } from 'antd';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   clearHiddenFieldValues,
   getVisibleFieldRules,
@@ -13,12 +12,106 @@ import {
   type ForgotDirection,
 } from '@/lib/field-movement/field-movement-field-rules';
 
-function parseTime(value: string | undefined | null): Dayjs | null {
-  if (!value) {
-    return null;
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => {
+  const value = String(hour).padStart(2, '0');
+  return { value, label: value };
+});
+
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, minute) => {
+  const value = String(minute).padStart(2, '0');
+  return { value, label: value };
+});
+
+function splitHhMm(value: string | undefined | null): {
+  hour: string | null;
+  minute: string | null;
+} {
+  if (!value || !/^\d{2}:\d{2}$/.test(value)) {
+    return { hour: null, minute: null };
   }
-  const parsed = dayjs(value, 'HH:mm', true);
-  return parsed.isValid() ? parsed : null;
+  const [hour, minute] = value.split(':');
+  return { hour: hour ?? null, minute: minute ?? null };
+}
+
+/** 24h HH:mm via hour + minute dropdowns (drawer-friendly). */
+export function HourMinuteSelects({
+  id,
+  value,
+  disabled,
+  'aria-invalid': ariaInvalid,
+  'aria-required': ariaRequired,
+  onChange,
+}: {
+  id: string;
+  value: string | undefined | null;
+  disabled?: boolean;
+  'aria-invalid'?: boolean;
+  'aria-required'?: boolean;
+  onChange: (next: string) => void;
+}): React.ReactNode {
+  const parsed = splitHhMm(value);
+  const [hour, setHour] = useState<string | null>(parsed.hour);
+  const [minute, setMinute] = useState<string | null>(parsed.minute);
+
+  useEffect(() => {
+    const next = splitHhMm(value);
+    setHour(next.hour);
+    setMinute(next.minute);
+  }, [value]);
+
+  function commit(nextHour: string | null, nextMinute: string | null): void {
+    setHour(nextHour);
+    setMinute(nextMinute);
+    if (nextHour && nextMinute) {
+      onChange(`${nextHour}:${nextMinute}`);
+      return;
+    }
+    // Keep partial local selection; only clear the parent when both cleared.
+    if (!nextHour && !nextMinute) {
+      onChange('');
+    }
+  }
+
+  return (
+    <div className="fm-time-selects" role="group" aria-labelledby={id}>
+      <Select
+        id={id}
+        size="large"
+        className="fm-time-selects__hour"
+        placeholder="HH"
+        options={HOUR_OPTIONS}
+        value={hour ?? undefined}
+        allowClear
+        disabled={disabled}
+        status={ariaInvalid ? 'error' : undefined}
+        aria-invalid={ariaInvalid}
+        aria-required={ariaRequired}
+        getPopupContainer={() => document.body}
+        onChange={(next) =>
+          commit(typeof next === 'string' ? next : null, minute)
+        }
+      />
+      <span className="fm-time-selects__sep" aria-hidden>
+        :
+      </span>
+      <Select
+        id={`${id}-minute`}
+        size="large"
+        className="fm-time-selects__minute"
+        placeholder="mm"
+        options={MINUTE_OPTIONS}
+        value={minute ?? undefined}
+        allowClear
+        disabled={disabled}
+        status={ariaInvalid ? 'error' : undefined}
+        aria-invalid={ariaInvalid}
+        getPopupContainer={() => document.body}
+        onChange={(next) =>
+          commit(hour, typeof next === 'string' ? next : null)
+        }
+      />
+    </div>
+  );
 }
 
 export type FieldMovementEntryErrors = Partial<
@@ -245,16 +338,14 @@ export default function FieldMovementEntryFields({
               error={error}
             >
               {(a11y) => (
-                <TimePicker
-                  {...a11y}
-                  size="large"
-                  format="HH:mm"
-                  needConfirm={false}
-                  className="w-full sm:max-w-xs"
-                  value={parseTime(values[valueKey])}
-                  onChange={(value) =>
+                <HourMinuteSelects
+                  id={a11y.id}
+                  aria-invalid={a11y['aria-invalid']}
+                  aria-required={a11y['aria-required']}
+                  value={values[valueKey]}
+                  onChange={(next) =>
                     patchValues({
-                      [valueKey]: value ? value.format('HH:mm') : '',
+                      [valueKey]: next,
                     })
                   }
                 />

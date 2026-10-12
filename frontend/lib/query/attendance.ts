@@ -7,6 +7,8 @@ import {
   confirmAttendanceImport,
   correctAttendanceDailyLog,
   createFieldMovementLog,
+  removeFieldMovementDraftDay,
+  upsertFieldMovementDraftEntries,
   getAttendanceImportHistory,
   getAttendanceMonthlyApproval,
   getAwaitingEnrolment,
@@ -31,6 +33,8 @@ import type {
   CorrectDailyLogDto,
   CreateFieldMovementLogDto,
   ListFieldMovementLogsParams,
+  RemoveFieldMovementDraftDayDto,
+  UpsertFieldMovementDraftEntriesDto,
   ReviewScanFlagDto,
   UnlockAttendanceMonthDto,
 } from '@/lib/api/attendance.types';
@@ -386,6 +390,34 @@ export function useFieldMovementLog(id: string | undefined, enabled = true) {
     queryFn: () => getFieldMovementLog(id!),
     enabled: Boolean(id) && enabled,
     retry: false,
+  });
+}
+
+/**
+ * Upsert draft entries for flagged days in a month.
+ */
+export function useUpsertFieldMovementDraftEntries() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: UpsertFieldMovementDraftEntriesDto) =>
+      upsertFieldMovementDraftEntries(dto),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
+  });
+}
+
+/**
+ * Remove one day from the monthly field movement draft.
+ */
+export function useRemoveFieldMovementDraftDay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: RemoveFieldMovementDraftDayDto) =>
+      removeFieldMovementDraftDay(dto),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
   });
 }
 

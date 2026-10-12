@@ -492,6 +492,20 @@ export type FieldMovementStatus =
   | 'RETURNED'
   | 'CANCELLED';
 
+export type FieldMovementExplanationStatus =
+  | 'NOT_EXPLAINED'
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'RETURNED';
+
+export type FieldMovementIssueType =
+  | 'MISSING_CLOCK_OUT'
+  | 'MISSING_CLOCK_IN'
+  | 'EARLY_DEPARTURE'
+  | 'NO_SCANS';
+
 export interface FlaggedDay {
   id: string;
   date: string;
@@ -517,12 +531,25 @@ export interface FlaggedDay {
    * The day is then locked (alreadySubmitted).
    */
   coverMessage?: string | null;
+  /** Derived issue grouping for bulk explain (server may send; else client derives). */
+  issueType?: FieldMovementIssueType | null;
+  explanationStatus?: FieldMovementExplanationStatus;
+  draftEntries?: CreateFieldMovementEntryDto[];
+  draftLogId?: string | null;
+  scheduledStartTime?: string;
+  scheduledEndTime?: string;
+  /** When false, row cannot be selected (locked cover / submitted). */
+  selectable?: boolean;
+  /** Late-entry reason from the month draft log (when explanationStatus is DRAFT). */
+  lateReason?: string | null;
 }
 
 export interface FlaggedDaysResponse {
   flaggedDays: FlaggedDay[];
   month: number;
   year: number;
+  draftLogId?: string | null;
+  draftLateReason?: string | null;
 }
 
 /** Flagged days for another employee (on behalf); hasRecord = month imported. */
@@ -549,6 +576,27 @@ export interface CreateFieldMovementLogDto {
 
 export interface SubmitFieldMovementLogDto {
   lateReason?: string;
+}
+
+export interface UpsertFieldMovementDraftEntriesDto {
+  month: number;
+  year: number;
+  entries: CreateFieldMovementEntryDto[];
+  notes?: string;
+  lateReason?: string;
+  onBehalfOfEmployeeId?: string;
+}
+
+export interface RemoveFieldMovementDraftDayDto {
+  month: number;
+  year: number;
+  dailyLogId: string;
+  onBehalfOfEmployeeId?: string;
+}
+
+export interface UpsertFieldMovementDraftEntriesResponse {
+  draftLogId: string;
+  entryCount: number;
 }
 
 export interface FieldMovementLogEntry {

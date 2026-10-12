@@ -15,9 +15,11 @@ import {
 } from 'lucide-react';
 import type {
   AttendanceDayFlag,
+  FieldMovementExplanationStatus,
   FieldMovementReason,
   FieldMovementStatus,
 } from '@/lib/api/attendance.types';
+import type { FieldMovementIssueType } from '@/lib/field-movement/field-movement-issue-compatibility';
 import './field-movement.css';
 
 /**
@@ -76,6 +78,69 @@ const STATUS_DISPLAY: Record<
 
 export function formatFieldMovementStatus(status: FieldMovementStatus): string {
   return STATUS_DISPLAY[status]?.label ?? status;
+}
+
+export const ISSUE_TYPE_LABELS: Record<FieldMovementIssueType, string> = {
+  MISSING_CLOCK_OUT: 'Missing clock-out',
+  MISSING_CLOCK_IN: 'Missing clock-in',
+  EARLY_DEPARTURE: 'Early departure',
+  NO_SCANS: 'No scans',
+};
+
+const EXPLANATION_STATUS_DISPLAY: Record<
+  FieldMovementExplanationStatus,
+  { label: string; tone: string }
+> = {
+  NOT_EXPLAINED: { label: 'Not explained', tone: 'amber' },
+  DRAFT: { label: 'Draft', tone: 'neutral' },
+  SUBMITTED: { label: 'Submitted', tone: 'blue' },
+  APPROVED: { label: 'Approved', tone: 'green' },
+  REJECTED: { label: 'Rejected', tone: 'red' },
+  RETURNED: { label: 'Returned', tone: 'amber' },
+};
+
+export function IssueTypeBadge({
+  issueType,
+}: {
+  issueType: FieldMovementIssueType;
+}): React.ReactNode {
+  return (
+    <span className="fm-badge fm-badge--neutral">
+      {ISSUE_TYPE_LABELS[issueType]}
+    </span>
+  );
+}
+
+export function ExplanationStatusBadge({
+  status,
+}: {
+  status: FieldMovementExplanationStatus;
+}): React.ReactNode {
+  const display = EXPLANATION_STATUS_DISPLAY[status] ?? {
+    label: status,
+    tone: 'neutral',
+  };
+  return (
+    <span className={`fm-badge fm-badge--${display.tone}`}>
+      {display.label}
+    </span>
+  );
+}
+
+export function ScanTimes({
+  clockIn,
+  clockOut,
+}: {
+  clockIn: string | null;
+  clockOut: string | null;
+}): React.ReactNode {
+  return (
+    <span className="fm-scan-times">
+      <span>{clockIn ?? '—'}</span>
+      <span aria-hidden> / </span>
+      <span>{clockOut ?? '—'}</span>
+    </span>
+  );
 }
 
 export function FlagBadge({ flag }: { flag: AttendanceDayFlag }): React.ReactNode {

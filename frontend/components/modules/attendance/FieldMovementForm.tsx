@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button, Checkbox, Input, InputNumber, Select } from 'antd';
 import dayjs from 'dayjs';
 import {
@@ -35,7 +35,7 @@ import type {
   AttendanceDayFlag,
   CreateFieldMovementEntryDto,
   CreateFieldMovementLogDto,
-  FlaggedDay,
+  FlaggedDaysResponse,
 } from '@/lib/api/attendance.types';
 import {
   useCancelFieldMovementLog,
@@ -57,12 +57,15 @@ import {
   toStorageEntries,
   validateFieldMovementValues,
 } from '@/lib/field-movement/field-movement-field-rules';
+import ExplainDaysPanel from '@/components/modules/attendance/ExplainDaysPanel';
 import FieldMovementEntryFields from '@/components/modules/attendance/FieldMovementEntryFields';
 import {
   canApplySelectionToDay,
   combineLateReasons,
   dayFieldValues,
+  dayHasDraftExplanation,
   dayIsFullyExplained,
+  defaultScheduledEndTime,
   emptyFieldValues,
   getValidBulkForgotDirections,
   getValidBulkReasons,
@@ -112,10 +115,7 @@ function monthName(month: number | null): string {
 }
 
 function scheduledEndTime(dateStr: string, isHalfDay: boolean): string {
-  if (isHalfDay) {
-    return '12:30';
-  }
-  return new Date(dateStr).getDay() === 6 ? '12:30' : '17:30';
+  return defaultScheduledEndTime(dateStr, isHalfDay);
 }
 
 function dayNeedsAttention(
@@ -399,6 +399,15 @@ export default function FieldMovementForm({
   );
   const [bulkApplySkipped, setBulkApplySkipped] = useState<string[]>([]);
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
+  const [draftLogId, setDraftLogId] = useState<string | null>(null);
+  /** Log-level late reason kept across draft reload so Review can always show it. */
+  const [logLateReason, setLogLateReason] = useState('');
+  const logLateReasonRef = useRef('');
+  function persistLogLateReason(value: string): void {
+    const trimmed = value.trim();
+    logLateReasonRef.current = trimmed;
+    setLogLateReason(trimmed);
+  }
 
   useSetHeaderExtra(null);
 
@@ -562,17 +571,23 @@ export default function FieldMovementForm({
     setBulkLateReason('');
   }
 
+  const draftExplanationDays = useMemo(
+    () => dayEntries.filter(dayHasDraftExplanation),
+    [dayEntries],
+  );
+
   const canProceedToStep3 =
-    selectedCount > 0 &&
-    dayEntries.every(
-      (day) =>
-        !day.selected ||
-        dayIsFullyExplained(
-          day,
-          needsLateReason,
-          scheduledEndTime(day.date, day.isHalfDay),
-        ),
-    );
+    (draftLogId !== null && draftExplanationDays.length > 0) ||
+    (selectedCount > 0 &&
+      dayEntries.every(
+        (day) =>
+          !day.selected ||
+          dayIsFullyExplained(
+            day,
+            needsLateReason,
+            scheduledEndTime(day.date, day.isHalfDay),
+          ),
+      ));
 
   const unfilledSelectedCount = dayEntries.filter(
     (day) =>
@@ -585,19 +600,26 @@ export default function FieldMovementForm({
   ).length;
 
   const totalStorageEntries = useMemo(() => {
-    return selectedDays.reduce(
+    const source =
+      draftExplanationDays.length > 0 ? draftExplanationDays : selectedDays;
+    return source.reduce(
       (sum, day) => sum + storageEntryCountForDay(day),
       0,
     );
-  }, [selectedDays]);
+  }, [draftExplanationDays, selectedDays]);
+
+  const reviewSourceDays = useMemo(() => {
+    if (draftExplanationDays.length > 0) {
+      return draftExplanationDays;
+    }
+    return selectedDays.filter((day) => day.reasonType);
+  }, [draftExplanationDays, selectedDays]);
 
   const reviewGroups = useMemo(() => {
-    return groupBy(
-      selectedDays.filter((day) => day.reasonType),
-      (day) =>
-        `${day.reasonType}||${day.forgotDirection ?? ''}||${day.location.trim()}`,
+    return groupBy(reviewSourceDays, (day) =>
+      `${day.reasonType}||${day.forgotDirection ?? ''}||${day.location.trim()}`,
     );
-  }, [selectedDays]);
+  }, [reviewSourceDays]);
 
   useEffect(() => {
     if (dayEntries.length === 0) {
@@ -752,7 +774,7 @@ export default function FieldMovementForm({
     setFetchState('loading');
     clearBulkFields();
     try {
-      let flags: { flaggedDays: FlaggedDay[] };
+      let flags: FlaggedDaysResponse;
       let hasMonthRecord: boolean;
       if (onBehalf && targetEmployeeId) {
         const result = await getEmployeeFlaggedDays(targetEmployeeId, month, year);
@@ -770,15 +792,39 @@ export default function FieldMovementForm({
       }
       if (!hasMonthRecord) {
         setDayEntries([]);
+        persistLogLateReason('');
         setFetchState('not-approved');
         return;
       }
       if (flags.flaggedDays.length === 0) {
         setDayEntries([]);
+        persistLogLateReason('');
         setFetchState('no-data');
         return;
       }
-      const entries = flags.flaggedDays.map(toDayEntry);
+      const apiLate =
+        flags.draftLateReason?.trim() ||
+        flags.flaggedDays.find((day) => day.lateReason?.trim())?.lateReason?.trim() ||
+        '';
+      const preservedLate = apiLate || logLateReasonRef.current;
+      if (preservedLate) {
+        persistLogLateReason(preservedLate);
+      }
+      const entries = flags.flaggedDays.map((day) => {
+        const isDraftRow =
+          day.explanationStatus === 'DRAFT' ||
+          (day.draftEntries != null && day.draftEntries.length > 0);
+        return toDayEntry(
+          preservedLate && isDraftRow && !day.lateReason?.trim()
+            ? { ...day, lateReason: preservedLate }
+            : day,
+        );
+      });
+      const monthDraftLogId =
+        flags.draftLogId ??
+        flags.flaggedDays.find((day) => day.draftLogId)?.draftLogId ??
+        null;
+      setDraftLogId(monthDraftLogId);
       setStepOneError(null);
       setDayEntries(entries);
       const pendingCount = entries.filter((day) => !day.alreadySubmitted).length;
@@ -836,6 +882,10 @@ export default function FieldMovementForm({
       );
       return false;
     }
+    const draftDays = dayEntries.filter(dayHasDraftExplanation);
+    if (draftLogId && draftDays.length > 0) {
+      return true;
+    }
     if (selectedDays.length === 0) {
       messageApi.warning('Select at least one day to explain.');
       return false;
@@ -886,12 +936,14 @@ export default function FieldMovementForm({
         });
       }
     }
-    const logLateReason = needsLateReason
-      ? combineLateReasons(selectedDays)
+    const combinedLate = needsLateReason
+      ? combineLateReasons(selectedDays) ||
+        logLateReasonRef.current ||
+        undefined
       : undefined;
     return {
       notes: overallNotes.trim() || undefined,
-      lateReason: logLateReason,
+      lateReason: combinedLate,
       entries,
       ...(onBehalf && targetEmployeeId
         ? { onBehalfOfEmployeeId: targetEmployeeId, autoApproveTier: false }
@@ -901,6 +953,27 @@ export default function FieldMovementForm({
 
   async function handleSubmit(): Promise<void> {
     if (!validateStep2()) {
+      return;
+    }
+    const draftDays = dayEntries.filter(dayHasDraftExplanation);
+    if (draftLogId && draftDays.length > 0) {
+      setSubmitting(true);
+      try {
+        await submitMutation.mutateAsync({
+          id: draftLogId,
+          lateReason: needsLateReason
+            ? combineLateReasons(draftDays) ||
+              logLateReasonRef.current ||
+              undefined
+            : undefined,
+        });
+        messageApi.success('Field movement log submitted.');
+        router.push('/approvals?tab=my-requests');
+      } catch (error) {
+        notifyApiError(error, 'Failed to submit field movement log', messageApi);
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
     if (
@@ -964,6 +1037,8 @@ export default function FieldMovementForm({
     setFetchState('idle');
     setFetchError(null);
     setDayEntries([]);
+    setDraftLogId(null);
+    persistLogLateReason('');
     setOverallNotes('');
     setStepOneError(null);
     clearBulkFields();
@@ -1042,6 +1117,8 @@ export default function FieldMovementForm({
                         setTargetEmployeeId(value);
                         setFetchState('idle');
                         setDayEntries([]);
+                        setDraftLogId(null);
+                        persistLogLateReason('');
                         setStepOneError(null);
                       }}
                     />
@@ -1063,6 +1140,8 @@ export default function FieldMovementForm({
                       setMonth(value ?? null);
                       setFetchState('idle');
                       setDayEntries([]);
+                      setDraftLogId(null);
+                      persistLogLateReason('');
                       setStepOneError(null);
                     }}
                   />
@@ -1082,6 +1161,8 @@ export default function FieldMovementForm({
                       setYear(value == null ? null : value);
                       setFetchState('idle');
                       setDayEntries([]);
+                      setDraftLogId(null);
+                      persistLogLateReason('');
                       setStepOneError(null);
                     }}
                   />
@@ -1252,347 +1333,33 @@ export default function FieldMovementForm({
             </Notice>
           ) : null}
 
-          {selectableDays.length > 0 ? (
-            <>
-              <section className="fm-card" aria-labelledby="fm-progress-title">
-                <div className="fm-progress">
-                  <div className="fm-progress__row">
-                    <h2 id="fm-progress-title" className="fm-progress__count m-0">
-                      {selectedCount > 0
-                        ? `${filledCount} of ${plural(selectedCount, 'selected day')} ready`
-                        : 'No days selected'}
-                    </h2>
-                    <span
-                      className={`fm-progress__status${allFilled ? ' fm-progress__status--done' : ''}`}
-                      aria-live="polite"
-                    >
-                      {allFilled ? (
-                        <>
-                          <CircleCheck size={16} aria-hidden />
-                          All set. Select Next to review.
-                        </>
-                      ) : selectedCount > 0 ? (
-                        `${plural(selectedCount - filledCount, 'day')} still ${selectedCount - filledCount === 1 ? 'needs' : 'need'} details`
-                      ) : (
-                        'Tick at least one day to continue'
-                      )}
-                    </span>
-                  </div>
-                  <div
-                    className="fm-progress__track"
-                    role="progressbar"
-                    aria-labelledby="fm-progress-title"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={progressPercent}
-                  >
-                    <div
-                      className="fm-progress__fill"
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
-                  <ol className="fm-steps-hint">
-                    <li>Untick any day you do not want to include.</li>
-                    <li>
-                      If several days have the same reason, fill them at once
-                      below. Otherwise open each day and add its details.
-                    </li>
-                  </ol>
-                </div>
-              </section>
-
-              <section className="fm-card" aria-labelledby="fm-bulk-title">
-                <div className="fm-card__header">
-                  <span className="fm-card__icon" aria-hidden>
-                    <Layers size={20} />
-                  </span>
-                  <div>
-                    <h2 id="fm-bulk-title" className="fm-card__title">
-                      Fill several days at once
-                    </h2>
-                    <p className="fm-card__subtitle">
-                      Choose one reason and apply it to every ticked day. You
-                      can still change individual days afterwards.
-                    </p>
-                  </div>
-                </div>
-                <div className="fm-card__body">
-                  <div className="fm-bulk__toolbar">
-                    <Checkbox
-                      indeterminate={someSelected}
-                      checked={allSelected}
-                      onChange={(event) => handleSelectAll(event.target.checked)}
-                    >
-                      Select all ({plural(selectableDays.length, 'day')})
-                    </Checkbox>
-                    <span className="fm-bulk__selection">
-                      {selectedCount} of {selectableDays.length} selected
-                    </span>
-                  </div>
-
-                  {anySelected ? (
-                    <div className="fm-stack">
-                      <FieldMovementEntryFields
-                        idPrefix="fm-bulk"
-                        hideDate
-                        availableReasonTypes={bulkAvailableReasonTypes}
-                        availableForgotDirections={bulkAvailableForgotDirections}
-                        selection={bulkSelection}
-                        values={bulkValues}
-                        labels={fieldLabels}
-                        reasonTypeLabels={reasonTypeLabels}
-                        forgotDirectionLabels={forgotDirectionLabels}
-                        optionalSuffix={optionalSuffix}
-                        reasonTypeLegend={t(`${fmPrefix}.reasonTypeLegend`)}
-                        forgotDirectionLegend={t(
-                          `${fmPrefix}.forgotDirectionLegend`,
-                        )}
-                        onSelectionChange={setBulkSelection}
-                        onValuesChange={setBulkValues}
-                      />
-
-                      {bulkSelection.reasonType ? (
-                        <p className="fm-field__hint" role="status">
-                          {t(`${fmPrefix}.entriesWillBeCreated`, {
-                            count: bulkStorageEntryCount,
-                          })}
-                        </p>
-                      ) : null}
-
-                      {bulkApplySkipped.length > 0 ? (
-                        <Notice tone="info" title={t(`${fmPrefix}.skippedTitle`)}>
-                          <ul className="m-0 pl-4">
-                            {bulkApplySkipped.map((dateLabel) => (
-                              <li key={dateLabel}>{dateLabel}</li>
-                            ))}
-                          </ul>
-                        </Notice>
-                      ) : null}
-
-                      {needsLateReason ? (
-                        <Field
-                          id="fm-bulk-late-reason"
-                          label={t('pages.hr.siteAssignments.form.lateReason')}
-                          required
-                          hint="Applied to each selected day when you click Apply — same as the other bulk fields."
-                        >
-                          {(a11y) => (
-                            <Input.TextArea
-                              {...a11y}
-                              rows={3}
-                              maxLength={2000}
-                              value={bulkLateReason}
-                              onChange={(event) =>
-                                setBulkLateReason(event.target.value)
-                              }
-                              placeholder={t(
-                                'pages.hr.siteAssignments.form.lateReasonPlaceholder',
-                              )}
-                            />
-                          )}
-                        </Field>
-                      ) : null}
-
-                      <div className="fm-bulk__actions">
-                        <Button
-                          type="primary"
-                          size="large"
-                          disabled={!canApplyBulk}
-                          onClick={handleApplyBulk}
-                        >
-                          Apply to {plural(selectedCount, 'day')}
-                        </Button>
-                        {bulkSelection.reasonType ? (
-                          <Button size="large" onClick={clearBulkFields}>
-                            Clear
-                          </Button>
-                        ) : (
-                          <span className="fm-bulk__selection">
-                            Choose a reason to continue.
-                          </span>
-                        )}
-                      </div>
-                      {bulkApplyBlockedHint ? (
-                        <p className="fm-field__hint" role="status">
-                          {bulkApplyBlockedHint}
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="fm-field__hint">
-                      Tick one or more days to apply a reason to all of them.
-                    </p>
-                  )}
-                </div>
-              </section>
-            </>
-          ) : null}
-
           {dayEntries.length > 0 ? (
-            <section aria-labelledby="fm-days-title" className="fm-stack">
-              <h2 id="fm-days-title" className="fm-card__title m-0">
-                Flagged days in {periodLabel}
-              </h2>
-              <ul className="fm-day-list">
-                {dayEntries.map((day, index) => {
-                  const state = dayState(day, needsLateReason);
-                  const showBody = expandedDays.has(index) && day.selected;
-                  const longDate = formatLongDate(day.date);
-                  const summary = daySummary(day, reasonTypeLabels);
-                  const bodyId = `fm-day-body-${day.id}`;
-                  const dayValuesForFields = dayFieldValues(day);
-                  const daySelectionForFields = daySelection(day);
-
-                  return (
-                    <li key={day.id} className={`fm-day fm-day--${state}`}>
-                      <div className="fm-day__header">
-                        <Checkbox
-                          className="fm-day__check"
-                          checked={day.selected}
-                          disabled={day.alreadySubmitted}
-                          onChange={(event) => {
-                            updateDay(day.id, {
-                              selected: event.target.checked,
-                              errors: {},
-                            });
-                          }}
-                        >
-                          <span className="fm-sr-only">Include {longDate}</span>
-                        </Checkbox>
-                        <DateTile date={day.date} />
-                        <div className="fm-day__main">
-                          <h3 className="fm-day__title">{longDate}</h3>
-                          <div className="fm-badge-row">
-                            <FlagBadge flag={day.flag} />
-                            <DayStatusBadge
-                              day={day}
-                              requireLateReason={needsLateReason}
-                            />
-                          </div>
-                          {summary && !showBody ? (
-                            <p className="fm-day__summary">{summary}</p>
-                          ) : null}
-                        </div>
-                        {day.selected ? (
-                          <Button
-                            className="fm-day__toggle"
-                            aria-expanded={showBody}
-                            aria-controls={bodyId}
-                            onClick={() => toggleDayExpanded(index)}
-                          >
-                            {showBody
-                              ? 'Hide details'
-                              : state === 'ready'
-                                ? 'Edit details'
-                                : 'Add details'}
-                            <span className="fm-sr-only"> for {longDate}</span>
-                            <ChevronDown
-                              size={16}
-                              className="fm-day__chevron"
-                              aria-hidden
-                            />
-                          </Button>
-                        ) : null}
-                      </div>
-
-                      <div id={bodyId} className="fm-day__body" hidden={!showBody}>
-                        <FieldMovementEntryFields
-                          idPrefix={`fm-day-${day.id}`}
-                          hideDate
-                          availableReasonTypes={availableReasonTypesForDay(day)}
-                          availableForgotDirections={availableForgotDirectionsForDay(
-                            day,
-                          )}
-                          selection={daySelectionForFields}
-                          values={dayValuesForFields}
-                          errors={day.errors}
-                          labels={fieldLabels}
-                          reasonTypeLabels={reasonTypeLabels}
-                          forgotDirectionLabels={forgotDirectionLabels}
-                          optionalSuffix={optionalSuffix}
-                          reasonTypeLegend={t(`${fmPrefix}.reasonTypeLegendDay`)}
-                          forgotDirectionLegend={t(
-                            `${fmPrefix}.forgotDirectionLegend`,
-                          )}
-                          onSelectionChange={(next) => {
-                            applyDayFields(
-                              day.id,
-                              next,
-                              clearHiddenFieldValues(next, dayValuesForFields),
-                            );
-                            updateDay(day.id, { errors: {} });
-                          }}
-                          onValuesChange={(next) => {
-                            updateDay(day.id, {
-                              location: next.location ?? '',
-                              timeOut: next.timeOut ?? '',
-                              returnTime: next.returnTime ?? '',
-                              clockInTime: next.clockInTime ?? '',
-                              clockOutTime: next.clockOutTime ?? '',
-                              reasonNote: next.reasonNote ?? '',
-                              filledViaBulk: false,
-                            });
-                          }}
-                        />
-
-                        {day.reasonType === 'FORGOT' ? (
-                          <p className="fm-note">
-                            <Info size={16} aria-hidden className="mt-0.5 shrink-0" />
-                            {t(`${fmPrefix}.forgotHint`)}
-                          </p>
-                        ) : null}
-
-                        {day.reasonType === 'EARLY_LEAVE' ? (
-                          <p className="fm-field__hint">
-                            {t(`${fmPrefix}.earlyLeaveScheduledEnd`, {
-                              time: scheduledEndTime(day.date, day.isHalfDay),
-                            })}
-                          </p>
-                        ) : null}
-
-                        {needsLateReason && day.reasonType ? (
-                          <Field
-                            id={`fm-day-${day.id}-late-reason`}
-                            label={t('pages.hr.siteAssignments.form.lateReason')}
-                            required
-                            hint="Required for this day because the period is before the current month."
-                            error={day.errors.lateReason}
-                          >
-                            {(a11y) => (
-                              <Input.TextArea
-                                {...a11y}
-                                rows={3}
-                                maxLength={2000}
-                                value={day.lateReason}
-                                onChange={(event) => {
-                                  updateDay(day.id, {
-                                    lateReason: event.target.value,
-                                    filledViaBulk: false,
-                                  });
-                                  clearDayError(day.id, 'lateReason');
-                                }}
-                                placeholder={t(
-                                  'pages.hr.siteAssignments.form.lateReasonPlaceholder',
-                                )}
-                              />
-                            )}
-                          </Field>
-                        ) : null}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
+            <ExplainDaysPanel
+              dayEntries={dayEntries}
+              setDayEntries={setDayEntries}
+              month={month!}
+              year={year!}
+              periodLabel={periodLabel}
+              needsLateReason={needsLateReason}
+              draftLogId={draftLogId}
+              onDraftLogIdChange={setDraftLogId}
+              onLateReasonSaved={persistLogLateReason}
+              onReload={handleCheckFlaggedDays}
+              onBehalf={onBehalf}
+              onBehalfOfEmployeeId={targetEmployeeId}
+              overallNotes={overallNotes}
+            />
           ) : null}
 
-          {!canProceedToStep3 && selectedCount > 0 ? (
+          {!canProceedToStep3 &&
+          selectedCount > 0 &&
+          dayEntries.filter(dayHasDraftExplanation).length === 0 ? (
             <Notice
               tone="warning"
               title={`${plural(unfilledSelectedCount, 'selected day')} still ${unfilledSelectedCount === 1 ? 'needs' : 'need'} details.`}
             >
-              Open each day marked “Needs details”, or use “Fill several days at
-              once” above.
+              Save draft explanations in the table above, or use Next when at
+              least one day is in draft.
             </Notice>
           ) : null}
         </div>
@@ -1623,7 +1390,7 @@ export default function FieldMovementForm({
               </div>
               <div className="fm-stat">
                 <dt>Days included</dt>
-                <dd>{selectedDays.length}</dd>
+                <dd>{reviewSourceDays.length}</dd>
               </div>
               <div className="fm-stat">
                 <dt>Entries to create</dt>
@@ -1679,20 +1446,11 @@ export default function FieldMovementForm({
                 <h3 className="fm-field__label mb-2">
                   {t('pages.hr.siteAssignments.form.lateReason')}
                 </h3>
-                <ul className="fm-review-list">
-                  {selectedDays.map((day) => (
-                    <li key={`late-${day.id}`} className="fm-review-item">
-                      <div className="fm-review-item__body">
-                        <p className="fm-review-item__title">
-                          {formatLongDate(day.date)}
-                        </p>
-                        <p className="fm-review-item__dates">
-                          {day.lateReason.trim() || '—'}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <p className="fm-review-item__dates m-0 whitespace-pre-wrap">
+                  {combineLateReasons(reviewSourceDays) ||
+                    logLateReason.trim() ||
+                    '—'}
+                </p>
               </div>
             ) : null}
 

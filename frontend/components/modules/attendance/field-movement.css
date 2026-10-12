@@ -3,6 +3,21 @@
  * Colours come from the --fm-* tokens below; every text/background pair is
  * at least 4.5:1, and non-text indicators (borders, focus ring) at least 3:1.
  */
+.fm-scan-times {
+  font-variant-numeric: tabular-nums;
+  color: var(--fm-text-2);
+}
+
+.fm-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.fm-explain-table .ant-table {
+  background: transparent;
+}
+
 .fm-page {
   --fm-text: #0f172a;
   --fm-text-2: #475569;
@@ -109,6 +124,26 @@
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+}
+
+.fm-time-selects {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 16rem;
+}
+
+.fm-time-selects__hour,
+.fm-time-selects__minute {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.fm-time-selects__sep {
+  flex: 0 0 auto;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fm-text-2);
 }
 
 .fm-field__label {

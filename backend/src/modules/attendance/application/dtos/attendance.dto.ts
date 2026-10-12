@@ -352,6 +352,69 @@ export class SubmitFieldMovementLogDto {
   lateReason?: string;
 }
 
+export class UpsertFieldMovementDraftEntriesDto {
+  @ApiProperty({ minimum: 1, maximum: 12 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month!: number;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  year!: number;
+
+  @ApiProperty({ type: [CreateFieldMovementEntryDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateFieldMovementEntryDto)
+  @ArrayMinSize(1, { message: 'At least one entry is required' })
+  entries!: CreateFieldMovementEntryDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  notes?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  lateReason?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  onBehalfOfEmployeeId?: string;
+}
+
+export class RemoveFieldMovementDraftDayDto {
+  @ApiProperty({ minimum: 1, maximum: 12 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month!: number;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  year!: number;
+
+  @ApiProperty()
+  @IsUUID()
+  dailyLogId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  onBehalfOfEmployeeId?: string;
+}
+
 export class UpdateFieldMovementLogDto {
   @ApiPropertyOptional({ type: [CreateFieldMovementEntryDto] })
   @IsOptional()

@@ -163,6 +163,7 @@ export class LeaveBalanceService {
         select: {
           id: true,
           firstName: true,
+          middleName: true,
           lastName: true,
           email: true,
           chineseName: true,
@@ -216,6 +217,7 @@ export class LeaveBalanceService {
         employee: {
           id: employee.id,
           firstName: employee.firstName,
+          middleName: employee.middleName,
           lastName: employee.lastName,
           email: employee.email,
           chineseName: employee.chineseName,

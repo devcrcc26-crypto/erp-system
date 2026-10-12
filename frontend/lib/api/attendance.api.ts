@@ -1,4 +1,10 @@
-import { apiGet, apiGetPaginated, apiPatch, apiPost, apiPostForm } from '@/lib/api/client';
+import {
+  apiGet,
+  apiGetPaginated,
+  apiPatch,
+  apiPost,
+  apiPostForm,
+} from '@/lib/api/client';
 import type {
   AttendanceEmployeeSearchResult,
   AwaitingEnrolmentEmployee,
@@ -18,7 +24,10 @@ import type {
   ConfirmAttendanceImportDto,
   CorrectDailyLogDto,
   CreateFieldMovementLogDto,
+  RemoveFieldMovementDraftDayDto,
   SubmitFieldMovementLogDto,
+  UpsertFieldMovementDraftEntriesDto,
+  UpsertFieldMovementDraftEntriesResponse,
   EmployeeDailyLogsResponse,
   FieldMovementLog,
   FieldMovementLogsListResponse,
@@ -296,6 +305,30 @@ export async function getEmployeeFlaggedDays(
 ): Promise<EmployeeFlaggedDaysResponse> {
   return apiGet<EmployeeFlaggedDaysResponse>(
     `${ATTENDANCE_PATH}/flagged-days/employee/${encodeURIComponent(employeeId)}?month=${month}&year=${year}`,
+  );
+}
+
+/**
+ * Upsert draft field movement entries for specific days (monthly draft log).
+ */
+export async function upsertFieldMovementDraftEntries(
+  dto: UpsertFieldMovementDraftEntriesDto,
+): Promise<UpsertFieldMovementDraftEntriesResponse> {
+  return apiPost<UpsertFieldMovementDraftEntriesResponse>(
+    `${ATTENDANCE_PATH}/field-movement-logs/draft-entries`,
+    dto,
+  );
+}
+
+/**
+ * Remove one day from the monthly field movement draft log.
+ */
+export async function removeFieldMovementDraftDay(
+  dto: RemoveFieldMovementDraftDayDto,
+): Promise<void> {
+  await apiPost(
+    `${ATTENDANCE_PATH}/field-movement-logs/draft-entries/remove-day`,
+    dto,
   );
 }
 

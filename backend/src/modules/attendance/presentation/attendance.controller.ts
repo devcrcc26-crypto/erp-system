@@ -41,6 +41,8 @@ import {
   ReviewScanFlagDto,
   UnlockAttendanceMonthDto,
   UpdateAttendanceIdentityDto,
+  UpsertFieldMovementDraftEntriesDto,
+  RemoveFieldMovementDraftDayDto,
 } from '../application/dtos/attendance.dto';
 import {
   AttendanceEmployeeSearchResult,
@@ -346,6 +348,41 @@ export class AttendanceController {
     @Body() dto: CreateFieldMovementLogDto,
   ): Promise<unknown> {
     return this.attendanceService.createFieldMovementLog(
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Post('field-movement-logs/draft-entries')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Upsert draft field-movement entries for a month (progressive explain)',
+  })
+  upsertFieldMovementDraftEntries(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: UpsertFieldMovementDraftEntriesDto,
+  ): Promise<unknown> {
+    return this.attendanceService.upsertFieldMovementDraftEntries(
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
+  @Post('field-movement-logs/draft-entries/remove-day')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary: 'Remove one day from the month draft field-movement log',
+  })
+  removeFieldMovementDraftDay(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: RemoveFieldMovementDraftDayDto,
+  ): Promise<unknown> {
+    return this.attendanceService.removeFieldMovementDraftDay(
       dto,
       companyId,
       user.userId,

@@ -99,6 +99,12 @@ import {
   validateStorageEntry,
 } from '../utils/field-movement-field-rules';
 import {
+  compatibleReasonsForIssue,
+  deriveIssueType,
+  type CompatibleIssueReason,
+  type FieldMovementIssueType,
+} from '../utils/field-movement-issue-compatibility';
+import {
   evaluateEarlyDeparture,
   isLateAfterGrace,
 } from '../utils/early-departure.util';
@@ -122,8 +128,10 @@ import {
   ListAttendanceMonthlyApprovalsDto,
   ListFieldMovementLogsDto,
   ListScanReviewsDto,
+  RemoveFieldMovementDraftDayDto,
   ReviewScanFlagDto,
   UnlockAttendanceMonthDto,
+  UpsertFieldMovementDraftEntriesDto,
 } from '../dtos/attendance.dto';
 import {
   AttendanceMatchResult,
@@ -3354,9 +3362,33 @@ export class AttendanceService
       } | null;
       /** Set when a pending leave / site assignment / WFH request covers the day. */
       coverMessage: string | null;
+      issueType: FieldMovementIssueType | null;
+      explanationStatus:
+        | 'NOT_EXPLAINED'
+        | 'DRAFT'
+        | 'SUBMITTED'
+        | 'APPROVED'
+        | 'REJECTED'
+        | 'RETURNED';
+      draftEntries: Array<{
+        dailyLogId: string;
+        reason: FieldMovementReason;
+        destination?: string | null;
+        departureTime?: string | null;
+        returnTime?: string | null;
+        notes?: string | null;
+      }>;
+      draftLogId: string | null;
+      /** Late-entry reason from the month draft log (same for all draft days). */
+      lateReason: string | null;
+      scheduledStartTime: string;
+      scheduledEndTime: string;
+      selectable: boolean;
     }>;
     month: number;
     year: number;
+    draftLogId: string | null;
+    draftLateReason: string | null;
   }> {
     const record = await this.prisma.attendanceRecord.findUnique({
       where: {
@@ -3370,7 +3402,13 @@ export class AttendanceService
     });
 
     if (!record) {
-      return { flaggedDays: [], month, year };
+      return {
+        flaggedDays: [],
+        month,
+        year,
+        draftLogId: null,
+        draftLateReason: null,
+      };
     }
 
     const companyStartDate = await this.resolveEmployeeCompanyStartDate(
@@ -3447,41 +3485,81 @@ export class AttendanceService
       (day) => coverByDate.get(coverDateKey(day.date))?.state !== 'APPROVED',
     );
 
-    /** Active logs still block a new explanation for that day. */
-    const blockingStatuses = new Set<FieldMovementStatus>([
-      FieldMovementStatus.DRAFT,
-      FieldMovementStatus.SUBMITTED,
-      FieldMovementStatus.IN_REVIEW,
-      FieldMovementStatus.RETURNED,
-      FieldMovementStatus.APPROVED,
-    ]);
+    const monthDraftLog = await this.prisma.fieldMovementLog.findFirst({
+      where: {
+        companyId,
+        employeeId,
+        month,
+        year,
+        status: FieldMovementStatus.DRAFT,
+        deletedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, lateReason: true },
+    });
+    const draftLogId = monthDraftLog?.id ?? null;
+    const draftLateReason = monthDraftLog?.lateReason?.trim() || null;
 
     const flaggedDaysWithOptions = uncoveredDays.map((day) => {
-      const availableReasons: FieldMovementReason[] = [];
+      const issueType = deriveIssueType({
+        flag: day.flag,
+        clockInLocal: day.clockInLocal,
+        clockOutLocal: day.clockOutLocal,
+        correctedClockInLocal: day.correctedClockInLocal,
+        correctedClockOutLocal: day.correctedClockOutLocal,
+      });
+      const availableReasons = this.storageReasonsForIssue(issueType);
 
-      if (day.flag === 'MISSING_CLOCK_IN') {
-        availableReasons.push(
-          FieldMovementReason.FIELD_VISIT,
-          FieldMovementReason.FORGOT_CLOCK_IN,
-        );
-      } else if (day.flag === 'MISSING_CLOCK_OUT') {
-        availableReasons.push(
-          FieldMovementReason.FIELD_VISIT,
-          FieldMovementReason.EARLY_LEAVE,
-          FieldMovementReason.FORGOT_CLOCK_OUT,
-        );
-      } else if (day.flag === 'EARLY_LEAVE') {
-        availableReasons.push(
-          FieldMovementReason.FIELD_VISIT,
-          FieldMovementReason.EARLY_LEAVE,
-        );
+      const statusRank: Record<string, number> = {
+        APPROVED: 6,
+        IN_REVIEW: 5,
+        SUBMITTED: 5,
+        RETURNED: 4,
+        DRAFT: 3,
+        REJECTED: 2,
+        CANCELLED: 1,
+      };
+      const ranked = [...day.fieldMovementEntries].sort(
+        (a, b) =>
+          (statusRank[b.log.status] ?? 0) - (statusRank[a.log.status] ?? 0),
+      );
+      const primaryEntry = ranked[0] ?? null;
+      const primaryLog = primaryEntry?.log ?? null;
+
+      let explanationStatus:
+        | 'NOT_EXPLAINED'
+        | 'DRAFT'
+        | 'SUBMITTED'
+        | 'APPROVED'
+        | 'REJECTED'
+        | 'RETURNED' = 'NOT_EXPLAINED';
+      if (primaryLog?.status === FieldMovementStatus.APPROVED) {
+        explanationStatus = 'APPROVED';
+      } else if (
+        primaryLog?.status === FieldMovementStatus.SUBMITTED ||
+        primaryLog?.status === FieldMovementStatus.IN_REVIEW
+      ) {
+        explanationStatus = 'SUBMITTED';
+      } else if (primaryLog?.status === FieldMovementStatus.RETURNED) {
+        explanationStatus = 'RETURNED';
+      } else if (primaryLog?.status === FieldMovementStatus.DRAFT) {
+        explanationStatus = 'DRAFT';
+      } else if (primaryLog?.status === FieldMovementStatus.REJECTED) {
+        explanationStatus = 'REJECTED';
       }
 
-      const activeEntry = day.fieldMovementEntries.find((entry) =>
-        blockingStatuses.has(entry.log.status),
-      );
-      const activeLog = activeEntry?.log ?? null;
-      const pendingTier = activeLog?.approvalRequest?.tiers[0];
+      const draftEntries = day.fieldMovementEntries
+        .filter((entry) => entry.log.status === FieldMovementStatus.DRAFT)
+        .map((entry) => ({
+          dailyLogId: entry.dailyLogId,
+          reason: entry.reason,
+          destination: entry.destination,
+          departureTime: entry.departureTime,
+          returnTime: entry.returnTime,
+          notes: entry.notes,
+        }));
+
+      const pendingTier = primaryLog?.approvalRequest?.tiers[0];
       const pendingApprover = pendingTier?.approver
         ? `${pendingTier.approver.firstName} ${pendingTier.approver.lastName}`.trim()
         : null;
@@ -3489,17 +3567,40 @@ export class AttendanceService
       const pendingCover = coverByDate.get(coverDateKey(day.date));
       const coverMessage = pendingCover ? dayCoverMessage(pendingCover) : null;
 
+      const lockedByPipeline =
+        explanationStatus === 'SUBMITTED' ||
+        explanationStatus === 'APPROVED' ||
+        explanationStatus === 'RETURNED';
+      const selectable = coverMessage === null && !lockedByPipeline;
+
+      // Legacy flag: anything not free for a brand-new explanation without overwrite.
+      const alreadySubmitted = !selectable;
+
+      const { start, end } = this.defaultScheduleTimes(day.date, day.isHalfDay);
+
       return {
         ...day,
         availableReasons,
-        alreadySubmitted: activeLog != null || coverMessage !== null,
+        alreadySubmitted,
         coverMessage,
-        submittedLog: activeLog
+        issueType,
+        explanationStatus,
+        draftEntries,
+        draftLogId:
+          explanationStatus === 'DRAFT'
+            ? (primaryLog?.id ?? draftLogId)
+            : draftLogId,
+        lateReason:
+          explanationStatus === 'DRAFT' ? draftLateReason : null,
+        scheduledStartTime: start,
+        scheduledEndTime: end,
+        selectable,
+        submittedLog: primaryLog
           ? {
-              id: activeLog.id,
-              requestNumber: activeLog.requestNumber,
-              status: activeLog.status,
-              approvalRequestId: activeLog.approvalRequestId,
+              id: primaryLog.id,
+              requestNumber: primaryLog.requestNumber,
+              status: primaryLog.status,
+              approvalRequestId: primaryLog.approvalRequestId,
               pendingTierLabel: pendingTier?.label ?? null,
               pendingApproverName: pendingApprover,
             }
@@ -3507,7 +3608,63 @@ export class AttendanceService
       };
     });
 
-    return { flaggedDays: flaggedDaysWithOptions, month, year };
+    return {
+      flaggedDays: flaggedDaysWithOptions,
+      month,
+      year,
+      draftLogId,
+      draftLateReason,
+    };
+  }
+
+  private storageReasonsForIssue(
+    issueType: FieldMovementIssueType | null,
+  ): FieldMovementReason[] {
+    if (!issueType) {
+      return [];
+    }
+    const reasons: FieldMovementReason[] = [];
+    for (const reason of compatibleReasonsForIssue(issueType)) {
+      for (const storage of this.expandCompatibleReason(reason)) {
+        if (!reasons.includes(storage)) {
+          reasons.push(storage);
+        }
+      }
+    }
+    return reasons;
+  }
+
+  private expandCompatibleReason(
+    reason: CompatibleIssueReason,
+  ): FieldMovementReason[] {
+    switch (reason) {
+      case 'FIELD_VISIT':
+        return [FieldMovementReason.FIELD_VISIT];
+      case 'EARLY_LEAVE':
+        return [FieldMovementReason.EARLY_LEAVE];
+      case 'FORGOT_CLOCK_IN':
+        return [FieldMovementReason.FORGOT_CLOCK_IN];
+      case 'FORGOT_CLOCK_OUT':
+        return [FieldMovementReason.FORGOT_CLOCK_OUT];
+      case 'FORGOT_BOTH':
+        return [
+          FieldMovementReason.FORGOT_CLOCK_IN,
+          FieldMovementReason.FORGOT_CLOCK_OUT,
+        ];
+      default:
+        return [];
+    }
+  }
+
+  private defaultScheduleTimes(
+    date: Date,
+    isHalfDay: boolean,
+  ): { start: string; end: string } {
+    const start = '08:00';
+    if (isHalfDay || date.getUTCDay() === 6) {
+      return { start, end: '12:30' };
+    }
+    return { start, end: '17:30' };
   }
 
   /**
@@ -3841,6 +3998,357 @@ export class AttendanceService
     });
 
     return created;
+  }
+
+  /**
+   * Upserts entries into the employee's month DRAFT field-movement log.
+   * Only the given days are replaced; other draft days stay untouched.
+   */
+  async upsertFieldMovementDraftEntries(
+    dto: UpsertFieldMovementDraftEntriesDto,
+    companyId: string,
+    userId: string,
+  ): Promise<{ draftLogId: string; entryCount: number }> {
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    await this.onBehalfService.assertTakesPartInHrProcesses(employeeId, companyId);
+
+    const dailyLogIds = [...new Set(dto.entries.map((entry) => entry.dailyLogId))];
+    const entriesByDailyLog = new Map<string, typeof dto.entries>();
+    for (const entry of dto.entries) {
+      const list = entriesByDailyLog.get(entry.dailyLogId) ?? [];
+      list.push(entry);
+      entriesByDailyLog.set(entry.dailyLogId, list);
+    }
+    for (const [dailyLogId, list] of entriesByDailyLog.entries()) {
+      if (list.length === 1) {
+        continue;
+      }
+      if (list.length > 2) {
+        throw new BadRequestException(
+          'At most two explanations are allowed for the same day',
+        );
+      }
+      const reasons = new Set(list.map((e) => e.reason));
+      const complementaryForgot =
+        reasons.has(FieldMovementReason.FORGOT_CLOCK_IN) &&
+        reasons.has(FieldMovementReason.FORGOT_CLOCK_OUT);
+      if (!complementaryForgot || reasons.size !== 2) {
+        throw new BadRequestException(
+          `Duplicate entries for daily log ${dailyLogId} are only allowed as FORGOT_CLOCK_IN + FORGOT_CLOCK_OUT`,
+        );
+      }
+    }
+
+    const dailyLogs = await this.prisma.attendanceDailyLog.findMany({
+      where: { id: { in: dailyLogIds } },
+      include: {
+        record: {
+          select: {
+            employeeId: true,
+            companyId: true,
+            month: true,
+            year: true,
+          },
+        },
+      },
+    });
+    if (dailyLogs.length !== dailyLogIds.length) {
+      throw new BadRequestException('One or more daily logs were not found');
+    }
+    for (const log of dailyLogs) {
+      if (log.record.companyId !== companyId) {
+        throw new ForbiddenException('Daily log does not belong to this company');
+      }
+      if (log.record.employeeId !== employeeId) {
+        throw new ForbiddenException(
+          'Daily logs must belong to the target employee',
+        );
+      }
+      if (log.record.month !== dto.month || log.record.year !== dto.year) {
+        throw new BadRequestException(
+          'All entries must belong to the requested attendance month',
+        );
+      }
+      if (log.dayStatus === 'ENROLMENT_GRACE') {
+        throw new BadRequestException(
+          `Day ${log.date.toISOString().split('T')[0]} is within enrolment grace — no explanation needed`,
+        );
+      }
+      if (log.flag === 'NONE') {
+        throw new BadRequestException(
+          `Day ${log.date.toISOString().split('T')[0]} has no flag — no explanation needed`,
+        );
+      }
+    }
+
+    await this.dayCoverage.assertUncovered(
+      companyId,
+      employeeId,
+      dailyLogs.map((log) => ({ date: log.date })),
+      ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME'],
+    );
+
+    const backdating = await this.backdatingPolicy.validateSubmissionDates({
+      companyId,
+      actorUserId: userId,
+      targetEmployeeId: employeeId,
+      dates: dailyLogs.map((log) => log.date),
+      lateReason: dto.lateReason,
+    });
+
+    const pipelineBlocking = await this.prisma.fieldMovementEntry.findMany({
+      where: {
+        dailyLogId: { in: dailyLogIds },
+        log: {
+          status: {
+            in: [
+              FieldMovementStatus.SUBMITTED,
+              FieldMovementStatus.IN_REVIEW,
+              FieldMovementStatus.RETURNED,
+              FieldMovementStatus.APPROVED,
+            ],
+          },
+          deletedAt: null,
+        },
+      },
+      include: {
+        log: { select: { requestNumber: true, status: true } },
+        dailyLog: { select: { date: true } },
+      },
+    });
+    if (pipelineBlocking.length > 0) {
+      const sample = pipelineBlocking[0]!;
+      const dateLabel = sample.dailyLog.date.toISOString().split('T')[0];
+      throw new BadRequestException(
+        `Day ${dateLabel} is already covered by ${sample.log.requestNumber} (${sample.log.status}). Wait for that request to finish, or cancel/reject it before submitting again.`,
+      );
+    }
+
+    const parentNotes = dto.notes?.trim() || null;
+    const entryNotes = (
+      notes: string | null | undefined,
+    ): string | null => notes?.trim() || parentNotes;
+    const validatedPairKeys = new Set<string>();
+    for (const entry of dto.entries) {
+      const dailyLog = dailyLogs.find((log) => log.id === entry.dailyLogId);
+      const dateLabel = dailyLog
+        ? dailyLog.date.toISOString().split('T')[0]
+        : entry.dailyLogId;
+      const siblings = entriesByDailyLog.get(entry.dailyLogId) ?? [entry];
+      const pairedForgot =
+        siblings.length === 2
+          ? siblings.find((sibling) => sibling !== entry) ?? null
+          : null;
+      const pairKey = `${entry.dailyLogId}:forgot-both`;
+      if (
+        pairedForgot &&
+        ((entry.reason === FieldMovementReason.FORGOT_CLOCK_IN &&
+          pairedForgot.reason === FieldMovementReason.FORGOT_CLOCK_OUT) ||
+          (entry.reason === FieldMovementReason.FORGOT_CLOCK_OUT &&
+            pairedForgot.reason === FieldMovementReason.FORGOT_CLOCK_IN))
+      ) {
+        if (validatedPairKeys.has(pairKey)) {
+          continue;
+        }
+        validatedPairKeys.add(pairKey);
+        const issues = validateStorageEntry(
+          {
+            reason: entry.reason,
+            destination: entry.destination,
+            departureTime: entry.departureTime,
+            returnTime: entry.returnTime,
+            notes: entryNotes(entry.notes),
+          },
+          {
+            dateLabel,
+            pairedForgot: {
+              reason: pairedForgot.reason,
+              destination: pairedForgot.destination,
+              departureTime: pairedForgot.departureTime,
+              returnTime: pairedForgot.returnTime,
+              notes: entryNotes(pairedForgot.notes),
+            },
+          },
+        );
+        if (issues.length > 0) {
+          throw new BadRequestException(
+            formatValidationMessage(issues, dateLabel),
+          );
+        }
+        continue;
+      }
+      const issues = validateStorageEntry(
+        {
+          reason: entry.reason,
+          destination: entry.destination,
+          departureTime: entry.departureTime,
+          returnTime: entry.returnTime,
+          notes: entryNotes(entry.notes),
+        },
+        { dateLabel },
+      );
+      if (issues.length > 0) {
+        throw new BadRequestException(
+          formatValidationMessage(issues, dateLabel),
+        );
+      }
+    }
+
+    let draftLog = await this.prisma.fieldMovementLog.findFirst({
+      where: {
+        companyId,
+        employeeId,
+        month: dto.month,
+        year: dto.year,
+        status: FieldMovementStatus.DRAFT,
+        deletedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!draftLog) {
+      const requestNumber = await this.nextFieldMovementNumber();
+      draftLog = await this.prisma.fieldMovementLog.create({
+        data: {
+          id: randomUUID(),
+          companyId,
+          requestNumber,
+          employeeId,
+          month: dto.month,
+          year: dto.year,
+          status: FieldMovementStatus.DRAFT,
+          notes: parentNotes,
+          isLateSubmission: backdating.isLateSubmission,
+          lateReason: backdating.lateReason,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+      if (dto.onBehalfOfEmployeeId) {
+        await this.onBehalfService.recordOnBehalfCreate({
+          moduleCode: 'FIELD_MOVEMENT_LOG',
+          companyId,
+          actorUserId: userId,
+          employeeId,
+          recordId: draftLog.id,
+          recordReference: requestNumber,
+          autoApproveTier: false,
+        });
+      }
+    } else {
+      await this.prisma.fieldMovementLog.update({
+        where: { id: draftLog.id },
+        data: {
+          notes: parentNotes ?? draftLog.notes,
+          isLateSubmission: backdating.isLateSubmission,
+          lateReason: backdating.lateReason ?? draftLog.lateReason,
+          updatedBy: userId,
+        },
+      });
+    }
+
+    // Drop prior draft rows for these days (this log and any other orphan drafts).
+    await this.prisma.fieldMovementEntry.deleteMany({
+      where: {
+        dailyLogId: { in: dailyLogIds },
+        log: {
+          companyId,
+          employeeId,
+          status: FieldMovementStatus.DRAFT,
+          deletedAt: null,
+        },
+      },
+    });
+
+    await this.prisma.fieldMovementEntry.createMany({
+      data: dto.entries.map((entry) => {
+        const dailyLog = dailyLogs.find((log) => log.id === entry.dailyLogId);
+        if (!dailyLog) {
+          throw new BadRequestException('Daily log not found for entry');
+        }
+        const sanitized = sanitizeStorageEntry({
+          reason: entry.reason,
+          destination: entry.destination,
+          departureTime: entry.departureTime,
+          returnTime: entry.returnTime,
+          notes: entryNotes(entry.notes),
+        });
+        return {
+          id: randomUUID(),
+          logId: draftLog!.id,
+          dailyLogId: entry.dailyLogId,
+          date: dailyLog.date,
+          reason: entry.reason,
+          status: FieldMovementStatus.DRAFT,
+          destination: sanitized.destination,
+          departureTime: sanitized.departureTime,
+          returnTime: sanitized.returnTime,
+          notes: sanitized.notes,
+        };
+      }),
+    });
+
+    const entryCount = await this.prisma.fieldMovementEntry.count({
+      where: { logId: draftLog.id },
+    });
+
+    return { draftLogId: draftLog.id, entryCount };
+  }
+
+  /**
+   * Removes one day's entries from the month DRAFT log.
+   */
+  async removeFieldMovementDraftDay(
+    dto: RemoveFieldMovementDraftDayDto,
+    companyId: string,
+    userId: string,
+  ): Promise<{ draftLogId: string | null; entryCount: number }> {
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    await this.onBehalfService.assertTakesPartInHrProcesses(employeeId, companyId);
+
+    const draftLog = await this.prisma.fieldMovementLog.findFirst({
+      where: {
+        companyId,
+        employeeId,
+        month: dto.month,
+        year: dto.year,
+        status: FieldMovementStatus.DRAFT,
+        deletedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!draftLog) {
+      return { draftLogId: null, entryCount: 0 };
+    }
+    if (draftLog.employeeId !== employeeId && draftLog.createdBy !== userId) {
+      throw new ForbiddenException('Cannot modify this draft log');
+    }
+
+    await this.prisma.fieldMovementEntry.deleteMany({
+      where: {
+        logId: draftLog.id,
+        dailyLogId: dto.dailyLogId,
+      },
+    });
+
+    const entryCount = await this.prisma.fieldMovementEntry.count({
+      where: { logId: draftLog.id },
+    });
+
+    await this.prisma.fieldMovementLog.update({
+      where: { id: draftLog.id },
+      data: { updatedBy: userId },
+    });
+
+    return { draftLogId: draftLog.id, entryCount };
   }
 
   /**

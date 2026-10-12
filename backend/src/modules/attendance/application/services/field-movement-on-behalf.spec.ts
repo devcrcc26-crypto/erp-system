@@ -142,8 +142,18 @@ function buildPrisma() {
         })),
       ),
     },
-    fieldMovementEntry: { findMany: jest.fn(async () => []) },
+    fieldMovementEntry: {
+      findMany: jest.fn(async () => []),
+      deleteMany: jest.fn(async () => ({ count: 0 })),
+      createMany: jest.fn(async () => ({ count: 0 })),
+      count: jest.fn(async () => 0),
+    },
     fieldMovementLog: {
+      findFirst: jest.fn(async () => null),
+      update: jest.fn(async (args: unknown) => {
+        const data = (args as { data: Record<string, unknown> }).data;
+        return data;
+      }),
       create: jest.fn(async (args: unknown) => {
         const data = (args as { data: Record<string, unknown> }).data;
         created.push(data);
