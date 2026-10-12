@@ -64,10 +64,19 @@ function buildPrisma() {
         }
         const user = USERS[where.id as string];
         return user
-          ? { ...user, departmentId: null, nationality: null, attendanceMode: 'SCANNER' }
+          ? {
+              ...user,
+              departmentId: null,
+              nationality: null,
+              attendanceMode: 'SCANNER',
+              employmentDate: null,
+            }
           : null;
       }),
       findMany: jest.fn(async (_args?: unknown) => []),
+    },
+    employeeContract: {
+      findMany: jest.fn(async () => []),
     },
     department: { findMany: jest.fn(async () => []) },
     discipline: { findMany: jest.fn(async () => []) },
@@ -201,6 +210,7 @@ const ENTRY_DTO = {
     {
       dailyLogId: 'log-1',
       reason: 'FORGOT_CLOCK_IN' as const,
+      returnTime: '08:15',
       notes: 'Paper form signed by the site lead',
     },
   ],

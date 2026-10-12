@@ -283,6 +283,38 @@
       "failedToSubmit": "提交审批申请失败",
       "requestSubmitted": "审批申请已提交",
       "fillRequiredFields": "请填写所有必填项",
+      "fieldMovement": {
+        "optionalSuffix": "（可选）",
+        "reasonTypeLegend": "所选日期的说明原因",
+        "reasonTypeLegendDay": "当天发生了什么？",
+        "forgotDirectionLegend": "忘记的是哪次打卡？",
+        "entriesWillBeCreated": "将创建 {{count}} 条记录",
+        "skippedExisting": "有 {{count}} 天已跳过，因为该原因不适用于这些日期。",
+        "skippedTitle": "已跳过的日期（原因不适用）",
+        "forgotHint": "“忘记打卡”在审批通过后会补录缺失的打卡。仅在有已批准的外勤或早退说明时，才会免除早退判定。",
+        "earlyLeaveScheduledEnd": "您的计划下班时间为 {{time}}。",
+        "reasonTypes": {
+          "FIELD_VISIT": "外勤 / 现场",
+          "EARLY_LEAVE": "早退",
+          "FORGOT": "忘记打卡"
+        },
+        "forgotDirections": {
+          "IN": "仅上班打卡",
+          "OUT": "仅下班打卡",
+          "BOTH": "上下班均忘记"
+        },
+        "fields": {
+          "date": "日期",
+          "timeOut": "外出时间",
+          "returnTime": "返回时间",
+          "clockInTime": "补录上班时间",
+          "clockOutTime": "补录下班时间",
+          "forgotDirection": "忘记哪次打卡",
+          "location": "地点 / 目的地",
+          "reasonNote": "原因说明",
+          "attachment": "附件"
+        }
+      },
       "noCategories": "暂无可用审批类别。",
       "empty": "暂无审批申请",
       "emptyFiltered": "没有符合筛选条件的审批申请",

@@ -94,6 +94,11 @@ import {
 } from '../utils/attendance-recalc-policy.util';
 import { FORGOT_TO_CLOCK_FLAG_THRESHOLD } from '../utils/attendance-policy.constants';
 import {
+  formatValidationMessage,
+  sanitizeStorageEntry,
+  validateStorageEntry,
+} from '../utils/field-movement-field-rules';
+import {
   evaluateEarlyDeparture,
   isLateAfterGrace,
 } from '../utils/early-departure.util';
@@ -3273,6 +3278,53 @@ export class AttendanceService
   }
 
   /**
+   * First calendar day the employee counts as in the company for attendance
+   * explanations: employmentDate when set, otherwise the earliest contract's
+   * later of signedAt / startDate (must be on or after both).
+   */
+  private async resolveEmployeeCompanyStartDate(
+    employeeId: string,
+    companyId: string,
+  ): Promise<Date | null> {
+    const [employee, contracts] = await Promise.all([
+      this.prisma.user.findFirst({
+        where: { id: employeeId, companyId, deletedAt: null },
+        select: { employmentDate: true },
+      }),
+      this.prisma.employeeContract.findMany({
+        where: { companyId, employeeId, deletedAt: null },
+        select: { startDate: true, signedAt: true },
+        orderBy: { startDate: 'asc' },
+      }),
+    ]);
+
+    if (employee?.employmentDate) {
+      return new Date(
+        Date.UTC(
+          employee.employmentDate.getUTCFullYear(),
+          employee.employmentDate.getUTCMonth(),
+          employee.employmentDate.getUTCDate(),
+        ),
+      );
+    }
+
+    if (contracts.length === 0) {
+      return null;
+    }
+
+    let earliest: Date | null = null;
+    for (const contract of contracts) {
+      const signed = contract.signedAt.getTime();
+      const start = contract.startDate.getTime();
+      const join = new Date(Math.max(signed, start));
+      if (!earliest || join.getTime() < earliest.getTime()) {
+        earliest = join;
+      }
+    }
+    return earliest;
+  }
+
+  /**
    * Returns unresolved flagged days for an employee month (form dropdown source).
    */
   async getFlaggedDaysForEmployee(
@@ -3321,6 +3373,11 @@ export class AttendanceService
       return { flaggedDays: [], month, year };
     }
 
+    const companyStartDate = await this.resolveEmployeeCompanyStartDate(
+      employeeId,
+      companyId,
+    );
+
     const flaggedDays = await this.prisma.attendanceDailyLog.findMany({
       where: {
         attendanceRecordId: record.id,
@@ -3328,6 +3385,8 @@ export class AttendanceService
         flagResolved: false,
         // Enrolment grace days are paid present — no field-movement explanation.
         dayStatus: { not: 'ENROLMENT_GRACE' },
+        // Not employed yet — ignore flags before signed / start date.
+        ...(companyStartDate ? { date: { gte: companyStartDate } } : {}),
       },
       orderBy: { date: 'asc' },
       select: {
@@ -3497,13 +3556,6 @@ export class AttendanceService
     }
     const uniqueIds = [...entriesByDailyLog.keys()];
 
-    const parentNote = dto.notes?.trim() ?? '';
-    if (parentNote.length < 3 && dto.entries.every((e) => !e.notes?.trim())) {
-      throw new BadRequestException(
-        'A reason / note is required on the log or each entry',
-      );
-    }
-
     const dailyLogs = await this.prisma.attendanceDailyLog.findMany({
       where: { id: { in: dailyLogIds } },
       include: {
@@ -3541,6 +3593,21 @@ export class AttendanceService
         throw new BadRequestException(
           `Day ${log.date.toISOString().split('T')[0]} has no flag — no explanation needed`,
         );
+      }
+    }
+
+    const companyStartDate = await this.resolveEmployeeCompanyStartDate(
+      employeeId,
+      companyId,
+    );
+    if (companyStartDate) {
+      const startMs = companyStartDate.getTime();
+      for (const log of dailyLogs) {
+        if (log.date.getTime() < startMs) {
+          throw new BadRequestException(
+            `Day ${log.date.toISOString().split('T')[0]} is before the employee's signed/start date — no explanation needed`,
+          );
+        }
       }
     }
 
@@ -3621,43 +3688,76 @@ export class AttendanceService
       );
     }
 
+    // Field matrix validation (same rules as the frontend form).
+    // Parent log notes satisfy reasonNote when an entry omits its own notes.
+    const parentNotes = dto.notes?.trim() || null;
+    const entryNotes = (
+      notes: string | null | undefined,
+    ): string | null => notes?.trim() || parentNotes;
+
+    const validatedPairKeys = new Set<string>();
     for (const entry of dto.entries) {
       const dailyLog = dailyLogs.find((log) => log.id === entry.dailyLogId);
       const dateLabel = dailyLog
         ? dailyLog.date.toISOString().split('T')[0]
         : entry.dailyLogId;
-
-      if (entry.reason === FieldMovementReason.FIELD_VISIT) {
-        if (!entry.destination?.trim()) {
-          throw new BadRequestException(
-            `Destination is required for field visit on ${dateLabel}`,
-          );
-        }
-        if (entry.destination.trim().length < 3) {
-          throw new BadRequestException(
-            `Destination must be at least 3 characters for field visit on ${dateLabel}`,
-          );
-        }
-        if (!entry.departureTime) {
-          throw new BadRequestException(
-            `Time out is required for field visit on ${dateLabel}`,
-          );
-        }
-      }
+      const siblings = entriesByDailyLog.get(entry.dailyLogId) ?? [entry];
+      const pairedForgot =
+        siblings.length === 2
+          ? siblings.find((sibling) => sibling !== entry) ?? null
+          : null;
+      const pairKey = `${entry.dailyLogId}:forgot-both`;
       if (
-        entry.reason === FieldMovementReason.EARLY_LEAVE &&
-        !entry.departureTime
+        pairedForgot &&
+        ((entry.reason === FieldMovementReason.FORGOT_CLOCK_IN &&
+          pairedForgot.reason === FieldMovementReason.FORGOT_CLOCK_OUT) ||
+          (entry.reason === FieldMovementReason.FORGOT_CLOCK_OUT &&
+            pairedForgot.reason === FieldMovementReason.FORGOT_CLOCK_IN))
       ) {
-        throw new BadRequestException(
-          'Departure time is required for early leave entries',
+        if (validatedPairKeys.has(pairKey)) {
+          continue;
+        }
+        validatedPairKeys.add(pairKey);
+        const issues = validateStorageEntry(
+          {
+            reason: entry.reason,
+            destination: entry.destination,
+            departureTime: entry.departureTime,
+            returnTime: entry.returnTime,
+            notes: entryNotes(entry.notes),
+          },
+          {
+            dateLabel,
+            pairedForgot: {
+              reason: pairedForgot.reason,
+              destination: pairedForgot.destination,
+              departureTime: pairedForgot.departureTime,
+              returnTime: pairedForgot.returnTime,
+              notes: entryNotes(pairedForgot.notes),
+            },
+          },
         );
+        if (issues.length > 0) {
+          throw new BadRequestException(
+            formatValidationMessage(issues, dateLabel),
+          );
+        }
+        continue;
       }
-      if (
-        entry.reason === FieldMovementReason.FORGOT_CLOCK_OUT &&
-        !entry.departureTime
-      ) {
+
+      const issues = validateStorageEntry(
+        {
+          reason: entry.reason,
+          destination: entry.destination,
+          departureTime: entry.departureTime,
+          returnTime: entry.returnTime,
+          notes: entryNotes(entry.notes),
+        },
+        { dateLabel },
+      );
+      if (issues.length > 0) {
         throw new BadRequestException(
-          `Stated clock-out time is required for FORGOT_CLOCK_OUT on ${dateLabel}`,
+          formatValidationMessage(issues, dateLabel),
         );
       }
     }
@@ -3701,15 +3801,22 @@ export class AttendanceService
             if (!dailyLog) {
               throw new BadRequestException('Daily log not found for entry');
             }
+            const sanitized = sanitizeStorageEntry({
+              reason: entry.reason,
+              destination: entry.destination,
+              departureTime: entry.departureTime,
+              returnTime: entry.returnTime,
+              notes: entry.notes?.trim() || parentNotes,
+            });
             return {
               id: randomUUID(),
               dailyLogId: entry.dailyLogId,
               date: dailyLog.date,
               reason: entry.reason,
-              destination: entry.destination ?? null,
-              departureTime: entry.departureTime ?? null,
-              returnTime: entry.returnTime ?? null,
-              notes: entry.notes ?? null,
+              destination: sanitized.destination,
+              departureTime: sanitized.departureTime,
+              returnTime: sanitized.returnTime,
+              notes: sanitized.notes,
             };
           }),
         },

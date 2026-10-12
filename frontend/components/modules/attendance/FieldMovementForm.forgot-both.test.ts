@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { FlaggedDay } from '@/lib/api/attendance.types';
-import { getValidBulkReasons, toDayEntry } from './FieldMovementForm';
+import {
+  getValidBulkForgotDirections,
+  getValidBulkReasons,
+  toDayEntry,
+} from './field-movement-form-model';
 
 function flagged(partial: Partial<FlaggedDay>): FlaggedDay {
   return {
@@ -22,23 +26,34 @@ function flagged(partial: Partial<FlaggedDay>): FlaggedDay {
 describe('"Forgot both" availability', () => {
   it('a day with neither scan allows it; a day with one scan does not', () => {
     expect(toDayEntry(flagged({})).bothScansMissing).toBe(true);
-    expect(toDayEntry(flagged({ clockOutLocal: '17:31' })).bothScansMissing).toBe(false);
+    expect(toDayEntry(flagged({ clockOutLocal: '17:31' })).bothScansMissing).toBe(
+      false,
+    );
     expect(
-      toDayEntry(flagged({ flag: 'MISSING_CLOCK_OUT', clockInLocal: '08:02' })).bothScansMissing,
+      toDayEntry(flagged({ flag: 'MISSING_CLOCK_OUT', clockInLocal: '08:02' }))
+        .bothScansMissing,
     ).toBe(false);
-    // A corrected time counts as recorded.
-    expect(toDayEntry(flagged({ correctedClockInLocal: '08:00' })).bothScansMissing).toBe(false);
+    expect(toDayEntry(flagged({ correctedClockInLocal: '08:00' })).bothScansMissing).toBe(
+      false,
+    );
   });
 
-  it('bulk offers it only when a selected day has both scans missing', () => {
+  it('bulk offers BOTH only when a selected day has both scans missing', () => {
     const oneScan = [
       toDayEntry(flagged({ id: 'a', clockOutLocal: '17:31' })),
-      toDayEntry(flagged({ id: 'b', flag: 'MISSING_CLOCK_OUT', clockInLocal: '08:02' })),
+      toDayEntry(
+        flagged({ id: 'b', flag: 'MISSING_CLOCK_OUT', clockInLocal: '08:02' }),
+      ),
     ];
-    expect(getValidBulkReasons(oneScan)).not.toContain('FORGOT_BOTH');
+    expect(getValidBulkForgotDirections(oneScan)).not.toContain('BOTH');
 
     const withBothMissing = [...oneScan, toDayEntry(flagged({ id: 'c' }))];
-    expect(getValidBulkReasons(withBothMissing)).toContain('FORGOT_BOTH');
+    expect(getValidBulkForgotDirections(withBothMissing)).toContain('BOTH');
+  });
+
+  it('bulk reason types include FORGOT when intersection allows', () => {
+    const days = [toDayEntry(flagged({}))];
+    expect(getValidBulkReasons(days)).toContain('FORGOT');
   });
 
   it('starts with an empty stated clock-in', () => {

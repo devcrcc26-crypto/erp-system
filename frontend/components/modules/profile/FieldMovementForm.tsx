@@ -1,104 +1,51 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import {
-  Button,
-  Checkbox,
-  Input,
-  Modal,
-  Progress,
-  Select,
-  Space,
-  Steps,
-  Switch,
-  Tag,
-  TimePicker,
-  Typography,
-} from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+import { useMemo, useState } from 'react';
+import { Button, Checkbox, Input, Modal, Progress, Space, Steps, Tag, Typography } from 'antd';
 import { useAppMessage } from '@/hooks/use-app-message';
-import type {
-  AttendanceDayFlag,
-  CreateFieldMovementEntryDto,
-  FieldMovementReason,
-  FlaggedDay,
-} from '@/lib/api/attendance.types';
+import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import type { CreateFieldMovementEntryDto, FlaggedDay } from '@/lib/api/attendance.types';
 import {
   useCancelFieldMovementLog,
   useCreateFieldMovementLog,
   useSubmitFieldMovementLog,
 } from '@/lib/query/attendance';
-import {
-  formatDateList,
-  groupBy,
-} from '@/lib/utils/date-format.util';
+import { formatDateList, groupBy } from '@/lib/utils/date-format.util';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
+import FieldMovementEntryFields from '@/components/modules/attendance/FieldMovementEntryFields';
+import {
+  canApplySelectionToDay,
+  emptyFieldValues,
+  getValidBulkForgotDirections,
+  getValidBulkReasons,
+  toDayEntry,
+  validationErrorsForDay,
+  availableForgotDirectionsForDay,
+  availableReasonTypesForDay,
+  type DayEntry,
+} from '@/components/modules/attendance/field-movement-form-model';
+import {
+  clearHiddenFieldValues,
+  countStorageEntries,
+  type FieldMovementFieldKey,
+  type FieldMovementFieldValues,
+  type FieldMovementReasonType,
+  type FieldMovementSelection,
+  toStorageEntries,
+  validateFieldMovementValues,
+} from '@/lib/field-movement/field-movement-field-rules';
 
-const REASON_OPTIONS: Record<
-  AttendanceDayFlag,
-  Array<{ value: FieldMovementReason; label: string }>
-> = {
-  MISSING_CLOCK_IN: [
-    { value: 'FIELD_VISIT', label: 'I was on a field / site visit' },
-    { value: 'FORGOT_CLOCK_IN', label: 'I forgot to clock in' },
-  ],
-  MISSING_CLOCK_OUT: [
-    { value: 'FIELD_VISIT', label: 'I left for a field / site visit' },
-    { value: 'EARLY_LEAVE', label: 'I left early' },
-    { value: 'FORGOT_CLOCK_OUT', label: 'I forgot to clock out' },
-  ],
-  EARLY_LEAVE: [
-    { value: 'FIELD_VISIT', label: 'I left for a field / site visit' },
-    { value: 'EARLY_LEAVE', label: 'I confirm I left early' },
-  ],
-  NONE: [],
-};
-
-const FLAG_LABELS: Record<AttendanceDayFlag, string> = {
+const FLAG_LABELS: Record<FlaggedDay['flag'], string> = {
   MISSING_CLOCK_IN: 'Missing clock-in',
   MISSING_CLOCK_OUT: 'Missing clock-out',
   EARLY_LEAVE: 'Early departure detected',
   NONE: '',
 };
 
-const REASON_SUMMARY: Record<FieldMovementReason, string> = {
-  FIELD_VISIT: 'Field visit',
-  EARLY_LEAVE: 'Left early',
-  FORGOT_CLOCK_IN: 'Forgot to clock in',
-  FORGOT_CLOCK_OUT: 'Forgot to clock out',
+type EntryDraft = {
+  selection: FieldMovementSelection;
+  values: FieldMovementFieldValues;
 };
-
-const BULK_REASON_CATALOG: Array<{
-  value: FieldMovementReason;
-  label: string;
-}> = [
-  {
-    value: 'FIELD_VISIT',
-    label: '🏗️ Field visit (applies to all flag types)',
-  },
-  {
-    value: 'FORGOT_CLOCK_IN',
-    label: '⏰ Forgot to clock in (only for missing clock-in days)',
-  },
-  {
-    value: 'FORGOT_CLOCK_OUT',
-    label: '⏰ Forgot to clock out (only for missing clock-out days)',
-  },
-  {
-    value: 'EARLY_LEAVE',
-    label: '🚪 Left early (only for early leave / missing clock-out days)',
-  },
-];
-
-interface EntryDraft {
-  reason?: FieldMovementReason;
-  destination?: string;
-  departureTime?: string;
-  didReturn?: boolean;
-  returnTime?: string;
-  notes?: string;
-  earlyLeaveReason?: string;
-}
 
 export interface FieldMovementFormProps {
   open: boolean;
@@ -119,40 +66,25 @@ function formatFlaggedDate(dateStr: string): string {
   });
 }
 
-function parseTime(value: string | undefined): Dayjs | null {
-  if (!value) {
-    return null;
-  }
-  const parsed = dayjs(value, 'HH:mm', true);
-  return parsed.isValid() ? parsed : null;
-}
-
-function getValidBulkReasons(days: FlaggedDay[]): FieldMovementReason[] {
-  const flags = new Set(days.map((d) => d.flag));
-  const reasons: FieldMovementReason[] = ['FIELD_VISIT'];
-  if (!flags.has('MISSING_CLOCK_OUT') && !flags.has('EARLY_LEAVE')) {
-    reasons.push('FORGOT_CLOCK_IN');
-  }
-  if (!flags.has('MISSING_CLOCK_IN') && !flags.has('EARLY_LEAVE')) {
-    reasons.push('FORGOT_CLOCK_OUT');
-  }
-  if (!flags.has('MISSING_CLOCK_IN')) {
-    reasons.push('EARLY_LEAVE');
-  }
-  return reasons;
+function dayEntryFromFlagged(day: FlaggedDay, draft: EntryDraft | undefined): DayEntry {
+  const base = toDayEntry(day);
+  return {
+    ...base,
+    selected: true,
+    reasonType: draft?.selection.reasonType ?? null,
+    forgotDirection: draft?.selection.forgotDirection ?? null,
+    location: draft?.values.location ?? '',
+    timeOut: draft?.values.timeOut ?? '',
+    returnTime: draft?.values.returnTime ?? '',
+    clockInTime: draft?.values.clockInTime ?? '',
+    clockOutTime: draft?.values.clockOutTime ?? '',
+    reasonNote: draft?.values.reasonNote ?? '',
+  };
 }
 
 function draftIsComplete(day: FlaggedDay, draft: EntryDraft | undefined): boolean {
-  if (!draft?.reason) {
-    return false;
-  }
-  if (draft.reason === 'FIELD_VISIT') {
-    return (draft.destination?.trim().length ?? 0) >= 3;
-  }
-  if (draft.reason === 'EARLY_LEAVE') {
-    return Boolean(draft.departureTime) && Boolean(draft.earlyLeaveReason?.trim());
-  }
-  return true;
+  const entry = dayEntryFromFlagged(day, draft);
+  return Object.keys(validationErrorsForDay(entry)).length === 0;
 }
 
 /**
@@ -169,30 +101,56 @@ export default function FieldMovementForm({
 }: FieldMovementFormProps): React.ReactNode {
   void employeeId;
   const messageApi = useAppMessage();
+  const { t } = useEpcTranslation();
   const createMutation = useCreateFieldMovementLog();
   const submitMutation = useSubmitFieldMovementLog();
   const cancelMutation = useCancelFieldMovementLog();
+
+  const fmPrefix = 'pages.approvals.fieldMovement';
+  const optionalSuffix = t(`${fmPrefix}.optionalSuffix`);
+  const fieldLabels = useMemo(
+    (): Record<FieldMovementFieldKey, string> => ({
+      date: t(`${fmPrefix}.fields.date`),
+      timeOut: t(`${fmPrefix}.fields.timeOut`),
+      returnTime: t(`${fmPrefix}.fields.returnTime`),
+      clockInTime: t(`${fmPrefix}.fields.clockInTime`),
+      clockOutTime: t(`${fmPrefix}.fields.clockOutTime`),
+      forgotDirection: t(`${fmPrefix}.fields.forgotDirection`),
+      location: t(`${fmPrefix}.fields.location`),
+      reasonNote: t(`${fmPrefix}.fields.reasonNote`),
+      attachment: t(`${fmPrefix}.fields.attachment`),
+    }),
+    [t],
+  );
+  const reasonTypeLabels = useMemo(
+    (): Record<FieldMovementReasonType, string> => ({
+      FIELD_VISIT: t(`${fmPrefix}.reasonTypes.FIELD_VISIT`),
+      EARLY_LEAVE: t(`${fmPrefix}.reasonTypes.EARLY_LEAVE`),
+      FORGOT: t(`${fmPrefix}.reasonTypes.FORGOT`),
+    }),
+    [t],
+  );
+  const forgotDirectionLabels = useMemo(
+    () => ({
+      IN: t(`${fmPrefix}.forgotDirections.IN`),
+      OUT: t(`${fmPrefix}.forgotDirections.OUT`),
+      BOTH: t(`${fmPrefix}.forgotDirections.BOTH`),
+    }),
+    [t],
+  );
 
   const [step, setStep] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [entryDrafts, setEntryDrafts] = useState<Record<string, EntryDraft>>({});
   const [overallNotes, setOverallNotes] = useState('');
   const [submittedNumber, setSubmittedNumber] = useState<string | null>(null);
-  const [bulkReason, setBulkReason] = useState<FieldMovementReason | null>(null);
-  const [bulkDestination, setBulkDestination] = useState('');
-  const [bulkDepartureTime, setBulkDepartureTime] = useState('');
-  const [bulkDidReturn, setBulkDidReturn] = useState(false);
-  const [bulkReturnTime, setBulkReturnTime] = useState('');
-  const [bulkEarlyLeaveReason, setBulkEarlyLeaveReason] = useState('');
-  const [bulkNotes, setBulkNotes] = useState('');
-
-  useEffect(() => {
-    if (open) {
-      onSuccess();
-    }
-    // Refresh locked-day state whenever the modal opens (avoids stale drafts).
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on open
-  }, [open]);
+  const [bulkSelection, setBulkSelection] = useState<FieldMovementSelection>({
+    reasonType: null,
+    forgotDirection: null,
+  });
+  const [bulkValues, setBulkValues] = useState<FieldMovementFieldValues>(
+    emptyFieldValues(),
+  );
 
   const selectableDays = useMemo(
     () => flaggedDays.filter((day) => !day.alreadySubmitted),
@@ -217,6 +175,11 @@ export default function FieldMovementForm({
     [flaggedDays, selectedIds],
   );
 
+  const selectedDayEntries = useMemo(
+    () => selectedDays.map((day) => toDayEntry({ ...day, alreadySubmitted: false })),
+    [selectedDays],
+  );
+
   const filledCount = selectedDays.filter((day) =>
     draftIsComplete(day, entryDrafts[day.id]),
   ).length;
@@ -227,64 +190,40 @@ export default function FieldMovementForm({
   const someSelected =
     selectableDays.some((day) => selectedIds.includes(day.id)) && !allSelected;
 
-  const bulkReasonOptions = useMemo(() => {
-    const valid = new Set(getValidBulkReasons(selectedDays));
-    return BULK_REASON_CATALOG.filter((option) => valid.has(option.value));
-  }, [selectedDays]);
+  const bulkAvailableReasonTypes = useMemo(
+    () => getValidBulkReasons(selectedDayEntries),
+    [selectedDayEntries],
+  );
+
+  const bulkAvailableForgotDirections = useMemo(
+    () => getValidBulkForgotDirections(selectedDayEntries),
+    [selectedDayEntries],
+  );
 
   const canApplyBulk = useMemo((): boolean => {
-    if (!bulkReason || selectedDays.length === 0) {
+    if (!bulkSelection.reasonType || selectedDays.length === 0) {
       return false;
     }
-    if (bulkReason === 'FIELD_VISIT') {
-      if (bulkDestination.trim().length < 3) {
-        return false;
-      }
-      if (bulkDidReturn && !parseTime(bulkReturnTime)) {
-        return false;
-      }
-      const dep = parseTime(bulkDepartureTime);
-      const ret = parseTime(bulkReturnTime);
-      if (bulkDidReturn && dep && ret && !ret.isAfter(dep)) {
-        return false;
-      }
-      return true;
-    }
-    if (bulkReason === 'EARLY_LEAVE') {
-      return (
-        Boolean(parseTime(bulkDepartureTime)) &&
-        bulkEarlyLeaveReason.trim().length > 0
-      );
-    }
-    return true;
-  }, [
-    bulkReason,
-    selectedDays.length,
-    bulkDestination,
-    bulkDidReturn,
-    bulkReturnTime,
-    bulkDepartureTime,
-    bulkEarlyLeaveReason,
-  ]);
+    return (
+      validateFieldMovementValues(bulkSelection, bulkValues, {
+        requireDate: false,
+      }).length === 0
+    );
+  }, [bulkSelection, bulkValues, selectedDays.length]);
 
   const reviewGroups = useMemo(() => {
     return groupBy(
-      selectedDays.filter((day) => entryDrafts[day.id]?.reason),
+      selectedDays.filter((day) => entryDrafts[day.id]?.selection.reasonType),
       (day) => {
         const draft = entryDrafts[day.id]!;
-        return `${draft.reason}||${draft.destination?.trim() || ''}`;
+        return `${draft.selection.reasonType}||${draft.selection.forgotDirection ?? ''}||${draft.values.location?.trim() || ''}`;
       },
     );
   }, [selectedDays, entryDrafts]);
 
   function clearBulkFields(): void {
-    setBulkReason(null);
-    setBulkDestination('');
-    setBulkDepartureTime('');
-    setBulkDidReturn(false);
-    setBulkReturnTime('');
-    setBulkEarlyLeaveReason('');
-    setBulkNotes('');
+    setBulkSelection({ reasonType: null, forgotDirection: null });
+    setBulkValues(emptyFieldValues());
   }
 
   function resetForm(): void {
@@ -304,53 +243,33 @@ export default function FieldMovementForm({
   function updateDraft(dayId: string, patch: Partial<EntryDraft>): void {
     setEntryDrafts((prev) => ({
       ...prev,
-      [dayId]: { ...prev[dayId], ...patch },
+      [dayId]: {
+        selection: patch.selection ??
+          prev[dayId]?.selection ?? { reasonType: null, forgotDirection: null },
+        values: patch.values ?? prev[dayId]?.values ?? emptyFieldValues(),
+      },
     }));
   }
 
   function handleSelectAll(checked: boolean): void {
-    setSelectedIds(
-      checked ? selectableDays.map((day) => day.id) : [],
-    );
+    setSelectedIds(checked ? selectableDays.map((day) => day.id) : []);
   }
 
   function handleApplyBulk(): void {
-    if (!bulkReason || !canApplyBulk) {
+    if (!bulkSelection.reasonType || !canApplyBulk) {
       return;
     }
 
-    const reason = bulkReason;
     setEntryDrafts((prev) => {
       const next = { ...prev };
       for (const day of selectedDays) {
-        const validReasons = REASON_OPTIONS[day.flag].map((o) => o.value);
-        if (
-          !validReasons.includes(reason) ||
-          !day.availableReasons.includes(reason)
-        ) {
+        const entry = toDayEntry(day);
+        if (!canApplySelectionToDay(entry, bulkSelection)) {
           continue;
         }
         next[day.id] = {
-          reason,
-          destination:
-            reason === 'FIELD_VISIT' ? bulkDestination.trim() : undefined,
-          departureTime:
-            reason === 'FIELD_VISIT' || reason === 'EARLY_LEAVE'
-              ? bulkDepartureTime || undefined
-              : undefined,
-          didReturn: reason === 'FIELD_VISIT' ? bulkDidReturn : false,
-          returnTime:
-            reason === 'FIELD_VISIT' && bulkDidReturn
-              ? bulkReturnTime || undefined
-              : undefined,
-          earlyLeaveReason:
-            reason === 'EARLY_LEAVE'
-              ? bulkEarlyLeaveReason.trim()
-              : undefined,
-          notes:
-            reason === 'EARLY_LEAVE'
-              ? bulkEarlyLeaveReason.trim()
-              : bulkNotes.trim() || undefined,
+          selection: { ...bulkSelection },
+          values: { ...bulkValues },
         };
       }
       return next;
@@ -366,57 +285,32 @@ export default function FieldMovementForm({
     }
     for (const day of selectedDays) {
       const draft = entryDrafts[day.id];
-      if (!draft?.reason) {
-        return `Select a reason for ${formatFlaggedDate(day.date)}`;
-      }
-      if (
-        draft.reason === 'FIELD_VISIT' &&
-        (draft.destination?.trim().length ?? 0) < 3
-      ) {
-        return `Destination is required for ${formatFlaggedDate(day.date)}`;
-      }
-      if (draft.reason === 'EARLY_LEAVE' && !draft.departureTime) {
-        return `Departure time is required for ${formatFlaggedDate(day.date)}`;
-      }
-      if (
-        draft.reason === 'EARLY_LEAVE' &&
-        !draft.earlyLeaveReason?.trim() &&
-        !draft.notes?.trim()
-      ) {
-        return `Early departure reason is required for ${formatFlaggedDate(day.date)}`;
-      }
-      const allowed = day.availableReasons.includes(draft.reason);
-      if (!allowed) {
-        return `Invalid reason for ${formatFlaggedDate(day.date)}`;
+      const errors = validationErrorsForDay(dayEntryFromFlagged(day, draft));
+      const first = Object.values(errors)[0];
+      if (first) {
+        return `${first} (${formatFlaggedDate(day.date)})`;
       }
     }
     return null;
   }
 
   function buildEntries(): CreateFieldMovementEntryDto[] {
-    return selectedDays.map((day) => {
+    const entries: CreateFieldMovementEntryDto[] = [];
+    for (const day of selectedDays) {
       const draft = entryDrafts[day.id]!;
-      const reason = draft.reason!;
-      return {
-        dailyLogId: day.id,
-        reason,
-        destination: draft.destination?.trim() || undefined,
-        departureTime:
-          reason === 'FIELD_VISIT' ||
-          reason === 'EARLY_LEAVE' ||
-          reason === 'FORGOT_CLOCK_OUT'
-            ? draft.departureTime || undefined
-            : undefined,
-        returnTime:
-          reason === 'FIELD_VISIT' && draft.didReturn
-            ? draft.returnTime || undefined
-            : undefined,
-        notes:
-          reason === 'EARLY_LEAVE'
-            ? draft.earlyLeaveReason?.trim() || draft.notes?.trim() || undefined
-            : draft.notes?.trim() || undefined,
-      };
-    });
+      const payloads = toStorageEntries(draft.selection, draft.values);
+      for (const payload of payloads) {
+        entries.push({
+          dailyLogId: day.id,
+          reason: payload.reason,
+          destination: payload.destination,
+          departureTime: payload.departureTime,
+          returnTime: payload.returnTime,
+          notes: payload.notes,
+        });
+      }
+    }
+    return entries;
   }
 
   async function handleSubmit(): Promise<void> {
@@ -465,7 +359,6 @@ export default function FieldMovementForm({
       );
       onSuccess();
     } catch (error) {
-      // Stale UI may still list a draft that was already cancelled elsewhere.
       onSuccess();
       notifyApiError(error, 'Failed to cancel draft', messageApi);
     }
@@ -478,6 +371,14 @@ export default function FieldMovementForm({
   const monthName = new Date(year, month - 1, 1).toLocaleString('en', {
     month: 'long',
   });
+
+  const totalStorageEntries = selectedDays.reduce((sum, day) => {
+    const draft = entryDrafts[day.id];
+    if (!draft?.selection.reasonType) {
+      return sum;
+    }
+    return sum + countStorageEntries(draft.selection);
+  }, 0);
 
   return (
     <Modal
@@ -597,26 +498,29 @@ export default function FieldMovementForm({
           {flaggedDays.map((day) => (
             <label
               key={day.id}
-              className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#E5E7EB] px-3 py-2 hover:border-[#F47B20]"
-              style={{ opacity: day.alreadySubmitted ? 0.6 : 1 }}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 ${
+                day.alreadySubmitted
+                  ? 'border-[#E5E7EB] bg-[#F8FAFC] opacity-70'
+                  : 'border-[#E5E7EB] bg-white'
+              }`}
             >
               <Checkbox
                 checked={selectedIds.includes(day.id)}
                 disabled={day.alreadySubmitted}
                 onChange={(event) => {
-                  const checked = event.target.checked;
-                  setSelectedIds((prev) =>
-                    checked
-                      ? [...prev, day.id]
-                      : prev.filter((id) => id !== day.id),
-                  );
+                  if (event.target.checked) {
+                    setSelectedIds((prev) => [...prev, day.id]);
+                  } else {
+                    setSelectedIds((prev) => prev.filter((id) => id !== day.id));
+                  }
                 }}
               />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-[#1A1A1A]">
-                  {formatFlaggedDate(day.date)} — {FLAG_LABELS[day.flag]}
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-[#1A1A1A]">
+                  {formatFlaggedDate(day.date)}
                 </div>
-                {day.alreadySubmitted && day.submittedLog ? (
+                <Tag className="!mt-1">{FLAG_LABELS[day.flag]}</Tag>
+                {day.submittedLog ? (
                   <div
                     className={`mt-1 text-xs ${
                       day.submittedLog.status === 'DRAFT'
@@ -642,7 +546,7 @@ export default function FieldMovementForm({
       {step === 1 ? (
         <div className="flex max-h-[480px] flex-col gap-4 overflow-y-auto pr-1">
           {selectedDays.length > 0 ? (
-            <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-3">
+            <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-3 fm-stack">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-[#1A1A1A]">
                   Bulk Actions
@@ -666,155 +570,41 @@ export default function FieldMovementForm({
                 className="!mb-3"
               />
 
-              <div className="flex flex-col gap-3">
-                <Select
-                  placeholder="Apply reason to selected days"
-                  className="w-full"
-                  value={bulkReason ?? undefined}
-                  allowClear
-                  options={bulkReasonOptions}
-                  onChange={(reason: FieldMovementReason | null) => {
-                    setBulkReason(reason);
-                    setBulkDestination('');
-                    setBulkDepartureTime('');
-                    setBulkDidReturn(false);
-                    setBulkReturnTime('');
-                    setBulkEarlyLeaveReason('');
-                    setBulkNotes('');
-                  }}
-                />
+              <FieldMovementEntryFields
+                idPrefix="profile-fm-bulk"
+                hideDate
+                availableReasonTypes={bulkAvailableReasonTypes}
+                availableForgotDirections={bulkAvailableForgotDirections}
+                selection={bulkSelection}
+                values={bulkValues}
+                labels={fieldLabels}
+                reasonTypeLabels={reasonTypeLabels}
+                forgotDirectionLabels={forgotDirectionLabels}
+                optionalSuffix={optionalSuffix}
+                reasonTypeLegend={t(`${fmPrefix}.reasonTypeLegend`)}
+                forgotDirectionLegend={t(`${fmPrefix}.forgotDirectionLegend`)}
+                onSelectionChange={setBulkSelection}
+                onValuesChange={setBulkValues}
+              />
 
-                {bulkReason === 'FIELD_VISIT' ? (
-                  <>
-                    <Input
-                      placeholder="Destination (required)"
-                      value={bulkDestination}
-                      onChange={(event) =>
-                        setBulkDestination(event.target.value)
-                      }
-                    />
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div>
-                        <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                          Departure time (optional)
-                        </div>
-                        <TimePicker
-                          className="w-full"
-                          format="HH:mm"
-                          value={parseTime(bulkDepartureTime)}
-                          onChange={(value) =>
-                            setBulkDepartureTime(
-                              value ? value.format('HH:mm') : '',
-                            )
-                          }
-                        />
-                      </div>
-                      <div>
-                        <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                          Returned to office?
-                        </div>
-                        <Switch
-                          checked={bulkDidReturn}
-                          onChange={(checked) => {
-                            setBulkDidReturn(checked);
-                            if (!checked) {
-                              setBulkReturnTime('');
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                    {bulkDidReturn ? (
-                      <div>
-                        <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                          Return time
-                        </div>
-                        <TimePicker
-                          className="w-full"
-                          format="HH:mm"
-                          value={parseTime(bulkReturnTime)}
-                          onChange={(value) =>
-                            setBulkReturnTime(
-                              value ? value.format('HH:mm') : '',
-                            )
-                          }
-                        />
-                      </div>
-                    ) : null}
-                    <Input.TextArea
-                      rows={2}
-                      placeholder="Notes (optional)"
-                      value={bulkNotes}
-                      onChange={(event) => setBulkNotes(event.target.value)}
-                    />
-                  </>
-                ) : null}
-
-                {bulkReason === 'EARLY_LEAVE' ? (
-                  <>
-                    <div>
-                      <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                        Departure time
-                      </div>
-                      <TimePicker
-                        className="w-full"
-                        format="HH:mm"
-                        value={parseTime(bulkDepartureTime)}
-                        onChange={(value) =>
-                          setBulkDepartureTime(
-                            value ? value.format('HH:mm') : '',
-                          )
-                        }
-                      />
-                    </div>
-                    <Input.TextArea
-                      rows={3}
-                      placeholder="Reason for early departure (required)"
-                      value={bulkEarlyLeaveReason}
-                      onChange={(event) =>
-                        setBulkEarlyLeaveReason(event.target.value)
-                      }
-                    />
-                  </>
-                ) : null}
-
-                {bulkReason === 'FORGOT_CLOCK_IN' ||
-                bulkReason === 'FORGOT_CLOCK_OUT' ? (
-                  <Input.TextArea
-                    rows={2}
-                    placeholder="Notes (optional)"
-                    value={bulkNotes}
-                    onChange={(event) => setBulkNotes(event.target.value)}
-                  />
-                ) : null}
-
-                <div>
-                  <Button
-                    type="primary"
-                    disabled={!canApplyBulk}
-                    onClick={handleApplyBulk}
-                  >
-                    Apply to {selectedDays.length} day(s)
-                  </Button>
-                </div>
-              </div>
+              <Button type="primary" disabled={!canApplyBulk} onClick={handleApplyBulk}>
+                Apply to {selectedDays.length} day(s)
+              </Button>
             </div>
           ) : null}
 
           {selectedDays.map((day) => {
-            const draft = entryDrafts[day.id] ?? {};
-            const reasonOptions =
-              day.availableReasons.length > 0
-                ? REASON_OPTIONS[day.flag].filter((option) =>
-                    day.availableReasons.includes(option.value),
-                  )
-                : REASON_OPTIONS[day.flag];
+            const draft = entryDrafts[day.id] ?? {
+              selection: { reasonType: null, forgotDirection: null },
+              values: emptyFieldValues(),
+            };
+            const entry = toDayEntry(day);
             const complete = draftIsComplete(day, draft);
 
             return (
               <div
                 key={day.id}
-                className="rounded-lg border border-[#E5E7EB] p-3"
+                className="rounded-lg border border-[#E5E7EB] p-3 fm-stack"
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <span className="text-sm font-semibold text-[#1A1A1A]">
@@ -827,167 +617,27 @@ export default function FieldMovementForm({
                     <Tag color="orange">Needs details</Tag>
                   )}
                 </div>
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                      Reason
-                    </div>
-                    <Select
-                      className="w-full"
-                      placeholder="Select reason"
-                      value={draft.reason}
-                      options={reasonOptions}
-                      onChange={(value: FieldMovementReason) =>
-                        updateDraft(day.id, {
-                          reason: value,
-                          destination:
-                            value === 'FIELD_VISIT'
-                              ? draft.destination
-                              : undefined,
-                          departureTime:
-                            value === 'FIELD_VISIT' || value === 'EARLY_LEAVE'
-                              ? draft.departureTime
-                              : undefined,
-                          didReturn:
-                            value === 'FIELD_VISIT' ? draft.didReturn : false,
-                          returnTime:
-                            value === 'FIELD_VISIT'
-                              ? draft.returnTime
-                              : undefined,
-                          earlyLeaveReason:
-                            value === 'EARLY_LEAVE'
-                              ? draft.earlyLeaveReason
-                              : undefined,
-                        })
-                      }
-                    />
-                  </div>
-
-                  {draft.reason === 'FIELD_VISIT' ? (
-                    <>
-                      <div>
-                        <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                          Destination
-                        </div>
-                        <Input
-                          value={draft.destination}
-                          placeholder="e.g. Dire Dawa site"
-                          onChange={(event) =>
-                            updateDraft(day.id, {
-                              destination: event.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                            Departure time (optional)
-                          </div>
-                          <TimePicker
-                            className="w-full"
-                            format="HH:mm"
-                            value={parseTime(draft.departureTime)}
-                            onChange={(value) =>
-                              updateDraft(day.id, {
-                                departureTime: value
-                                  ? value.format('HH:mm')
-                                  : undefined,
-                              })
-                            }
-                          />
-                        </div>
-                        <div>
-                          <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                            Returned to office?
-                          </div>
-                          <Switch
-                            checked={Boolean(draft.didReturn)}
-                            onChange={(checked) =>
-                              updateDraft(day.id, {
-                                didReturn: checked,
-                                returnTime: checked
-                                  ? draft.returnTime
-                                  : undefined,
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
-                      {draft.didReturn ? (
-                        <div>
-                          <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                            Return time
-                          </div>
-                          <TimePicker
-                            className="w-full"
-                            format="HH:mm"
-                            value={parseTime(draft.returnTime)}
-                            onChange={(value) =>
-                              updateDraft(day.id, {
-                                returnTime: value
-                                  ? value.format('HH:mm')
-                                  : undefined,
-                              })
-                            }
-                          />
-                        </div>
-                      ) : null}
-                    </>
-                  ) : null}
-
-                  {draft.reason === 'EARLY_LEAVE' ? (
-                    <>
-                      <div>
-                        <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                          Departure time
-                        </div>
-                        <TimePicker
-                          className="w-full"
-                          format="HH:mm"
-                          value={parseTime(draft.departureTime)}
-                          onChange={(value) =>
-                            updateDraft(day.id, {
-                              departureTime: value
-                                ? value.format('HH:mm')
-                                : undefined,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                          Reason for early departure
-                        </div>
-                        <Input.TextArea
-                          rows={2}
-                          value={draft.earlyLeaveReason ?? draft.notes}
-                          onChange={(event) =>
-                            updateDraft(day.id, {
-                              earlyLeaveReason: event.target.value,
-                              notes: event.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                    </>
-                  ) : null}
-
-                  {draft.reason && draft.reason !== 'EARLY_LEAVE' ? (
-                    <div>
-                      <div className="mb-1 text-xs font-medium text-[#6B7280]">
-                        Notes (optional)
-                      </div>
-                      <Input.TextArea
-                        rows={2}
-                        value={draft.notes}
-                        onChange={(event) =>
-                          updateDraft(day.id, { notes: event.target.value })
-                        }
-                      />
-                    </div>
-                  ) : null}
-                </div>
+                <FieldMovementEntryFields
+                  idPrefix={`profile-fm-day-${day.id}`}
+                  hideDate
+                  availableReasonTypes={availableReasonTypesForDay(entry)}
+                  availableForgotDirections={availableForgotDirectionsForDay(entry)}
+                  selection={draft.selection}
+                  values={draft.values}
+                  labels={fieldLabels}
+                  reasonTypeLabels={reasonTypeLabels}
+                  forgotDirectionLabels={forgotDirectionLabels}
+                  optionalSuffix={optionalSuffix}
+                  reasonTypeLegend={t(`${fmPrefix}.reasonTypeLegendDay`)}
+                  forgotDirectionLegend={t(`${fmPrefix}.forgotDirectionLegend`)}
+                  onSelectionChange={(selection) =>
+                    updateDraft(day.id, {
+                      selection,
+                      values: clearHiddenFieldValues(selection, draft.values),
+                    })
+                  }
+                  onValuesChange={(values) => updateDraft(day.id, { values })}
+                />
               </div>
             );
           })}
@@ -997,13 +647,21 @@ export default function FieldMovementForm({
       {step === 2 ? (
         <div className="flex flex-col gap-3">
           <Typography.Paragraph type="secondary" className="!mb-1">
-            Review your explanations before submitting ({selectedDays.length}{' '}
-            day(s)).
+            {t(`${fmPrefix}.entriesWillBeCreated`, { count: totalStorageEntries })}
           </Typography.Paragraph>
           <div className="flex flex-col gap-2">
             {Object.entries(reviewGroups).map(([key, days]) => {
-              const [reasonKey, destination] = key.split('||');
-              const reason = reasonKey as FieldMovementReason;
+              const [reasonKey, forgotDir, location] = key.split('||');
+              const reasonType = reasonKey as FieldMovementReasonType;
+              const titleParts = [reasonTypeLabels[reasonType]];
+              if (reasonType === 'FORGOT' && forgotDir) {
+                titleParts.push(
+                  forgotDirectionLabels[forgotDir as keyof typeof forgotDirectionLabels],
+                );
+              }
+              if (location) {
+                titleParts.push(location);
+              }
               return (
                 <div
                   key={key}
@@ -1011,13 +669,12 @@ export default function FieldMovementForm({
                 >
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold text-[#1A1A1A]">
-                      {REASON_SUMMARY[reason] ?? reason}
-                      {destination ? ` — ${destination}` : ''}
+                      {titleParts.join(' — ')}
                     </span>
                     <Tag>{days.length} day(s)</Tag>
                   </div>
                   <p className="m-0 text-xs text-[#64748b]">
-                    {formatDateList(days.map((day) => day.date))}
+                    {formatDateList(days.map((d) => d.date))}
                   </p>
                 </div>
               );
@@ -1025,7 +682,7 @@ export default function FieldMovementForm({
           </div>
           <div>
             <div className="mb-1 text-xs font-medium text-[#6B7280]">
-              Overall notes (optional)
+              Overall notes {optionalSuffix}
             </div>
             <Input.TextArea
               rows={3}

@@ -283,6 +283,38 @@
       "failedToSubmit": "Failed to submit approval request",
       "requestSubmitted": "Approval request submitted",
       "fillRequiredFields": "Please fill in all required fields",
+      "fieldMovement": {
+        "optionalSuffix": "(optional)",
+        "reasonTypeLegend": "Reason for the selected days",
+        "reasonTypeLegendDay": "What happened on this day?",
+        "forgotDirectionLegend": "Which scan did you forget?",
+        "entriesWillBeCreated": "{{count}} entries will be created",
+        "skippedExisting": "{{count}} day(s) were skipped because this reason does not apply to them.",
+        "skippedTitle": "Skipped days (reason not applicable)",
+        "forgotHint": "Forgot-to-clock fills the missing scan once approved. Early departure is only waived by an approved early leave or field visit.",
+        "earlyLeaveScheduledEnd": "Your scheduled end time was {{time}}.",
+        "reasonTypes": {
+          "FIELD_VISIT": "Field / site visit",
+          "EARLY_LEAVE": "Left early",
+          "FORGOT": "Forgot to clock in or out"
+        },
+        "forgotDirections": {
+          "IN": "Clock-in only",
+          "OUT": "Clock-out only",
+          "BOTH": "Both clock-in and clock-out"
+        },
+        "fields": {
+          "date": "Date",
+          "timeOut": "Time out",
+          "returnTime": "Return time",
+          "clockInTime": "Stated clock-in time",
+          "clockOutTime": "Stated clock-out time",
+          "forgotDirection": "Forgot which scan",
+          "location": "Location / destination",
+          "reasonNote": "Reason / note",
+          "attachment": "Attachment"
+        }
+      },
       "noCategories": "No approval categories are available.",
       "empty": "No approval requests",
       "emptyFiltered": "No approval requests match your filters",
