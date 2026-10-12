@@ -25,6 +25,7 @@ export interface LeaveUserSummary {
   lastName: string;
   email: string | null;
   chineseName?: string | null;
+  gender?: 'MALE' | 'FEMALE' | null;
 }
 
 export interface LeaveApprovalTier {

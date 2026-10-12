@@ -24,6 +24,7 @@ export interface OnBehalfEligibleEmployee {
   employeeId: string | null;
   department: string | null;
   discipline: string | null;
+  gender: 'MALE' | 'FEMALE' | null;
 }
 
 export const ON_BEHALF_AUTO_APPROVE_COMMENT =
@@ -126,6 +127,7 @@ export class OnBehalfService {
         middleName: true,
         lastName: true,
         employeeId: true,
+        gender: true,
         department: { select: { name: true } },
         engineeringDiscipline: { select: { name: true } },
       },
@@ -140,6 +142,7 @@ export class OnBehalfService {
       employeeId: user.employeeId,
       department: user.department?.name ?? null,
       discipline: user.engineeringDiscipline?.name ?? null,
+      gender: user.gender,
     }));
   }
 

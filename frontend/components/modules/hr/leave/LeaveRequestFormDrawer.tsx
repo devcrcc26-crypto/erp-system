@@ -22,6 +22,7 @@ import {
   useMyLeaveBalances,
   useSubmitLeaveRequest,
 } from '@/lib/query/leave';
+import { useCurrentUser } from '@/lib/query/profile';
 import {
   formatLeaveType,
   resolveBalanceLeaveType,
@@ -68,6 +69,7 @@ export default function LeaveRequestFormDrawer({
   onSubmitted?: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
+  const currentUser = useCurrentUser();
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<LeaveFormValues>();
@@ -82,8 +84,8 @@ export default function LeaveRequestFormDrawer({
 
   const leaveType = Form.useWatch('leaveType', form) as LeaveType | undefined;
 
-  const leaveTypeOptions = useMemo(
-    () => [
+  const leaveTypeOptions = useMemo(() => {
+    const options = [
       { value: 'ANNUAL' as const, label: t('hr.leaveType.ANNUAL') },
       { value: 'SICK' as const, label: t('hr.leaveType.SICK') },
       { value: 'UNPAID' as const, label: t('hr.leaveType.UNPAID') },
@@ -93,9 +95,12 @@ export default function LeaveRequestFormDrawer({
       { value: 'COMPASSIONATE' as const, label: t('hr.leaveType.COMPASSIONATE') },
       { value: 'STUDY' as const, label: t('hr.leaveType.STUDY') },
       { value: 'EXAM' as const, label: t('hr.leaveType.EXAM') },
-    ],
-    [t],
-  );
+    ];
+    if (currentUser.data?.gender === 'FEMALE') {
+      return options;
+    }
+    return options.filter((option) => option.value !== 'MATERNITY');
+  }, [currentUser.data?.gender, t]);
 
   const selectedBalance = useMemo(() => {
     if (!leaveType) {

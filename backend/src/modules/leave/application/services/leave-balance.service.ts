@@ -110,6 +110,7 @@ export class LeaveBalanceService {
           lastName: true,
           email: true,
           chineseName: true,
+          gender: true,
         },
       }),
       this.prisma.user.count({ where: userWhere }),

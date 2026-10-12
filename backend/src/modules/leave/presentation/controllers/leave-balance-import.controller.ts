@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   StreamableFile,
@@ -17,12 +18,14 @@ import {
 } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from '../../../../shared/decorators/current-user.decorator';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PermissionsGuard } from '../../../../shared/permissions/permissions.guard';
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import { ImportCommitResponseDto } from '../../../hr-shared/application/dtos/hr-import.dtos';
 import { LeaveBalanceImportPreviewResponseDto } from '../../application/dtos/leave-balance-import.dtos';
 import { LeaveBalanceImportService } from '../../application/services/leave-balance-import.service';
+import { canEditLeaveBalances } from '../../application/utils/leave-balance-access.util';
 
 @ApiTags('HR Leave Balance Import')
 @ApiBearerAuth()
@@ -35,10 +38,25 @@ import { LeaveBalanceImportService } from '../../application/services/leave-bala
 export class LeaveBalanceImportController {
   constructor(
     private readonly leaveBalanceImportService: LeaveBalanceImportService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };
+  }
+
+  private async assertCanEditLeaveBalances(
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      user.userId,
+      user.companyId,
+    );
+    if (!canEditLeaveBalances(roleNames)) {
+      throw new ForbiddenException(
+        'Only System Administrator, General Manager, or HR can edit leave balances',
+      );
+    }
   }
 
   @Get('template')
@@ -71,10 +89,11 @@ export class LeaveBalanceImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  preview(
+  async preview(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<LeaveBalanceImportPreviewResponseDto> {
+    await this.assertCanEditLeaveBalances(user);
     return this.leaveBalanceImportService.previewImport(this.ctx(user), file);
   }
 
@@ -98,10 +117,11 @@ export class LeaveBalanceImportController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  import(
+  async import(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ImportCommitResponseDto> {
+    await this.assertCanEditLeaveBalances(user);
     return this.leaveBalanceImportService.commitImport(this.ctx(user), file);
   }
 }

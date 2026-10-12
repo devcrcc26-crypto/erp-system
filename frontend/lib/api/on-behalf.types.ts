@@ -27,6 +27,7 @@ export interface OnBehalfEligibleEmployee {
   employeeId: string | null;
   department: string | null;
   discipline: string | null;
+  gender?: 'MALE' | 'FEMALE' | null;
 }
 
 /** GET /hr/on-behalf/is-in-chain response. */

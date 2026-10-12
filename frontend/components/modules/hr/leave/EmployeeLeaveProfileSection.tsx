@@ -9,7 +9,7 @@ import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import LeaveBalanceLedgerSection from '@/components/modules/hr/leave/LeaveBalanceLedgerSection';
-import { useCanEditHr, useCanViewHr } from '@/hooks/use-auth-capabilities';
+import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -24,9 +24,10 @@ import {
   useMyLeaveBalances,
   useMyLeaveRequestsAll,
 } from '@/lib/query/leave';
+import { useCurrentUser } from '@/lib/query/profile';
+import { leaveBalanceTypesForGender } from '@/lib/utils/leave-balance-access';
 import { leaveHistoryPath } from '@/lib/utils/leave-history-path';
 import {
-  OWN_BALANCE_LEAVE_TYPES,
   formatLeaveStatus,
   formatLeaveType,
   leaveStatusVariant,
@@ -173,7 +174,7 @@ export default function EmployeeLeaveProfileSection({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const canViewHr = useCanViewHr();
-  const canEditHr = useCanEditHr();
+  const currentUser = useCurrentUser();
   const currentYear = new Date().getFullYear();
   /** Year picked in the control; null = follow the current leave year. */
   const [pickedYear, setPickedYear] = useState<number | null>(null);
@@ -229,19 +230,30 @@ export default function EmployeeLeaveProfileSection({
   }> => {
     if (isSelf) {
       const rows = myBalancesQuery.data ?? [];
-      return OWN_BALANCE_LEAVE_TYPES.map((leaveType) => ({
+      const types = leaveBalanceTypesForGender(currentUser.data?.gender);
+      return types.map((leaveType) => ({
         leaveType,
         balance: pickBalance(rows, leaveType),
       }));
     }
 
     const summary = employeeBalancesQuery.data?.data?.[0];
-    return [
-      { leaveType: 'ANNUAL' as const, balance: summary?.annual ?? null },
-      { leaveType: 'MATERNITY' as const, balance: summary?.maternity ?? null },
-      { leaveType: 'SICK' as const, balance: summary?.sick ?? null },
-    ];
-  }, [isSelf, myBalancesQuery.data, employeeBalancesQuery.data?.data]);
+    const types = leaveBalanceTypesForGender(summary?.employee.gender);
+    return types.map((leaveType) => ({
+      leaveType,
+      balance:
+        leaveType === 'ANNUAL'
+          ? (summary?.annual ?? null)
+          : leaveType === 'SICK'
+            ? (summary?.sick ?? null)
+            : (summary?.maternity ?? null),
+    }));
+  }, [
+    isSelf,
+    myBalancesQuery.data,
+    employeeBalancesQuery.data?.data,
+    currentUser.data?.gender,
+  ]);
 
   const allHistory = useMemo(() => {
     const rows = isSelf
@@ -408,10 +420,7 @@ export default function EmployeeLeaveProfileSection({
         )}
       </LeaveProfileSection>
 
-      <LeaveBalanceLedgerSection
-        employeeId={targetEmployeeId}
-        canEdit={!isSelf && canEditHr}
-      />
+      <LeaveBalanceLedgerSection employeeId={targetEmployeeId} />
 
       <LeaveProfileSection
         title={t('hr.leave.historyTitle')}

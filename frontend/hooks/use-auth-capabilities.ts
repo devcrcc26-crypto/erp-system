@@ -1,5 +1,7 @@
 'use client';
 
+import { useCurrentUser } from '@/lib/query/profile';
+import { canEditLeaveBalances } from '@/lib/utils/leave-balance-access';
 import { useAuthStore } from '@/stores/auth.store';
 
 /**
@@ -194,6 +196,19 @@ export function useCanManageUsers(): boolean {
  */
 export function useIsSystemAdmin(): boolean {
   return useAuthStore((state) => state.capabilities.isSystemAdmin ?? false);
+}
+
+/**
+ * True when the session may set / adjust leave balances
+ * (System Administrator, General Manager, or HR roles).
+ */
+export function useCanEditLeaveBalances(): boolean {
+  const isSystemAdmin = useIsSystemAdmin();
+  const currentUser = useCurrentUser();
+  if (isSystemAdmin) {
+    return true;
+  }
+  return canEditLeaveBalances(currentUser.data?.roles);
 }
 
 /**

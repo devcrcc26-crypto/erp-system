@@ -4626,6 +4626,8 @@
         "adjustHint": "Adds or removes days on the current leave year. Existing entries are never changed.",
         "openingHint": "For go-live: the balance carried into the current leave year. Only possible while the year has no entitlement or opening balance.",
         "snapshotHint": "Enter entitled, brought forward and used for each leave type on the selected leave year. Remaining is calculated automatically.",
+        "broughtForwardAnnualOnly": "Brought forward applies to annual leave only",
+        "editBalances": "Edit balances",
         "leaveYearLabel": "Leave year",
         "leaveYearExtra": "Current leave year runs {{start}} – {{end}} (employment anniversary).",
         "remainingFormula": "Remaining = entitled + brought forward − used − pending",

@@ -37,6 +37,7 @@ import {
   useMyLeaveBalances,
   useSubmitLeaveRequest,
 } from '@/lib/query/leave';
+import { useCurrentUser } from '@/lib/query/profile';
 import { usePreviewLeaveDays } from '@/lib/query/work-schedule';
 import {
   formatLeaveType,
@@ -166,6 +167,7 @@ function ReviewItem({
 export default function LeaveRequestFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
   const onBehalf = useOnBehalf('LEAVE_REQUEST');
+  const currentUser = useCurrentUser();
   const router = useRouter();
   const messageApi = useAppMessage();
   const [form] = Form.useForm<LeaveFormValues>();
@@ -180,6 +182,9 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   ]);
   const [preview, setPreview] = useState<PreviewDaysResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const leaveOwnerGender =
+    onBehalf.employee?.gender ?? currentUser.data?.gender ?? null;
 
   const balanceForDate = useMemo(() => {
     const inputs = toPeriodInputs(periods);
@@ -207,8 +212,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     DEFAULT_LEAVE_TYPE;
   const formValues = Form.useWatch([], form) as LeaveFormValues | undefined;
 
-  const leaveTypeOptions = useMemo(
-    () => [
+  const leaveTypeOptions = useMemo(() => {
+    const options = [
       { value: 'ANNUAL' as const, label: t('hr.leaveType.ANNUAL') },
       { value: 'SICK' as const, label: t('hr.leaveType.SICK') },
       { value: 'UNPAID' as const, label: t('hr.leaveType.UNPAID') },
@@ -218,9 +223,12 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       { value: 'COMPASSIONATE' as const, label: t('hr.leaveType.COMPASSIONATE') },
       { value: 'STUDY' as const, label: t('hr.leaveType.STUDY') },
       { value: 'EXAM' as const, label: t('hr.leaveType.EXAM') },
-    ],
-    [t],
-  );
+    ];
+    if (leaveOwnerGender === 'FEMALE') {
+      return options;
+    }
+    return options.filter((option) => option.value !== 'MATERNITY');
+  }, [leaveOwnerGender, t]);
 
   const selectedBalance = useMemo(() => {
     if (!leaveType || !balancesQuery.data) {
@@ -236,6 +244,12 @@ export default function LeaveRequestFormContent(): React.ReactNode {
   useEffect(() => {
     form.setFieldsValue({ leaveType: DEFAULT_LEAVE_TYPE });
   }, [form]);
+
+  useEffect(() => {
+    if (leaveType === 'MATERNITY' && leaveOwnerGender !== 'FEMALE') {
+      form.setFieldsValue({ leaveType: DEFAULT_LEAVE_TYPE });
+    }
+  }, [form, leaveOwnerGender, leaveType]);
 
   useEffect(() => {
     const inputs = toPeriodInputs(periods);

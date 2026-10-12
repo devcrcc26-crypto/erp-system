@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  Gender,
   LeaveBalanceEntryKind,
   LeaveType,
   Prisma,
@@ -50,6 +51,7 @@ interface LedgerEmployee {
   /** Leave-year anchor: employmentDate, else first contract start, else none (calendar). */
   anchor: Date | null;
   excluded: boolean;
+  gender: Gender | null;
   policyId: string | null;
   rules: Map<LeaveType, PolicyRuleRow>;
 }
@@ -455,6 +457,8 @@ export class LeaveLedgerService {
     if (!reason) {
       throw new BadRequestException('A reason is required');
     }
+    const employee = await this.loadEmployee(input.employeeId, input.companyId);
+    this.assertBalanceLeaveTypeAllowed(employee, input.leaveType);
     return this.addHrEntry(
       input,
       LeaveBalanceEntryKind.ADJUSTMENT,
@@ -485,6 +489,7 @@ export class LeaveLedgerService {
       throw new BadRequestException('A reason is required');
     }
     const employee = await this.loadEmployee(input.employeeId, input.companyId);
+    this.assertBalanceLeaveTypeAllowed(employee, input.leaveType);
     const year = leaveYearFor(employee.anchor, new Date());
     const existing = await this.prisma.leaveBalanceEntry.count({
       where: {
@@ -562,13 +567,24 @@ export class LeaveLedgerService {
         );
       }
       seen.add(row.leaveType);
+      this.assertBalanceLeaveTypeAllowed(employee, row.leaveType);
+      const broughtForward =
+        row.leaveType === LeaveType.ANNUAL ? row.broughtForward : 0;
+      if (
+        row.leaveType !== LeaveType.ANNUAL &&
+        Number(row.broughtForward) !== 0
+      ) {
+        throw new BadRequestException(
+          'Brought forward is only allowed for annual leave',
+        );
+      }
       if (
         !POLICY_BALANCE_LEAVE_TYPES.includes(row.leaveType) ||
         !isHalfDayStep(row.entitled) ||
-        !isHalfDayStep(row.broughtForward) ||
+        !isHalfDayStep(broughtForward) ||
         !isHalfDayStep(row.used) ||
         row.entitled < 0 ||
-        row.broughtForward < 0 ||
+        broughtForward < 0 ||
         row.used < 0
       ) {
         throw new BadRequestException(
@@ -580,7 +596,7 @@ export class LeaveLedgerService {
         year,
         leaveType: row.leaveType,
         entitled: roundDays(row.entitled),
-        broughtForward: roundDays(row.broughtForward),
+        broughtForward: roundDays(broughtForward),
         used: roundDays(row.used),
         reason,
         actorUserId: input.actorUserId,
@@ -632,6 +648,17 @@ export class LeaveLedgerService {
     actorUserId: string | null;
   }): Promise<{ created: boolean }> {
     const employee = await this.loadEmployee(input.employeeId, input.companyId);
+    this.assertBalanceLeaveTypeAllowed(employee, input.leaveType);
+    const broughtForward =
+      input.leaveType === LeaveType.ANNUAL ? input.broughtForward : 0;
+    if (
+      input.leaveType !== LeaveType.ANNUAL &&
+      Number(input.broughtForward) !== 0
+    ) {
+      throw new BadRequestException(
+        'Brought forward is only allowed for annual leave',
+      );
+    }
     const year = leaveYearByLabel(employee.anchor, input.yearLabel);
     const entryCount = await this.prisma.leaveBalanceEntry.count({
       where: {
@@ -645,9 +672,9 @@ export class LeaveLedgerService {
       year,
       leaveType: input.leaveType,
       entitled: roundDays(input.entitled),
-      broughtForward: roundDays(input.broughtForward),
+      broughtForward: roundDays(broughtForward),
       used: roundDays(input.used ?? 0),
-      reason: `Imported balance: entitled ${input.entitled}, brought forward ${input.broughtForward}, used ${input.used ?? 0}`,
+      reason: `Imported balance: entitled ${input.entitled}, brought forward ${broughtForward}, used ${input.used ?? 0}`,
       actorUserId: input.actorUserId,
     });
     await this.syncCache(employee, year, Object.values(LeaveType));
@@ -1217,6 +1244,24 @@ export class LeaveLedgerService {
     }
   }
 
+  /**
+   * Maternity balances and requests are female-only.
+   * Brought-forward days apply only to annual leave (enforced at snapshot write).
+   */
+  assertBalanceLeaveTypeAllowed(
+    employee: Pick<LedgerEmployee, 'gender'>,
+    leaveType: LeaveType,
+  ): void {
+    if (
+      leaveType === LeaveType.MATERNITY &&
+      employee.gender !== Gender.FEMALE
+    ) {
+      throw new BadRequestException(
+        'Maternity leave is only available for female employees',
+      );
+    }
+  }
+
   async loadEmployee(employeeId: string, companyId: string): Promise<LedgerEmployee> {
     const user = await this.prisma.user.findFirst({
       where: { id: employeeId, companyId, deletedAt: null },
@@ -1225,6 +1270,7 @@ export class LeaveLedgerService {
         companyId: true,
         employmentDate: true,
         excludedFromHrProcesses: true,
+        gender: true,
         leavePolicyId: true,
         leavePolicy: {
           where: activeOnly({ isActive: true }),
@@ -1249,6 +1295,7 @@ export class LeaveLedgerService {
       companyId: user.companyId,
       anchor: anchor ? toDateOnlyUtc(anchor) : null,
       excluded: user.excludedFromHrProcesses === true,
+      gender: user.gender,
       policyId: user.leavePolicy ? user.leavePolicyId : null,
       rules: new Map(
         (user.leavePolicy?.rules ?? []).map((rule) => [rule.leaveType, rule]),

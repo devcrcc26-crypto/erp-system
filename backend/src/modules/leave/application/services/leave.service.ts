@@ -12,6 +12,7 @@ import {
 import {
   ApprovalRequestStatus,
   FolderContextType,
+  Gender,
   LeaveRequestStatus,
   LeaveType,
   Prisma,
@@ -201,6 +202,21 @@ export class LeaveService
     actorUserId: string,
     files: UploadedFile[] = [],
   ): Promise<unknown> {
+    if (dto.leaveType === LeaveType.MATERNITY) {
+      const employee = await this.prisma.user.findFirst({
+        where: { id: employeeId, companyId, deletedAt: null },
+        select: { gender: true },
+      });
+      if (!employee) {
+        throw new NotFoundException('Employee not found in this company');
+      }
+      if (employee.gender !== Gender.FEMALE) {
+        throw new BadRequestException(
+          'Maternity leave is only available for female employees',
+        );
+      }
+    }
+
     const resolved = await this.workScheduleService.calculateLeaveDays(
       employeeId,
       companyId,

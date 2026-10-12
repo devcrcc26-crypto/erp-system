@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -12,6 +13,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { PermissionService } from '../../../../shared/permissions/permission.service';
+import { canEditLeaveBalances } from '../../application/utils/leave-balance-access.util';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import {
@@ -71,7 +74,26 @@ export class LeaveController {
     private readonly leaveBalanceService: LeaveBalanceService,
     private readonly onBehalfService: OnBehalfService,
     private readonly leaveLedger: LeaveLedgerService,
+    private readonly permissionService: PermissionService,
   ) {}
+
+  /**
+   * Balance edits are limited to System Administrator, General Manager, and HR roles.
+   */
+  private async assertCanEditLeaveBalances(
+    userId: string,
+    companyId: string,
+  ): Promise<void> {
+    const roleNames = await this.permissionService.getUserRoleNames(
+      userId,
+      companyId,
+    );
+    if (!canEditLeaveBalances(roleNames)) {
+      throw new ForbiddenException(
+        'Only System Administrator, General Manager, or HR can edit leave balances',
+      );
+    }
+  }
 
   @Post()
   @DelegatePermissionCheck()
@@ -220,11 +242,12 @@ export class LeaveController {
     summary:
       'HR: adjust a leave balance (+/− days, reason required). Appends an ADJUSTMENT entry; audit-logged.',
   })
-  adjustBalance(
+  async adjustBalance(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Body() dto: LeaveBalanceAdjustmentDto,
   ): Promise<unknown> {
+    await this.assertCanEditLeaveBalances(user.userId, companyId);
     return this.leaveLedger.addAdjustment({
       ...dto,
       companyId,
@@ -238,11 +261,12 @@ export class LeaveController {
     summary:
       'HR go-live: set the opening balance for the current leave year (once per leave type); audit-logged.',
   })
-  setOpeningBalance(
+  async setOpeningBalance(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Body() dto: LeaveOpeningBalanceDto,
   ): Promise<unknown> {
+    await this.assertCanEditLeaveBalances(user.userId, companyId);
     return this.leaveLedger.setOpeningBalance({
       ...dto,
       companyId,
@@ -256,11 +280,12 @@ export class LeaveController {
     summary:
       'HR: set entitled, brought-forward and used for leave types on a leave year; remaining is calculated.',
   })
-  setBalanceSnapshot(
+  async setBalanceSnapshot(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Body() dto: LeaveBalanceSnapshotDto,
   ): Promise<unknown> {
+    await this.assertCanEditLeaveBalances(user.userId, companyId);
     return this.leaveLedger.setBalanceSnapshot({
       employeeId: dto.employeeId,
       companyId,

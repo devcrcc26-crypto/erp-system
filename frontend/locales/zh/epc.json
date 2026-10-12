@@ -4622,6 +4622,8 @@
         "adjustHint": "在当前假期年度增加或扣减天数。已有记录不会被修改。",
         "openingHint": "上线时使用：转入当前假期年度的余额。仅在该年度尚无应享天数或期初余额时可用。",
         "snapshotHint": "为所选假期年度填写各假期类型的应享天数、结转天数和已用天数。剩余天数将自动计算。",
+        "broughtForwardAnnualOnly": "结转仅适用于年假",
+        "editBalances": "编辑余额",
         "leaveYearLabel": "假期年度",
         "leaveYearExtra": "当前假期年度为 {{start}} – {{end}}（按入职周年）。",
         "remainingFormula": "剩余 = 应享 + 结转 − 已用 − 待批",
