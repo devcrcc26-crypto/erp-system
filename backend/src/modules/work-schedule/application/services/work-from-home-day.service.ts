@@ -37,7 +37,8 @@ import type {
   RequestWorkFromHomeDayDto,
   UpdateWorkFromHomeDayDto,
 } from '../dtos/work-from-home-day.dto';
-import { parseDateOnly } from './work-schedule.dates';
+import { iterateUtcDays, parseDateOnly } from './work-schedule.dates';
+import { WFH_MAX_RANGE_DAYS } from './work-from-home-range.util';
 import {
   formatWorkFromHomeRangeLabel,
   monthsOfDateKeys,
@@ -217,6 +218,8 @@ export class WorkFromHomeDayService
 
   /**
    * Direct assignment by HR (any scope) or Discipline Lead (employees under them).
+   * Accepts a single `date` or an inclusive `startDate`–`endDate` range
+   * (one calendar day row per date; employee-scope merges into existing days).
    */
   async create(
     dto: CreateWorkFromHomeDayDto,
@@ -226,7 +229,25 @@ export class WorkFromHomeDayService
     const ctx = await this.resolveAssigner(userId, companyId);
     this.assertCanAssign(ctx);
 
-    const date = parseDateOnly(dto.date);
+    const startKey = dto.startDate ?? dto.date;
+    const endKey = dto.endDate ?? dto.date ?? dto.startDate;
+    if (!startKey || !endKey) {
+      throw new BadRequestException(
+        'Provide date, or startDate and endDate',
+      );
+    }
+    const start = parseDateOnly(startKey);
+    const end = parseDateOnly(endKey);
+    if (end.getTime() < start.getTime()) {
+      throw new BadRequestException('endDate must be on or after startDate');
+    }
+    const dates = iterateUtcDays(start, end);
+    if (dates.length > WFH_MAX_RANGE_DAYS) {
+      throw new BadRequestException(
+        `Work-from-home range cannot exceed ${WFH_MAX_RANGE_DAYS} days`,
+      );
+    }
+
     const scope = ctx.isHr
       ? (dto.scope ?? WorkFromHomeScope.ALL)
       : WorkFromHomeScope.EMPLOYEES;
@@ -245,41 +266,68 @@ export class WorkFromHomeDayService
 
     this.validateScopePayload(scope, departmentIds, employeeIds);
 
+    const created: unknown[] = [];
+    for (const date of dates) {
+      created.push(
+        await this.createOrMergeOneDay({
+          companyId,
+          userId,
+          date,
+          reason: dto.reason.trim(),
+          scope,
+          departmentIds,
+          employeeIds,
+          ctx,
+        }),
+      );
+    }
+    return dates.length === 1 ? created[0] : { created: created.length, days: created };
+  }
+
+  private async createOrMergeOneDay(input: {
+    companyId: string;
+    userId: string;
+    date: Date;
+    reason: string;
+    scope: WorkFromHomeScope;
+    departmentIds: string[];
+    employeeIds: string[];
+    ctx: AssignerContext;
+  }): Promise<unknown> {
     const existing = await this.prisma.workFromHomeDay.findFirst({
-      where: activeOnly({ companyId, date }),
+      where: activeOnly({ companyId: input.companyId, date: input.date }),
     });
 
     if (existing) {
-      if (scope === WorkFromHomeScope.EMPLOYEES) {
+      if (input.scope === WorkFromHomeScope.EMPLOYEES) {
         return this.mergeEmployeesOntoDay(
           existing,
-          employeeIds,
-          dto.reason.trim(),
-          userId,
-          companyId,
-          ctx,
+          input.employeeIds,
+          input.reason,
+          input.userId,
+          input.companyId,
+          input.ctx,
         );
       }
-      throw new ConflictException(
-        'A work-from-home day already exists for this date',
-      );
+      // Range assign: keep existing company/department day; do not fail the whole range.
+      return this.mapRow(existing);
     }
 
     try {
       const created = await this.prisma.workFromHomeDay.create({
         data: {
           id: randomUUID(),
-          companyId,
-          date,
-          reason: dto.reason.trim(),
-          scope,
-          departmentIds,
-          employeeIds,
-          createdBy: userId,
-          updatedBy: userId,
+          companyId: input.companyId,
+          date: input.date,
+          reason: input.reason,
+          scope: input.scope,
+          departmentIds: input.departmentIds,
+          employeeIds: input.employeeIds,
+          createdBy: input.userId,
+          updatedBy: input.userId,
         },
       });
-      await this.recalculateMonth(companyId, date);
+      await this.recalculateMonth(input.companyId, input.date);
       return this.mapRow(created);
     } catch (error: unknown) {
       if (

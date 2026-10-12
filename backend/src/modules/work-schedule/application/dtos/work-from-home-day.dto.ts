@@ -14,9 +14,32 @@ import {
 } from 'class-validator';
 
 export class CreateWorkFromHomeDayDto {
-  @ApiProperty({ example: '2026-08-12' })
+  @ApiPropertyOptional({
+    example: '2026-08-12',
+    description: 'Single day (or use startDate/endDate for a range)',
+  })
+  @ValidateIf(
+    (o: CreateWorkFromHomeDayDto) =>
+      o.startDate === undefined && o.endDate === undefined,
+  )
   @IsDateString()
-  date!: string;
+  date?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-08-11',
+    description: 'First day of an assign range (inclusive)',
+  })
+  @ValidateIf((o: CreateWorkFromHomeDayDto) => o.date === undefined)
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-08-15',
+    description: 'Last day of an assign range (inclusive)',
+  })
+  @ValidateIf((o: CreateWorkFromHomeDayDto) => o.date === undefined)
+  @IsDateString()
+  endDate?: string;
 
   @ApiProperty()
   @IsString()

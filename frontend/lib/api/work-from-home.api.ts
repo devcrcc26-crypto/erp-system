@@ -12,7 +12,10 @@ export interface WorkFromHomeDay {
 }
 
 export interface CreateWorkFromHomeDayDto {
-  date: string;
+  /** Single day (legacy / edit). Prefer startDate–endDate for assign ranges. */
+  date?: string;
+  startDate?: string;
+  endDate?: string;
   reason: string;
   scope?: WorkFromHomeScope;
   departmentIds?: string[];
@@ -64,8 +67,8 @@ export async function listWorkFromHomeAssignableEmployees(): Promise<WorkFromHom
 
 export async function createWorkFromHomeDay(
   dto: CreateWorkFromHomeDayDto,
-): Promise<WorkFromHomeDay> {
-  return apiPost<WorkFromHomeDay>('/hr/attendance/work-from-home', dto);
+): Promise<WorkFromHomeDay | { created: number; days: WorkFromHomeDay[] }> {
+  return apiPost('/hr/attendance/work-from-home', dto);
 }
 
 export async function requestWorkFromHomeDay(

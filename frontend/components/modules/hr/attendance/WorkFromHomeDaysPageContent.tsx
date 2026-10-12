@@ -49,6 +49,8 @@ import {
   listWorkFromHomeAssignableEmployees,
   listWorkFromHomeDays,
   updateWorkFromHomeDay,
+  WFH_MAX_RANGE_DAYS,
+  type CreateWorkFromHomeDayDto,
   type WorkFromHomeDay,
   type WorkFromHomeScope,
 } from '@/lib/api/work-from-home.api';
@@ -66,11 +68,16 @@ import { formatUserName } from '@/lib/utils/user-display';
 type ScopeMode = 'all' | WorkFromHomeScope;
 
 interface WfhFormValues {
-  date: Dayjs;
+  date?: Dayjs;
   reason: string;
   scope: WorkFromHomeScope;
   departmentIds?: string[];
   employeeIds?: string[];
+}
+
+interface WfhPeriodRow {
+  id: string;
+  range: [Dayjs, Dayjs] | null;
 }
 
 const SCOPE_TAG_COLOR: Record<WorkFromHomeScope, string> = {
@@ -78,6 +85,39 @@ const SCOPE_TAG_COLOR: Record<WorkFromHomeScope, string> = {
   DEPARTMENTS: 'blue',
   EMPLOYEES: 'gold',
 };
+
+function newPeriodId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function completeRange(
+  value: [Dayjs | null, Dayjs | null] | null,
+): [Dayjs, Dayjs] | null {
+  if (!value?.[0] || !value[1]) {
+    return null;
+  }
+  return [value[0], value[1]];
+}
+
+function periodsOverlap(periods: WfhPeriodRow[]): boolean {
+  const ranges = periods
+    .map((row) => row.range)
+    .filter((range): range is [Dayjs, Dayjs] => Boolean(range));
+  for (let i = 0; i < ranges.length; i += 1) {
+    for (let j = i + 1; j < ranges.length; j += 1) {
+      const a = ranges[i];
+      const b = ranges[j];
+      if (!a[1].isBefore(b[0], 'day') && !b[1].isBefore(a[0], 'day')) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function periodExceedsMax(range: [Dayjs, Dayjs]): boolean {
+  return range[1].diff(range[0], 'day') + 1 > WFH_MAX_RANGE_DAYS;
+}
 
 /**
  * WFH assign calendar — HR (any scope) or Discipline Lead (multi-select reports).
@@ -99,6 +139,10 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<WorkFromHomeDay | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [periods, setPeriods] = useState<WfhPeriodRow[]>([
+    { id: newPeriodId(), range: null },
+  ]);
+  const [periodError, setPeriodError] = useState<string | null>(null);
   const [form] = Form.useForm<WfhFormValues>();
   const watchedScope = Form.useWatch('scope', form) ?? 'EMPLOYEES';
 
@@ -179,7 +223,11 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   }, [rows, scopeMode]);
 
   const createMutation = useMutation({
-    mutationFn: createWorkFromHomeDay,
+    mutationFn: async (payloads: CreateWorkFromHomeDayDto[]) => {
+      for (const dto of payloads) {
+        await createWorkFromHomeDay(dto);
+      }
+    },
     onSuccess: async () => {
       messageApi.success(t('common.saved'));
       closeDrawer();
@@ -271,11 +319,15 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
   function closeDrawer(): void {
     setDrawerOpen(false);
     setEditing(null);
+    setPeriods([{ id: newPeriodId(), range: null }]);
+    setPeriodError(null);
     form.resetFields();
   }
 
   function openCreate(): void {
     setEditing(null);
+    setPeriods([{ id: newPeriodId(), range: null }]);
+    setPeriodError(null);
     form.resetFields();
     form.setFieldsValue({
       scope: canAssignCompanyWide ? 'ALL' : 'EMPLOYEES',
@@ -291,6 +343,7 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
       return;
     }
     setEditing(row);
+    setPeriodError(null);
     form.setFieldsValue({
       date: dayjs(row.date),
       reason: row.reason,
@@ -303,18 +356,56 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
 
   function handleSubmit(values: WfhFormValues): void {
     const scope = canAssignCompanyWide ? values.scope : 'EMPLOYEES';
-    const payload = {
-      date: values.date.format('YYYY-MM-DD'),
+    const shared = {
       reason: values.reason.trim(),
       scope,
       departmentIds: scope === 'DEPARTMENTS' ? (values.departmentIds ?? []) : [],
       employeeIds: scope === 'EMPLOYEES' ? (values.employeeIds ?? []) : [],
     };
+
     if (editing) {
-      updateMutation.mutate({ id: editing.id, dto: payload });
+      if (!values.date) {
+        return;
+      }
+      updateMutation.mutate({
+        id: editing.id,
+        dto: {
+          ...shared,
+          date: values.date.format('YYYY-MM-DD'),
+        },
+      });
       return;
     }
-    createMutation.mutate(payload);
+
+    const filled = periods.filter(
+      (row): row is WfhPeriodRow & { range: [Dayjs, Dayjs] } =>
+        Boolean(row.range?.[0] && row.range[1]),
+    );
+    if (filled.length === 0) {
+      setPeriodError(t('pages.hr.workFromHome.fields.periodRequired'));
+      return;
+    }
+    if (periodsOverlap(filled)) {
+      setPeriodError(t('pages.hr.workFromHome.fields.periodOverlap'));
+      return;
+    }
+    const tooLong = filled.find((row) => periodExceedsMax(row.range));
+    if (tooLong) {
+      setPeriodError(
+        t('pages.hr.workFromHome.fields.periodMaxDays', {
+          days: WFH_MAX_RANGE_DAYS,
+        }),
+      );
+      return;
+    }
+    setPeriodError(null);
+    createMutation.mutate(
+      filled.map((row) => ({
+        ...shared,
+        startDate: row.range[0].format('YYYY-MM-DD'),
+        endDate: row.range[1].format('YYYY-MM-DD'),
+      })),
+    );
   }
 
   function handleResetPeriod(): void {
@@ -489,13 +580,90 @@ export default function WorkFromHomeDaysPageContent(): React.ReactNode {
           }}
           onFinish={handleSubmit}
         >
-          <Form.Item
-            name="date"
-            label={t('pages.hr.workFromHome.fields.date')}
-            rules={[{ required: true }]}
-          >
-            <DatePicker className="w-full" />
-          </Form.Item>
+          {editing ? (
+            <Form.Item
+              name="date"
+              label={t('pages.hr.workFromHome.fields.date')}
+              rules={[{ required: true }]}
+            >
+              <DatePicker className="w-full" />
+            </Form.Item>
+          ) : (
+            <div className="erp-wfh-period-editor">
+              <p className="erp-wfh-period-editor-label">
+                {t('pages.hr.workFromHome.fields.periods')}
+              </p>
+              <p className="erp-wfh-period-editor-hint">
+                {t('pages.hr.workFromHome.fields.periodsHint', {
+                  days: WFH_MAX_RANGE_DAYS,
+                })}
+              </p>
+              <div className="erp-wfh-period-editor-list">
+                {periods.map((period, index) => (
+                  <div key={period.id} className="erp-wfh-period-editor-row">
+                    <DatePicker.RangePicker
+                      className="w-full"
+                      value={period.range}
+                      onChange={(value) => {
+                        setPeriodError(null);
+                        setPeriods((current) =>
+                          current.map((row) =>
+                            row.id === period.id
+                              ? {
+                                  ...row,
+                                  range: completeRange(
+                                    value as
+                                      | [Dayjs | null, Dayjs | null]
+                                      | null,
+                                  ),
+                                }
+                              : row,
+                          ),
+                        );
+                      }}
+                    />
+                    <div className="erp-wfh-period-editor-actions">
+                      {periods.length > 1 ? (
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          aria-label={t(
+                            'pages.hr.workFromHome.fields.removePeriod',
+                          )}
+                          onClick={() => {
+                            setPeriodError(null);
+                            setPeriods((current) =>
+                              current.filter((row) => row.id !== period.id),
+                            );
+                          }}
+                        />
+                      ) : null}
+                      {index === periods.length - 1 ? (
+                        <Button
+                          icon={<PlusOutlined />}
+                          onClick={() => {
+                            setPeriodError(null);
+                            setPeriods((current) => [
+                              ...current,
+                              { id: newPeriodId(), range: null },
+                            ]);
+                          }}
+                        >
+                          {t('pages.hr.workFromHome.fields.addPeriod')}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {periodError ? (
+                <p className="erp-wfh-period-editor-error" role="alert">
+                  {periodError}
+                </p>
+              ) : null}
+            </div>
+          )}
           <Form.Item
             name="reason"
             label={t('pages.hr.workFromHome.fields.reason')}

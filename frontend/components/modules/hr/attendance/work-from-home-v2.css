@@ -179,3 +179,60 @@
   line-height: 1.35;
   white-space: normal;
 }
+
+.erp-wfh-drawer .erp-wfh-period-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.erp-wfh-drawer .erp-wfh-period-editor-label {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-wfh-drawer .erp-wfh-period-editor-hint {
+  margin: -4px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.erp-wfh-drawer .erp-wfh-period-editor-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.erp-wfh-drawer .erp-wfh-period-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.erp-wfh-drawer .erp-wfh-period-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f7f8fa;
+}
+
+.erp-wfh-drawer .erp-wfh-period-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+@media (max-width: 575px) {
+  .erp-wfh-drawer .erp-wfh-period-editor-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
