@@ -3,7 +3,8 @@
 import './site-assignments-v2.css';
 
 import { useMemo, useState } from 'react';
-import { DatePicker, Form, Input, Select } from 'antd';
+import { Button, DatePicker, Form, Input, Select } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
@@ -29,8 +30,57 @@ interface SiteAssignmentFormValues {
   lateReason?: string;
 }
 
+interface SitePeriodRow {
+  id: string;
+  range: [Dayjs, Dayjs] | null;
+}
+
+interface SitePeriodSnapshot {
+  startDate: string;
+  endDate: string;
+  days: number;
+}
+
 function calendarDays(start: Dayjs, end: Dayjs): number {
   return end.diff(start, 'day') + 1;
+}
+
+function newPeriodId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function completeRange(
+  value: [Dayjs | null, Dayjs | null] | null,
+): [Dayjs, Dayjs] | null {
+  if (!value?.[0] || !value[1]) {
+    return null;
+  }
+  return [value[0], value[1]];
+}
+
+function periodsOverlap(periods: SitePeriodRow[]): boolean {
+  const ranges = periods
+    .map((row) => row.range)
+    .filter((range): range is [Dayjs, Dayjs] => Boolean(range));
+  for (let i = 0; i < ranges.length; i += 1) {
+    for (let j = i + 1; j < ranges.length; j += 1) {
+      const a = ranges[i];
+      const b = ranges[j];
+      if (!a[1].isBefore(b[0], 'day') && !b[1].isBefore(a[0], 'day')) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function filledPeriods(
+  periods: SitePeriodRow[],
+): Array<SitePeriodRow & { range: [Dayjs, Dayjs] }> {
+  return periods.filter(
+    (row): row is SitePeriodRow & { range: [Dayjs, Dayjs] } =>
+      Boolean(row.range?.[0] && row.range[1]),
+  );
 }
 
 function ReviewItem({
@@ -52,6 +102,7 @@ function ReviewItem({
 
 /**
  * New site assignment request — v2 hero + StepperForm (details → review).
+ * Supports multiple non-overlapping date periods (one request each).
  */
 export default function SiteAssignmentFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -67,30 +118,41 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   const requiresLateReason =
     earliestQuery.data?.requiresLateReasonWhenBeforeCurrentMonth === true;
   const projectsQuery = useProjects({ page: 1, limit: 200 });
-  const [range, setRange] = useState<[Dayjs | null, Dayjs | null] | null>(
-    null,
-  );
+  const [periods, setPeriods] = useState<SitePeriodRow[]>([
+    { id: newPeriodId(), range: null },
+  ]);
+  const [periodError, setPeriodError] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<{
     siteName: string;
     projectId?: string;
     reason: string;
     lateReason: string;
-    startDate: string | null;
-    endDate: string | null;
+    periods: SitePeriodSnapshot[];
   }>({
     siteName: '',
     reason: '',
     lateReason: '',
-    startDate: null,
-    endDate: null,
+    periods: [],
   });
 
   const dayCount = useMemo(() => {
-    if (!range?.[0] || !range[1]) {
+    const filled = filledPeriods(periods);
+    if (filled.length === 0) {
       return null;
     }
-    return calendarDays(range[0], range[1]);
-  }, [range]);
+    return filled.reduce(
+      (sum, row) => sum + calendarDays(row.range[0], row.range[1]),
+      0,
+    );
+  }, [periods]);
+
+  const anyPeriodBeforeCurrentMonth = useMemo(
+    () =>
+      filledPeriods(periods).some((row) =>
+        row.range[0].isBefore(dayjs().startOf('month'), 'day'),
+      ),
+    [periods],
+  );
 
   const projectOptions = useMemo(
     () =>
@@ -118,8 +180,11 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
       projectId: values.projectId,
       reason: values.reason?.trim() ?? '',
       lateReason: values.lateReason?.trim() ?? '',
-      startDate: range?.[0]?.format('YYYY-MM-DD') ?? null,
-      endDate: range?.[1]?.format('YYYY-MM-DD') ?? null,
+      periods: filledPeriods(periods).map((row) => ({
+        startDate: row.range[0].format('YYYY-MM-DD'),
+        endDate: row.range[1].format('YYYY-MM-DD'),
+        days: calendarDays(row.range[0], row.range[1]),
+      })),
     };
     setSnapshot(next);
     return next;
@@ -127,28 +192,38 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
 
   function resetForm(): void {
     form.resetFields();
-    setRange(null);
+    setPeriods([{ id: newPeriodId(), range: null }]);
+    setPeriodError(null);
     setSnapshot({
       siteName: '',
       reason: '',
       lateReason: '',
-      startDate: null,
-      endDate: null,
+      periods: [],
     });
     onBehalf.reset();
+  }
+
+  function validatePeriods(): boolean {
+    const filled = filledPeriods(periods);
+    if (filled.length === 0) {
+      setPeriodError(t('pages.hr.siteAssignments.form.periodRequired'));
+      return false;
+    }
+    if (periodsOverlap(filled)) {
+      setPeriodError(t('pages.hr.siteAssignments.form.periodOverlap'));
+      return false;
+    }
+    setPeriodError(null);
+    return true;
   }
 
   async function validateDetailsStep(): Promise<boolean> {
     try {
       await form.validateFields(['siteName']);
-      if (!range?.[0] || !range[1]) {
-        messageApi.error(t('pages.hr.siteAssignments.form.datesRequired'));
+      if (!validatePeriods()) {
         return false;
       }
-      if (
-        requiresLateReason &&
-        range[0].isBefore(dayjs().startOf('month'), 'day')
-      ) {
+      if (requiresLateReason && anyPeriodBeforeCurrentMonth) {
         await form.validateFields(['lateReason']);
       }
       captureSnapshot();
@@ -160,22 +235,39 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
 
   async function handleSubmit(): Promise<void> {
     const ok = await validateDetailsStep();
-    if (!ok || !range?.[0] || !range[1]) {
+    if (!ok) {
       return;
     }
     const values = captureSnapshot();
+    if (values.periods.length === 0) {
+      return;
+    }
     try {
-      const detail = await submitMutation.mutateAsync({
-        siteName: values.siteName,
-        projectId: values.projectId,
-        startDate: values.startDate!,
-        endDate: values.endDate!,
-        reason: values.reason || undefined,
-        lateReason: values.lateReason?.trim() || undefined,
-        ...onBehalf.payload,
-      });
-      messageApi.success(t('pages.hr.siteAssignments.form.submitSuccess'));
-      router.push(`/hr/site-assignments/${detail.id}`);
+      const created: Array<{ id: string }> = [];
+      for (const period of values.periods) {
+        const detail = await submitMutation.mutateAsync({
+          siteName: values.siteName,
+          projectId: values.projectId,
+          startDate: period.startDate,
+          endDate: period.endDate,
+          reason: values.reason || undefined,
+          lateReason: values.lateReason?.trim() || undefined,
+          ...onBehalf.payload,
+        });
+        created.push(detail);
+      }
+      messageApi.success(
+        values.periods.length === 1
+          ? t('pages.hr.siteAssignments.form.submitSuccess')
+          : t('pages.hr.siteAssignments.form.submitSuccessMany', {
+              count: values.periods.length,
+            }),
+      );
+      if (created.length === 1) {
+        router.push(`/hr/site-assignments/${created[0].id}`);
+        return;
+      }
+      router.push('/hr/site-assignments');
     } catch (error) {
       notifyApiError(
         error,
@@ -189,6 +281,16 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   const onBehalfLabel = onBehalf.employee
     ? formatUserName(onBehalf.employee)
     : t('hr.onBehalf.forYourself');
+
+  const periodsReviewValue =
+    snapshot.periods.length === 0
+      ? '—'
+      : snapshot.periods
+          .map(
+            (period) =>
+              `${formatProjectDate(period.startDate)} – ${formatProjectDate(period.endDate)} (${period.days})`,
+          )
+          .join('\n');
 
   const steps = useMemo(
     () => [
@@ -230,22 +332,78 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
                   )}
                 />
               </Form.Item>
-              <Form.Item
-                label={t('pages.hr.siteAssignments.form.dateRange')}
-                required
-                className="md:col-span-2"
-              >
-                <DatePicker.RangePicker
-                  className="w-full"
-                  value={range}
-                  onChange={(value) => setRange(value ?? null)}
-                  disabledDate={(current) => {
-                    if (!current || !earliestDay) {
-                      return false;
-                    }
-                    return current.isBefore(earliestDay, 'day');
-                  }}
-                />
+              <div className="erp-sa-period-editor md:col-span-2">
+                <p className="erp-sa-period-editor-label">
+                  {t('pages.hr.siteAssignments.form.periods')}
+                </p>
+                <p className="erp-sa-period-editor-hint">
+                  {t('pages.hr.siteAssignments.form.periodsHint')}
+                </p>
+                <div className="erp-sa-period-editor-list">
+                  {periods.map((period, index) => (
+                    <div key={period.id} className="erp-sa-period-editor-row">
+                      <DatePicker.RangePicker
+                        className="w-full"
+                        value={period.range}
+                        onChange={(value) => {
+                          setPeriodError(null);
+                          setPeriods((current) =>
+                            current.map((row) =>
+                              row.id === period.id
+                                ? {
+                                    ...row,
+                                    range: completeRange(
+                                      value as
+                                        | [Dayjs | null, Dayjs | null]
+                                        | null,
+                                    ),
+                                  }
+                                : row,
+                            ),
+                          );
+                        }}
+                        disabledDate={(current) => {
+                          if (!current || !earliestDay) {
+                            return false;
+                          }
+                          return current.isBefore(earliestDay, 'day');
+                        }}
+                      />
+                      <div className="erp-sa-period-editor-actions">
+                        {periods.length > 1 ? (
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            aria-label={t(
+                              'pages.hr.siteAssignments.form.removePeriod',
+                            )}
+                            onClick={() => {
+                              setPeriodError(null);
+                              setPeriods((current) =>
+                                current.filter((row) => row.id !== period.id),
+                              );
+                            }}
+                          />
+                        ) : null}
+                        {index === periods.length - 1 ? (
+                          <Button
+                            icon={<PlusOutlined />}
+                            onClick={() => {
+                              setPeriodError(null);
+                              setPeriods((current) => [
+                                ...current,
+                                { id: newPeriodId(), range: null },
+                              ]);
+                            }}
+                          >
+                            {t('pages.hr.siteAssignments.form.addPeriod')}
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 {dayCount != null ? (
                   <p className="erp-sa-day-hint">
                     {t('pages.hr.siteAssignments.form.calendarDays', {
@@ -253,9 +411,13 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
                     })}
                   </p>
                 ) : null}
-              </Form.Item>
-              {requiresLateReason &&
-              range?.[0]?.isBefore(dayjs().startOf('month'), 'day') ? (
+                {periodError ? (
+                  <p className="erp-sa-period-editor-error" role="alert">
+                    {periodError}
+                  </p>
+                ) : null}
+              </div>
+              {requiresLateReason && anyPeriodBeforeCurrentMonth ? (
                 <Form.Item
                   name="lateReason"
                   label={t('pages.hr.siteAssignments.form.lateReason')}
@@ -304,20 +466,22 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
                 value={projectLabel}
               />
               <ReviewItem
-                label={t('pages.hr.siteAssignments.form.dateRange')}
+                label={t('pages.hr.siteAssignments.columns.days')}
                 value={
-                  snapshot.startDate && snapshot.endDate
-                    ? `${formatProjectDate(snapshot.startDate)} – ${formatProjectDate(snapshot.endDate)}`
+                  snapshot.periods.length > 0
+                    ? String(
+                        snapshot.periods.reduce(
+                          (sum, period) => sum + period.days,
+                          0,
+                        ),
+                      )
                     : '—'
                 }
               />
               <ReviewItem
-                label={t('pages.hr.siteAssignments.columns.days')}
-                value={
-                  snapshot.startDate && snapshot.endDate && range?.[0] && range[1]
-                    ? String(calendarDays(range[0], range[1]))
-                    : '—'
-                }
+                label={t('pages.hr.siteAssignments.form.periods')}
+                value={periodsReviewValue}
+                wide
               />
               <ReviewItem
                 label={t('pages.hr.siteAssignments.form.reason')}
@@ -335,10 +499,15 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
       onBehalfLabel,
       projectOptions,
       projectsQuery.isLoading,
-      range,
+      periods,
       dayCount,
+      periodError,
       snapshot,
       projectLabel,
+      periodsReviewValue,
+      earliestDay,
+      requiresLateReason,
+      anyPeriodBeforeCurrentMonth,
     ],
   );
 

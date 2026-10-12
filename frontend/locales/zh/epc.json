@@ -552,7 +552,7 @@
         "form": {
           "title": "现场派驻申请",
           "description": "日期可包含上月1日以来的历史天数及未来计划现场工作。",
-          "detailsStepDescription": "填写现场、日期，以及可选的项目或原因。",
+          "detailsStepDescription": "填写现场、一个或多个日期时段，以及可选的项目或原因。",
           "reviewStepDescription": "确认派驻详情后提交审批。",
           "steps": {
             "details": "详情",
@@ -563,12 +563,21 @@
           "project": "项目（可选）",
           "projectPlaceholder": "关联项目",
           "dateRange": "日期范围",
+          "periods": "时段",
+          "periodsHint": "每个时段为包含起止日的日期范围。不连续的日期请再添加一个时段——每个时段会生成单独的申请。",
+          "addPeriod": "添加时段",
+          "removePeriod": "删除时段",
+          "periodRequired": "请至少选择一个日期范围。",
+          "periodOverlap": "时段不能重叠。",
           "calendarDays": "共 {{count}} 个自然日",
           "daysLabel": "天",
           "reason": "原因",
+          "lateReason": "补录原因",
+          "lateReasonPlaceholder": "说明为何在月度结束后补录…",
           "datesRequired": "请选择开始和结束日期。",
           "submit": "提交申请",
           "submitSuccess": "现场派驻已提交。",
+          "submitSuccessMany": "已提交 {{count}} 条现场派驻申请。",
           "submitFailed": "无法提交现场派驻。"
         },
         "detail": {

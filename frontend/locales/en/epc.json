@@ -552,7 +552,7 @@
         "form": {
           "title": "Site assignment request",
           "description": "Dates follow payroll lock rules. HR may back-date earlier months with a reason.",
-          "detailsStepDescription": "Enter the site, dates, and optional project or reason for this assignment.",
+          "detailsStepDescription": "Enter the site, one or more date periods, and optional project or reason.",
           "reviewStepDescription": "Confirm the assignment details before submitting for approval.",
           "steps": {
             "details": "Details",
@@ -563,6 +563,12 @@
           "project": "Project (optional)",
           "projectPlaceholder": "Link to a project",
           "dateRange": "Date range",
+          "periods": "Periods",
+          "periodsHint": "Each period is an inclusive date range. Add another period for non-contiguous dates — each becomes its own request.",
+          "addPeriod": "Add period",
+          "removePeriod": "Remove period",
+          "periodRequired": "Select at least one date range.",
+          "periodOverlap": "Periods must not overlap.",
           "calendarDays": "{{count}} calendar days",
           "daysLabel": "days",
           "reason": "Reason",
@@ -571,6 +577,7 @@
           "datesRequired": "Select a start and end date.",
           "submit": "Submit request",
           "submitSuccess": "Site assignment submitted.",
+          "submitSuccessMany": "{{count}} site assignments submitted.",
           "submitFailed": "Could not submit site assignment."
         },
         "detail": {

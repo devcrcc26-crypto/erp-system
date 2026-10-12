@@ -449,6 +449,63 @@
   font-size: 13px;
 }
 
+.erp-site-assignments-v2 .erp-sa-period-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-label {
+  margin: 0;
+  color: var(--sav2-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-hint {
+  margin: -4px 0 0;
+  color: var(--sav2-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--sav2-subtle);
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.erp-site-assignments-v2 .erp-sa-period-editor-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 575px) {
+  .erp-site-assignments-v2 .erp-sa-period-editor-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .erp-site-assignments-v2 .erp-sa-review-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
