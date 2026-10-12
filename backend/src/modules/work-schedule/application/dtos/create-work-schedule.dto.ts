@@ -4,6 +4,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -15,6 +16,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { WorkScheduleCheckMode } from '@prisma/client';
 
 const HH_MM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -85,6 +87,30 @@ export class CreateWorkScheduleDto {
   @IsBoolean()
   isActive?: boolean;
 
+  @ApiPropertyOptional({
+    enum: WorkScheduleCheckMode,
+    default: WorkScheduleCheckMode.STANDARD,
+    description:
+      'SCAN_ONLY: any scan that day is present; no late / early-departure / missing-punch rules',
+  })
+  @IsOptional()
+  @IsEnum(WorkScheduleCheckMode)
+  checkMode?: WorkScheduleCheckMode;
+
+  @ApiPropertyOptional({
+    example: '08:30',
+    description:
+      'Required when checkMode is SCAN_ONLY. An earliest scan after this is flagged for HR review.',
+  })
+  @ValidateIf(
+    (o: { checkMode?: WorkScheduleCheckMode; latestScanTime?: string | null }) =>
+      o.checkMode === WorkScheduleCheckMode.SCAN_ONLY ||
+      (o.latestScanTime !== undefined && o.latestScanTime !== null),
+  )
+  @IsString()
+  @Matches(HH_MM, { message: 'latestScanTime must be HH:mm' })
+  latestScanTime?: string | null;
+
   @ApiProperty({ type: [WorkScheduleDayDto] })
   @IsArray()
   @ArrayMinSize(7)
@@ -116,6 +142,30 @@ export class UpdateWorkScheduleDto {
   @IsBoolean()
   isActive?: boolean;
 
+  @ApiPropertyOptional({
+    enum: WorkScheduleCheckMode,
+    default: WorkScheduleCheckMode.STANDARD,
+    description:
+      'SCAN_ONLY: any scan that day is present; no late / early-departure / missing-punch rules',
+  })
+  @IsOptional()
+  @IsEnum(WorkScheduleCheckMode)
+  checkMode?: WorkScheduleCheckMode;
+
+  @ApiPropertyOptional({
+    example: '08:30',
+    description:
+      'Required when checkMode is SCAN_ONLY. An earliest scan after this is flagged for HR review.',
+  })
+  @ValidateIf(
+    (o: { checkMode?: WorkScheduleCheckMode; latestScanTime?: string | null }) =>
+      o.checkMode === WorkScheduleCheckMode.SCAN_ONLY ||
+      (o.latestScanTime !== undefined && o.latestScanTime !== null),
+  )
+  @IsString()
+  @Matches(HH_MM, { message: 'latestScanTime must be HH:mm' })
+  latestScanTime?: string | null;
+
   @ApiPropertyOptional({ type: [WorkScheduleDayDto] })
   @IsOptional()
   @IsArray()
@@ -126,7 +176,7 @@ export class UpdateWorkScheduleDto {
 
   @ApiPropertyOptional({
     description:
-      'When true and days are updated, recalculate attendance for assigned employees from recalculateFrom',
+      'Recalculate imported attendance for employees on this schedule when days, checkMode or latestScanTime change. Defaults to true; pass false to skip.',
   })
   @IsOptional()
   @IsBoolean()
@@ -134,7 +184,8 @@ export class UpdateWorkScheduleDto {
 
   @ApiPropertyOptional({
     example: '2026-09-01',
-    description: 'Start date for attendance recalculation when recalculateAttendance is true',
+    description:
+      "Start date for attendance recalculation. Defaults to each employee's assignment start on this schedule.",
   })
   @IsOptional()
   @IsDateString()
@@ -158,7 +209,7 @@ export class AssignScheduleDto {
 
   @ApiPropertyOptional({
     description:
-      'When true, recalculate attendance daily logs and month summaries from effectiveFrom onward',
+      'Recalculate attendance daily logs and month summaries from effectiveFrom onward. Defaults to true; pass false to skip. Approved / payroll-locked months are flagged stale instead.',
   })
   @IsOptional()
   @IsBoolean()

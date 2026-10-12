@@ -31,11 +31,13 @@ import ProjectSealDetail from '@/components/modules/approvals/detail/ProjectSeal
 import InspectionRepairDetail from '@/components/modules/approvals/detail/InspectionRepairDetail';
 import ExitPermitDetail from '@/components/modules/approvals/detail/ExitPermitDetail';
 import FieldMovementDetail from '@/components/modules/approvals/detail/FieldMovementDetail';
+import WorkFromHomeDetail from '@/components/modules/approvals/detail/WorkFromHomeDetail';
 import ConditionResponsePanel from '@/components/modules/approvals/ConditionResponsePanel';
 import RejectedBanner from '@/components/modules/approvals/RejectedBanner';
 import ResubmitPanel, {
   ResponseHistory,
 } from '@/components/modules/approvals/ResubmitPanel';
+import LateSubmissionBanner from '@/components/modules/approvals/LateSubmissionBanner';
 import ReturnedBanner from '@/components/modules/approvals/ReturnedBanner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import ErpNotice from '@/components/ui/ErpNotice/ErpNotice';
@@ -244,6 +246,9 @@ function renderTypedDetail(request: ApprovalRequestDetail): React.ReactNode {
           sourceId={sourceId}
         />
       );
+    case 'WORK_FROM_HOME':
+      // The request itself is the record (range + days live in formData).
+      return <WorkFromHomeDetail request={request} />;
     default:
       return <GenericApprovalDetail request={request} />;
   }
@@ -642,6 +647,10 @@ export default function ApprovalDetailPageContent({
 
       <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_360px]">
         <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
+          <LateSubmissionBanner
+            lateSubmission={request.lateSubmission}
+            onBehalfSubmittedByName={request.onBehalf?.submittedBy.name}
+          />
           {request.status === 'RETURNED' ? (
             <ReturnedBanner note={returnNote} />
           ) : null}

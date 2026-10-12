@@ -55,6 +55,7 @@ import {
   UpdateLeaveRequestDto,
 } from '../dtos/leave.dtos';
 import { LeaveBalanceService } from './leave-balance.service';
+import { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 import { resolveBalanceLeaveType } from './leave-balance-rules';
 
 export { DEDUCTS_FROM_ANNUAL, resolveBalanceLeaveType } from './leave-balance-rules';
@@ -129,6 +130,7 @@ export class LeaveService
     @Inject(STORAGE_SERVICE)
     private readonly storage: IStorageService,
     private readonly dayCoverage: DayCoverageService,
+    private readonly leaveLedger: LeaveLedgerService,
   ) {}
    
   onModuleInit(): void {
@@ -206,7 +208,12 @@ export class LeaveService
     );
     const startDate = resolved.startDate;
     const endDate = resolved.endDate;
-    const year = startDate.getUTCFullYear();
+    // Balance bucket: the employee's leave year (employment anniversary).
+    const year = await this.leaveBalanceService.yearLabelForDate(
+      employeeId,
+      companyId,
+      startDate,
+    );
     const days = resolved.days;
 
     // A leave day must not already be covered by leave, a site assignment,
@@ -295,14 +302,7 @@ export class LeaveService
         await this.attachFiles(leaveId, companyId, actorUserId, files);
       }
 
-      await this.leaveBalanceService.adjustBalance(
-        employeeId,
-        dto.leaveType,
-        year,
-        'used',
-        days,
-        companyId,
-      );
+      await this.leaveLedger.recordLeaveUsed(leaveId);
 
       this.logger.log(
         `Leave request ${requestNumber} auto-approved (no further tiers)`,
@@ -435,8 +435,9 @@ export class LeaveService
   }
 
   /**
-   * Cancels a DRAFT, SUBMITTED, or IN_REVIEW leave request.
-   * Owner or HR (hr.view) may cancel.
+   * Cancels a DRAFT, SUBMITTED, or IN_REVIEW leave request (owner or HR), or
+   * an APPROVED one (HR only — reverses its USED ledger entry and recalculates
+   * attendance).
    */
   async cancelRequest(
     id: string,
@@ -450,13 +451,26 @@ export class LeaveService
       throw new NotFoundException('Leave request not found');
     }
     await this.assertCanManageLeaveRequest(leave.employeeId, companyId, userId);
-    if (
+    const isApproved = leave.status === LeaveRequestStatus.APPROVED;
+    if (isApproved) {
+      const isHr = await this.permissionService.hasPermission(
+        userId,
+        companyId,
+        'hr',
+        'view',
+      );
+      if (!isHr) {
+        throw new ForbiddenException(
+          'Only HR can cancel an approved leave request',
+        );
+      }
+    } else if (
       leave.status !== LeaveRequestStatus.DRAFT &&
       leave.status !== LeaveRequestStatus.SUBMITTED &&
       leave.status !== LeaveRequestStatus.IN_REVIEW
     ) {
       throw new BadRequestException(
-        'Only draft, submitted, or in-review leave requests can be cancelled',
+        'Only draft, submitted, in-review or approved leave requests can be cancelled',
       );
     }
 
@@ -488,13 +502,24 @@ export class LeaveService
       previousStatus === LeaveRequestStatus.SUBMITTED ||
       previousStatus === LeaveRequestStatus.IN_REVIEW
     ) {
-      await this.leaveBalanceService.adjustBalance(
+      await this.leaveBalanceService.adjustPendingForDate(
         leave.employeeId,
         leave.leaveType,
-        leave.startDate?.getUTCFullYear() ?? new Date().getUTCFullYear(),
-        'pending',
+        leave.startDate ?? new Date(),
         -Number(leave.days ?? 0),
         companyId,
+      );
+    }
+    if (isApproved) {
+      await this.leaveLedger.reverseLeaveUsed(leave.id, userId);
+      const periods = await this.prisma.leaveRequestPeriod.findMany({
+        where: { leaveRequestId: leave.id },
+        select: { startDate: true, endDate: true },
+      });
+      await this.recalculateAttendanceForLeavePeriods(
+        companyId,
+        leave.employeeId,
+        periods,
       );
     }
 
@@ -594,8 +619,6 @@ export class LeaveService
       );
     }
 
-    const year =
-      leave.startDate?.getUTCFullYear() ?? new Date().getUTCFullYear();
     const days = Number(leave.days ?? 0);
     const now = new Date();
 
@@ -625,23 +648,15 @@ export class LeaveService
       leave.status === LeaveRequestStatus.SUBMITTED ||
       leave.status === LeaveRequestStatus.IN_REVIEW
     ) {
-      await this.leaveBalanceService.adjustBalance(
+      await this.leaveBalanceService.adjustPendingForDate(
         leave.employeeId,
         leave.leaveType,
-        year,
-        'pending',
+        leave.startDate ?? new Date(),
         -days,
         companyId,
       );
     } else if (leave.status === LeaveRequestStatus.APPROVED) {
-      await this.leaveBalanceService.adjustBalance(
-        leave.employeeId,
-        leave.leaveType,
-        year,
-        'used',
-        -days,
-        companyId,
-      );
+      await this.leaveLedger.reverseLeaveUsed(leave.id, userId);
     }
   }
 
@@ -716,8 +731,11 @@ export class LeaveService
     companyId: string,
   ): Promise<Record<string, unknown>> {
     const mapped = this.mapLeave(leave);
-    const year =
-      leave.startDate?.getUTCFullYear() ?? new Date().getUTCFullYear();
+    const year = await this.leaveBalanceService.yearLabelForDate(
+      leave.employeeId,
+      companyId,
+      leave.startDate ?? new Date(),
+    );
     const balances = (await this.leaveBalanceService.getBalance(
       leave.employeeId,
       year,
@@ -919,8 +937,6 @@ export class LeaveService
       return;
     }
 
-    const year =
-      leave.startDate?.getUTCFullYear() ?? new Date().getUTCFullYear();
     const days = Number(leave.days ?? 0);
     const now = new Date();
 
@@ -943,32 +959,15 @@ export class LeaveService
       },
     });
 
+    await this.leaveBalanceService.adjustPendingForDate(
+      leave.employeeId,
+      leave.leaveType,
+      leave.startDate ?? now,
+      -days,
+      leave.companyId,
+    );
     if (decision === 'APPROVED') {
-      await this.leaveBalanceService.adjustBalance(
-        leave.employeeId,
-        leave.leaveType,
-        year,
-        'pending',
-        -days,
-        leave.companyId,
-      );
-      await this.leaveBalanceService.adjustBalance(
-        leave.employeeId,
-        leave.leaveType,
-        year,
-        'used',
-        days,
-        leave.companyId,
-      );
-    } else {
-      await this.leaveBalanceService.adjustBalance(
-        leave.employeeId,
-        leave.leaveType,
-        year,
-        'pending',
-        -days,
-        leave.companyId,
-      );
+      await this.leaveLedger.recordLeaveUsed(leave.id);
     }
 
     await this.recalculateAttendanceForLeavePeriods(

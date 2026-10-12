@@ -79,6 +79,7 @@ export interface SubmitSiteAssignmentPayload extends OnBehalfPayload {
   startDate: string;
   endDate: string;
   reason?: string;
+  lateReason?: string;
   createdFromAttendanceImport?: boolean;
 }
 

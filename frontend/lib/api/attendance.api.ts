@@ -13,15 +13,19 @@ import type {
   AttendanceMonthlyApproval,
   AttendancePreviewResult,
   AttendanceRecord,
+  AttendanceScanReviewStatusFilter,
+  AttendanceScanReviewsResponse,
   ConfirmAttendanceImportDto,
   CorrectDailyLogDto,
   CreateFieldMovementLogDto,
+  SubmitFieldMovementLogDto,
   EmployeeDailyLogsResponse,
   FieldMovementLog,
   FieldMovementLogsListResponse,
   FlaggedDaysResponse,
   ListFieldMovementLogsParams,
   MyAttendanceResponse,
+  ReviewScanFlagDto,
   UnlockAttendanceMonthDto,
 } from '@/lib/api/attendance.types';
 import { toQueryString } from '@/lib/query/pm-query-utils';
@@ -312,10 +316,11 @@ export async function createFieldMovementLog(
  */
 export async function submitFieldMovementLog(
   id: string,
+  dto: SubmitFieldMovementLogDto = {},
 ): Promise<FieldMovementLog> {
   return apiPost<FieldMovementLog>(
     `${ATTENDANCE_PATH}/field-movement-logs/${id}/submit`,
-    {},
+    dto,
   );
 }
 
@@ -357,4 +362,27 @@ export async function listFieldMovementLogs(
     page: result.meta.page,
     limit: result.meta.limit,
   };
+}
+
+/**
+ * SCAN_ONLY schedules: scans after the latest scan time for a month.
+ */
+export async function listAttendanceScanReviews(params: {
+  month: number;
+  year: number;
+  status?: AttendanceScanReviewStatusFilter;
+}): Promise<AttendanceScanReviewsResponse> {
+  return apiGet<AttendanceScanReviewsResponse>(
+    `${ATTENDANCE_PATH}/scan-reviews${toQueryString(params)}`,
+  );
+}
+
+/**
+ * Excuse or mark late a SCAN_AFTER_DEADLINE flag (no pay effect).
+ */
+export async function reviewAttendanceScanFlag(
+  dailyLogId: string,
+  dto: ReviewScanFlagDto,
+): Promise<unknown> {
+  return apiPatch(`${ATTENDANCE_PATH}/scan-reviews/${dailyLogId}`, dto);
 }

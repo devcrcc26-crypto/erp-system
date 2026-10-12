@@ -1,7 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import {
   calendarDaysInclusive,
-  earliestAllowedSiteStart,
   rangesOverlap,
   siteNameForDate,
   validateSiteAssignmentDates,
@@ -46,12 +45,10 @@ function dayInput(
 }
 
 describe('site-assignment.util', () => {
-  const today = d(2026, 8, 15);
-
-  it('rejects start before 1st of previous month', () => {
+  it('rejects end before start', () => {
     expect(() =>
-      validateSiteAssignmentDates(d(2026, 6, 30), d(2026, 8, 1), today),
-    ).toThrow(/previous month/);
+      validateSiteAssignmentDates(d(2026, 8, 10), d(2026, 8, 1)),
+    ).toThrow(/End date/);
   });
 
   it('detects overlapping assignments', () => {
@@ -70,11 +67,6 @@ describe('site-assignment.util', () => {
     expect(calendarDaysInclusive(d(2026, 8, 1), d(2026, 8, 15))).toBe(15);
   });
 
-  it('earliest allowed start is July 1 when today is August 2026', () => {
-    expect(earliestAllowedSiteStart(today).toISOString().slice(0, 10)).toBe(
-      '2026-07-01',
-    );
-  });
 });
 
 describe('dayDeduction with site assignments', () => {

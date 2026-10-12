@@ -161,11 +161,14 @@ export function computeSelectableOvertimeWindows(
   } else {
     // Full working day: before morning + after afternoon end.
     // Lunch is not selectable when LUNCH_COUNTS_AS_OVERTIME is false.
+    // Single-shift days (SCAN_ONLY schedules, e.g. 07:00–08:30) have no
+    // afternoon: the duty window ends at morningEnd.
+    const dutyEnd = afternoonEnd ?? (afternoonStart == null ? morningEnd : null);
     if (morningStart != null && morningStart > 0) {
       base.push({ start: 0, end: morningStart });
     }
-    if (afternoonEnd != null && afternoonEnd < END_OF_DAY_MINUTES) {
-      base.push({ start: afternoonEnd, end: END_OF_DAY_MINUTES });
+    if (dutyEnd != null && dutyEnd < END_OF_DAY_MINUTES) {
+      base.push({ start: dutyEnd, end: END_OF_DAY_MINUTES });
     }
     if (LUNCH_COUNTS_AS_OVERTIME && morningEnd != null && afternoonStart != null) {
       base.push({ start: morningEnd, end: afternoonStart });

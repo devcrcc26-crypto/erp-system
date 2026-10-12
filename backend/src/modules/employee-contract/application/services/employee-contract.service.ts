@@ -33,6 +33,7 @@ import {
 import type { IStorageService } from "@/shared/storage/storage.interface";
 import { buildPrismaPagination, PaginatedResult, buildPaginatedResult } from "@/shared/utils/pagination.util";
 import { PayrollCalculationService } from "@/modules/payroll/application/services/payroll-calculation.service";
+import { LeaveLedgerService } from "@/modules/leave-policy/application/services/leave-ledger.service";
 
 type UploadedFile = {
   originalname: string;
@@ -135,7 +136,32 @@ export class EmployeeContractService {
         private readonly payrollCalc: PayrollCalculationService,
         @Inject(STORAGE_SERVICE)
         private readonly storage: IStorageService,
+        private readonly leaveLedger: LeaveLedgerService,
     ){}
+
+    /**
+     * Leave ledger hook: a contract that supersedes another and starts on an
+     * employment anniversary opens a new leave year (idempotent). A failure
+     * here never blocks the contract change.
+     */
+    private async syncLeaveLedger(
+        contractId: string,
+        userId: string,
+        mode: 'activated' | 'recompute',
+    ): Promise<void> {
+        try {
+            if (mode === 'activated') {
+                await this.leaveLedger.onContractActivated(contractId, userId);
+            } else {
+                await this.leaveLedger.recomputeContractEntries(contractId, userId);
+            }
+        } catch (error: unknown) {
+            this.logger.error(
+                `Leave ledger sync failed for contract ${contractId}`,
+                error instanceof Error ? error.stack : String(error),
+            );
+        }
+    }
 
     async createContract(
         dto: CreateEmployeeContractDto,
@@ -236,6 +262,8 @@ export class EmployeeContractService {
         if (files.length > 0) {
             await this.attachFiles(id, companyId, userId, files);
         }
+
+        await this.syncLeaveLedger(id, userId, 'activated');
 
         this.logger.log(`Created employee contract ${contractNumber}`);
         return this.getContract(id, companyId, userId);
@@ -571,6 +599,11 @@ export class EmployeeContractService {
             }
         });
 
+        // Back-dated / moved start: recompute only entries this contract generated.
+        if (startDate.getTime() !== contract.startDate.getTime()) {
+            await this.syncLeaveLedger(id, userId, 'recompute');
+        }
+
         return this.getContract(id, companyId, userId);
     }
 
@@ -637,6 +670,7 @@ export class EmployeeContractService {
                 updatedBy: userId,
             }
         });
+        await this.syncLeaveLedger(id, userId, 'recompute');
         this.logger.log(`Deleted employee contract ${contract.contractNumber}`);
     }
 

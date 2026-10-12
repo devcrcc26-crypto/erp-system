@@ -28,13 +28,53 @@ import { ApprovalDecisionRegistry } from '../../../approvals/application/service
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import { BackdatingPolicyService } from '../../../hr-shared/application/services/backdating-policy.service';
 import { DayCoverageService } from '../../../hr-shared/application/services/day-coverage.service';
 import type {
+  CancelWorkFromHomeRequestDto,
   CreateWorkFromHomeDayDto,
+  PreviewWorkFromHomeRangeDto,
   RequestWorkFromHomeDayDto,
   UpdateWorkFromHomeDayDto,
 } from '../dtos/work-from-home-day.dto';
 import { parseDateOnly } from './work-schedule.dates';
+import {
+  formatWorkFromHomeRangeLabel,
+  monthsOfDateKeys,
+  planWorkFromHomeRange,
+  workFromHomeFormDates,
+  type WorkFromHomeRangePlan,
+} from './work-from-home-range.util';
+import { WorkScheduleService } from './work-schedule.service';
+
+/** Approval form of a work-from-home request (one request per range). */
+interface WorkFromHomeFormData {
+  startDate?: string;
+  endDate?: string;
+  /** Days to create on approval (non-skipped days of the range). */
+  dates?: string[];
+  skipped?: Array<{ date: string; reason: string }>;
+  /** Legacy single-day requests. */
+  date?: string;
+  reason?: string;
+  employeeId?: string;
+  createdFromAttendanceImport?: boolean;
+  /** Days this request actually added on approval (removed again on cancel). */
+  appliedDates?: string[];
+  notAppliedDates?: string[];
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancelReason?: string | null;
+}
+
+type ApplyDayResult = 'applied' | 'covered' | 'conflict';
+
+const OPEN_WFH_STATUSES: ApprovalRequestStatus[] = [
+  ApprovalRequestStatus.PENDING,
+  ApprovalRequestStatus.SUBMITTED,
+  ApprovalRequestStatus.IN_REVIEW,
+  ApprovalRequestStatus.RETURNED,
+];
 
 interface AssignerContext {
   userId: string;
@@ -53,7 +93,8 @@ interface AssignableEmployee {
 
 /**
  * Work-from-home calendar days (attendance credit).
- * - Employees request a date → Discipline Lead approval.
+ * - Employees request a date range → Discipline Lead approval. One approval
+ *   request per range; approval creates the per-day rows for its working days.
  * - Discipline Leads assign employees under their disciplines (multi-select).
  * - HR assigns anyone / departments / company-wide.
  */
@@ -73,6 +114,9 @@ export class WorkFromHomeDayService
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly onBehalfService: OnBehalfService,
     private readonly dayCoverage: DayCoverageService,
+    private readonly backdatingPolicy: BackdatingPolicyService,
+    @Inject(forwardRef(() => WorkScheduleService))
+    private readonly workScheduleService: WorkScheduleService,
   ) {}
 
   onModuleInit(): void {
@@ -382,7 +426,39 @@ export class WorkFromHomeDayService
   }
 
   /**
-   * Employee (or on-behalf) request — opens Employee → Discipline Lead approval.
+   * Working days a range would create for the employee, and skipped days with
+   * the reason (Sunday / holiday / day off / leave / site / already WFH …).
+   */
+  async previewRange(
+    dto: PreviewWorkFromHomeRangeDto,
+    companyId: string,
+    userId: string,
+  ): Promise<WorkFromHomeRangePlan & { employeeId: string; label: string }> {
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      userId,
+      companyId,
+      dto.onBehalfOfEmployeeId,
+    );
+    const plan = await this.buildRangePlan(
+      companyId,
+      employeeId,
+      parseDateOnly(dto.startDate),
+      parseDateOnly(dto.endDate),
+    );
+    return {
+      ...plan,
+      employeeId,
+      label: formatWorkFromHomeRangeLabel(
+        plan.startDate,
+        plan.endDate,
+        plan.workingDays,
+      ),
+    };
+  }
+
+  /**
+   * Employee (or on-behalf) request for a date range — opens one
+   * Employee → Discipline Lead approval carrying the list of working days.
    */
   async submitRequest(
     dto: RequestWorkFromHomeDayDto,
@@ -394,25 +470,29 @@ export class WorkFromHomeDayService
       companyId,
       dto.onBehalfOfEmployeeId,
     );
-    const date = parseDateOnly(dto.date);
-    const dateKey = date.toISOString().slice(0, 10);
+    const startKey = dto.startDate ?? dto.date;
+    const endKey = dto.endDate ?? dto.date ?? dto.startDate;
+    if (!startKey || !endKey) {
+      throw new BadRequestException('Choose the work-from-home dates');
+    }
+    const start = parseDateOnly(startKey);
+    const end = parseDateOnly(endKey);
     const reason = dto.reason.trim();
 
-    if (await this.employeeAlreadyCovered(companyId, employeeId, date)) {
-      throw new ConflictException(
-        'This employee already has work-from-home credit for that date',
+    const plan = await this.buildRangePlan(companyId, employeeId, start, end);
+    if (plan.dates.length === 0) {
+      throw new BadRequestException(
+        'None of the selected days can be work from home (Sundays, holidays, leave, site assignments or existing work from home)',
       );
     }
 
-    await this.assertNoPendingRequest(companyId, employeeId, dateKey);
-    // Not on a day with leave, a site assignment, a field movement (approved or
-    // requested) or attendance scans.
-    await this.dayCoverage.assertUncovered(
+    const backdating = await this.backdatingPolicy.validateSubmissionDates({
       companyId,
-      employeeId,
-      [{ date }],
-      ['LEAVE', 'SITE_ASSIGNMENT', 'FIELD_MOVEMENT', 'ATTENDANCE'],
-    );
+      actorUserId: userId,
+      targetEmployeeId: employeeId,
+      dates: plan.dates.map((key) => parseDateOnly(key)),
+      lateReason: dto.lateReason,
+    });
 
     const resolvedTiers =
       await this.hrApprovalChain.buildSiteAssignmentApprovalChain(
@@ -420,28 +500,43 @@ export class WorkFromHomeDayService
         companyId,
       );
 
-    const title = `Work from home — ${dateKey}`;
+    const title = `Work from home — ${formatWorkFromHomeRangeLabel(
+      plan.startDate,
+      plan.endDate,
+      plan.workingDays,
+    )}`;
+    const formData: WorkFromHomeFormData = {
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      dates: plan.dates,
+      skipped: plan.skipped,
+      reason,
+      employeeId,
+      createdFromAttendanceImport: dto.createdFromAttendanceImport === true,
+    };
 
     if (resolvedTiers.length === 0) {
-      await this.applyEmployeeDay(
+      const applied = await this.applyEmployeeDays(
         companyId,
         employeeId,
-        date,
+        plan.dates,
         reason,
         userId,
-        dto.createdFromAttendanceImport === true,
+        formData.createdFromAttendanceImport === true,
       );
       await this.onBehalfService.recordOnBehalfCreate({
         moduleCode: 'WORK_FROM_HOME',
         companyId,
         actorUserId: userId,
         employeeId,
-        recordId: `${dateKey}:${employeeId}`,
+        recordId: `${plan.startDate}:${plan.endDate}:${employeeId}`,
         recordReference: title,
       });
       return {
         autoApproved: true,
-        date: dateKey,
+        startDate: plan.startDate,
+        endDate: plan.endDate,
+        dates: applied.appliedDates,
         employeeId,
       };
     }
@@ -450,13 +545,7 @@ export class WorkFromHomeDayService
       {
         categoryCode: 'WORK_FROM_HOME',
         title,
-        formData: {
-          date: dateKey,
-          reason,
-          employeeId,
-          createdFromAttendanceImport:
-            dto.createdFromAttendanceImport === true,
-        },
+        formData: formData as Prisma.InputJsonObject,
       },
       companyId,
       employeeId,
@@ -466,6 +555,10 @@ export class WorkFromHomeDayService
           tiers: resolvedTiers,
         },
         createdByUserId: userId,
+        lateSubmission: {
+          isLateSubmission: backdating.isLateSubmission,
+          lateReason: backdating.lateReason,
+        },
       },
     )) as { id: string; requestNumber: string };
 
@@ -479,6 +572,91 @@ export class WorkFromHomeDayService
     });
 
     return approval;
+  }
+
+  /**
+   * Cancels a work-from-home request. Pending: the employee, the person who
+   * filed it, or HR — nothing was created, so nothing is removed. Approved:
+   * HR only — removes the day rows this request added and recalculates.
+   */
+  async cancelRequest(
+    approvalRequestId: string,
+    dto: CancelWorkFromHomeRequestDto,
+    companyId: string,
+    userId: string,
+  ): Promise<{ status: ApprovalRequestStatus; removedDates: string[] }> {
+    const approval = await this.prisma.approvalRequest.findFirst({
+      where: activeOnly({
+        id: approvalRequestId,
+        companyId,
+        category: { code: 'WORK_FROM_HOME' },
+      }),
+    });
+    if (!approval) {
+      throw new NotFoundException('Work-from-home request not found');
+    }
+    const formData = (approval.formData ?? {}) as WorkFromHomeFormData;
+    const isHr = await this.permissionService.hasPermission(
+      userId,
+      companyId,
+      'hr',
+      'view',
+    );
+    const isOpen = OPEN_WFH_STATUSES.includes(approval.status);
+    const isApproved = approval.status === ApprovalRequestStatus.APPROVED;
+    if (!isOpen && !isApproved) {
+      throw new BadRequestException(
+        'Only pending or approved work-from-home requests can be cancelled',
+      );
+    }
+    if (isApproved && !isHr) {
+      throw new ForbiddenException(
+        'Only HR can cancel an approved work-from-home request',
+      );
+    }
+    if (
+      isOpen &&
+      !isHr &&
+      approval.requestedBy !== userId &&
+      approval.createdBy !== userId
+    ) {
+      throw new ForbiddenException(
+        'Only the employee, the person who filed it, or HR can cancel this request',
+      );
+    }
+
+    let removedDates: string[] = [];
+    if (isApproved && formData.employeeId) {
+      const applied =
+        formData.appliedDates ?? workFromHomeFormDates(formData);
+      removedDates = await this.removeEmployeeDays(
+        companyId,
+        formData.employeeId,
+        applied,
+        userId,
+      );
+    }
+
+    const now = new Date();
+    await this.prisma.approvalRequest.update({
+      where: { id: approval.id },
+      data: {
+        status: ApprovalRequestStatus.CANCELLED,
+        completedAt: now,
+        updatedBy: userId,
+        formData: {
+          ...formData,
+          cancelledAt: now.toISOString(),
+          cancelledBy: userId,
+          cancelReason: dto.reason?.trim() || null,
+        } as Prisma.InputJsonObject,
+      },
+    });
+
+    if (removedDates.length > 0 && formData.employeeId) {
+      await this.recalculateDates(companyId, removedDates, formData.employeeId);
+    }
+    return { status: ApprovalRequestStatus.CANCELLED, removedDates };
   }
 
   async onApprovalDecision(
@@ -500,38 +678,158 @@ export class WorkFromHomeDayService
       return;
     }
 
-    const formData = approval.formData as {
-      date?: string;
-      reason?: string;
-      employeeId?: string;
-      createdFromAttendanceImport?: boolean;
-    };
+    const formData = (approval.formData ?? {}) as WorkFromHomeFormData;
+    const dates = workFromHomeFormDates(formData);
 
-    if (!formData.date || !formData.employeeId) {
+    if (dates.length === 0 || !formData.employeeId) {
       this.logger.warn(
-        `WORK_FROM_HOME approval ${approvalRequestId} missing date/employeeId`,
+        `WORK_FROM_HOME approval ${approvalRequestId} missing dates/employeeId`,
       );
       return;
     }
 
     if (decision === 'APPROVED') {
-      await this.applyEmployeeDay(
+      // Exactly the previewed days; days covered meanwhile are skipped.
+      const result = await this.applyEmployeeDays(
         approval.companyId,
         formData.employeeId,
-        parseDateOnly(formData.date),
+        dates,
         (formData.reason ?? 'Approved work-from-home request').trim(),
         approval.createdBy,
         formData.createdFromAttendanceImport === true,
       );
-      return;
+      await this.prisma.approvalRequest.update({
+        where: { id: approval.id },
+        data: {
+          formData: {
+            ...formData,
+            appliedDates: result.appliedDates,
+            notAppliedDates: result.notAppliedDates,
+          } as Prisma.InputJsonObject,
+        },
+      });
     }
+    // Rejected: no day rows were created, nothing to remove.
+  }
 
-    const date = parseDateOnly(formData.date);
-    await this.recalculateMonth(
-      approval.companyId,
-      date,
-      formData.employeeId,
+  /**
+   * Adds the employee to each day, then recalculates their attendance once
+   * per touched month.
+   */
+  private async applyEmployeeDays(
+    companyId: string,
+    employeeId: string,
+    dates: ReadonlyArray<string>,
+    reason: string,
+    actorUserId: string,
+    createdFromAttendanceImport: boolean,
+  ): Promise<{ appliedDates: string[]; notAppliedDates: string[] }> {
+    const appliedDates: string[] = [];
+    const notAppliedDates: string[] = [];
+    for (const key of dates) {
+      const result = await this.applyEmployeeDay(
+        companyId,
+        employeeId,
+        parseDateOnly(key),
+        reason,
+        actorUserId,
+        createdFromAttendanceImport,
+      );
+      if (result === 'applied') {
+        appliedDates.push(key);
+      } else if (result === 'conflict') {
+        notAppliedDates.push(key);
+      }
+    }
+    if (appliedDates.length > 0) {
+      await this.recalculateDates(companyId, appliedDates, employeeId);
+    }
+    return { appliedDates, notAppliedDates };
+  }
+
+  /**
+   * Takes the employee off the given days' rows (employee-scoped rows only);
+   * a row left with nobody is soft-deleted. Returns the dates changed.
+   */
+  private async removeEmployeeDays(
+    companyId: string,
+    employeeId: string,
+    dates: ReadonlyArray<string>,
+    userId: string,
+  ): Promise<string[]> {
+    const removed: string[] = [];
+    for (const key of dates) {
+      const row = await this.prisma.workFromHomeDay.findFirst({
+        where: activeOnly({ companyId, date: parseDateOnly(key) }),
+      });
+      if (
+        !row ||
+        row.scope !== WorkFromHomeScope.EMPLOYEES ||
+        !row.employeeIds.includes(employeeId)
+      ) {
+        continue;
+      }
+      const remaining = row.employeeIds.filter((id) => id !== employeeId);
+      await this.prisma.workFromHomeDay.update({
+        where: { id: row.id },
+        data:
+          remaining.length > 0
+            ? { employeeIds: remaining, updatedBy: userId }
+            : { deletedAt: new Date(), deletedBy: userId, updatedBy: userId },
+      });
+      removed.push(key);
+    }
+    return removed;
+  }
+
+  private async buildRangePlan(
+    companyId: string,
+    employeeId: string,
+    start: Date,
+    end: Date,
+  ): Promise<WorkFromHomeRangePlan> {
+    // Validates order and the 31-day cap before any lookups.
+    planWorkFromHomeRange({ start, end, schedule: [], covers: [] });
+    const working = await this.workScheduleService.calculateWorkingDays(
+      employeeId,
+      companyId,
+      start,
+      end,
     );
+    const scheduleDays = working.breakdown.map((row) => ({
+      date: row.date,
+      type: row.type,
+      holidayName: row.holidayName,
+    }));
+    const candidates = scheduleDays
+      .filter(
+        (row) =>
+          row.date.getUTCDay() !== 0 &&
+          (row.type === 'working' || row.type === 'half'),
+      )
+      .map((row) => ({ date: row.date }));
+    const covers = await this.dayCoverage.findCovers(
+      companyId,
+      employeeId,
+      candidates,
+      ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME', 'FIELD_MOVEMENT', 'ATTENDANCE'],
+    );
+    return planWorkFromHomeRange({ start, end, schedule: scheduleDays, covers });
+  }
+
+  private async recalculateDates(
+    companyId: string,
+    dates: ReadonlyArray<string>,
+    employeeId: string,
+  ): Promise<void> {
+    for (const { month, year } of monthsOfDateKeys(dates)) {
+      await this.attendanceService.recalculateCompanyAttendanceMonth(
+        companyId,
+        month,
+        year,
+        employeeId,
+      );
+    }
   }
 
   private async applyEmployeeDay(
@@ -541,9 +839,9 @@ export class WorkFromHomeDayService
     reason: string,
     actorUserId: string,
     createdFromAttendanceImport = false,
-  ): Promise<void> {
+  ): Promise<ApplyDayResult> {
     if (await this.employeeAlreadyCovered(companyId, employeeId, date)) {
-      return;
+      return 'covered';
     }
 
     const existing = await this.prisma.workFromHomeDay.findFirst({
@@ -565,43 +863,29 @@ export class WorkFromHomeDayService
           updatedBy: actorUserId,
         },
       });
-      await this.recalculateMonth(companyId, date, employeeId);
-      return;
+      return 'applied';
     }
 
-    if (existing.scope === WorkFromHomeScope.ALL) {
-      return;
-    }
-
-    if (existing.scope === WorkFromHomeScope.DEPARTMENTS) {
-      const employee = await this.prisma.user.findFirst({
-        where: activeOnly({ id: employeeId, companyId }),
-        select: { departmentId: true },
-      });
-      if (
-        employee?.departmentId &&
-        existing.departmentIds.includes(employee.departmentId)
-      ) {
-        return;
-      }
-      throw new ConflictException(
-        'A department-scoped work-from-home day already exists for this date. Ask HR to adjust it.',
+    if (existing.scope !== WorkFromHomeScope.EMPLOYEES) {
+      // ALL / matching DEPARTMENTS rows already covered above; another
+      // department's row cannot take a single employee — HR must adjust it.
+      this.logger.warn(
+        `WFH ${date.toISOString().slice(0, 10)}: department-scoped day exists; employee ${employeeId} not added`,
       );
+      return 'conflict';
     }
 
-    if (!existing.employeeIds.includes(employeeId)) {
-      await this.prisma.workFromHomeDay.update({
-        where: { id: existing.id },
-        data: {
-          employeeIds: [...existing.employeeIds, employeeId],
-          ...(createdFromAttendanceImport
-            ? { createdFromAttendanceImport: true }
-            : {}),
-          updatedBy: actorUserId,
-        },
-      });
-      await this.recalculateMonth(companyId, date, employeeId);
-    }
+    await this.prisma.workFromHomeDay.update({
+      where: { id: existing.id },
+      data: {
+        employeeIds: [...existing.employeeIds, employeeId],
+        ...(createdFromAttendanceImport
+          ? { createdFromAttendanceImport: true }
+          : {}),
+        updatedBy: actorUserId,
+      },
+    });
+    return 'applied';
   }
 
   private async mergeEmployeesOntoDay(
@@ -675,37 +959,6 @@ export class WorkFromHomeDayService
       );
     }
     return false;
-  }
-
-  private async assertNoPendingRequest(
-    companyId: string,
-    employeeId: string,
-    dateKey: string,
-  ): Promise<void> {
-    const pending = await this.prisma.approvalRequest.findMany({
-      where: activeOnly({
-        companyId,
-        status: {
-          in: [
-            ApprovalRequestStatus.PENDING,
-            ApprovalRequestStatus.SUBMITTED,
-            ApprovalRequestStatus.IN_REVIEW,
-            ApprovalRequestStatus.RETURNED,
-          ],
-        },
-        category: { code: 'WORK_FROM_HOME' },
-      }),
-      select: { formData: true, requestNumber: true },
-    });
-
-    for (const row of pending) {
-      const data = row.formData as { date?: string; employeeId?: string };
-      if (data.date === dateKey && data.employeeId === employeeId) {
-        throw new ConflictException(
-          `A pending work-from-home request already exists (${row.requestNumber})`,
-        );
-      }
-    }
   }
 
   private async resolveAssigner(

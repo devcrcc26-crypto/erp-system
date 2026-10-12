@@ -10,6 +10,7 @@ import {
   dayCoverMessage,
   resolveDayCovers,
 } from '../utils/day-coverage.util';
+import { workFromHomeFormDates } from '../../../work-schedule/application/services/work-from-home-range.util';
 
 const OPEN_OR_APPROVED = [
   'DRAFT',
@@ -205,14 +206,15 @@ export class DayCoverageService {
     const fromKey = dateKey(from);
     const toKey = dateKey(to);
     for (const row of pending) {
-      const data = row.formData as { date?: string; employeeId?: string } | null;
-      if (
-        data?.employeeId === employeeId &&
-        typeof data.date === 'string' &&
-        data.date >= fromKey &&
-        data.date <= toKey
-      ) {
-        requested.set(data.date, row.requestNumber);
+      const data = row.formData as { employeeId?: string } | null;
+      if (data?.employeeId !== employeeId) {
+        continue;
+      }
+      // Range requests list their days in `dates`; legacy ones use `date`.
+      for (const key of workFromHomeFormDates(row.formData)) {
+        if (key >= fromKey && key <= toKey) {
+          requested.set(key, row.requestNumber);
+        }
       }
     }
     return { approved, requested };

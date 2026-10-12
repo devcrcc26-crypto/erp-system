@@ -184,6 +184,14 @@ function buildAttendance() {
     { register: jest.fn() } as never,
     onBehalf,
     new DayCoverageService(prisma as never),
+    {
+      validateSubmissionDates: jest.fn(async () => ({
+        earliestDate: '2026-01-01',
+        isLateSubmission: false,
+        lateReason: null,
+        actorKind: 'EMPLOYEE_SELF',
+      })),
+    } as never,
   );
   return { service, onBehalf, prisma, created, audits };
 }

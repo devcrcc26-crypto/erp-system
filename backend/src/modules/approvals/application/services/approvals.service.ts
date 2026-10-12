@@ -48,6 +48,11 @@ import {
   SubmitRequestDto,
 } from '../dtos/approval.dtos';
 import type { ApprovalFinalDecision } from '../ports/approval-decision.listener';
+import { markPayrollAttendanceSnapshotStale } from '../../../attendance/application/utils/attendance-recalc-policy.util';
+import {
+  lateSubmissionMetaFromApprovalRequest,
+  payrollMonthsFromApprovalRequest,
+} from '../../../hr-shared/application/utils/late-submission-meta.util';
 import { resolveCategoryPermissionModule } from '../utils/approval-category-permission.util';
 import { isTrueSystemAdministrator } from '../../../../shared/permissions/system-admin.util';
 import {
@@ -93,6 +98,14 @@ const USER_SELECT = {
 const REQUEST_DETAIL_INCLUDE = {
   category: true,
   requester: { select: USER_SELECT },
+  creator: {
+    select: {
+      id: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+    },
+  },
   tiers: {
     include: { approver: { select: USER_SELECT } },
     orderBy: { tierOrder: 'asc' as const },
@@ -277,6 +290,10 @@ export class ApprovalsService {
       resolvedTiers?: MatchedApprovalRule;
       /** On-behalf filings: the person who filed it (defaults to `userId`). */
       createdByUserId?: string;
+      lateSubmission?: {
+        isLateSubmission: boolean;
+        lateReason: string | null;
+      };
     },
   ): Promise<unknown> {
     const category = await this.prisma.approvalCategory.findFirst({
@@ -387,6 +404,9 @@ export class ApprovalsService {
             matchedRuleName: matched.ruleName,
             submittedAt: now,
             attachmentFolderId: dto.documentFolderId ?? null,
+            isLateSubmission:
+              options?.lateSubmission?.isLateSubmission === true,
+            lateReason: options?.lateSubmission?.lateReason ?? null,
             createdBy: options?.createdByUserId ?? userId,
             updatedBy: options?.createdByUserId ?? userId,
             tiers: {
@@ -483,7 +503,10 @@ export class ApprovalsService {
     // Field movement filed on someone's behalf: who filed it, and whether the
     // viewer is that person (they may not approve it — see approveTier).
     const fieldMovement = request.fieldMovementLog;
-    const onBehalf =
+    let onBehalf: {
+      submittedBy: { id: string; name: string };
+      viewerIsSubmitter: boolean;
+    } | null =
       fieldMovement && fieldMovement.createdBy !== fieldMovement.employeeId
         ? {
             submittedBy: {
@@ -500,11 +523,39 @@ export class ApprovalsService {
           }
         : null;
 
+    if (
+      !onBehalf &&
+      request.createdBy !== request.requestedBy &&
+      request.creator
+    ) {
+      onBehalf = {
+        submittedBy: {
+          id: request.creator.id,
+          name: [
+            request.creator.firstName,
+            request.creator.middleName,
+            request.creator.lastName,
+          ]
+            .filter((part) => Boolean(part && part.trim()))
+            .join(' '),
+        },
+        viewerIsSubmitter: request.createdBy === userId,
+      };
+    }
+
+    const lateSubmission = lateSubmissionMetaFromApprovalRequest({
+      isLateSubmission: request.isLateSubmission,
+      lateReason: request.lateReason,
+      categoryCode: request.category?.code ?? null,
+      formData: request.formData,
+    });
+
     return {
       ...request,
       categoryCode: request.category?.code ?? null,
       sourceId,
       onBehalf,
+      lateSubmission,
       leaveRequest: undefined,
       overtimeSheet: undefined,
       flightApplication: undefined,
@@ -784,6 +835,12 @@ export class ApprovalsService {
       const pageRows = filtered.slice(skip, skip + take).map((row) => ({
         ...row,
         categoryCode: row.category?.code ?? null,
+        lateSubmission: lateSubmissionMetaFromApprovalRequest({
+          isLateSubmission: row.isLateSubmission,
+          lateReason: row.lateReason,
+          categoryCode: row.category?.code ?? null,
+          formData: row.formData,
+        }),
         needsTicketAcknowledgement:
           flightAckRequestIds.has(row.id) ||
           businessTripAckRequestIds.has(row.id),
@@ -818,7 +875,21 @@ export class ApprovalsService {
       this.prisma.approvalRequest.count({ where }),
     ]);
 
-    return buildPaginatedResult(rows, total, page, limit);
+    return buildPaginatedResult(
+      rows.map((row) => ({
+        ...row,
+        categoryCode: row.category?.code ?? null,
+        lateSubmission: lateSubmissionMetaFromApprovalRequest({
+          isLateSubmission: row.isLateSubmission,
+          lateReason: row.lateReason,
+          categoryCode: row.category?.code ?? null,
+          formData: row.formData,
+        }),
+      })),
+      total,
+      page,
+      limit,
+    );
   }
 
   /**
@@ -1657,12 +1728,10 @@ export class ApprovalsService {
           'Leave request is missing dates and cannot be resubmitted',
         );
       }
-      const year = startDate.getUTCFullYear();
-      await this.leaveBalanceService.adjustBalance(
+      await this.leaveBalanceService.adjustPendingForDate(
         request.leaveRequest.employeeId,
         request.leaveRequest.leaveType,
-        year,
-        'pending',
+        startDate,
         Number(request.leaveRequest.days ?? 0),
         companyId,
       );
@@ -1910,6 +1979,26 @@ export class ApprovalsService {
     approvalRequestId: string,
     decision: ApprovalFinalDecision,
   ): Promise<void> {
+    if (decision === 'APPROVED') {
+      const request = await this.prisma.approvalRequest.findFirst({
+        where: activeOnly({ id: approvalRequestId }),
+        include: { category: { select: { code: true } } },
+      });
+      if (request?.isLateSubmission) {
+        const months = payrollMonthsFromApprovalRequest({
+          categoryCode: request.category?.code ?? null,
+          formData: request.formData,
+        });
+        for (const period of months) {
+          await markPayrollAttendanceSnapshotStale(
+            this.prisma,
+            request.companyId,
+            period.month,
+            period.year,
+          );
+        }
+      }
+    }
     await this.decisionRegistry.notify(approvalRequestId, decision);
   }
 

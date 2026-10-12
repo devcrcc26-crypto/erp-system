@@ -1,12 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import {
+  isEmploymentAnniversary,
+  toDateOnlyUtc,
+} from '../utils/leave-year.util';
+import { LeaveLedgerService } from './leave-ledger.service';
 import { LeavePolicyService } from './leave-policy.service';
 
 /**
- * Leave balance refresh:
- * - daily at 06:00 for employees whose first contract anniversary is today
- * - 1 January safety net for employees with no contract start date
+ * Leave balance refresh (ledger):
+ * - daily at 06:00: employees whose employment anniversary is today open a new
+ *   leave year (entitlement for their service years + annual carry-over /
+ *   expiry). Idempotent per leave year, so a renewal contract on the same day
+ *   never grants twice.
+ * - 1 January safety net for employees with no employment date or contract
  */
 @Injectable()
 export class LeaveBalanceCronService {
@@ -15,65 +23,37 @@ export class LeaveBalanceCronService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly leavePolicyService: LeavePolicyService,
+    private readonly leaveLedger: LeaveLedgerService,
   ) {}
 
   /**
-   * Refreshes balances on the anniversary of each employee's first contract.
+   * Opens the new leave year on each employee's employment anniversary.
    */
   @Cron('0 6 * * *')
   async refreshAnniversaryBalances(): Promise<void> {
-    const today = new Date();
-    const todayMonth = today.getMonth() + 1;
-    const todayDay = today.getDate();
-    const currentYear = today.getFullYear();
+    const today = toDateOnlyUtc(new Date());
 
     const employees = await this.prisma.user.findMany({
       where: {
         isActive: true,
         deletedAt: null,
-        leavePolicyId: { not: null },
-        employeeContractEmployee: {
-          some: {
-            status: 'ACTIVE',
-            deletedAt: null,
-          },
-        },
+        excludedFromHrProcesses: false,
+        employmentDate: { not: null },
       },
-      select: {
-        id: true,
-        companyId: true,
-        employeeContractEmployee: {
-          where: { deletedAt: null },
-          orderBy: { startDate: 'asc' },
-          take: 1,
-          select: { startDate: true },
-        },
-      },
+      select: { id: true, companyId: true, employmentDate: true },
     });
 
     let refreshed = 0;
     for (const employee of employees) {
-      const firstContract = employee.employeeContractEmployee[0];
-      if (!firstContract?.startDate) {
+      if (!isEmploymentAnniversary(employee.employmentDate, today)) {
         continue;
       }
-
-      const startDate = firstContract.startDate;
-      const contractMonth = startDate.getUTCMonth() + 1;
-      const contractDay = startDate.getUTCDate();
-      if (contractMonth !== todayMonth || contractDay !== todayDay) {
-        continue;
-      }
-      if (startDate.getUTCFullYear() === currentYear) {
-        continue;
-      }
-
       try {
-        await this.leavePolicyService.refreshEmployeeBalances(
+        await this.leaveLedger.openLeaveYearForDate(
           employee.id,
           employee.companyId,
-          currentYear,
-          startDate,
+          today,
+          'Leave year opened (employment anniversary)',
         );
         refreshed += 1;
       } catch (error: unknown) {
@@ -86,7 +66,7 @@ export class LeaveBalanceCronService {
     }
 
     this.logger.log(
-      `Anniversary leave refresh complete: ${refreshed} employee(s) for ${currentYear}`,
+      `Anniversary leave refresh complete: ${refreshed} employee(s) on ${today.toISOString().slice(0, 10)}`,
     );
   }
 

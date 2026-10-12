@@ -161,6 +161,49 @@ function mapLeavesForResponse(
   }));
 }
 
+/** Approved leave rows for attendance list / HR table (includes total days per request). */
+export type AttendanceApprovedLeaveSummary = {
+  id: string;
+  leaveType: LeaveType;
+  days: number;
+  periods: LeaveCoveredAbsencesResult['leaves'][number]['periods'];
+};
+
+export function formatApprovedLeavesForAttendanceList(
+  leaves: LeaveCoverageLeave[],
+): AttendanceApprovedLeaveSummary[] {
+  return mapLeavesForResponse(leaves).map((leave) => ({
+    id: leave.id,
+    leaveType: leave.leaveType,
+    days: leave.periods.reduce((sum, period) => sum + period.days, 0),
+    periods: leave.periods,
+  }));
+}
+
+/**
+ * Approved leave requests overlapping a month — for list views (independent of daily logs).
+ */
+export async function getApprovedLeaveSummariesForEmployees(
+  prisma: AttendanceLeavePrisma,
+  companyId: string,
+  employeeIds: string[],
+  month: number,
+  year: number,
+): Promise<Map<string, AttendanceApprovedLeaveSummary[]>> {
+  const byEmployee = await fetchApprovedLeavesForMonth(
+    prisma,
+    companyId,
+    employeeIds,
+    month,
+    year,
+  );
+  const result = new Map<string, AttendanceApprovedLeaveSummary[]>();
+  for (const [employeeId, leaves] of byEmployee) {
+    result.set(employeeId, formatApprovedLeavesForAttendanceList(leaves));
+  }
+  return result;
+}
+
 const emptyCoverage = (): LeaveCoveredAbsencesResult => ({
   coveredDays: 0,
   coveredDates: [],

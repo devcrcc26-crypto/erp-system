@@ -126,8 +126,13 @@ export interface ScheduleDayTimes {
 
 /**
  * Validates a single weekday definition and returns auto-calculated hours.
+ * `allowSingleShift` (SCAN_ONLY schedules): a full working day may define only
+ * the first window (e.g. 07:00–08:30) and leave the afternoon empty.
  */
-export function computeAndValidateDayHours(day: ScheduleDayTimes): number {
+export function computeAndValidateDayHours(
+  day: ScheduleDayTimes,
+  options?: { allowSingleShift?: boolean },
+): number {
   if (!day.isWorkingDay) {
     return 0;
   }
@@ -141,6 +146,14 @@ export function computeAndValidateDayHours(day: ScheduleDayTimes): number {
   let hours = hoursBetween(day.morningStart, day.morningEnd);
 
   if (day.isHalfDay) {
+    return hours;
+  }
+
+  if (
+    options?.allowSingleShift &&
+    !day.afternoonStart &&
+    !day.afternoonEnd
+  ) {
     return hours;
   }
 

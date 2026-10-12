@@ -317,6 +317,9 @@
       "returnedHint": "Please make changes and resubmit.",
       "returnedWithNote": "Approver note: {{note}}. Please make changes and resubmit.",
       "rejectedTitle": "This request was rejected",
+      "lateSubmissionBadge": "Late submission — for {{month}}",
+      "lateSubmissionReason": "Reason: {{reason}}",
+      "lateSubmissionOnBehalf": "Entered by {{name}} on behalf",
       "resubmit": {
         "title": "Resubmit",
         "returnNote": "Return note",
@@ -548,7 +551,7 @@
         },
         "form": {
           "title": "Site assignment request",
-          "description": "Dates may include past days back to the 1st of the previous month and future planned site work.",
+          "description": "Dates follow payroll lock rules. HR may back-date earlier months with a reason.",
           "detailsStepDescription": "Enter the site, dates, and optional project or reason for this assignment.",
           "reviewStepDescription": "Confirm the assignment details before submitting for approval.",
           "steps": {
@@ -563,6 +566,8 @@
           "calendarDays": "{{count}} calendar days",
           "daysLabel": "days",
           "reason": "Reason",
+          "lateReason": "Late entry reason",
+          "lateReasonPlaceholder": "Why this is being entered after the month ended…",
           "datesRequired": "Select a start and end date.",
           "submit": "Submit request",
           "submitSuccess": "Site assignment submitted.",
@@ -807,6 +812,34 @@
           "wouldDeduct": "Would deduct {{days}}d (not applied)",
           "deducted": "Deducted {{days}}d",
           "earlyDeparturePending": "Early departure — approval pending",
+          "scanReview": {
+            "title": "Scans after the latest scan time",
+            "subtitle": "Scan-only schedules: the employee is present, but the first scan was after the schedule's latest scan time. No pay effect either way.",
+            "empty": "No late scans this month.",
+            "colEmployee": "Employee",
+            "colDate": "Date",
+            "colScanTime": "First scan",
+            "colDecision": "Decision",
+            "colNote": "Note",
+            "colReviewedBy": "Reviewed by",
+            "colActions": "Actions",
+            "pending": "Pending",
+            "decisionEXCUSED": "Excused",
+            "decisionMARKED_LATE": "Marked late",
+            "excuse": "Excuse",
+            "markLate": "Mark late",
+            "change": "Change",
+            "notePlaceholder": "Optional note",
+            "reviewTitle": "{{decision}} — {{name}}, {{date}}",
+            "save": "Save",
+            "saved": "Review saved.",
+            "saveFailed": "Failed to save review.",
+            "monthlyCounts": "Per employee this month",
+            "countSummary": "{{total}} late scan(s): {{pending}} pending, {{excused}} excused, {{markedLate}} marked late",
+            "filterAll": "All",
+            "filterPending": "Pending",
+            "filterReviewed": "Reviewed"
+          },
           "columns": {
             "flaggedDays": "Flagged Days",
             "resolved": "Resolved",
@@ -843,7 +876,8 @@
             "onSiteAt": "On site — {{siteName}}",
             "alsoOnSite": "also on site",
             "LEAVE": "Leave",
-            "FIELD_MOVEMENT_PENDING": "Field movement pending"
+            "FIELD_MOVEMENT_PENDING": "Field movement pending",
+            "ENROLMENT_GRACE": "Enrolment grace"
           }
         },
         "importModal": {
@@ -3805,7 +3839,7 @@
       "assigned": "Schedule assigned.",
       "recalcAttendanceTitle": "Update attendance from this date?",
       "recalcAttendanceDescription": "Recalculate this employee’s attendance records from {{date}} onward using the new schedule? Approved (locked) months are skipped. Draft payroll runs should be recalculated afterward if needed.",
-      "recalcAttendanceEditDescription": "Weekday hours changed. Recalculate attendance for employees on this schedule from the date below? Approved (locked) months are skipped.",
+      "recalcAttendanceEditDescription": "Weekday hours or check mode changed. Recalculate imported attendance for employees on this schedule? Approved or payroll-locked months are skipped and flagged for recalculation.",
       "recalcAttendanceYes": "Yes, update attendance",
       "recalcAttendanceNo": "No, assign only",
       "recalcAttendanceSaveOnly": "No, save schedule only",
@@ -3832,7 +3866,17 @@
       "endAfterStart": "End must be after start.",
       "summaryTitle": "Week summary",
       "workingDays": "Working days",
-      "halfDays": "Half days"
+      "halfDays": "Half days",
+      "checkMode": "Check mode",
+      "checkModeStandard": "Standard",
+      "checkModeScanOnly": "Scan only",
+      "checkModeHint": "Standard applies late, early-departure and missing-punch rules. Scan only is for staff who scan once (e.g. cleaners finishing before office hours).",
+      "latestScanTime": "Latest scan time",
+      "latestScanTimeRequired": "Set the latest scan time.",
+      "scanOnlyNote": "Present if any scan that day; scan after this time is flagged for HR review.",
+      "shift": "Shift",
+      "shiftHint": "Scan only: one shift window. Overtime cannot be claimed inside it.",
+      "recalcAttendanceFromHint": "Leave empty to recalculate from each employee's start date on this schedule."
     },
     "publicHoliday": {
       "new": "New holiday",

@@ -111,7 +111,8 @@ export interface AttendanceDailyLog {
     | 'WORK_FROM_HOME'
     | 'ON_SITE'
     | 'LEAVE'
-    | 'FIELD_MOVEMENT_PENDING';
+    | 'FIELD_MOVEMENT_PENDING'
+    | 'ENROLMENT_GRACE';
   dayDeduction?: number;
   siteAssignmentName?: string | null;
   corrections?: AttendanceDailyLogCorrection[];
@@ -543,6 +544,11 @@ export interface CreateFieldMovementLogDto {
   notes?: string;
   onBehalfOfEmployeeId?: string;
   autoApproveTier?: boolean;
+  lateReason?: string;
+}
+
+export interface SubmitFieldMovementLogDto {
+  lateReason?: string;
 }
 
 export interface FieldMovementLogEntry {
@@ -621,4 +627,47 @@ export interface FieldMovementLogsListResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+/** HR decision on a SCAN_AFTER_DEADLINE flag (no pay effect). */
+export type AttendanceScanReviewDecision = 'EXCUSED' | 'MARKED_LATE';
+
+export type AttendanceScanReviewStatusFilter = 'PENDING' | 'REVIEWED' | 'ALL';
+
+/** SCAN_ONLY schedule: earliest scan after the schedule's latest scan time. */
+export interface AttendanceScanReviewItem {
+  dailyLogId: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string | null;
+  departmentName: string | null;
+  date: string;
+  scanTime: string | null;
+  needsReview: boolean;
+  decision: AttendanceScanReviewDecision | null;
+  note: string | null;
+  reviewedBy: { id: string; name: string } | null;
+  reviewedAt: string | null;
+}
+
+export interface AttendanceScanReviewEmployeeCount {
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string | null;
+  total: number;
+  pending: number;
+  excused: number;
+  markedLate: number;
+}
+
+export interface AttendanceScanReviewsResponse {
+  month: number;
+  year: number;
+  items: AttendanceScanReviewItem[];
+  employees: AttendanceScanReviewEmployeeCount[];
+}
+
+export interface ReviewScanFlagDto {
+  decision: AttendanceScanReviewDecision;
+  note?: string;
 }

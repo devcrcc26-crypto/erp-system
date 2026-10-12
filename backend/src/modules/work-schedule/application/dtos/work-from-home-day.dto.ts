@@ -10,6 +10,7 @@ import {
   IsUUID,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateWorkFromHomeDayDto {
@@ -77,9 +78,23 @@ export class UpdateWorkFromHomeDayDto {
 }
 
 export class RequestWorkFromHomeDayDto {
-  @ApiProperty({ example: '2026-08-12' })
+  @ApiPropertyOptional({
+    example: '2026-08-11',
+    description: 'First day of the range (or use legacy `date` for one day)',
+  })
+  @ValidateIf((o: RequestWorkFromHomeDayDto) => o.date === undefined)
   @IsDateString()
-  date!: string;
+  startDate?: string;
+
+  @ApiPropertyOptional({ example: '2026-08-15', description: 'Last day (inclusive)' })
+  @ValidateIf((o: RequestWorkFromHomeDayDto) => o.date === undefined)
+  @IsDateString()
+  endDate?: string;
+
+  @ApiPropertyOptional({ example: '2026-08-12', description: 'Legacy single day' })
+  @IsOptional()
+  @IsDateString()
+  date?: string;
 
   @ApiProperty()
   @IsString()
@@ -96,6 +111,15 @@ export class RequestWorkFromHomeDayDto {
 
   @IsOptional()
   createdFromAttendanceImport?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Required when HR enters a date before the current calendar month',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  lateReason?: string;
 }
 
 export class ListWorkFromHomeDaysDto {
@@ -106,4 +130,29 @@ export class ListWorkFromHomeDaysDto {
   @ApiPropertyOptional()
   @IsOptional()
   year?: number;
+}
+
+/** Preview which days of a range become work-from-home days. */
+export class PreviewWorkFromHomeRangeDto {
+  @ApiProperty({ example: '2026-08-11' })
+  @IsDateString()
+  startDate!: string;
+
+  @ApiProperty({ example: '2026-08-15' })
+  @IsDateString()
+  endDate!: string;
+
+  @ApiPropertyOptional({ description: 'On-behalf target employee' })
+  @IsOptional()
+  @IsUUID('4')
+  onBehalfOfEmployeeId?: string;
+}
+
+/** Cancel a pending (requester / HR) or approved (HR) work-from-home request. */
+export class CancelWorkFromHomeRequestDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  reason?: string;
 }

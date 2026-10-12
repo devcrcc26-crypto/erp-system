@@ -10,12 +10,16 @@ import {
   apiGet,
   apiGetPaginated,
   apiPatch,
+  apiPost,
   apiPostForm,
   downloadApiFile,
 } from '@/lib/api/client';
 import { appendOnBehalfFields } from '@/lib/api/on-behalf.types';
 import type {
   LeaveBalance,
+  LeaveBalanceEntry,
+  LeaveBalanceEntryPayload,
+  LeaveBalanceLedger,
   LeaveRequestDetail,
   LeaveRequestListItem,
   EmployeeLeaveBalanceSummary,
@@ -51,6 +55,8 @@ export const leaveKeys = {
     [...leaveKeys.balances(), 'employee', employeeId, year] as const,
   companyBalances: (params: ListLeaveBalancesParams) =>
     [...leaveKeys.balances(), 'company', params] as const,
+  ledger: (employeeId: string | undefined, year: number | undefined) =>
+    [...leaveKeys.balances(), 'ledger', employeeId ?? 'me', year ?? 'all'] as const,
 };
 
 function buildListQuery(params: ListLeaveRequestsParams): string {
@@ -400,4 +406,57 @@ export async function downloadLeaveRequestImportTemplate(): Promise<void> {
     `${LEAVE_PATH}/import/template`,
     'leave-request-import-template.xlsx',
   );
+}
+
+/**
+ * Leave balance ledger (all entries, newest first) for me or an employee.
+ * `year` = leave-year label; omitted → every leave year.
+ */
+export function useLeaveBalanceLedger(
+  employeeId: string | undefined,
+  year?: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: leaveKeys.ledger(employeeId, year),
+    queryFn: () =>
+      apiGet<LeaveBalanceLedger>(
+        `${LEAVE_PATH}/balance-ledger${toQueryString({
+          ...(employeeId ? { employeeId } : {}),
+          ...(year != null ? { year } : {}),
+        })}`,
+      ),
+    enabled,
+    retry: false,
+  });
+}
+
+/** HR: append an ADJUSTMENT (±days, reason required). */
+export function useAdjustLeaveBalance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: LeaveBalanceEntryPayload) =>
+      apiPost<LeaveBalanceEntry>(
+        `${LEAVE_PATH}/balance-ledger/adjustments`,
+        payload,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.balances() });
+    },
+  });
+}
+
+/** HR go-live: OPENING_BALANCE for the employee's current leave year. */
+export function useSetOpeningLeaveBalance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: LeaveBalanceEntryPayload) =>
+      apiPost<LeaveBalanceEntry>(
+        `${LEAVE_PATH}/balance-ledger/opening`,
+        payload,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.balances() });
+    },
+  });
 }

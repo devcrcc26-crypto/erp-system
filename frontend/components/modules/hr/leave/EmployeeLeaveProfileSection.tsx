@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, InputNumber, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
@@ -8,7 +8,8 @@ import { CalendarDays } from 'lucide-react';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import TableEmptyState from '@/components/ui/TableEmptyState';
-import { useCanViewHr } from '@/hooks/use-auth-capabilities';
+import LeaveBalanceLedgerSection from '@/components/modules/hr/leave/LeaveBalanceLedgerSection';
+import { useCanEditHr, useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
 import type {
@@ -17,6 +18,7 @@ import type {
   LeaveType,
 } from '@/lib/api/leave.types';
 import {
+  useLeaveBalanceLedger,
   useLeaveBalances,
   useLeaveRequestsAll,
   useMyLeaveBalances,
@@ -171,13 +173,28 @@ export default function EmployeeLeaveProfileSection({
   const { t } = useEpcTranslation();
   const router = useRouter();
   const canViewHr = useCanViewHr();
+  const canEditHr = useCanEditHr();
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
+  const [yearTouched, setYearTouched] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
 
   const isSelf = mode === 'self';
   const targetEmployeeId = isSelf ? undefined : employeeId;
   const employeeEnabled = Boolean(targetEmployeeId);
+
+  // Leave years follow the employment anniversary: default to the current one.
+  const ledgerQuery = useLeaveBalanceLedger(
+    targetEmployeeId,
+    undefined,
+    isSelf || employeeEnabled,
+  );
+  const currentLeaveYear = ledgerQuery.data?.currentLeaveYear;
+  useEffect(() => {
+    if (currentLeaveYear && !yearTouched) {
+      setYear(currentLeaveYear.label);
+    }
+  }, [currentLeaveYear, yearTouched]);
 
   const myBalancesQuery = useMyLeaveBalances(year, isSelf);
   const employeeBalancesQuery = useLeaveBalances(
@@ -367,6 +384,7 @@ export default function EmployeeLeaveProfileSection({
               onChange={(value) => {
                 if (typeof value === 'number') {
                   setYear(value);
+                  setYearTouched(true);
                 }
               }}
               size="small"
@@ -394,6 +412,11 @@ export default function EmployeeLeaveProfileSection({
           </div>
         )}
       </LeaveProfileSection>
+
+      <LeaveBalanceLedgerSection
+        employeeId={targetEmployeeId}
+        canEdit={!isSelf && canEditHr}
+      />
 
       <LeaveProfileSection
         title={t('hr.leave.historyTitle')}

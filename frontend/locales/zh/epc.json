@@ -317,6 +317,9 @@
       "returnedHint": "请修改后重新提交。",
       "returnedWithNote": "审批人备注：{{note}}。请修改后重新提交。",
       "rejectedTitle": "此申请已拒绝",
+      "lateSubmissionBadge": "迟交 — {{month}}",
+      "lateSubmissionReason": "原因：{{reason}}",
+      "lateSubmissionOnBehalf": "由 {{name}} 代录",
       "resubmit": {
         "title": "重新提交",
         "returnNote": "退回备注",
@@ -807,6 +810,34 @@
           "wouldDeduct": "将扣 {{days}} 天（未执行）",
           "deducted": "已扣 {{days}} 天",
           "earlyDeparturePending": "早退 — 审批中",
+          "scanReview": {
+            "title": "晚于最晚打卡时间的打卡",
+            "subtitle": "仅打卡班次：员工计为出勤，但首次打卡晚于班次的最晚打卡时间。无论如何处理均不影响工资。",
+            "empty": "本月没有晚打卡记录。",
+            "colEmployee": "员工",
+            "colDate": "日期",
+            "colScanTime": "首次打卡",
+            "colDecision": "处理结果",
+            "colNote": "备注",
+            "colReviewedBy": "审核人",
+            "colActions": "操作",
+            "pending": "待处理",
+            "decisionEXCUSED": "已豁免",
+            "decisionMARKED_LATE": "记为迟到",
+            "excuse": "豁免",
+            "markLate": "记为迟到",
+            "change": "修改",
+            "notePlaceholder": "备注（可选）",
+            "reviewTitle": "{{decision}} — {{name}}，{{date}}",
+            "save": "保存",
+            "saved": "审核已保存。",
+            "saveFailed": "保存审核失败。",
+            "monthlyCounts": "本月按员工统计",
+            "countSummary": "晚打卡 {{total}} 次：待处理 {{pending}}，已豁免 {{excused}}，记为迟到 {{markedLate}}",
+            "filterAll": "全部",
+            "filterPending": "待处理",
+            "filterReviewed": "已处理"
+          },
           "columns": {
             "flaggedDays": "异常天数",
             "resolved": "已解决",
@@ -842,7 +873,8 @@
             "onSiteAt": "现场 — {{siteName}}",
             "alsoOnSite": "同时在现场",
             "LEAVE": "休假",
-            "FIELD_MOVEMENT_PENDING": "外出登记待审批"
+            "FIELD_MOVEMENT_PENDING": "外出登记待审批",
+            "ENROLMENT_GRACE": "入职登记宽限"
           }
         },
         "importModal": {
@@ -3804,7 +3836,7 @@
       "assigned": "时间表已分配。",
       "recalcAttendanceTitle": "是否从此日期起更新考勤？",
       "recalcAttendanceDescription": "是否按新班次从 {{date}} 起重新计算该员工的考勤记录？已批准（锁定）的月份会跳过。如有草稿工资单，之后请重新计算。",
-      "recalcAttendanceEditDescription": "工作日安排已更改。是否从下方日期起为使用该班次的员工重新计算考勤？已批准（锁定）的月份会跳过。",
+      "recalcAttendanceEditDescription": "工作日安排或考勤方式已更改。是否为使用该班次的员工重新计算已导入的考勤？已批准或工资已锁定的月份会跳过并标记为待重新计算。",
       "recalcAttendanceYes": "是，更新考勤",
       "recalcAttendanceNo": "否，仅分配",
       "recalcAttendanceSaveOnly": "否，仅保存班次",
@@ -3831,7 +3863,17 @@
       "endAfterStart": "结束时间必须晚于开始时间。",
       "summaryTitle": "每周汇总",
       "workingDays": "工作日",
-      "halfDays": "半天"
+      "halfDays": "半天",
+      "checkMode": "考勤方式",
+      "checkModeStandard": "标准",
+      "checkModeScanOnly": "仅打卡",
+      "checkModeHint": "标准：适用迟到、早退和漏打卡规则。仅打卡：适用于每天只打一次卡的员工（如在上班前完成工作的保洁）。",
+      "latestScanTime": "最晚打卡时间",
+      "latestScanTimeRequired": "请设置最晚打卡时间。",
+      "scanOnlyNote": "当天有任意打卡即计为出勤；晚于此时间的打卡将标记给人事审核。",
+      "shift": "班次",
+      "shiftHint": "仅打卡：一个班次时段，该时段内不能申报加班。",
+      "recalcAttendanceFromHint": "留空则从每位员工开始使用该班次的日期起重新计算。"
     },
     "publicHoliday": {
       "new": "新建假期",

@@ -19,11 +19,19 @@ export interface CreateWorkFromHomeDayDto {
   employeeIds?: string[];
 }
 
+/** Longest range one work-from-home request may cover (calendar days). */
+export const WFH_MAX_RANGE_DAYS = 31;
+
 export interface RequestWorkFromHomeDayDto {
-  date: string;
+  /** Range (preferred). */
+  startDate?: string;
+  endDate?: string;
+  /** Legacy single day. */
+  date?: string;
   reason: string;
   onBehalfOfEmployeeId?: string;
   createdFromAttendanceImport?: boolean;
+  lateReason?: string;
 }
 
 export interface WorkFromHomeAssignableEmployee {
@@ -75,4 +83,71 @@ export async function updateWorkFromHomeDay(
 
 export async function deleteWorkFromHomeDay(id: string): Promise<void> {
   await apiDelete(`/hr/attendance/work-from-home/${id}`);
+}
+
+export type WorkFromHomeSkipReason =
+  | 'SUNDAY'
+  | 'HOLIDAY'
+  | 'NON_WORKING_DAY'
+  | 'LEAVE'
+  | 'SITE_ASSIGNMENT'
+  | 'ALREADY_WFH'
+  | 'WFH_REQUESTED'
+  | 'FIELD_MOVEMENT'
+  | 'ATTENDANCE';
+
+export interface WorkFromHomeRangeDay {
+  date: string;
+  included: boolean;
+  reason?: WorkFromHomeSkipReason;
+  holidayName?: string;
+  reference?: string | null;
+}
+
+export interface WorkFromHomeRangePreview {
+  employeeId: string;
+  startDate: string;
+  endDate: string;
+  days: WorkFromHomeRangeDay[];
+  dates: string[];
+  skipped: Array<{ date: string; reason: WorkFromHomeSkipReason }>;
+  workingDays: number;
+  /** "Aug 11 – Aug 15 (4 days)" */
+  label: string;
+}
+
+/** Approval formData of a work-from-home request. */
+export interface WorkFromHomeRequestForm {
+  startDate?: string;
+  endDate?: string;
+  dates?: string[];
+  skipped?: Array<{ date: string; reason: WorkFromHomeSkipReason }>;
+  date?: string;
+  reason?: string;
+  employeeId?: string;
+  appliedDates?: string[];
+  notAppliedDates?: string[];
+  cancelledAt?: string;
+  cancelReason?: string | null;
+}
+
+export async function previewWorkFromHomeRange(dto: {
+  startDate: string;
+  endDate: string;
+  onBehalfOfEmployeeId?: string;
+}): Promise<WorkFromHomeRangePreview> {
+  return apiPost<WorkFromHomeRangePreview>(
+    '/hr/attendance/work-from-home/preview',
+    dto,
+  );
+}
+
+export async function cancelWorkFromHomeRequest(
+  approvalRequestId: string,
+  reason?: string,
+): Promise<{ status: string; removedDates: string[] }> {
+  return apiPost(
+    `/hr/attendance/work-from-home/requests/${approvalRequestId}/cancel`,
+    { reason },
+  );
 }

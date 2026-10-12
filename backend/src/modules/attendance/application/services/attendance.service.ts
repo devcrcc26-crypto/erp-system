@@ -24,6 +24,7 @@ import {
   AttendanceMatchMethod,
   AttendanceMissingResolution,
   AttendanceMode,
+  AttendanceScanReviewDecision,
   AttendanceUnmatchedStatus,
   Nationality,
 } from '@prisma/client';
@@ -41,6 +42,7 @@ import {
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { ApprovalDecisionRegistry } from '../../../approvals/application/services/approval-decision-registry.service';
 import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
+import { BackdatingPolicyService } from '../../../hr-shared/application/services/backdating-policy.service';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
@@ -57,6 +59,13 @@ import {
   previousNotEnrolledMonths,
   type AwaitingEnrolmentEntry,
 } from '../utils/attendance-enrolment.util';
+import { enrolmentGraceDateKeys } from '../utils/enrolment-grace.util';
+import {
+  isScanOnlySchedule,
+  SCAN_AFTER_DEADLINE_FLAG,
+  scanOnlyRuleFor,
+  type ScanOnlyRule,
+} from '../utils/scan-only.util';
 import {
   buildDayDeductionContext,
   dailyLogToDeductionInput,
@@ -87,7 +96,10 @@ import {
   evaluateEarlyDeparture,
   isLateAfterGrace,
 } from '../utils/early-departure.util';
-import { dateToYyyyMmDd } from './attendance-leave.util';
+import {
+  dateToYyyyMmDd,
+  getApprovedLeaveSummariesForEmployees,
+} from './attendance-leave.util';
 import type { AttendanceDailyRaw } from '../../utils/attendance-excel.parser';
 import { parseAttendanceExcel } from '../../utils/attendance-excel.parser';
 import {
@@ -103,6 +115,8 @@ import {
   ListAttendanceDto,
   ListAttendanceMonthlyApprovalsDto,
   ListFieldMovementLogsDto,
+  ListScanReviewsDto,
+  ReviewScanFlagDto,
   UnlockAttendanceMonthDto,
 } from '../dtos/attendance.dto';
 import {
@@ -240,7 +254,39 @@ type ScheduleDayLike = {
   morningEnd: string | null;
   afternoonEnd: string | null;
   totalHours: Prisma.Decimal | number;
+  /** Schedule-level check mode, copied onto each weekday row. */
+  checkMode?: string | null;
+  latestScanTime?: string | null;
 };
+
+/**
+ * Weekday rows of a work schedule with the schedule's check mode attached.
+ */
+function toScheduleDayLikes(schedule: {
+  checkMode?: string | null;
+  latestScanTime?: string | null;
+  days: Array<{
+    dayOfWeek: number;
+    isWorkingDay: boolean;
+    isHalfDay: boolean;
+    morningStart: string | null;
+    morningEnd: string | null;
+    afternoonEnd: string | null;
+    totalHours: Prisma.Decimal | number;
+  }>;
+}): ScheduleDayLike[] {
+  return schedule.days.map((day) => ({
+    dayOfWeek: day.dayOfWeek,
+    isWorkingDay: day.isWorkingDay,
+    isHalfDay: day.isHalfDay,
+    morningStart: day.morningStart,
+    morningEnd: day.morningEnd,
+    afternoonEnd: day.afternoonEnd,
+    totalHours: day.totalHours,
+    checkMode: schedule.checkMode ?? null,
+    latestScanTime: schedule.latestScanTime ?? null,
+  }));
+}
 
 type DailyLogFlagSource = {
   id: string;
@@ -257,7 +303,7 @@ type DailyLogFlagSource = {
 
 /**
  * Resolves the HR review flag for a single duty day from effective punch times.
- * Early leave uses the 15-minute grace (flag only when earlier than end − 15).
+ * Early leave uses the 30-minute grace (flag only when earlier than end − 30).
  */
 function resolveAttendanceDayFlag(params: {
   isHoliday: boolean;
@@ -266,8 +312,10 @@ function resolveAttendanceDayFlag(params: {
   clockOut: string | null;
   isLastExportDay: boolean;
   scheduledEnd: string | null;
+  /** SCAN_ONLY schedule: no missing-punch or early-leave flags. */
+  scanOnly?: boolean;
 }): AttendanceDayFlag {
-  if (params.isHoliday || params.isWeekend) {
+  if (params.isHoliday || params.isWeekend || params.scanOnly) {
     return AttendanceDayFlag.NONE;
   }
   if (!params.clockIn) {
@@ -287,6 +335,50 @@ function resolveAttendanceDayFlag(params: {
     }
   }
   return AttendanceDayFlag.NONE;
+}
+
+/**
+ * SCAN_AFTER_DEADLINE review columns for one daily log. Keeps an HR decision
+ * while the flagged scan time is unchanged; clears everything once the day is
+ * no longer flagged (schedule change, correction, leave approved, …).
+ */
+function resolveScanReviewFields(
+  log: {
+    scanReviewFlag: string | null;
+    scanReviewTime: string | null;
+    scanReviewDecision: AttendanceScanReviewDecision | null;
+  },
+  scanAfterDeadlineTime: string | null,
+): Prisma.AttendanceDailyLogUpdateInput {
+  if (!scanAfterDeadlineTime) {
+    if (!log.scanReviewFlag) {
+      return {};
+    }
+    return {
+      scanReviewFlag: null,
+      scanReviewTime: null,
+      needsReview: false,
+      scanReviewDecision: null,
+      scanReviewNote: null,
+      scanReviewedBy: { disconnect: true },
+      scanReviewedAt: null,
+    };
+  }
+  const sameFlag =
+    log.scanReviewFlag === SCAN_AFTER_DEADLINE_FLAG &&
+    log.scanReviewTime === scanAfterDeadlineTime;
+  if (sameFlag) {
+    return { needsReview: log.scanReviewDecision == null };
+  }
+  return {
+    scanReviewFlag: SCAN_AFTER_DEADLINE_FLAG,
+    scanReviewTime: scanAfterDeadlineTime,
+    needsReview: true,
+    scanReviewDecision: null,
+    scanReviewNote: null,
+    scanReviewedBy: { disconnect: true },
+    scanReviewedAt: null,
+  };
 }
 
 /**
@@ -352,6 +444,7 @@ export class AttendanceService
     private readonly decisionRegistry: ApprovalDecisionRegistry,
     private readonly onBehalfService: OnBehalfService,
     private readonly dayCoverage: DayCoverageService,
+    private readonly backdatingPolicy: BackdatingPolicyService,
   ) {}
 
   onModuleInit(): void {
@@ -598,26 +691,8 @@ export class AttendanceService
       ),
     );
 
-    const periodStart = new Date(Date.UTC(year, month - 1, 1));
-    let scheduleDays: ScheduleDayLike[] = [];
-    try {
-      const schedule = await this.workScheduleService.getActiveSchedule(
-        employeeId,
-        companyId,
-        periodStart,
-      );
-      scheduleDays = schedule.days.map((day) => ({
-        dayOfWeek: day.dayOfWeek,
-        isWorkingDay: day.isWorkingDay,
-        isHalfDay: day.isHalfDay,
-        morningStart: day.morningStart,
-        morningEnd: day.morningEnd,
-        afternoonEnd: day.afternoonEnd,
-        totalHours: day.totalHours,
-      }));
-    } catch {
-      scheduleDays = this.fallbackWeekdaySchedule();
-    }
+    // Each day uses the schedule assigned on that date (effective-dated).
+    const scheduleCache = new Map<string, ScheduleDayLike[]>();
 
     const exportDayKey = lastExportDate
       ? lastExportDate.toISOString().slice(0, 10)
@@ -630,9 +705,16 @@ export class AttendanceService
       const date =
         day.date instanceof Date ? day.date : new Date(String(day.date));
       const dayOfWeek = date.getUTCDay();
+      const scheduleDays = await this.resolveScheduleDaysCached(
+        scheduleCache,
+        employeeId,
+        companyId,
+        date,
+      );
       const scheduleDay = scheduleDays.find(
         (row) => row.dayOfWeek === dayOfWeek,
       );
+      const scanOnly = isScanOnlySchedule(scheduleDay);
 
       const matchedHoliday = applicableHolidays.find((holiday) =>
         holidayFallsOnDate(holiday.date, holiday.isRecurring, date),
@@ -646,7 +728,10 @@ export class AttendanceService
       // Holidays / weekends are not scheduled duty — expected hours are 0.
       const scheduledHours = isDutyDay ? weekdayHours : 0;
 
-      const wasPresent = Boolean(day.clockInLocal);
+      // SCAN_ONLY: any scan (first or last punch) is presence.
+      const wasPresent = scanOnly
+        ? Boolean(day.clockInLocal || day.clockOutLocal)
+        : Boolean(day.clockInLocal);
       let recordedHours: number | null = null;
       if (day.clockInLocal && day.clockOutLocal) {
         recordedHours = calculateHoursBetween(
@@ -657,8 +742,9 @@ export class AttendanceService
 
       let isLate = false;
       let lateMinutes = 0;
-      // Late flag only (15-min grace); never a pay deduction.
+      // Late flag only (15-min grace); never a pay deduction. SCAN_ONLY skips it.
       if (
+        !scanOnly &&
         wasPresent &&
         isDutyDay &&
         scheduleDay?.morningStart &&
@@ -672,14 +758,19 @@ export class AttendanceService
         lateMinutes = late.lateMinutes;
       }
 
-      // Missing punches only apply on scheduled duty days (not holidays/weekends).
+      // Missing punches only apply on scheduled duty days (not holidays/weekends)
+      // and never on SCAN_ONLY schedules (one scan is a full day).
       const missingClockIn =
-        isDutyDay && !wasPresent && Boolean(day.clockOutLocal);
+        !scanOnly && isDutyDay && !wasPresent && Boolean(day.clockOutLocal);
       const isLastExportDay =
         exportDayKey != null &&
         date.toISOString().slice(0, 10) === exportDayKey;
       const missingClockOut =
-        isDutyDay && wasPresent && !day.clockOutLocal && !isLastExportDay;
+        !scanOnly &&
+        isDutyDay &&
+        wasPresent &&
+        !day.clockOutLocal &&
+        !isLastExportDay;
 
       // Payable hours: scheduled duty hours when present, plus paid public-holiday
       // credit on weekdays. Absent / weekend days add nothing.
@@ -696,6 +787,7 @@ export class AttendanceService
         clockOut: day.clockOutLocal,
         isLastExportDay,
         scheduledEnd: scheduledEndForDay(scheduleDay),
+        scanOnly,
       });
 
       logs.push({
@@ -1766,6 +1858,18 @@ export class AttendanceService
       wfhGroups.map((g) => [g.attendanceRecordId, g._count._all]),
     );
 
+    const employeeIds = rows.map((row) => row.employeeId);
+    const approvedLeaveByEmployee =
+      employeeIds.length > 0
+        ? await getApprovedLeaveSummariesForEmployees(
+            this.prisma,
+            companyId,
+            employeeIds,
+            month,
+            year,
+          )
+        : new Map();
+
     const enriched = rows.map((row) => {
       // Fields added in 20261009160000; cast until prisma generate refreshes the client.
       const earlyFields = row as typeof row & {
@@ -1775,6 +1879,7 @@ export class AttendanceService
       return {
         ...row,
         leaveDaysThisMonth: leaveDaysByRecord.get(row.id) ?? 0,
+        approvedLeave: approvedLeaveByEmployee.get(row.employeeId) ?? [],
         siteDaysThisMonth: siteSummaryByRecord.get(row.id) ?? [],
         workFromHomeDaysThisMonth: wfhDaysByRecord.get(row.id) ?? 0,
         forgotToClockFlagThreshold: FORGOT_TO_CLOCK_FLAG_THRESHOLD,
@@ -2686,6 +2791,193 @@ export class AttendanceService
   }
 
   /**
+   * SCAN_ONLY schedules: SCAN_AFTER_DEADLINE flags for a month (employee, date,
+   * earliest scan) plus per-employee counts. Lateness here never affects pay.
+   */
+  async listScanReviews(
+    dto: ListScanReviewsDto,
+    companyId: string,
+  ): Promise<{
+    month: number;
+    year: number;
+    items: Array<{
+      dailyLogId: string;
+      employeeId: string;
+      employeeName: string;
+      employeeCode: string | null;
+      departmentName: string | null;
+      date: string;
+      scanTime: string | null;
+      needsReview: boolean;
+      decision: AttendanceScanReviewDecision | null;
+      note: string | null;
+      reviewedBy: { id: string; name: string } | null;
+      reviewedAt: Date | null;
+    }>;
+    employees: Array<{
+      employeeId: string;
+      employeeName: string;
+      employeeCode: string | null;
+      total: number;
+      pending: number;
+      excused: number;
+      markedLate: number;
+    }>;
+  }> {
+    const status = dto.status ?? 'ALL';
+    const rows = await this.prisma.attendanceDailyLog.findMany({
+      where: {
+        scanReviewFlag: SCAN_AFTER_DEADLINE_FLAG,
+        record: { companyId, month: dto.month, year: dto.year },
+      },
+      orderBy: [{ date: 'asc' }],
+      include: {
+        record: {
+          select: {
+            employeeId: true,
+            employee: {
+              select: {
+                firstName: true,
+                lastName: true,
+                employeeId: true,
+                department: { select: { name: true } },
+              },
+            },
+          },
+        },
+        scanReviewedBy: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+      },
+    });
+
+    const fullName = (person: {
+      firstName: string | null;
+      lastName: string | null;
+    }): string =>
+      [person.firstName, person.lastName]
+        .map((part) => part?.trim() ?? '')
+        .filter((part) => part.length > 0)
+        .join(' ');
+
+    const counts = new Map<
+      string,
+      {
+        employeeId: string;
+        employeeName: string;
+        employeeCode: string | null;
+        total: number;
+        pending: number;
+        excused: number;
+        markedLate: number;
+      }
+    >();
+    for (const row of rows) {
+      const employeeId = row.record.employeeId;
+      const entry = counts.get(employeeId) ?? {
+        employeeId,
+        employeeName: fullName(row.record.employee),
+        employeeCode: row.record.employee.employeeId,
+        total: 0,
+        pending: 0,
+        excused: 0,
+        markedLate: 0,
+      };
+      entry.total += 1;
+      if (row.scanReviewDecision === AttendanceScanReviewDecision.EXCUSED) {
+        entry.excused += 1;
+      } else if (
+        row.scanReviewDecision === AttendanceScanReviewDecision.MARKED_LATE
+      ) {
+        entry.markedLate += 1;
+      } else {
+        entry.pending += 1;
+      }
+      counts.set(employeeId, entry);
+    }
+
+    const items = rows
+      .filter((row) => {
+        if (status === 'PENDING') {
+          return row.scanReviewDecision == null;
+        }
+        if (status === 'REVIEWED') {
+          return row.scanReviewDecision != null;
+        }
+        return true;
+      })
+      .map((row) => ({
+        dailyLogId: row.id,
+        employeeId: row.record.employeeId,
+        employeeName: fullName(row.record.employee),
+        employeeCode: row.record.employee.employeeId,
+        departmentName: row.record.employee.department?.name ?? null,
+        date: dateToYyyyMmDd(row.date),
+        scanTime: row.scanReviewTime,
+        needsReview: row.needsReview,
+        decision: row.scanReviewDecision,
+        note: row.scanReviewNote,
+        reviewedBy: row.scanReviewedBy
+          ? { id: row.scanReviewedBy.id, name: fullName(row.scanReviewedBy) }
+          : null,
+        reviewedAt: row.scanReviewedAt,
+      }));
+
+    return {
+      month: dto.month,
+      year: dto.year,
+      items,
+      employees: [...counts.values()].sort(
+        (a, b) => b.total - a.total || a.employeeName.localeCompare(b.employeeName),
+      ),
+    };
+  }
+
+  /**
+   * HR decision on a SCAN_AFTER_DEADLINE flag (Excuse / Mark late + note).
+   * Status and pay are unchanged either way, so locked months may be reviewed.
+   */
+  async reviewScanFlag(
+    dailyLogId: string,
+    dto: ReviewScanFlagDto,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    const log = await this.prisma.attendanceDailyLog.findFirst({
+      where: { id: dailyLogId, record: { companyId } },
+      select: { id: true, scanReviewFlag: true },
+    });
+    if (!log) {
+      throw new NotFoundException('Daily log not found');
+    }
+    if (log.scanReviewFlag !== SCAN_AFTER_DEADLINE_FLAG) {
+      throw new BadRequestException(
+        'This day has no scan-after-deadline flag to review',
+      );
+    }
+    return this.prisma.attendanceDailyLog.update({
+      where: { id: dailyLogId },
+      data: {
+        scanReviewDecision: dto.decision,
+        scanReviewNote: dto.note?.trim() || null,
+        scanReviewedById: userId,
+        scanReviewedAt: new Date(),
+        needsReview: false,
+      },
+      select: {
+        id: true,
+        scanReviewFlag: true,
+        scanReviewTime: true,
+        scanReviewDecision: true,
+        scanReviewNote: true,
+        scanReviewedById: true,
+        scanReviewedAt: true,
+        needsReview: true,
+      },
+    });
+  }
+
+  /**
    * Day-by-day breakdown for one employee in one month (HR review drawer).
    */
   async getEmployeeDailyLogs(
@@ -2763,6 +3055,7 @@ export class AttendanceService
       dailyLog.correctedClockOutLocal ?? dailyLog.clockOutLocal;
 
     let scheduledEnd: string | null = '17:30';
+    let scanOnly = false;
     try {
       const schedule = await this.workScheduleService.getActiveSchedule(
         record.employeeId,
@@ -2770,22 +3063,11 @@ export class AttendanceService
         dailyLog.date,
       );
       const dayOfWeek = dailyLog.date.getUTCDay();
-      const scheduleDay = schedule.days.find(
+      const scheduleDay = toScheduleDayLikes(schedule).find(
         (row) => row.dayOfWeek === dayOfWeek,
       );
-      scheduledEnd = scheduledEndForDay(
-        scheduleDay
-          ? {
-              dayOfWeek: scheduleDay.dayOfWeek,
-              isWorkingDay: scheduleDay.isWorkingDay,
-              isHalfDay: scheduleDay.isHalfDay,
-              morningStart: scheduleDay.morningStart,
-              morningEnd: scheduleDay.morningEnd,
-              afternoonEnd: scheduleDay.afternoonEnd,
-              totalHours: scheduleDay.totalHours,
-            }
-          : undefined,
-      );
+      scheduledEnd = scheduledEndForDay(scheduleDay);
+      scanOnly = isScanOnlySchedule(scheduleDay);
     } catch {
       scheduledEnd = '17:30';
     }
@@ -2797,6 +3079,7 @@ export class AttendanceService
       clockOut: effectiveClockOut,
       isLastExportDay: dailyLog.isLastExportDay,
       scheduledEnd,
+      scanOnly,
     });
 
     await this.prisma.attendanceDailyLog.update({
@@ -2804,11 +3087,13 @@ export class AttendanceService
       data: {
         flag,
         missingClockIn:
+          !scanOnly &&
           !dailyLog.isHoliday &&
           !dailyLog.isWeekend &&
           !effectiveClockIn &&
           Boolean(effectiveClockOut),
         missingClockOut:
+          !scanOnly &&
           !dailyLog.isHoliday &&
           !dailyLog.isWeekend &&
           Boolean(effectiveClockIn) &&
@@ -3282,6 +3567,14 @@ export class AttendanceService
       ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME'],
     );
 
+    const backdating = await this.backdatingPolicy.validateSubmissionDates({
+      companyId,
+      actorUserId: userId,
+      targetEmployeeId: employeeId,
+      dates: dailyLogs.map((log) => log.date),
+      lateReason: dto.lateReason,
+    });
+
     const existingBlockingEntries = await this.prisma.fieldMovementEntry.findMany({
       where: {
         dailyLogId: { in: dailyLogIds },
@@ -3381,6 +3674,8 @@ export class AttendanceService
         year,
         status: FieldMovementStatus.DRAFT,
         notes: dto.notes ?? null,
+        isLateSubmission: backdating.isLateSubmission,
+        lateReason: backdating.lateReason,
         createdBy: userId,
         updatedBy: userId,
         entries: {
@@ -3431,6 +3726,7 @@ export class AttendanceService
     logId: string,
     companyId: string,
     userId: string,
+    submitDto?: { lateReason?: string },
   ): Promise<unknown> {
     const log = await this.prisma.fieldMovementLog.findFirst({
       where: { id: logId, companyId, deletedAt: null },
@@ -3458,6 +3754,15 @@ export class AttendanceService
     if (log.entries.length === 0) {
       throw new BadRequestException('Add at least one entry before submitting');
     }
+
+    const entryDates = log.entries.map((entry) => entry.date);
+    const backdating = await this.backdatingPolicy.validateSubmissionDates({
+      companyId,
+      actorUserId: userId,
+      targetEmployeeId: log.employeeId,
+      dates: entryDates,
+      lateReason: submitDto?.lateReason ?? log.lateReason,
+    });
 
     const resolvedTiers =
       await this.hrApprovalChain.buildFieldMovementApprovalChain(
@@ -3499,6 +3804,10 @@ export class AttendanceService
           ruleName: 'Field movement chain',
           tiers: resolvedTiers,
         },
+        lateSubmission: {
+          isLateSubmission: backdating.isLateSubmission,
+          lateReason: backdating.lateReason,
+        },
       },
     )) as { id: string };
 
@@ -3508,6 +3817,8 @@ export class AttendanceService
         data: {
           status: FieldMovementStatus.SUBMITTED,
           approvalRequestId: approval.id,
+          isLateSubmission: backdating.isLateSubmission,
+          lateReason: backdating.lateReason,
           submittedAt: new Date(),
           updatedBy: userId,
         },
@@ -4088,6 +4399,7 @@ export class AttendanceService
       ReturnType<typeof dailyLogToDeductionInput>
     >();
     const scheduleEndByDate = new Map<string, string | null>();
+    const scanOnlyRuleByDate = new Map<string, ScanOnlyRule>();
     const scheduleCache = new Map<string, ScheduleDayLike[]>();
 
     const rebuildLogMaps = async (
@@ -4096,6 +4408,7 @@ export class AttendanceService
       dailyLogIdsByDate.clear();
       dailyLogsByDate.clear();
       scheduleEndByDate.clear();
+      scanOnlyRuleByDate.clear();
       for (const log of logs) {
         const key = dateToYyyyMmDd(log.date);
         dailyLogIdsByDate.set(key, log.id);
@@ -4109,6 +4422,10 @@ export class AttendanceService
           (row) => row.dayOfWeek === log.date.getUTCDay(),
         );
         scheduleEndByDate.set(key, scheduledEndForDay(scheduleDay));
+        const scanOnlyRule = scanOnlyRuleFor(scheduleDay);
+        if (scanOnlyRule) {
+          scanOnlyRuleByDate.set(key, scanOnlyRule);
+        }
         dailyLogsByDate.set(
           key,
           dailyLogToDeductionInput({
@@ -4235,9 +4552,40 @@ export class AttendanceService
     // an attendance-exempt one (paid categories such as leave still apply
     // first) instead of letting every working day become a no-scan absence.
     const presentByDecision = isCountedPresentMatchMethod(record.matchMethod);
+
+    const hireDate =
+      employee.employmentDate ??
+      contractSegments[0]?.startDate ??
+      null;
+    let enrolmentGraceKeys: Set<string> | undefined;
+    if (hireDate && !presentByDecision) {
+      const firstScanLog = await readDb.attendanceDailyLog.findFirst({
+        where: {
+          record: { companyId, employeeId },
+          OR: [
+            { clockInLocal: { not: null } },
+            { clockOutLocal: { not: null } },
+            { correctedClockInLocal: { not: null } },
+            { correctedClockOutLocal: { not: null } },
+          ],
+        },
+        orderBy: { date: 'asc' },
+        select: { date: true },
+      });
+      enrolmentGraceKeys = enrolmentGraceDateKeys({
+        hireDate,
+        firstScanDate: firstScanLog?.date ?? null,
+        throughDate: monthEnd,
+        isPublicHoliday: (date) =>
+          matchedPublicHolidayForEmployee(employee, deductionData, date) !=
+          null,
+      });
+    }
+
     const context = buildDayDeductionContext(
       presentByDecision ? { ...employee, attendanceMode: 'EXEMPT' } : employee,
       deductionData,
+      { enrolmentGraceKeys, scanOnlyRuleByDate },
     );
 
     // Month totals over the employed window only (30-day payroll scale). Per-day
@@ -4282,6 +4630,7 @@ export class AttendanceService
           ? this.calculateEarlyLeaveMinutes(clockOut, scheduledEnd)
           : 0;
       const inEmployedWindow = monthSummary.byDate.has(key);
+      const scanOnly = scanOnlyRuleByDate.has(key);
       const flag = resolveAttendanceDayFlag({
         isHoliday,
         isWeekend: log.isWeekend,
@@ -4289,7 +4638,12 @@ export class AttendanceService
         clockOut,
         isLastExportDay: log.isLastExportDay,
         scheduledEnd,
+        scanOnly,
       });
+      const scanReview = resolveScanReviewFields(
+        log,
+        inEmployedWindow ? (dayResult.scanAfterDeadlineTime ?? null) : null,
+      );
       // Holidays / weekends are never scheduled duty. When a holiday is cleared,
       // restore weekday hours from the schedule already resolved in rebuildLogMaps.
       let scheduledHours = Number(log.scheduledHours);
@@ -4335,8 +4689,24 @@ export class AttendanceService
             earlyDepartureBand: earlyBand === 'NONE' ? null : earlyBand,
             earlyDepartureWouldDeduct: earlyWould,
           } as Prisma.AttendanceDailyLogUpdateInput),
+          // SCAN_ONLY: no late / missing punch, whatever an earlier recalc stored.
+          ...(scanOnly
+            ? {
+                isLate: false,
+                lateMinutes: 0,
+                missingClockIn: false,
+                missingClockOut: false,
+              }
+            : {}),
+          ...scanReview,
         },
       });
+      if (scanOnly) {
+        log.isLate = false;
+        log.lateMinutes = 0;
+        log.missingClockIn = false;
+        log.missingClockOut = false;
+      }
 
       // Keep in-memory logs aligned so month KPIs below use the new holiday flags.
       log.isHoliday = isHoliday;
@@ -4556,6 +4926,29 @@ export class AttendanceService
           record.month,
           record.year,
         );
+        await markPayrollAttendanceSnapshotStale(
+          this.prisma,
+          companyId,
+          record.month,
+          record.year,
+        );
+        continue;
+      }
+      if (
+        await isPayrollMonthLocked(
+          this.prisma,
+          companyId,
+          record.month,
+          record.year,
+        )
+      ) {
+        skippedLockedMonths += 1;
+        await markPayrollAttendanceSnapshotStale(
+          this.prisma,
+          companyId,
+          record.month,
+          record.year,
+        );
         continue;
       }
 
@@ -4587,6 +4980,7 @@ export class AttendanceService
         const scheduleDay = scheduleDays.find(
           (row) => row.dayOfWeek === dayOfWeek,
         );
+        const scanOnly = isScanOnlySchedule(scheduleDay);
 
         const matchedHoliday = applicableHolidays.find((holiday) =>
           holidayFallsOnDate(holiday.date, holiday.isRecurring, logDay),
@@ -4603,7 +4997,9 @@ export class AttendanceService
           log.correctedClockInLocal ?? log.clockInLocal;
         const clockOut =
           log.correctedClockOutLocal ?? log.clockOutLocal;
-        const wasPresent = Boolean(clockIn);
+        const wasPresent = scanOnly
+          ? Boolean(clockIn || clockOut)
+          : Boolean(clockIn);
 
         let recordedHours: number | null = null;
         if (clockIn && clockOut) {
@@ -4613,6 +5009,7 @@ export class AttendanceService
         let isLate = false;
         let lateMinutes = 0;
         if (
+          !scanOnly &&
           wasPresent &&
           isDutyDay &&
           scheduleDay?.morningStart &&
@@ -4624,12 +5021,16 @@ export class AttendanceService
         }
 
         const missingClockIn =
-          isDutyDay && !wasPresent && Boolean(clockOut);
+          !scanOnly && isDutyDay && !wasPresent && Boolean(clockOut);
         const isLastExportDay =
           exportDayKey != null &&
           logDay.toISOString().slice(0, 10) === exportDayKey;
         const missingClockOut =
-          isDutyDay && wasPresent && !clockOut && !isLastExportDay;
+          !scanOnly &&
+          isDutyDay &&
+          wasPresent &&
+          !clockOut &&
+          !isLastExportDay;
 
         const flag = resolveAttendanceDayFlag({
           isHoliday,
@@ -4638,6 +5039,7 @@ export class AttendanceService
           clockOut,
           isLastExportDay,
           scheduledEnd: scheduledEndForDay(scheduleDay),
+          scanOnly,
         });
 
         const flagResolved =
@@ -4680,6 +5082,13 @@ export class AttendanceService
           record.month,
           record.year,
         );
+        // Draft payroll for the month now reads different attendance figures.
+        await markPayrollAttendanceSnapshotStale(
+          this.prisma,
+          companyId,
+          record.month,
+          record.year,
+        );
         updatedRecords += 1;
         updatedDays += daysChanged;
       }
@@ -4712,15 +5121,7 @@ export class AttendanceService
       if (cached) {
         return cached;
       }
-      const days: ScheduleDayLike[] = schedule.days.map((day) => ({
-        dayOfWeek: day.dayOfWeek,
-        isWorkingDay: day.isWorkingDay,
-        isHalfDay: day.isHalfDay,
-        morningStart: day.morningStart,
-        morningEnd: day.morningEnd,
-        afternoonEnd: day.afternoonEnd,
-        totalHours: day.totalHours,
-      }));
+      const days = toScheduleDayLikes(schedule);
       cache.set(cacheKey, days);
       return days;
     } catch {

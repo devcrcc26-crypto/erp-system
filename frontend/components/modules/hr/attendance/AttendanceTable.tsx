@@ -154,7 +154,7 @@ export default function AttendanceTable({
         },
       },
       {
-        title: 'Leave',
+        title: t('pages.hr.attendance.columns.leaveDays'),
         key: 'leave',
         width: 150,
         render: (_: unknown, row: AttendanceRecord) => {

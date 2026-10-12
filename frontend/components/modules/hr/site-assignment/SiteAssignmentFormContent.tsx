@@ -4,7 +4,7 @@ import './site-assignments-v2.css';
 
 import { useMemo, useState } from 'react';
 import { DatePicker, Form, Input, Select } from 'antd';
-import type { Dayjs } from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -15,6 +15,7 @@ import {
 } from '@/components/shared/OnBehalfSelector';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useEarliestAllowedDate } from '@/lib/query/backdating';
 import { useSubmitSiteAssignment } from '@/lib/query/site-assignment';
 import { useProjects } from '@/lib/query/projects';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
@@ -25,6 +26,7 @@ interface SiteAssignmentFormValues {
   siteName?: string;
   projectId?: string;
   reason?: string;
+  lateReason?: string;
 }
 
 function calendarDays(start: Dayjs, end: Dayjs): number {
@@ -57,7 +59,13 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const [form] = Form.useForm<SiteAssignmentFormValues>();
   const onBehalf = useOnBehalf('SITE_ASSIGNMENT');
+  const earliestQuery = useEarliestAllowedDate(onBehalf.effectiveEmployeeId);
   const submitMutation = useSubmitSiteAssignment();
+  const earliestDay = earliestQuery.data?.earliestDate
+    ? dayjs(earliestQuery.data.earliestDate)
+    : null;
+  const requiresLateReason =
+    earliestQuery.data?.requiresLateReasonWhenBeforeCurrentMonth === true;
   const projectsQuery = useProjects({ page: 1, limit: 200 });
   const [range, setRange] = useState<[Dayjs | null, Dayjs | null] | null>(
     null,
@@ -66,11 +74,13 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
     siteName: string;
     projectId?: string;
     reason: string;
+    lateReason: string;
     startDate: string | null;
     endDate: string | null;
   }>({
     siteName: '',
     reason: '',
+    lateReason: '',
     startDate: null,
     endDate: null,
   });
@@ -107,6 +117,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
       siteName: values.siteName?.trim() ?? '',
       projectId: values.projectId,
       reason: values.reason?.trim() ?? '',
+      lateReason: values.lateReason?.trim() ?? '',
       startDate: range?.[0]?.format('YYYY-MM-DD') ?? null,
       endDate: range?.[1]?.format('YYYY-MM-DD') ?? null,
     };
@@ -120,6 +131,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
     setSnapshot({
       siteName: '',
       reason: '',
+      lateReason: '',
       startDate: null,
       endDate: null,
     });
@@ -132,6 +144,12 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
       if (!range?.[0] || !range[1]) {
         messageApi.error(t('pages.hr.siteAssignments.form.datesRequired'));
         return false;
+      }
+      if (
+        requiresLateReason &&
+        range[0].isBefore(dayjs().startOf('month'), 'day')
+      ) {
+        await form.validateFields(['lateReason']);
       }
       captureSnapshot();
       return true;
@@ -153,6 +171,7 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
         startDate: values.startDate!,
         endDate: values.endDate!,
         reason: values.reason || undefined,
+        lateReason: values.lateReason?.trim() || undefined,
         ...onBehalf.payload,
       });
       messageApi.success(t('pages.hr.siteAssignments.form.submitSuccess'));
@@ -220,6 +239,12 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
                   className="w-full"
                   value={range}
                   onChange={(value) => setRange(value ?? null)}
+                  disabledDate={(current) => {
+                    if (!current || !earliestDay) {
+                      return false;
+                    }
+                    return current.isBefore(earliestDay, 'day');
+                  }}
                 />
                 {dayCount != null ? (
                   <p className="erp-sa-day-hint">
@@ -229,6 +254,23 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
                   </p>
                 ) : null}
               </Form.Item>
+              {requiresLateReason &&
+              range?.[0]?.isBefore(dayjs().startOf('month'), 'day') ? (
+                <Form.Item
+                  name="lateReason"
+                  label={t('pages.hr.siteAssignments.form.lateReason')}
+                  rules={[{ required: true, min: 3 }]}
+                  className="md:col-span-2"
+                >
+                  <Input.TextArea
+                    rows={3}
+                    maxLength={2000}
+                    placeholder={t(
+                      'pages.hr.siteAssignments.form.lateReasonPlaceholder',
+                    )}
+                  />
+                </Form.Item>
+              ) : null}
               <Form.Item
                 name="reason"
                 label={t('pages.hr.siteAssignments.form.reason')}

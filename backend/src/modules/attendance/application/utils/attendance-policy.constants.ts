@@ -3,14 +3,17 @@
  * Kept beside enrolment grace so payroll/HR review share one source of truth.
  */
 
-/** Working days of consecutive "Needs enrolment" before escalation UI. */
+/**
+ * Working days from hire date until first scanner punch that are not counted
+ * absent (enrolment grace). Shown on attendance daily logs as ENROLMENT_GRACE.
+ */
 export const ENROLMENT_GRACE_WORKING_DAYS = 3;
 
 /** First clock-in after scheduleStart + this many minutes → late flag only (no pay deduction). */
 export const LATE_ARRIVAL_GRACE_MINUTES = 15;
 
 /** Last OUT at or after scheduleEnd − this → not early. */
-export const EARLY_DEPARTURE_GRACE_MINUTES = 15;
+export const EARLY_DEPARTURE_GRACE_MINUTES = 30;
 
 /** Last OUT earlier than scheduleEnd − this → 0.5 day (or would-deduct in REPORT_ONLY). */
 export const EARLY_DEPARTURE_DEDUCT_MINUTES = 60;

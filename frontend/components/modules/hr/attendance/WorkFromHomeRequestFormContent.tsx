@@ -4,8 +4,8 @@ import '../site-assignment/site-assignments-v2.css';
 import './work-from-home-v2.css';
 
 import { useMemo, useState } from 'react';
-import { DatePicker, Form, Input } from 'antd';
-import type { Dayjs } from 'dayjs';
+import { Alert, DatePicker, Form, Input, Spin } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
@@ -16,14 +16,21 @@ import {
 } from '@/components/shared/OnBehalfSelector';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { requestWorkFromHomeDay } from '@/lib/api/work-from-home.api';
-import { useMutation } from '@tanstack/react-query';
+import WorkFromHomeRangeDays from '@/components/modules/hr/attendance/WorkFromHomeRangeDays';
+import {
+  previewWorkFromHomeRange,
+  requestWorkFromHomeDay,
+  WFH_MAX_RANGE_DAYS,
+} from '@/lib/api/work-from-home.api';
+import { useEarliestAllowedDate } from '@/lib/query/backdating';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
-import { formatProjectDate } from '@/lib/utils/project-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 interface WfhRequestFormValues {
   reason?: string;
+  lateReason?: string;
 }
 
 function ReviewItem({
@@ -44,7 +51,8 @@ function ReviewItem({
 }
 
 /**
- * Employee work-from-home request — Employee → Discipline Lead approval.
+ * Employee work-from-home request for a date range — one request, Employee →
+ * Discipline Lead approval; approval creates a WFH day per working day.
  */
 export default function WorkFromHomeRequestFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -52,11 +60,41 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
   const messageApi = useAppMessage();
   const [form] = Form.useForm<WfhRequestFormValues>();
   const onBehalf = useOnBehalf('WORK_FROM_HOME');
-  const [date, setDate] = useState<Dayjs | null>(null);
+  const earliestQuery = useEarliestAllowedDate(onBehalf.effectiveEmployeeId);
+  const earliestDay = earliestQuery.data?.earliestDate
+    ? dayjs(earliestQuery.data.earliestDate)
+    : null;
+  const requiresLateReason =
+    earliestQuery.data?.requiresLateReasonWhenBeforeCurrentMonth === true;
+  const [range, setRange] = useState<[Dayjs, Dayjs] | null>(null);
+  /** First day clicked while choosing a range (limits the 31-day window). */
+  const [rangeAnchor, setRangeAnchor] = useState<Dayjs | null>(null);
   const [snapshot, setSnapshot] = useState<{
-    date: string | null;
+    label: string | null;
     reason: string;
-  }>({ date: null, reason: '' });
+  }>({ label: null, reason: '' });
+  const startKey = range?.[0].format('YYYY-MM-DD') ?? null;
+  const endKey = range?.[1].format('YYYY-MM-DD') ?? null;
+
+  const previewQuery = useQuery({
+    queryKey: [
+      'work-from-home-preview',
+      startKey,
+      endKey,
+      onBehalf.effectiveEmployeeId ?? null,
+    ],
+    queryFn: () =>
+      previewWorkFromHomeRange({
+        startDate: startKey!,
+        endDate: endKey!,
+        ...(onBehalf.payload.onBehalfOfEmployeeId
+          ? { onBehalfOfEmployeeId: onBehalf.payload.onBehalfOfEmployeeId }
+          : {}),
+      }),
+    enabled: Boolean(startKey && endKey),
+    retry: false,
+  });
+  const preview = previewQuery.data;
 
   const submitMutation = useMutation({
     mutationFn: requestWorkFromHomeDay,
@@ -65,7 +103,7 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
   function captureSnapshot(): typeof snapshot {
     const values = form.getFieldsValue(true) as WfhRequestFormValues;
     const next = {
-      date: date?.format('YYYY-MM-DD') ?? null,
+      label: preview?.label ?? null,
       reason: values.reason?.trim() ?? '',
     };
     setSnapshot(next);
@@ -74,17 +112,25 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
 
   function resetForm(): void {
     form.resetFields();
-    setDate(null);
-    setSnapshot({ date: null, reason: '' });
+    setRange(null);
+    setRangeAnchor(null);
+    setSnapshot({ label: null, reason: '' });
     onBehalf.reset();
   }
 
   async function validateDetailsStep(): Promise<boolean> {
     try {
       await form.validateFields(['reason']);
-      if (!date) {
-        messageApi.error(t('pages.hr.workFromHome.request.dateRequired'));
+      if (!range) {
+        messageApi.error(t('pages.hr.workFromHome.range.rangeRequired'));
         return false;
+      }
+      if (!preview || preview.workingDays === 0) {
+        messageApi.error(t('pages.hr.workFromHome.range.noWorkingDays'));
+        return false;
+      }
+      if (requiresLateReason && range[0].isBefore(dayjs().startOf('month'), 'day')) {
+        await form.validateFields(['lateReason']);
       }
       captureSnapshot();
       return true;
@@ -95,14 +141,16 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
 
   async function handleSubmit(): Promise<void> {
     const ok = await validateDetailsStep();
-    if (!ok || !date) {
+    if (!ok || !startKey || !endKey) {
       return;
     }
     const values = captureSnapshot();
     try {
       await submitMutation.mutateAsync({
-        date: values.date!,
+        startDate: startKey,
+        endDate: endKey,
         reason: values.reason,
+        lateReason: form.getFieldValue('lateReason')?.trim() || undefined,
         ...onBehalf.payload,
       });
       messageApi.success(t('pages.hr.workFromHome.request.submitSuccess'));
@@ -135,15 +183,91 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
             <OnBehalfSection state={onBehalf} />
             <div className="erp-form-grid-2">
               <Form.Item
-                label={t('pages.hr.workFromHome.fields.date')}
+                label={t('pages.hr.workFromHome.range.dateRange')}
                 required
+                extra={t('pages.hr.workFromHome.range.maxRange', {
+                  days: WFH_MAX_RANGE_DAYS,
+                })}
+                className="md:col-span-2"
               >
-                <DatePicker
+                <DatePicker.RangePicker
                   className="w-full"
-                  value={date}
-                  onChange={(value) => setDate(value)}
+                  value={range}
+                  onCalendarChange={(values) => {
+                    setRangeAnchor(values?.[0] ?? values?.[1] ?? null);
+                  }}
+                  onOpenChange={(open) => {
+                    if (!open) {
+                      setRangeAnchor(null);
+                    }
+                  }}
+                  onChange={(values) => {
+                    setRange(
+                      values?.[0] && values?.[1] ? [values[0], values[1]] : null,
+                    );
+                  }}
+                  disabledDate={(current) => {
+                    if (!current) {
+                      return false;
+                    }
+                    if (earliestDay && current.isBefore(earliestDay, 'day')) {
+                      return true;
+                    }
+                    if (rangeAnchor) {
+                      return (
+                        Math.abs(current.diff(rangeAnchor, 'day')) >=
+                        WFH_MAX_RANGE_DAYS
+                      );
+                    }
+                    return false;
+                  }}
                 />
               </Form.Item>
+              {range ? (
+                <div className="md:col-span-2">
+                  {previewQuery.isLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Spin size="small" />
+                    </div>
+                  ) : previewQuery.isError ? (
+                    <Alert
+                      type="error"
+                      showIcon
+                      title={getFriendlyApiErrorMessage(
+                        previewQuery.error,
+                        t('pages.hr.workFromHome.range.previewFailed'),
+                        t,
+                      )}
+                    />
+                  ) : preview ? (
+                    <div className="flex flex-col gap-2">
+                      <p className="m-0 text-sm font-semibold text-slate-900">
+                        {t('pages.hr.workFromHome.range.daysCount', {
+                          count: preview.workingDays,
+                        })}
+                      </p>
+                      <WorkFromHomeRangeDays days={preview.days} />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {requiresLateReason &&
+              range?.[0].isBefore(dayjs().startOf('month'), 'day') ? (
+                <Form.Item
+                  name="lateReason"
+                  label={t('pages.hr.siteAssignments.form.lateReason')}
+                  rules={[{ required: true, min: 3 }]}
+                  className="md:col-span-2"
+                >
+                  <Input.TextArea
+                    rows={3}
+                    maxLength={2000}
+                    placeholder={t(
+                      'pages.hr.siteAssignments.form.lateReasonPlaceholder',
+                    )}
+                  />
+                </Form.Item>
+              ) : null}
               <Form.Item
                 name="reason"
                 label={t('pages.hr.workFromHome.fields.reason')}
@@ -178,10 +302,8 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
                 value={onBehalfLabel}
               />
               <ReviewItem
-                label={t('pages.hr.workFromHome.fields.date')}
-                value={
-                  snapshot.date ? formatProjectDate(snapshot.date) : '—'
-                }
+                label={t('pages.hr.workFromHome.range.dateRange')}
+                value={snapshot.label ?? '—'}
               />
               <ReviewItem
                 label={t('pages.hr.workFromHome.fields.reason')}
@@ -198,7 +320,20 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
         ),
       },
     ],
-    [t, onBehalf, onBehalfLabel, date, snapshot],
+    [
+      t,
+      onBehalf,
+      onBehalfLabel,
+      range,
+      rangeAnchor,
+      earliestDay,
+      requiresLateReason,
+      preview,
+      previewQuery.isLoading,
+      previewQuery.isError,
+      previewQuery.error,
+      snapshot,
+    ],
   );
 
   return (

@@ -251,3 +251,69 @@ export class ListLeaveBalancesDto {
   @MinLength(1)
   search?: string;
 }
+
+/** Leave ledger history for an employee (HR, self or on-behalf). */
+export class LeaveLedgerQueryDto {
+  @ApiPropertyOptional({ description: 'Defaults to the caller' })
+  @IsOptional()
+  @IsUUID()
+  employeeId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Leave-year label (calendar year the leave year starts in); omit for all years',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  year?: number;
+}
+
+/** HR: ±days (0.5 steps) on the employee's current leave year. */
+export class LeaveBalanceAdjustmentDto {
+  @ApiProperty()
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({ enum: [LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK] })
+  @IsIn([LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK])
+  leaveType!: LeaveType;
+
+  @ApiProperty({ example: -1.5, description: 'Signed days, multiple of 0.5' })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(-365)
+  @Max(365)
+  days!: number;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(1000)
+  reason!: string;
+}
+
+/** HR go-live: opening balance for the employee's current leave year. */
+export class LeaveOpeningBalanceDto {
+  @ApiProperty()
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiProperty({ enum: [LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK] })
+  @IsIn([LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK])
+  leaveType!: LeaveType;
+
+  @ApiProperty({ example: 12.5, description: 'Days, multiple of 0.5' })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(0)
+  @Max(365)
+  days!: number;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(1000)
+  reason!: string;
+}

@@ -71,6 +71,17 @@ function logsForMonth(
 describe('dayDeduction / summarizeMonthAbsence', () => {
   const fullContractStart = d(2020, 1, 1);
 
+  it('no-scan working day in enrolment grace → ENROLMENT_GRACE, deduction 0', () => {
+    const date = d(2026, 8, 17);
+    const r = dayDeduction(
+      date,
+      dayInput(date, { clockIn: null, clockOut: null }),
+      emptyContext({ isEnrolmentGrace: () => true }),
+    );
+    expect(r.status).toBe('ENROLMENT_GRACE');
+    expect(r.deduction).toBe(0);
+  });
+
   it('full month, no absences: Feb → 30, Aug → 30, Sep → 30', () => {
     for (const month of [2, 8, 9]) {
       const daily = logsForMonth(month, 2026, fullContractStart, null, (date) =>

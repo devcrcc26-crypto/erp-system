@@ -33,6 +33,7 @@ import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AttendanceDailyLogsDrawer from '@/components/modules/hr/attendance/AttendanceDailyLogsDrawer';
 import AttendanceMissingScheduleDrawer from '@/components/modules/hr/attendance/AttendanceMissingScheduleDrawer';
+import AttendanceScanReviewSection from '@/components/modules/hr/attendance/AttendanceScanReviewSection';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import TableEmptyState from '@/components/ui/TableEmptyState';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
@@ -1038,6 +1039,12 @@ export default function AttendanceReviewPageContent({
           </div>
         </div>
       ) : null}
+
+      <AttendanceScanReviewSection
+        month={month}
+        year={year}
+        enabled={Boolean(canViewHr && approval)}
+      />
 
       <AttendanceDailyLogsDrawer
         employeeId={drawerEmployeeId}

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   AttendanceMonthStatus,
+  AttendanceScanReviewDecision,
   FieldMovementReason,
   FieldMovementStatus,
 } from '@prisma/client';
@@ -19,6 +20,7 @@ import {
   Matches,
   Max,
   Min,
+  MaxLength,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -328,6 +330,26 @@ export class CreateFieldMovementLogDto {
   @IsOptional()
   @IsBoolean()
   autoApproveTier?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Required when HR enters dates before the current calendar month',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  lateReason?: string;
+}
+
+export class SubmitFieldMovementLogDto {
+  @ApiPropertyOptional({
+    description:
+      'Required when HR submits flagged days before the current calendar month',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  lateReason?: string;
 }
 
 export class UpdateFieldMovementLogDto {
@@ -395,4 +417,39 @@ export class GetFlaggedDaysDto {
   @IsInt()
   @Min(2020)
   year!: number;
+}
+
+/** SCAN_ONLY schedules: list SCAN_AFTER_DEADLINE flags for a month. */
+export class ListScanReviewsDto {
+  @ApiProperty({ example: 10 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month!: number;
+
+  @ApiProperty({ example: 2026 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  year!: number;
+
+  @ApiPropertyOptional({ enum: ['PENDING', 'REVIEWED', 'ALL'], default: 'ALL' })
+  @IsOptional()
+  @IsIn(['PENDING', 'REVIEWED', 'ALL'])
+  status?: 'PENDING' | 'REVIEWED' | 'ALL';
+}
+
+/** HR decision on a SCAN_AFTER_DEADLINE flag. No pay effect either way. */
+export class ReviewScanFlagDto {
+  @ApiProperty({ enum: AttendanceScanReviewDecision })
+  @IsEnum(AttendanceScanReviewDecision)
+  decision!: AttendanceScanReviewDecision;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  note?: string;
 }

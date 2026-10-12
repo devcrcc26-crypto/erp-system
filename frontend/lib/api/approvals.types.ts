@@ -88,6 +88,14 @@ export interface ApprovalComment {
   commenter?: ApprovalUserSummary;
 }
 
+export interface LateSubmissionMeta {
+  isLate: true;
+  reason: string | null;
+  monthLabel: string;
+  month: number;
+  year: number;
+}
+
 export interface ApprovalRequestListItem {
   id: string;
   companyId: string;
@@ -107,6 +115,7 @@ export interface ApprovalRequestListItem {
   categoryCode?: string | null;
   /** True when the current user must acknowledge a flight ticket on this request. */
   needsTicketAcknowledgement?: boolean;
+  lateSubmission?: LateSubmissionMeta | null;
   requester?: ApprovalUserSummary;
   tiers?: Array<
     Pick<
@@ -126,6 +135,7 @@ export interface ApprovalRequestDetail extends ApprovalRequestListItem {
     submittedBy: { id: string; name: string };
     viewerIsSubmitter: boolean;
   } | null;
+  lateSubmission?: LateSubmissionMeta | null;
   notes?: string | null;
   attachmentFolderId?: string | null;
   category?: ApprovalCategorySummary;

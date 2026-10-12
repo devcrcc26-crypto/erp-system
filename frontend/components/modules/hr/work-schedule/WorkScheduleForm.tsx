@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Button, Form, Input, Segmented, Switch, TimePicker } from 'antd';
+import { Button, Form, Input, Segmented, Select, Switch, TimePicker } from 'antd';
 import { Copy } from 'lucide-react';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -11,6 +11,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
   CreateWorkSchedulePayload,
   WorkSchedule,
+  WorkScheduleCheckMode,
   WorkScheduleDayInput,
 } from '@/lib/api/work-schedule.types';
 
@@ -18,6 +19,7 @@ const DEFAULT_MORNING_START = '08:30';
 const DEFAULT_MORNING_END = '12:30';
 const DEFAULT_AFTERNOON_START = '13:30';
 const DEFAULT_AFTERNOON_END = '17:30';
+const DEFAULT_LATEST_SCAN_TIME = '08:30';
 
 type DayMode = 'off' | 'half' | 'working';
 
@@ -34,6 +36,8 @@ export interface WorkScheduleFormValues {
   description?: string;
   isDefault: boolean;
   isActive: boolean;
+  checkMode: WorkScheduleCheckMode;
+  latestScanTime?: Dayjs | null;
   days: DayFormValue[];
 }
 
@@ -61,7 +65,7 @@ function hoursBetween(start: string, end: string): number {
   return Math.round((diff / 60) * 10) / 10;
 }
 
-function computeHours(day: DayFormValue): number {
+function computeHours(day: DayFormValue, singleShift = false): number {
   if (day.mode === 'off') {
     return 0;
   }
@@ -71,7 +75,7 @@ function computeHours(day: DayFormValue): number {
     return 0;
   }
   let hours = hoursBetween(morningStart, morningEnd);
-  if (day.mode === 'working') {
+  if (day.mode === 'working' && !singleShift) {
     const afternoonStart = formatTime(day.afternoonStart);
     const afternoonEnd = formatTime(day.afternoonEnd);
     if (afternoonStart && afternoonEnd) {
@@ -126,19 +130,23 @@ function daysFromSchedule(schedule: WorkSchedule): DayFormValue[] {
   });
 }
 
-function toDayPayload(days: DayFormValue[]): WorkScheduleDayInput[] {
+/** Scan only: a working day is one shift window (no afternoon block). */
+function toDayPayload(
+  days: DayFormValue[],
+  singleShift: boolean,
+): WorkScheduleDayInput[] {
   return days.map((day, dayOfWeek) => {
     const isWorkingDay = day.mode !== 'off';
     const isHalfDay = day.mode === 'half';
+    const hasAfternoon = day.mode === 'working' && !singleShift;
     return {
       dayOfWeek,
       isWorkingDay,
       isHalfDay,
       morningStart: isWorkingDay ? formatTime(day.morningStart) : null,
       morningEnd: isWorkingDay ? formatTime(day.morningEnd) : null,
-      afternoonStart:
-        day.mode === 'working' ? formatTime(day.afternoonStart) : null,
-      afternoonEnd: day.mode === 'working' ? formatTime(day.afternoonEnd) : null,
+      afternoonStart: hasAfternoon ? formatTime(day.afternoonStart) : null,
+      afternoonEnd: hasAfternoon ? formatTime(day.afternoonEnd) : null,
     };
   });
 }
@@ -150,6 +158,8 @@ function valuesFromSchedule(schedule?: WorkSchedule): WorkScheduleFormValues {
       description: undefined,
       isDefault: false,
       isActive: true,
+      checkMode: 'STANDARD',
+      latestScanTime: null,
       days: defaultDays(),
     };
   }
@@ -158,6 +168,8 @@ function valuesFromSchedule(schedule?: WorkSchedule): WorkScheduleFormValues {
     description: schedule.description ?? undefined,
     isDefault: schedule.isDefault,
     isActive: schedule.isActive,
+    checkMode: schedule.checkMode ?? 'STANDARD',
+    latestScanTime: parseTime(schedule.latestScanTime),
     days: daysFromSchedule(schedule),
   };
 }
@@ -165,12 +177,15 @@ function valuesFromSchedule(schedule?: WorkSchedule): WorkScheduleFormValues {
 export function buildWorkSchedulePayload(
   values: WorkScheduleFormValues,
 ): CreateWorkSchedulePayload {
+  const scanOnly = values.checkMode === 'SCAN_ONLY';
   return {
     name: values.name.trim(),
     description: values.description?.trim() || undefined,
     isDefault: values.isDefault,
     isActive: values.isActive,
-    days: toDayPayload(values.days),
+    checkMode: scanOnly ? 'SCAN_ONLY' : 'STANDARD',
+    latestScanTime: scanOnly ? formatTime(values.latestScanTime) : null,
+    days: toDayPayload(values.days, scanOnly),
   };
 }
 
@@ -298,6 +313,11 @@ export default function WorkScheduleForm({
   const messageApi = useAppMessage();
   const [form] = Form.useForm<WorkScheduleFormValues>();
   const watchedDays = Form.useWatch('days', form) as DayFormValue[] | undefined;
+  const watchedCheckMode = Form.useWatch('checkMode', form) as
+    | WorkScheduleCheckMode
+    | undefined;
+  const scanOnly =
+    (watchedCheckMode ?? schedule?.checkMode ?? 'STANDARD') === 'SCAN_ONLY';
   /** The default is transferred by making another schedule default, never cleared here. */
   const isDefaultSchedule = Boolean(schedule?.isDefault);
 
@@ -324,14 +344,14 @@ export default function WorkScheduleForm({
 
   const days = watchedDays ?? valuesFromSchedule(schedule).days;
   const summary = useMemo(() => {
-    const totals = days.map((day) => (day ? computeHours(day) : 0));
+    const totals = days.map((day) => (day ? computeHours(day, scanOnly) : 0));
     return {
       hours: Math.round(totals.reduce((sum, value) => sum + value, 0) * 10) / 10,
       working: days.filter((day) => day?.mode === 'working').length,
       half: days.filter((day) => day?.mode === 'half').length,
       totals,
     };
-  }, [days]);
+  }, [days, scanOnly]);
 
   function copyMondayToWeekdays(): void {
     const monday = form.getFieldValue(['days', 1]) as DayFormValue | undefined;
@@ -383,6 +403,42 @@ export default function WorkScheduleForm({
               <Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} maxLength={2000} />
             </Form.Item>
           </div>
+          <div className="grid gap-x-4 md:grid-cols-2">
+            <Form.Item
+              name="checkMode"
+              label={<span className="font-medium text-slate-700">{t('hr.workSchedule.checkMode')}</span>}
+              extra={<span className="text-xs text-slate-600">{t('hr.workSchedule.checkModeHint')}</span>}
+            >
+              <Select
+                options={[
+                  { value: 'STANDARD', label: t('hr.workSchedule.checkModeStandard') },
+                  { value: 'SCAN_ONLY', label: t('hr.workSchedule.checkModeScanOnly') },
+                ]}
+                onChange={(value: WorkScheduleCheckMode) => {
+                  if (value === 'SCAN_ONLY' && !form.getFieldValue('latestScanTime')) {
+                    form.setFieldsValue({ latestScanTime: parseTime(DEFAULT_LATEST_SCAN_TIME) });
+                  }
+                }}
+              />
+            </Form.Item>
+            {scanOnly ? (
+              <Form.Item
+                name="latestScanTime"
+                label={<span className="font-medium text-slate-700">{t('hr.workSchedule.latestScanTime')}</span>}
+                rules={[{ required: true, message: t('hr.workSchedule.latestScanTimeRequired') }]}
+                extra={<span className="text-xs text-slate-600">{t('hr.workSchedule.scanOnlyNote')}</span>}
+              >
+                <TimePicker
+                  format="HH:mm"
+                  minuteStep={5}
+                  needConfirm={false}
+                  allowClear={false}
+                  className="w-full"
+                  aria-label={t('hr.workSchedule.latestScanTime')}
+                />
+              </Form.Item>
+            ) : null}
+          </div>
           <div className="grid gap-3 md:grid-cols-2">
             <SwitchRow
               name="isDefault"
@@ -414,7 +470,9 @@ export default function WorkScheduleForm({
                 {t('hr.workSchedule.weekPattern')}
               </h2>
               <p className="m-0 mt-0.5 text-[13px] text-slate-500">
-                {t('hr.workSchedule.weekPatternHint')}
+                {scanOnly
+                  ? t('hr.workSchedule.shiftHint')
+                  : t('hr.workSchedule.weekPatternHint')}
               </p>
             </div>
             <Button size="small" icon={<Copy size={14} strokeWidth={2} />} onClick={copyMondayToWeekdays}>
@@ -451,11 +509,15 @@ export default function WorkScheduleForm({
                           index={index}
                           startField="morningStart"
                           endField="morningEnd"
-                          label={t('hr.workSchedule.morning')}
+                          label={
+                            scanOnly && mode === 'working'
+                              ? t('hr.workSchedule.shift')
+                              : t('hr.workSchedule.morning')
+                          }
                           requiredMessage={requiredTime}
                           orderMessage={orderMessage}
                         />
-                        {mode === 'working' ? (
+                        {mode === 'working' && !scanOnly ? (
                           <TimeRange
                             index={index}
                             startField="afternoonStart"

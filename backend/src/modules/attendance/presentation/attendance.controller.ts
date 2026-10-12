@@ -31,11 +31,14 @@ import {
   ConfirmAttendanceImportDto,
   CorrectDailyLogDto,
   CreateFieldMovementLogDto,
+  SubmitFieldMovementLogDto,
   GetFlaggedDaysDto,
   ListAttendanceDto,
   ListAttendanceMonthlyApprovalsDto,
   ListFieldMovementLogsDto,
+  ListScanReviewsDto,
   ResolveAttendanceMissingDto,
+  ReviewScanFlagDto,
   UnlockAttendanceMonthDto,
   UpdateAttendanceIdentityDto,
 } from '../application/dtos/attendance.dto';
@@ -263,6 +266,38 @@ export class AttendanceController {
     return this.attendanceService.correctDailyLog(dto, companyId, user.userId);
   }
 
+  @Get('scan-reviews')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({
+    summary:
+      'SCAN_ONLY schedules: scans after the latest scan time for a month, with per-employee counts',
+  })
+  listScanReviews(
+    @CurrentCompany() companyId: string,
+    @Query() query: ListScanReviewsDto,
+  ): Promise<unknown> {
+    return this.attendanceService.listScanReviews(query, companyId);
+  }
+
+  @Patch('scan-reviews/:dailyLogId')
+  @RequireAnyPermission({ module: 'hr', action: 'view' })
+  @ApiOperation({
+    summary: 'Excuse or mark late a SCAN_AFTER_DEADLINE flag (no pay effect)',
+  })
+  reviewScanFlag(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Param('dailyLogId', ParseUUIDPipe) dailyLogId: string,
+    @Body() dto: ReviewScanFlagDto,
+  ): Promise<unknown> {
+    return this.attendanceService.reviewScanFlag(
+      dailyLogId,
+      dto,
+      companyId,
+      user.userId,
+    );
+  }
+
   @Get('flagged-days/me')
   @DelegatePermissionCheck()
   @ApiOperation({
@@ -354,11 +389,13 @@ export class AttendanceController {
     @CurrentUser() user: AuthenticatedUser,
     @CurrentCompany() companyId: string,
     @Param('id') id: string,
+    @Body() dto: SubmitFieldMovementLogDto,
   ): Promise<unknown> {
     return this.attendanceService.submitFieldMovementLog(
       id,
       companyId,
       user.userId,
+      dto,
     );
   }
 

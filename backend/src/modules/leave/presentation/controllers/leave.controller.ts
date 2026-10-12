@@ -27,7 +27,10 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  LeaveBalanceAdjustmentDto,
   LeaveBalanceQueryDto,
+  LeaveLedgerQueryDto,
+  LeaveOpeningBalanceDto,
   ListLeaveBalancesDto,
   ListLeaveRequestsDto,
   SubmitLeaveRequestDto,
@@ -35,6 +38,7 @@ import {
 } from '../../application/dtos/leave.dtos';
 import { LeaveBalanceService } from '../../application/services/leave-balance.service';
 import { LeaveService } from '../../application/services/leave.service';
+import { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
 
 @ApiTags('HR Leave Requests')
@@ -51,6 +55,7 @@ export class LeaveController {
     private readonly leaveService: LeaveService,
     private readonly leaveBalanceService: LeaveBalanceService,
     private readonly onBehalfService: OnBehalfService,
+    private readonly leaveLedger: LeaveLedgerService,
   ) {}
 
   @Post()
@@ -132,13 +137,17 @@ export class LeaveController {
     @CurrentCompany() companyId: string,
     @Query() query: LeaveBalanceQueryDto,
   ): Promise<unknown> {
-    const year = query.year ?? new Date().getFullYear();
     const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
       user.userId,
       companyId,
       query.employeeId,
     );
-    return this.leaveBalanceService.getBalance(employeeId, year, companyId);
+    // No year → the employee's current leave year (employment anniversary).
+    return this.leaveBalanceService.getBalance(
+      employeeId,
+      query.year,
+      companyId,
+    );
   }
 
   @Get('balances/me')
@@ -165,6 +174,61 @@ export class LeaveController {
     @Query() query: ListLeaveBalancesDto,
   ): Promise<unknown> {
     return this.leaveBalanceService.listCompanyBalances(query, companyId);
+  }
+
+  @Get('balance-ledger')
+  @DelegatePermissionCheck()
+  @ApiOperation({
+    summary:
+      'Leave balance ledger entries (who / when / why) for me, an on-behalf target, or any employee (HR)',
+  })
+  async getLedger(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Query() query: LeaveLedgerQueryDto,
+  ): Promise<unknown> {
+    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+      user.userId,
+      companyId,
+      query.employeeId,
+    );
+    return this.leaveLedger.listEntries(employeeId, companyId, query.year);
+  }
+
+  @Post('balance-ledger/adjustments')
+  @RequireAnyPermission({ module: 'hr', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'HR: adjust a leave balance (+/− days, reason required). Appends an ADJUSTMENT entry; audit-logged.',
+  })
+  adjustBalance(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: LeaveBalanceAdjustmentDto,
+  ): Promise<unknown> {
+    return this.leaveLedger.addAdjustment({
+      ...dto,
+      companyId,
+      actorUserId: user.userId,
+    });
+  }
+
+  @Post('balance-ledger/opening')
+  @RequireAnyPermission({ module: 'hr', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'HR go-live: set the opening balance for the current leave year (once per leave type); audit-logged.',
+  })
+  setOpeningBalance(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: LeaveOpeningBalanceDto,
+  ): Promise<unknown> {
+    return this.leaveLedger.setOpeningBalance({
+      ...dto,
+      companyId,
+      actorUserId: user.userId,
+    });
   }
 
   @Get(':id')
@@ -206,7 +270,7 @@ export class LeaveController {
   )
   @ApiOperation({
     summary:
-      'Cancel a draft, submitted, or in-review leave request (owner or HR)',
+      'Cancel a draft, submitted or in-review leave request (owner or HR), or an approved one (HR — reverses used days)',
   })
   cancel(
     @CurrentUser() user: AuthenticatedUser,

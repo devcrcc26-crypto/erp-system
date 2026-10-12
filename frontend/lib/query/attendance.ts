@@ -16,9 +16,11 @@ import {
   getMyAttendance,
   getMyFlaggedDays,
   listAttendanceRecords,
+  listAttendanceScanReviews,
   listFieldMovementLogs,
   markAttendanceMonthReviewed,
   previewAttendanceImport,
+  reviewAttendanceScanFlag,
   submitFieldMovementLog,
   unlockAttendanceMonth,
 } from '@/lib/api/attendance.api';
@@ -29,6 +31,7 @@ import type {
   CorrectDailyLogDto,
   CreateFieldMovementLogDto,
   ListFieldMovementLogsParams,
+  ReviewScanFlagDto,
   UnlockAttendanceMonthDto,
 } from '@/lib/api/attendance.types';
 
@@ -63,6 +66,8 @@ export const attendanceKeys = {
     [...attendanceKeys.fieldMovementLists(), params] as const,
   fieldMovementDetail: (id: string) =>
     [...attendanceKeys.all, 'field-movement', id] as const,
+  scanReviews: (month: number, year: number) =>
+    [...attendanceKeys.all, 'scan-reviews', month, year] as const,
 };
 
 const FETCH_PAGE_SIZE = 100;
@@ -408,7 +413,14 @@ export function useCreateFieldMovementLog() {
 export function useSubmitFieldMovementLog() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => submitFieldMovementLog(id),
+    mutationFn: (input: string | { id: string; lateReason?: string }) => {
+      if (typeof input === 'string') {
+        return submitFieldMovementLog(input);
+      }
+      return submitFieldMovementLog(input.id, {
+        lateReason: input.lateReason,
+      });
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: attendanceKeys.fieldMovementLists(),
@@ -433,6 +445,42 @@ export function useCancelFieldMovementLog() {
       });
       void queryClient.invalidateQueries({
         queryKey: attendanceKeys.all,
+      });
+    },
+  });
+}
+
+/**
+ * SCAN_ONLY schedules: SCAN_AFTER_DEADLINE flags for a month (HR review).
+ */
+export function useAttendanceScanReviews(
+  month: number,
+  year: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: attendanceKeys.scanReviews(month, year),
+    queryFn: () => listAttendanceScanReviews({ month, year }),
+    enabled,
+  });
+}
+
+/**
+ * Excuse / mark late a SCAN_AFTER_DEADLINE flag.
+ */
+export function useReviewAttendanceScanFlag(month: number, year: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      dailyLogId,
+      dto,
+    }: {
+      dailyLogId: string;
+      dto: ReviewScanFlagDto;
+    }) => reviewAttendanceScanFlag(dailyLogId, dto),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: attendanceKeys.scanReviews(month, year),
       });
     },
   });

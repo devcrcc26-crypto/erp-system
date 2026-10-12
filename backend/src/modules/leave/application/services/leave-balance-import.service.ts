@@ -172,6 +172,7 @@ export class LeaveBalanceImportService {
           row.entitled,
           row.broughtForward ?? 0,
           ctx.companyId,
+          ctx.userId,
         );
         if (result.created) {
           created += 1;

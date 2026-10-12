@@ -1,15 +1,6 @@
-import { dateToYyyyMmDd } from '../../../attendance/application/services/attendance-leave.util';
-
 export interface DateRange {
   startDate: Date;
   endDate: Date;
-}
-
-/** Earliest allowed start: 1st day of the previous calendar month (UTC). */
-export function earliestAllowedSiteStart(today: Date = new Date()): Date {
-  const year = today.getUTCFullYear();
-  const month = today.getUTCMonth();
-  return new Date(Date.UTC(year, month - 1, 1));
 }
 
 export function parseUtcDateOnly(value: string): Date {
@@ -17,20 +8,21 @@ export function parseUtcDateOnly(value: string): Date {
   return new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1));
 }
 
-export function validateSiteAssignmentDates(
+export function validateSiteAssignmentDateOrder(
   startDate: Date,
   endDate: Date,
-  today: Date = new Date(),
 ): void {
   if (endDate.getTime() < startDate.getTime()) {
     throw new Error('End date must be on or after start date');
   }
-  const earliest = earliestAllowedSiteStart(today);
-  if (startDate.getTime() < earliest.getTime()) {
-    throw new Error(
-      `Start date cannot be before ${dateToYyyyMmDd(earliest)} (1st of previous month)`,
-    );
-  }
+}
+
+/** @deprecated Use BackdatingPolicyService — kept as alias for date order only. */
+export function validateSiteAssignmentDates(
+  startDate: Date,
+  endDate: Date,
+): void {
+  validateSiteAssignmentDateOrder(startDate, endDate);
 }
 
 export function calendarDaysInclusive(startDate: Date, endDate: Date): number {

@@ -11,6 +11,7 @@ import {
   HolidayNationality,
   Nationality,
   Prisma,
+  WorkScheduleCheckMode,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
@@ -62,6 +63,17 @@ type NormalizedScheduleDay = {
   afternoonEnd: string | null;
   totalHours: Prisma.Decimal;
 };
+
+/** Check mode + latest scan time after validation, ready to persist. */
+type NormalizedCheckMode = {
+  checkMode: WorkScheduleCheckMode;
+  latestScanTime: string | null;
+};
+
+/** Recalc start when an employee's assignment start on a schedule is unknown. */
+const RECALC_FROM_ALL_IMPORTED = new Date(Date.UTC(2000, 0, 1));
+
+const HH_MM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 type HolidayRow = {
   id: string;
@@ -455,7 +467,8 @@ export class WorkScheduleService {
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const days = this.normalizeDays(dto.days);
+    const mode = this.normalizeCheckMode(dto.checkMode, dto.latestScanTime);
+    const days = this.normalizeDays(dto.days, mode.checkMode);
 
     try {
       const created = await this.prisma.$transaction(async (tx) => {
@@ -474,6 +487,7 @@ export class WorkScheduleService {
             description: dto.description?.trim() || null,
             isDefault: dto.isDefault ?? false,
             isActive: dto.isActive ?? true,
+            ...mode,
             createdBy: userId,
             updatedBy: userId,
             days: {
@@ -491,6 +505,7 @@ export class WorkScheduleService {
       const revived = await this.reviveDeletedSchedule(
         dto,
         days,
+        mode,
         companyId,
         userId,
         error,
@@ -510,6 +525,7 @@ export class WorkScheduleService {
   private async reviveDeletedSchedule(
     dto: CreateWorkScheduleDto,
     days: NormalizedScheduleDay[],
+    mode: NormalizedCheckMode,
     companyId: string,
     userId: string,
     error: unknown,
@@ -555,6 +571,7 @@ export class WorkScheduleService {
           description: dto.description?.trim() || null,
           isDefault: dto.isDefault ?? false,
           isActive: dto.isActive ?? true,
+          ...mode,
           deletedAt: null,
           deletedBy: null,
           updatedBy: userId,
@@ -576,7 +593,22 @@ export class WorkScheduleService {
     userId: string,
   ): Promise<unknown> {
     const existing = await this.findScheduleOrThrow(id, companyId);
-    const days = dto.days ? this.normalizeDays(dto.days) : null;
+    const mode = this.normalizeCheckMode(
+      dto.checkMode ?? existing.checkMode,
+      dto.latestScanTime !== undefined
+        ? dto.latestScanTime
+        : existing.latestScanTime,
+    );
+    const days = dto.days
+      ? this.normalizeDays(dto.days, mode.checkMode)
+      : null;
+    if (!days && mode.checkMode !== existing.checkMode) {
+      // Switching back to STANDARD needs both windows on full working days.
+      this.normalizeDays(existing.days, mode.checkMode);
+    }
+    const checkModeChanged =
+      mode.checkMode !== existing.checkMode ||
+      mode.latestScanTime !== existing.latestScanTime;
 
     if (dto.isActive === false && existing.isDefault) {
       throw new BadRequestException(
@@ -623,6 +655,7 @@ export class WorkScheduleService {
               : {}),
             ...(dto.isDefault !== undefined ? { isDefault: dto.isDefault } : {}),
             ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+            ...mode,
             updatedBy: userId,
           },
           include: SCHEDULE_INCLUDE,
@@ -639,22 +672,28 @@ export class WorkScheduleService {
         skippedLockedMonths: number;
       } | null = null;
 
-      if (dto.recalculateAttendance && days) {
-        const from = dto.recalculateFrom
+      // Timing / check-mode changes re-evaluate imported months (approved or
+      // payroll-locked months are only flagged stale). Opt out with false.
+      if (dto.recalculateAttendance !== false && (days || checkModeChanged)) {
+        const fixedFrom = dto.recalculateFrom
           ? parseDateOnly(dto.recalculateFrom)
-          : todayUtc();
-        const employeeIds = await this.listAssignedEmployeeIds(id, companyId);
+          : null;
+        const targets = await this.listRecalcTargets(
+          id,
+          companyId,
+          updated.isDefault,
+        );
         let updatedRecords = 0;
         let updatedDays = 0;
         let skippedLockedMonths = 0;
         let employeesUpdated = 0;
 
-        for (const employeeId of employeeIds) {
+        for (const [employeeId, assignedFrom] of targets) {
           const result =
             await this.attendanceService.recalculateEmployeeAttendanceFromDate(
               employeeId,
               companyId,
-              from,
+              fixedFrom ?? assignedFrom,
             );
           if (result.updatedRecords > 0 || result.updatedDays > 0) {
             employeesUpdated += 1;
@@ -938,7 +977,7 @@ export class WorkScheduleService {
       skippedLockedMonths: number;
     } | null = null;
 
-    if (dto.recalculateAttendance) {
+    if (dto.recalculateAttendance !== false) {
       attendanceRecalc =
         await this.attendanceService.recalculateEmployeeAttendanceFromDate(
           dto.employeeId,
@@ -1004,6 +1043,11 @@ export class WorkScheduleService {
           data: { workScheduleId: scheduleId, updatedBy: userId },
         });
       });
+      await this.attendanceService.recalculateEmployeeAttendanceFromDate(
+        employeeId,
+        companyId,
+        current.effectiveFrom,
+      );
       return;
     }
 
@@ -1317,6 +1361,8 @@ export class WorkScheduleService {
       description: null,
       isDefault: false,
       isActive: true,
+      checkMode: WorkScheduleCheckMode.STANDARD,
+      latestScanTime: null,
       createdAt: now,
       createdBy: 'system',
       updatedAt: now,
@@ -1365,7 +1411,93 @@ export class WorkScheduleService {
     );
   }
 
-  private normalizeDays(days: WorkScheduleDayDto[]): NormalizedScheduleDay[] {
+  /**
+   * SCAN_ONLY requires latestScanTime (HH:mm); STANDARD never stores one.
+   */
+  private normalizeCheckMode(
+    checkMode: WorkScheduleCheckMode | undefined,
+    latestScanTime: string | null | undefined,
+  ): NormalizedCheckMode {
+    if (checkMode !== WorkScheduleCheckMode.SCAN_ONLY) {
+      return { checkMode: WorkScheduleCheckMode.STANDARD, latestScanTime: null };
+    }
+    const trimmed = latestScanTime?.trim() ?? '';
+    if (!HH_MM.test(trimmed)) {
+      throw new BadRequestException(
+        'Scan-only schedules require a latest scan time (HH:mm)',
+      );
+    }
+    return {
+      checkMode: WorkScheduleCheckMode.SCAN_ONLY,
+      latestScanTime: trimmed,
+    };
+  }
+
+  /**
+   * Employees whose imported attendance a schedule edit can change, each with
+   * the date to recalculate from: the earliest assignment start on this
+   * schedule. Employees on it without an assignment row (user FK, or the
+   * company-default fallback) recalculate every imported month.
+   */
+  private async listRecalcTargets(
+    scheduleId: string,
+    companyId: string,
+    isDefault: boolean,
+  ): Promise<Map<string, Date>> {
+    const targets = new Map<string, Date>();
+    const assignments = await this.prisma.employeeScheduleAssignment.findMany({
+      where: { companyId, scheduleId },
+      select: { employeeId: true, effectiveFrom: true },
+    });
+    for (const row of assignments) {
+      const current = targets.get(row.employeeId);
+      if (!current || row.effectiveFrom.getTime() < current.getTime()) {
+        targets.set(row.employeeId, row.effectiveFrom);
+      }
+    }
+
+    const fallbackUsers = await this.prisma.user.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        OR: [
+          { workScheduleId: scheduleId },
+          ...(isDefault
+            ? [
+                {
+                  scheduleAssignments: { none: {} },
+                  attendanceRecords: { some: {} },
+                },
+              ]
+            : []),
+        ],
+      },
+      select: { id: true },
+    });
+    for (const user of fallbackUsers) {
+      if (!targets.has(user.id)) {
+        targets.set(user.id, RECALC_FROM_ALL_IMPORTED);
+      }
+    }
+    return targets;
+  }
+
+  private normalizeDays(
+    days: Array<
+      Pick<
+        WorkScheduleDayDto,
+        | 'dayOfWeek'
+        | 'isWorkingDay'
+        | 'isHalfDay'
+        | 'morningStart'
+        | 'morningEnd'
+        | 'afternoonStart'
+        | 'afternoonEnd'
+      >
+    >,
+    checkMode: WorkScheduleCheckMode = WorkScheduleCheckMode.STANDARD,
+  ): NormalizedScheduleDay[] {
+    const allowSingleShift = checkMode === WorkScheduleCheckMode.SCAN_ONLY;
     if (days.length !== 7) {
       throw new BadRequestException('A schedule must define all 7 days of the week');
     }
@@ -1379,14 +1511,17 @@ export class WorkScheduleService {
       seen.add(day.dayOfWeek);
       const isWorkingDay = day.isWorkingDay;
       const isHalfDay = isWorkingDay ? Boolean(day.isHalfDay) : false;
-      const hours = computeAndValidateDayHours({
-        isWorkingDay,
-        isHalfDay,
-        morningStart: day.morningStart,
-        morningEnd: day.morningEnd,
-        afternoonStart: day.afternoonStart,
-        afternoonEnd: day.afternoonEnd,
-      });
+      const hours = computeAndValidateDayHours(
+        {
+          isWorkingDay,
+          isHalfDay,
+          morningStart: day.morningStart,
+          morningEnd: day.morningEnd,
+          afternoonStart: day.afternoonStart,
+          afternoonEnd: day.afternoonEnd,
+        },
+        { allowSingleShift },
+      );
       return {
         dayOfWeek: day.dayOfWeek,
         isWorkingDay,

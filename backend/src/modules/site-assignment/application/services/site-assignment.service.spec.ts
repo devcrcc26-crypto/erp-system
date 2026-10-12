@@ -47,6 +47,7 @@ describe('SiteAssignmentService.onApprovalDecision', () => {
       {} as never,
       attendanceService as unknown as AttendanceService,
       {} as never,
+      {} as never,
     );
   });
 

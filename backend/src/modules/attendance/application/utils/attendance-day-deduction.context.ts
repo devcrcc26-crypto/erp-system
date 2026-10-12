@@ -14,6 +14,7 @@ import {
   fieldMovementCoverageFromEntryStatus,
   mergeFieldMovementCoverage,
 } from './field-movement-entry-status.util';
+import type { ScanOnlyRule } from './scan-only.util';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -246,7 +247,14 @@ export function matchedPublicHolidayForEmployee(
 export function buildDayDeductionContext(
   employee: EmployeeDeductionProfile,
   data: LoadedDeductionData,
+  options?: {
+    enrolmentGraceKeys?: ReadonlySet<string>;
+    /** Dates (YYYY-MM-DD) whose work schedule is SCAN_ONLY. */
+    scanOnlyRuleByDate?: ReadonlyMap<string, ScanOnlyRule>;
+  },
 ): DayDeductionContext {
+  const graceKeys = options?.enrolmentGraceKeys;
+  const scanOnlyByDate = options?.scanOnlyRuleByDate;
   return {
     isSunday: (date) => date.getUTCDay() === 0,
     isPublicHoliday: (date) =>
@@ -265,6 +273,13 @@ export function buildDayDeductionContext(
     earlyDepartureWaiver: (date) =>
       data.earlyDepartureWaiverByDate.get(dateToYyyyMmDd(date)) ?? 'NONE',
     isAttendanceExempt: () => employee.attendanceMode === 'EXEMPT',
+    isEnrolmentGrace: graceKeys
+      ? (date) => graceKeys.has(dateToYyyyMmDd(date))
+      : undefined,
+    scanOnlyRule:
+      scanOnlyByDate && scanOnlyByDate.size > 0
+        ? (date) => scanOnlyByDate.get(dateToYyyyMmDd(date)) ?? null
+        : undefined,
   };
 }
 

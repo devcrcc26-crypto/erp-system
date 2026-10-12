@@ -53,7 +53,8 @@ export function isLateAfterGrace(
 }
 
 /**
- * Tiered early departure vs schedule end (weekday 17:30 / Saturday half-day end).
+ * Tiered early departure vs schedule end (weekday 17:30 / Saturday half-day 12:30).
+ * Same grace (EARLY_DEPARTURE_GRACE_MINUTES) applies on weekdays and Saturdays.
  */
 export function evaluateEarlyDeparture(input: {
   clockOut: string | null | undefined;
@@ -107,7 +108,7 @@ export function evaluateEarlyDeparture(input: {
     };
   }
 
-  // end − 60 <= OUT < end − 15 → flag only (exactly 60 min early is still FLAG).
+  // end − 60 <= OUT < end − grace → flag only (exactly 60 min early is still FLAG).
   if (minutesEarly <= deductAt) {
     if (input.fieldMovement === 'PENDING') {
       return {

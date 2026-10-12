@@ -9,6 +9,11 @@ import {
   evaluateEarlyDeparture,
   type EarlyDepartureBand,
 } from './early-departure.util';
+import {
+  earliestScan,
+  isScanAfterDeadline,
+  type ScanOnlyRule,
+} from './scan-only.util';
 
 export type DayDeductionValue = 0 | 0.5 | 1;
 
@@ -46,8 +51,18 @@ export interface DayDeductionContext {
    * Checked after paid categories (Sunday / holiday / WFH / site / leave).
    */
   isAttendanceExempt?: () => boolean;
+  /**
+   * Hire → first-scan enrolment grace (first N working days). Not absent;
+   * shown as ENROLMENT_GRACE on the daily log.
+   */
+  isEnrolmentGrace?: (date: Date) => boolean;
   /** Override EARLY_DEPARTURE_DEDUCTION_MODE for tests / company settings. */
   earlyDepartureMode?: 'REPORT_ONLY' | 'ENFORCED';
+  /**
+   * SCAN_ONLY work schedule on this date (null / absent = STANDARD). Any scan
+   * is full presence; late, early departure and missing punch are skipped.
+   */
+  scanOnlyRule?: (date: Date) => ScanOnlyRule | null;
 }
 
 export interface DayDeductionResult {
@@ -58,6 +73,13 @@ export interface DayDeductionResult {
   earlyDepartureBand?: EarlyDepartureBand;
   /** Would-deduct amount for REPORT_ONLY review (never stacked with missing punch). */
   earlyDepartureWouldDeduct?: 0 | 0.5;
+  /** True when the day was evaluated under a SCAN_ONLY schedule. */
+  scanOnly?: boolean;
+  /**
+   * SCAN_ONLY: earliest scan (HH:mm) when it is after latestScanTime — flagged
+   * SCAN_AFTER_DEADLINE for HR review. No pay effect.
+   */
+  scanAfterDeadlineTime?: string | null;
 }
 
 function roundDays(value: number): number {
@@ -102,8 +124,16 @@ export function dayDeduction(
     return { deduction: 0, status: 'PRESENT' };
   }
 
+  const scanOnly = context.scanOnlyRule?.(date) ?? null;
+  if (scanOnly) {
+    return scanOnlyDayDeduction(date, day, scanOnly, siteName, context);
+  }
+
   // Full absence on any Mon–Sat duty day (Saturday included as 1, never 0.5).
   if (!hasClockIn && !hasClockOut) {
+    if (context.isEnrolmentGrace?.(date)) {
+      return { deduction: 0, status: 'ENROLMENT_GRACE' };
+    }
     return { deduction: 1, status: 'ABSENT' };
   }
 
@@ -176,6 +206,36 @@ export function dayDeduction(
     siteName: siteName ?? null,
     earlyDepartureBand: early.band,
     earlyDepartureWouldDeduct: early.wouldDeduct,
+  };
+}
+
+/**
+ * SCAN_ONLY duty day (after Sunday / holiday / unpaid / WFH / site / leave /
+ * exempt): any scan → PRESENT 0; no scan → enrolment grace or ABSENT 1.
+ * Earliest scan after latestScanTime is flagged only — status and pay unchanged.
+ */
+function scanOnlyDayDeduction(
+  date: Date,
+  day: DayDeductionDayInput,
+  rule: ScanOnlyRule,
+  siteName: string | null,
+  context: DayDeductionContext,
+): DayDeductionResult {
+  const scan = earliestScan(day.clockIn, day.clockOut);
+  if (!scan) {
+    if (context.isEnrolmentGrace?.(date)) {
+      return { deduction: 0, status: 'ENROLMENT_GRACE', scanOnly: true };
+    }
+    return { deduction: 1, status: 'ABSENT', scanOnly: true };
+  }
+  return {
+    deduction: 0,
+    status: 'PRESENT',
+    siteName: siteName ?? null,
+    scanOnly: true,
+    scanAfterDeadlineTime: isScanAfterDeadline(scan, rule.latestScanTime)
+      ? scan
+      : null,
   };
 }
 

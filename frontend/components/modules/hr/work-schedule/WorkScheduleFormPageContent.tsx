@@ -156,10 +156,6 @@ export default function WorkScheduleFormPageContent({
           if (!pendingValues) {
             return;
           }
-          if (!recalcFrom) {
-            messageApi.warning(t('hr.workSchedule.effectiveFromRequired'));
-            return;
-          }
           void saveSchedule(pendingValues, true);
         }}
         onCancel={() => {
@@ -178,6 +174,9 @@ export default function WorkScheduleFormPageContent({
             onChange={(value) => setRecalcFrom(value)}
             disabled={updateMutation.isPending}
           />
+          <p className="m-0 mt-1.5 text-xs text-slate-600">
+            {t('hr.workSchedule.recalcAttendanceFromHint')}
+          </p>
         </div>
       </ConfirmDialog>
     </HrFormPageShell>

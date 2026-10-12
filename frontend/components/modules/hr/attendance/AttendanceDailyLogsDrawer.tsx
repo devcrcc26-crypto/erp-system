@@ -70,6 +70,7 @@ const STATUS_CONFIG: Record<DayStatus, { color: string; labelKey: string }> = {
     color: 'orange',
     labelKey: 'FIELD_MOVEMENT_PENDING',
   },
+  ENROLMENT_GRACE: { color: 'blue', labelKey: 'ENROLMENT_GRACE' },
 };
 
 /** Days where nobody is expected at the clock, so missing punches are not flagged. */
@@ -79,6 +80,7 @@ const NO_PUNCH_EXPECTED = new Set<DayStatus>([
   'LEAVE',
   'WORK_FROM_HOME',
   'ON_SITE',
+  'ENROLMENT_GRACE',
 ]);
 
 const FLAG_CONFIG: Record<

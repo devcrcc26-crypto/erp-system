@@ -29,8 +29,10 @@ import type {
 } from '../../../approvals/application/ports/approval-decision.listener';
 import { HrApprovalChainService } from '../../../hr-shared/application/services/hr-approval-chain.service';
 import { OnBehalfService } from '../../../on-behalf/on-behalf.service';
+import { BackdatingPolicyService } from '../../../hr-shared/application/services/backdating-policy.service';
 import { DayCoverageService } from '../../../hr-shared/application/services/day-coverage.service';
 import { eachDay } from '../../../hr-shared/application/utils/day-coverage.util';
+import { markPayrollAttendanceSnapshotStale } from '../../../attendance/application/utils/attendance-recalc-policy.util';
 import { formatDateOnly } from '../../../work-schedule/application/services/work-schedule.dates';
 import {
   ListSiteAssignmentsDto,
@@ -42,7 +44,7 @@ import {
   monthsTouchedByRange,
   parseUtcDateOnly,
   rangesOverlap,
-  validateSiteAssignmentDates,
+  validateSiteAssignmentDateOrder,
 } from '../utils/site-assignment.util';
 
 const USER_SELECT = {
@@ -112,6 +114,7 @@ export class SiteAssignmentService
     private readonly permissionService: PermissionService,
     private readonly attendanceService: AttendanceService,
     private readonly dayCoverage: DayCoverageService,
+    private readonly backdatingPolicy: BackdatingPolicyService,
   ) {}
 
   onModuleInit(): void {
@@ -139,12 +142,20 @@ export class SiteAssignmentService
     const startDate = parseUtcDateOnly(dto.startDate);
     const endDate = parseUtcDateOnly(dto.endDate);
     try {
-      validateSiteAssignmentDates(startDate, endDate);
+      validateSiteAssignmentDateOrder(startDate, endDate);
     } catch (error: unknown) {
       throw new BadRequestException(
         error instanceof Error ? error.message : 'Invalid dates',
       );
     }
+
+    const backdating = await this.backdatingPolicy.validateSubmissionDates({
+      companyId,
+      actorUserId: userId,
+      targetEmployeeId: employeeId,
+      dates: eachDay(startDate, endDate).map((day) => day.date),
+      lateReason: dto.lateReason,
+    });
 
     if (dto.projectId) {
       const project = await this.prisma.project.findFirst({
@@ -190,6 +201,8 @@ export class SiteAssignmentService
           startDate,
           endDate,
           reason: dto.reason?.trim() || null,
+          isLateSubmission: backdating.isLateSubmission,
+          lateReason: backdating.lateReason,
           status: SiteAssignmentStatus.APPROVED,
           submittedAt: now,
           completedAt: now,
@@ -217,6 +230,17 @@ export class SiteAssignmentService
         endDate,
       );
 
+      if (backdating.isLateSubmission) {
+        for (const period of monthsTouchedByRange(startDate, endDate)) {
+          await markPayrollAttendanceSnapshotStale(
+            this.prisma,
+            companyId,
+            period.month,
+            period.year,
+          );
+        }
+      }
+
       return this.getDetail(recordId, companyId, userId);
     }
 
@@ -241,6 +265,10 @@ export class SiteAssignmentService
           tiers: resolvedTiers,
         },
         createdByUserId: userId,
+        lateSubmission: {
+          isLateSubmission: backdating.isLateSubmission,
+          lateReason: backdating.lateReason,
+        },
       },
     )) as { id: string; requestNumber: string };
 
@@ -256,6 +284,8 @@ export class SiteAssignmentService
           startDate,
           endDate,
           reason: dto.reason?.trim() || null,
+          isLateSubmission: backdating.isLateSubmission,
+          lateReason: backdating.lateReason,
           status: SiteAssignmentStatus.SUBMITTED,
           approvalRequestId: approval.id,
           submittedAt: now,
@@ -627,6 +657,7 @@ export class SiteAssignmentService
         row.endDate,
       );
     }
+
   }
 
   private async assertNoOverlap(

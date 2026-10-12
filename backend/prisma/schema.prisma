@@ -294,6 +294,7 @@ model Company {
   approvalRequests         ApprovalRequest[]
   leaveRequests            LeaveRequest[]
   leaveBalances            LeaveBalance[]
+  leaveBalanceEntries      LeaveBalanceEntry[]
   overtimeSheets           OvertimeSheet[]
   flightApplications       FlightApplication[]
   businessTrips            BusinessTrip[]
@@ -770,6 +771,8 @@ model User {
   leaveRequestsAsEmployee  LeaveRequest[]         @relation("LeaveEmployee")
   leaveRequestsCreated     LeaveRequest[]         @relation("LeaveCreator")
   leaveBalances            LeaveBalance[]         @relation("LeaveBalance")
+  leaveBalanceEntries      LeaveBalanceEntry[]    @relation("LeaveBalanceEntryEmployee")
+  leaveBalanceEntriesCreated LeaveBalanceEntry[]  @relation("LeaveBalanceEntryCreator")
   overtimeSheetsAsEmployee OvertimeSheet[]        @relation("OvertimeEmployee")
   overtimeSheetsCreated    OvertimeSheet[]        @relation("OvertimeCreator")
   flightApplicationsSubmitted FlightApplication[] @relation("FlightSubmitter")
@@ -859,6 +862,7 @@ model User {
   attendanceMonthlyApprovals      AttendanceMonthlyApproval[] @relation("AttendanceApprover")
   attendanceMonthlyUnlocks        AttendanceMonthlyApproval[] @relation("AttendanceUnlocker")
   attendanceDailyCorrections      AttendanceDailyLogCorrection[] @relation("AttendanceCorrector")
+  attendanceScanReviews           AttendanceDailyLog[]           @relation("AttendanceScanReviewer")
 
   // Evaluation relations
   evaluationTemplatesCreated    EvaluationTemplate[]        @relation("EvaluationTemplateCreator")
@@ -3617,6 +3621,8 @@ model ApprovalRequest {
   completedAt        DateTime?             @map("completed_at") @db.Timestamp(6)
   attachmentFolderId String?               @map("attachment_folder_id")
   notes              String?
+  isLateSubmission   Boolean               @default(false) @map("is_late_submission")
+  lateReason         String?               @map("late_reason")
   createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamp(6)
   createdBy          String                @map("created_by")
   updatedAt          DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
@@ -3729,6 +3735,13 @@ model ApprovalResponseDocument {
 
 // ─── Work Schedule & Public Holidays ─────────────────────────────────────────
 
+/// STANDARD: late / early departure / missing punch rules. SCAN_ONLY: any scan
+/// that day counts as present (e.g. cleaners finishing before office hours).
+enum WorkScheduleCheckMode {
+  STANDARD
+  SCAN_ONLY
+}
+
 model WorkSchedule {
   id          String    @id @default(uuid())
   companyId   String    @map("company_id")
@@ -3736,6 +3749,9 @@ model WorkSchedule {
   description String?
   isDefault   Boolean   @default(false) @map("is_default")
   isActive    Boolean   @default(true) @map("is_active")
+  checkMode   WorkScheduleCheckMode @default(STANDARD) @map("check_mode")
+  /// "HH:mm"; required when SCAN_ONLY. An earliest scan after this is flagged for HR review.
+  latestScanTime String?  @map("latest_scan_time")
   createdAt   DateTime  @default(now()) @map("created_at")
   createdBy   String    @map("created_by")
   updatedAt   DateTime  @updatedAt @map("updated_at")
@@ -3859,6 +3875,8 @@ model SiteAssignment {
   reason            String?
   status            SiteAssignmentStatus @default(SUBMITTED)
   approvalRequestId String?              @unique @map("approval_request_id")
+  isLateSubmission  Boolean              @default(false) @map("is_late_submission")
+  lateReason        String?              @map("late_reason")
   submittedAt       DateTime?            @map("submitted_at")
   completedAt       DateTime?            @map("completed_at")
   createdAt         DateTime             @default(now()) @map("created_at")
@@ -3964,6 +3982,7 @@ model LeaveRequest {
   creator          User                  @relation("LeaveCreator", fields: [createdBy], references: [id])
   documents        LeaveRequestDocument[]
   periods          LeaveRequestPeriod[]
+  balanceEntries   LeaveBalanceEntry[]
 
   @@unique([companyId, requestNumber])
   @@index([companyId])
@@ -4023,6 +4042,50 @@ model LeaveBalance {
   @@unique([companyId, employeeId, year, leaveType])
   @@index([employeeId, year])
   @@map("leave_balance")
+}
+
+/// Leave balance ledger entry kind. Balance = sum of entries (USED / EXPIRED negative).
+enum LeaveBalanceEntryKind {
+  ENTITLEMENT
+  CARRY_OVER
+  ADJUSTMENT
+  OPENING_BALANCE
+  USED
+  EXPIRED
+}
+
+/// Append-only leave ledger per employee / leave type / leave year (employment
+/// anniversary). leave_balance is a cache of these sums plus pending days.
+model LeaveBalanceEntry {
+  id                   String                @id @default(uuid())
+  companyId            String                @map("company_id")
+  employeeId           String                @map("employee_id")
+  leaveType            LeaveType             @map("leave_type")
+  leaveYearStart       DateTime              @map("leave_year_start") @db.Date
+  leaveYearEnd         DateTime              @map("leave_year_end") @db.Date
+  kind                 LeaveBalanceEntryKind
+  /// Signed days (0.5 steps): USED / EXPIRED and outgoing carry-over are negative.
+  days                 Decimal               @db.Decimal(6, 1)
+  reason               String?
+  /// Idempotency key for system entries (entitlement, carry-over, expiry, used); null for HR entries.
+  dedupeKey            String?               @unique @map("dedupe_key")
+  sourceContractId     String?               @map("source_contract_id")
+  sourceLeaveRequestId String?               @map("source_leave_request_id")
+  /// Null for system / migration entries.
+  createdById          String?               @map("created_by_id")
+  createdAt            DateTime              @default(now()) @map("created_at")
+
+  company            Company           @relation(fields: [companyId], references: [id])
+  employee           User              @relation("LeaveBalanceEntryEmployee", fields: [employeeId], references: [id])
+  createdBy          User?             @relation("LeaveBalanceEntryCreator", fields: [createdById], references: [id])
+  sourceContract     EmployeeContract? @relation(fields: [sourceContractId], references: [id], onDelete: SetNull)
+  sourceLeaveRequest LeaveRequest?     @relation(fields: [sourceLeaveRequestId], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, leaveType, leaveYearStart], map: "idx_leave_balance_entry_employee_year")
+  @@index([companyId], map: "idx_leave_balance_entry_company")
+  @@index([sourceContractId], map: "idx_leave_balance_entry_contract")
+  @@index([sourceLeaveRequestId], map: "idx_leave_balance_entry_leave")
+  @@map("leave_balance_entry")
 }
 
 enum OvertimeSheetStatus {
@@ -4156,6 +4219,15 @@ enum AttendanceDayFlag {
   NONE
 }
 
+enum AttendanceScanReviewFlag {
+  SCAN_AFTER_DEADLINE
+}
+
+enum AttendanceScanReviewDecision {
+  EXCUSED
+  MARKED_LATE
+}
+
 enum AttendanceDayStatus {
   PRESENT
   ABSENT
@@ -4166,6 +4238,8 @@ enum AttendanceDayStatus {
   ON_SITE
   LEAVE
   FIELD_MOVEMENT_PENDING
+  /// Hire → first scan grace (not absent); first N working days only.
+  ENROLMENT_GRACE
 }
 
 enum WorkFromHomeScope {
@@ -4384,14 +4458,27 @@ model AttendanceDailyLog {
   dayStatus                AttendanceDayStatus @default(PRESENT) @map("day_status")
   dayDeduction             Decimal           @default(0) @map("day_deduction") @db.Decimal(3, 2)
   siteAssignmentName       String?           @map("site_assignment_name")
+  /// SCAN_ONLY schedule: earliest scan later than the schedule's latestScanTime.
+  scanReviewFlag           AttendanceScanReviewFlag? @map("scan_review_flag")
+  /// Earliest scan (HH:mm) that raised scanReviewFlag.
+  scanReviewTime           String?           @map("scan_review_time")
+  /// True while scanReviewFlag is set and HR has not decided yet.
+  needsReview              Boolean           @default(false) @map("needs_review")
+  /// HR decision on the flag. No pay effect either way.
+  scanReviewDecision       AttendanceScanReviewDecision? @map("scan_review_decision")
+  scanReviewNote           String?           @map("scan_review_note")
+  scanReviewedById         String?           @map("scan_reviewed_by_id")
+  scanReviewedAt           DateTime?         @map("scan_reviewed_at")
 
   record               AttendanceRecord              @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
+  scanReviewedBy       User?                         @relation("AttendanceScanReviewer", fields: [scanReviewedById], references: [id])
   corrections          AttendanceDailyLogCorrection[]
   fieldMovementEntries FieldMovementEntry[]
 
   @@unique([attendanceRecordId, date], map: "uq_attendance_daily_log_record_date")
   @@index([attendanceRecordId], map: "idx_attendance_daily_log_record")
   @@index([date], map: "idx_attendance_daily_log_date")
+  @@index([scanReviewFlag], map: "idx_attendance_daily_log_scan_review_flag")
   @@map("attendance_daily_log")
 }
 
@@ -4437,6 +4524,8 @@ model FieldMovementLog {
   status            FieldMovementStatus @default(DRAFT)
   notes             String?
   approvalRequestId String?             @unique @map("approval_request_id")
+  isLateSubmission  Boolean             @default(false) @map("is_late_submission")
+  lateReason        String?             @map("late_reason")
   submittedAt       DateTime?           @map("submitted_at")
   completedAt       DateTime?           @map("completed_at")
   createdAt         DateTime            @default(now()) @map("created_at")
@@ -5643,6 +5732,7 @@ model EmployeeContract{
   evaluations               EmployeeEvaluation[]
   payrollEntries            PayrollEntry[]
   payrollSalaryPeriods      PayrollSalaryPeriod[]
+  leaveBalanceEntries       LeaveBalanceEntry[]
 
   @@unique([companyId, contractNumber], map: "uq_employee_contract_company_number")
   @@index([companyId], map:"idx_employee_contract_company")

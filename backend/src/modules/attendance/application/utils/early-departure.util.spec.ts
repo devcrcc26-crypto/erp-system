@@ -20,9 +20,9 @@ describe('evaluateEarlyDeparture', () => {
   const weekdayEnd = '17:30';
   const saturdayEnd = '12:30';
 
-  it('17:15 → nothing', () => {
+  it('17:00 → nothing (30-minute grace)', () => {
     const r = evaluateEarlyDeparture({
-      clockOut: '17:15',
+      clockOut: '17:00',
       scheduledEnd: weekdayEnd,
       fieldMovement: 'NONE',
       mode: 'ENFORCED',
@@ -31,9 +31,9 @@ describe('evaluateEarlyDeparture', () => {
     expect(r.appliedDeduction).toBe(0);
   });
 
-  it('17:14 → flag only', () => {
+  it('16:59 → flag only', () => {
     const r = evaluateEarlyDeparture({
-      clockOut: '17:14',
+      clockOut: '16:59',
       scheduledEnd: weekdayEnd,
       fieldMovement: 'NONE',
       mode: 'ENFORCED',
@@ -64,6 +64,30 @@ describe('evaluateEarlyDeparture', () => {
     expect(r.band).toBe('OVER_1H');
     expect(r.appliedDeduction).toBe(0.5);
     expect(r.wouldDeduct).toBe(0.5);
+  });
+
+  it('Saturday 12:00 → nothing (30-minute grace vs 12:30)', () => {
+    const r = evaluateEarlyDeparture({
+      clockOut: '12:00',
+      scheduledEnd: saturdayEnd,
+      fieldMovement: 'NONE',
+      mode: 'ENFORCED',
+    });
+    expect(r.band).toBe('NONE');
+    expect(r.appliedDeduction).toBe(0);
+    expect(r.isEarlyLeaveFlag).toBe(false);
+  });
+
+  it('Saturday 11:59 → flag only', () => {
+    const r = evaluateEarlyDeparture({
+      clockOut: '11:59',
+      scheduledEnd: saturdayEnd,
+      fieldMovement: 'NONE',
+      mode: 'ENFORCED',
+    });
+    expect(r.band).toBe('FLAG');
+    expect(r.appliedDeduction).toBe(0);
+    expect(r.isEarlyLeaveFlag).toBe(true);
   });
 
   it('Saturday 11:29 → 0.5; 11:30 → flag', () => {

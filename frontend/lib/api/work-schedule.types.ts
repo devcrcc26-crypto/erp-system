@@ -2,6 +2,9 @@ export type HolidayNationality = 'ETHIOPIAN' | 'CHINESE' | 'ALL';
 
 export type DayBreakdownType = 'working' | 'half' | 'weekend' | 'holiday';
 
+/** STANDARD: late / early / missing-punch rules. SCAN_ONLY: any scan = present. */
+export type WorkScheduleCheckMode = 'STANDARD' | 'SCAN_ONLY';
+
 export interface WorkScheduleDay {
   id: string;
   scheduleId: string;
@@ -22,6 +25,9 @@ export interface WorkSchedule {
   description: string | null;
   isDefault: boolean;
   isActive: boolean;
+  checkMode: WorkScheduleCheckMode;
+  /** HH:mm; set when checkMode is SCAN_ONLY. */
+  latestScanTime: string | null;
   createdAt: string;
   updatedAt: string;
   days: WorkScheduleDay[];
@@ -45,6 +51,8 @@ export interface CreateWorkSchedulePayload {
   description?: string;
   isDefault?: boolean;
   isActive?: boolean;
+  checkMode?: WorkScheduleCheckMode;
+  latestScanTime?: string | null;
   days: WorkScheduleDayInput[];
 }
 

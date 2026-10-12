@@ -14,50 +14,22 @@ import {
   UpdateLeavePolicyDto,
 } from '../dtos/leave-policy.dtos';
 
-/** Balance buckets that are seeded from leave policy rules. */
-export const POLICY_BALANCE_LEAVE_TYPES: LeaveType[] = [
-  LeaveType.ANNUAL,
-  LeaveType.MATERNITY,
-  LeaveType.SICK,
-];
+import { LeaveLedgerService } from './leave-ledger.service';
+import {
+  entitlementFromPolicyRule,
+  getBalanceLeaveType,
+  POLICY_BALANCE_LEAVE_TYPES,
+  type PolicyRuleRow,
+} from '../utils/leave-entitlement.util';
 
-/**
- * Maps a leave request type to the balance row that should be adjusted.
- */
-export function getBalanceLeaveType(leaveType: LeaveType): LeaveType {
-  switch (leaveType) {
-    case LeaveType.ANNUAL:
-    case LeaveType.STUDY:
-    case LeaveType.EXAM:
-    case LeaveType.UNPAID:
-    case LeaveType.EMERGENCY:
-    case LeaveType.PATERNITY:
-    case LeaveType.COMPASSIONATE:
-      return LeaveType.ANNUAL;
-    case LeaveType.MATERNITY:
-      return LeaveType.MATERNITY;
-    case LeaveType.SICK:
-      return LeaveType.SICK;
-    default:
-      return LeaveType.ANNUAL;
-  }
-}
-
-type PolicyRuleRow = {
-  leaveType: LeaveType;
-  baseDays: Prisma.Decimal;
-  isProgressive: boolean;
-  incrementDays: Prisma.Decimal | null;
-  incrementEveryYears: number | null;
-  minimumServiceMonths: number;
-  maxDaysCap: Prisma.Decimal | null;
-  maxCarryForwardDays: Prisma.Decimal | null;
-  requiresReceipt: boolean;
-};
+export { getBalanceLeaveType, POLICY_BALANCE_LEAVE_TYPES };
 
 @Injectable()
 export class LeavePolicyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly leaveLedger: LeaveLedgerService,
+  ) {}
 
   /**
    * Creates a leave policy with rules in one transaction.
@@ -262,165 +234,55 @@ export class LeavePolicyService {
   }
 
   /**
-   * Initializes ANNUAL / MATERNITY / SICK balances from the employee's policy.
+   * Leave policy assigned / changed: aligns the current leave year's
+   * ENTITLEMENT entries with the policy (ledger correction, never an edit).
+   * `year` is kept for callers; the ledger uses the employee's leave year.
    */
   async initializeBalances(
     employeeId: string,
     companyId: string,
-    year: number,
+    _year: number,
   ): Promise<void> {
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: {
-        leavePolicyId: true,
-        employmentDate: true,
-        experienceStartDate: true,
-        leavePolicy: {
-          where: activeOnly({ isActive: true }),
-          include: { rules: true },
-        },
-      },
-    });
-    if (!employee?.leavePolicy) {
-      return;
-    }
-
-    const serviceStart = await this.resolveServiceStartDate(
+    await this.leaveLedger.reconcilePolicyEntitlement(
       employeeId,
       companyId,
-      employee.employmentDate,
-      employee.experienceStartDate,
+      null,
     );
-    const yearsOfService = this.calculateYearsOfService(serviceStart, year);
-
-    const rulesByType = new Map(
-      employee.leavePolicy.rules.map((rule) => [rule.leaveType, rule]),
-    );
-
-    for (const leaveType of POLICY_BALANCE_LEAVE_TYPES) {
-      const rule = rulesByType.get(leaveType);
-      const entitled = rule
-        ? this.entitlementFromRule(rule, yearsOfService)
-        : 0;
-
-      await this.prisma.leaveBalance.upsert({
-        where: {
-          companyId_employeeId_year_leaveType: {
-            companyId,
-            employeeId,
-            year,
-            leaveType,
-          },
-        },
-        create: {
-          id: randomUUID(),
-          companyId,
-          employeeId,
-          year,
-          leaveType,
-          entitled: new Prisma.Decimal(entitled),
-          broughtForward: new Prisma.Decimal(0),
-          used: new Prisma.Decimal(0),
-          pending: new Prisma.Decimal(0),
-        },
-        update: {
-          entitled: new Prisma.Decimal(entitled),
-        },
-      });
-    }
   }
 
   /**
-   * Refreshes ANNUAL / MATERNITY / SICK balances for one employee.
-   * Seniority uses the first contract start date when provided.
+   * Opens the employee's leave year for `year` (entitlement for the service
+   * years at its start + annual carry-over / expiry). Idempotent per leave year.
+   * The leave year follows the employment anniversary, not the contract start.
    */
   async refreshEmployeeBalances(
     employeeId: string,
     companyId: string,
     year: number,
-    firstContractStartDate?: Date,
+    anniversaryDate?: Date,
   ): Promise<void> {
-    const employee = await this.prisma.user.findFirst({
-      where: { id: employeeId, companyId, deletedAt: null },
-      select: {
-        employmentDate: true,
-        experienceStartDate: true,
-        leavePolicy: {
-          where: activeOnly({ isActive: true }),
-          include: { rules: true },
-        },
-      },
-    });
-    if (!employee?.leavePolicy) {
-      return;
-    }
-
-    const serviceStart =
-      firstContractStartDate ??
-      (await this.resolveServiceStartDate(
-        employeeId,
-        companyId,
-        employee.employmentDate,
-        employee.experienceStartDate,
-      ));
-    const yearsOfService = this.calculateYearsOfService(serviceStart, year);
-    const rulesByType = new Map(
-      employee.leavePolicy.rules.map((rule) => [rule.leaveType, rule]),
-    );
-
-    for (const leaveType of POLICY_BALANCE_LEAVE_TYPES) {
-      const rule = rulesByType.get(leaveType);
-      if (!rule) {
-        continue;
-      }
-
-      const entitled = this.entitlementFromRule(rule, yearsOfService);
-      const broughtForward =
-        leaveType === LeaveType.ANNUAL
-          ? await this.calculateAnnualCarryForward(
-              companyId,
-              employeeId,
+    const onDate =
+      anniversaryDate != null
+        ? new Date(
+            Date.UTC(
               year,
-              rule,
-            )
-          : 0;
-
-      await this.prisma.leaveBalance.upsert({
-        where: {
-          companyId_employeeId_year_leaveType: {
-            companyId,
-            employeeId,
-            year,
-            leaveType,
-          },
-        },
-        create: {
-          id: randomUUID(),
-          companyId,
-          employeeId,
-          year,
-          leaveType,
-          entitled: new Prisma.Decimal(entitled),
-          broughtForward: new Prisma.Decimal(broughtForward),
-          used: new Prisma.Decimal(0),
-          pending: new Prisma.Decimal(0),
-        },
-        update:
-          leaveType === LeaveType.ANNUAL
-            ? {
-                entitled: new Prisma.Decimal(entitled),
-                broughtForward: new Prisma.Decimal(broughtForward),
-              }
-            : {
-                entitled: new Prisma.Decimal(entitled),
-              },
-      });
-    }
+              anniversaryDate.getUTCMonth(),
+              anniversaryDate.getUTCDate(),
+            ),
+          )
+        : new Date(Date.UTC(year, 0, 1));
+    await this.leaveLedger.openLeaveYearForDate(
+      employeeId,
+      companyId,
+      onDate,
+      'Leave year opened (anniversary)',
+    );
   }
 
   /**
-   * Calendar-year safety net for employees with no contract start date.
-   * Employees with a first contract are refreshed on their anniversary instead.
+   * Calendar-year safety net (1 January) for employees with no employment
+   * date and no contract — their leave year is the calendar year. Everyone
+   * else opens on their employment anniversary (cron) or on first read.
    */
   async refreshAllBalances(
     companyId: string,
@@ -433,36 +295,16 @@ export class LeavePolicyService {
         companyId,
         deletedAt: null,
         isActive: true,
-        leavePolicyId: { not: null },
+        excludedFromHrProcesses: false,
+        employmentDate: null,
+        employeeContractEmployee: { none: { deletedAt: null } },
       },
-      select: {
-        id: true,
-        employmentDate: true,
-        experienceStartDate: true,
-      },
+      select: { id: true },
     });
 
     let refreshed = 0;
     for (const employee of employees) {
-      const firstContract = await this.prisma.employeeContract.findFirst({
-        where: {
-          companyId,
-          employeeId: employee.id,
-          deletedAt: null,
-        },
-        orderBy: { startDate: 'asc' },
-        select: { startDate: true },
-      });
-      if (firstContract?.startDate) {
-        continue;
-      }
-
-      await this.refreshEmployeeBalances(
-        employee.id,
-        companyId,
-        year,
-        employee.employmentDate ?? employee.experienceStartDate ?? undefined,
-      );
+      await this.refreshEmployeeBalances(employee.id, companyId, year);
       refreshed += 1;
     }
 
@@ -473,29 +315,7 @@ export class LeavePolicyService {
    * Pure entitlement math for previews and balance seeding.
    */
   entitlementFromRule(rule: PolicyRuleRow, yearsOfService: number): number {
-    const minimumYears = rule.minimumServiceMonths / 12;
-    if (yearsOfService < minimumYears) {
-      return 0;
-    }
-
-    let days = Number(rule.baseDays);
-
-    if (
-      rule.isProgressive &&
-      rule.incrementDays != null &&
-      rule.incrementEveryYears != null &&
-      rule.incrementEveryYears > 0
-    ) {
-      const progressiveYears = Math.max(0, yearsOfService - minimumYears);
-      const steps = Math.floor(progressiveYears / rule.incrementEveryYears);
-      days += steps * Number(rule.incrementDays);
-    }
-
-    if (rule.maxDaysCap != null) {
-      days = Math.min(days, Number(rule.maxDaysCap));
-    }
-
-    return Math.round(days * 10) / 10;
+    return entitlementFromPolicyRule(rule, yearsOfService);
   }
 
   /**
@@ -527,47 +347,6 @@ export class LeavePolicyService {
       return 0;
     }
     return Math.round((ms / (365.25 * 24 * 60 * 60 * 1000)) * 1000) / 1000;
-  }
-
-  /**
-   * Unused prior-year annual days, capped by the rule's max carry-forward.
-   */
-  private async calculateAnnualCarryForward(
-    companyId: string,
-    employeeId: string,
-    year: number,
-    rule: PolicyRuleRow,
-  ): Promise<number> {
-    const prior = await this.prisma.leaveBalance.findUnique({
-      where: {
-        companyId_employeeId_year_leaveType: {
-          companyId,
-          employeeId,
-          year: year - 1,
-          leaveType: LeaveType.ANNUAL,
-        },
-      },
-      select: {
-        entitled: true,
-        broughtForward: true,
-        used: true,
-        pending: true,
-      },
-    });
-    if (!prior) {
-      return 0;
-    }
-
-    const unused =
-      Number(prior.entitled) +
-      Number(prior.broughtForward) -
-      Number(prior.used) -
-      Number(prior.pending);
-    const cap =
-      rule.maxCarryForwardDays != null
-        ? Number(rule.maxCarryForwardDays)
-        : unused;
-    return Math.max(0, Math.min(unused, cap));
   }
 
   private async resolveServiceStartDate(

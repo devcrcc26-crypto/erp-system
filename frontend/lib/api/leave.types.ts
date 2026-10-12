@@ -162,3 +162,47 @@ export interface UpdateLeaveRequestPayload {
   days?: number;
   reason?: string;
 }
+
+export type LeaveBalanceEntryKind =
+  | 'ENTITLEMENT'
+  | 'CARRY_OVER'
+  | 'ADJUSTMENT'
+  | 'OPENING_BALANCE'
+  | 'USED'
+  | 'EXPIRED';
+
+/** Leave year = employment anniversary year; `label` = year it starts in. */
+export interface LeaveYearView {
+  label: number;
+  start: string;
+  end: string;
+}
+
+export interface LeaveBalanceEntry {
+  id: string;
+  leaveType: LeaveType;
+  leaveYearStart: string;
+  leaveYearEnd: string;
+  kind: LeaveBalanceEntryKind;
+  /** Signed days (USED / EXPIRED negative). */
+  days: number;
+  reason: string | null;
+  sourceContractId: string | null;
+  sourceLeaveRequestId: string | null;
+  createdBy: { id: string; name: string } | null;
+  createdAt: string;
+}
+
+export interface LeaveBalanceLedger {
+  currentLeaveYear: LeaveYearView;
+  leaveYear: LeaveYearView | null;
+  entries: LeaveBalanceEntry[];
+  totals: Array<{ leaveType: LeaveType; balance: number }>;
+}
+
+export interface LeaveBalanceEntryPayload {
+  employeeId: string;
+  leaveType: LeaveType;
+  days: number;
+  reason: string;
+}

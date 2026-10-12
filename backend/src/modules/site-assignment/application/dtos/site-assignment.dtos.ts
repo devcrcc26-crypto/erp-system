@@ -36,6 +36,11 @@ export class SubmitSiteAssignmentDto {
   reason?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  lateReason?: string;
+
+  @IsOptional()
   autoApproveTier?: boolean;
 
   /** Set when HR submits from the not-in-attendance-file flow. */

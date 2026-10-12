@@ -281,6 +281,13 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         render: (value: string, row: ApprovalRequestListItem) => (
           <div className="min-w-0">
             <p className="erp-users-cell-strong m-0 truncate">{value}</p>
+            {row.lateSubmission?.isLate ? (
+              <p className="erp-users-cell-sub m-0 mt-0.5 truncate text-[#BA7517]">
+                {t('pages.approvals.lateSubmissionBadge', {
+                  month: row.lateSubmission.monthLabel,
+                })}
+              </p>
+            ) : null}
             {isNarrow ? (
               <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
                 {row.requestNumber}

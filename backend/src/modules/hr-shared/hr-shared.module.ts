@@ -3,6 +3,9 @@ import { OnBehalfModule } from '../on-behalf/on-behalf.module';
 import { HrApprovalChainService } from './application/services/hr-approval-chain.service';
 import { HrExcelImportService } from './application/import-export/hr-excel-import.service';
 import { DayCoverageService } from './application/services/day-coverage.service';
+import { BackdatingPolicyService } from './application/services/backdating-policy.service';
+import { BackdatingPolicyController } from './presentation/backdating-policy.controller';
+import { PermissionService } from '../../shared/permissions/permission.service';
 
 /**
  * Shared HR helpers (org approval chain, Excel import parsing, on-behalf submission)
@@ -10,11 +13,19 @@ import { DayCoverageService } from './application/services/day-coverage.service'
  */
 @Module({
   imports: [forwardRef(() => OnBehalfModule)],
-  providers: [HrApprovalChainService, HrExcelImportService, DayCoverageService],
+  controllers: [BackdatingPolicyController],
+  providers: [
+    HrApprovalChainService,
+    HrExcelImportService,
+    DayCoverageService,
+    BackdatingPolicyService,
+    PermissionService,
+  ],
   exports: [
     HrApprovalChainService,
     HrExcelImportService,
     DayCoverageService,
+    BackdatingPolicyService,
     OnBehalfModule,
   ],
 })
