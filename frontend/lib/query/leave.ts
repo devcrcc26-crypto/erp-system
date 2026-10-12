@@ -20,6 +20,8 @@ import type {
   LeaveBalanceEntry,
   LeaveBalanceEntryPayload,
   LeaveBalanceLedger,
+  LeaveBalanceSnapshotPayload,
+  LeaveBalanceSnapshotResult,
   LeaveRequestDetail,
   LeaveRequestListItem,
   EmployeeLeaveBalanceSummary,
@@ -495,6 +497,21 @@ export function useSetOpeningLeaveBalance() {
     mutationFn: (payload: LeaveBalanceEntryPayload) =>
       apiPost<LeaveBalanceEntry>(
         `${LEAVE_PATH}/balance-ledger/opening`,
+        payload,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: leaveKeys.balances() });
+    },
+  });
+}
+
+/** HR: set entitled / brought-forward / used for leave types (remaining calculated). */
+export function useSetLeaveBalanceSnapshot() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: LeaveBalanceSnapshotPayload) =>
+      apiPost<LeaveBalanceSnapshotResult>(
+        `${LEAVE_PATH}/balance-ledger/snapshot`,
         payload,
       ),
     onSuccess: () => {

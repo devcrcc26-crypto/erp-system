@@ -513,8 +513,113 @@ export class LeaveLedgerService {
   }
 
   /**
-   * Imported balance (entitled + brought forward as absolute numbers): an
-   * OPENING_BALANCE for an empty year, otherwise an ADJUSTMENT for the delta.
+   * HR go-live / correction: set entitled, brought-forward and used for one or
+   * more leave types on a leave year. Remaining =
+   * entitled + broughtForward − used − pending (pending is left unchanged).
+   */
+  async setBalanceSnapshot(input: {
+    employeeId: string;
+    companyId: string;
+    yearLabel?: number;
+    rows: Array<{
+      leaveType: LeaveType;
+      entitled: number;
+      broughtForward: number;
+      used: number;
+    }>;
+    reason: string;
+    actorUserId: string;
+  }): Promise<{
+    year: LeaveYearView;
+    balances: Array<{
+      leaveType: LeaveType;
+      entitled: number;
+      broughtForward: number;
+      used: number;
+      pending: number;
+      remaining: number;
+    }>;
+  }> {
+    const reason = input.reason?.trim();
+    if (!reason) {
+      throw new BadRequestException('A reason is required');
+    }
+    if (input.rows.length === 0) {
+      throw new BadRequestException('At least one leave type row is required');
+    }
+
+    const employee = await this.loadEmployee(input.employeeId, input.companyId);
+    const year =
+      input.yearLabel != null
+        ? leaveYearByLabel(employee.anchor, input.yearLabel)
+        : leaveYearFor(employee.anchor, new Date());
+
+    const seen = new Set<LeaveType>();
+    for (const row of input.rows) {
+      if (seen.has(row.leaveType)) {
+        throw new BadRequestException(
+          `Duplicate leave type in snapshot: ${row.leaveType}`,
+        );
+      }
+      seen.add(row.leaveType);
+      if (
+        !POLICY_BALANCE_LEAVE_TYPES.includes(row.leaveType) ||
+        !isHalfDayStep(row.entitled) ||
+        !isHalfDayStep(row.broughtForward) ||
+        !isHalfDayStep(row.used) ||
+        row.entitled < 0 ||
+        row.broughtForward < 0 ||
+        row.used < 0
+      ) {
+        throw new BadRequestException(
+          `Invalid balance row for ${row.leaveType}: entitled, broughtForward and used must be ≥ 0 in 0.5-day steps`,
+        );
+      }
+      await this.applyBalanceSnapshotRow({
+        employee,
+        year,
+        leaveType: row.leaveType,
+        entitled: roundDays(row.entitled),
+        broughtForward: roundDays(row.broughtForward),
+        used: roundDays(row.used),
+        reason,
+        actorUserId: input.actorUserId,
+      });
+    }
+
+    await this.syncCache(employee, year, Object.values(LeaveType));
+
+    const cacheRows = await this.prisma.leaveBalance.findMany({
+      where: {
+        companyId: employee.companyId,
+        employeeId: employee.id,
+        year: year.label,
+        leaveType: { in: [...seen] },
+      },
+    });
+
+    return {
+      year: toLeaveYearView(year),
+      balances: [...seen].map((leaveType) => {
+        const row = cacheRows.find((item) => item.leaveType === leaveType);
+        const entitled = Number(row?.entitled ?? 0);
+        const broughtForward = Number(row?.broughtForward ?? 0);
+        const used = Number(row?.used ?? 0);
+        const pending = Number(row?.pending ?? 0);
+        return {
+          leaveType,
+          entitled,
+          broughtForward,
+          used,
+          pending,
+          remaining: roundDays(entitled + broughtForward - used - pending),
+        };
+      }),
+    };
+  }
+
+  /**
+   * Imported balance: absolute entitled / brought-forward / used for a leave year.
    */
   async applyImportedBalance(input: {
     employeeId: string;
@@ -523,6 +628,7 @@ export class LeaveLedgerService {
     yearLabel: number;
     entitled: number;
     broughtForward: number;
+    used?: number;
     actorUserId: string | null;
   }): Promise<{ created: boolean }> {
     const employee = await this.loadEmployee(input.employeeId, input.companyId);
@@ -534,32 +640,176 @@ export class LeaveLedgerService {
         leaveYearStart: year.start,
       },
     });
-    const current = await this.sumEntries(employee.id, input.leaveType, year, [
+    await this.applyBalanceSnapshotRow({
+      employee,
+      year,
+      leaveType: input.leaveType,
+      entitled: roundDays(input.entitled),
+      broughtForward: roundDays(input.broughtForward),
+      used: roundDays(input.used ?? 0),
+      reason: `Imported balance: entitled ${input.entitled}, brought forward ${input.broughtForward}, used ${input.used ?? 0}`,
+      actorUserId: input.actorUserId,
+    });
+    await this.syncCache(employee, year, Object.values(LeaveType));
+    return { created: entryCount === 0 };
+  }
+
+  /**
+   * Writes absolute entitled (OPENING/ADJUSTMENT), brought-forward (CARRY_OVER)
+   * and go-live used (USED without a leave request) for one leave type / year.
+   */
+  private async applyBalanceSnapshotRow(input: {
+    employee: LedgerEmployee;
+    year: LeaveYear;
+    leaveType: LeaveType;
+    entitled: number;
+    broughtForward: number;
+    used: number;
+    reason: string;
+    actorUserId: string | null;
+  }): Promise<void> {
+    const { employee, year, leaveType } = input;
+    const yearKey = dateOnlyKey(year.start);
+
+    const currentEntitled = await this.sumEntries(employee.id, leaveType, year, [
       LeaveBalanceEntryKind.ENTITLEMENT,
       LeaveBalanceEntryKind.OPENING_BALANCE,
       LeaveBalanceEntryKind.ADJUSTMENT,
-      LeaveBalanceEntryKind.CARRY_OVER,
       LeaveBalanceEntryKind.EXPIRED,
     ]);
-    const target = roundDays(input.entitled + input.broughtForward);
-    const delta = roundDays(target - current);
-    if (delta !== 0 || entryCount === 0) {
+    const currentBroughtForward = await this.sumEntries(
+      employee.id,
+      leaveType,
+      year,
+      [LeaveBalanceEntryKind.CARRY_OVER],
+    );
+    const systemUsed = roundDays(
+      -(
+        await this.prisma.leaveBalanceEntry.aggregate({
+          where: {
+            employeeId: employee.id,
+            leaveType,
+            leaveYearStart: year.start,
+            kind: LeaveBalanceEntryKind.USED,
+            sourceLeaveRequestId: { not: null },
+          },
+          _sum: { days: true },
+        })
+      )._sum.days ?? 0,
+    );
+    if (input.used < systemUsed) {
+      throw new BadRequestException(
+        `${leaveType}: used (${input.used}) cannot be less than days already taken on approved leave requests (${systemUsed})`,
+      );
+    }
+
+    const entitledDelta = roundDays(input.entitled - currentEntitled);
+    if (entitledDelta !== 0 || currentEntitled === 0) {
+      const hasSeed = await this.prisma.leaveBalanceEntry.count({
+        where: {
+          employeeId: employee.id,
+          leaveType,
+          leaveYearStart: year.start,
+          kind: {
+            in: [
+              LeaveBalanceEntryKind.OPENING_BALANCE,
+              LeaveBalanceEntryKind.ENTITLEMENT,
+              LeaveBalanceEntryKind.ADJUSTMENT,
+            ],
+          },
+        },
+      });
+      if (hasSeed === 0) {
+        await this.createEntry(this.prisma, {
+          employee,
+          leaveType,
+          year,
+          kind: LeaveBalanceEntryKind.OPENING_BALANCE,
+          days: input.entitled,
+          reason: input.reason,
+          dedupeKey: `OPENING:${employee.id}:${leaveType}:${yearKey}`,
+          actorUserId: input.actorUserId,
+        });
+      } else if (entitledDelta !== 0) {
+        await this.createEntry(this.prisma, {
+          employee,
+          leaveType,
+          year,
+          kind: LeaveBalanceEntryKind.ADJUSTMENT,
+          days: entitledDelta,
+          reason: input.reason,
+          dedupeKey: null,
+          actorUserId: input.actorUserId,
+        });
+      }
+    }
+
+    const carryDedupe = `CARRY_OVER:SNAPSHOT:${employee.id}:${leaveType}:${yearKey}`;
+    const systemCarry = roundDays(
+      (
+        await this.prisma.leaveBalanceEntry.aggregate({
+          where: {
+            employeeId: employee.id,
+            leaveType,
+            leaveYearStart: year.start,
+            kind: LeaveBalanceEntryKind.CARRY_OVER,
+            NOT: { dedupeKey: carryDedupe },
+          },
+          _sum: { days: true },
+        })
+      )._sum.days ?? 0,
+    );
+    if (input.broughtForward < systemCarry) {
+      throw new BadRequestException(
+        `${leaveType}: brought forward (${input.broughtForward}) cannot be less than system carry-over (${systemCarry})`,
+      );
+    }
+    await this.prisma.leaveBalanceEntry.deleteMany({
+      where: {
+        employeeId: employee.id,
+        leaveType,
+        leaveYearStart: year.start,
+        kind: LeaveBalanceEntryKind.CARRY_OVER,
+        dedupeKey: carryDedupe,
+      },
+    });
+    const snapshotCarry = roundDays(input.broughtForward - systemCarry);
+    if (snapshotCarry > 0) {
       await this.createEntry(this.prisma, {
         employee,
-        leaveType: input.leaveType,
+        leaveType,
         year,
-        kind:
-          entryCount === 0
-            ? LeaveBalanceEntryKind.OPENING_BALANCE
-            : LeaveBalanceEntryKind.ADJUSTMENT,
-        days: entryCount === 0 ? target : delta,
-        reason: `Imported balance: entitled ${input.entitled}, brought forward ${input.broughtForward}`,
-        dedupeKey: null,
+        kind: LeaveBalanceEntryKind.CARRY_OVER,
+        days: snapshotCarry,
+        reason: input.reason,
+        dedupeKey: carryDedupe,
         actorUserId: input.actorUserId,
       });
     }
-    await this.syncCache(employee, year, Object.values(LeaveType));
-    return { created: entryCount === 0 };
+
+    const goLiveUsedTarget = roundDays(input.used - systemUsed);
+    const goLiveDedupe = `USED:SNAPSHOT:${employee.id}:${leaveType}:${yearKey}`;
+    await this.prisma.leaveBalanceEntry.deleteMany({
+      where: {
+        employeeId: employee.id,
+        leaveType,
+        leaveYearStart: year.start,
+        kind: LeaveBalanceEntryKind.USED,
+        dedupeKey: goLiveDedupe,
+      },
+    });
+    if (goLiveUsedTarget > 0) {
+      await this.createEntry(this.prisma, {
+        employee,
+        leaveType,
+        year,
+        kind: LeaveBalanceEntryKind.USED,
+        days: -goLiveUsedTarget,
+        reason: input.reason,
+        dedupeKey: goLiveDedupe,
+        actorUserId: input.actorUserId,
+      });
+    }
   }
 
   // ─── Reads ────────────────────────────────────────────────────────────────

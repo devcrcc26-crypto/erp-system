@@ -329,3 +329,68 @@ export class LeaveOpeningBalanceDto {
   @MaxLength(1000)
   reason!: string;
 }
+
+export class LeaveBalanceSnapshotRowDto {
+  @ApiProperty({ enum: [LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK] })
+  @IsIn([LeaveType.ANNUAL, LeaveType.MATERNITY, LeaveType.SICK])
+  leaveType!: LeaveType;
+
+  @ApiProperty({ example: 20 })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(0)
+  @Max(365)
+  entitled!: number;
+
+  @ApiProperty({ example: 2, default: 0 })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(0)
+  @Max(365)
+  broughtForward!: number;
+
+  @ApiProperty({
+    example: 1.5,
+    default: 0,
+    description: 'Days already used in this leave year (before / outside the system)',
+  })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(0)
+  @Max(365)
+  used!: number;
+}
+
+/**
+ * HR: set entitled / brought-forward / used for leave types on a leave year.
+ * Remaining is calculated as entitled + broughtForward − used − pending.
+ */
+export class LeaveBalanceSnapshotDto {
+  @ApiProperty()
+  @IsUUID()
+  employeeId!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Leave year label (employment anniversary year). Defaults to the current leave year.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  year?: number;
+
+  @ApiProperty({ type: [LeaveBalanceSnapshotRowDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => LeaveBalanceSnapshotRowDto)
+  rows!: LeaveBalanceSnapshotRowDto[];
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(1000)
+  reason!: string;
+}

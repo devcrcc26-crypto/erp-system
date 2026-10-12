@@ -206,3 +206,30 @@ export interface LeaveBalanceEntryPayload {
   days: number;
   reason: string;
 }
+
+export interface LeaveBalanceSnapshotRow {
+  leaveType: LeaveType;
+  entitled: number;
+  broughtForward: number;
+  used: number;
+}
+
+export interface LeaveBalanceSnapshotPayload {
+  employeeId: string;
+  /** Leave year label; omit for the employee's current leave year. */
+  year?: number;
+  rows: LeaveBalanceSnapshotRow[];
+  reason: string;
+}
+
+export interface LeaveBalanceSnapshotResult {
+  year: LeaveYearView;
+  balances: Array<{
+    leaveType: LeaveType;
+    entitled: number;
+    broughtForward: number;
+    used: number;
+    pending: number;
+    remaining: number;
+  }>;
+}

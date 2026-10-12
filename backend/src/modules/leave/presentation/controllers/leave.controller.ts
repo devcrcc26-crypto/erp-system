@@ -30,6 +30,7 @@ import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   LeaveBalanceAdjustmentDto,
   LeaveBalanceQueryDto,
+  LeaveBalanceSnapshotDto,
   LeaveLedgerQueryDto,
   LeaveOpeningBalanceDto,
   ListLeaveBalancesDto,
@@ -245,6 +246,27 @@ export class LeaveController {
     return this.leaveLedger.setOpeningBalance({
       ...dto,
       companyId,
+      actorUserId: user.userId,
+    });
+  }
+
+  @Post('balance-ledger/snapshot')
+  @RequireAnyPermission({ module: 'hr', action: 'edit' })
+  @ApiOperation({
+    summary:
+      'HR: set entitled, brought-forward and used for leave types on a leave year; remaining is calculated.',
+  })
+  setBalanceSnapshot(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentCompany() companyId: string,
+    @Body() dto: LeaveBalanceSnapshotDto,
+  ): Promise<unknown> {
+    return this.leaveLedger.setBalanceSnapshot({
+      employeeId: dto.employeeId,
+      companyId,
+      yearLabel: dto.year,
+      rows: dto.rows,
+      reason: dto.reason,
       actorUserId: user.userId,
     });
   }

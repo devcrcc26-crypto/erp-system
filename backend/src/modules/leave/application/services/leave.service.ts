@@ -208,7 +208,7 @@ export class LeaveService
     );
     const startDate = resolved.startDate;
     const endDate = resolved.endDate;
-    // Balance bucket: the employee's leave year (employment anniversary).
+    // Balance bucket: the employee's leave year containing the start date.
     const year = await this.leaveBalanceService.yearLabelForDate(
       employeeId,
       companyId,

@@ -230,6 +230,9 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     return balancesQuery.data.find((row) => row.leaveType === balanceLeaveType);
   }, [balancesQuery.data, leaveType]);
 
+  const balanceYearLabel =
+    selectedBalance?.year ?? balancesQuery.data?.[0]?.year;
+
   useEffect(() => {
     form.setFieldsValue({ leaveType: DEFAULT_LEAVE_TYPE });
   }, [form]);
@@ -624,9 +627,20 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               <div className="erp-leave-form-balance mb-4">
                 <p className="erp-leave-form-balance-title">
                   {leaveType
-                    ? `${formatLeaveType(leaveType, t)} — ${t('hr.section.leaveBalance')} (${year})`
-                    : `${t('hr.section.leaveBalance')} (${year})`}
+                    ? `${formatLeaveType(leaveType, t)} — ${t('hr.section.leaveBalance')}${balanceYearLabel != null ? ` (${balanceYearLabel})` : ''}`
+                    : `${t('hr.section.leaveBalance')}${balanceYearLabel != null ? ` (${balanceYearLabel})` : ''}`}
                 </p>
+                {balanceForDate ? (
+                  <p className="erp-users-cell-sub m-0 mb-2">
+                    {t('hr.form.leaveBalanceForDates', {
+                      date: balanceForDate,
+                    })}
+                  </p>
+                ) : (
+                  <p className="erp-users-cell-sub m-0 mb-2">
+                    {t('hr.form.leaveBalanceSelectDates')}
+                  </p>
+                )}
                 {renderBalancePanel()}
               </div>
 
@@ -752,7 +766,8 @@ export default function LeaveRequestFormContent(): React.ReactNode {
       t,
       leaveTypeOptions,
       leaveType,
-      year,
+      balanceYearLabel,
+      balanceForDate,
       selectedBalance,
       balancesQuery.isLoading,
       balancesQuery.isError,

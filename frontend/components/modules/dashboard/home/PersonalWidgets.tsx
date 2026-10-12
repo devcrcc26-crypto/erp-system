@@ -148,6 +148,8 @@ export function LeaveBalanceWidget({
 }): React.ReactNode {
   const { t, locale } = useEpcTranslation();
   const query = useMyLeaveBalances({ enabled });
+  const leaveYearLabel =
+    query.data?.[0]?.year ?? addisParts().year;
   const balances = (query.data ?? []).filter(
     (balance) =>
       balance.entitled + balance.broughtForward > 0 || balance.remaining > 0,
@@ -161,7 +163,7 @@ export function LeaveBalanceWidget({
       viewAllHref="/hr/leave-requests"
       query={query}
       isEmpty={balances.length === 0}
-      emptyLabel={t(`${HOME}.leaveBalance.empty`, { year })}
+      emptyLabel={t(`${HOME}.leaveBalance.empty`, { year: leaveYearLabel })}
     >
       <ul className="dv2-list">
         {balances.map((balance) => (
