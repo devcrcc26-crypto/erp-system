@@ -13,6 +13,7 @@ import {
 import {
   AttendanceDailyLog,
   AttendanceDayFlag,
+  AttendanceDayStatus,
   AttendanceImportBatch,
   AttendanceMonthlyApproval,
   FieldMovementEntry,
@@ -318,6 +319,8 @@ type DailyLogFlagSource = {
 /**
  * Resolves the HR review flag for a single duty day from effective punch times.
  * Early leave uses the 30-minute grace (flag only when earlier than end − 30).
+ * Approved site / WFH / leave coverage suppresses missing-punch and early flags;
+ * leave + any scan raises ON_LEAVE_BUT_SCANNED for HR (not Explain days).
  */
 function resolveAttendanceDayFlag(params: {
   isHoliday: boolean;
@@ -330,12 +333,37 @@ function resolveAttendanceDayFlag(params: {
   scanOnly?: boolean;
   /** Hire-to-first-scan grace: not absent and no field-movement flags. */
   enrolmentGrace?: boolean;
+  /** From dayDeduction — leave stays; flag only when scans exist. */
+  onLeaveButScanned?: boolean;
+  /** Coverage statuses that must not raise field-movement explain flags. */
+  dayStatus?: AttendanceDayStatus | null;
 }): AttendanceDayFlag {
+  if (params.onLeaveButScanned) {
+    return AttendanceDayFlag.ON_LEAVE_BUT_SCANNED;
+  }
+  if (
+    params.dayStatus === 'ON_SITE' ||
+    params.dayStatus === 'WORK_FROM_HOME' ||
+    params.dayStatus === 'LEAVE' ||
+    params.dayStatus === 'SUNDAY' ||
+    params.dayStatus === 'HOLIDAY' ||
+    params.dayStatus === 'ENROLMENT_GRACE'
+  ) {
+    return AttendanceDayFlag.NONE;
+  }
   if (
     params.isHoliday ||
     params.isWeekend ||
     params.scanOnly ||
     params.enrolmentGrace
+  ) {
+    return AttendanceDayFlag.NONE;
+  }
+  // Exempt / manual-present days are PRESENT with no punches — not FM flags.
+  if (
+    params.dayStatus === 'PRESENT' &&
+    !params.clockIn &&
+    !params.clockOut
   ) {
     return AttendanceDayFlag.NONE;
   }
@@ -3419,10 +3447,23 @@ export class AttendanceService
     const flaggedDays = await this.prisma.attendanceDailyLog.findMany({
       where: {
         attendanceRecordId: record.id,
-        flag: { not: 'NONE' },
+        // Field-movement Explain days only — leave+scan is an HR review flag.
+        flag: {
+          notIn: [
+            AttendanceDayFlag.NONE,
+            AttendanceDayFlag.ON_LEAVE_BUT_SCANNED,
+          ],
+        },
         flagResolved: false,
-        // Enrolment grace days are paid present — no field-movement explanation.
-        dayStatus: { not: 'ENROLMENT_GRACE' },
+        // Enrolment grace / covered statuses need no field-movement explanation.
+        dayStatus: {
+          notIn: [
+            'ENROLMENT_GRACE',
+            'ON_SITE',
+            'WORK_FROM_HOME',
+            'LEAVE',
+          ],
+        },
         // Not employed yet — ignore flags before signed / start date.
         ...(companyStartDate ? { date: { gte: companyStartDate } } : {}),
       },
@@ -5276,6 +5317,7 @@ export class AttendanceService
       const enrolmentGrace =
         status === 'ENROLMENT_GRACE' ||
         enrolmentGraceKeys?.has(key) === true;
+      const onLeaveButScanned = dayResult.onLeaveButScanned === true;
       const flag = resolveAttendanceDayFlag({
         isHoliday,
         isWeekend: log.isWeekend,
@@ -5285,6 +5327,8 @@ export class AttendanceService
         scheduledEnd,
         scanOnly,
         enrolmentGrace,
+        onLeaveButScanned,
+        dayStatus: status,
       });
       const scanReview = resolveScanReviewFields(
         log,
@@ -5308,6 +5352,12 @@ export class AttendanceService
         scheduledHours = Number(scheduleDay?.totalHours ?? 0);
       }
 
+      const coverageSuppressesScanFlags =
+        status === 'ON_SITE' ||
+        status === 'WORK_FROM_HOME' ||
+        status === 'LEAVE' ||
+        status === 'ENROLMENT_GRACE';
+
       await writeDb.attendanceDailyLog.update({
         where: { id: log.id },
         data: {
@@ -5316,11 +5366,15 @@ export class AttendanceService
           scheduledHours,
           dayStatus: status,
           dayDeduction: inEmployedWindow ? deduction : 0,
-          isEarlyLeave,
-          earlyLeaveMinutes,
+          isEarlyLeave: coverageSuppressesScanFlags ? false : isEarlyLeave,
+          earlyLeaveMinutes: coverageSuppressesScanFlags ? 0 : earlyLeaveMinutes,
           flag,
           flagResolved:
-            flag === AttendanceDayFlag.NONE ? true : log.flagResolved,
+            flag === AttendanceDayFlag.NONE
+              ? true
+              : flag === AttendanceDayFlag.ON_LEAVE_BUT_SCANNED
+                ? false
+                : log.flagResolved,
           flagResolvedAt:
             flag === AttendanceDayFlag.NONE
               ? (log.flagResolvedAt ?? new Date())
@@ -5332,11 +5386,17 @@ export class AttendanceService
             (status === 'ON_SITE' ? context.siteNameForDate(log.date) : null),
           // earlyDeparture* columns from 20261009160000 — cast until client regen
           ...({
-            earlyDepartureBand: earlyBand === 'NONE' ? null : earlyBand,
-            earlyDepartureWouldDeduct: earlyWould,
+            earlyDepartureBand: coverageSuppressesScanFlags
+              ? null
+              : earlyBand === 'NONE'
+                ? null
+                : earlyBand,
+            earlyDepartureWouldDeduct: coverageSuppressesScanFlags
+              ? 0
+              : earlyWould,
           } as Prisma.AttendanceDailyLogUpdateInput),
-          // SCAN_ONLY: no late / missing punch, whatever an earlier recalc stored.
-          ...(scanOnly
+          // SCAN_ONLY or site/WFH/leave coverage: no late / missing punch noise.
+          ...(scanOnly || coverageSuppressesScanFlags
             ? {
                 isLate: false,
                 lateMinutes: 0,
@@ -5345,9 +5405,11 @@ export class AttendanceService
               }
             : {}),
           ...scanReview,
+          // Leave + scans: HR review queue (Explain days still excludes via leave cover).
+          ...(onLeaveButScanned ? { needsReview: true } : {}),
         },
       });
-      if (scanOnly) {
+      if (scanOnly || coverageSuppressesScanFlags) {
         log.isLate = false;
         log.lateMinutes = 0;
         log.missingClockIn = false;

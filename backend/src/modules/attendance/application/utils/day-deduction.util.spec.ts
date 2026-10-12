@@ -905,6 +905,94 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(r.status).toBe('HALF_ABSENT');
   });
 
+  it('approved site + clock-in only → ON_SITE, deduction 0 (no missing-punch)', () => {
+    const date = d(2026, 8, 3);
+    const r = dayDeduction(
+      date,
+      dayInput(date, { clockOut: null }),
+      emptyContext({ siteNameForDate: () => 'Camp A' }),
+    );
+    expect(r).toMatchObject({
+      status: 'ON_SITE',
+      deduction: 0,
+      siteName: 'Camp A',
+    });
+  });
+
+  it('approved site + early out → ON_SITE, deduction 0', () => {
+    const date = d(2026, 8, 3);
+    const r = dayDeduction(
+      date,
+      dayInput(date, { clockOut: '15:00' }),
+      emptyContext({
+        siteNameForDate: () => 'Camp A',
+        earlyDepartureMode: 'ENFORCED',
+      }),
+    );
+    expect(r).toMatchObject({ status: 'ON_SITE', deduction: 0 });
+  });
+
+  it('approved WFH + 1 punch → WORK_FROM_HOME, deduction 0', () => {
+    const date = d(2026, 8, 3);
+    const r = dayDeduction(
+      date,
+      dayInput(date, { clockOut: null }),
+      emptyContext({ isWorkFromHome: () => true }),
+    );
+    expect(r).toMatchObject({ status: 'WORK_FROM_HOME', deduction: 0 });
+  });
+
+  it('pending site (not in context) + 1 punch → HALF_ABSENT 0.5', () => {
+    const date = d(2026, 8, 3);
+    const r = dayDeduction(
+      date,
+      dayInput(date, { clockOut: null }),
+      emptyContext({ siteNameForDate: () => null }),
+    );
+    expect(r).toMatchObject({ status: 'HALF_ABSENT', deduction: 0.5 });
+  });
+
+  it('approved leave + any scan → LEAVE 0 with onLeaveButScanned', () => {
+    const date = d(2026, 8, 3);
+    const r = dayDeduction(
+      date,
+      dayInput(date, { clockOut: null }),
+      emptyContext({ isOnApprovedLeave: () => true }),
+    );
+    expect(r).toMatchObject({
+      status: 'LEAVE',
+      deduction: 0,
+      onLeaveButScanned: true,
+    });
+  });
+
+  it('approved leave + no scan → LEAVE 0 without onLeaveButScanned', () => {
+    const date = d(2026, 8, 3);
+    const r = dayDeduction(
+      date,
+      dayInput(date, { clockIn: null, clockOut: null }),
+      emptyContext({ isOnApprovedLeave: () => true }),
+    );
+    expect(r).toMatchObject({
+      status: 'LEAVE',
+      deduction: 0,
+      onLeaveButScanned: false,
+    });
+  });
+
+  it('approved leave wins over approved site on the same day', () => {
+    const date = d(2026, 8, 3);
+    const r = dayDeduction(
+      date,
+      dayInput(date, { clockIn: null, clockOut: null }),
+      emptyContext({
+        isOnApprovedLeave: () => true,
+        siteNameForDate: () => 'Camp',
+      }),
+    );
+    expect(r.status).toBe('LEAVE');
+  });
+
   it('EXEMPT employee with no scan → full presence (no deduction)', () => {
     const date = d(2026, 8, 3);
     const r = dayDeduction(

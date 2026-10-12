@@ -340,6 +340,13 @@ export class LeaveService
         autoApproveTier: dto.autoApproveTier,
       });
 
+      // Mirror site-assignment auto-approve: sync attendance daily logs to LEAVE.
+      await this.recalculateAttendanceForLeavePeriods(
+        companyId,
+        employeeId,
+        resolved.periodRows,
+      );
+
       return this.fetchLeaveDetail(leaveId, companyId);
     }
 
@@ -681,6 +688,15 @@ export class LeaveService
       );
     } else if (leave.status === LeaveRequestStatus.APPROVED) {
       await this.leaveLedger.reverseLeaveUsed(leave.id, userId);
+      const periods = await this.prisma.leaveRequestPeriod.findMany({
+        where: { leaveRequestId: leave.id },
+        select: { startDate: true, endDate: true },
+      });
+      await this.recalculateAttendanceForLeavePeriods(
+        companyId,
+        leave.employeeId,
+        periods,
+      );
     }
   }
 

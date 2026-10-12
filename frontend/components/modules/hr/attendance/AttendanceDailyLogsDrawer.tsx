@@ -102,6 +102,11 @@ const FLAG_CONFIG: Record<
     className: 'bg-orange-50 text-orange-800 ring-orange-200',
     icon: <TimerOff size={12} strokeWidth={2.25} />,
   },
+  ON_LEAVE_BUT_SCANNED: {
+    labelKey: 'pages.hr.attendance.dailyDrawer.flagOnLeaveButScanned',
+    className: 'bg-violet-50 text-violet-800 ring-violet-200',
+    icon: <LogIn size={12} strokeWidth={2.25} />,
+  },
 };
 
 const CARD_SHADOW =
@@ -169,6 +174,9 @@ function resolveDayFlags(
   }
   if (stored === 'EARLY_LEAVE') {
     push('EARLY_LEAVE');
+  }
+  if (stored === 'ON_LEAVE_BUT_SCANNED') {
+    push('ON_LEAVE_BUT_SCANNED');
   }
   return flags;
 }
@@ -529,20 +537,26 @@ export default function AttendanceDailyLogsDrawer({
           return (
             <div className="flex flex-col items-start gap-1">
               <Tag color={config.color} className="!m-0 !rounded-full !px-2">
-                {status === 'ON_SITE' && row.siteAssignmentName
-                  ? t('pages.hr.attendance.review.dayStatus.onSiteAt', {
-                      siteName: row.siteAssignmentName,
+                {status === 'ON_SITE' &&
+                (row.correctedClockInLocal ?? row.clockInLocal)
+                  ? t('pages.hr.attendance.review.dayStatus.onSiteScannedIn', {
+                      time: row.correctedClockInLocal ?? row.clockInLocal,
                     })
-                  : t(
-                      `pages.hr.attendance.review.dayStatus.${config.labelKey}`,
-                    )}
+                  : status === 'ON_SITE' && row.siteAssignmentName
+                    ? t('pages.hr.attendance.review.dayStatus.onSiteAt', {
+                        siteName: row.siteAssignmentName,
+                      })
+                    : t(
+                        `pages.hr.attendance.review.dayStatus.${config.labelKey}`,
+                      )}
               </Tag>
               {row.holidayName ? (
                 <span className="text-xs text-slate-600">{row.holidayName}</span>
               ) : null}
-              {status === 'PRESENT' && row.siteAssignmentName ? (
+              {status === 'ON_SITE' &&
+              row.siteAssignmentName &&
+              (row.correctedClockInLocal ?? row.clockInLocal) ? (
                 <span className="text-xs text-slate-600">
-                  {t('pages.hr.attendance.review.dayStatus.alsoOnSite')} —{' '}
                   {row.siteAssignmentName}
                 </span>
               ) : null}

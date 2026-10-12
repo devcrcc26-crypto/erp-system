@@ -126,7 +126,38 @@ describe('SCAN_ONLY work schedule — dayDeduction', () => {
       scans(MONDAY, null, null),
       scanOnlyContext({ isOnApprovedLeave: () => true }),
     );
-    expect(r).toMatchObject({ status: 'LEAVE', deduction: 0 });
+    expect(r).toMatchObject({
+      status: 'LEAVE',
+      deduction: 0,
+      onLeaveButScanned: false,
+    });
+  });
+
+  it('SCAN_ONLY approved site + 1 punch → ON_SITE 0 (no scan-after-deadline)', () => {
+    const r = dayDeduction(
+      MONDAY,
+      scans(MONDAY, '08:10', null),
+      scanOnlyContext({ siteNameForDate: () => 'Site A' }),
+    );
+    expect(r).toMatchObject({
+      status: 'ON_SITE',
+      deduction: 0,
+      siteName: 'Site A',
+    });
+    expect(r.scanAfterDeadlineTime).toBeUndefined();
+  });
+
+  it('SCAN_ONLY approved leave + scan → LEAVE 0 + onLeaveButScanned', () => {
+    const r = dayDeduction(
+      MONDAY,
+      scans(MONDAY, '08:10', null),
+      scanOnlyContext({ isOnApprovedLeave: () => true }),
+    );
+    expect(r).toMatchObject({
+      status: 'LEAVE',
+      deduction: 0,
+      onLeaveButScanned: true,
+    });
   });
 
   it('no scan + approved site / WFH / enrolment grace / exempt → 0 as today', () => {

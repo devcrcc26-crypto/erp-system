@@ -32,6 +32,7 @@ export type AttendanceFlagForIssue =
   | 'MISSING_CLOCK_IN'
   | 'MISSING_CLOCK_OUT'
   | 'EARLY_LEAVE'
+  | 'ON_LEAVE_BUT_SCANNED'
   | 'NONE';
 
 export function effectiveScan(
@@ -52,7 +53,7 @@ export function deriveIssueType(day: {
   correctedClockInLocal?: string | null;
   correctedClockOutLocal?: string | null;
 }): FieldMovementIssueType | null {
-  if (day.flag === 'NONE') {
+  if (day.flag === 'NONE' || day.flag === 'ON_LEAVE_BUT_SCANNED') {
     return null;
   }
   const clockIn = effectiveScan(

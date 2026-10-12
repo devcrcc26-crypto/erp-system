@@ -99,7 +99,12 @@ export function selectAllTargetIds(
 }
 
 export function deriveIssueTypeFromFlagged(day: {
-  flag: 'MISSING_CLOCK_IN' | 'MISSING_CLOCK_OUT' | 'EARLY_LEAVE' | 'NONE';
+  flag:
+    | 'MISSING_CLOCK_IN'
+    | 'MISSING_CLOCK_OUT'
+    | 'EARLY_LEAVE'
+    | 'ON_LEAVE_BUT_SCANNED'
+    | 'NONE';
   clockInLocal: string | null;
   clockOutLocal: string | null;
   correctedClockInLocal?: string | null;

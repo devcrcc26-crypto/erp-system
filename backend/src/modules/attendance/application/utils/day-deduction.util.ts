@@ -80,6 +80,11 @@ export interface DayDeductionResult {
    * SCAN_AFTER_DEADLINE for HR review. No pay effect.
    */
   scanAfterDeadlineTime?: string | null;
+  /**
+   * Approved paid leave with any HQ scan — leave status stays; HR review flag
+   * ON_LEAVE_BUT_SCANNED. No automatic change to the leave request.
+   */
+  onLeaveButScanned?: boolean;
 }
 
 function roundDays(value: number): number {
@@ -88,6 +93,9 @@ function roundDays(value: number): number {
 
 /**
  * Single source of truth for attendance absence weight and payroll paid days.
+ *
+ * Precedence: Sunday / holiday → unpaid leave → approved leave → site / WFH →
+ * exempt → scan rules (STANDARD or SCAN_ONLY).
  */
 export function dayDeduction(
   date: Date,
@@ -104,20 +112,29 @@ export function dayDeduction(
   if (context.isOnUnpaidLeave?.(date)) {
     return { deduction: 1, status: 'ABSENT' };
   }
+
+  const hasClockIn = Boolean(day.clockIn);
+  const hasClockOut = Boolean(day.clockOut);
+  const hasAnyScan = hasClockIn || hasClockOut;
+
+  // Paid leave before site/WFH. Scans do not change leave pay; flag for HR.
+  if (context.isOnApprovedLeave(date)) {
+    return {
+      deduction: 0,
+      status: 'LEAVE',
+      onLeaveButScanned: hasAnyScan,
+    };
+  }
+
+  // Approved site / WFH: full coverage regardless of scans (no missing-punch /
+  // late / early flags). Scans are retained on the daily log for display.
   if (context.isWorkFromHome(date)) {
     return { deduction: 0, status: 'WORK_FROM_HOME' };
   }
 
   const siteName = context.siteNameForDate(date);
-  const hasClockIn = Boolean(day.clockIn);
-  const hasClockOut = Boolean(day.clockOut);
-
-  if (siteName && !hasClockIn && !hasClockOut) {
+  if (siteName) {
     return { deduction: 0, status: 'ON_SITE', siteName };
-  }
-
-  if (context.isOnApprovedLeave(date)) {
-    return { deduction: 0, status: 'LEAVE' };
   }
 
   if (context.isAttendanceExempt?.()) {
@@ -126,7 +143,7 @@ export function dayDeduction(
 
   const scanOnly = context.scanOnlyRule?.(date) ?? null;
   if (scanOnly) {
-    return scanOnlyDayDeduction(date, day, scanOnly, siteName, context);
+    return scanOnlyDayDeduction(date, day, scanOnly, null, context);
   }
 
   // Full absence on any Mon–Sat duty day (Saturday included as 1, never 0.5).
@@ -210,7 +227,7 @@ export function dayDeduction(
 }
 
 /**
- * SCAN_ONLY duty day (after Sunday / holiday / unpaid / WFH / site / leave /
+ * SCAN_ONLY duty day (after Sunday / holiday / unpaid / leave / WFH / site /
  * exempt): any scan → PRESENT 0; no scan → enrolment grace or ABSENT 1.
  * Earliest scan after latestScanTime is flagged only — status and pay unchanged.
  */

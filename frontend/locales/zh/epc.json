@@ -947,7 +947,8 @@
             "NONE": "无",
             "MISSING_CLOCK_IN": "缺上班卡",
             "MISSING_CLOCK_OUT": "缺下班卡",
-            "EARLY_LEAVE": "早退"
+            "EARLY_LEAVE": "早退",
+            "ON_LEAVE_BUT_SCANNED": "休假但仍打卡"
           },
           "dayStatus": {
             "PRESENT": "出勤",
@@ -958,6 +959,7 @@
             "WORK_FROM_HOME": "居家办公",
             "ON_SITE": "现场",
             "onSiteAt": "现场 — {{siteName}}",
+            "onSiteScannedIn": "现场 — {{time}} 打卡",
             "alsoOnSite": "同时在现场",
             "LEAVE": "休假",
             "FIELD_MOVEMENT_PENDING": "外出登记待审批",
@@ -1056,6 +1058,7 @@
           "flagMissingClockIn": "缺少上班打卡",
           "flagMissingClockOut": "缺少下班打卡",
           "flagEarlyLeave": "早退",
+          "flagOnLeaveButScanned": "休假但仍打卡",
           "flagResolved": "{{flag}} · 已处理",
           "explained": "已说明：{{reason}}",
           "noExplanation": "尚未提交说明",

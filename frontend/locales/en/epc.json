@@ -948,7 +948,8 @@
             "NONE": "None",
             "MISSING_CLOCK_IN": "Missing Clock In",
             "MISSING_CLOCK_OUT": "Missing Clock Out",
-            "EARLY_LEAVE": "Early Leave"
+            "EARLY_LEAVE": "Early Leave",
+            "ON_LEAVE_BUT_SCANNED": "On leave but scanned"
           },
           "dayStatus": {
             "PRESENT": "Present",
@@ -959,6 +960,7 @@
             "WORK_FROM_HOME": "Work from home",
             "ON_SITE": "On site",
             "onSiteAt": "On site — {{siteName}}",
+            "onSiteScannedIn": "On site — scanned in {{time}}",
             "alsoOnSite": "also on site",
             "LEAVE": "Leave",
             "FIELD_MOVEMENT_PENDING": "Field movement pending",
@@ -1057,6 +1059,7 @@
           "flagMissingClockIn": "Missing clock-in",
           "flagMissingClockOut": "Missing clock-out",
           "flagEarlyLeave": "Early departure",
+          "flagOnLeaveButScanned": "On leave but scanned",
           "flagResolved": "{{flag}} · resolved",
           "explained": "Explained: {{reason}}",
           "noExplanation": "No explanation submitted yet",

@@ -34,6 +34,7 @@ export type AttendanceDayFlag =
   | 'MISSING_CLOCK_IN'
   | 'MISSING_CLOCK_OUT'
   | 'EARLY_LEAVE'
+  | 'ON_LEAVE_BUT_SCANNED'
   | 'NONE';
 
 export type AttendanceMonthStatus =
