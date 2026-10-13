@@ -4244,6 +4244,8 @@ enum AttendanceDayStatus {
   WORK_FROM_HOME
   ON_SITE
   LEAVE
+  /// Approved UNPAID leave — deduction 1; not attended / not paid.
+  UNPAID_LEAVE
   FIELD_MOVEMENT_PENDING
   /// Hire → first scan grace (not absent); first N working days only.
   ENROLMENT_GRACE
@@ -4401,6 +4403,8 @@ model AttendanceRecord {
   presentDays           Decimal  @map("present_days") @db.Decimal(4, 1)
   absentDays            Decimal  @map("absent_days") @db.Decimal(5, 2)
   paidDays                Decimal  @default(0) @map("paid_days") @db.Decimal(5, 2)
+  /// Approved unpaid leave days deducted this month (separate from absentDays).
+  unpaidLeaveDays         Decimal  @default(0) @map("unpaid_leave_days") @db.Decimal(5, 2)
   holidayDays           Decimal  @default(0) @map("holiday_days") @db.Decimal(4, 1)
   lateDays              Int      @default(0) @map("late_days")
   totalLateMinutes      Int      @default(0) @map("total_late_minutes")

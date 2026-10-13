@@ -104,6 +104,7 @@ interface AttendanceSnapshot {
   presentDays: Decimal;
   absentDays: Decimal;
   paidDays: Decimal;
+  unpaidLeaveDays?: Decimal | number | null;
   /** NEEDS_ENROLMENT → counted present, non-blocking note on the entry. */
   matchMethod: string;
   /** REPORT_ONLY early-departure would-deduct total (not applied to paid days). */
@@ -986,6 +987,7 @@ export class PayrollRunService {
           presentDays: true,
           absentDays: true,
           paidDays: true,
+          unpaidLeaveDays: true,
           matchMethod: true,
           earlyDepartureWouldDeductDays: true,
           dailyLogs: {
@@ -1414,6 +1416,10 @@ export class PayrollRunService {
     if (attendance) {
       absentInWindow = this.toNumber(attendance.absentDays);
       payrollDays = this.toNumber(attendance.paidDays);
+      const unpaidLeave = this.toNumber(attendance.unpaidLeaveDays);
+      if (unpaidLeave > 0) {
+        noteParts.push(`Unpaid leave: ${unpaidLeave} days`);
+      }
       const wouldDeduct = this.toNumber(
         attendance.earlyDepartureWouldDeductDays,
       );

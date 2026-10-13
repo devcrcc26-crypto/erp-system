@@ -25,6 +25,29 @@ describe('employedPayrollDays', () => {
     expect(employedPayrollDays(8, 2026, d(2026, 8, 31), null).days).toBe(1);
   });
 
+  it('Part C joiners: Aug 24 → 7; Aug 17 → 14; Feb 28 non-leap → 3; Feb 29 leap → 2; Feb 1 → 30', () => {
+    expect(employedPayrollDays(8, 2026, d(2026, 8, 24), null).days).toBe(7);
+    expect(employedPayrollDays(8, 2026, d(2026, 8, 17), null).days).toBe(14);
+    expect(employedPayrollDays(2, 2026, d(2026, 2, 28), null).days).toBe(3);
+    expect(employedPayrollDays(2, 2024, d(2024, 2, 29), null).days).toBe(2);
+    expect(employedPayrollDays(2, 2026, d(2026, 2, 1), null).days).toBe(30);
+  });
+
+  it('split contract Feb 27/28 → 27 + 3 = 30', () => {
+    const parts = allocateContractPayrollDays(
+      2,
+      2026,
+      [
+        { id: 'old', startDate: d(2025, 1, 1), endDate: d(2026, 2, 27) },
+        { id: 'new', startDate: d(2026, 2, 28), endDate: null },
+      ],
+      d(2025, 1, 1),
+      null,
+    );
+    expect(parts.map((p) => p.days)).toEqual([27, 3]);
+    expect(parts.reduce((s, p) => s + p.days, 0)).toBe(PAYROLL_MONTH_DAYS);
+  });
+
   it('leavers: Aug 15 → 15; Aug 31 → 30; Feb 28 (non-leap) → 30', () => {
     expect(
       employedPayrollDays(8, 2026, d(2025, 1, 1), d(2026, 8, 15)).days,

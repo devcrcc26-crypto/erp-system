@@ -68,6 +68,7 @@ const STATUS_CONFIG: Record<DayStatus, { color: string; labelKey: string }> = {
   WORK_FROM_HOME: { color: 'cyan', labelKey: 'WORK_FROM_HOME' },
   ON_SITE: { color: 'geekblue', labelKey: 'ON_SITE' },
   LEAVE: { color: 'purple', labelKey: 'LEAVE' },
+  UNPAID_LEAVE: { color: 'error', labelKey: 'UNPAID_LEAVE' },
   FIELD_MOVEMENT_PENDING: {
     color: 'orange',
     labelKey: 'FIELD_MOVEMENT_PENDING',
@@ -82,6 +83,7 @@ const NO_PUNCH_EXPECTED = new Set<DayStatus>([
   'WORKED_ON_DAY_OFF',
   'HOLIDAY',
   'LEAVE',
+  'UNPAID_LEAVE',
   'WORK_FROM_HOME',
   'ON_SITE',
   'ENROLMENT_GRACE',

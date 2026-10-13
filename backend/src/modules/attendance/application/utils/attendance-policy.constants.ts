@@ -29,3 +29,10 @@ export const EARLY_DEPARTURE_DEDUCTION_MODE: EarlyDepartureDeductionMode =
 
 /** Monthly FORGOT_CLOCK_IN + FORGOT_CLOCK_OUT approved count that flags review. */
 export const FORGOT_TO_CLOCK_FLAG_THRESHOLD = 3;
+
+/**
+ * When true, approved unpaid leave deducts 1 per calendar day in the range,
+ * including schedule day offs, Sundays, and public holidays inside the range.
+ * Set false to charge unpaid leave on duty days only.
+ */
+export const UNPAID_LEAVE_COUNTS_REST_DAYS = true;

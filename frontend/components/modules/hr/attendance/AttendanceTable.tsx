@@ -112,19 +112,9 @@ export default function AttendanceTable({
         },
       },
       {
-        title: t('pages.hr.attendance.columns.presentDays'),
-        key: 'presentDays',
-        width: 110,
-        align: 'right',
-        sorter: (a, b) => toNumber(a.presentDays) - toNumber(b.presentDays),
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-att-num">{formatNumber(row.presentDays)}</span>
-        ),
-      },
-      {
         title: t('pages.hr.attendance.columns.paidDays'),
         key: 'paidDays',
-        width: 110,
+        width: 130,
         align: 'right',
         sorter: (a, b) => toNumber(a.paidDays) - toNumber(b.paidDays),
         render: (_: unknown, row: AttendanceRecord) => (
@@ -134,13 +124,21 @@ export default function AttendanceTable({
         ),
       },
       {
-        title: t('pages.hr.attendance.columns.absentDays'),
-        key: 'absentDays',
+        title: t('pages.hr.attendance.columns.presentDays'),
+        key: 'presentDays',
         width: 120,
         align: 'right',
+        sorter: (a, b) => toNumber(a.presentDays) - toNumber(b.presentDays),
+        render: (_: unknown, row: AttendanceRecord) => (
+          <span className="erp-att-num">{formatNumber(row.presentDays)}</span>
+        ),
+      },
+      {
+        title: t('pages.hr.attendance.columns.absentDays'),
+        key: 'absentDays',
+        width: 100,
+        align: 'right',
         sorter: (a, b) => toNumber(a.absentDays) - toNumber(b.absentDays),
-        // Stored absentDays: the same value the payroll entry uses (leave days
-        // are already 0, so they never need subtracting here).
         render: (_: unknown, row: AttendanceRecord) => {
           const absent = toNumber(row.absentDays);
           if (absent === 0) {
@@ -149,6 +147,25 @@ export default function AttendanceTable({
           return (
             <span className="erp-att-num erp-att-num--danger">
               {formatNumber(absent)}
+            </span>
+          );
+        },
+      },
+      {
+        title: t('pages.hr.attendance.columns.unpaidLeaveDays'),
+        key: 'unpaidLeaveDays',
+        width: 120,
+        align: 'right',
+        sorter: (a, b) =>
+          toNumber(a.unpaidLeaveDays ?? 0) - toNumber(b.unpaidLeaveDays ?? 0),
+        render: (_: unknown, row: AttendanceRecord) => {
+          const unpaid = toNumber(row.unpaidLeaveDays ?? 0);
+          if (unpaid === 0) {
+            return <span className="erp-att-dash">—</span>;
+          }
+          return (
+            <span className="erp-att-num erp-att-num--danger">
+              {formatNumber(unpaid)}
             </span>
           );
         },

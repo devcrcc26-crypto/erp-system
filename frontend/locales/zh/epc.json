@@ -795,9 +795,10 @@
         "showingPeriod": "当前显示 {{month}} {{year}}。",
         "columns": {
           "scheduledDays": "应出勤天数",
-          "presentDays": "出勤天数",
-          "absentDays": "缺勤天数",
-          "paidDays": "计薪天数",
+          "presentDays": "实际出勤天数",
+          "absentDays": "缺勤",
+          "paidDays": "计薪天数（30 天制）",
+          "unpaidLeaveDays": "无薪假",
           "leaveDays": "请假天数",
           "scheduleCoverage": "现场 / 居家",
           "attendanceRate": "出勤率",
@@ -965,6 +966,7 @@
             "onSiteScannedIn": "现场 — {{time}} 打卡",
             "alsoOnSite": "同时在现场",
             "LEAVE": "休假",
+            "UNPAID_LEAVE": "无薪假",
             "FIELD_MOVEMENT_PENDING": "外出登记待审批",
             "ENROLMENT_GRACE": "入职登记宽限"
           }
@@ -4955,8 +4957,9 @@
       },
       "entry": {
         "employee": "员工",
-        "paidDays": "计薪天数",
-        "paidDaysTooltip": "在职 {{employed}} · 缺勤 {{absent}} · 计薪 {{paid}}",
+        "paidDays": "计薪天数（30 天制）",
+        "paidDaysTooltip": "在职 {{employed}} · 缺勤 {{absent}} · 无薪假 {{unpaid}} · 计薪 {{paid}}",
+        "unpaidLeaveNote": "无薪假：{{days}} 天",
         "basic": "基本",
         "earned": "应得",
         "otPay": "加班费",

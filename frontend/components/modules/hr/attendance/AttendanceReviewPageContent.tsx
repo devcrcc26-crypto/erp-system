@@ -291,18 +291,9 @@ export default function AttendanceReviewPageContent({
         },
       },
       {
-        title: t('pages.hr.attendance.columns.presentDays'),
-        key: 'presentDays',
-        width: 110,
-        align: 'right',
-        render: (_: unknown, row: AttendanceRecord) => (
-          <span className="erp-att-num">{formatNumber(row.presentDays)}</span>
-        ),
-      },
-      {
         title: t('pages.hr.attendance.columns.paidDays'),
         key: 'paidDays',
-        width: 110,
+        width: 130,
         align: 'right',
         render: (_: unknown, row: AttendanceRecord) => (
           <span className="erp-att-num erp-att-num--teal">
@@ -311,9 +302,18 @@ export default function AttendanceReviewPageContent({
         ),
       },
       {
+        title: t('pages.hr.attendance.columns.presentDays'),
+        key: 'presentDays',
+        width: 120,
+        align: 'right',
+        render: (_: unknown, row: AttendanceRecord) => (
+          <span className="erp-att-num">{formatNumber(row.presentDays)}</span>
+        ),
+      },
+      {
         title: t('pages.hr.attendance.columns.absentDays'),
         key: 'absentDays',
-        width: 110,
+        width: 100,
         align: 'right',
         render: (_: unknown, row: AttendanceRecord) => {
           const absent = toNumber(row.absentDays);
@@ -323,6 +323,23 @@ export default function AttendanceReviewPageContent({
           return (
             <span className="erp-att-num erp-att-num--danger">
               {formatNumber(absent)}
+            </span>
+          );
+        },
+      },
+      {
+        title: t('pages.hr.attendance.columns.unpaidLeaveDays'),
+        key: 'unpaidLeaveDays',
+        width: 120,
+        align: 'right',
+        render: (_: unknown, row: AttendanceRecord) => {
+          const unpaid = toNumber(row.unpaidLeaveDays ?? 0);
+          if (unpaid === 0) {
+            return <span className="erp-att-dash">—</span>;
+          }
+          return (
+            <span className="erp-att-num erp-att-num--danger">
+              {formatNumber(unpaid)}
             </span>
           );
         },

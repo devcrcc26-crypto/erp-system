@@ -611,7 +611,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(result.paidDays).toBe(0);
   });
 
-  it('unpaid leave day with no scan → deduction 1 (Saturday included as full day)', () => {
+  it('unpaid leave day with no scan → UNPAID_LEAVE, deduction 1 (Saturday included)', () => {
     const unpaidSat = d(2026, 8, 8); // Saturday
     const key = dateToYyyyMmDd(unpaidSat);
     const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
@@ -630,8 +630,166 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
       }),
     });
     expect(result.byDate.get(key)?.deduction).toBe(1);
-    expect(result.byDate.get(key)?.status).toBe('ABSENT');
+    expect(result.byDate.get(key)?.status).toBe('UNPAID_LEAVE');
+    expect(result.unpaidLeaveDays).toBe(1);
+    expect(result.absentDays).toBe(0);
     expect(result.paidDays).toBe(29);
+  });
+
+  it('unpaid leave Fri–Mon (incl. Sat/Sun rest) → 4 unpaid days', () => {
+    // Fri 7 Aug … Mon 10 Aug 2026
+    const keys = new Set([
+      '2026-08-07',
+      '2026-08-08',
+      '2026-08-09',
+      '2026-08-10',
+    ]);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (keys.has(k)) {
+        return dayInput(date, { clockIn: null, clockOut: null });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        isOnUnpaidLeave: (date) => keys.has(dateToYyyyMmDd(date)),
+      }),
+    });
+    expect(result.unpaidLeaveDays).toBe(4);
+    expect(result.byDate.get('2026-08-09')?.status).toBe('UNPAID_LEAVE'); // Sunday
+    expect(result.paidDays).toBe(26);
+  });
+
+  it('full-month unpaid leave → paid 0', () => {
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date) =>
+      dayInput(date, { clockIn: null, clockOut: null }),
+    );
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        isOnUnpaidLeave: () => true,
+      }),
+    });
+    expect(result.paidDays).toBe(0);
+    expect(result.fullyAbsentWorkingDays).toBe(true);
+    expect(
+      [...result.byDate.values()].every((r) => r.status === 'UNPAID_LEAVE'),
+    ).toBe(true);
+  });
+
+  it('unpaid leave Mon–Fri → absent 0, unpaid 5, paid 25 (never double-counted)', () => {
+    // Mon 3 Aug … Fri 7 Aug 2026
+    const unpaidKeys = new Set([
+      '2026-08-03',
+      '2026-08-04',
+      '2026-08-05',
+      '2026-08-06',
+      '2026-08-07',
+    ]);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (unpaidKeys.has(k)) {
+        return dayInput(date, { clockIn: null, clockOut: null });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        isOnUnpaidLeave: (date) => unpaidKeys.has(dateToYyyyMmDd(date)),
+      }),
+    });
+    for (const key of unpaidKeys) {
+      expect(result.byDate.get(key)?.status).toBe('UNPAID_LEAVE');
+      expect(result.byDate.get(key)?.deduction).toBe(1);
+    }
+    expect(result.absentDays).toBe(0);
+    expect(result.unpaidLeaveDays).toBe(5);
+    expect(result.paidDays).toBe(25);
+    // Deduction counted once: paid = employed − absent − unpaid
+    expect(result.paidDays).toBe(
+      result.employedDays - result.absentDays - result.unpaidLeaveDays,
+    );
+  });
+
+  it('unpaid leave Mon–Fri + 2 other absences → absent 2, unpaid 5, paid 23', () => {
+    const unpaidKeys = new Set([
+      '2026-08-03',
+      '2026-08-04',
+      '2026-08-05',
+      '2026-08-06',
+      '2026-08-07',
+    ]);
+    // Two other absences outside the unpaid range (Mon 10, Tue 11 Aug)
+    const absentKeys = new Set(['2026-08-10', '2026-08-11']);
+    const daily = logsForMonth(8, 2026, fullContractStart, null, (date, k) => {
+      if (unpaidKeys.has(k) || absentKeys.has(k)) {
+        return dayInput(date, { clockIn: null, clockOut: null });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        isOnUnpaidLeave: (date) => unpaidKeys.has(dateToYyyyMmDd(date)),
+      }),
+    });
+    expect(result.byDate.get('2026-08-10')?.status).toBe('ABSENT');
+    expect(result.byDate.get('2026-08-03')?.status).toBe('UNPAID_LEAVE');
+    expect(result.absentDays).toBe(2);
+    expect(result.unpaidLeaveDays).toBe(5);
+    expect(result.paidDays).toBe(23);
+    expect(result.absentDays + result.unpaidLeaveDays).toBe(7);
+  });
+
+  it('joiner Aug 24 with unpaid leave Aug 20–26 → only Aug 24–26 count (3), paid 4', () => {
+    const join = d(2026, 8, 24);
+    const unpaidKeys = new Set([
+      '2026-08-20',
+      '2026-08-21',
+      '2026-08-22',
+      '2026-08-23',
+      '2026-08-24',
+      '2026-08-25',
+      '2026-08-26',
+    ]);
+    const daily = logsForMonth(8, 2026, join, null, (date, k) => {
+      if (unpaidKeys.has(k)) {
+        return dayInput(date, { clockIn: null, clockOut: null });
+      }
+      return dayInput(date);
+    });
+    const result = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: join, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        isOnUnpaidLeave: (date) => unpaidKeys.has(dateToYyyyMmDd(date)),
+      }),
+    });
+    // Pre-hire dates are outside the employment window
+    expect(result.byDate.has('2026-08-20')).toBe(false);
+    expect(result.byDate.has('2026-08-23')).toBe(false);
+    expect(result.byDate.get('2026-08-24')?.status).toBe('UNPAID_LEAVE');
+    expect(result.byDate.get('2026-08-25')?.status).toBe('UNPAID_LEAVE');
+    expect(result.byDate.get('2026-08-26')?.status).toBe('UNPAID_LEAVE');
+    expect(result.employedDays).toBe(7);
+    expect(result.absentDays).toBe(0);
+    expect(result.unpaidLeaveDays).toBe(3);
+    expect(result.paidDays).toBe(4);
   });
 
   it('unpaid leave overrides site coverage that day', () => {
@@ -653,7 +811,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
         isOnUnpaidLeave: (date) => dateToYyyyMmDd(date) === key,
       }),
     });
-    expect(result.byDate.get(key)?.status).toBe('ABSENT');
+    expect(result.byDate.get(key)?.status).toBe('UNPAID_LEAVE');
     expect(result.byDate.get(key)?.deduction).toBe(1);
   });
 
@@ -1159,6 +1317,72 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
       }
       return 'WORKING' as const;
     };
+
+    it('full month Sat/Sun-off, no absences → paid 30, attended 21', () => {
+      const daily = logsForMonth(8, 2026, fullContractStart, null, (date) =>
+        dayInput(date),
+      );
+      const result = summarizeMonthAbsence({
+        month: 8,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext({ dayKind: satOffKind }),
+      });
+      expect(result.employedDays).toBe(30);
+      expect(result.paidDays).toBe(30);
+      expect(result.scheduledDays).toBe(21);
+      expect(result.presentDays).toBe(21);
+      expect(result.absentDays).toBe(0);
+    });
+
+    it('joiner Aug 24 no absences → employed/paid 7 (attended ≤ 7)', () => {
+      const join = d(2026, 8, 24);
+      const daily = logsForMonth(8, 2026, join, null, (date) => dayInput(date));
+      const result = summarizeMonthAbsence({
+        month: 8,
+        year: 2026,
+        contracts: [{ startDate: join, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      expect(result.employedDays).toBe(7);
+      expect(result.paidDays).toBe(7);
+      expect(result.presentDays).toBe(7);
+      expect(result.scheduledDays).toBe(7);
+    });
+
+    it('Feb full month fully absent → paid 0 (not 2)', () => {
+      const daily = logsForMonth(2, 2026, fullContractStart, null, (date) =>
+        dayInput(date, { clockIn: null, clockOut: null }),
+      );
+      const result = summarizeMonthAbsence({
+        month: 2,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      expect(result.paidDays).toBe(0);
+      expect(result.fullyAbsentWorkingDays).toBe(true);
+    });
+
+    it('joiner Feb 15 fully absent → paid 0', () => {
+      const join = d(2026, 2, 15);
+      const daily = logsForMonth(2, 2026, join, null, (date) =>
+        dayInput(date, { clockIn: null, clockOut: null }),
+      );
+      const result = summarizeMonthAbsence({
+        month: 2,
+        year: 2026,
+        contracts: [{ startDate: join, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext(),
+      });
+      expect(result.employedDays).toBe(16);
+      expect(result.paidDays).toBe(0);
+      expect(result.fullyAbsentWorkingDays).toBe(true);
+    });
 
     it('Sat-off schedule + no scan Saturday → deduction 0, DAY_OFF', () => {
       const sat = d(2026, 10, 10); // Saturday

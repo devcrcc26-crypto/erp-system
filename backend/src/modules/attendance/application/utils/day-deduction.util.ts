@@ -10,7 +10,10 @@ import {
   type DayKind,
 } from '../../../work-schedule/application/utils/get-day-kind.util';
 import { dateToYyyyMmDd } from '../services/attendance-leave.util';
-import { EARLY_DEPARTURE_DEDUCTION_MODE } from './attendance-policy.constants';
+import {
+  EARLY_DEPARTURE_DEDUCTION_MODE,
+  UNPAID_LEAVE_COUNTS_REST_DAYS,
+} from './attendance-policy.constants';
 import {
   evaluateEarlyDeparture,
   type EarlyDepartureBand,
@@ -115,7 +118,8 @@ export function resolveContextDayKind(
 export type DayDeductionStatus =
   | AttendanceDayStatus
   | 'DAY_OFF'
-  | 'WORKED_ON_DAY_OFF';
+  | 'WORKED_ON_DAY_OFF'
+  | 'UNPAID_LEAVE';
 
 export interface DayDeductionResult {
   deduction: DayDeductionValue;
@@ -146,8 +150,10 @@ function roundDays(value: number): number {
 /**
  * Single source of truth for attendance absence weight and payroll paid days.
  *
- * Precedence: holiday / day off → unpaid leave → approved leave → site / WFH →
- * exempt → scan rules (STANDARD or SCAN_ONLY).
+ * Precedence (when {@link UNPAID_LEAVE_COUNTS_REST_DAYS}): unpaid leave →
+ * holiday / day off → paid leave → site / WFH → exempt → scan rules.
+ * When the constant is false, unpaid leave is evaluated only on duty days
+ * (after holiday / day off).
  */
 export function dayDeduction(
   date: Date,
@@ -155,13 +161,23 @@ export function dayDeduction(
   context: DayDeductionContext,
 ): DayDeductionResult {
   const kind = resolveContextDayKind(date, context);
-  if (kind === 'HOLIDAY') {
-    return { deduction: 0, status: 'HOLIDAY' };
-  }
-
   const hasClockIn = Boolean(day.clockIn);
   const hasClockOut = Boolean(day.clockOut);
   const hasAnyScan = hasClockIn || hasClockOut;
+
+  // Unpaid leave: deduction 1, status UNPAID_LEAVE. Optionally includes rest days.
+  if (context.isOnUnpaidLeave?.(date)) {
+    if (
+      UNPAID_LEAVE_COUNTS_REST_DAYS ||
+      (kind !== 'HOLIDAY' && kind !== 'DAY_OFF')
+    ) {
+      return { deduction: 1, status: 'UNPAID_LEAVE' };
+    }
+  }
+
+  if (kind === 'HOLIDAY') {
+    return { deduction: 0, status: 'HOLIDAY' };
+  }
 
   if (kind === 'DAY_OFF') {
     // Scans on a day off are informational only — no pay change, no flags.
@@ -169,11 +185,6 @@ export function dayDeduction(
       return { deduction: 0, status: 'WORKED_ON_DAY_OFF' };
     }
     return { deduction: 0, status: 'DAY_OFF' };
-  }
-
-  // Unpaid leave is absence even when a site/WFH row also exists that day.
-  if (context.isOnUnpaidLeave?.(date)) {
-    return { deduction: 1, status: 'ABSENT' };
   }
 
   // Paid leave before site/WFH. Scans do not change leave pay; flag for HR.
@@ -333,12 +344,21 @@ export interface MonthAbsenceSummary {
   /** WORKING / HALF_DAY days in the employment window (each counts 1). */
   scheduledDays: number;
   /**
-   * Scheduled days with a scan (clock-in or clock-out, after corrections), or
-   * marked present for attendance-exempt staff. Each counts 1 — never 0.5; a
-   * missing punch is a pay deduction, not a half presence.
+   * Days attended (duty days with a scan, or marked present for exempt staff).
+   * Day offs / Sundays / holidays / unpaid leave are never included.
    */
   presentDays: number;
+  /**
+   * Non-unpaid absence deductions (no-scan, missing punch, early departure, …).
+   * Unpaid leave is tracked separately in {@link unpaidLeaveDays}.
+   */
   absentDays: number;
+  /** Approved unpaid leave deductions this month (separate from absentDays). */
+  unpaidLeaveDays: number;
+  /**
+   * Paid days on the 30-day basis: employedDays − absentDays − unpaidLeaveDays
+   * (or 0 when fully absent on every duty day).
+   */
   paidDays: number;
   leaveDays: number;
   /**
@@ -465,6 +485,7 @@ export function summarizeMonthAbsence(
   );
 
   let absentDays = 0;
+  let unpaidLeaveDays = 0;
   let leaveDays = 0;
   let earlyDepartureCount = 0;
   let earlyDepartureDeductedDays = 0;
@@ -482,7 +503,11 @@ export function summarizeMonthAbsence(
     };
     const result = dayDeduction(date, dayInput, input.context);
     byDate.set(key, result);
-    absentDays += result.deduction;
+    if (result.status === 'UNPAID_LEAVE') {
+      unpaidLeaveDays += result.deduction;
+    } else {
+      absentDays += result.deduction;
+    }
     if (result.status === 'LEAVE') {
       leaveDays += 1;
     }
@@ -508,6 +533,7 @@ export function summarizeMonthAbsence(
   }
 
   const absentRounded = roundDays(absentDays);
+  const unpaidRounded = roundDays(unpaidLeaveDays);
 
   const workingDates = dates.filter((date) =>
     isAbsenceWorkingDay(date, input.context),
@@ -515,8 +541,12 @@ export function summarizeMonthAbsence(
   const presentDays = workingDates.filter((date) => {
     const key = dateToYyyyMmDd(date);
     const day = input.dailyLogsByDate.get(key);
+    const status = byDate.get(key)?.status;
+    if (status === 'UNPAID_LEAVE') {
+      return false;
+    }
     const hasScan = Boolean(day?.clockIn || day?.clockOut);
-    return hasScan || byDate.get(key)?.status === 'PRESENT';
+    return hasScan || status === 'PRESENT';
   }).length;
   const fullyAbsentWorkingDays =
     workingDates.length > 0 &&
@@ -525,19 +555,20 @@ export function summarizeMonthAbsence(
       return result != null && result.deduction === 1;
     });
 
-  // Normal: paid = employed − absent. Fully absent on all duty days → 0
+  // Normal: paid = employed − absent − unpaid. Fully absent on all duty days → 0
   // (do not leave day-off / holiday remainder as paid days).
   // Early-departure 0.5 days are included in absentRounded when ENFORCED /
   // pending, and never alone force the fully-absent zero-pay rule.
   const paidDays = fullyAbsentWorkingDays
     ? 0
-    : roundDays(Math.max(0, employedDays - absentRounded));
+    : roundDays(Math.max(0, employedDays - absentRounded - unpaidRounded));
 
   return {
     employedDays,
     scheduledDays: workingDates.length,
     presentDays,
     absentDays: absentRounded,
+    unpaidLeaveDays: unpaidRounded,
     paidDays,
     leaveDays: roundDays(leaveDays),
     fullyAbsentWorkingDays,

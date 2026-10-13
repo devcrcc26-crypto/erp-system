@@ -111,6 +111,9 @@ function dayStatusLabel(
   if (log.dayStatus === 'WORKED_ON_DAY_OFF') {
     return t('pages.hr.attendance.review.dayStatus.WORKED_ON_DAY_OFF');
   }
+  if (log.dayStatus === 'UNPAID_LEAVE') {
+    return t('pages.hr.attendance.review.dayStatus.UNPAID_LEAVE');
+  }
   if (log.isHoliday || log.dayStatus === 'HOLIDAY') {
     return t('pages.hr.attendance.daily.holiday');
   }

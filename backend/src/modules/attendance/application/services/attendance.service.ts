@@ -347,6 +347,7 @@ function resolveAttendanceDayFlag(params: {
     params.dayStatus === 'ON_SITE' ||
     params.dayStatus === 'WORK_FROM_HOME' ||
     params.dayStatus === 'LEAVE' ||
+    params.dayStatus === 'UNPAID_LEAVE' ||
     params.dayStatus === 'SUNDAY' ||
     params.dayStatus === 'DAY_OFF' ||
     params.dayStatus === 'WORKED_ON_DAY_OFF' ||
@@ -5405,6 +5406,7 @@ export class AttendanceService
         status === 'ON_SITE' ||
         status === 'WORK_FROM_HOME' ||
         status === 'LEAVE' ||
+        status === 'UNPAID_LEAVE' ||
         status === 'ENROLMENT_GRACE' ||
         status === 'DAY_OFF' ||
         status === 'WORKED_ON_DAY_OFF' ||
@@ -5503,6 +5505,7 @@ export class AttendanceService
     const scheduledDays = monthSummary.scheduledDays;
     const presentDays = monthSummary.presentDays;
     const absentDays = monthSummary.absentDays;
+    const unpaidLeaveDays = monthSummary.unpaidLeaveDays;
     const paidDays = monthSummary.paidDays;
     const holidayDays = holidayLogs.length;
     const lateDays = workingDayLogs.filter((log) => log.isLate).length;
@@ -5592,8 +5595,9 @@ export class AttendanceService
         flaggedDays,
         resolvedDays,
         payableHours: Math.round(payableHours * 100) / 100,
-        // earlyDeparture* / forgotToClock* from 20261009160000 — cast until client regen
+        // unpaidLeaveDays / earlyDeparture* — cast until prisma generate after migrate
         ...({
+          unpaidLeaveDays,
           earlyDepartureCount: monthSummary.earlyDepartureCount,
           earlyDepartureDeductedDays: monthSummary.earlyDepartureDeductedDays,
           earlyDepartureWouldDeductDays:

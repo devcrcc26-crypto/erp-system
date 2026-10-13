@@ -114,6 +114,7 @@ export interface AttendanceDailyLog {
     | 'WORK_FROM_HOME'
     | 'ON_SITE'
     | 'LEAVE'
+    | 'UNPAID_LEAVE'
     | 'FIELD_MOVEMENT_PENDING'
     | 'ENROLMENT_GRACE';
   dayDeduction?: number;
@@ -133,6 +134,7 @@ export interface AttendanceRecord {
   presentDays: number;
   absentDays: number;
   paidDays?: number;
+  unpaidLeaveDays?: number;
   holidayDays: number;
   lateDays: number;
   totalLateMinutes: number;

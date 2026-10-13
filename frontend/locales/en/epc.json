@@ -795,9 +795,10 @@
         "showingPeriod": "Showing {{month}} {{year}}.",
         "columns": {
           "scheduledDays": "Scheduled Days",
-          "presentDays": "Present Days",
-          "absentDays": "Absent Days",
-          "paidDays": "Paid Days",
+          "presentDays": "Days attended",
+          "absentDays": "Absent",
+          "paidDays": "Paid days (30-day basis)",
+          "unpaidLeaveDays": "Unpaid leave",
           "leaveDays": "Leave Days",
           "scheduleCoverage": "Site / WFH",
           "attendanceRate": "Attendance %",
@@ -965,6 +966,7 @@
             "onSiteScannedIn": "On site — scanned in {{time}}",
             "alsoOnSite": "also on site",
             "LEAVE": "Leave",
+            "UNPAID_LEAVE": "Unpaid leave",
             "FIELD_MOVEMENT_PENDING": "Field movement pending",
             "ENROLMENT_GRACE": "Enrolment grace"
           }
@@ -4956,8 +4958,9 @@
       },
       "entry": {
         "employee": "Employee",
-        "paidDays": "Paid days",
-        "paidDaysTooltip": "Employed {{employed}} · Absent {{absent}} · Paid {{paid}}",
+        "paidDays": "Paid days (30-day basis)",
+        "paidDaysTooltip": "Employed {{employed}} · Absent {{absent}} · Unpaid leave {{unpaid}} · Paid {{paid}}",
+        "unpaidLeaveNote": "Unpaid leave: {{days}} days",
         "basic": "Basic",
         "earned": "Earned",
         "otPay": "OT pay",

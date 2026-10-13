@@ -599,6 +599,7 @@ export default function PayrollRunDetailPageContent({
               title={t('hr.payroll.entry.paidDaysTooltip', {
                 employed: parsePayrollMoney(row.employedDays),
                 absent: parsePayrollMoney(row.absentDays),
+                unpaid: 0,
                 paid: parsePayrollMoney(row.payrollDays),
               })}
             >
