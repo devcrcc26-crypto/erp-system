@@ -10,7 +10,7 @@ import {
   type FieldMovementReasonType,
   type FieldMovementSelection,
   type ForgotDirection,
-} from '@/lib/field-movement/field-movement-field-rules';
+} from '@/lib/generated/field-movement-field-rules';
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => {
   const value = String(hour).padStart(2, '0');

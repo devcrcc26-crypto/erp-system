@@ -1,9 +1,9 @@
-import type { FieldMovementFieldValues } from '@/lib/field-movement/field-movement-field-rules';
+import type { FieldMovementFieldValues } from '@/lib/generated/field-movement-field-rules';
 import {
   validateFieldMovementValues,
   type FieldMovementSelection,
-} from '@/lib/field-movement/field-movement-field-rules';
-import { effectiveScan } from '@/lib/field-movement/field-movement-issue-compatibility';
+} from '@/lib/generated/field-movement-field-rules';
+import { effectiveScan } from '@/lib/generated/field-movement-issue-compatibility';
 
 export interface ExplainDayScanContext {
   clockInLocal: string | null;

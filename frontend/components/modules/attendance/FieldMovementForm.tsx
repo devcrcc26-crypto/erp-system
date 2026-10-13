@@ -56,7 +56,7 @@ import {
   type FieldMovementSelection,
   toStorageEntries,
   validateFieldMovementValues,
-} from '@/lib/field-movement/field-movement-field-rules';
+} from '@/lib/generated/field-movement-field-rules';
 import ExplainDaysPanel from '@/components/modules/attendance/ExplainDaysPanel';
 import FieldMovementEntryFields from '@/components/modules/attendance/FieldMovementEntryFields';
 import {

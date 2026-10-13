@@ -6,7 +6,7 @@ import type {
   FieldMovementFieldKey,
   FieldMovementReasonType,
   ForgotDirection,
-} from '@/lib/field-movement/field-movement-field-rules';
+} from '@/lib/generated/field-movement-field-rules';
 
 beforeAll(() => {
   class ResizeObserverStub {

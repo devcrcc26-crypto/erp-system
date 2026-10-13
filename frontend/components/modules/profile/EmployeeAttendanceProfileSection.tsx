@@ -138,7 +138,7 @@ function DailyLogsTable({
   t,
 }: {
   logs: AttendanceDailyLog[];
-  t: (key: string, options?: Record<string, unknown>) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }): React.ReactNode {
   const columns: ColumnsType<AttendanceDailyLog> = [
     {

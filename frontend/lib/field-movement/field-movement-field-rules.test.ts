@@ -6,7 +6,7 @@ import {
   resolveFieldPresence,
   toStorageEntries,
   validateFieldMovementValues,
-} from './field-movement-field-rules';
+} from '@/lib/generated/field-movement-field-rules';
 
 describe('shared field-movement-field-rules (frontend import)', () => {
   it.each([

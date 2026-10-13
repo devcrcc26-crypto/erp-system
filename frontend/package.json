@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit -p .",
+    "typecheck:baseline": "node scripts/typecheck-baseline.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

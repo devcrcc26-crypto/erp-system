@@ -1,7 +1,19 @@
-import type {
-  FieldMovementReasonType,
-  FieldMovementSelection,
-} from './field-movement-field-rules';
+/**
+ * Bulk-explain issue grouping and reason compatibility for field movements.
+ *
+ * Shared with the frontend: `npm run sync:shared` copies this file to
+ * frontend/lib/generated/. Keep it dependency-free (no imports at all, not even
+ * the Prisma client or sibling modules); enum-backed values are string-literal
+ * unions checked against Prisma in field-movement-shared-config.spec.ts.
+ */
+
+/** Local mirrors of field-movement-field-rules types (kept equal by the spec). */
+type FieldMovementReasonType = 'FIELD_VISIT' | 'EARLY_LEAVE' | 'FORGOT';
+
+interface FieldMovementSelection {
+  reasonType: FieldMovementReasonType | null;
+  forgotDirection?: 'IN' | 'OUT' | 'BOTH' | null;
+}
 
 /** Attendance issue grouping for bulk explain compatibility. */
 export type FieldMovementIssueType =
@@ -28,12 +40,17 @@ const COMPATIBLE_BY_ISSUE: Record<
   NO_SCANS: ['FIELD_VISIT', 'FORGOT_BOTH'],
 };
 
+/** Attendance day flags (= Prisma AttendanceDayFlag). */
+export const ATTENDANCE_FLAGS_FOR_ISSUE = [
+  'MISSING_CLOCK_IN',
+  'MISSING_CLOCK_OUT',
+  'EARLY_LEAVE',
+  'ON_LEAVE_BUT_SCANNED',
+  'NONE',
+] as const;
+
 export type AttendanceFlagForIssue =
-  | 'MISSING_CLOCK_IN'
-  | 'MISSING_CLOCK_OUT'
-  | 'EARLY_LEAVE'
-  | 'ON_LEAVE_BUT_SCANNED'
-  | 'NONE';
+  (typeof ATTENDANCE_FLAGS_FOR_ISSUE)[number];
 
 export function effectiveScan(
   corrected: string | null | undefined,

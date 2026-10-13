@@ -464,7 +464,8 @@ export interface UnlockAttendanceMonthDto {
   unlockReason: string;
 }
 
-export interface EmployeeDailyLogsResponse extends AttendanceRecord {
+export interface EmployeeDailyLogsResponse
+  extends Omit<AttendanceRecord, 'employee' | 'dailyLogs'> {
   employee: {
     id: string;
     firstName: string;

@@ -19,7 +19,7 @@ import type {
   FieldMovementReason,
   FieldMovementStatus,
 } from '@/lib/api/attendance.types';
-import type { FieldMovementIssueType } from '@/lib/field-movement/field-movement-issue-compatibility';
+import type { FieldMovementIssueType } from '@/lib/generated/field-movement-issue-compatibility';
 import './field-movement.css';
 
 /**
@@ -46,6 +46,7 @@ export const FLAG_LABELS: Record<AttendanceDayFlag, string> = {
   MISSING_CLOCK_IN: 'Missing clock-in',
   MISSING_CLOCK_OUT: 'Missing clock-out',
   EARLY_LEAVE: 'Early departure detected',
+  ON_LEAVE_BUT_SCANNED: 'On leave but scanned',
   NONE: '',
 };
 
@@ -53,6 +54,7 @@ export const FLAG_TONES: Record<AttendanceDayFlag, string> = {
   MISSING_CLOCK_IN: 'red',
   MISSING_CLOCK_OUT: 'amber',
   EARLY_LEAVE: 'coral',
+  ON_LEAVE_BUT_SCANNED: 'violet',
   NONE: 'neutral',
 };
 
@@ -60,6 +62,7 @@ const FLAG_ICONS: Record<AttendanceDayFlag, LucideIcon> = {
   MISSING_CLOCK_IN: LogIn,
   MISSING_CLOCK_OUT: LogOut,
   EARLY_LEAVE: DoorOpen,
+  ON_LEAVE_BUT_SCANNED: LogIn,
   NONE: Info,
 };
 

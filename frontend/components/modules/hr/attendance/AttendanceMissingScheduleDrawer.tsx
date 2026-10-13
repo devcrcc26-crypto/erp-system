@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button, DatePicker, Drawer, Form, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { useAppMessage } from '@/hooks/use-app-message';
+
+dayjs.extend(utc);
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useCurrentUser } from '@/lib/query/profile';
 import { useOnBehalfEligibleEmployees } from '@/lib/query/on-behalf';
@@ -104,7 +107,7 @@ export default function AttendanceMissingScheduleDrawer({
       onSubmitted?.();
       onClose();
     } catch (error) {
-      notifyApiError(error, messageApi);
+      notifyApiError(error, 'Failed to submit site assignment', messageApi);
     }
   }
 
@@ -122,7 +125,7 @@ export default function AttendanceMissingScheduleDrawer({
       onSubmitted?.();
       onClose();
     } catch (error) {
-      notifyApiError(error, messageApi);
+      notifyApiError(error, 'Failed to submit work from home', messageApi);
     } finally {
       setSubmittingWfh(false);
     }

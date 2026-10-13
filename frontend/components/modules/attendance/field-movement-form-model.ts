@@ -10,7 +10,7 @@ import {
   deriveIssueTypeFromFlagged,
   normalizeExplanationStatus,
 } from '@/lib/field-movement/explain-days-selection';
-import type { FieldMovementIssueType } from '@/lib/field-movement/field-movement-issue-compatibility';
+import type { FieldMovementIssueType } from '@/lib/generated/field-movement-issue-compatibility';
 import {
   availableForgotDirections,
   availableReasonTypesForFlag,
@@ -21,7 +21,7 @@ import {
   type FieldMovementSelection,
   type ForgotDirection,
   validateFieldMovementValues,
-} from '@/lib/field-movement/field-movement-field-rules';
+} from '@/lib/generated/field-movement-field-rules';
 
 export type DayErrors = FieldMovementEntryErrors & {
   lateReason?: string;

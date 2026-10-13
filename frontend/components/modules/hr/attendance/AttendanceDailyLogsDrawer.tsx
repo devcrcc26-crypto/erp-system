@@ -540,7 +540,8 @@ export default function AttendanceDailyLogsDrawer({
                 {status === 'ON_SITE' &&
                 (row.correctedClockInLocal ?? row.clockInLocal)
                   ? t('pages.hr.attendance.review.dayStatus.onSiteScannedIn', {
-                      time: row.correctedClockInLocal ?? row.clockInLocal,
+                      time:
+                        row.correctedClockInLocal ?? row.clockInLocal ?? '',
                     })
                   : status === 'ON_SITE' && row.siteAssignmentName
                     ? t('pages.hr.attendance.review.dayStatus.onSiteAt', {

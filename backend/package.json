@@ -28,6 +28,7 @@
     "prisma:seed-payroll-test": "ts-node -r tsconfig-paths/register --transpile-only prisma/seed-payroll-test-data.ts",
     "prisma:seed-payroll-test-topup": "ts-node -r tsconfig-paths/register --transpile-only prisma/seed-payroll-test-topup.ts",
     "prisma:studio": "prisma studio",
+    "sync:shared": "ts-node --transpile-only scripts/sync-shared-config.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

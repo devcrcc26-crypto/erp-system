@@ -6,7 +6,7 @@ import {
   idsForSelectAllCompatible,
   intersectionCompatibleReasons,
   resolveSelectAllAnchor,
-} from './field-movement-issue-compatibility';
+} from '@/lib/generated/field-movement-issue-compatibility';
 
 describe('field-movement-issue-compatibility', () => {
   it('intersection of five compatible issue types includes shared reasons', () => {

@@ -19,10 +19,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
-      "@erp/fm-rules": [
-        "../backend/src/modules/attendance/application/utils/field-movement-field-rules.ts"
-      ]
+      "@/*": ["./*"]
     }
   },
   "include": [

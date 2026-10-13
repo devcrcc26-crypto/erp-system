@@ -1,0 +1,28 @@
+{
+  "count": 36,
+  "files": [
+    "components/modules/approvals/detail/VehicleRefuelingDetail.tsx",
+    "components/modules/hr/HrImportModal.tsx",
+    "components/modules/hr/inspection-repair/InspectionRepairFormContent.tsx",
+    "components/modules/hr/per-diem/EmployeePerDiemRatesListPageContent.tsx",
+    "components/modules/hr/per-diem/EmployeePerDiemRatesSection.tsx",
+    "components/modules/hr/per-diem/PerDiemRequestForm.tsx",
+    "components/modules/hr/per-diem/PerDiemRequestsListPageContent.tsx",
+    "components/modules/hr/per-diem/PerDiemSettlementDetailPageContent.tsx",
+    "components/modules/hr/site-assignment/EmployeeSiteAssignmentsSection.tsx",
+    "components/modules/hr/site-assignment/SiteAssignmentDetailPageContent.tsx",
+    "components/modules/hr/site-assignment/SiteAssignmentsListPageContent.tsx",
+    "components/modules/hr/work-schedule/AssignWorkScheduleModal.tsx",
+    "components/modules/projects/engineering/VersionHistoryTimeline.test.tsx",
+    "components/modules/settings/SettingsDisciplinesPanel.tsx",
+    "components/modules/users/add-employee/AddEmployeeForm.tsx",
+    "components/providers/AntDesignProvider.tsx",
+    "components/ui/ConfirmDialog/ConfirmDialog.tsx",
+    "components/ui/FormPageFooter/FormPageFooter.tsx",
+    "components/ui/StepperForm/StepperForm.tsx",
+    "lib/field-movement/field-movement-field-rules.test.ts",
+    "lib/i18n/epc-messages.ts",
+    "lib/utils/users-export-excel.test.ts"
+  ],
+  "updatedAt": "2026-04-13T00:00:00.000Z"
+}

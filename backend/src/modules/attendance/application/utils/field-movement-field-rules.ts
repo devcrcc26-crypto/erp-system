@@ -2,9 +2,13 @@
  * Single source of truth for field-movement entry field visibility,
  * required/optional labels, and validation.
  *
- * Frontend imports this file via the @erp/fm-rules path alias (same module).
  * Storage reasons remain FORGOT_CLOCK_IN / FORGOT_CLOCK_OUT; UI "Both"
  * expands to one entry of each.
+ *
+ * Shared with the frontend: `npm run sync:shared` copies this file to
+ * frontend/lib/generated/. Keep it dependency-free (no imports at all, not even
+ * the Prisma client); enum-backed values are string-literal unions checked
+ * against Prisma in field-movement-shared-config.spec.ts.
  */
 
 export type FieldMovementReasonType =
@@ -28,12 +32,16 @@ export type FieldMovementFieldKey =
 
 export type FieldPresence = 'required' | 'optional' | 'hidden';
 
-/** Canonical storage reasons persisted on FieldMovementEntry. */
+/** Canonical storage reasons persisted on FieldMovementEntry (= Prisma FieldMovementReason). */
+export const FIELD_MOVEMENT_STORAGE_REASONS = [
+  'FIELD_VISIT',
+  'EARLY_LEAVE',
+  'FORGOT_CLOCK_IN',
+  'FORGOT_CLOCK_OUT',
+] as const;
+
 export type FieldMovementStorageReason =
-  | 'FIELD_VISIT'
-  | 'EARLY_LEAVE'
-  | 'FORGOT_CLOCK_IN'
-  | 'FORGOT_CLOCK_OUT';
+  (typeof FIELD_MOVEMENT_STORAGE_REASONS)[number];
 
 export interface FieldMovementSelection {
   reasonType: FieldMovementReasonType | null;

@@ -6,7 +6,7 @@ import {
   idsForSelectAllCompatible,
   resolveSelectAllAnchor,
   type FieldMovementIssueType,
-} from '@/lib/field-movement/field-movement-issue-compatibility';
+} from '@/lib/generated/field-movement-issue-compatibility';
 
 export function isExplanationStatusLocked(
   status: FieldMovementExplanationStatus,

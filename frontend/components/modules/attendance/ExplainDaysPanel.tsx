@@ -3,12 +3,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Button, Checkbox, Drawer, Input, Table, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { effectiveScan } from '@/lib/field-movement/field-movement-issue-compatibility';
+import { effectiveScan } from '@/lib/generated/field-movement-issue-compatibility';
 import {
   intersectionCompatibleReasons,
   reasonTypesFromCompatibleReasons,
   type FieldMovementIssueType,
-} from '@/lib/field-movement/field-movement-issue-compatibility';
+} from '@/lib/generated/field-movement-issue-compatibility';
 import {
   canSelectRow,
   selectAllTargetIds,
@@ -22,7 +22,7 @@ import {
   type FieldMovementReasonType,
   type FieldMovementSelection,
   toStorageEntries,
-} from '@/lib/field-movement/field-movement-field-rules';
+} from '@/lib/generated/field-movement-field-rules';
 import FieldMovementEntryFields, {
   HourMinuteSelects,
 } from '@/components/modules/attendance/FieldMovementEntryFields';

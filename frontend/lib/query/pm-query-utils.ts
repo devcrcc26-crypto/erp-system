@@ -1,33 +1,17 @@
-import type { PaginationParams } from '@/lib/api/types';
-
 export type QueryParamValue = string | number | boolean | undefined | null;
 
-export type QueryStringParams = PaginationParams & {
-  [key: string]: QueryParamValue | undefined;
-};
+/** Loose map for query builders — callers may pass domain-specific filters. */
+export type QueryStringParams = Record<string, QueryParamValue | undefined>;
 
-export function toQueryString<P extends PaginationParams>(
-  params: P = {} as P,
-): string {
+/**
+ * Builds a `?a=1&b=2` string from any plain params object.
+ * Accepts `object` so list DTOs (pagination + filters) type-check without casts.
+ */
+export function toQueryString(params: object = {}): string {
   const search = new URLSearchParams();
+  const entries = Object.entries(params as Record<string, unknown>);
 
-  if (params.page !== undefined) {
-    search.set('page', String(params.page));
-  }
-  if (params.limit !== undefined) {
-    search.set('limit', String(params.limit));
-  }
-  if (params.sortBy) {
-    search.set('sortBy', params.sortBy);
-  }
-  if (params.sortOrder) {
-    search.set('sortOrder', params.sortOrder);
-  }
-
-  for (const [key, value] of Object.entries(params)) {
-    if (['page', 'limit', 'sortBy', 'sortOrder'].includes(key)) {
-      continue;
-    }
+  for (const [key, value] of entries) {
     if (value === undefined || value === null || value === '') {
       continue;
     }

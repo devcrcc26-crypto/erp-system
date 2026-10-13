@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Alert, Button, InputNumber, Select, Skeleton, Spin } from 'antd';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Clock } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
 import { useRouter } from 'next/navigation';
 import {
@@ -522,7 +522,10 @@ export default function OvertimeHistoryPageContent({
             }}
             locale={{
               emptyText: (
-                <TableEmptyState title={t('hr.overtime.noHistory')} />
+                <TableEmptyState
+                  icon={<Clock />}
+                  title={t('hr.overtime.noHistory')}
+                />
               ),
             }}
           />
