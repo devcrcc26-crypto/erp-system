@@ -79,6 +79,24 @@ describe('computeSelectableOvertimeWindows', () => {
     ).toBe(true);
   });
 
+  it('Sat-off employee Saturday → NON_WORKING whole day (WEEKEND classification)', () => {
+    // Same shape as Sunday off — schedule isWorkingDay false for Saturday.
+    const satOff = {
+      isHoliday: false,
+      isWorkingDay: false,
+      isHalfDay: false,
+      morningStart: null as string | null,
+      morningEnd: null as string | null,
+      afternoonStart: null as string | null,
+      afternoonEnd: null as string | null,
+      leaveExcludedWindows: [] as Array<{ start: string; end: string }>,
+      hasFullDayLeave: false,
+    };
+    const result = computeSelectableOvertimeWindows(satOff);
+    expect(result.dayKind).toBe('NON_WORKING');
+    expect(result.windows).toEqual([{ start: '00:00', end: '24:00' }]);
+  });
+
   it('4 — end at or before start is not inside windows', () => {
     const result = computeSelectableOvertimeWindows(FULL);
     expect(

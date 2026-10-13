@@ -61,7 +61,9 @@ const STATUS_CONFIG: Record<DayStatus, { color: string; labelKey: string }> = {
   PRESENT: { color: 'success', labelKey: 'PRESENT' },
   ABSENT: { color: 'error', labelKey: 'ABSENT' },
   HALF_ABSENT: { color: 'warning', labelKey: 'HALF_ABSENT' },
-  SUNDAY: { color: 'default', labelKey: 'SUNDAY' },
+  SUNDAY: { color: 'default', labelKey: 'DAY_OFF' },
+  DAY_OFF: { color: 'default', labelKey: 'DAY_OFF' },
+  WORKED_ON_DAY_OFF: { color: 'cyan', labelKey: 'WORKED_ON_DAY_OFF' },
   HOLIDAY: { color: 'processing', labelKey: 'HOLIDAY' },
   WORK_FROM_HOME: { color: 'cyan', labelKey: 'WORK_FROM_HOME' },
   ON_SITE: { color: 'geekblue', labelKey: 'ON_SITE' },
@@ -76,6 +78,8 @@ const STATUS_CONFIG: Record<DayStatus, { color: string; labelKey: string }> = {
 /** Days where nobody is expected at the clock, so missing punches are not flagged. */
 const NO_PUNCH_EXPECTED = new Set<DayStatus>([
   'SUNDAY',
+  'DAY_OFF',
+  'WORKED_ON_DAY_OFF',
   'HOLIDAY',
   'LEAVE',
   'WORK_FROM_HOME',
@@ -134,7 +138,7 @@ function resolveDayStatus(log: AttendanceDailyLog): DayStatus {
     return 'HOLIDAY';
   }
   if (log.isWeekend) {
-    return 'SUNDAY';
+    return 'DAY_OFF';
   }
   if (log.wasPresent || log.correctedClockInLocal || log.clockInLocal) {
     return 'PRESENT';

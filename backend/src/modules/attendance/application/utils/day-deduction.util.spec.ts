@@ -1150,6 +1150,102 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(Number(result.totalDays)).toBe(5.5);
     expect(FULLY_ABSENT_NO_PAY_NOTE).toBe('Absent all working days — no pay.');
   });
+
+  describe('schedule-aware dayKind (Sat-off / default parity)', () => {
+    const satOffKind = (date: Date) => {
+      const dow = date.getUTCDay();
+      if (dow === 0 || dow === 6) {
+        return 'DAY_OFF' as const;
+      }
+      return 'WORKING' as const;
+    };
+
+    it('Sat-off schedule + no scan Saturday → deduction 0, DAY_OFF', () => {
+      const sat = d(2026, 10, 10); // Saturday
+      const r = dayDeduction(
+        sat,
+        dayInput(sat, { clockIn: null, clockOut: null }),
+        emptyContext({ dayKind: satOffKind }),
+      );
+      expect(r.status).toBe('DAY_OFF');
+      expect(r.deduction).toBe(0);
+    });
+
+    it('Sat-off schedule + scan Saturday → WORKED_ON_DAY_OFF, deduction 0', () => {
+      const sat = d(2026, 10, 10);
+      const r = dayDeduction(
+        sat,
+        dayInput(sat, { clockIn: '09:00', clockOut: '12:00' }),
+        emptyContext({ dayKind: satOffKind }),
+      );
+      expect(r.status).toBe('WORKED_ON_DAY_OFF');
+      expect(r.deduction).toBe(0);
+    });
+
+    it('default schedule Saturday no scan → deduction 1 (unchanged)', () => {
+      const sat = d(2026, 10, 10);
+      const r = dayDeduction(
+        sat,
+        dayInput(sat, { clockIn: null, clockOut: null }),
+        emptyContext(),
+      );
+      expect(r.status).toBe('ABSENT');
+      expect(r.deduction).toBe(1);
+    });
+
+    it('Sat-off fully-absent month counts only Mon–Fri', () => {
+      const daily = logsForMonth(8, 2026, fullContractStart, null, (date) =>
+        dayInput(date, { clockIn: null, clockOut: null }),
+      );
+      const result = summarizeMonthAbsence({
+        month: 8,
+        year: 2026,
+        contracts: [{ startDate: fullContractStart, endDate: null }],
+        dailyLogsByDate: daily,
+        context: emptyContext({ dayKind: satOffKind }),
+      });
+      // Aug 2026: 31 days, 5 Sundays + 5 Saturdays off → 21 Mon–Fri duty days.
+      expect(result.scheduledDays).toBe(21);
+      expect(result.fullyAbsentWorkingDays).toBe(true);
+      expect(result.paidDays).toBe(0);
+      expect(result.byDate.get('2026-08-01')?.status).toBe('DAY_OFF'); // Sat
+      expect(result.byDate.get('2026-08-02')?.status).toBe('DAY_OFF'); // Sun
+      expect(result.byDate.get('2026-08-03')?.status).toBe('ABSENT'); // Mon
+    });
+
+    it('mid-month schedule change uses each date\'s dayKind', () => {
+      // Before the 15th: Sat-off; from the 15th: default (Sat half / working).
+      const dayKind = (date: Date) => {
+        if (date.getUTCDate() < 15) {
+          return satOffKind(date);
+        }
+        const dow = date.getUTCDay();
+        if (dow === 0) {
+          return 'DAY_OFF' as const;
+        }
+        if (dow === 6) {
+          return 'HALF_DAY' as const;
+        }
+        return 'WORKING' as const;
+      };
+      const satEarly = d(2026, 8, 8); // Sat before change
+      const satLate = d(2026, 8, 15); // Sat on/after change
+      expect(
+        dayDeduction(
+          satEarly,
+          dayInput(satEarly, { clockIn: null, clockOut: null }),
+          emptyContext({ dayKind }),
+        ).status,
+      ).toBe('DAY_OFF');
+      expect(
+        dayDeduction(
+          satLate,
+          dayInput(satLate, { clockIn: null, clockOut: null }),
+          emptyContext({ dayKind }),
+        ).status,
+      ).toBe('ABSENT');
+    });
+  });
 });
 
 /** Stored daily logs as the attendance recompute writes them (0 outside the window). */
@@ -1269,8 +1365,24 @@ describe('isFullyAbsentFromStoredLogs (payroll run) matches summarizeMonthAbsenc
     ).toBe(true);
   });
 
-  it('Saturday counts as a working day even when the schedule marks it off', () => {
-    // Every Mon–Fri absent (1) but Saturdays present (0) → not fully absent.
+  it('Sat-off schedule: Saturdays (isWeekend) are excluded from fully-absent', () => {
+    // Mon–Fri all deduction 1; Sat/Sun isWeekend → fully absent on duty days.
+    const stored = Array.from({ length: 31 }, (_, index) => {
+      const date = d(2026, 8, index + 1);
+      const dow = date.getUTCDay();
+      const isWeekend = dow === 0 || dow === 6;
+      return {
+        date,
+        dayDeduction: isWeekend ? 0 : 1,
+        isHoliday: false,
+        isWeekend,
+      };
+    });
+    expect(isFullyAbsentFromStoredLogs(0, stored, wholeMonth(8, 2026))).toBe(true);
+  });
+
+  it('legacy stored logs without isWeekend still treat only Sunday as off', () => {
+    // Saturdays present (0) without isWeekend → still duty days → not fully absent.
     const stored = Array.from({ length: 31 }, (_, index) => {
       const date = d(2026, 8, index + 1);
       const dow = date.getUTCDay();

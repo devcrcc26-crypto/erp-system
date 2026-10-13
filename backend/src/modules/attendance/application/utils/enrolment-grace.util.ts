@@ -15,7 +15,7 @@ function addUtcDays(date: Date, days: number): Date {
 /**
  * Enrolment grace for employees not yet on the scanner (or just enrolled):
  * from signed/hire date through the calendar day after the first scan.
- * No-scan Mon–Sat non-holiday days in that window → ENROLMENT_GRACE (not absent).
+ * No-scan WORKING / HALF_DAY (non-holiday) days in that window → ENROLMENT_GRACE.
  * If there is no scan yet, grace runs through `throughDate`.
  */
 export function enrolmentGraceDateKeys(params: {
@@ -25,6 +25,11 @@ export function enrolmentGraceDateKeys(params: {
   /** Inclusive upper bound when listing keys (typically month end). */
   throughDate: Date;
   isPublicHoliday: (date: Date) => boolean;
+  /**
+   * Schedule day off (not a duty day). When omitted, calendar Sunday is treated
+   * as day off (legacy Mon–Sat grace).
+   */
+  isDayOff?: (date: Date) => boolean;
 }): Set<string> {
   const keys = new Set<string>();
   const hire = utcDateOnly(params.hireDate);
@@ -46,8 +51,9 @@ export function enrolmentGraceDateKeys(params: {
 
   const cursor = new Date(hire.getTime());
   while (cursor.getTime() <= effectiveEnd.getTime()) {
-    const isSunday = cursor.getUTCDay() === 0;
-    if (!isSunday && !params.isPublicHoliday(cursor)) {
+    const isOff =
+      params.isDayOff?.(cursor) ?? cursor.getUTCDay() === 0;
+    if (!isOff && !params.isPublicHoliday(cursor)) {
       keys.add(dateToYyyyMmDd(cursor));
     }
     cursor.setUTCDate(cursor.getUTCDate() + 1);

@@ -47,7 +47,7 @@ describe('planWorkFromHomeRange', () => {
     expect(plan.dates).toEqual(['2026-08-13', '2026-08-14', '2026-08-15', '2026-08-18']);
     expect(plan.workingDays).toBe(4);
     expect(plan.skipped).toEqual([
-      { date: '2026-08-16', reason: 'SUNDAY' },
+      { date: '2026-08-16', reason: 'NON_WORKING_DAY' },
       { date: '2026-08-17', reason: 'HOLIDAY' },
     ]);
     expect(plan.days.find((day) => day.date === '2026-08-17')?.holidayName).toBe('Founders Day');

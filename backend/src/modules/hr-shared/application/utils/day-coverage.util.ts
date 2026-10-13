@@ -26,6 +26,11 @@ export interface CoverCheckDay {
   date: Date;
   /** Half-day leave: scans for the other half are expected, so attendance does not conflict. */
   halfDay?: boolean;
+  /**
+   * Schedule day off. When omitted, calendar Sunday is treated as day off
+   * (legacy). Day-offs are never credited by coverage modules.
+   */
+  isDayOff?: boolean;
 }
 
 export interface CoverSources {
@@ -79,9 +84,10 @@ function better(a: DayCover | null, b: DayCover | null): DayCover | null {
 }
 
 /**
- * Covers for each day from the modules in `check`. Sundays are skipped (no
- * module credits a Sunday). One cover per day: the first approved one, else
- * the first requested one, in the order of `check`.
+ * Covers for each day from the modules in `check`. Schedule day-offs (and
+ * legacy Sundays) are skipped — no module credits a day off. One cover per
+ * day: the first approved one, else the first requested one, in order of
+ * `check`.
  */
 export function resolveDayCovers(
   days: ReadonlyArray<CoverCheckDay>,
@@ -90,7 +96,8 @@ export function resolveDayCovers(
 ): DayCover[] {
   const result: DayCover[] = [];
   for (const day of days) {
-    if (day.date.getUTCDay() === 0) {
+    const isOff = day.isDayOff ?? day.date.getUTCDay() === 0;
+    if (isOff) {
       continue;
     }
     const key = dateKey(day.date);

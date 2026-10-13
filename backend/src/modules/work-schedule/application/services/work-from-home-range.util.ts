@@ -77,9 +77,9 @@ function coverReason(cover: DayCover): WorkFromHomeSkipReason {
 }
 
 /**
- * Splits a range into the working days that will be created (Mon–Sat per
- * the employee's schedule) and skipped days with a reason. Precedence:
- * Sunday → holiday → schedule day off → leave / site / already WFH /
+ * Splits a range into the working days that will be created (per the
+ * employee's schedule) and skipped days with a reason. Precedence:
+ * holiday → schedule day off → leave / site / already WFH /
  * pending WFH / field movement / attendance scans (approved before requested).
  */
 export function planWorkFromHomeRange(input: {
@@ -108,10 +108,6 @@ export function planWorkFromHomeRange(input: {
   ) {
     const key = formatDateOnly(cursor);
     const scheduleDay = scheduleByKey.get(key);
-    if (cursor.getUTCDay() === 0) {
-      days.push({ date: key, included: false, reason: 'SUNDAY' });
-      continue;
-    }
     if (scheduleDay?.type === 'holiday') {
       days.push({
         date: key,

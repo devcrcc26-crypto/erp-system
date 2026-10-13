@@ -4234,7 +4234,12 @@ enum AttendanceDayStatus {
   PRESENT
   ABSENT
   HALF_ABSENT
+  /// Legacy calendar Sunday; new writes use DAY_OFF from the work schedule.
   SUNDAY
+  /// Schedule day off (incl. Sunday when the schedule says so).
+  DAY_OFF
+  /// Scanned on a schedule day off — info only; deduction 0, no pay change.
+  WORKED_ON_DAY_OFF
   HOLIDAY
   WORK_FROM_HOME
   ON_SITE

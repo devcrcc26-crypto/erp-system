@@ -47,6 +47,11 @@ import {
   type LeaveDayPortion,
   type LeaveDaysResult,
 } from '../../../leave/application/utils/leave-days.util';
+import {
+  defaultScheduleDayFlags,
+  getDayKind as classifyDayKind,
+  type DayKind,
+} from '../utils/get-day-kind.util';
 
 type ScheduleWithDays = Prisma.WorkScheduleGetPayload<{
   include: { days: true };
@@ -1312,8 +1317,9 @@ export class WorkScheduleService {
   }
 
   /**
-   * Assigned or company-default schedule, else Mon–Fri 8h so leave/overtime
-   * day counts still work when HR has not configured a schedule yet.
+   * Assigned or company-default schedule, else Mon–Sat (Sat half) so leave /
+   * overtime day counts match legacy attendance when HR has not configured a
+   * schedule yet.
    */
   private async getActiveScheduleOrWeekdayFallback(
     employeeId: string,
@@ -1334,24 +1340,71 @@ export class WorkScheduleService {
   }
 
   /**
-   * In-memory Mon–Fri full days used only when no assignment or company default exists.
+   * Day kind for an employee on a date (assignment → company default →
+   * Mon–Sat half / Sunday off fallback). Holiday wins over schedule.
+   */
+  async getDayKind(
+    employeeId: string,
+    companyId: string,
+    date: Date,
+    options?: { nationality?: Nationality | null },
+  ): Promise<DayKind> {
+    const onDate = toUtcDateOnly(date);
+    const calendar = await this.isHolidayForEmployee(
+      companyId,
+      options?.nationality ?? null,
+      onDate,
+    );
+    let scheduleDay: { isWorkingDay: boolean; isHalfDay: boolean } | undefined;
+    try {
+      const schedule = await this.getActiveScheduleOrWeekdayFallback(
+        employeeId,
+        companyId,
+        onDate,
+      );
+      const weekday = schedule.days.find(
+        (row) => row.dayOfWeek === onDate.getUTCDay(),
+      );
+      if (weekday) {
+        scheduleDay = {
+          isWorkingDay: weekday.isWorkingDay,
+          isHalfDay: weekday.isHalfDay,
+        };
+      }
+    } catch {
+      scheduleDay = defaultScheduleDayFlags(onDate.getUTCDay());
+    }
+    const flags = scheduleDay ?? defaultScheduleDayFlags(onDate.getUTCDay());
+    return classifyDayKind({
+      isHoliday: calendar.isHoliday,
+      isWorkingDay: flags.isWorkingDay,
+      isHalfDay: flags.isHalfDay,
+    });
+  }
+
+  /**
+   * In-memory Mon–Fri full + Saturday half used only when no assignment or
+   * company default exists (matches attendance fallbackWeekdaySchedule).
    */
   private weekdayFallbackSchedule(companyId: string): ScheduleWithDays {
     const now = new Date();
     const scheduleId = 'weekday-fallback';
     const days = Array.from({ length: 7 }, (_, dayOfWeek) => {
-      const isWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 5;
+      const isSunday = dayOfWeek === 0;
+      const isSaturday = dayOfWeek === 6;
+      const isWorkingDay = !isSunday;
+      const isHalfDay = isSaturday;
       return {
         id: `${scheduleId}-${dayOfWeek}`,
         scheduleId,
         dayOfWeek,
         isWorkingDay,
-        isHalfDay: false,
+        isHalfDay,
         morningStart: isWorkingDay ? '08:00' : null,
         morningEnd: isWorkingDay ? '12:00' : null,
-        afternoonStart: isWorkingDay ? '13:00' : null,
-        afternoonEnd: isWorkingDay ? '17:00' : null,
-        totalHours: new Prisma.Decimal(isWorkingDay ? 8 : 0),
+        afternoonStart: isWorkingDay && !isHalfDay ? '13:00' : null,
+        afternoonEnd: isWorkingDay && !isHalfDay ? '17:00' : null,
+        totalHours: new Prisma.Decimal(isWorkingDay ? (isHalfDay ? 4 : 8) : 0),
       };
     });
     return {

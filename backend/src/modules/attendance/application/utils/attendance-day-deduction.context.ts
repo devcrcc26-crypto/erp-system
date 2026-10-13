@@ -3,6 +3,11 @@ import {
   holidayAppliesToNationality,
   holidayFallsOnDate,
 } from '../../../work-schedule/application/services/work-schedule.dates';
+import {
+  resolveDayKindForDate,
+  type DayKind,
+  type ScheduleDayFlags,
+} from '../../../work-schedule/application/utils/get-day-kind.util';
 import { dateToYyyyMmDd } from '../services/attendance-leave.util';
 import { siteNameForDate as resolveSiteNameForDate } from '../../../site-assignment/application/utils/site-assignment.util';
 import {
@@ -251,14 +256,28 @@ export function buildDayDeductionContext(
     enrolmentGraceKeys?: ReadonlySet<string>;
     /** Dates (YYYY-MM-DD) whose work schedule is SCAN_ONLY. */
     scanOnlyRuleByDate?: ReadonlyMap<string, ScanOnlyRule>;
+    /**
+     * Schedule flags per date (from the assignment effective that day).
+     * When missing a date, falls back to Mon–Sat / Sunday off.
+     */
+    scheduleFlagsByDate?: ReadonlyMap<string, ScheduleDayFlags>;
   },
 ): DayDeductionContext {
   const graceKeys = options?.enrolmentGraceKeys;
   const scanOnlyByDate = options?.scanOnlyRuleByDate;
+  const scheduleByDate = options?.scheduleFlagsByDate;
+  const isPublicHoliday = (date: Date): boolean =>
+    matchedPublicHolidayForEmployee(employee, data, date) != null;
+  const dayKind = (date: Date): DayKind =>
+    resolveDayKindForDate(
+      date,
+      isPublicHoliday(date),
+      scheduleByDate?.get(dateToYyyyMmDd(date)),
+    );
   return {
-    isSunday: (date) => date.getUTCDay() === 0,
-    isPublicHoliday: (date) =>
-      matchedPublicHolidayForEmployee(employee, data, date) != null,
+    dayKind,
+    isSunday: (date) => dayKind(date) === 'DAY_OFF',
+    isPublicHoliday,
     isWorkFromHome: (date) => {
       const key = dateToYyyyMmDd(date);
       return data.wfhDays.some((row) => wfhAppliesToEmployee(row, employee, key));

@@ -3,6 +3,12 @@ import {
   employedCalendarWindow,
   employedPayrollDays,
 } from '../../../payroll/application/utils/payroll-days.util';
+import {
+  defaultScheduleDayFlags,
+  getDayKind,
+  isDutyDayKind,
+  type DayKind,
+} from '../../../work-schedule/application/utils/get-day-kind.util';
 import { dateToYyyyMmDd } from '../services/attendance-leave.util';
 import { EARLY_DEPARTURE_DEDUCTION_MODE } from './attendance-policy.constants';
 import {
@@ -14,6 +20,8 @@ import {
   isScanAfterDeadline,
   type ScanOnlyRule,
 } from './scan-only.util';
+
+export type { DayKind };
 
 export type DayDeductionValue = 0 | 0.5 | 1;
 
@@ -28,7 +36,17 @@ export interface DayDeductionDayInput {
 }
 
 export interface DayDeductionContext {
-  isSunday: (date: Date) => boolean;
+  /**
+   * Schedule + holiday day kind for this employee on the date.
+   * When omitted, falls back to Mon–Sat working (Sat half) / Sunday off +
+   * {@link isPublicHoliday}.
+   */
+  dayKind?: (date: Date) => DayKind;
+  /**
+   * @deprecated Prefer {@link dayKind}. Kept for tests that only stub Sundays;
+   * ignored when dayKind is provided.
+   */
+  isSunday?: (date: Date) => boolean;
   isPublicHoliday: (date: Date) => boolean;
   isWorkFromHome: (date: Date) => boolean;
   /** Approved site assignment covering this date, if any. */
@@ -48,7 +66,7 @@ export interface DayDeductionContext {
   earlyDepartureWaiver?: (date: Date) => FieldMovementCoverage;
   /**
    * Attendance-exempt employees (no scanner) — treat duty days as full presence.
-   * Checked after paid categories (Sunday / holiday / WFH / site / leave).
+   * Checked after paid categories (day off / holiday / WFH / site / leave).
    */
   isAttendanceExempt?: () => boolean;
   /**
@@ -65,9 +83,43 @@ export interface DayDeductionContext {
   scanOnlyRule?: (date: Date) => ScanOnlyRule | null;
 }
 
+/**
+ * Resolves day kind from context (schedule-aware dayKind, else holiday +
+ * legacy Sunday / default Mon–Sat).
+ */
+export function resolveContextDayKind(
+  date: Date,
+  context: Pick<DayDeductionContext, 'dayKind' | 'isSunday' | 'isPublicHoliday'>,
+): DayKind {
+  if (context.dayKind) {
+    return context.dayKind(date);
+  }
+  if (context.isPublicHoliday(date)) {
+    return 'HOLIDAY';
+  }
+  if (context.isSunday?.(date) ?? date.getUTCDay() === 0) {
+    return 'DAY_OFF';
+  }
+  const flags = defaultScheduleDayFlags(date.getUTCDay());
+  return getDayKind({
+    isHoliday: false,
+    isWorkingDay: flags.isWorkingDay,
+    isHalfDay: flags.isHalfDay,
+  });
+}
+
+/**
+ * Includes DAY_OFF / WORKED_ON_DAY_OFF before Prisma client regen after migrate.
+ * Cast to AttendanceDayStatus when persisting once the enum is generated.
+ */
+export type DayDeductionStatus =
+  | AttendanceDayStatus
+  | 'DAY_OFF'
+  | 'WORKED_ON_DAY_OFF';
+
 export interface DayDeductionResult {
   deduction: DayDeductionValue;
-  status: AttendanceDayStatus;
+  status: DayDeductionStatus;
   /** Set when present on a site day (HQ scan) or ON_SITE. */
   siteName?: string | null;
   earlyDepartureBand?: EarlyDepartureBand;
@@ -94,7 +146,7 @@ function roundDays(value: number): number {
 /**
  * Single source of truth for attendance absence weight and payroll paid days.
  *
- * Precedence: Sunday / holiday → unpaid leave → approved leave → site / WFH →
+ * Precedence: holiday / day off → unpaid leave → approved leave → site / WFH →
  * exempt → scan rules (STANDARD or SCAN_ONLY).
  */
 export function dayDeduction(
@@ -102,20 +154,27 @@ export function dayDeduction(
   day: DayDeductionDayInput,
   context: DayDeductionContext,
 ): DayDeductionResult {
-  if (context.isSunday(date)) {
-    return { deduction: 0, status: 'SUNDAY' };
-  }
-  if (context.isPublicHoliday(date)) {
+  const kind = resolveContextDayKind(date, context);
+  if (kind === 'HOLIDAY') {
     return { deduction: 0, status: 'HOLIDAY' };
-  }
-  // Unpaid leave is absence even when a site/WFH row also exists that day.
-  if (context.isOnUnpaidLeave?.(date)) {
-    return { deduction: 1, status: 'ABSENT' };
   }
 
   const hasClockIn = Boolean(day.clockIn);
   const hasClockOut = Boolean(day.clockOut);
   const hasAnyScan = hasClockIn || hasClockOut;
+
+  if (kind === 'DAY_OFF') {
+    // Scans on a day off are informational only — no pay change, no flags.
+    if (hasAnyScan) {
+      return { deduction: 0, status: 'WORKED_ON_DAY_OFF' };
+    }
+    return { deduction: 0, status: 'DAY_OFF' };
+  }
+
+  // Unpaid leave is absence even when a site/WFH row also exists that day.
+  if (context.isOnUnpaidLeave?.(date)) {
+    return { deduction: 1, status: 'ABSENT' };
+  }
 
   // Paid leave before site/WFH. Scans do not change leave pay; flag for HR.
   if (context.isOnApprovedLeave(date)) {
@@ -146,7 +205,7 @@ export function dayDeduction(
     return scanOnlyDayDeduction(date, day, scanOnly, null, context);
   }
 
-  // Full absence on any Mon–Sat duty day (Saturday included as 1, never 0.5).
+  // Full absence on any WORKING / HALF_DAY duty day (HALF_DAY still deducts 1).
   if (!hasClockIn && !hasClockOut) {
     if (context.isEnrolmentGrace?.(date)) {
       return { deduction: 0, status: 'ENROLMENT_GRACE' };
@@ -227,7 +286,7 @@ export function dayDeduction(
 }
 
 /**
- * SCAN_ONLY duty day (after Sunday / holiday / unpaid / leave / WFH / site /
+ * SCAN_ONLY duty day (after day off / holiday / unpaid / leave / WFH / site /
  * exempt): any scan → PRESENT 0; no scan → enrolment grace or ABSENT 1.
  * Earliest scan after latestScanTime is flagged only — status and pay unchanged.
  */
@@ -271,7 +330,7 @@ export interface MonthAbsenceSummaryInput {
 
 export interface MonthAbsenceSummary {
   employedDays: number;
-  /** Mon–Sat non-holiday days in the employment window; Saturday counts 1. */
+  /** WORKING / HALF_DAY days in the employment window (each counts 1). */
   scheduledDays: number;
   /**
    * Scheduled days with a scan (clock-in or clock-out, after corrections), or
@@ -283,7 +342,7 @@ export interface MonthAbsenceSummary {
   paidDays: number;
   leaveDays: number;
   /**
-   * True when every Mon–Sat non-holiday day in the employment window has
+   * True when every WORKING / HALF_DAY day in the employment window has
    * deduction 1 (full absence). Paid days are then forced to 0.
    * Half-day early-departure deductions never trigger this rule.
    */
@@ -301,20 +360,14 @@ export const FULLY_ABSENT_NO_PAY_NOTE =
   'Absent all working days — no pay.';
 
 /**
- * Working day for absence pay: Mon–Sat and not a public holiday.
- * Saturday is a full absence day (deduction 1), never 0.5.
+ * Duty day for absence pay / fully-absent / COVERED: WORKING or HALF_DAY.
+ * HALF_DAY still counts as a full absence day (deduction 1), never 0.5.
  */
 export function isAbsenceWorkingDay(
   date: Date,
-  context: Pick<DayDeductionContext, 'isSunday' | 'isPublicHoliday'>,
+  context: Pick<DayDeductionContext, 'dayKind' | 'isSunday' | 'isPublicHoliday'>,
 ): boolean {
-  if (context.isSunday(date)) {
-    return false;
-  }
-  if (context.isPublicHoliday(date)) {
-    return false;
-  }
-  return true;
+  return isDutyDayKind(resolveContextDayKind(date, context));
 }
 
 function eachDateInWindow(
@@ -472,8 +525,8 @@ export function summarizeMonthAbsence(
       return result != null && result.deduction === 1;
     });
 
-  // Normal: paid = employed − absent. Fully absent Mon–Sat month → 0
-  // (do not leave Sunday/holiday remainder as paid days).
+  // Normal: paid = employed − absent. Fully absent on all duty days → 0
+  // (do not leave day-off / holiday remainder as paid days).
   // Early-departure 0.5 days are included in absentRounded when ENFORCED /
   // pending, and never alone force the fully-absent zero-pay rule.
   const paidDays = fullyAbsentWorkingDays
@@ -499,13 +552,17 @@ export interface StoredDayDeduction {
   date: Date;
   dayDeduction: number;
   isHoliday: boolean;
+  /**
+   * Schedule day off (isWeekend on the daily log). When omitted, falls back to
+   * calendar Sunday only (legacy).
+   */
+  isWeekend?: boolean;
 }
 
 /**
  * Fully-absent check on stored daily logs (payroll run), using the same rule
- * as summarizeMonthAbsence: paid days are 0 and every Mon–Sat non-holiday day
- * inside the employed windows has deduction 1. Saturday is a working day here
- * whatever the schedule says; only the calendar Sunday is excluded.
+ * as summarizeMonthAbsence: paid days are 0 and every duty day (not holiday,
+ * not schedule day off) inside the employed windows has deduction 1.
  * With no windows (no contract) every stored log counts.
  */
 export function isFullyAbsentFromStoredLogs(
@@ -523,9 +580,14 @@ export function isFullyAbsentFromStoredLogs(
         date.getTime() >= window.windowStart.getTime() &&
         date.getTime() <= window.windowEnd.getTime(),
     );
-  const working = logs.filter(
-    (log) => log.date.getUTCDay() !== 0 && !log.isHoliday && inWindow(log.date),
-  );
+  const working = logs.filter((log) => {
+    if (!inWindow(log.date) || log.isHoliday) {
+      return false;
+    }
+    const isOff =
+      log.isWeekend ?? log.date.getUTCDay() === 0;
+    return !isOff;
+  });
   return (
     working.length > 0 && working.every((log) => log.dayDeduction === 1)
   );

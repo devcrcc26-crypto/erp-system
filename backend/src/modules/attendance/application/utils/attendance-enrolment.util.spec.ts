@@ -127,7 +127,7 @@ describe('Needs enrolment — counted present', () => {
     expect(result.absentDays).toBe(0);
     expect(result.leaveDays).toBe(1);
     expect(result.byDate.get(leaveKey)?.status).toBe('LEAVE');
-    expect(result.byDate.get('2026-08-02')?.status).toBe('SUNDAY');
+    expect(result.byDate.get('2026-08-02')?.status).toBe('DAY_OFF');
     expect(result.presentDays).toBe(result.scheduledDays - 1);
   });
 });

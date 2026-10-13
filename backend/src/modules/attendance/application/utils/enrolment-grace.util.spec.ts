@@ -61,4 +61,21 @@ describe('enrolmentGraceDateKeys', () => {
     expect(keys.has('2026-08-14')).toBe(true);
     expect(keys.has('2026-08-19')).toBe(true);
   });
+
+  it('Sat-off schedule skips Saturday in the grace window', () => {
+    const keys = enrolmentGraceDateKeys({
+      hireDate: d(2026, 8, 14),
+      firstScanDate: d(2026, 8, 18),
+      throughDate: d(2026, 8, 31),
+      isPublicHoliday: noHoliday,
+      isDayOff: (date) => {
+        const dow = date.getUTCDay();
+        return dow === 0 || dow === 6;
+      },
+    });
+    expect(keys.has('2026-08-15')).toBe(false); // Saturday
+    expect(keys.has('2026-08-16')).toBe(false); // Sunday
+    expect(keys.has('2026-08-14')).toBe(true); // Friday
+    expect(keys.has('2026-08-17')).toBe(true); // Monday
+  });
 });

@@ -5,11 +5,16 @@ import {
   isAbsenceWorkingDay,
   type ContractSegment,
   type DayDeductionContext,
+  type DayKind,
 } from './day-deduction.util';
 import {
   holidayAppliesToNationality,
   holidayFallsOnDate,
 } from '../../../work-schedule/application/services/work-schedule.dates';
+import {
+  resolveDayKindForDate,
+  type ScheduleDayFlags,
+} from '../../../work-schedule/application/utils/get-day-kind.util';
 import type { HolidayNationality, Nationality } from '@prisma/client';
 
 export type ScheduleCoverageKind = 'SITE' | 'WFH' | 'LEAVE';
@@ -81,16 +86,25 @@ function wfhAppliesToEmployee(
 function buildHolidayContext(
   holidays: HolidayRow[],
   nationality: Nationality | null,
-): Pick<DayDeductionContext, 'isSunday' | 'isPublicHoliday'> {
+  scheduleFlagsByDate?: ReadonlyMap<string, ScheduleDayFlags>,
+): Pick<DayDeductionContext, 'dayKind' | 'isSunday' | 'isPublicHoliday'> {
   const applicable = holidays.filter((holiday) =>
     holidayAppliesToNationality(holiday.appliesToNationality, nationality),
   );
+  const isPublicHoliday = (date: Date): boolean =>
+    applicable.some((holiday) =>
+      holidayFallsOnDate(holiday.date, holiday.isRecurring, date),
+    );
+  const dayKind = (date: Date): DayKind =>
+    resolveDayKindForDate(
+      date,
+      isPublicHoliday(date),
+      scheduleFlagsByDate?.get(dateToYyyyMmDd(date)),
+    );
   return {
-    isSunday: (date) => date.getUTCDay() === 0,
-    isPublicHoliday: (date) =>
-      applicable.some((holiday) =>
-        holidayFallsOnDate(holiday.date, holiday.isRecurring, date),
-      ),
+    dayKind,
+    isSunday: (date) => dayKind(date) === 'DAY_OFF',
+    isPublicHoliday,
   };
 }
 
@@ -133,7 +147,7 @@ function coverageLabelForTag(
 }
 
 /**
- * Counts Mon–Sat non-holiday days in the employment window covered by approved
+ * Counts WORKING / HALF_DAY days in the employment window covered by approved
  * site assignment, WFH calendar rows, or approved leave.
  */
 export function summarizeMissingEmployeeCoverage(input: {
@@ -145,10 +159,13 @@ export function summarizeMissingEmployeeCoverage(input: {
   approvedSites: ApprovedSiteRange[];
   wfhDays: WfhCalendarRow[];
   leaveDateKeys: Set<string>;
+  /** Per-date schedule flags; omitted → Mon–Sat / Sunday-off fallback. */
+  scheduleFlagsByDate?: ReadonlyMap<string, ScheduleDayFlags>;
 }): MissingEmployeeCoverageSummary {
   const holidayContext = buildHolidayContext(
     input.holidays,
     input.employee.nationality,
+    input.scheduleFlagsByDate,
   );
   const employedDates = employedCalendarDatesForContracts(
     input.month,

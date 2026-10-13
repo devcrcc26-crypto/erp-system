@@ -197,10 +197,12 @@ describe('SCAN_ONLY work schedule — dayDeduction', () => {
   });
 
   it('Sunday / public holiday → nothing (no deduction, no flag)', () => {
-    for (const input of [scans(SUNDAY, null, null), scans(SUNDAY, '09:30', null)]) {
-      const r = dayDeduction(SUNDAY, input, scanOnlyContext());
-      expect(r).toEqual({ deduction: 0, status: 'SUNDAY' });
-    }
+    expect(
+      dayDeduction(SUNDAY, scans(SUNDAY, null, null), scanOnlyContext()),
+    ).toEqual({ deduction: 0, status: 'DAY_OFF' });
+    expect(
+      dayDeduction(SUNDAY, scans(SUNDAY, '09:30', null), scanOnlyContext()),
+    ).toEqual({ deduction: 0, status: 'WORKED_ON_DAY_OFF' });
     for (const input of [scans(MONDAY, null, null), scans(MONDAY, '09:30', null)]) {
       const r = dayDeduction(
         MONDAY,

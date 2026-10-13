@@ -108,6 +108,8 @@ export interface AttendanceDailyLog {
     | 'ABSENT'
     | 'HALF_ABSENT'
     | 'SUNDAY'
+    | 'DAY_OFF'
+    | 'WORKED_ON_DAY_OFF'
     | 'HOLIDAY'
     | 'WORK_FROM_HOME'
     | 'ON_SITE'

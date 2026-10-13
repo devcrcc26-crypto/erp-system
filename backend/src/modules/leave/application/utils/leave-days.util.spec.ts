@@ -116,6 +116,24 @@ describe('leave-days.util', () => {
     }
   });
 
+  it('Mon–Sun on Sat/Sun-off schedule charges 5', () => {
+    const satSunOff = (date: Date) => {
+      const dow = date.getUTCDay();
+      return {
+        isWorkingDay: dow >= 1 && dow <= 5,
+        isHalfDay: false,
+      };
+    };
+    // Mon 5 Oct … Sun 11 Oct
+    const result = calculateLeaveDaysForRange(
+      d(2026, 10, 5),
+      d(2026, 10, 11),
+      satSunOff,
+      [],
+    );
+    expect(Number(result.totalDays)).toBe(5);
+  });
+
   it('employee whose schedule changed mid-range uses the right schedule per date', () => {
     // Before Wed: Mon–Fri only (no Saturday). From Wed: standard with Sat half.
     const resolve = (date: Date) => {

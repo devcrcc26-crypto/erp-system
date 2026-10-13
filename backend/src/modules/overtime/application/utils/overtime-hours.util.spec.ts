@@ -142,6 +142,13 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
     );
   });
 
+  it('9b — Sat-off employee Saturday OT → all Weekend (not half-day rules)', () => {
+    expectBuckets(
+      calculateOvertimeHours(utcDate('2026-09-12'), '08:00', '17:00', OFF),
+      { weekendHours: 9 },
+    );
+  });
+
   it('10 — Sat 20:00 – Sun 02:00 half then off overnight → 4 W + 2 W', () => {
     expectBuckets(
       calculateOvertimeHours(

@@ -105,11 +105,17 @@ function dayStatusLabel(
   log: AttendanceDailyLog,
   t: (key: string) => string,
 ): string {
-  if (log.isHoliday) {
+  if (log.dayStatus === 'DAY_OFF' || log.dayStatus === 'SUNDAY') {
+    return t('pages.hr.attendance.review.dayStatus.DAY_OFF');
+  }
+  if (log.dayStatus === 'WORKED_ON_DAY_OFF') {
+    return t('pages.hr.attendance.review.dayStatus.WORKED_ON_DAY_OFF');
+  }
+  if (log.isHoliday || log.dayStatus === 'HOLIDAY') {
     return t('pages.hr.attendance.daily.holiday');
   }
   if (log.isWeekend) {
-    return t('pages.hr.attendance.daily.weekend');
+    return t('pages.hr.attendance.review.dayStatus.DAY_OFF');
   }
   if (log.isHalfDay) {
     return t('pages.hr.attendance.daily.halfDay');

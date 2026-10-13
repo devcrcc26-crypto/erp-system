@@ -108,11 +108,12 @@ interface AttendanceSnapshot {
   matchMethod: string;
   /** REPORT_ONLY early-departure would-deduct total (not applied to paid days). */
   earlyDepartureWouldDeductDays?: Decimal | number | null;
-  /** Daily logs used to detect fully-absent Mon–Sat months. */
+  /** Daily logs used to detect fully-absent duty-day months. */
   dailyLogs: Array<{
     date: Date;
     dayDeduction: Decimal;
     isHoliday: boolean;
+    isWeekend: boolean;
   }>;
 }
 
@@ -992,6 +993,7 @@ export class PayrollRunService {
               date: true,
               dayDeduction: true,
               isHoliday: true,
+              isWeekend: true,
             },
           },
         } as Prisma.AttendanceRecordSelect,
@@ -1759,7 +1761,7 @@ export class PayrollRunService {
   }
 
   /**
-   * Every Mon–Sat non-holiday day in the attendance month has full absence
+   * Every WORKING / HALF_DAY day in the attendance month has full absence
    * (dayDeduction = 1). Matches {@link summarizeMonthAbsence} fully-absent rule.
    */
   private isFullyAbsentWorkingMonth(
@@ -1775,6 +1777,7 @@ export class PayrollRunService {
         date: log.date,
         dayDeduction: this.toNumber(log.dayDeduction),
         isHoliday: log.isHoliday,
+        isWeekend: log.isWeekend,
       })),
       windows,
     );

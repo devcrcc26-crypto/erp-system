@@ -80,6 +80,7 @@ import {
   dayDeduction,
   employedCalendarDatesForContracts,
   summarizeMonthAbsence,
+  type DayDeductionStatus,
 } from '../utils/day-deduction.util';
 import { DayCoverageService } from '../../../hr-shared/application/services/day-coverage.service';
 import {
@@ -337,7 +338,7 @@ function resolveAttendanceDayFlag(params: {
   /** From dayDeduction — leave stays; flag only when scans exist. */
   onLeaveButScanned?: boolean;
   /** Coverage statuses that must not raise field-movement explain flags. */
-  dayStatus?: AttendanceDayStatus | null;
+  dayStatus?: DayDeductionStatus | null;
 }): AttendanceDayFlag {
   if (params.onLeaveButScanned) {
     return AttendanceDayFlag.ON_LEAVE_BUT_SCANNED;
@@ -347,6 +348,8 @@ function resolveAttendanceDayFlag(params: {
     params.dayStatus === 'WORK_FROM_HOME' ||
     params.dayStatus === 'LEAVE' ||
     params.dayStatus === 'SUNDAY' ||
+    params.dayStatus === 'DAY_OFF' ||
+    params.dayStatus === 'WORKED_ON_DAY_OFF' ||
     params.dayStatus === 'HOLIDAY' ||
     params.dayStatus === 'ENROLMENT_GRACE'
   ) {
@@ -5086,7 +5089,34 @@ export class AttendanceService
     >();
     const scheduleEndByDate = new Map<string, string | null>();
     const scanOnlyRuleByDate = new Map<string, ScanOnlyRule>();
+    const scheduleFlagsByDate = new Map<
+      string,
+      { isWorkingDay: boolean; isHalfDay: boolean }
+    >();
     const scheduleCache = new Map<string, ScheduleDayLike[]>();
+
+    const rememberScheduleFlags = async (date: Date): Promise<{
+      isWorkingDay: boolean;
+      isHalfDay: boolean;
+      scheduleDay: ScheduleDayLike | undefined;
+    }> => {
+      const key = dateToYyyyMmDd(date);
+      const scheduleDays = await this.resolveScheduleDaysCached(
+        scheduleCache,
+        employeeId,
+        companyId,
+        date,
+      );
+      const scheduleDay = scheduleDays.find(
+        (row) => row.dayOfWeek === date.getUTCDay(),
+      );
+      const flags = {
+        isWorkingDay: scheduleDay?.isWorkingDay ?? false,
+        isHalfDay: scheduleDay?.isHalfDay ?? false,
+      };
+      scheduleFlagsByDate.set(key, flags);
+      return { ...flags, scheduleDay };
+    };
 
     const rebuildLogMaps = async (
       logs: typeof dailyLogs,
@@ -5095,18 +5125,11 @@ export class AttendanceService
       dailyLogsByDate.clear();
       scheduleEndByDate.clear();
       scanOnlyRuleByDate.clear();
+      scheduleFlagsByDate.clear();
       for (const log of logs) {
         const key = dateToYyyyMmDd(log.date);
         dailyLogIdsByDate.set(key, log.id);
-        const scheduleDays = await this.resolveScheduleDaysCached(
-          scheduleCache,
-          employeeId,
-          companyId,
-          log.date,
-        );
-        const scheduleDay = scheduleDays.find(
-          (row) => row.dayOfWeek === log.date.getUTCDay(),
-        );
+        const { scheduleDay } = await rememberScheduleFlags(log.date);
         scheduleEndByDate.set(key, scheduledEndForDay(scheduleDay));
         const scanOnlyRule = scanOnlyRuleFor(scheduleDay);
         if (scanOnlyRule) {
@@ -5159,20 +5182,12 @@ export class AttendanceService
 
       const toCreate: Prisma.AttendanceDailyLogCreateManyInput[] = [];
       for (const date of missingDates) {
-        const scheduleDays = await this.resolveScheduleDaysCached(
-          scheduleCache,
-          employeeId,
-          companyId,
-          date,
-        );
-        const scheduleDay = scheduleDays.find(
-          (row) => row.dayOfWeek === date.getUTCDay(),
-        );
+        const { scheduleDay, isWorkingDay: wouldBeWorkingDay } =
+          await rememberScheduleFlags(date);
         const matchedHoliday = applicableHolidays.find((holiday) =>
           holidayFallsOnDate(holiday.date, holiday.isRecurring, date),
         );
         const isHoliday = Boolean(matchedHoliday);
-        const wouldBeWorkingDay = scheduleDay?.isWorkingDay ?? false;
         const isWeekend = !wouldBeWorkingDay;
         const isDutyDay = !isHoliday && wouldBeWorkingDay;
         const isHalfDay = isDutyDay ? (scheduleDay?.isHalfDay ?? false) : false;
@@ -5258,6 +5273,22 @@ export class AttendanceService
         orderBy: { date: 'asc' },
         select: { date: true },
       });
+      // Ensure schedule flags exist for every grace-window calendar day.
+      {
+        const cursor = new Date(
+          Date.UTC(
+            hireDate.getUTCFullYear(),
+            hireDate.getUTCMonth(),
+            hireDate.getUTCDate(),
+          ),
+        );
+        while (cursor.getTime() <= monthEnd.getTime()) {
+          if (!scheduleFlagsByDate.has(dateToYyyyMmDd(cursor))) {
+            await rememberScheduleFlags(cursor);
+          }
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+      }
       enrolmentGraceKeys = enrolmentGraceDateKeys({
         hireDate,
         firstScanDate: firstScanLog?.date ?? null,
@@ -5265,13 +5296,28 @@ export class AttendanceService
         isPublicHoliday: (date) =>
           matchedPublicHolidayForEmployee(employee, deductionData, date) !=
           null,
+        isDayOff: (date) => {
+          const flags = scheduleFlagsByDate.get(dateToYyyyMmDd(date));
+          return flags ? !flags.isWorkingDay : date.getUTCDay() === 0;
+        },
       });
+    }
+
+    // Ensure schedule flags for every employed date used by summarizeMonthAbsence.
+    for (const date of employedCalendarDatesForContracts(
+      month,
+      year,
+      contractSegments,
+    )) {
+      if (!scheduleFlagsByDate.has(dateToYyyyMmDd(date))) {
+        await rememberScheduleFlags(date);
+      }
     }
 
     const context = buildDayDeductionContext(
       presentByDecision ? { ...employee, attendanceMode: 'EXEMPT' } : employee,
       deductionData,
-      { enrolmentGraceKeys, scanOnlyRuleByDate },
+      { enrolmentGraceKeys, scanOnlyRuleByDate, scheduleFlagsByDate },
     );
 
     // Month totals over the employed window only (30-day payroll scale). Per-day
@@ -5322,9 +5368,25 @@ export class AttendanceService
       // still raise MISSING_CLOCK_OUT / EARLY_LEAVE for Explain days.
       const enrolmentGrace = status === 'ENROLMENT_GRACE';
       const onLeaveButScanned = dayResult.onLeaveButScanned === true;
+      const scheduleFlags = scheduleFlagsByDate.get(key);
+      const isWeekend = scheduleFlags
+        ? !scheduleFlags.isWorkingDay
+        : status === 'DAY_OFF' ||
+          status === 'WORKED_ON_DAY_OFF' ||
+          status === 'SUNDAY';
+      const isHalfDay =
+        !isHoliday && !isWeekend
+          ? (scheduleFlags?.isHalfDay ?? log.isHalfDay)
+          : false;
+      // Holidays / day-offs are never scheduled duty.
+      let scheduledHours = 0;
+      if (!isHoliday && !isWeekend) {
+        const { scheduleDay } = await rememberScheduleFlags(log.date);
+        scheduledHours = Number(scheduleDay?.totalHours ?? 0);
+      }
       const flag = resolveAttendanceDayFlag({
         isHoliday,
-        isWeekend: log.isWeekend,
+        isWeekend,
         clockIn,
         clockOut,
         isLastExportDay: log.isLastExportDay,
@@ -5338,29 +5400,15 @@ export class AttendanceService
         log,
         inEmployedWindow ? (dayResult.scanAfterDeadlineTime ?? null) : null,
       );
-      // Holidays / weekends are never scheduled duty. When a holiday is cleared,
-      // restore weekday hours from the schedule already resolved in rebuildLogMaps.
-      let scheduledHours = Number(log.scheduledHours);
-      if (isHoliday || log.isWeekend) {
-        scheduledHours = 0;
-      } else if (log.isHoliday && !isHoliday) {
-        const scheduleDays = await this.resolveScheduleDaysCached(
-          scheduleCache,
-          employeeId,
-          companyId,
-          log.date,
-        );
-        const scheduleDay = scheduleDays.find(
-          (row) => row.dayOfWeek === log.date.getUTCDay(),
-        );
-        scheduledHours = Number(scheduleDay?.totalHours ?? 0);
-      }
 
       const coverageSuppressesScanFlags =
         status === 'ON_SITE' ||
         status === 'WORK_FROM_HOME' ||
         status === 'LEAVE' ||
-        status === 'ENROLMENT_GRACE';
+        status === 'ENROLMENT_GRACE' ||
+        status === 'DAY_OFF' ||
+        status === 'WORKED_ON_DAY_OFF' ||
+        status === 'SUNDAY';
 
       const nextFlagResolved =
         flag === AttendanceDayFlag.NONE
@@ -5383,8 +5431,11 @@ export class AttendanceService
         data: {
           isHoliday,
           holidayName: matchedHoliday?.name ?? null,
+          isWeekend,
+          isHalfDay,
           scheduledHours,
-          dayStatus: status,
+          // DAY_OFF / WORKED_ON_DAY_OFF cast until prisma generate after migrate.
+          dayStatus: status as AttendanceDayStatus,
           dayDeduction: inEmployedWindow ? deduction : 0,
           isEarlyLeave: coverageSuppressesScanFlags ? false : isEarlyLeave,
           earlyLeaveMinutes: coverageSuppressesScanFlags ? 0 : earlyLeaveMinutes,
@@ -5428,9 +5479,11 @@ export class AttendanceService
 
       // Keep in-memory logs aligned so month KPIs below use the new holiday flags.
       log.isHoliday = isHoliday;
+      log.isWeekend = isWeekend;
+      log.isHalfDay = isHalfDay;
       log.holidayName = matchedHoliday?.name ?? null;
       log.scheduledHours = scheduledHours as never;
-      log.dayStatus = status;
+      log.dayStatus = status as AttendanceDayStatus;
       log.dayDeduction = (inEmployedWindow ? deduction : 0) as never;
       log.isEarlyLeave = isEarlyLeave;
       log.earlyLeaveMinutes = earlyLeaveMinutes;
@@ -6081,6 +6134,7 @@ export class AttendanceService
       string,
       ReturnType<typeof summarizeMissingEmployeeCoverage>
     >();
+    const scheduleCache = new Map<string, ScheduleDayLike[]>();
 
     for (const employee of employees) {
       const overlapping = contractsGrouped.get(employee.id) ?? [];
@@ -6106,6 +6160,30 @@ export class AttendanceService
         employmentEndDate,
       });
 
+      const scheduleFlagsByDate = new Map<
+        string,
+        { isWorkingDay: boolean; isHalfDay: boolean }
+      >();
+      for (const date of employedCalendarDatesForContracts(
+        month,
+        year,
+        segments,
+      )) {
+        const scheduleDays = await this.resolveScheduleDaysCached(
+          scheduleCache,
+          employee.id,
+          companyId,
+          date,
+        );
+        const scheduleDay = scheduleDays.find(
+          (row) => row.dayOfWeek === date.getUTCDay(),
+        );
+        scheduleFlagsByDate.set(dateToYyyyMmDd(date), {
+          isWorkingDay: scheduleDay?.isWorkingDay ?? false,
+          isHalfDay: scheduleDay?.isHalfDay ?? false,
+        });
+      }
+
       const summary = summarizeMissingEmployeeCoverage({
         month,
         year,
@@ -6119,6 +6197,7 @@ export class AttendanceService
         approvedSites: sitesByEmployee.get(employee.id) ?? [],
         wfhDays,
         leaveDateKeys: leaveKeysByEmployee.get(employee.id) ?? new Set(),
+        scheduleFlagsByDate,
       });
       result.set(employee.id, summary);
     }
