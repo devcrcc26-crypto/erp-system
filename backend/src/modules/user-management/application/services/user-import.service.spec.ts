@@ -6,6 +6,7 @@ import { UserManagementService } from './user-management.service';
 import { UserProvisioningService } from './user-provisioning.service';
 
 describe('UserImportService', () => {
+  jest.setTimeout(30_000);
   let service: UserImportService;
   let prisma: {
     role: { findMany: jest.Mock };

@@ -513,10 +513,15 @@ export function selectionFromStorageReason(
  * Which reason types are offered for a flagged day.
  */
 export function availableReasonTypesForFlag(
-  flag: 'MISSING_CLOCK_IN' | 'MISSING_CLOCK_OUT' | 'EARLY_LEAVE' | 'NONE',
+  flag:
+    | 'MISSING_CLOCK_IN'
+    | 'MISSING_CLOCK_OUT'
+    | 'EARLY_LEAVE'
+    | 'ON_LEAVE_BUT_SCANNED'
+    | 'NONE',
   options?: { bothScansMissing?: boolean },
 ): FieldMovementReasonType[] {
-  if (flag === 'NONE') {
+  if (flag === 'NONE' || flag === 'ON_LEAVE_BUT_SCANNED') {
     return [];
   }
   if (flag === 'MISSING_CLOCK_IN') {
@@ -539,10 +544,19 @@ export function availableReasonTypesForFlag(
  * Which forgot directions are valid for a day.
  */
 export function availableForgotDirections(day: {
-  flag: 'MISSING_CLOCK_IN' | 'MISSING_CLOCK_OUT' | 'EARLY_LEAVE' | 'NONE';
+  flag:
+    | 'MISSING_CLOCK_IN'
+    | 'MISSING_CLOCK_OUT'
+    | 'EARLY_LEAVE'
+    | 'ON_LEAVE_BUT_SCANNED'
+    | 'NONE';
   bothScansMissing: boolean;
 }): ForgotDirection[] {
-  if (day.flag === 'EARLY_LEAVE' || day.flag === 'NONE') {
+  if (
+    day.flag === 'EARLY_LEAVE' ||
+    day.flag === 'NONE' ||
+    day.flag === 'ON_LEAVE_BUT_SCANNED'
+  ) {
     return [];
   }
   const directions: ForgotDirection[] = [];

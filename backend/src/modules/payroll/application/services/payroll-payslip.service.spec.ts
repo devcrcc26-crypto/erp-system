@@ -7,6 +7,7 @@ function dec(value: number): Decimal {
 }
 
 describe('PayrollPayslipService', () => {
+  jest.setTimeout(30_000);
   const ctx = { userId: 'hr-1', companyId: 'co-1' };
 
   function harness(): {

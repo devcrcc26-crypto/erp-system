@@ -1,5 +1,6 @@
 import { EmployeeContractStatus, EmployeeContractType } from '@prisma/client';
 import { EmployeeContractService } from './employee-contract.service';
+import type { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 
 const PAY_FIELDS = [
   'basicSalary',
@@ -8,18 +9,54 @@ const PAY_FIELDS = [
   'monthlyNetBonus',
 ] as const;
 
+function buildService(leaveLedger: {
+  onContractActivated: jest.Mock;
+  recomputeContractEntries: jest.Mock;
+}): EmployeeContractService {
+  return new EmployeeContractService(
+    { employeeContract: { findFirst: jest.fn() } } as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    leaveLedger as unknown as LeaveLedgerService,
+  );
+}
+
+async function syncActivated(
+  service: EmployeeContractService,
+  contractId: string,
+  userId: string,
+): Promise<void> {
+  await (
+    service as unknown as {
+      syncLeaveLedger: (
+        contractId: string,
+        userId: string,
+        mode: 'activated' | 'recompute',
+      ) => Promise<void>;
+    }
+  ).syncLeaveLedger(contractId, userId, 'activated');
+}
+
 describe('EmployeeContractService.getMyActiveContract', () => {
   const findFirst = jest.fn();
   const prisma = { employeeContract: { findFirst } };
+  const leaveLedger = {
+    onContractActivated: jest.fn(),
+    recomputeContractEntries: jest.fn(),
+  };
   const service = new EmployeeContractService(
     prisma as never,
     {} as never,
     {} as never,
     {} as never,
+    leaveLedger as unknown as LeaveLedgerService,
   );
 
   beforeEach(() => {
     findFirst.mockReset();
+    leaveLedger.onContractActivated.mockReset();
+    leaveLedger.recomputeContractEntries.mockReset();
   });
 
   it('returns { contract: null } when the employee has no active contract', async () => {
@@ -80,5 +117,53 @@ describe('EmployeeContractService.getMyActiveContract', () => {
     for (const field of PAY_FIELDS) {
       expect(result.contract).not.toHaveProperty(field);
     }
+  });
+});
+
+describe('EmployeeContractService leave ledger hook', () => {
+  it('renewal on anniversary grants entitlement once (re-saving never grants twice)', async () => {
+    let entitlementGrants = 0;
+    const leaveLedger = {
+      onContractActivated: jest.fn(async () => {
+        entitlementGrants += 1;
+        if (entitlementGrants === 1) {
+          return { renewal: true, leaveYear: { id: 'ly-2025' } };
+        }
+        return { renewal: false, leaveYear: { id: 'ly-2025' } };
+      }),
+      recomputeContractEntries: jest.fn(),
+    };
+    const service = buildService(leaveLedger);
+
+    await syncActivated(service, 'k2', 'hr');
+    await syncActivated(service, 'k2', 'hr');
+    await syncActivated(service, 'k2', 'hr');
+
+    expect(leaveLedger.onContractActivated).toHaveBeenCalledTimes(3);
+    const resolved = await Promise.all(
+      leaveLedger.onContractActivated.mock.results.map(
+        (r) => r.value as Promise<{ renewal: boolean }>,
+      ),
+    );
+    expect(resolved.filter((r) => r.renewal)).toHaveLength(1);
+    expect(resolved.filter((r) => !r.renewal)).toHaveLength(2);
+  });
+
+  it('a mid-year contract change grants nothing', async () => {
+    const leaveLedger = {
+      onContractActivated: jest.fn(async () => ({
+        renewal: false,
+        leaveYear: null,
+      })),
+      recomputeContractEntries: jest.fn(),
+    };
+    const service = buildService(leaveLedger);
+
+    await syncActivated(service, 'k2', 'hr');
+
+    expect(leaveLedger.onContractActivated).toHaveBeenCalledWith('k2', 'hr');
+    await expect(
+      leaveLedger.onContractActivated.mock.results[0]!.value,
+    ).resolves.toEqual({ renewal: false, leaveYear: null });
   });
 });

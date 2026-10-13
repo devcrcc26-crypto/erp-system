@@ -41,7 +41,30 @@ function flushImmediate(): Promise<void> {
   });
 }
 
-describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
+function permissionStub(): PermissionService {
+  return {
+    hasPermission: jest.fn(async () => true),
+    getUserRoleNames: jest.fn(async () => ['Employee']),
+    getUserModulePermissionsMap: jest.fn(async () => ({})),
+  } as unknown as PermissionService;
+}
+
+function buildApprovalsService(
+  prisma: unknown,
+  resolveRule: ApprovalResolverService['resolveRule'],
+): ApprovalsService {
+  return new ApprovalsService(
+    prisma as unknown as PrismaService,
+    { resolveRule } as unknown as ApprovalResolverService,
+    { send: jest.fn(async () => undefined) } as unknown as NotificationService,
+    { notify: jest.fn(async () => undefined) } as unknown as ApprovalDecisionRegistry,
+    permissionStub(),
+    {} as unknown as LeaveBalanceService,
+    {} as unknown as IStorageService,
+  );
+}
+
+describe('AUTO_APPROVE_ALL (scenarios)', () => {
   const originalEnv = { ...process.env };
 
   afterEach(() => {
@@ -49,7 +72,7 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
     jest.restoreAllMocks();
   });
 
-  it('leave request: auto-approves via approveTier and leave balance is charged on APPROVED', async () => {
+  it('flag on + localhost → auto-approves leave via approveTier; leave balance charged on APPROVED', async () => {
     process.env.AUTO_APPROVE_ALL = 'true';
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@127.0.0.1:5433/pwf_fresh';
@@ -136,35 +159,30 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
           days: 2,
           startDate: new Date(Date.UTC(2026, 9, 1)),
           status: LeaveRequestStatus.SUBMITTED,
+          periods: [
+            {
+              startDate: new Date(Date.UTC(2026, 9, 1)),
+              endDate: new Date(Date.UTC(2026, 9, 2)),
+            },
+          ],
         })),
         update: jest.fn(async () => ({})),
       },
     };
 
-    const approvals = new ApprovalsService(
-      prisma as unknown as PrismaService,
-      {
-        resolveRule: jest.fn(async () => ({
-          ruleName: 'test',
-          tiers: [
-            {
-              tierOrder: 1,
-              label: 'Discipline Lead',
-              approverId: 'approver-1',
-              resolver: 'DISCIPLINE_LEAD',
-            },
-          ],
-        })),
-      } as unknown as ApprovalResolverService,
-      { send: jest.fn(async () => undefined) } as unknown as NotificationService,
-      { notify: jest.fn(async () => undefined) } as unknown as ApprovalDecisionRegistry,
-      {
-        hasPermission: jest.fn(async () => true),
-        getUserRoleNames: jest.fn(async () => ['Employee']),
-        getUserModulePermissionsMap: jest.fn(async () => ({})),
-      } as unknown as PermissionService,
-      {} as unknown as LeaveBalanceService,
-      {} as unknown as IStorageService,
+    const approvals = buildApprovalsService(
+      prisma,
+      jest.fn(async () => ({
+        ruleName: 'test',
+        tiers: [
+          {
+            tierOrder: 1,
+            label: 'Discipline Lead',
+            approverId: 'approver-1',
+            resolver: 'DISCIPLINE_LEAD',
+          },
+        ],
+      })) as never,
     );
     (approvals as unknown as { approveTier: typeof approveTier }).approveTier =
       approveTier;
@@ -189,27 +207,39 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
       { bypassApproverCheck: true },
     );
 
-    const adjustBalance = jest.fn(async () => undefined);
+    const adjustPendingForDate = jest.fn(async () => undefined);
+    const recordLeaveUsed = jest.fn(async () => undefined);
     const leave = new LeaveService(
       prisma as unknown as PrismaService,
       {} as never,
-      { adjustBalance } as unknown as LeaveBalanceService,
+      { adjustPendingForDate } as unknown as LeaveBalanceService,
       {} as never,
       {} as never,
       {} as never,
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
+      { recordLeaveUsed } as never,
     );
+    jest
+      .spyOn(
+        leave as unknown as {
+          recalculateAttendanceForLeavePeriods: () => Promise<void>;
+        },
+        'recalculateAttendanceForLeavePeriods',
+      )
+      .mockResolvedValue(undefined);
     await leave.onApprovalDecision(REQUEST_ID, 'APPROVED');
-    expect(adjustBalance).toHaveBeenCalledWith(
+    expect(adjustPendingForDate).toHaveBeenCalledWith(
       'emp-1',
       LeaveType.ANNUAL,
-      2026,
-      'used',
-      2,
+      expect.any(Date),
+      -2,
       COMPANY_ID,
     );
+    expect(recordLeaveUsed).toHaveBeenCalledWith('leave-1');
   });
 
   it('overtime sheet: APPROVED so hours can appear in the payroll run', async () => {
@@ -310,6 +340,8 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
       {} as never,
       {} as never,
       { recalculateCompanyAttendanceMonth: recalculate } as never,
+      {} as never,
+      {} as never,
     );
 
     await service.onApprovalDecision(REQUEST_ID, 'APPROVED');
@@ -349,7 +381,10 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
         fn({
           fieldMovementLog: { update: logUpdate },
-          fieldMovementEntry: { update: entryUpdate },
+          fieldMovementEntry: {
+            update: entryUpdate,
+            updateMany: jest.fn(async () => ({ count: 1 })),
+          },
           attendanceDailyLog: { update: dailyLogUpdate },
           attendanceRecord: {
             findFirst: jest.fn(async () => null),
@@ -369,16 +404,10 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
     );
-
-    jest
-      .spyOn(
-        service as unknown as {
-          recalculateAttendanceRecord: () => Promise<void>;
-        },
-        'recalculateAttendanceRecord',
-      )
-      .mockResolvedValue(undefined);
 
     jest
       .spyOn(
@@ -388,6 +417,14 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
         'applyEntryCorrection',
       )
       .mockResolvedValue(undefined);
+    jest
+      .spyOn(
+        service as unknown as {
+          recalculateCompanyAttendanceMonth: () => Promise<unknown>;
+        },
+        'recalculateCompanyAttendanceMonth',
+      )
+      .mockResolvedValue({ updated: 1 });
 
     await service.onApprovalDecision(REQUEST_ID, 'APPROVED');
 
@@ -458,7 +495,7 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
     ]);
   });
 
-  it('flag set but non-local DB → nothing auto-approved', async () => {
+  it('flag on + remote host → no auto-approve', async () => {
     const mode = resolveAutoApproveMode({
       AUTO_APPROVE_ALL: 'true',
       DATABASE_URL:
@@ -504,30 +541,19 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
       },
     };
 
-    const service = new ApprovalsService(
-      prisma as unknown as PrismaService,
-      {
-        resolveRule: jest.fn(async () => ({
-          ruleName: 'test',
-          tiers: [
-            {
-              tierOrder: 1,
-              label: 'Discipline Lead',
-              approverId: 'a1',
-              resolver: 'DISCIPLINE_LEAD',
-            },
-          ],
-        })),
-      } as unknown as ApprovalResolverService,
-      { send: jest.fn(async () => undefined) } as unknown as NotificationService,
-      { notify: jest.fn(async () => undefined) } as unknown as ApprovalDecisionRegistry,
-      {
-        hasPermission: jest.fn(async () => true),
-        getUserRoleNames: jest.fn(async () => ['Employee']),
-        getUserModulePermissionsMap: jest.fn(async () => ({})),
-      } as unknown as PermissionService,
-      {} as unknown as LeaveBalanceService,
-      {} as unknown as IStorageService,
+    const service = buildApprovalsService(
+      prisma,
+      jest.fn(async () => ({
+        ruleName: 'test',
+        tiers: [
+          {
+            tierOrder: 1,
+            label: 'Discipline Lead',
+            approverId: 'a1',
+            resolver: 'DISCIPLINE_LEAD',
+          },
+        ],
+      })) as never,
     );
     (service as unknown as { approveTier: typeof approveTier }).approveTier =
       approveTier;
@@ -547,7 +573,85 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
     expect(approveTier).not.toHaveBeenCalled();
   });
 
-  it('payroll run is not auto-approved', async () => {
+  it('flag off → no auto-approve', async () => {
+    const mode = resolveAutoApproveMode({
+      AUTO_APPROVE_ALL: 'false',
+      DATABASE_URL:
+        'postgresql://postgres:postgres@127.0.0.1:5433/pwf_fresh',
+    });
+    expect(mode.active).toBe(false);
+    expect(mode.ignoredNonLocal).toBe(false);
+
+    process.env.AUTO_APPROVE_ALL = 'false';
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@127.0.0.1:5433/pwf_fresh';
+
+    const approveTier = jest.fn(async () => ({}));
+    const prisma = {
+      approvalCategory: {
+        findFirst: jest.fn(async () => ({
+          id: 'cat-1',
+          code: 'LEAVE_REQUEST',
+          numberPrefix: 'APR',
+          approvalRules: [],
+          isActive: true,
+          isUserRequestable: true,
+        })),
+      },
+      document: { findMany: jest.fn(async () => []) },
+      $queryRawUnsafe: jest.fn(async () => [{ nextval: 1 }]),
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          approvalRequest: {
+            create: jest.fn(async () => ({
+              id: REQUEST_ID,
+              requestNumber: 'APR-0001',
+            })),
+          },
+        }),
+      ),
+      approvalRequest: {
+        findFirst: jest.fn(async () => ({
+          id: REQUEST_ID,
+          requestNumber: 'APR-0001',
+          tiers: [],
+        })),
+      },
+    };
+
+    const service = buildApprovalsService(
+      prisma,
+      jest.fn(async () => ({
+        ruleName: 'test',
+        tiers: [
+          {
+            tierOrder: 1,
+            label: 'Discipline Lead',
+            approverId: 'a1',
+            resolver: 'DISCIPLINE_LEAD',
+          },
+        ],
+      })) as never,
+    );
+    (service as unknown as { approveTier: typeof approveTier }).approveTier =
+      approveTier;
+
+    await service.submitRequest(
+      {
+        categoryCode: 'LEAVE_REQUEST',
+        title: 'Leave',
+        formData: {},
+      },
+      COMPANY_ID,
+      'emp-1',
+    );
+    await flushImmediate();
+    await new Promise((r) => setTimeout(r, 80));
+
+    expect(approveTier).not.toHaveBeenCalled();
+  });
+
+  it('payroll run is never auto-approved', async () => {
     process.env.AUTO_APPROVE_ALL = 'true';
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5433/pwf_fresh';
@@ -585,30 +689,19 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
       },
     };
 
-    const service = new ApprovalsService(
-      prisma as unknown as PrismaService,
-      {
-        resolveRule: jest.fn(async () => ({
-          ruleName: 'payroll',
-          tiers: [
-            {
-              tierOrder: 1,
-              label: 'HR Manager',
-              approverId: 'hr-1',
-              resolver: 'ROLE:HR Manager',
-            },
-          ],
-        })),
-      } as unknown as ApprovalResolverService,
-      { send: jest.fn(async () => undefined) } as unknown as NotificationService,
-      { notify: jest.fn(async () => undefined) } as unknown as ApprovalDecisionRegistry,
-      {
-        hasPermission: jest.fn(async () => true),
-        getUserRoleNames: jest.fn(async () => ['Employee']),
-        getUserModulePermissionsMap: jest.fn(async () => ({})),
-      } as unknown as PermissionService,
-      {} as unknown as LeaveBalanceService,
-      {} as unknown as IStorageService,
+    const service = buildApprovalsService(
+      prisma,
+      jest.fn(async () => ({
+        ruleName: 'payroll',
+        tiers: [
+          {
+            tierOrder: 1,
+            label: 'HR Manager',
+            approverId: 'hr-1',
+            resolver: 'ROLE:HR Manager',
+          },
+        ],
+      })) as never,
     );
     (service as unknown as { approveTier: typeof approveTier }).approveTier =
       approveTier;
@@ -621,6 +714,76 @@ describe('AUTO_APPROVE_ALL (8 scenarios)', () => {
       },
       COMPANY_ID,
       'hr-1',
+    );
+    await flushImmediate();
+    await new Promise((r) => setTimeout(r, 80));
+
+    expect(approveTier).not.toHaveBeenCalled();
+  });
+
+  it('evaluation is never auto-approved', async () => {
+    process.env.AUTO_APPROVE_ALL = 'true';
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5433/pwf_fresh';
+
+    const approveTier = jest.fn(async () => ({}));
+    const prisma = {
+      approvalCategory: {
+        findFirst: jest.fn(async () => ({
+          id: 'cat-eval',
+          code: 'EVALUATION',
+          numberPrefix: 'EV',
+          approvalRules: [],
+          isActive: true,
+          isUserRequestable: true,
+        })),
+      },
+      document: { findMany: jest.fn(async () => []) },
+      $queryRawUnsafe: jest.fn(async () => [{ nextval: 1 }]),
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          approvalRequest: {
+            create: jest.fn(async () => ({
+              id: 'eval-req',
+              requestNumber: 'EV-0001',
+            })),
+          },
+        }),
+      ),
+      approvalRequest: {
+        findFirst: jest.fn(async () => ({
+          id: 'eval-req',
+          requestNumber: 'EV-0001',
+          tiers: [],
+        })),
+      },
+    };
+
+    const service = buildApprovalsService(
+      prisma,
+      jest.fn(async () => ({
+        ruleName: 'evaluation',
+        tiers: [
+          {
+            tierOrder: 1,
+            label: 'Team Lead',
+            approverId: 'tl-1',
+            resolver: 'TEAM_LEAD',
+          },
+        ],
+      })) as never,
+    );
+    (service as unknown as { approveTier: typeof approveTier }).approveTier =
+      approveTier;
+
+    await service.submitRequest(
+      {
+        categoryCode: 'EVALUATION',
+        title: 'Performance evaluation',
+        formData: {},
+      },
+      COMPANY_ID,
+      'tl-1',
     );
     await flushImmediate();
     await new Promise((r) => setTimeout(r, 80));

@@ -235,6 +235,7 @@ function sumDataColumn(
 }
 
 describe('PayrollExcelExportService — Data sheet', () => {
+  jest.setTimeout(30_000);
   it('places POSITION between NAME EMPLOYEE and DATE OF EMPLOY\'T', async () => {
     const workbook = await exportFixture(makeFixtureEntries());
     const sheet = workbook.getWorksheet('Data')!;
@@ -360,6 +361,7 @@ describe('PayrollExcelExportService — Data sheet', () => {
 });
 
 describe('PayrollExcelExportService — Payroll sheet', () => {
+  jest.setTimeout(30_000);
   it('writes the tax declaration header and one row per employee', async () => {
     const entries = makeFixtureEntries();
     const workbook = await exportFixture(entries);

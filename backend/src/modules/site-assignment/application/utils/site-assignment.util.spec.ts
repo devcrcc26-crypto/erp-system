@@ -182,7 +182,7 @@ describe('dayDeduction with site assignments', () => {
     expect(shortened.paidDays).toBeLessThan(full.paidDays);
   });
 
-  it('scanned at HQ on a site day → present, deduction 0', () => {
+  it('scanned at HQ on a site day → ON_SITE, deduction 0', () => {
     const day = d(2026, 8, 5);
     const r = dayDeduction(
       day,
@@ -190,7 +190,7 @@ describe('dayDeduction with site assignments', () => {
       siteContext(d(2026, 8, 1), d(2026, 8, 31)),
     );
     expect(r.deduction).toBe(0);
-    expect(r.status).toBe('PRESENT');
+    expect(r.status).toBe('ON_SITE');
     expect(r.siteName).toBe(site);
   });
 });

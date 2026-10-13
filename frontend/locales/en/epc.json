@@ -1103,6 +1103,12 @@
           "emptyDescription": "They are saved when you confirm an attendance import.",
           "emptyFiltered": "No identities match these filters.",
           "typeToSearch": "Type at least 2 letters to search"
+        },
+        "workFromHome": {
+          "fields": {
+            "date": "Date",
+            "reason": "Reason"
+          }
         }
       },
       "workFromHome": {
@@ -2446,6 +2452,7 @@
     "done": "Done",
     "delete": "Delete",
     "update": "Update",
+    "submit": "Submit",
     "view": "View",
     "assigned": "Assigned",
     "reset": "Reset",

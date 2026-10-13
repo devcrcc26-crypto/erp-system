@@ -197,7 +197,7 @@ describe('WorkFromHomeDayService — range request lifecycle', () => {
       approvalsService as never,
       { register: jest.fn(), unregister: jest.fn() } as never,
       {
-        resolveTargetEmployeeId: jest.fn(async (_u: string, _c: string, target?: string) => target ?? 'e1'),
+        resolveHrProcessSubjectId: jest.fn(async (_u: string, _c: string, target?: string) => target ?? 'e1'),
         recordOnBehalfCreate: jest.fn(async () => undefined),
       } as never,
       dayCoverage as never,

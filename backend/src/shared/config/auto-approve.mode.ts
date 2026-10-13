@@ -13,6 +13,7 @@ export const AUTO_APPROVE_FALLBACK_TIER_LABEL = 'Test auto-approval';
 /** Categories that must never be auto-approved (own status machines). */
 export const AUTO_APPROVE_EXCLUDED_CATEGORIES = new Set<string>([
   'PAYROLL_RUN',
+  'EVALUATION',
 ]);
 
 export interface AutoApproveMode {
