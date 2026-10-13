@@ -8,6 +8,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { SiteAssignmentListItem } from '@/lib/api/site-assignment.types';
 import { useEmployeeSiteAssignments } from '@/lib/query/site-assignment';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { siteAssignmentStatusVariant } from '@/lib/utils/site-assignment-display';
 
 export default function EmployeeSiteAssignmentsSection({
   employeeId,
@@ -66,13 +67,7 @@ export default function EmployeeSiteAssignmentsSection({
               dataIndex: 'status',
               render: (status: SiteAssignmentListItem['status']) => (
                 <StatusBadge
-                  variant={
-                    status === 'APPROVED'
-                      ? 'approved'
-                      : status === 'REJECTED' || status === 'CANCELLED'
-                        ? 'rejected'
-                        : 'pending'
-                  }
+                  variant={siteAssignmentStatusVariant(status)}
                   label={t(`pages.hr.siteAssignments.status.${status}`)}
                 />
               ),

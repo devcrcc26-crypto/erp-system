@@ -19,6 +19,9 @@ export interface AddEmployeeFormValues extends EmployeeProfileFormValues {
   }>;
   engineeringDisciplineId?: string;
   isActive: boolean;
+  /** Approver only — edit mode, users.edit only. */
+  excludedFromHrProcesses?: boolean;
+  excludedReason?: string;
   dateOfBirth?: Dayjs;
   experienceStartDate?: Dayjs;
 }

@@ -40,6 +40,7 @@ import type {
 import { useSiteAssignments } from '@/lib/query/site-assignment';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { siteAssignmentStatusVariant } from '@/lib/utils/site-assignment-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 type StatusMode = 'all' | 'pending' | 'approved' | 'rejected';
@@ -51,25 +52,6 @@ const PENDING_STATUSES: SiteAssignmentStatus[] = [
 ];
 const APPROVED_STATUSES: SiteAssignmentStatus[] = ['APPROVED'];
 const REJECTED_STATUSES: SiteAssignmentStatus[] = ['REJECTED', 'CANCELLED'];
-
-function statusVariant(
-  status: SiteAssignmentStatus,
-): 'approved' | 'pending' | 'rejected' | 'draft' {
-  if (status === 'APPROVED') {
-    return 'approved';
-  }
-  if (status === 'REJECTED' || status === 'CANCELLED') {
-    return 'rejected';
-  }
-  if (
-    status === 'SUBMITTED' ||
-    status === 'IN_REVIEW' ||
-    status === 'RETURNED'
-  ) {
-    return 'pending';
-  }
-  return 'draft';
-}
 
 function statusesForMode(mode: StatusMode): SiteAssignmentStatus[] | undefined {
   switch (mode) {
@@ -263,7 +245,7 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
         width: 130,
         render: (value: SiteAssignmentStatus) => (
           <StatusBadge
-            variant={statusVariant(value)}
+            variant={siteAssignmentStatusVariant(value)}
             label={t(`pages.hr.siteAssignments.status.${value}`)}
           />
         ),

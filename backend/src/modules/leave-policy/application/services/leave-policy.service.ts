@@ -7,6 +7,7 @@ import {
 import { LeaveType, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import {
   CreateLeavePolicyDto,
@@ -291,14 +292,13 @@ export class LeavePolicyService {
     refreshed: number;
   }> {
     const employees = await this.prisma.user.findMany({
-      where: {
+      where: hrProcessEmployeeWhere({
         companyId,
         deletedAt: null,
         isActive: true,
-        excludedFromHrProcesses: false,
         employmentDate: null,
         employeeContractEmployee: { none: { deletedAt: null } },
-      },
+      }),
       select: { id: true },
     });
 

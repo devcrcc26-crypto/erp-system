@@ -16,6 +16,11 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import {
+  EXCLUDED_FROM_HR_MESSAGE,
+  hrProcessEmployeeWhere,
+  isExcludedFromHrProcesses,
+} from '../../../../shared/prisma/hr-process.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import type {
   CreateEmployeeEvaluationDto,
@@ -447,6 +452,9 @@ export class EvaluationService {
     if (!employee) {
       throw new NotFoundException('Employee not found');
     }
+    if (isExcludedFromHrProcesses(employee)) {
+      throw new BadRequestException(EXCLUDED_FROM_HR_MESSAGE);
+    }
 
     const existing = await this.prisma.employeeEvaluation.findFirst({
       where: {
@@ -528,12 +536,13 @@ export class EvaluationService {
       );
     }
 
+    // Approver-only accounts are never evaluatees.
     const employees = await this.prisma.user.findMany({
-      where: {
+      where: hrProcessEmployeeWhere({
         companyId: ctx.companyId,
         isActive: true,
         deletedAt: null,
-      },
+      }),
       include: {
         engineeringDiscipline: {
           include: {

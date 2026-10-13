@@ -9,6 +9,11 @@ import { Prisma } from '@prisma/client';
 import { PermissionService } from '../../shared/permissions/permission.service';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { activeOnly } from '../../shared/prisma/soft-delete.util';
+import {
+  EXCLUDED_FROM_HR_MESSAGE,
+  hrProcessEmployeeWhere,
+  isExcludedFromHrProcesses,
+} from '../../shared/prisma/hr-process.util';
 import { AuditService } from '../audit/application/services/audit.service';
 import { ApprovalsService } from '../approvals/application/services/approvals.service';
 import {
@@ -30,8 +35,7 @@ export interface OnBehalfEligibleEmployee {
 export const ON_BEHALF_AUTO_APPROVE_COMMENT =
   'Auto-approved by creator (on-behalf submission)';
 
-export const EXCLUDED_FROM_HR_MESSAGE =
-  'This employee is approver-only and does not take part in HR processes';
+export { EXCLUDED_FROM_HR_MESSAGE };
 
 const CREATE_ON_BEHALF_ACTION = 'CREATE_ON_BEHALF';
 const AUTO_APPROVE_ACTION = 'ON_BEHALF_AUTO_APPROVE';
@@ -213,7 +217,7 @@ export class OnBehalfService {
     if (!employee) {
       throw new NotFoundException('Employee not found');
     }
-    if (employee.excludedFromHrProcesses) {
+    if (isExcludedFromHrProcesses(employee)) {
       throw new BadRequestException(EXCLUDED_FROM_HR_MESSAGE);
     }
     if (!(await this.isEligibleFor(actorUserId, onBehalfOfEmployeeId, companyId))) {
@@ -239,9 +243,28 @@ export class OnBehalfService {
     if (!employee) {
       throw new NotFoundException('Employee not found');
     }
-    if (employee.excludedFromHrProcesses) {
+    if (isExcludedFromHrProcesses(employee)) {
       throw new BadRequestException(EXCLUDED_FROM_HR_MESSAGE);
     }
+  }
+
+  /**
+   * Subject of an HR-process request (leave, overtime, field movement, site
+   * assignment, WFH): the on-behalf target or the actor, and never an
+   * approver-only account — including approver-only users filing for themselves.
+   */
+  async resolveHrProcessSubjectId(
+    actorUserId: string,
+    companyId: string,
+    onBehalfOfEmployeeId?: string | null,
+  ): Promise<string> {
+    const employeeId = await this.resolveTargetEmployeeId(
+      actorUserId,
+      companyId,
+      onBehalfOfEmployeeId,
+    );
+    await this.assertTakesPartInHrProcesses(employeeId, companyId);
+    return employeeId;
   }
 
   /**
@@ -375,12 +398,13 @@ export class OnBehalfService {
     userId: string,
     companyId: string,
   ): Promise<Prisma.UserWhereInput | null> {
-    const base = activeOnly({
-      companyId,
-      isActive: true,
-      excludedFromHrProcesses: false,
-      id: { not: userId },
-    });
+    const base = activeOnly(
+      hrProcessEmployeeWhere({
+        companyId,
+        isActive: true,
+        id: { not: userId },
+      }),
+    );
 
     const [isHrViewer, isFullAccess] = await Promise.all([
       this.permissionService.hasPermission(userId, companyId, 'hr', 'view'),

@@ -15,6 +15,7 @@ import {
   SubmittalStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { subtaskRoleOr } from '../../../project-management/domain/task-access-scope.util';
@@ -514,7 +515,7 @@ export class DashboardService {
       overtimeThisMonth,
     ] = await Promise.all([
       this.prisma.user.count({
-        where: { companyId, deletedAt: null, isActive: true },
+        where: hrProcessEmployeeWhere({ companyId, deletedAt: null, isActive: true }),
       }),
       this.prisma.leaveRequest.count({
         where: {
@@ -584,12 +585,12 @@ export class DashboardService {
         },
       }),
       this.prisma.user.count({
-        where: {
+        where: hrProcessEmployeeWhere({
           companyId,
           deletedAt: null,
           isActive: true,
           leavePolicyId: null,
-        },
+        }),
       }),
       this.prisma.leaveRequest.groupBy({
         by: ['leaveType'],
@@ -623,12 +624,12 @@ export class DashboardService {
       }),
       this.prisma.user.groupBy({
         by: ['departmentId'],
-        where: {
+        where: hrProcessEmployeeWhere({
           companyId,
           deletedAt: null,
           isActive: true,
           departmentId: { not: null },
-        },
+        }),
         _count: { id: true },
       }),
       this.prisma.leaveRequest.findMany({

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { LeaveType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import {
   buildPaginatedResult,
   buildPrismaPagination,
@@ -123,7 +124,7 @@ export class LeaveBalanceService {
     const limit = query.limit ?? 20;
     const { skip, take } = buildPrismaPagination(page, limit);
 
-    const userWhere: Prisma.UserWhereInput = {
+    const userWhere: Prisma.UserWhereInput = hrProcessEmployeeWhere({
       companyId,
       deletedAt: null,
       isActive: true,
@@ -152,7 +153,7 @@ export class LeaveBalanceService {
             ],
           }
         : {}),
-    };
+    });
 
     const [employees, total] = await Promise.all([
       this.prisma.user.findMany({

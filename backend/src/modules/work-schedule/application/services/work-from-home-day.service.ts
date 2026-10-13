@@ -18,6 +18,10 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  EXCLUDED_FROM_HR_MESSAGE,
+  hrProcessEmployeeWhere,
+} from '../../../../shared/prisma/hr-process.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { AttendanceService } from '../../../attendance/application/services/attendance.service';
 import type {
@@ -241,12 +245,14 @@ export class WorkFromHomeDayService
     }
 
     const where: Prisma.UserWhereInput = ctx.isHr
-      ? activeOnly({ companyId, isActive: true })
-      : activeOnly({
-          companyId,
-          isActive: true,
-          engineeringDisciplineId: { in: ctx.ledDisciplineIds },
-        });
+      ? activeOnly(hrProcessEmployeeWhere({ companyId, isActive: true }))
+      : activeOnly(
+          hrProcessEmployeeWhere({
+            companyId,
+            isActive: true,
+            engineeringDisciplineId: { in: ctx.ledDisciplineIds },
+          }),
+        );
 
     const users = await this.prisma.user.findMany({
       where,
@@ -321,6 +327,7 @@ export class WorkFromHomeDayService
         companyId,
       );
     }
+    await this.assertHrProcessEmployees(employeeIds, companyId);
 
     this.validateScopePayload(scope, departmentIds, employeeIds);
 
@@ -466,6 +473,7 @@ export class WorkFromHomeDayService
       );
       nextEmployeeIds = [...new Set([...outside, ...validated])];
     }
+    await this.assertHrProcessEmployees(dto.employeeIds ?? [], companyId);
 
     this.validateScopePayload(nextScope, nextDepartmentIds, nextEmployeeIds);
 
@@ -540,7 +548,7 @@ export class WorkFromHomeDayService
     companyId: string,
     userId: string,
   ): Promise<WorkFromHomeRangePlan & { employeeId: string; label: string }> {
-    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+    const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
       userId,
       companyId,
       dto.onBehalfOfEmployeeId,
@@ -571,7 +579,7 @@ export class WorkFromHomeDayService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+    const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
       userId,
       companyId,
       dto.onBehalfOfEmployeeId,
@@ -1098,6 +1106,25 @@ export class WorkFromHomeDayService
     }
   }
 
+  /** Explicitly chosen WFH employees must take part in HR processes. */
+  private async assertHrProcessEmployees(
+    employeeIds: string[],
+    companyId: string,
+  ): Promise<void> {
+    const unique = [...new Set(employeeIds)];
+    if (unique.length === 0) {
+      return;
+    }
+    const eligible = await this.prisma.user.count({
+      where: activeOnly(hrProcessEmployeeWhere({ companyId, id: { in: unique } })),
+    });
+    if (eligible !== unique.length) {
+      throw new BadRequestException(
+        `${EXCLUDED_FROM_HR_MESSAGE} (or was not found)`,
+      );
+    }
+  }
+
   private async assertEmployeesUnderDiscipline(
     employeeIds: string[],
     ledDisciplineIds: string[],
@@ -1107,12 +1134,14 @@ export class WorkFromHomeDayService
       throw new BadRequestException('Select at least one employee');
     }
     const users = await this.prisma.user.findMany({
-      where: activeOnly({
-        companyId,
-        id: { in: employeeIds },
-        isActive: true,
-        engineeringDisciplineId: { in: ledDisciplineIds },
-      }),
+      where: activeOnly(
+        hrProcessEmployeeWhere({
+          companyId,
+          id: { in: employeeIds },
+          isActive: true,
+          engineeringDisciplineId: { in: ledDisciplineIds },
+        }),
+      ),
       select: { id: true },
     });
     if (users.length !== employeeIds.length) {

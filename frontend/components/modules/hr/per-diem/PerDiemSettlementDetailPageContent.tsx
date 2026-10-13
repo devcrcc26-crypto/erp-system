@@ -302,7 +302,10 @@ export default function PerDiemSettlementDetailPageContent({
               </h3>
             </div>
             <div className="erp-employee-section-body">
-              <ApprovalTierTimeline tiers={tiers} />
+              <ApprovalTierTimeline
+                tiers={tiers}
+                currentTier={settlement.approvalRequest?.currentTier ?? 0}
+              />
             </div>
           </div>
         ) : null}

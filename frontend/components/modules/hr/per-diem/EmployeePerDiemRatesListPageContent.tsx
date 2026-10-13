@@ -268,7 +268,7 @@ export default function EmployeePerDiemRatesListPageContent(): React.ReactNode {
             return (
               <StatusBadge
                 label={t('pages.hr.employeePerDiemRates.notConfigured')}
-                variant="draft"
+                variant="default"
               />
             );
           }

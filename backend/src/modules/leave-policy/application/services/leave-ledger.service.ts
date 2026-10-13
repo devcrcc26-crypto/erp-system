@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { isExcludedFromHrProcesses } from '../../../../shared/prisma/hr-process.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import {
@@ -1549,7 +1550,7 @@ export class LeaveLedgerService {
       id: user.id,
       companyId: user.companyId,
       anchor: anchor ? toDateOnlyUtc(anchor) : null,
-      excluded: user.excludedFromHrProcesses === true,
+      excluded: isExcludedFromHrProcesses(user),
       gender: user.gender,
       policyId: user.leavePolicy ? user.leavePolicyId : null,
       rules: new Map(

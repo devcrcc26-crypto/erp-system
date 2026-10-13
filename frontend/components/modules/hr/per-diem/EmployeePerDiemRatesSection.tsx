@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Button, Form, InputNumber, Space, Spin, Switch } from 'antd';
+import { Alert, Button, Form, InputNumber, Space, Spin, Switch } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { Wallet } from 'lucide-react';
 import {
   PER_DIEM_CATEGORY_FIELDS,
   PER_DIEM_DESTINATION_CATEGORIES,
+  type PerDiemActiveField,
   type PerDiemDestinationCategory,
+  type PerDiemRateField,
 } from '@/lib/constants/per-diem-destination-categories';
 import {
   useEmployeePerDiemRate,
@@ -23,7 +25,9 @@ import { formatEtbAmount } from '@/lib/utils/expense-claim-display';
 
 const ETB = 'ETB';
 
-type FormValues = Record<string, number | boolean | null | undefined>;
+type FormValues = Partial<
+  Record<PerDiemRateField, number | null> & Record<PerDiemActiveField, boolean>
+>;
 
 const CATEGORY_ACCENT: Record<PerDiemDestinationCategory, string> = {
   Domestic: '#1d9e75',

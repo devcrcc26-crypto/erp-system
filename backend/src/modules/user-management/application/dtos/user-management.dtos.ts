@@ -434,6 +434,8 @@ export class CreateUserDto {
   workScheduleId?: string;
 }
 
+export const EXCLUDED_REASON_MAX = 500;
+
 export class UpdateUserDto extends PartialType(
   OmitType(CreateUserDto, [
     'discipline',
@@ -492,6 +494,28 @@ export class UpdateUserDto extends PartialType(
   @ValidateIf((_, value) => value !== null)
   @IsEntityUuid()
   positionId?: string | null;
+
+  /**
+   * Approver only — excluded from HR processes. PATCH /users/:id requires
+   * users.edit, so only holders of that permission can set it. Audited.
+   */
+  @ApiPropertyOptional({
+    description: 'Approver only — excluded from HR processes (users.edit; audited)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  excludedFromHrProcesses?: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    maxLength: EXCLUDED_REASON_MAX,
+    description: 'Why the account is approver-only (kept only while excluded)',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(EXCLUDED_REASON_MAX)
+  excludedReason?: string | null;
 }
 
 export class UsersQueryDto extends PaginationQueryDto {

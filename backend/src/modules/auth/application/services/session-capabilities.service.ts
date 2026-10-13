@@ -122,6 +122,7 @@ export class SessionCapabilitiesService {
     return {
       canManageUsers: users.canView,
       canCreateUsers: users.canCreate,
+      canEditUsers: users.canEdit,
       canManageRoles: roles.canView,
       canEditRoles: roles.canEdit,
       canViewNotifications: true,

@@ -42,9 +42,13 @@ export function useSiteAssignment(id: string, enabled = true) {
   });
 }
 
-export function useEmployeeSiteAssignments(employeeId: string, enabled = true) {
+export function useEmployeeSiteAssignments(
+  employeeId: string | undefined,
+  enabled = true,
+) {
   return useQuery({
-    queryKey: siteAssignmentKeys.employee(employeeId),
+    // Disabled (and never fetched) while employeeId is empty.
+    queryKey: siteAssignmentKeys.employee(employeeId ?? ''),
     queryFn: () =>
       apiGet<SiteAssignmentListItem[]>(`${PATH}/employee/${employeeId}`),
     enabled: enabled && Boolean(employeeId),

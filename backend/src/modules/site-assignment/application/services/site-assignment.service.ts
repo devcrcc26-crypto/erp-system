@@ -134,7 +134,7 @@ export class SiteAssignmentService
     companyId: string,
     userId: string,
   ): Promise<unknown> {
-    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+    const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
       userId,
       companyId,
       dto.onBehalfOfEmployeeId,

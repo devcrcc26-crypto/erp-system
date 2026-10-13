@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { HrReportQueryDto } from '../dtos/hr-report.dtos';
@@ -190,11 +191,12 @@ export class HrReportService {
       ? { employeeId: { in: employeeScope } }
       : {};
 
-    const userScopeWhere = {
+    // Headcount / demographics count HR-process employees only (no approver-only).
+    const userScopeWhere = hrProcessEmployeeWhere({
       companyId,
       deletedAt: null,
       ...(departmentId ? { departmentId } : {}),
-    };
+    });
 
     const [
       activeEmployees,
@@ -219,36 +221,21 @@ export class HrReportService {
       evaluationRows,
     ] = await Promise.all([
       this.prisma.user.count({
-        where: activeOnly({
-          companyId,
-          isActive: true,
-          ...(departmentId ? { departmentId } : {}),
-        }),
+        where: { ...userScopeWhere, isActive: true },
       }),
       this.prisma.user.count({
-        where: activeOnly({
-          companyId,
-          isActive: false,
-          ...(departmentId ? { departmentId } : {}),
-        }),
+        where: { ...userScopeWhere, isActive: false },
       }),
       this.prisma.user.count({
-        where: activeOnly({
-          companyId,
-          createdAt: { gte: from, lte: to },
-          ...(departmentId ? { departmentId } : {}),
-        }),
+        where: { ...userScopeWhere, createdAt: { gte: from, lte: to } },
       }),
       this.prisma.user.count({
-        where: activeOnly({ companyId, isActive: true, departmentId: null }),
+        where: activeOnly(
+          hrProcessEmployeeWhere({ companyId, isActive: true, departmentId: null }),
+        ),
       }),
       this.prisma.user.count({
-        where: activeOnly({
-          companyId,
-          isActive: true,
-          leavePolicyId: null,
-          ...(departmentId ? { departmentId } : {}),
-        }),
+        where: { ...userScopeWhere, isActive: true, leavePolicyId: null },
       }),
       this.prisma.user.groupBy({
         by: ['departmentId'],

@@ -7,9 +7,9 @@ export const PER_DIEM_DESTINATION_CATEGORIES = [
 export type PerDiemDestinationCategory =
   (typeof PER_DIEM_DESTINATION_CATEGORIES)[number];
 
-type RateField = 'domesticRate' | 'regionalRate' | 'internationalRate';
+export type PerDiemRateField = 'domesticRate' | 'regionalRate' | 'internationalRate';
 
-type ActiveField =
+export type PerDiemActiveField =
   | 'domesticActive'
   | 'regionalActive'
   | 'internationalActive';
@@ -17,8 +17,8 @@ type ActiveField =
 export const PER_DIEM_CATEGORY_FIELDS: Record<
   PerDiemDestinationCategory,
   {
-    rate: RateField;
-    active: ActiveField;
+    rate: PerDiemRateField;
+    active: PerDiemActiveField;
     labelKey: string;
     descriptionKey: string;
   }

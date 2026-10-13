@@ -191,6 +191,15 @@ export function useCanManageUsers(): boolean {
 }
 
 /**
+ * True when the session holds users.edit — the permission the backend requires
+ * for login-name changes, the approver-only flag and HR password resets.
+ * hr.view alone is read-only for these.
+ */
+export function useCanEditUsers(): boolean {
+  return useAuthStore((state) => state.capabilities.canEditUsers);
+}
+
+/**
  * True when the session holds the System Administrator role
  * (not merely Project Administrator / elevated access).
  */

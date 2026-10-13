@@ -27,8 +27,8 @@ import {
 } from '@/components/modules/users/add-employee/add-employee.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useAppMessage } from '@/hooks/use-app-message';
-import { useIsSystemAdmin } from '@/hooks/use-auth-capabilities';
-import { toApiRequestError } from '@/lib/api/errors';
+import { useCanEditUsers, useIsSystemAdmin } from '@/hooks/use-auth-capabilities';
+import { ApiRequestError, toApiRequestError } from '@/lib/api/errors';
 import type { CreateUserRequest, UpdateUserRequest, UserDetail } from '@/lib/api/types';
 import { SYSTEM_ADMINISTRATOR_ROLE } from '@/lib/constants/protected-accounts';
 import {
@@ -75,6 +75,8 @@ function buildFormValuesFromUser(user: UserDetail): AddEmployeeFormValues {
     reportsToUserId: user.reportsToUserId ?? undefined,
     engineeringDisciplineId: user.engineeringDisciplineId ?? undefined,
     isActive: user.isActive,
+    excludedFromHrProcesses: Boolean(user.excludedFromHrProcesses),
+    excludedReason: user.excludedReason ?? '',
     roleAssignments,
     roleId: roleAssignments.find((role) => role.isPrimary)?.roleId,
     ...employeeProfileInitialValues(user),
@@ -165,6 +167,10 @@ export default function AddEmployeeForm({
   const rolesQuery = useRoles();
   const roles = rolesQuery.data?.data ?? [];
   const viewerIsAdmin = useIsSystemAdmin();
+  // Approver-only flag: PATCH /users/:id accepts it only for users.edit.
+  const canEditUsers = useCanEditUsers();
+  const showApproverOnly = isEdit && canEditUsers;
+  const approverOnlyValue = Form.useWatch('excludedFromHrProcesses', form);
   const availableRoles = useMemo(
     () =>
       roles
@@ -283,6 +289,14 @@ export default function AddEmployeeForm({
           engineeringDisciplineId: values.engineeringDisciplineId ?? null,
           isActive: values.isActive,
           ...buildEmployeeProfilePayload(values),
+          ...(showApproverOnly
+            ? {
+                excludedFromHrProcesses: Boolean(values.excludedFromHrProcesses),
+                excludedReason: values.excludedFromHrProcesses
+                  ? values.excludedReason?.trim() || null
+                  : null,
+              }
+            : {}),
         };
 
         await updateUser.mutateAsync({ userId, body });
@@ -524,6 +538,25 @@ export default function AddEmployeeForm({
                     unCheckedChildren={t('common.inactive')}
                   />
                 </Form.Item>
+                {showApproverOnly ? (
+                  <Form.Item
+                    label={t('users.approverOnlySwitch')}
+                    name="excludedFromHrProcesses"
+                    valuePropName="checked"
+                    extra={t('users.approverOnlyHint')}
+                  >
+                    <Switch />
+                  </Form.Item>
+                ) : null}
+                {showApproverOnly && approverOnlyValue ? (
+                  <Form.Item
+                    label={t('users.approverOnlyReason')}
+                    name="excludedReason"
+                    rules={[{ max: 500 }]}
+                  >
+                    <Input placeholder={t('users.approverOnlyReasonPlaceholder')} />
+                  </Form.Item>
+                ) : null}
               </div>
             </FormLayout>
           </div>
@@ -688,6 +721,8 @@ export default function AddEmployeeForm({
       t,
       hasEmail,
       isEdit,
+      showApproverOnly,
+      approverOnlyValue,
       userId,
       userQuery.data,
       profileMode,

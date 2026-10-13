@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 /**
- * Runs `tsc --noEmit` and enforces a committed error baseline.
+ * Runs `tsc --noEmit` and enforces a committed per-file error baseline.
  *
- * - Fails if the error count grows, or if any new file starts erroring.
- * - When the count shrinks (or the file set shrinks with equal/lower count),
- *   rewrites the baseline so fixed errors permanently lower the bar.
+ * The baseline records, per file, the error count and each error's signature
+ * (`TSxxxx: message`, no line/column so unrelated edits don't shift it).
+ *
+ * - Fails if any file has an error that is not in its baseline: a higher count,
+ *   a new file, or the same count with a different error (fixing one error and
+ *   adding another in the same file). Fixes elsewhere never offset new errors.
+ * - When nothing new appeared and at least one error was fixed, rewrites the
+ *   baseline to the current state so fixed errors permanently lower the bar.
+ * - Fails if tsc exits non-zero without parseable errors (crash / config
+ *   error), so a broken run can never rewrite the baseline to 0.
  *
  * Usage: node scripts/typecheck-baseline.mjs
  * npm:   npm run typecheck:baseline
@@ -23,7 +30,9 @@ const ERROR_LINE =
   /^(.+?)\((\d+),(\d+)\):\s+error\s+(TS\d+):\s*(.*)$/;
 
 /**
- * @typedef {{ count: number, files: string[], updatedAt?: string }} Baseline
+ * @typedef {{ count: number, errors: string[] }} FileEntry
+ * @typedef {Record<string, FileEntry>} FileMap
+ * @typedef {{ count: number, files: FileMap, updatedAt?: string }} Baseline
  */
 
 /**
@@ -35,7 +44,22 @@ function normalizePath(filePath) {
 }
 
 /**
- * @returns {{ count: number, files: string[], errors: string[] }}
+ * @param {FileMap} files
+ * @returns {FileMap}
+ */
+function sortFiles(files) {
+  return Object.fromEntries(
+    Object.entries(files)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([file, entry]) => [
+        file,
+        { count: entry.errors.length, errors: [...entry.errors].sort() },
+      ]),
+  );
+}
+
+/**
+ * @returns {{ count: number, files: FileMap, lines: string[] }}
  */
 function runTsc() {
   const result = spawnSync(
@@ -50,24 +74,27 @@ function runTsc() {
   );
 
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  const lines = output.split(/\r?\n/).filter(Boolean);
   /** @type {string[]} */
-  const errors = [];
-  /** @type {Set<string>} */
-  const files = new Set();
+  const lines = [];
+  /** @type {FileMap} */
+  const files = {};
 
-  for (const line of lines) {
+  for (const line of output.split(/\r?\n/)) {
     const match = ERROR_LINE.exec(line);
     if (!match) continue;
-    errors.push(line);
-    files.add(normalizePath(match[1]));
+    lines.push(normalizePath(line));
+    const file = normalizePath(match[1]);
+    files[file] ??= { count: 0, errors: [] };
+    files[file].errors.push(`${match[4]}: ${match[5].trim()}`);
   }
 
-  return {
-    count: errors.length,
-    files: [...files].sort((a, b) => a.localeCompare(b)),
-    errors,
-  };
+  if (result.error || (result.status !== 0 && lines.length === 0)) {
+    console.error('tsc did not run cleanly and reported no parseable errors:');
+    console.error(result.error?.message ?? output.trim().slice(0, 2000));
+    process.exit(2);
+  }
+
+  return { count: lines.length, files: sortFiles(files), lines };
 }
 
 /**
@@ -76,80 +103,114 @@ function runTsc() {
 function loadBaseline() {
   if (!existsSync(baselinePath)) return null;
   const raw = JSON.parse(readFileSync(baselinePath, 'utf8'));
-  return {
-    count: Number(raw.count),
-    files: (raw.files ?? []).map(normalizePath).sort((a, b) => a.localeCompare(b)),
-    updatedAt: raw.updatedAt,
-  };
+  if (Array.isArray(raw.files)) {
+    throw new Error(
+      `${relative(frontendRoot, baselinePath)} uses the old file-list format; ` +
+        'delete it and re-run to record per-file errors.',
+    );
+  }
+  /** @type {FileMap} */
+  const files = {};
+  for (const [file, entry] of Object.entries(raw.files ?? {})) {
+    files[normalizePath(file)] = {
+      count: Number(entry.count),
+      errors: entry.errors ?? [],
+    };
+  }
+  return { count: Number(raw.count), files, updatedAt: raw.updatedAt };
 }
 
 /**
- * @param {Baseline} baseline
+ * @param {{ count: number, files: FileMap }} baseline
  */
 function writeBaseline(baseline) {
   const payload = {
     count: baseline.count,
-    files: baseline.files,
+    files: sortFiles(baseline.files),
     updatedAt: new Date().toISOString(),
   };
   writeFileSync(baselinePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
+/**
+ * Multiset difference: signatures in `current` not covered by `allowed`.
+ * @param {string[]} current
+ * @param {string[]} allowed
+ * @returns {string[]}
+ */
+function uncovered(current, allowed) {
+  /** @type {Map<string, number>} */
+  const remaining = new Map();
+  for (const sig of allowed) remaining.set(sig, (remaining.get(sig) ?? 0) + 1);
+  return current.filter((sig) => {
+    const left = remaining.get(sig) ?? 0;
+    if (left === 0) return true;
+    remaining.set(sig, left - 1);
+    return false;
+  });
+}
+
 function main() {
   const current = runTsc();
   const baseline = loadBaseline();
+  const fileCount = (/** @type {FileMap} */ files) => Object.keys(files).length;
 
   if (!baseline) {
-    writeBaseline({ count: current.count, files: current.files });
+    writeBaseline(current);
     console.log(
-      `Created typecheck baseline: ${current.count} errors across ${current.files.length} files.`,
+      `Created typecheck baseline: ${current.count} errors across ${fileCount(current.files)} files.`,
     );
     console.log(`Wrote ${relative(frontendRoot, baselinePath)}`);
     process.exit(current.count > 0 ? 1 : 0);
   }
 
-  const baselineFileSet = new Set(baseline.files);
-  const newFiles = current.files.filter((f) => !baselineFileSet.has(f));
-  const countGrew = current.count > baseline.count;
-  const filesGrew = newFiles.length > 0;
+  const regressions = Object.entries(current.files)
+    .map(([file, entry]) => {
+      const was = baseline.files[file] ?? { count: 0, errors: [] };
+      return {
+        file,
+        count: entry.count,
+        was: was.count,
+        added: uncovered(entry.errors, was.errors),
+      };
+    })
+    .filter(({ count, was, added }) => count > was || added.length > 0);
 
-  if (countGrew || filesGrew) {
-    console.error('Typecheck baseline regression.');
-    console.error(
-      `  Errors: ${current.count} (baseline ${baseline.count})${countGrew ? ' — count grew' : ''}`,
-    );
-    console.error(
-      `  Files:  ${current.files.length} (baseline ${baseline.files.length})${filesGrew ? ' — new erroring files' : ''}`,
-    );
-    if (newFiles.length > 0) {
-      console.error('  New erroring files:');
-      for (const f of newFiles) console.error(`    - ${f}`);
-    }
-    const sample = current.errors.slice(0, 20);
-    if (sample.length > 0) {
-      console.error('  Sample errors:');
-      for (const line of sample) console.error(`    ${line}`);
-      if (current.errors.length > sample.length) {
-        console.error(`    … and ${current.errors.length - sample.length} more`);
+  if (regressions.length > 0) {
+    console.error('Typecheck baseline regression (new errors per file):');
+    for (const { file, count, was, added } of regressions) {
+      const note =
+        was === 0 ? ' (new erroring file)' : count <= was ? ' (error swapped)' : '';
+      console.error(`  ${file}: ${was} → ${count}${note}`);
+      for (const sig of added) console.error(`    + ${sig}`);
+      for (const line of current.lines.filter((l) => l.startsWith(`${file}(`))) {
+        console.error(`      ${line}`);
       }
     }
+    console.error(
+      `  Total: ${current.count} (baseline ${baseline.count}). ` +
+        'Fix the new errors; fixing errors elsewhere does not offset them.',
+    );
     process.exit(1);
   }
 
-  const countDropped = current.count < baseline.count;
-  const filesDropped =
-    current.files.length < baseline.files.length ||
-    baseline.files.some((f) => !current.files.includes(f));
+  const lowered = Object.entries(baseline.files).filter(
+    ([file, was]) => (current.files[file]?.count ?? 0) < was.count,
+  );
 
-  if (countDropped || filesDropped) {
-    writeBaseline({ count: current.count, files: current.files });
+  if (lowered.length > 0) {
+    writeBaseline(current);
     console.log(
-      `Baseline lowered: ${baseline.count} → ${current.count} errors; ${baseline.files.length} → ${current.files.length} files.`,
+      `Baseline lowered: ${baseline.count} → ${current.count} errors; ` +
+        `${fileCount(baseline.files)} → ${fileCount(current.files)} files.`,
     );
+    for (const [file, was] of lowered) {
+      console.log(`  ${file}: ${was.count} → ${current.files[file]?.count ?? 0}`);
+    }
     console.log(`Updated ${relative(frontendRoot, baselinePath)}`);
   } else {
     console.log(
-      `Typecheck baseline OK: ${current.count} errors across ${current.files.length} files (unchanged).`,
+      `Typecheck baseline OK: ${current.count} errors across ${fileCount(current.files)} files (unchanged).`,
     );
   }
 

@@ -31,6 +31,7 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   buildPaginatedResult,
@@ -562,13 +563,13 @@ export class AttendanceService
     }
 
     const activeEmployees = await this.prisma.user.findMany({
-      where: {
+      where: hrProcessEmployeeWhere({
         companyId,
         deletedAt: null,
         isActive: true,
         includeInPayroll: true,
         attendanceMode: AttendanceMode.SCANNER,
-      },
+      }),
       select: {
         id: true,
         firstName: true,
@@ -1000,13 +1001,14 @@ export class AttendanceService
     >();
 
     if (assignmentEmployeeIds.length > 0) {
+      // Approver-only accounts cannot receive attendance (reported as not found).
       const employees = await this.prisma.user.findMany({
-        where: {
+        where: hrProcessEmployeeWhere({
           companyId,
           deletedAt: null,
           isActive: true,
           id: { in: [...new Set(assignmentEmployeeIds)] },
-        },
+        }),
         select: {
           id: true,
           firstName: true,
@@ -1224,13 +1226,13 @@ export class AttendanceService
 
     // EXEMPT employees (include freelancers) get full-presence records.
     const exemptEmployees = await this.prisma.user.findMany({
-      where: {
+      where: hrProcessEmployeeWhere({
         companyId,
         deletedAt: null,
         isActive: true,
         includeInPayroll: true,
         attendanceMode: AttendanceMode.EXEMPT,
-      },
+      }),
       select: {
         id: true,
         firstName: true,
@@ -1722,16 +1724,16 @@ export class AttendanceService
     }
 
     return this.prisma.user.findMany({
-      where: {
+      where: hrProcessEmployeeWhere({
         companyId,
         deletedAt: null,
         isActive: true,
         OR: [
-          { firstName: { contains: trimmed, mode: 'insensitive' } },
-          { lastName: { contains: trimmed, mode: 'insensitive' } },
-          { employeeId: { contains: trimmed, mode: 'insensitive' } },
+          { firstName: { contains: trimmed, mode: 'insensitive' as const } },
+          { lastName: { contains: trimmed, mode: 'insensitive' as const } },
+          { employeeId: { contains: trimmed, mode: 'insensitive' as const } },
         ],
-      },
+      }),
       select: {
         id: true,
         firstName: true,
@@ -1779,7 +1781,7 @@ export class AttendanceService
           : {}),
       ...(isHrViewer && filters.search?.trim()
         ? {
-            employee: {
+            employee: hrProcessEmployeeWhere({
               OR: [
                 {
                   firstName: {
@@ -1806,9 +1808,9 @@ export class AttendanceService
                   },
                 },
               ],
-            },
+            }),
           }
-        : {}),
+        : { employee: hrProcessEmployeeWhere() }),
     };
 
     const [rows, total] = await Promise.all([
@@ -2417,7 +2419,7 @@ export class AttendanceService
       where: {
         companyId,
         matchMethod: AttendanceMatchMethod.NEEDS_ENROLMENT,
-        employee: { deletedAt: null, isActive: true },
+        employee: hrProcessEmployeeWhere({ deletedAt: null, isActive: true }),
       },
       select: { employeeId: true },
       distinct: ['employeeId'],
@@ -3239,6 +3241,7 @@ export class AttendanceService
       where: {
         importBatchId: approval.importBatchId,
         flaggedDays: { gt: 0 },
+        employee: hrProcessEmployeeWhere(),
       },
       include: {
         employee: {

@@ -48,7 +48,8 @@ import TableEmptyState from '@/components/ui/TableEmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import UserImportModal from '@/components/modules/users/UserImportModal';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { useIsSystemAdmin } from '@/hooks/use-auth-capabilities';
+import { useCanEditUsers, useIsSystemAdmin } from '@/hooks/use-auth-capabilities';
+import { ApproverOnlyTag } from '@/components/modules/users/EmployeeApproverOnlyField';
 import { useTablePagination } from '@/hooks/use-table-pagination';
 import { ApiRequestError } from '@/lib/api/errors';
 import {
@@ -76,6 +77,7 @@ import {
   type UsersListSortField,
 } from '@/lib/utils/users-list-filter';
 import { formatUserName, pickTopLevelRoleName } from '@/lib/utils/user-display';
+import { canResetUserPassword } from '@/lib/utils/user-permissions';
 import { getRoleColor, formatRoleDisplayName } from '@/lib/utils/role-colors';
 import {
   userStatusLabel,
@@ -252,6 +254,7 @@ export default function UsersPageContent(): React.ReactNode {
   const isCompact = screens.md === false;
   const isNarrow = screens.sm === false;
   const viewerIsAdmin = useIsSystemAdmin();
+  const canEditUsers = useCanEditUsers();
   const { params, bindMeta, resetPage } = useTablePagination(10);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [actionMessage, setActionMessage] = useState<{
@@ -581,7 +584,7 @@ export default function UsersPageContent(): React.ReactNode {
       });
     }
 
-    if (user.isActive) {
+    if (canResetUserPassword(user, canEditUsers)) {
       items.push({
         key: 'reset-password',
         icon: <KeyOutlined />,
@@ -974,6 +977,7 @@ export default function UsersPageContent(): React.ReactNode {
                             value={fullName}
                             className="erp-users-name whitespace-normal break-words"
                           />
+                          {record.excludedFromHrProcesses ? <ApproverOnlyTag /> : null}
                         </div>
                         {record.email ? (
                           <TruncateText

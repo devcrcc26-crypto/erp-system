@@ -137,6 +137,12 @@ export class CapabilitiesDto {
   @ApiProperty({ description: 'Can create new users' })
   canCreateUsers!: boolean;
 
+  @ApiProperty({
+    description:
+      'users.edit — edit employees, login name, approver-only flag, reset password',
+  })
+  canEditUsers!: boolean;
+
   @ApiProperty({ description: 'Can list and view roles' })
   canManageRoles!: boolean;
 

@@ -306,7 +306,7 @@ export class OvertimeService
       throw new BadRequestException('Cannot open a sheet for a future month');
     }
 
-    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+    const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
       userId,
       companyId,
       dto.onBehalfOfEmployeeId,

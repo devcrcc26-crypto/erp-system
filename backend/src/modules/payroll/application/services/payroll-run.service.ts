@@ -18,6 +18,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { randomUUID } from 'crypto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import {
   PayrollCalculationService,
   type OvertimeHours,
@@ -881,13 +882,14 @@ export class PayrollRunService {
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
     const monthEnd = new Date(Date.UTC(year, month, 0));
 
+    // Approver-only accounts get no payroll entry (and so no flags / MISSING_CONTRACT).
     const employees = await this.prisma.user.findMany({
-      where: {
+      where: hrProcessEmployeeWhere({
         companyId: ctx.companyId,
         isActive: true,
         includeInPayroll: true,
         deletedAt: null,
-      },
+      }),
       select: {
         id: true,
         firstName: true,

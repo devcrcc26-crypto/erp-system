@@ -1,12 +1,25 @@
 import { StrictMode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EMPTY_CAPABILITIES } from '@/lib/api/types';
+import { useAuthStore } from '@/stores/auth.store';
 import AddEmployeeForm from './AddEmployeeForm';
+
+// The DatePicker popup observes its size; jsdom has no ResizeObserver.
+beforeAll(() => {
+  class ResizeObserverStub {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  vi.stubGlobal('ResizeObserver', ResizeObserverStub);
+});
 
 const mockUseUser = vi.fn();
 const mockUpdateUser = vi.fn();
 const mockCreateUser = vi.fn();
+const mockAssignRole = vi.fn();
 
 const idleMutation = (): { mutateAsync: ReturnType<typeof vi.fn>; isPending: boolean } => ({
   mutateAsync: vi.fn().mockResolvedValue({}),
@@ -17,8 +30,9 @@ vi.mock('@/lib/query/users', () => ({
   useUser: (...args: unknown[]) => mockUseUser(...args),
   useCreateUser: () => ({ mutateAsync: mockCreateUser, isPending: false }),
   useUpdateUser: () => ({ mutateAsync: mockUpdateUser, isPending: false }),
-  useAssignRole: () => idleMutation(),
+  useAssignRole: () => ({ mutateAsync: mockAssignRole, isPending: false }),
   useRevokeRole: () => idleMutation(),
+  useSetPrimaryRole: () => idleMutation(),
   useUploadUserDocuments: () => idleMutation(),
   useUploadUserPhoto: () => idleMutation(),
 }));
@@ -29,8 +43,10 @@ vi.mock('@/lib/query/org', () => ({
   useEngineeringDisciplineOptions: () => ({ options: [], isLoading: false }),
 }));
 
+const EMPLOYEE_ROLE = { id: 'role-employee', name: 'Employee', isActive: true };
+
 vi.mock('@/lib/query/roles', () => ({
-  useRoles: () => ({ data: { data: [] }, isLoading: false }),
+  useRoles: () => ({ data: { data: [EMPLOYEE_ROLE] }, isLoading: false }),
 }));
 
 vi.mock('@/lib/query/leave-policy', () => ({
@@ -89,11 +105,13 @@ const USER = {
   educationLevel: 'BSC',
   fieldOfStudy: 'Civil Engineering',
   experienceStartDate: '2015-09-01',
+  employmentDate: '2020-03-01',
   addressCountry: 'Ethiopia',
   addressCity: 'Addis Ababa',
   emergencyContacts: [{ firstName: 'Wei', lastName: 'Chen', phone: '+251900000000' }],
   isActive: true,
-  userRoles: [],
+  // Roles are required (exactly one primary) since multi-role assignment.
+  userRoles: [{ roleId: 'role-employee', isPrimary: true, role: { name: 'Employee' } }],
 };
 
 function renderEditForm(): void {
@@ -182,11 +200,33 @@ describe('AddEmployeeForm (edit mode)', () => {
       educationLevel: 'BSC',
       fieldOfStudy: 'Civil Engineering',
       experienceStartDate: '2015-09-01',
+      employmentDate: '2020-03-01',
       addressCountry: 'Ethiopia',
       addressCity: 'Addis Ababa',
     });
     expect(body.emergencyContacts).toHaveLength(1);
-  });
+    // Role unchanged, so no role API calls.
+    expect(mockAssignRole).not.toHaveBeenCalled();
+  }, 20_000);
+
+  it('saves a changed employment date', async () => {
+    const user = userEvent.setup();
+    renderEditForm();
+    const picker = inputFor('users.form.employmentDate');
+    await waitFor(() => expect(picker).toHaveValue('2020-03-01'));
+
+    await user.click(picker);
+    await user.clear(picker);
+    await user.type(picker, '2024-03-15{Enter}');
+    await waitFor(() => expect(picker).toHaveValue('2024-03-15'));
+    await clickThroughAndSubmit(user, 'common.saveChanges');
+
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
+    const { body } = mockUpdateUser.mock.calls[0][0] as {
+      body: Record<string, unknown>;
+    };
+    expect(body.employmentDate).toBe('2024-03-15');
+  }, 20_000);
 
   it('sends values typed during an edit', async () => {
     const user = userEvent.setup();
@@ -205,13 +245,64 @@ describe('AddEmployeeForm (edit mode)', () => {
       body: Record<string, unknown>;
     };
     expect(body).toMatchObject({ addressCity: 'Adama', addressWoreda: '05' });
+  }, 20_000);
+});
+
+describe('AddEmployeeForm (edit mode) — approver-only switch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUpdateUser.mockResolvedValue({});
+    mockUseUser.mockReturnValue({ isLoading: false, isError: false, data: USER, error: null });
   });
+
+  afterEach(() => {
+    useAuthStore.setState({ capabilities: { ...EMPTY_CAPABILITIES } });
+  });
+
+  it('is hidden for hr.view without users.edit, and never sent', async () => {
+    useAuthStore.setState({
+      capabilities: { ...EMPTY_CAPABILITIES, canViewHr: true, canEditHr: true },
+    });
+    const user = userEvent.setup();
+    renderEditForm();
+    await waitFor(() => expect(screen.getByDisplayValue('Jinxia')).toBeInTheDocument());
+
+    expect(screen.queryByLabelText('users.approverOnlySwitch')).not.toBeInTheDocument();
+    await clickThroughAndSubmit(user, 'common.saveChanges');
+
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
+    const { body } = mockUpdateUser.mock.calls[0][0] as { body: Record<string, unknown> };
+    expect(body).not.toHaveProperty('excludedFromHrProcesses');
+    expect(body).not.toHaveProperty('excludedReason');
+  }, 20_000);
+
+  it('users.edit can mark the employee approver-only with a reason', async () => {
+    useAuthStore.setState({
+      capabilities: { ...EMPTY_CAPABILITIES, canViewHr: true, canEditUsers: true },
+    });
+    const user = userEvent.setup();
+    renderEditForm();
+    const toggle = await screen.findByLabelText('users.approverOnlySwitch');
+    expect(toggle).not.toBeChecked();
+
+    await user.click(toggle);
+    await user.type(await screen.findByLabelText('users.approverOnlyReason'), 'External director');
+    await clickThroughAndSubmit(user, 'common.saveChanges');
+
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledTimes(1));
+    const { body } = mockUpdateUser.mock.calls[0][0] as { body: Record<string, unknown> };
+    expect(body).toMatchObject({
+      excludedFromHrProcesses: true,
+      excludedReason: 'External director',
+    });
+  }, 20_000);
 });
 
 describe('AddEmployeeForm (create mode)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCreateUser.mockResolvedValue({ id: 'new-user' });
+    mockAssignRole.mockResolvedValue({});
     mockUseUser.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -221,7 +312,8 @@ describe('AddEmployeeForm (create mode)', () => {
   });
 
   it('sends every typed profile field when creating an employee', async () => {
-    const user = userEvent.setup();
+    // Lots of typing: skip userEvent's per-keystroke delay so it fits the timeout under load.
+    const user = userEvent.setup({ delay: null });
     render(
       <StrictMode>
         <AddEmployeeForm onSuccess={vi.fn()} />
@@ -240,6 +332,8 @@ describe('AddEmployeeForm (create mode)', () => {
     await user.type(inputFor('users.form.nationalId'), 'NID-9');
     await user.type(inputFor('users.form.addressCity'), 'Addis Ababa');
     await user.type(inputFor('users.form.fieldOfStudy'), 'Surveying');
+    // Roles are required: the first added role becomes primary.
+    await user.click(screen.getByRole('button', { name: /users\.addAnotherRole/ }));
     await clickThroughAndSubmit(user, 'users.sendInvitation');
 
     await waitFor(() => expect(mockCreateUser).toHaveBeenCalledTimes(1));
@@ -255,5 +349,34 @@ describe('AddEmployeeForm (create mode)', () => {
       addressCity: 'Addis Ababa',
       fieldOfStudy: 'Surveying',
     });
+    await waitFor(() =>
+      expect(mockAssignRole).toHaveBeenCalledWith({
+        userId: 'new-user',
+        roleId: 'role-employee',
+        isPrimary: true,
+      }),
+    );
+  }, 20_000);
+
+  it('saves the employment date entered for a new employee', async () => {
+    const user = userEvent.setup();
+    render(
+      <StrictMode>
+        <AddEmployeeForm onSuccess={vi.fn()} />
+      </StrictMode>,
+    );
+
+    await user.type(inputFor('users.form.firstName'), 'Abebe');
+    await user.click(screen.getByRole('button', { name: /users\.addAnotherRole/ }));
+    const picker = inputFor('users.form.employmentDate');
+    await user.click(picker);
+    await user.type(picker, '2023-07-10{Enter}');
+    await waitFor(() => expect(picker).toHaveValue('2023-07-10'));
+    // No email → record-only account ("Create user" instead of "Send invitation").
+    await clickThroughAndSubmit(user, 'users.createUser');
+
+    await waitFor(() => expect(mockCreateUser).toHaveBeenCalledTimes(1));
+    const body = mockCreateUser.mock.calls[0][0] as Record<string, unknown>;
+    expect(body.employmentDate).toBe('2023-07-10');
   }, 20_000);
 });

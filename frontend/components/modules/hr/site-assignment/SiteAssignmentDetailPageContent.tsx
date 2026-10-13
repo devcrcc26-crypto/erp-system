@@ -19,7 +19,6 @@ import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useCanViewHr } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import type { ApprovalTier } from '@/lib/api/approvals.types';
 import {
   useCancelApprovedSiteAssignment,
   useCancelSiteAssignment,
@@ -30,28 +29,10 @@ import { useCurrentUser } from '@/lib/query/profile';
 import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
+import { siteAssignmentStatusVariant } from '@/lib/utils/site-assignment-display';
 import { formatUserName } from '@/lib/utils/user-display';
 
 const LIST_PATH = '/hr/site-assignments';
-
-function statusVariant(
-  status: string,
-): 'approved' | 'pending' | 'rejected' | 'draft' {
-  if (status === 'APPROVED') {
-    return 'approved';
-  }
-  if (status === 'REJECTED' || status === 'CANCELLED') {
-    return 'rejected';
-  }
-  if (
-    status === 'SUBMITTED' ||
-    status === 'IN_REVIEW' ||
-    status === 'RETURNED'
-  ) {
-    return 'pending';
-  }
-  return 'draft';
-}
 
 function DetailSection({
   title,
@@ -99,7 +80,7 @@ export default function SiteAssignmentDetailPageContent({
 
   const row = detailQuery.data;
   const isOwner = row?.employeeId === currentUser.data?.id;
-  const tiers = (row?.approvalRequest?.tiers ?? []) as ApprovalTier[];
+  const tiers = row?.approvalRequest?.tiers ?? [];
 
   async function handleEmployeeCancel(): Promise<void> {
     try {
@@ -185,7 +166,7 @@ export default function SiteAssignmentDetailPageContent({
             <div className="erp-sa-hero-title-row">
               <h2 className="erp-sa-hero-title">{row.requestNumber}</h2>
               <StatusBadge
-                variant={statusVariant(row.status)}
+                variant={siteAssignmentStatusVariant(row.status)}
                 label={t(`pages.hr.siteAssignments.status.${row.status}`)}
               />
             </div>
@@ -281,7 +262,7 @@ export default function SiteAssignmentDetailPageContent({
             </p>
             <p className="erp-sa-field-value">
               <StatusBadge
-                variant={statusVariant(row.status)}
+                variant={siteAssignmentStatusVariant(row.status)}
                 label={t(`pages.hr.siteAssignments.status.${row.status}`)}
               />
             </p>

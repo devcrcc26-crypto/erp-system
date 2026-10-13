@@ -190,7 +190,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
     return filtered.slice(start, start + meta.limit);
   }, [filtered, meta.page, meta.limit]);
 
-  const columns: ColumnsType<PerDiemRequestListItem> = useMemo(
+  const columns = useMemo<ColumnsType<PerDiemRequestListItem>>(
     () => [
       {
         title: t('hr.table.requestNumber'),
@@ -203,12 +203,12 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
         ),
       },
       ...(canViewHr
-        ? [
+        ? ([
             {
               title: t('hr.table.employee'),
               key: 'employee',
               width: 200,
-              responsive: ['md'] as const,
+              responsive: ['md'],
               render: (_: unknown, row: PerDiemRequestListItem) => (
                 <div className="min-w-0">
                   <p className="erp-users-cell-strong m-0">
@@ -222,7 +222,7 @@ export default function PerDiemRequestsListPageContent(): React.ReactNode {
                 </div>
               ),
             },
-          ]
+          ] satisfies ColumnsType<PerDiemRequestListItem>)
         : []),
       {
         title: t('hr.table.destination'),

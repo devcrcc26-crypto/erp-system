@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import Fuse from 'fuse.js';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import type {
   AttendanceDailyRaw,
   AttendanceRawRow,
@@ -118,8 +119,9 @@ export class AttendanceMatchingService {
           userId: true,
         },
       }),
+      // Approver-only accounts are never matched (rows fall to NO_MATCH).
       this.prisma.user.findMany({
-        where: { companyId, deletedAt: null },
+        where: hrProcessEmployeeWhere({ companyId, deletedAt: null }),
         select: {
           id: true,
           firstName: true,

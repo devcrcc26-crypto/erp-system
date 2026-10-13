@@ -1,3 +1,4 @@
+import type { ApprovalTier } from '@/lib/api/approvals.types';
 import type { OnBehalfPayload } from '@/lib/api/on-behalf.types';
 import type { PaginationMeta } from '@/lib/api/types';
 
@@ -63,13 +64,8 @@ export interface SiteAssignmentDetail extends SiteAssignmentListItem {
     id: string;
     status: string;
     currentTier?: number;
-    tiers: Array<{
-      id: string;
-      tierOrder: number;
-      label: string;
-      decision: string | null;
-      approver: SiteAssignmentEmployee;
-    }>;
+    /** Full tier rows (backend includes every scalar plus approver). */
+    tiers: ApprovalTier[];
     category?: { code: string; name: string; icon: string | null };
   } | null;
 }

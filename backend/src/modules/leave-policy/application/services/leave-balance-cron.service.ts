@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import {
   isEmploymentAnniversary,
   toDateOnlyUtc,
@@ -34,12 +35,11 @@ export class LeaveBalanceCronService {
     const today = toDateOnlyUtc(new Date());
 
     const employees = await this.prisma.user.findMany({
-      where: {
+      where: hrProcessEmployeeWhere({
         isActive: true,
         deletedAt: null,
-        excludedFromHrProcesses: false,
         employmentDate: { not: null },
-      },
+      }),
       select: { id: true, companyId: true, employmentDate: true },
     });
 

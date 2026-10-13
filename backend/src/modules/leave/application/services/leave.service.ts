@@ -153,7 +153,7 @@ export class LeaveService
     userId: string,
     files: UploadedFile[] = [],
   ): Promise<unknown> {
-    const employeeId = await this.onBehalfService.resolveTargetEmployeeId(
+    const employeeId = await this.onBehalfService.resolveHrProcessSubjectId(
       userId,
       companyId,
       dto.onBehalfOfEmployeeId,

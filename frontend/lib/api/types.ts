@@ -269,6 +269,9 @@ export interface User {
   lastName: string;
   chineseName: string | null;
   loginName?: string | null;
+  /** Approver only — excluded from HR processes (set by users.edit). */
+  excludedFromHrProcesses?: boolean;
+  excludedReason?: string | null;
   email: string | null;
   phone: string | null;
   preferredLanguage: string | null;
@@ -361,6 +364,9 @@ export interface CreateUserRequest {
 }
 
 export interface UpdateUserRequest {
+  /** users.edit only (PATCH /users/:id); audited. */
+  excludedFromHrProcesses?: boolean;
+  excludedReason?: string | null;
   firstName?: string;
   lastName?: string;
   chineseName?: string;
@@ -628,6 +634,8 @@ export interface AuditLogStats {
 export interface AuthCapabilities {
   canManageUsers: boolean;
   canCreateUsers: boolean;
+  /** users.edit — edit employees, login name, approver-only flag, reset password. */
+  canEditUsers: boolean;
   canManageRoles: boolean;
   canEditRoles: boolean;
   canViewNotifications: boolean;
@@ -699,6 +707,7 @@ export interface Capabilities extends AuthCapabilities {
 export const EMPTY_CAPABILITIES: Capabilities = {
   canManageUsers: false,
   canCreateUsers: false,
+  canEditUsers: false,
   canManageRoles: false,
   canEditRoles: false,
   canViewNotifications: true,

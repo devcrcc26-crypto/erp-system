@@ -9,6 +9,9 @@ import { AuditLogSource, FolderContextType, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { AUTH_AUDIT_MODULE } from '../../../auth/application/constants/login-security.constants';
+import { resolveHrProcessExclusionUpdate } from '../utils/hr-process-exclusion.util';
+
+const USERS_AUDIT_MODULE = 'users';
 import { PasswordService } from '../../../auth/application/services/password.service';
 import {
   assertPasswordPolicy,
@@ -419,6 +422,8 @@ export class UserManagementService {
         leavePolicyId: true,
         workScheduleId: true,
         loginName: true,
+        excludedFromHrProcesses: true,
+        excludedReason: true,
       },
     });
     if (!existing) {
@@ -435,6 +440,8 @@ export class UserManagementService {
       employeeId: dtoEmployeeId,
       workScheduleId,
       loginName: dtoLoginName,
+      excludedFromHrProcesses: dtoExcluded,
+      excludedReason: dtoExcludedReason,
       ...rest
     } = dto;
 
@@ -482,11 +489,37 @@ export class UserManagementService {
       data.passwordHash = await this.passwordService.hash(password);
     }
 
+    const exclusion = resolveHrProcessExclusionUpdate(existing, {
+      excludedFromHrProcesses: dtoExcluded,
+      excludedReason: dtoExcludedReason,
+    });
+    if (exclusion) {
+      data.excludedFromHrProcesses = exclusion.excludedFromHrProcesses;
+      data.excludedReason = exclusion.excludedReason;
+    }
+
     const updated = await this.prisma.user.update({
       where: { id },
       data,
       select: this.userSelect(),
     });
+
+    if (exclusion) {
+      await this.auditService.create({
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        module: USERS_AUDIT_MODULE,
+        action: 'HR_PROCESS_EXCLUSION_UPDATED',
+        recordType: 'User',
+        recordId: id,
+        beforeValue: {
+          excludedFromHrProcesses: existing.excludedFromHrProcesses,
+          excludedReason: existing.excludedReason,
+        },
+        afterValue: { ...exclusion },
+        source: AuditLogSource.USER_ACTION,
+      });
+    }
 
     if (
       dtoLoginName !== undefined &&
@@ -1325,6 +1358,8 @@ export class UserManagementService {
       employmentDate: true,
       experienceStartDate: true,
       emergencyContacts: true,
+      excludedFromHrProcesses: true,
+      excludedReason: true,
       leavePolicyId: true,
       leavePolicy: { select: { id: true, name: true } },
       workScheduleId: true,
