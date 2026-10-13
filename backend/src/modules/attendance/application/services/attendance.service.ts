@@ -5314,9 +5314,10 @@ export class AttendanceService
           : 0;
       const inEmployedWindow = monthSummary.byDate.has(key);
       const scanOnly = scanOnlyRuleByDate.has(key);
-      const enrolmentGrace =
-        status === 'ENROLMENT_GRACE' ||
-        enrolmentGraceKeys?.has(key) === true;
+      // Only suppress FM flags when the day is actually ENROLMENT_GRACE.
+      // A grace-window date with scans (e.g. clock-in only → HALF_ABSENT) must
+      // still raise MISSING_CLOCK_OUT / EARLY_LEAVE for Explain days.
+      const enrolmentGrace = status === 'ENROLMENT_GRACE';
       const onLeaveButScanned = dayResult.onLeaveButScanned === true;
       const flag = resolveAttendanceDayFlag({
         isHoliday,
@@ -5358,6 +5359,22 @@ export class AttendanceService
         status === 'LEAVE' ||
         status === 'ENROLMENT_GRACE';
 
+      const nextFlagResolved =
+        flag === AttendanceDayFlag.NONE
+          ? true
+          : flag === AttendanceDayFlag.ON_LEAVE_BUT_SCANNED
+            ? false
+            : // Keep resolved only when the same actionable flag is unchanged.
+              log.flag === flag
+              ? log.flagResolved
+              : false;
+      const nextFlagResolvedAt =
+        flag === AttendanceDayFlag.NONE
+          ? (log.flagResolvedAt ?? new Date())
+          : log.flag === flag && log.flagResolved
+            ? log.flagResolvedAt
+            : null;
+
       await writeDb.attendanceDailyLog.update({
         where: { id: log.id },
         data: {
@@ -5369,18 +5386,8 @@ export class AttendanceService
           isEarlyLeave: coverageSuppressesScanFlags ? false : isEarlyLeave,
           earlyLeaveMinutes: coverageSuppressesScanFlags ? 0 : earlyLeaveMinutes,
           flag,
-          flagResolved:
-            flag === AttendanceDayFlag.NONE
-              ? true
-              : flag === AttendanceDayFlag.ON_LEAVE_BUT_SCANNED
-                ? false
-                : log.flagResolved,
-          flagResolvedAt:
-            flag === AttendanceDayFlag.NONE
-              ? (log.flagResolvedAt ?? new Date())
-              : log.flagResolved
-                ? log.flagResolvedAt
-                : null,
+          flagResolved: nextFlagResolved,
+          flagResolvedAt: nextFlagResolvedAt,
           siteAssignmentName:
             siteName ??
             (status === 'ON_SITE' ? context.siteNameForDate(log.date) : null),
@@ -5429,6 +5436,8 @@ export class AttendanceService
         earlyDepartureWouldDeduct: earlyWould,
       });
       log.flag = flag;
+      log.flagResolved = nextFlagResolved;
+      log.flagResolvedAt = nextFlagResolvedAt;
     }
 
     const workingDayLogs = dailyLogs.filter(
