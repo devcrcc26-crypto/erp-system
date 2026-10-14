@@ -5595,9 +5595,8 @@ export class AttendanceService
         flaggedDays,
         resolvedDays,
         payableHours: Math.round(payableHours * 100) / 100,
-        // unpaidLeaveDays / earlyDeparture* — cast until prisma generate after migrate
+        // earlyDeparture* / forgotToClock* — cast until client regen
         ...({
-          unpaidLeaveDays,
           earlyDepartureCount: monthSummary.earlyDepartureCount,
           earlyDepartureDeductedDays: monthSummary.earlyDepartureDeductedDays,
           earlyDepartureWouldDeductDays:
@@ -5607,6 +5606,13 @@ export class AttendanceService
         } as Prisma.AttendanceRecordUpdateInput),
       },
     });
+    // unpaid_leave_days column exists after migrate; write via SQL until
+    // `prisma generate` succeeds (running Nest locks the query engine DLL).
+    await writeDb.$executeRaw`
+      UPDATE attendance_record
+      SET unpaid_leave_days = ${unpaidLeaveDays}
+      WHERE id = ${record.id}
+    `;
   }
 
   /**

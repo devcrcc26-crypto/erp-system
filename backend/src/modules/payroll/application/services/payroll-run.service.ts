@@ -115,6 +115,7 @@ interface AttendanceSnapshot {
     dayDeduction: Decimal;
     isHoliday: boolean;
     isWeekend: boolean;
+    dayStatus?: string | null;
   }>;
 }
 
@@ -979,6 +980,7 @@ export class PayrollRunService {
           month,
           year,
         },
+        // unpaidLeaveDays omitted until prisma generate (derive from dayStatus).
         // earlyDepartureWouldDeductDays from 20261009160000 — cast until client regen
         select: {
           id: true,
@@ -987,7 +989,6 @@ export class PayrollRunService {
           presentDays: true,
           absentDays: true,
           paidDays: true,
-          unpaidLeaveDays: true,
           matchMethod: true,
           earlyDepartureWouldDeductDays: true,
           dailyLogs: {
@@ -996,6 +997,7 @@ export class PayrollRunService {
               dayDeduction: true,
               isHoliday: true,
               isWeekend: true,
+              dayStatus: true,
             },
           },
         } as Prisma.AttendanceRecordSelect,
@@ -1416,7 +1418,16 @@ export class PayrollRunService {
     if (attendance) {
       absentInWindow = this.toNumber(attendance.absentDays);
       payrollDays = this.toNumber(attendance.paidDays);
-      const unpaidLeave = this.toNumber(attendance.unpaidLeaveDays);
+      // Prefer stored counter when Prisma client knows the field; else sum logs.
+      const unpaidFromRecord = this.toNumber(attendance.unpaidLeaveDays);
+      const unpaidFromLogs = attendance.dailyLogs.reduce((sum, log) => {
+        if (log.dayStatus === 'UNPAID_LEAVE') {
+          return sum + this.toNumber(log.dayDeduction);
+        }
+        return sum;
+      }, 0);
+      const unpaidLeave =
+        unpaidFromRecord > 0 ? unpaidFromRecord : unpaidFromLogs;
       if (unpaidLeave > 0) {
         noteParts.push(`Unpaid leave: ${unpaidLeave} days`);
       }
@@ -1679,6 +1690,7 @@ export class PayrollRunService {
           })),
         });
         for (const p of periods) {
+          // id is text (Prisma String), not uuid — do not cast ::uuid.
           await this.prisma.$executeRaw`
             UPDATE payroll_salary_period SET
               normal_ot_hours = ${p.normalOtHours},
@@ -1690,7 +1702,7 @@ export class PayrollRunService {
               sunday_ot_pay = ${p.sundayOtPay},
               holiday_ot_pay = ${p.holidayOtPay},
               total_ot_pay = ${p.totalOtPay}
-            WHERE id = ${p.id}::uuid
+            WHERE id = ${p.id}
           `;
         }
       }
