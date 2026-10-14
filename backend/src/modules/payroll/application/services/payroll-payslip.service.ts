@@ -419,6 +419,7 @@ export class PayrollPayslipService {
       employee: {
         select: {
           firstName: true,
+          middleName: true,
           lastName: true,
           chineseName: true,
           employeeId: true,

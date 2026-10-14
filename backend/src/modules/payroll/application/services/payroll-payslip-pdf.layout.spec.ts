@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import {
   buildPayslipLines,
   collectPayslipText,
+  formatEmployeeName,
   formatEtb,
   maskAccountLast4,
   payslipPdfFileName,
@@ -151,5 +152,15 @@ describe('payslip layout', () => {
     for (const char of '工资单基本工资加班交通补贴奖金养老金个人所得税应发合计扣除实发公司员工部门专业银行账号计薪天数阿米亚斯') {
       expect(text).toContain(char);
     }
+  });
+
+  it('formatEmployeeName includes first, middle, and last', () => {
+    expect(
+      formatEmployeeName({
+        firstName: 'Sara',
+        middleName: 'Alemu',
+        lastName: 'Tesfaye',
+      }),
+    ).toBe('Sara Alemu Tesfaye');
   });
 });

@@ -377,6 +377,7 @@ export class PayrollController {
     const file = await this.payrollExcelExportService.exportRun(
       id,
       user.companyId,
+      user.userId,
     );
     return new StreamableFile(file.buffer, {
       type: file.mimeType,

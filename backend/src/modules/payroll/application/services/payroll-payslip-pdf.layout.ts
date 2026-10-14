@@ -3,7 +3,7 @@
  * bilingual lines, omitted zeros, and money formatting stay in one place.
  */
 
-import { formatUserDisplayName } from '../../../../shared/utils/user-display.util';
+import { formatEnglishName } from '../../../../shared/utils/user-display.util';
 
 const MONTHS = [
   'January',
@@ -124,7 +124,7 @@ export function formatGeneratedDate(date: Date): string {
 }
 
 /**
- * Display name, including the Chinese name when the employee has one.
+ * Full English name (first + middle + last), matching the employee profile.
  */
 export function formatEmployeeName(employee: {
   firstName: string;
@@ -132,7 +132,7 @@ export function formatEmployeeName(employee: {
   lastName: string;
   chineseName?: string | null;
 }): string {
-  return formatUserDisplayName(employee);
+  return formatEnglishName(employee);
 }
 
 /**

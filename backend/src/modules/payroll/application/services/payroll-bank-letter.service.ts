@@ -16,6 +16,7 @@ import {
   convertMillimetersToTwip,
 } from 'docx';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { formatEnglishName } from '../../../../shared/utils/user-display.util';
 import {
   birrAmountInWords,
   integerInWords,
@@ -96,12 +97,21 @@ interface LetterRun {
   year: number;
   status: PayrollRunStatus;
   bankLetterRefNo: string | null;
-  gmApprover: { firstName: string; lastName: string } | null;
+  gmApprover: {
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+  } | null;
   entries: Array<{
     employeeId: string;
     netPay: { toString(): string } | number;
     bankAccountNumber: string | null;
-    employee: { firstName: string; lastName: string; bankAccountNumber: string | null };
+    employee: {
+      firstName: string;
+      middleName?: string | null;
+      lastName: string;
+      bankAccountNumber: string | null;
+    };
   }>;
 }
 
@@ -201,14 +211,21 @@ export class PayrollBankLetterService {
         year: true,
         status: true,
         bankLetterRefNo: true,
-        gmApprover: { select: { firstName: true, lastName: true } },
+        gmApprover: {
+          select: { firstName: true, middleName: true, lastName: true },
+        },
         entries: {
           select: {
             employeeId: true,
             netPay: true,
             bankAccountNumber: true,
             employee: {
-              select: { firstName: true, lastName: true, bankAccountNumber: true },
+              select: {
+                firstName: true,
+                middleName: true,
+                lastName: true,
+                bankAccountNumber: true,
+              },
             },
           },
         },
@@ -241,7 +258,7 @@ export class PayrollBankLetterService {
       if (!(net > 0)) {
         continue;
       }
-      const name = `${entry.employee.firstName} ${entry.employee.lastName}`.trim();
+      const name = formatEnglishName(entry.employee);
       const account =
         entry.employee.bankAccountNumber?.trim() || entry.bankAccountNumber?.trim() || '';
       if (account === '') {

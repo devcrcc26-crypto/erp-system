@@ -21,12 +21,17 @@ interface RunFixture {
   year: number;
   status: PayrollRunStatus;
   bankLetterRefNo: string | null;
-  gmApprover: { firstName: string; lastName: string };
+  gmApprover: { firstName: string; middleName?: string | null; lastName: string };
   entries: Array<{
     employeeId: string;
     netPay: Decimal;
     bankAccountNumber: string | null;
-    employee: { firstName: string; lastName: string; bankAccountNumber: string | null };
+    employee: {
+      firstName: string;
+      middleName?: string | null;
+      lastName: string;
+      bankAccountNumber: string | null;
+    };
   }>;
 }
 
@@ -49,7 +54,12 @@ function makeRun(overrides: Partial<RunFixture> = {}): RunFixture {
         employeeId: 'e2',
         netPay: new Decimal(2000.25),
         bankAccountNumber: null,
-        employee: { firstName: 'Sara', lastName: 'Tesfaye', bankAccountNumber: null },
+        employee: {
+          firstName: 'Sara',
+          middleName: 'Alemu',
+          lastName: 'Tesfaye',
+          bankAccountNumber: null,
+        },
       },
       {
         employeeId: 'e3',
@@ -134,7 +144,9 @@ describe('PayrollBankLetterService', () => {
     expect(preview.includedCount).toBe(4);
     expect(preview.totalNet).toBeCloseTo(6500.75, 2);
     // Zero-net employees are not warned about; profile accounts count even if the entry has none.
-    expect(preview.excludedEmployees).toEqual([{ id: 'e2', name: 'Sara Tesfaye' }]);
+    expect(preview.excludedEmployees).toEqual([
+      { id: 'e2', name: 'Sara Alemu Tesfaye' },
+    ]);
     expect(sequenceCalls).toHaveLength(0);
   });
 
@@ -145,7 +157,9 @@ describe('PayrollBankLetterService', () => {
     expect(result.refNo).toBe(`CRIECC-FZY-2026-00${NEXT_SEQUENCE}`);
     expect(sequenceCalls).toEqual([2026]);
     expect(savedRefs).toEqual([result.refNo]);
-    expect(result.excludedEmployees).toEqual([{ id: 'e2', name: 'Sara Tesfaye' }]);
+    expect(result.excludedEmployees).toEqual([
+      { id: 'e2', name: 'Sara Alemu Tesfaye' },
+    ]);
     expect(result.filename.endsWith('.docx')).toBe(true);
     expect(result.mimeType).toBe(
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
