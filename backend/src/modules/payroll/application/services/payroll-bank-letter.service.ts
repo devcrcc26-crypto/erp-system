@@ -72,7 +72,7 @@ export interface PayrollBankLetterPreview {
   refNo: string | null;
   totalNet: number;
   includedCount: number;
-  /** Employees with net pay but no bank account on the run entry. */
+  /** Employees in the letter with a blank account cell (no account on profile or entry). */
   excludedEmployees: BankLetterExcludedEmployee[];
   /** Human-readable reason when `allowed` is false. */
   reason: string | null;
@@ -101,7 +101,7 @@ interface LetterRun {
     employeeId: string;
     netPay: { toString(): string } | number;
     bankAccountNumber: string | null;
-    employee: { firstName: string; lastName: string };
+    employee: { firstName: string; lastName: string; bankAccountNumber: string | null };
   }>;
 }
 
@@ -149,7 +149,7 @@ export class PayrollBankLetterService {
       excludedEmployees: selection.excluded,
       reason: hasLines
         ? null
-        : 'No employees with a positive net pay and a bank account number',
+        : 'No employees with a positive net pay',
     };
   }
 
@@ -165,9 +165,7 @@ export class PayrollBankLetterService {
     const run = await this.loadRun(runId, companyId);
     const selection = this.selectLines(run);
     if (selection.lines.length === 0) {
-      throw new BadRequestException(
-        'No employees with a positive net pay and a bank account number',
-      );
+      throw new BadRequestException('No employees with a positive net pay');
     }
 
     const settings = await this.companySettings.getSettings(companyId);
@@ -209,7 +207,9 @@ export class PayrollBankLetterService {
             employeeId: true,
             netPay: true,
             bankAccountNumber: true,
-            employee: { select: { firstName: true, lastName: true } },
+            employee: {
+              select: { firstName: true, lastName: true, bankAccountNumber: true },
+            },
           },
         },
       },
@@ -226,8 +226,10 @@ export class PayrollBankLetterService {
   }
 
   /**
-   * Splits entries into payable lines (net > 0 and an account number) and
-   * excluded employees (net > 0 but no account number).
+   * Every employee with net > 0 is a line. The account comes from the employee's
+   * current profile (bank details are often entered after the run is generated),
+   * falling back to the entry snapshot; with neither, the cell is left blank and
+   * the employee is reported in `excluded` so HR can fill it in by hand.
    */
   private selectLines(run: LetterRun): LetterSelection {
     const lines: LetterLine[] = [];
@@ -240,10 +242,10 @@ export class PayrollBankLetterService {
         continue;
       }
       const name = `${entry.employee.firstName} ${entry.employee.lastName}`.trim();
-      const account = entry.bankAccountNumber?.trim() ?? '';
+      const account =
+        entry.employee.bankAccountNumber?.trim() || entry.bankAccountNumber?.trim() || '';
       if (account === '') {
         excluded.push({ id: entry.employeeId, name });
-        continue;
       }
       lines.push({ name, accountNumber: account, netPay: net });
       totalCents += Math.round(net * CENTS_FACTOR);

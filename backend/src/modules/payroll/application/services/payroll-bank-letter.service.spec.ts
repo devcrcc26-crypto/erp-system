@@ -26,7 +26,7 @@ interface RunFixture {
     employeeId: string;
     netPay: Decimal;
     bankAccountNumber: string | null;
-    employee: { firstName: string; lastName: string };
+    employee: { firstName: string; lastName: string; bankAccountNumber: string | null };
   }>;
 }
 
@@ -43,25 +43,32 @@ function makeRun(overrides: Partial<RunFixture> = {}): RunFixture {
         employeeId: 'e1',
         netPay: new Decimal(1000.5),
         bankAccountNumber: '1000123456789',
-        employee: { firstName: 'Abebe', lastName: 'Kebede' },
+        employee: { firstName: 'Abebe', lastName: 'Kebede', bankAccountNumber: '1000123456789' },
       },
       {
         employeeId: 'e2',
         netPay: new Decimal(2000.25),
         bankAccountNumber: null,
-        employee: { firstName: 'Sara', lastName: 'Tesfaye' },
+        employee: { firstName: 'Sara', lastName: 'Tesfaye', bankAccountNumber: null },
       },
       {
         employeeId: 'e3',
         netPay: new Decimal(0),
         bankAccountNumber: null,
-        employee: { firstName: 'Zero', lastName: 'Pay' },
+        employee: { firstName: 'Zero', lastName: 'Pay', bankAccountNumber: null },
       },
       {
         employeeId: 'e4',
         netPay: new Decimal(3000),
         bankAccountNumber: '1000987654321',
-        employee: { firstName: 'Chaltu', lastName: 'Bekele' },
+        employee: { firstName: 'Chaltu', lastName: 'Bekele', bankAccountNumber: '1000987654321' },
+      },
+      {
+        // Account added to the profile after the run was generated.
+        employeeId: 'e5',
+        netPay: new Decimal(500),
+        bankAccountNumber: null,
+        employee: { firstName: 'Dawit', lastName: 'Late', bankAccountNumber: '1000555555555' },
       },
     ],
     ...overrides,
@@ -117,15 +124,16 @@ describe('PayrollBankLetterService', () => {
     );
   });
 
-  it('previews included and excluded employees without allocating a reference', async () => {
+  it('previews every payable employee without allocating a reference', async () => {
     const { service, sequenceCalls } = makeService(makeRun());
     const preview = await service.preview(RUN_ID, COMPANY_ID);
 
     expect(preview.allowed).toBe(true);
     expect(preview.refNo).toBeNull();
-    expect(preview.includedCount).toBe(2);
-    expect(preview.totalNet).toBeCloseTo(4000.5, 2);
-    // Zero-net employees are not warned about; only payable staff without accounts.
+    // Payable staff without an account stay in the letter with a blank cell.
+    expect(preview.includedCount).toBe(4);
+    expect(preview.totalNet).toBeCloseTo(6500.75, 2);
+    // Zero-net employees are not warned about; profile accounts count even if the entry has none.
     expect(preview.excludedEmployees).toEqual([{ id: 'e2', name: 'Sara Tesfaye' }]);
     expect(sequenceCalls).toHaveLength(0);
   });
@@ -159,7 +167,7 @@ describe('PayrollBankLetterService', () => {
 
   it('refuses to generate when nobody is payable', async () => {
     const run = makeRun();
-    run.entries = run.entries.filter((e) => e.bankAccountNumber === null);
+    run.entries = run.entries.filter((e) => Number(e.netPay) === 0);
     const { service } = makeService(run);
 
     const preview = await service.preview(RUN_ID, COMPANY_ID);
