@@ -6,6 +6,17 @@
 
 export const PAYROLL_MONTH_DAYS = 30;
 
+/** How to handle allowances for employees who leave before the end of the month.
+ *  'PRORATED' (default): allowance × employedDays / 30.
+ *  'FULL': pay the full contract amount regardless of leaving date.
+ */
+export const LEAVER_ALLOWANCE_MODE: 'PRORATED' | 'FULL' = 'PRORATED';
+
+/** When false (default): transport and monthly-bonus use employed/contract days.
+ *  When true: they are scaled down by payrollDays / employedDays (absences reduce allowances).
+ */
+export const ALLOWANCES_REDUCED_BY_ABSENCE = false;
+
 export interface EmployedPayrollDaysResult {
   days: number;
   startDay: number;

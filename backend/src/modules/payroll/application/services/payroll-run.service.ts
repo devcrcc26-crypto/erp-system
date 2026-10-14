@@ -30,10 +30,13 @@ import {
 } from '../../../attendance/application/utils/day-deduction.util';
 import { resolveEntryAttendanceFlag } from '../utils/payroll-attendance-flag.util';
 import {
+  ALLOWANCES_REDUCED_BY_ABSENCE,
+  LEAVER_ALLOWANCE_MODE,
   allocateContractPayrollDays,
   employedPayrollDays,
   resolveEmploymentSegmentsForMonth,
 } from '../utils/payroll-days.util';
+import { computeContractAllowances } from '../utils/payroll-allowance.util';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import {
   assignOvertimeToSalaryPeriods,
@@ -1476,8 +1479,28 @@ export class PayrollRunService {
     const monthEndBasic = this.toNumber(monthEndContract?.basicSalary);
     // Fully absent Mon–Sat month: no transport, bonuses, net bonuses, or pension.
     // Approved overtime is still paid.
-    let transport = this.toNumber(monthEndContract?.transportationAllowance);
-    let monthlyBonus = this.toNumber(monthEndContract?.monthlyBonus);
+
+    // Prorate transport and monthly bonus using the same contract-period split as
+    // earned salary.  For a single full-month contract this equals the contract
+    // amount; for joiners/leavers/renewals each contract contributes
+    // amount × contractDays / 30.
+    const noLeaverDays = employmentStart
+      ? employedPayrollDays(run.month, run.year, employmentStart, null).days
+      : totalEmployedDays;
+    const proratedAllowances = computeContractAllowances(
+      periodDetails.map((p) => ({
+        transportationAllowance: this.toNumber(p.contract.transportationAllowance),
+        monthlyBonus: this.toNumber(p.contract.monthlyBonus),
+        allocatedDays: p.days,
+      })),
+      totalEmployedDays,
+      payrollDays,
+      noLeaverDays,
+      LEAVER_ALLOWANCE_MODE,
+      ALLOWANCES_REDUCED_BY_ABSENCE,
+    );
+    let transport = proratedAllowances.transport;
+    let monthlyBonus = proratedAllowances.monthlyBonus;
     let contractNetBonus = this.toNumber(monthEndContract?.monthlyNetBonus);
     let effectiveBonusTopUp = bonusTopUp;
     let effectiveNetTopUp = netTopUp;
@@ -1491,6 +1514,22 @@ export class PayrollRunService {
       effectiveNetTopUp = 0;
       pensionApplicable = false;
       noteParts.push(FULLY_ABSENT_NO_PAY_NOTE);
+    } else if (periodDetails.length > 1) {
+      // Show per-contract allowance breakdown when contracts split mid-month.
+      const fmt = (n: number): string =>
+        n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      const bonusParts = periodDetails.map((p) => {
+        const b = this.toNumber(p.contract.monthlyBonus);
+        const contrib = this.round((b * p.days) / 30);
+        return `${fmt(contrib)} (${fmt(b)} contract, ${p.days} d)`;
+      });
+      noteParts.push(`Bonus: ${bonusParts.join(' + ')}`);
+      const transportParts = periodDetails.map((p) => {
+        const t = this.toNumber(p.contract.transportationAllowance);
+        const contrib = this.round((t * p.days) / 30);
+        return `${fmt(contrib)} (${fmt(t)} contract, ${p.days} d)`;
+      });
+      noteParts.push(`Transport: ${transportParts.join(' + ')}`);
     }
 
     const attendanceFlag = resolveEntryAttendanceFlag({
