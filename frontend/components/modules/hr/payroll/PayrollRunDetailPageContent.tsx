@@ -120,6 +120,97 @@ function MoneyCell({
   );
 }
 
+interface ContractLine {
+  key: string;
+  label: string;
+  title: string;
+  days: number;
+  basic: number;
+  earned: number;
+  ot: number;
+  transport: number;
+  bonus: number;
+}
+
+// Shares are rounded to cents; the last share absorbs the remainder so lines sum to the total.
+function splitByWeight(total: number, weights: number[]): number[] {
+  const sum = weights.reduce((s, w) => s + w, 0);
+  if (sum <= 0 || total === 0) {
+    return weights.map(() => 0);
+  }
+  let allocated = 0;
+  return weights.map((w, i) => {
+    if (i === weights.length - 1) {
+      return Math.round((total - allocated) * 100) / 100;
+    }
+    const share = Math.round(((total * w) / sum) * 100) / 100;
+    allocated += share;
+    return share;
+  });
+}
+
+// Transport and bonus are Σ(contract amount × days / 30) on the backend, with any
+// attendance/leaver scale applied uniformly — so splitting the stored total by
+// amount × days reproduces each contract's share exactly.
+function buildContractLines(row: PayrollEntryDetail): ContractLine[] | null {
+  if (row.salaryPeriods.length < 2) {
+    return null;
+  }
+  const periods = [...row.salaryPeriods].sort((a, b) =>
+    a.periodStart.localeCompare(b.periodStart),
+  );
+  const days = periods.map((p) => parsePayrollMoney(p.days));
+  const transport = splitByWeight(
+    parsePayrollMoney(row.taxableTransport) + parsePayrollMoney(row.nonTaxableTransport),
+    periods.map((p, i) => parsePayrollMoney(p.contract?.transportationAllowance) * days[i]),
+  );
+  const bonus = splitByWeight(
+    parsePayrollMoney(row.monthlyBonus),
+    periods.map((p, i) => parsePayrollMoney(p.contract?.monthlyBonus) * days[i]),
+  );
+  return periods.map((p, i) => {
+    const start = dayjs(p.periodStart.slice(0, 10));
+    const end = dayjs(p.periodEnd.slice(0, 10));
+    return {
+      key: p.id,
+      label: `${start.format('D')}–${end.format('D MMM')}`,
+      title: [
+        p.contract?.contractNumber,
+        `${start.format('YYYY-MM-DD')} – ${end.format('YYYY-MM-DD')}`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      days: days[i],
+      basic: parsePayrollMoney(p.basicSalary),
+      earned: parsePayrollMoney(p.earnedSalary),
+      ot: parsePayrollMoney(p.totalOtPay),
+      transport: transport[i],
+      bonus: bonus[i],
+    };
+  });
+}
+
+function SplitCell({
+  lines,
+  value,
+  total,
+}: {
+  lines: ContractLine[];
+  value: (line: ContractLine) => React.ReactNode;
+  total: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className="erp-pr-split">
+      {lines.map((line) => (
+        <div key={line.key} className="erp-pr-split-line" title={line.title}>
+          {value(line)}
+        </div>
+      ))}
+      <div className="erp-pr-split-line erp-pr-split-total">{total}</div>
+    </div>
+  );
+}
+
 const MOBILE_PAGE_SIZE = 20;
 
 function resolveUserLabel(
@@ -570,31 +661,50 @@ export default function PayrollRunDetailPageContent({
     }
   }
 
+  const contractLinesById = useMemo(
+    () => new Map(filteredEntries.map((e) => [e.id, buildContractLines(e)])),
+    [filteredEntries],
+  );
+
   const columns: ColumnsType<PayrollEntryDetail> = useMemo(
     () => [
       {
         title: t('hr.payroll.entry.employee'),
         key: 'employee',
         fixed: 'left',
-        width: 200,
-        render: (_, row) => (
-          <div className="min-w-[160px]">
-            <p className="erp-payroll-employee-name truncate">
-              {formatUserName(row.employee)}
-            </p>
-            <p className="erp-payroll-employee-id">
-              {row.employee.employeeId ?? '—'}
-            </p>
-          </div>
-        ),
+        width: 220,
+        className: 'erp-payroll-col-employee',
+        render: (_, row) => {
+          const lines = contractLinesById.get(row.id);
+          return (
+            <div className="min-w-[160px]">
+              <p className="erp-payroll-employee-name truncate">
+                {formatUserName(row.employee)}
+              </p>
+              <p className="erp-payroll-employee-id">
+                {row.employee.employeeId ?? '—'}
+              </p>
+              {lines ? (
+                <span className="erp-payroll-split-pill">
+                  {t('hr.payroll.entry.contractsCount', { count: lines.length })}
+                </span>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
-        title: t('hr.payroll.entry.paidDays'),
+        title: (
+          <Tooltip title={t('hr.payroll.entry.paidDaysBasis')}>
+            <span>{t('hr.payroll.entry.paidDays')}</span>
+          </Tooltip>
+        ),
         key: 'paidDays',
-        width: 88,
+        width: 128,
         align: 'right',
         render: (_, row) => {
-          return (
+          const lines = contractLinesById.get(row.id);
+          const total = (
             <Tooltip
               title={t('hr.payroll.entry.paidDaysTooltip', {
                 employed: parsePayrollMoney(row.employedDays),
@@ -603,153 +713,248 @@ export default function PayrollRunDetailPageContent({
                 paid: parsePayrollMoney(row.payrollDays),
               })}
             >
-              <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {parsePayrollMoney(row.payrollDays)}
-              </span>
+              <span className="erp-payroll-num">{parsePayrollMoney(row.payrollDays)}</span>
             </Tooltip>
           );
-        },
-      },
-      {
-        title: t('hr.payroll.entry.basic'),
-        dataIndex: 'basicSalary',
-        align: 'right',
-        width: 100,
-        render: (v) => <MoneyCell value={v} />,
-      },
-      {
-        title: t('hr.payroll.entry.earned'),
-        dataIndex: 'earnedSalary',
-        align: 'right',
-        width: 100,
-        render: (v) => <MoneyCell value={v} />,
-      },
-      {
-        title: t('hr.payroll.entry.otPay'),
-        dataIndex: 'totalOtPay',
-        align: 'right',
-        width: 100,
-        render: (v, row) => (
-          <Tooltip
-            title={
-              <div className="text-xs">
-                <div>
-                  {t('hr.payroll.entry.otNormal')}: {formatPayrollMoney(row.normalOtPay)} (
-                  {parsePayrollMoney(row.normalOtHours)}h)
-                </div>
-                <div>
-                  {t('hr.payroll.entry.otEvening')}: {formatPayrollMoney(row.eveningOtPay)} (
-                  {parsePayrollMoney(row.eveningOtHours)}h)
-                </div>
-                <div>
-                  {t('hr.payroll.entry.otSunday')}: {formatPayrollMoney(row.sundayOtPay)} (
-                  {parsePayrollMoney(row.sundayOtHours)}h)
-                </div>
-                <div>
-                  {t('hr.payroll.entry.otHoliday')}: {formatPayrollMoney(row.holidayOtPay)} (
-                  {parsePayrollMoney(row.holidayOtHours)}h)
-                </div>
-              </div>
-            }
-          >
-            <span style={PAYROLL_MONEY_CELL_STYLE}>{formatPayrollMoney(v)}</span>
-          </Tooltip>
-        ),
-      },
-      {
-        title: t('hr.payroll.entry.transport'),
-        key: 'transport',
-        align: 'right',
-        width: 100,
-        render: (_, row) => (
-          <MoneyCell
-            value={
-              parsePayrollMoney(row.taxableTransport) +
-              parsePayrollMoney(row.nonTaxableTransport)
-            }
-          />
-        ),
-      },
-      {
-        title: t('hr.payroll.entry.bonus'),
-        key: 'bonus',
-        align: 'right',
-        width: 100,
-        render: (_, row) => {
-          const topUp = parsePayrollMoney(row.bonusTopUp);
-          const total =
-            parsePayrollMoney(row.monthlyBonus) + topUp;
+          if (!lines) {
+            return total;
+          }
           return (
-            <span style={PAYROLL_MONEY_CELL_STYLE}>
-              {formatPayrollMoney(total)}
-              {topUp > 0 ? (
-                <Tooltip title={row.bonusTopUpReason || t('hr.payroll.entry.bonusTopUpAmount')}>
-                  <span className="erp-payroll-topup-mark">*</span>
-                </Tooltip>
-              ) : null}
-            </span>
+            <SplitCell
+              lines={lines}
+              value={(line) => (
+                <>
+                  <span className="erp-pr-split-tag">{line.label}</span>
+                  <span className="erp-payroll-num">{line.days}</span>
+                </>
+              )}
+              total={total}
+            />
           );
         },
       },
       {
-        title: t('hr.payroll.entry.gross'),
-        dataIndex: 'grossIncome',
-        align: 'right',
-        width: 100,
-        render: (v) => <MoneyCell value={v} />,
-      },
-      {
-        title: t('hr.payroll.entry.taxable'),
-        dataIndex: 'taxableIncome',
-        align: 'right',
-        width: 100,
-        render: (v) => <MoneyCell value={v} />,
-      },
-      {
-        title: t('hr.payroll.entry.pensionEmp'),
-        dataIndex: 'pensionEmployee',
-        align: 'right',
-        width: 100,
-        render: (v) => <MoneyCell value={v} />,
-      },
-      {
-        title: t('hr.payroll.entry.tax'),
-        dataIndex: 'incomeTax',
-        align: 'right',
-        width: 90,
-        render: (v) => <MoneyCell value={v} />,
-      },
-      {
-        title: t('hr.payroll.entry.netBonus'),
-        key: 'netBonus',
-        align: 'right',
-        width: 110,
-        render: (_, row) => {
-          const contractNet = parsePayrollMoney(row.contractNetBonus);
-          const oneTime = parsePayrollMoney(row.netTopUp);
-          const total = contractNet + oneTime;
-          return (
-            <span style={PAYROLL_MONEY_CELL_STYLE}>
-              {formatPayrollMoney(total)}
-              {oneTime > 0 ? (
+        title: t('hr.payroll.entry.groupEarnings'),
+        key: 'earnings',
+        children: [
+          {
+            title: t('hr.payroll.entry.basic'),
+            dataIndex: 'basicSalary',
+            align: 'right',
+            width: 112,
+            className: 'erp-payroll-col-group-start',
+            render: (v, row) => {
+              const lines = contractLinesById.get(row.id);
+              if (!lines) {
+                return <MoneyCell value={v} />;
+              }
+              return (
+                <SplitCell
+                  lines={lines}
+                  value={(line) => <MoneyCell value={line.basic} />}
+                  total={<span aria-hidden="true" />}
+                />
+              );
+            },
+          },
+          {
+            title: t('hr.payroll.entry.earned'),
+            dataIndex: 'earnedSalary',
+            align: 'right',
+            width: 112,
+            render: (v, row) => {
+              const lines = contractLinesById.get(row.id);
+              if (!lines) {
+                return <MoneyCell value={v} />;
+              }
+              return (
+                <SplitCell
+                  lines={lines}
+                  value={(line) => <MoneyCell value={line.earned} />}
+                  total={<MoneyCell value={v} strong />}
+                />
+              );
+            },
+          },
+          {
+            title: t('hr.payroll.entry.otPay'),
+            dataIndex: 'totalOtPay',
+            align: 'right',
+            width: 108,
+            render: (v, row) => {
+              const lines = contractLinesById.get(row.id);
+              const total = (
                 <Tooltip
                   title={
-                    row.netTopUpReason || t('hr.payroll.entry.netTopUpAmount')
+                    <div className="text-xs">
+                      <div>
+                        {t('hr.payroll.entry.otNormal')}: {formatPayrollMoney(row.normalOtPay)} (
+                        {parsePayrollMoney(row.normalOtHours)}h)
+                      </div>
+                      <div>
+                        {t('hr.payroll.entry.otEvening')}: {formatPayrollMoney(row.eveningOtPay)} (
+                        {parsePayrollMoney(row.eveningOtHours)}h)
+                      </div>
+                      <div>
+                        {t('hr.payroll.entry.otSunday')}: {formatPayrollMoney(row.sundayOtPay)} (
+                        {parsePayrollMoney(row.sundayOtHours)}h)
+                      </div>
+                      <div>
+                        {t('hr.payroll.entry.otHoliday')}: {formatPayrollMoney(row.holidayOtPay)} (
+                        {parsePayrollMoney(row.holidayOtHours)}h)
+                      </div>
+                    </div>
                   }
                 >
-                  <span className="erp-payroll-topup-mark">*</span>
+                  <span
+                    style={{ ...PAYROLL_MONEY_CELL_STYLE, fontWeight: lines ? 600 : undefined }}
+                  >
+                    {formatPayrollMoney(v)}
+                  </span>
                 </Tooltip>
-              ) : null}
-            </span>
-          );
-        },
+              );
+              if (!lines) {
+                return total;
+              }
+              return (
+                <SplitCell
+                  lines={lines}
+                  value={(line) => <MoneyCell value={line.ot} />}
+                  total={total}
+                />
+              );
+            },
+          },
+          {
+            title: t('hr.payroll.entry.transport'),
+            key: 'transport',
+            align: 'right',
+            width: 108,
+            render: (_, row) => {
+              const lines = contractLinesById.get(row.id);
+              const value =
+                parsePayrollMoney(row.taxableTransport) +
+                parsePayrollMoney(row.nonTaxableTransport);
+              if (!lines) {
+                return <MoneyCell value={value} />;
+              }
+              return (
+                <SplitCell
+                  lines={lines}
+                  value={(line) => <MoneyCell value={line.transport} />}
+                  total={<MoneyCell value={value} strong />}
+                />
+              );
+            },
+          },
+          {
+            title: t('hr.payroll.entry.bonus'),
+            key: 'bonus',
+            align: 'right',
+            width: 120,
+            render: (_, row) => {
+              const lines = contractLinesById.get(row.id);
+              const topUp = parsePayrollMoney(row.bonusTopUp);
+              const value = parsePayrollMoney(row.monthlyBonus) + topUp;
+              const total = (
+                <span
+                  style={{ ...PAYROLL_MONEY_CELL_STYLE, fontWeight: lines ? 600 : undefined }}
+                >
+                  {formatPayrollMoney(value)}
+                  {topUp > 0 ? (
+                    <Tooltip
+                      title={row.bonusTopUpReason || t('hr.payroll.entry.bonusTopUpAmount')}
+                    >
+                      <span className="erp-payroll-topup-mark">*</span>
+                    </Tooltip>
+                  ) : null}
+                </span>
+              );
+              if (!lines) {
+                return total;
+              }
+              return (
+                <SplitCell
+                  lines={lines}
+                  value={(line) => <MoneyCell value={line.bonus} />}
+                  total={total}
+                />
+              );
+            },
+          },
+          {
+            title: t('hr.payroll.entry.gross'),
+            dataIndex: 'grossIncome',
+            align: 'right',
+            width: 116,
+            className: 'erp-payroll-col-gross',
+            render: (v) => <MoneyCell value={v} strong />,
+          },
+        ],
       },
       {
-        title: t('hr.payroll.entry.net'),
-        dataIndex: 'netPay',
-        align: 'right',
-        width: 100,
-        render: (v) => <MoneyCell value={v} strong />,
+        title: t('hr.payroll.entry.groupTax'),
+        key: 'taxGroup',
+        children: [
+          {
+            title: t('hr.payroll.entry.taxable'),
+            dataIndex: 'taxableIncome',
+            align: 'right',
+            width: 116,
+            className: 'erp-payroll-col-group-start',
+            render: (v) => <MoneyCell value={v} />,
+          },
+          {
+            title: t('hr.payroll.entry.pensionEmp'),
+            dataIndex: 'pensionEmployee',
+            align: 'right',
+            width: 108,
+            render: (v) => <MoneyCell value={v} />,
+          },
+          {
+            title: t('hr.payroll.entry.tax'),
+            dataIndex: 'incomeTax',
+            align: 'right',
+            width: 108,
+            render: (v) => <MoneyCell value={v} />,
+          },
+        ],
+      },
+      {
+        title: t('hr.payroll.entry.groupPay'),
+        key: 'payGroup',
+        children: [
+          {
+            title: t('hr.payroll.entry.netBonus'),
+            key: 'netBonus',
+            align: 'right',
+            width: 112,
+            className: 'erp-payroll-col-group-start',
+            render: (_, row) => {
+              const contractNet = parsePayrollMoney(row.contractNetBonus);
+              const oneTime = parsePayrollMoney(row.netTopUp);
+              const total = contractNet + oneTime;
+              return (
+                <span style={PAYROLL_MONEY_CELL_STYLE}>
+                  {formatPayrollMoney(total)}
+                  {oneTime > 0 ? (
+                    <Tooltip title={row.netTopUpReason || t('hr.payroll.entry.netTopUpAmount')}>
+                      <span className="erp-payroll-topup-mark">*</span>
+                    </Tooltip>
+                  ) : null}
+                </span>
+              );
+            },
+          },
+          {
+            title: t('hr.payroll.entry.net'),
+            dataIndex: 'netPay',
+            align: 'right',
+            width: 124,
+            className: 'erp-payroll-col-net',
+            render: (v) => <MoneyCell value={v} strong />,
+          },
+        ],
       },
       {
         title: t('hr.payroll.entry.flag'),
@@ -792,7 +997,7 @@ export default function PayrollRunDetailPageContent({
           ]
         : []),
     ],
-    [t, showPayslipColumn, openingPayslipId],
+    [t, showPayslipColumn, openingPayslipId, contractLinesById],
   );
 
   function renderEntryCard(entry: PayrollEntryDetail): React.ReactNode {
@@ -1802,7 +2007,7 @@ export default function PayrollRunDetailPageContent({
         />
       ) : null}
 
-      <section className="erp-pro-card erp-payroll-entries overflow-hidden">
+      <section className="erp-pro-card erp-payroll-entries">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title m-0">
@@ -1903,8 +2108,12 @@ export default function PayrollRunDetailPageContent({
             size="small"
             columns={columns}
             dataSource={filteredEntries}
-            scroll={{ x: 1400 }}
-            sticky
+            // Fixed x wider than the columns yields fractional widths; the header copies rounded ones and drifts.
+            scroll={{ x: 'max-content', y: 'max(320px, calc(100dvh - 300px))' }}
+            className="erp-payroll-entries-table"
+            rowClassName={(row) =>
+              contractLinesById.get(row.id) ? 'erp-payroll-row--split' : ''
+            }
             pagination={false}
             expandable={{
               expandedRowRender: renderExpandedRow,
@@ -1948,7 +2157,11 @@ export default function PayrollRunDetailPageContent({
                     <Table.Summary.Cell index={12} align="right">
                       <MoneyCell value={totalsRow.netBonus} strong />
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={13} align="right">
+                    <Table.Summary.Cell
+                      index={13}
+                      align="right"
+                      className="erp-payroll-col-net"
+                    >
                       <MoneyCell value={totalsRow.net} strong />
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={14} />

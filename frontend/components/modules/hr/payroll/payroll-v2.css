@@ -505,19 +505,157 @@
 
 /* ── Run detail: entries table ── */
 
-.erp-payroll-entries .ant-table-wrapper .ant-table-tbody > tr.ant-table-row > td {
+/* `clip`, not `hidden`: hidden makes a scroll container and traps the sticky header. */
+.erp-payroll-entries {
+  overflow: clip;
+}
+
+.erp-payroll-entries-table {
+  --pr-net-bg: #f0faf6;
+  --pr-group-line: #e4e7ec;
+}
+
+/* Header: grouped two-row header, opaque so rows don't show through when stuck. */
+.erp-payroll-entries-table .ant-table-thead > tr > th.ant-table-cell {
+  padding: 10px 12px !important;
+  line-height: 18px;
+}
+
+.erp-payroll-entries-table .ant-table-thead > tr:first-child > th.ant-table-cell[colspan] {
+  padding-top: 8px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 2px solid var(--pr-tint) !important;
+  color: var(--pr-primary-strong) !important;
+  text-align: center;
+}
+
+.erp-payroll-entries-table .ant-table-thead > tr:first-child > th.ant-table-cell[colspan],
+.erp-payroll-entries-table .erp-payroll-col-group-start {
+  border-left: 1px solid var(--pr-group-line) !important;
+}
+
+/* Header and totals stay inside the card; only the rows scroll between them. */
+.erp-payroll-entries-table .ant-table-header {
+  position: relative;
+  z-index: 3;
+  box-shadow:
+    0 1px 0 var(--pr-divider),
+    0 6px 10px -8px rgba(16, 24, 40, 0.18);
+}
+
+.erp-payroll-entries-table .ant-table-container {
+  border-radius: 0 0 var(--pr-radius) var(--pr-radius);
+}
+
+/* Body */
+.erp-payroll-entries-table .ant-table-tbody > tr.ant-table-row > td.ant-table-cell {
+  padding: 12px !important;
+  color: var(--pr-body);
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.erp-payroll-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-payroll-v2 .erp-payroll-entries-table .ant-table-thead > tr > th.erp-payroll-col-net,
+.erp-payroll-v2 .erp-payroll-entries-table .ant-table-tbody > tr.ant-table-row > td.erp-payroll-col-net,
+.erp-payroll-v2 .erp-payroll-entries-table .ant-table-summary td.erp-payroll-col-net {
+  background: var(--pr-net-bg) !important;
+  color: var(--pr-primary-strong) !important;
+}
+
+.erp-payroll-v2 .erp-payroll-entries-table .ant-table-tbody > tr.ant-table-row:hover > td.erp-payroll-col-net {
+  background: #e3f5ee !important;
+}
+
+.erp-payroll-entries-table td.erp-payroll-col-gross {
+  color: var(--pr-strong) !important;
+}
+
+/* Multi-contract rows: one line per contract, then a total line. Line heights are
+   fixed so every stacked column lines up; other cells sit on the total line. */
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td.ant-table-cell {
+  vertical-align: bottom;
+}
+
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td.erp-payroll-col-employee,
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td.ant-table-row-expand-icon-cell {
+  vertical-align: top;
+}
+
+.erp-payroll-entries-table .ant-table-tbody > tr.erp-payroll-row--split > td:first-child {
+  box-shadow: inset 3px 0 0 var(--pr-primary);
+}
+
+.erp-pr-split {
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-pr-split-line {
+  display: flex;
+  height: 22px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--pr-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.erp-pr-split-total {
+  height: 27px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #d0d5dd;
+  color: var(--pr-strong);
   font-size: 13px;
 }
 
+.erp-pr-split-tag {
+  margin-right: auto;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--pr-tile);
+  color: var(--pr-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.erp-payroll-split-pill {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--pr-tint);
+  color: var(--pr-primary-strong);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+/* Totals (sticky at the bottom) */
 .erp-payroll-entries .ant-table-summary > tr > td,
 .erp-payroll-entries .ant-table-summary .ant-table-cell {
-  border-top: 1px solid var(--pr-divider);
+  padding: 12px !important;
+  border-top: 2px solid var(--pr-group-line, #e4e7ec);
   background: var(--pr-subtle) !important;
   color: var(--pr-strong);
 }
 
+.erp-payroll-entries-table .ant-table-summary {
+  box-shadow: 0 -6px 10px -8px rgba(16, 24, 40, 0.18);
+}
+
 .erp-payroll-entries .ant-table-row-expand-icon {
   border-radius: 6px;
+}
+
+.erp-payroll-entries .ant-table-row-expand-icon:focus-visible {
+  outline: 2px solid var(--pr-primary);
+  outline-offset: 2px;
 }
 
 .erp-payroll-entries .ant-table-tbody > tr.ant-table-expanded-row > td {

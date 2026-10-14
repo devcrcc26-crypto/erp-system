@@ -527,7 +527,18 @@ export class PayrollRunService {
                 engineeringDiscipline: { select: { id: true, name: true } },
               },
             },
-            salaryPeriods: true,
+            salaryPeriods: {
+              orderBy: { periodStart: 'asc' },
+              include: {
+                contract: {
+                  select: {
+                    contractNumber: true,
+                    transportationAllowance: true,
+                    monthlyBonus: true,
+                  },
+                },
+              },
+            },
             payslip: {
               select: {
                 id: true,

@@ -57,6 +57,11 @@ export interface PayrollSalaryPeriod {
   sundayOtPay?: MoneyField;
   holidayOtPay?: MoneyField;
   totalOtPay?: MoneyField;
+  contract?: {
+    contractNumber: string | null;
+    transportationAllowance: MoneyField;
+    monthlyBonus: MoneyField;
+  } | null;
 }
 
 export interface PayrollEntryEmployee {

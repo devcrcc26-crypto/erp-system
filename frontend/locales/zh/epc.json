@@ -4957,7 +4957,12 @@
       },
       "entry": {
         "employee": "员工",
-        "paidDays": "计薪天数（30 天制）",
+        "paidDays": "计薪天数",
+        "paidDaysBasis": "按每月 30 天计算的计薪天数",
+        "contractsCount": "{{count}} 份合同",
+        "groupEarnings": "收入",
+        "groupTax": "税费与养老金",
+        "groupPay": "实发",
         "paidDaysTooltip": "在职 {{employed}} · 缺勤 {{absent}} · 无薪假 {{unpaid}} · 计薪 {{paid}}",
         "unpaidLeaveNote": "无薪假：{{days}} 天",
         "basic": "基本",

@@ -4958,7 +4958,12 @@
       },
       "entry": {
         "employee": "Employee",
-        "paidDays": "Paid days (30-day basis)",
+        "paidDays": "Paid days",
+        "paidDaysBasis": "Paid days on a 30-day month basis",
+        "contractsCount": "{{count}} contracts",
+        "groupEarnings": "Earnings",
+        "groupTax": "Tax & pension",
+        "groupPay": "Pay",
         "paidDaysTooltip": "Employed {{employed}} · Absent {{absent}} · Unpaid leave {{unpaid}} · Paid {{paid}}",
         "unpaidLeaveNote": "Unpaid leave: {{days}} days",
         "basic": "Basic",
