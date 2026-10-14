@@ -302,12 +302,16 @@ export class PayrollRunService {
       throw new NotFoundException('Payroll run not found');
     }
 
+    const includeFreelancerIds = await this.includedFreelancerIds(runId);
+
     await this.prisma.payrollSalaryPeriod.deleteMany({
       where: { entry: { runId } },
     });
     await this.prisma.payrollEntry.deleteMany({ where: { runId } });
 
-    const drafts = await this.buildEntryDrafts(run, ctx, new Map());
+    const drafts = await this.buildEntryDrafts(run, ctx, new Map(), {
+      includeFreelancerIds,
+    });
     await this.persistEntryDrafts(drafts, ctx);
     await this.updateRunTotals(runId, ctx);
 
@@ -328,7 +332,8 @@ export class PayrollRunService {
   }
 
   /**
-   * Recalculates a DRAFT/REVIEWED run, preserving bonus top-ups and notes.
+   * Recalculates any unpaid run, preserving bonus top-ups, notes and the
+   * freelancers HR added. A run already in the approval chain goes back to DRAFT.
    */
   async recalculate(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
     const started = Date.now();
@@ -338,11 +343,9 @@ export class PayrollRunService {
     if (!run) {
       throw new NotFoundException('Payroll run not found');
     }
-    if (run.status !== 'DRAFT' && run.status !== 'REVIEWED') {
-      throw new BadRequestException(
-        `Cannot recalculate run in ${run.status} status`,
-      );
-    }
+    this.assertRunEditable(run);
+
+    const includeFreelancerIds = await this.includedFreelancerIds(runId);
 
     const existingEntries = await this.prisma.payrollEntry.findMany({
       where: { runId },
@@ -383,7 +386,9 @@ export class PayrollRunService {
     await this.prisma.payrollEntry.deleteMany({ where: { runId } });
 
     // Regenerate without top-ups, then reapply captured adjustments.
-    const drafts = await this.buildEntryDrafts(run, ctx, new Map());
+    const drafts = await this.buildEntryDrafts(run, ctx, new Map(), {
+      includeFreelancerIds,
+    });
     await this.persistEntryDrafts(drafts, ctx);
 
     if (captured.size > 0) {
@@ -441,6 +446,7 @@ export class PayrollRunService {
         updatedBy: ctx.userId,
       } as Prisma.PayrollRunUpdateInput,
     });
+    await this.reopenIfInApproval(run, ctx);
 
     const elapsedMs = Date.now() - started;
     this.logger.log(
@@ -448,6 +454,170 @@ export class PayrollRunService {
     );
 
     return this.getRun(runId, ctx.companyId);
+  }
+
+  /**
+   * Freelancers HR can still add to the run (active, on the payroll roster, not yet in it).
+   */
+  async listAvailableFreelancers(
+    runId: string,
+    ctx: ServiceContext,
+  ): Promise<
+    Array<{
+      id: string;
+      firstName: string;
+      middleName: string | null;
+      lastName: string;
+      chineseName: string | null;
+      employeeId: string | null;
+    }>
+  > {
+    await this.requireRun(runId, ctx.companyId);
+    return this.prisma.user.findMany({
+      where: hrProcessEmployeeWhere({
+        companyId: ctx.companyId,
+        isActive: true,
+        includeInPayroll: true,
+        deletedAt: null,
+        employeeType: 'FREELANCER' as EmployeeType,
+        payrollEntriesAsEmplyee: { none: { runId } },
+      }),
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        chineseName: true,
+        employeeId: true,
+      },
+      orderBy: { firstName: 'asc' },
+    });
+  }
+
+  /**
+   * Adds freelancers to an unpaid run. A run already in the approval chain goes back to DRAFT.
+   */
+  async addFreelancers(
+    runId: string,
+    employeeIds: string[],
+    ctx: ServiceContext,
+  ): Promise<PayrollRun> {
+    const run = await this.requireRun(runId, ctx.companyId);
+    this.assertRunEditable(run);
+
+    const ids = [...new Set(employeeIds)];
+    const available = await this.listAvailableFreelancers(runId, ctx);
+    const availableIds = new Set(available.map((u) => u.id));
+    const invalid = ids.filter((id) => !availableIds.has(id));
+    if (invalid.length > 0) {
+      throw new BadRequestException(
+        'Only active freelancers on the payroll roster who are not already in this run can be added',
+      );
+    }
+
+    const drafts = await this.buildEntryDrafts(run, ctx, new Map(), {
+      includeFreelancerIds: new Set(ids),
+      onlyEmployeeIds: ids,
+    });
+    await this.persistEntryDrafts(drafts, ctx);
+    await this.updateRunTotals(runId, ctx);
+    await this.reopenIfInApproval(run, ctx);
+
+    this.logger.log(
+      `[PayrollRun] Added ${drafts.length} freelancer(s) to ${run.runNumber}`,
+    );
+    return this.getRun(runId, ctx.companyId);
+  }
+
+  /**
+   * Removes a freelancer's entry from an unpaid run. Regular employees are
+   * generated automatically and cannot be removed here.
+   */
+  async removeFreelancerEntry(
+    runId: string,
+    entryId: string,
+    ctx: ServiceContext,
+  ): Promise<PayrollRun> {
+    const run = await this.requireRun(runId, ctx.companyId);
+    this.assertRunEditable(run);
+
+    const entry = await this.prisma.payrollEntry.findFirst({
+      where: { id: entryId, runId, companyId: ctx.companyId },
+      select: { id: true, employee: { select: { employeeType: true } } },
+    });
+    if (!entry) {
+      throw new NotFoundException('Payroll entry not found');
+    }
+    if (entry.employee.employeeType !== 'FREELANCER') {
+      throw new BadRequestException('Only freelancer entries can be removed from a run');
+    }
+
+    await this.prisma.payrollEntry.delete({ where: { id: entryId } });
+    await this.updateRunTotals(runId, ctx);
+    await this.reopenIfInApproval(run, ctx);
+    return this.getRun(runId, ctx.companyId);
+  }
+
+  private assertRunEditable(run: PayrollRun): void {
+    if (run.status === 'PAID' || run.status === 'CANCELLED') {
+      throw new BadRequestException(`Cannot change a run in ${run.status} status`);
+    }
+  }
+
+  private async includedFreelancerIds(runId: string): Promise<Set<string>> {
+    const rows = await this.prisma.payrollEntry.findMany({
+      where: { runId, employee: { employeeType: 'FREELANCER' } },
+      select: { employeeId: true },
+    });
+    return new Set(rows.map((r) => r.employeeId));
+  }
+
+  /**
+   * Changed figures invalidate prior sign-off: SUBMITTED / APPROVED / GM_APPROVED
+   * go back to DRAFT and must pass review and both approvals again.
+   */
+  private async reopenIfInApproval(run: PayrollRun, ctx: ServiceContext): Promise<void> {
+    if (
+      run.status !== 'SUBMITTED' &&
+      run.status !== 'APPROVED' &&
+      run.status !== 'GM_APPROVED'
+    ) {
+      return;
+    }
+    await this.prisma.payrollRun.update({
+      where: { id: run.id },
+      data: {
+        status: 'DRAFT',
+        submittedAt: null,
+        submittedBy: null,
+        approvedAt: null,
+        approvedBy: null,
+        gmApprovedAt: null,
+        gmApprovedBy: null,
+        updatedBy: ctx.userId,
+      },
+    });
+
+    const recipients = new Set<string>(
+      await this.findUserIdsByRoleNames(ctx.companyId, [
+        HR_MANAGER_ROLE,
+        ...(run.status === 'GM_APPROVED' || run.status === 'APPROVED'
+          ? [GENERAL_MANAGER_ROLE]
+          : []),
+      ]),
+    );
+    recipients.delete(ctx.userId);
+    await this.notifyMany(
+      ctx,
+      [...recipients],
+      'payroll.run_reopened',
+      `Payroll ${run.runNumber} changed — approval needed again`,
+      `Payroll run ${run.runNumber} (${run.month}/${run.year}) was changed after it was ${run.status === 'SUBMITTED' ? 'submitted' : 'approved'}. It is back in draft and must be reviewed and approved again.`,
+      `/payroll/runs/${run.id}`,
+    );
+    this.logger.log(
+      `[PayrollRun] ${run.runNumber} reopened from ${run.status} to DRAFT after a change`,
+    );
   }
 
   /**
@@ -523,6 +693,7 @@ export class PayrollRunService {
                 lastName: true,
                 chineseName: true,
                 employeeId: true,
+                employeeType: true,
                 department: { select: { id: true, name: true } },
                 engineeringDiscipline: { select: { id: true, name: true } },
               },
@@ -894,19 +1065,24 @@ export class PayrollRunService {
     run: PayrollRun,
     ctx: ServiceContext,
     capturedTopUps: Map<string, CapturedTopUp>,
+    options: { includeFreelancerIds?: Set<string>; onlyEmployeeIds?: string[] } = {},
   ): Promise<EntryDraft[]> {
     const { month, year } = run;
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
     const monthEnd = new Date(Date.UTC(year, month, 0));
+    const includeFreelancerIds = options.includeFreelancerIds ?? new Set<string>();
 
     // Approver-only accounts get no payroll entry (and so no flags / MISSING_CONTRACT).
-    const employees = await this.prisma.user.findMany({
-      where: hrProcessEmployeeWhere({
-        companyId: ctx.companyId,
-        isActive: true,
-        includeInPayroll: true,
-        deletedAt: null,
-      }),
+    // Freelancers are only paid in months HR adds them to the run.
+    const employees = (
+      await this.prisma.user.findMany({
+        where: hrProcessEmployeeWhere({
+          companyId: ctx.companyId,
+          isActive: true,
+          includeInPayroll: true,
+          deletedAt: null,
+          ...(options.onlyEmployeeIds ? { id: { in: options.onlyEmployeeIds } } : {}),
+        }),
       select: {
         id: true,
         firstName: true,
@@ -918,7 +1094,10 @@ export class PayrollRunService {
         bankName: true,
         bankAccountNumber: true,
       },
-    });
+      })
+    ).filter(
+      (e) => e.employeeType !== 'FREELANCER' || includeFreelancerIds.has(e.id),
+    );
 
     if (employees.length === 0) {
       return [];

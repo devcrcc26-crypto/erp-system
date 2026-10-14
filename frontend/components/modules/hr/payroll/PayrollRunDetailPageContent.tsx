@@ -66,6 +66,9 @@ import type {
   PayrollRunStatus,
 } from '@/lib/api/payroll.types';
 import {
+  useAddPayrollFreelancers,
+  useAvailablePayrollFreelancers,
+  useRemovePayrollFreelancerEntry,
   useApprovePayrollRun,
   useCancelPayrollRun,
   useGeneratePayslips,
@@ -264,6 +267,15 @@ export default function PayrollRunDetailPageContent({
   const updateEntryMutation = useUpdatePayrollEntry(runId);
   const generatePayslipsMutation = useGeneratePayslips(runId);
   const releasePayslipsMutation = useReleasePayslips(runId);
+  const addFreelancersMutation = useAddPayrollFreelancers(runId);
+  const removeFreelancerMutation = useRemovePayrollFreelancerEntry(runId);
+  const [freelancerModalOpen, setFreelancerModalOpen] = useState(false);
+  const [freelancerSelection, setFreelancerSelection] = useState<string[]>([]);
+  const [removingEntry, setRemovingEntry] = useState<PayrollEntryDetail | null>(null);
+  const availableFreelancersQuery = useAvailablePayrollFreelancers(
+    runId,
+    freelancerModalOpen,
+  );
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [submitAcknowledge, setSubmitAcknowledge] = useState(false);
@@ -649,6 +661,36 @@ export default function PayrollRunDetailPageContent({
 
   const showPayslipColumn =
     canCreate && (run?.status === 'GM_APPROVED' || run?.status === 'PAID');
+  const canChangeRun =
+    canCreate && Boolean(run) && run?.status !== 'PAID' && run?.status !== 'CANCELLED';
+  const runInApproval =
+    run?.status === 'SUBMITTED' || run?.status === 'APPROVED' || run?.status === 'GM_APPROVED';
+
+  async function addSelectedFreelancers(): Promise<void> {
+    try {
+      await addFreelancersMutation.mutateAsync(freelancerSelection);
+      messageApi.success(
+        t('hr.payroll.freelancers.added', { count: freelancerSelection.length }),
+      );
+      setFreelancerModalOpen(false);
+      setFreelancerSelection([]);
+    } catch (error) {
+      notifyApiError(error, t('hr.payroll.freelancers.add'), messageApi, t);
+    }
+  }
+
+  async function removeFreelancerEntry(): Promise<void> {
+    if (!removingEntry) {
+      return;
+    }
+    try {
+      await removeFreelancerMutation.mutateAsync(removingEntry.id);
+      messageApi.success(t('hr.payroll.freelancers.removed'));
+      setRemovingEntry(null);
+    } catch (error) {
+      notifyApiError(error, t('hr.payroll.freelancers.remove'), messageApi, t);
+    }
+  }
 
   async function openPayslip(payslipId: string): Promise<void> {
     setOpeningPayslipId(payslipId);
@@ -684,6 +726,11 @@ export default function PayrollRunDetailPageContent({
               <p className="erp-payroll-employee-id">
                 {row.employee.employeeId ?? '—'}
               </p>
+              {row.employee.employeeType === 'FREELANCER' ? (
+                <span className="erp-payroll-split-pill erp-payroll-freelancer-pill">
+                  {t('hr.payroll.freelancers.tag')}
+                </span>
+              ) : null}
               {lines ? (
                 <span className="erp-payroll-split-pill">
                   {t('hr.payroll.entry.contractsCount', { count: lines.length })}
@@ -1212,6 +1259,11 @@ export default function PayrollRunDetailPageContent({
               {t('hr.payroll.entry.editBonusTopUp')}
             </Button>
           ) : null}
+          {canChangeRun && row.employee.employeeType === 'FREELANCER' ? (
+            <Button danger onClick={() => setRemovingEntry(row)}>
+              {t('hr.payroll.freelancers.remove')}
+            </Button>
+          ) : null}
         </div>
       </div>
     );
@@ -1222,7 +1274,9 @@ export default function PayrollRunDetailPageContent({
       case 'recalculate':
         return {
           title: t('hr.payroll.confirm.recalculateTitle'),
-          description: t('hr.payroll.confirm.recalculateDescription'),
+          description: runInApproval
+            ? t('hr.payroll.confirm.recalculateReopenDescription')
+            : t('hr.payroll.confirm.recalculateDescription'),
         };
       case 'markReviewed':
         return {
@@ -1381,6 +1435,12 @@ export default function PayrollRunDetailPageContent({
       add('recalc', t('hr.payroll.actions.recalculate'), 'recalculate');
       add('submit', t('hr.payroll.actions.submit'), 'submit', 'primary');
     }
+    if (
+      (status === 'SUBMITTED' || status === 'APPROVED' || status === 'GM_APPROVED') &&
+      canCreate
+    ) {
+      add('recalc', t('hr.payroll.actions.recalculate'), 'recalculate');
+    }
     if (status === 'SUBMITTED' && (canApprove || isSysAdmin)) {
       add('approve', t('hr.payroll.actions.approve'), 'approve', 'primary');
     }
@@ -1509,6 +1569,71 @@ export default function PayrollRunDetailPageContent({
           })();
         }}
         onCancel={() => setReleaseOpen(false)}
+      />
+
+      <Modal
+        title={t('hr.payroll.freelancers.addTitle')}
+        open={freelancerModalOpen}
+        onCancel={() => {
+          setFreelancerModalOpen(false);
+          setFreelancerSelection([]);
+        }}
+        onOk={() => void addSelectedFreelancers()}
+        okText={t('hr.payroll.freelancers.addConfirm')}
+        okButtonProps={{ disabled: freelancerSelection.length === 0 }}
+        confirmLoading={addFreelancersMutation.isPending}
+        destroyOnHidden
+        className="erp-payroll-modal"
+      >
+        <p className="erp-payroll-modal-hint">{t('hr.payroll.freelancers.addHint')}</p>
+        {runInApproval ? (
+          <Alert
+            type="warning"
+            showIcon
+            className="!mb-4"
+            title={t('hr.payroll.freelancers.reopenWarning')}
+          />
+        ) : null}
+        <Select
+          mode="multiple"
+          allowClear
+          showSearch
+          className="w-full"
+          aria-label={t('hr.payroll.freelancers.selectLabel')}
+          placeholder={t('hr.payroll.freelancers.selectPlaceholder')}
+          loading={availableFreelancersQuery.isLoading}
+          value={freelancerSelection}
+          onChange={setFreelancerSelection}
+          optionFilterProp="label"
+          notFoundContent={
+            availableFreelancersQuery.isLoading ? (
+              <Spin size="small" />
+            ) : (
+              t('hr.payroll.freelancers.none')
+            )
+          }
+          options={(availableFreelancersQuery.data ?? []).map((u) => ({
+            value: u.id,
+            label: `${formatUserName(u)}${u.employeeId ? ` · ${u.employeeId}` : ''}`,
+          }))}
+        />
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(removingEntry)}
+        title={t('hr.payroll.freelancers.removeTitle')}
+        description={
+          removingEntry
+            ? `${t('hr.payroll.freelancers.removeDescription', {
+                name: formatUserName(removingEntry.employee),
+              })}${runInApproval ? ` ${t('hr.payroll.freelancers.reopenWarning')}` : ''}`
+            : ''
+        }
+        confirmLabel={t('hr.payroll.freelancers.remove')}
+        danger
+        confirmLoading={removeFreelancerMutation.isPending}
+        onConfirm={() => void removeFreelancerEntry()}
+        onCancel={() => setRemovingEntry(null)}
       />
 
       <ConfirmDialog
@@ -2017,6 +2142,11 @@ export default function PayrollRunDetailPageContent({
               {filteredEntries.length.toLocaleString()}
             </span>
           </div>
+          {canChangeRun ? (
+            <Button onClick={() => setFreelancerModalOpen(true)}>
+              {t('hr.payroll.freelancers.add')}
+            </Button>
+          ) : null}
         </div>
 
         <div className="erp-users-filter-bar">

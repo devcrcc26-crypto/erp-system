@@ -64,6 +64,15 @@ export interface PayrollSalaryPeriod {
   } | null;
 }
 
+export interface PayrollFreelancerOption {
+  id: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  chineseName: string | null;
+  employeeId: string | null;
+}
+
 export interface PayrollEntryEmployee {
   id: string;
   firstName: string;
@@ -71,6 +80,7 @@ export interface PayrollEntryEmployee {
   lastName: string;
   chineseName?: string | null;
   employeeId: string | null;
+  employeeType?: 'PERMANENT' | 'CONTRACT' | 'TEMPORARY' | 'FREELANCER' | null;
   department: { id: string; name: string } | null;
   engineeringDiscipline: { id: string; name: string } | null;
 }

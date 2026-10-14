@@ -1,9 +1,17 @@
-import { apiClient, apiGet, apiPatch, apiPost, downloadApiFile } from '@/lib/api/client';
+import {
+  apiClient,
+  apiDelete,
+  apiGet,
+  apiPatch,
+  apiPost,
+  downloadApiFile,
+} from '@/lib/api/client';
 import type {
   CreatePayrollRunPayload,
   EmployeePayslip,
   PayrollCompanySettings,
   PayrollEntryDetail,
+  PayrollFreelancerOption,
   PayrollRunDetail,
   PayrollRunListItem,
   PayslipGenerateResult,
@@ -39,6 +47,26 @@ export async function recalculatePayrollRun(
   runId: string,
 ): Promise<PayrollRunDetail> {
   return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/recalculate`);
+}
+
+export async function listAvailablePayrollFreelancers(
+  runId: string,
+): Promise<PayrollFreelancerOption[]> {
+  return apiGet<PayrollFreelancerOption[]>(`${BASE}/runs/${runId}/freelancers/available`);
+}
+
+export async function addPayrollFreelancers(
+  runId: string,
+  employeeIds: string[],
+): Promise<PayrollRunDetail> {
+  return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/freelancers`, { employeeIds });
+}
+
+export async function removePayrollFreelancerEntry(
+  runId: string,
+  entryId: string,
+): Promise<PayrollRunDetail> {
+  return apiDelete<PayrollRunDetail>(`${BASE}/runs/${runId}/entries/${entryId}`);
 }
 
 export async function markPayrollRunReviewed(

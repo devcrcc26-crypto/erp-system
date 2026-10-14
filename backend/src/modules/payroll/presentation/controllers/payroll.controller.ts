@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -22,6 +23,7 @@ import { PermissionsGuard } from '../../../../shared/permissions/permissions.gua
 import { RequireAnyPermission } from '../../../../shared/permissions/require-any-permission.decorator';
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
+  AddPayrollFreelancersDto,
   CreatePayrollRunDto,
   SubmitPayrollRunDto,
   UpdatePayrollCompanySettingsDto,
@@ -153,12 +155,52 @@ export class PayrollController {
 
   @Post('runs/:id/recalculate')
   @RequireAnyPermission({ module: 'payroll', action: 'create' })
-  @ApiOperation({ summary: 'Recalculate all entries (preserves bonus top-ups)' })
+  @ApiOperation({
+    summary:
+      'Recalculate all entries (preserves bonus top-ups and added freelancers). Allowed until PAID; resets an approved run to DRAFT.',
+  })
   recalculate(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
     return this.payrollRunService.recalculate(id, this.ctx(user));
+  }
+
+  @Get('runs/:id/freelancers/available')
+  @RequireAnyPermission({ module: 'payroll', action: 'create' })
+  @ApiOperation({ summary: 'Freelancers that can be added to this run' })
+  listAvailableFreelancers(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.listAvailableFreelancers(id, this.ctx(user));
+  }
+
+  @Post('runs/:id/freelancers')
+  @RequireAnyPermission({ module: 'payroll', action: 'create' })
+  @ApiOperation({
+    summary:
+      'Add freelancers to an unpaid run (freelancers are never added automatically). Resets an approved run to DRAFT.',
+  })
+  addFreelancers(
+    @Param('id') id: string,
+    @Body() dto: AddPayrollFreelancersDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.addFreelancers(id, dto.employeeIds, this.ctx(user));
+  }
+
+  @Delete('runs/:id/entries/:entryId')
+  @RequireAnyPermission({ module: 'payroll', action: 'create' })
+  @ApiOperation({
+    summary: 'Remove a freelancer entry from an unpaid run. Resets an approved run to DRAFT.',
+  })
+  removeFreelancerEntry(
+    @Param('id') id: string,
+    @Param('entryId') entryId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.removeFreelancerEntry(id, entryId, this.ctx(user));
   }
 
   @Post('runs/:id/mark-reviewed')

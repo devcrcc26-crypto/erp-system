@@ -4938,10 +4938,27 @@
         "releaseTitle": "Release payslips to employees?",
         "releaseDescription": "{{count}} employees will be notified that their payslip is available."
       },
+      "freelancers": {
+        "tag": "Freelancer",
+        "add": "Add freelancer",
+        "addTitle": "Add freelancers to this payroll",
+        "addHint": "Freelancers are never added automatically. Choose who is paid this month; they stay in the run when it is recalculated.",
+        "addConfirm": "Add to payroll",
+        "selectLabel": "Freelancers",
+        "selectPlaceholder": "Search freelancers",
+        "none": "No freelancers left to add",
+        "added": "{{count}} freelancer(s) added",
+        "remove": "Remove from payroll",
+        "removeTitle": "Remove freelancer from this payroll?",
+        "removeDescription": "{{name}} will not be paid in this run.",
+        "removed": "Freelancer removed",
+        "reopenWarning": "This run is already in approval. Changing it sends it back to draft, and it must be reviewed and approved again."
+      },
       "confirm": {
         "confirmButton": "Confirm",
         "recalculateTitle": "Recalculate payroll?",
         "recalculateDescription": "Recalculates all entries from current contracts, attendance, overtime and leave. Bonus top-ups and notes are kept.",
+        "recalculateReopenDescription": "Recalculates all entries from current contracts, attendance, overtime and leave. Bonus top-ups, notes and added freelancers are kept. The run goes back to draft and must be reviewed, submitted and approved by HR and the GM again. Generated payslips are removed and must be regenerated after approval.",
         "markReviewedTitle": "Mark as reviewed?",
         "markReviewedDescription": "Lock this draft for HR review before submission.",
         "submitTitle": "Submit for approval?",

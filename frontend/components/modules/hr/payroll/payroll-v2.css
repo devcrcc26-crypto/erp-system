@@ -636,6 +636,26 @@
   line-height: 20px;
 }
 
+.erp-payroll-split-pill + .erp-payroll-split-pill {
+  margin-left: 6px;
+}
+
+.erp-payroll-freelancer-pill {
+  background: var(--pr-amber-bg);
+  color: var(--pr-amber);
+}
+
+.erp-payroll-entries .erp-users-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.erp-payroll-entries .erp-users-toolbar .ant-btn {
+  border-radius: 10px;
+}
+
 /* Totals (sticky at the bottom) */
 .erp-payroll-entries .ant-table-summary > tr > td,
 .erp-payroll-entries .ant-table-summary .ant-table-cell {

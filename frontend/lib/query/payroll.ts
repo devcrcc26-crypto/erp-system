@@ -2,6 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  addPayrollFreelancers,
+  listAvailablePayrollFreelancers,
+  removePayrollFreelancerEntry,
   approvePayrollRun,
   cancelPayrollRun,
   createPayrollRun,
@@ -84,6 +87,30 @@ export function useRecalculatePayrollRun(runId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => recalculatePayrollRun(runId),
+    onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+export function useAvailablePayrollFreelancers(runId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...payrollKeys.run(runId), 'available-freelancers'] as const,
+    queryFn: () => listAvailablePayrollFreelancers(runId),
+    enabled: enabled && Boolean(runId),
+  });
+}
+
+export function useAddPayrollFreelancers(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (employeeIds: string[]) => addPayrollFreelancers(runId, employeeIds),
+    onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+export function useRemovePayrollFreelancerEntry(runId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (entryId: string) => removePayrollFreelancerEntry(runId, entryId),
     onSuccess: () => invalidateRun(queryClient, runId),
   });
 }

@@ -4937,10 +4937,27 @@
         "releaseTitle": "向员工发布工资单？",
         "releaseDescription": "将通知 {{count}} 名员工，其工资单已可查看。"
       },
+      "freelancers": {
+        "tag": "自由职业者",
+        "add": "添加自由职业者",
+        "addTitle": "将自由职业者加入本次薪资",
+        "addHint": "自由职业者不会自动加入。请选择本月需要支付的人员；重新计算时他们会保留在本次薪资中。",
+        "addConfirm": "加入薪资",
+        "selectLabel": "自由职业者",
+        "selectPlaceholder": "搜索自由职业者",
+        "none": "没有可添加的自由职业者",
+        "added": "已添加 {{count}} 名自由职业者",
+        "remove": "从薪资中移除",
+        "removeTitle": "从本次薪资中移除该自由职业者？",
+        "removeDescription": "{{name}} 将不会在本次薪资中获得支付。",
+        "removed": "已移除自由职业者",
+        "reopenWarning": "本次薪资已在审批中。修改后将退回草稿，需要重新审核和审批。"
+      },
       "confirm": {
         "confirmButton": "确认",
         "recalculateTitle": "重新计算薪资？",
         "recalculateDescription": "将根据当前合同、考勤、加班和请假重新计算所有明细。奖金补发和备注将保留。",
+        "recalculateReopenDescription": "将根据当前合同、考勤、加班和请假重新计算所有明细。奖金补发、备注和已添加的自由职业者将保留。本次薪资将退回草稿，需要重新审核、提交，并由人事和总经理再次审批。已生成的工资单将被删除，审批后需重新生成。",
         "markReviewedTitle": "标记为已复核？",
         "markReviewedDescription": "锁定草稿，准备提交审批。",
         "submitTitle": "提交审批？",

@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayNotEmpty,
+  IsArray,
+  IsUUID,
   IsBoolean,
   IsInt,
   IsNumber,
@@ -26,6 +29,14 @@ export class CreatePayrollRunDto {
   @IsOptional()
   @IsString()
   notes?: string;
+}
+
+export class AddPayrollFreelancersDto {
+  @ApiProperty({ type: [String], description: 'Freelancer user ids to add to this run' })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('all', { each: true })
+  employeeIds!: string[];
 }
 
 export class SubmitPayrollRunDto {
