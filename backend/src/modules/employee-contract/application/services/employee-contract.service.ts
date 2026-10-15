@@ -174,12 +174,14 @@ export class EmployeeContractService {
         await this.assertCanManage(companyId, userId);
         const employee = await this.prisma.user.findFirst({
             where: activeOnly({id: dto.employeeId, companyId}),
-            select: {id: true},
+            select: {id: true, employeeType: true},
         });
 
         if(!employee){
             throw new NotFoundException('Employee not found');
         }
+        // Freelancers have no pension unless HR says otherwise (convert-to-freelancer contracts).
+        const defaultPension = employee.employeeType !== 'FREELANCER';
 
         const signedAt = this.parseDateOnly(dto.signedAt);
         const startDate = this.parseDateOnly(dto.startDate);
@@ -192,7 +194,7 @@ export class EmployeeContractService {
             transportationAllowance: dto.transportationAllowance ?? 0,
             monthlyBonus: dto.monthlyBonus ?? 0,
             monthlyNetBonus: dto.monthlyNetBonus ?? 0,
-            pensionApplicable: dto.pensionApplicable ?? true,
+            pensionApplicable: dto.pensionApplicable ?? defaultPension,
             taxApplicable: dto.taxApplicable ?? true,
         });
 

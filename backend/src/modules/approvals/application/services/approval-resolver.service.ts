@@ -6,6 +6,10 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  isVacantApprover,
+  vacantApproverMessage,
+} from '../../../../shared/employment/vacant-approver.util';
 
 /** Single tier definition inside an approval rule. */
 export interface ApprovalRuleTierConfig {
@@ -206,7 +210,7 @@ export class ApprovalResolverService {
           `Tier "${tier.label}" USER resolver requires userId`,
         );
       }
-      await this.assertActiveUser(companyId, tier.userId);
+      await this.assertActiveUser(companyId, tier.userId, tier.label);
       return tier.userId;
     }
 
@@ -224,7 +228,7 @@ export class ApprovalResolverService {
           `Cannot resolve department leader for tier "${tier.label}"`,
         );
       }
-      await this.assertActiveUser(companyId, leaderId);
+      await this.assertActiveUser(companyId, leaderId, tier.label);
       return leaderId;
     }
 
@@ -268,16 +272,14 @@ export class ApprovalResolverService {
     const assignment = await this.prisma.userRole.findFirst({
       where: activeOnly({
         roleId,
-        user: activeOnly({ companyId, isActive: true }),
+        user: activeOnly({ companyId, isActive: true, employmentStatus: 'ACTIVE' as const }),
       }),
       orderBy: { createdAt: 'asc' },
       select: { userId: true },
     });
 
     if (!assignment) {
-      throw new BadRequestException(
-        `No active user found for role on tier "${tier.label}"`,
-      );
+      throw new BadRequestException(vacantApproverMessage(roleKey ?? tier.label));
     }
 
     return assignment.userId;
@@ -286,13 +288,17 @@ export class ApprovalResolverService {
   private async assertActiveUser(
     companyId: string,
     userId: string,
+    role: string,
   ): Promise<void> {
     const user = await this.prisma.user.findFirst({
-      where: activeOnly({ id: userId, companyId, isActive: true }),
-      select: { id: true },
+      where: activeOnly({ id: userId, companyId }),
+      select: { id: true, isActive: true, employmentStatus: true },
     });
     if (!user) {
       throw new NotFoundException(`Approver user ${userId} not found`);
+    }
+    if (isVacantApprover(user)) {
+      throw new BadRequestException(vacantApproverMessage(role));
     }
   }
 }

@@ -114,6 +114,53 @@ export function cappedContractSegments(
   return result;
 }
 
+export interface HoldoverContractLike {
+  id: string;
+  startDate: Date;
+  endDate: Date | null;
+  terminatedAt?: Date | null;
+}
+
+/**
+ * Contract ended without a new one while employment stays open: the person is
+ * never auto-separated, so the last contract's terms keep applying until HR
+ * renews, converts or separates. Returns the date the contract ended when the
+ * holdover applies this month, else null. Legacy users without EmploymentPeriod
+ * rows are excluded (their contracts still define employment).
+ */
+export function contractHoldoverEndedOn(
+  window: EmploymentWindow | null,
+  latest: Pick<HoldoverContractLike, 'endDate' | 'terminatedAt'> | null | undefined,
+  monthEnd: Date,
+): Date | null {
+  if (!window?.fromPeriods || !window.overlapsMonth || !latest) return null;
+  if (latest.terminatedAt || !latest.endDate) return null;
+  if (latest.endDate.getTime() >= monthEnd.getTime()) return null;
+  if (window.end && window.end.getTime() <= latest.endDate.getTime()) return null;
+  return latest.endDate;
+}
+
+/**
+ * Applies {@link contractHoldoverEndedOn}: the latest contract is extended to the
+ * leaving date (or left open), and added to the month list when it ended before
+ * the month started.
+ */
+export function withContractHoldover<T extends HoldoverContractLike>(
+  monthContracts: T[],
+  latest: T | null | undefined,
+  window: EmploymentWindow | null,
+  monthEnd: Date,
+): { contracts: T[]; endedOn: Date | null } {
+  const endedOn = contractHoldoverEndedOn(window, latest ?? null, monthEnd);
+  if (!endedOn || !latest) return { contracts: monthContracts, endedOn: null };
+  const extended = { ...latest, endDate: window?.end ?? null };
+  const rest = monthContracts.filter((c) => c.id !== latest.id);
+  return {
+    contracts: [...rest, extended].sort((a, b) => a.startDate.getTime() - b.startDate.getTime()),
+    endedOn,
+  };
+}
+
 /**
  * Batch-loads employment windows for the month. Users missing from the result
  * were not requested; every requested id gets a window (fallback when no periods).

@@ -158,10 +158,10 @@ describe('PolicySettingsService', () => {
       expect(preview.affectedRuns.map((r) => r.id)).toEqual(['nov']);
     });
 
-    it('informational policies (not yet used by calculations) affect no runs', async () => {
+    it('separation settlement policies now affect runs (final settlement reads them)', async () => {
       const { service } = makeService({ roles: ['HR Manager'], runs: [run('nov', 11, 'PAID')] });
       const preview = await service.preview(ctx, 'noticePay', '2026-11-01');
-      expect(preview.affectedRuns).toEqual([]);
+      expect(preview.affectedRuns.map((r) => r.effect)).toEqual(['REVIEW_REQUIRED']);
     });
   });
 

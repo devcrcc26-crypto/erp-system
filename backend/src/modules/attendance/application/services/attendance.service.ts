@@ -34,6 +34,7 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
 import {
   cappedContractSegments,
+  withContractHoldover,
   effectiveContractEnd,
   employedInMonthWhere,
   getEmploymentWindow,
@@ -103,6 +104,10 @@ import {
   markPayrollAttendanceSnapshotStale,
 } from '../utils/attendance-recalc-policy.util';
 import { getPolicy, loadPolicySnapshot } from '../../../../shared/policy/policy-reader.util';
+import {
+  inactiveSpanOn,
+  loadInactiveSpansForMonth,
+} from '../../../../shared/employment/inactive-period.util';
 import {
   formatValidationMessage,
   sanitizeStorageEntry,
@@ -362,7 +367,8 @@ function resolveAttendanceDayFlag(params: {
     params.dayStatus === 'DAY_OFF' ||
     params.dayStatus === 'WORKED_ON_DAY_OFF' ||
     params.dayStatus === 'HOLIDAY' ||
-    params.dayStatus === 'ENROLMENT_GRACE'
+    params.dayStatus === 'ENROLMENT_GRACE' ||
+    params.dayStatus === 'INACTIVE'
   ) {
     return AttendanceDayFlag.NONE;
   }
@@ -5092,10 +5098,26 @@ export class AttendanceService
           { OR: [{ terminatedAt: null }, { terminatedAt: { gte: monthStart } }] },
         ],
       },
-      select: { startDate: true, endDate: true, terminatedAt: true },
+      select: { id: true, startDate: true, endDate: true, terminatedAt: true },
       orderBy: { startDate: 'asc' },
     });
-    const contracts = cappedContractSegments(rawContracts, employmentWindow);
+    // Contract ended without renewal while employment is open → still employed.
+    const latestContract = await readDb.employeeContract.findFirst({
+      where: {
+        companyId,
+        employeeId,
+        deletedAt: null,
+        status: { not: 'DRAFT' },
+        startDate: { lte: monthEnd },
+      },
+      select: { id: true, startDate: true, endDate: true, terminatedAt: true },
+      orderBy: { startDate: 'desc' },
+    });
+    const contracts = cappedContractSegments(
+      withContractHoldover(rawContracts, latestContract, employmentWindow, monthEnd)
+        .contracts,
+      employmentWindow,
+    );
 
     let employmentEndDate: Date | null = employmentWindow?.end ?? null;
     if (contracts.length === 0 && !employmentEndDate) {
@@ -5297,6 +5319,8 @@ export class AttendanceService
     const presentByDecision = isCountedPresentMatchMethod(record.matchMethod);
     // Policies as of the attendance month — never "current".
     const policy = await loadPolicySnapshot(readDb, companyId, monthStart);
+    const inactiveSpans =
+      (await loadInactiveSpansForMonth(readDb, [employeeId], month, year)).get(employeeId) ?? [];
 
     const hireDate =
       employee.employmentDate ??
@@ -5362,7 +5386,16 @@ export class AttendanceService
     const context = buildDayDeductionContext(
       presentByDecision ? { ...employee, attendanceMode: 'EXEMPT' } : employee,
       deductionData,
-      { enrolmentGraceKeys, scanOnlyRuleByDate, scheduleFlagsByDate, policy },
+      {
+        enrolmentGraceKeys,
+        scanOnlyRuleByDate,
+        scheduleFlagsByDate,
+        policy,
+        inactiveForDate: (date) => {
+          const span = inactiveSpanOn(date, inactiveSpans);
+          return span ? { paid: policy.inactivePaid[span.type] } : null;
+        },
+      },
     );
 
     // Month totals over the employed window only (30-day payroll scale). Per-day
@@ -5464,6 +5497,7 @@ export class AttendanceService
 
       const coverageSuppressesScanFlags =
         afterSeparation ||
+        status === 'INACTIVE' ||
         status === 'ON_SITE' ||
         status === 'WORK_FROM_HOME' ||
         status === 'LEAVE' ||

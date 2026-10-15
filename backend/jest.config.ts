@@ -4,9 +4,16 @@ const config: Config = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: 'src',
   testRegex: '.*\\.spec\\.ts$',
+  maxWorkers: 2,
+  workerIdleMemoryLimit: '700MB',
   setupFiles: ['<rootDir>/../test/jest-env-setup.cjs'],
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.(t|j)s$': [
+      'ts-jest',
+      {
+        isolatedModules: true,
+      },
+    ],
   },
   collectCoverageFrom: [
     '**/*.(t|j)s',

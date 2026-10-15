@@ -262,6 +262,8 @@ export function buildDayDeductionContext(
      * When missing a date, falls back to Mon–Sat / Sunday off.
      */
     scheduleFlagsByDate?: ReadonlyMap<string, ScheduleDayFlags>;
+    /** Inactive spans for the employee (with paid flag resolved from policy). */
+    inactiveForDate?: (date: Date) => { paid: boolean } | null;
     /** Policies in force for the attendance month (omitted = policy defaults). */
     policy?: Pick<
       PolicyValues,
@@ -312,6 +314,7 @@ export function buildDayDeductionContext(
     earlyDepartureGraceMinutes: options?.policy?.earlyDepartureGraceMinutes,
     earlyDepartureDeductMinutes: options?.policy?.earlyDepartureDeductMinutes,
     unpaidLeaveCountsRestDays: options?.policy?.unpaidLeaveCountsRestDays,
+    inactiveForDate: options?.inactiveForDate,
   };
 }
 

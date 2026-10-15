@@ -20,6 +20,7 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { assertWithinEmploymentWindow, datesInRange } from '../../../../shared/employment/employment-guard.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { isInstantOnPastDay } from '../../../../shared/utils/date-validation.util';
 import {
@@ -172,6 +173,10 @@ export class BusinessTripService
     const uniqueIds = new Set(passengerIds);
     if (uniqueIds.size !== passengerIds.length) {
       throw new BadRequestException('Duplicate passenger employeeIds are not allowed');
+    }
+    const tripDays = datesInRange(departureDate, returnDate);
+    for (const travellerId of new Set([employeeId, ...passengerIds])) {
+      await assertWithinEmploymentWindow(this.prisma, travellerId, tripDays);
     }
 
     const selectablePassengers = await this.hrApprovalChain.getSelectablePassengers(

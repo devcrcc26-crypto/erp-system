@@ -17,8 +17,10 @@
     "db:seed": "npm --prefix backend run prisma:seed",
     "db:studio": "npm --prefix backend run prisma:studio",
     "test:backend": "npm --prefix backend run test",
+    "test:backend:changed": "npm --prefix backend run test:changed",
     "test:backend:e2e": "npm --prefix backend run test:e2e",
     "test:frontend": "npm --prefix frontend run test",
+    "test:frontend:changed": "npm --prefix frontend run test:changed",
     "test:frontend:e2e": "npm --prefix frontend run test:e2e"
   },
   "engines": {

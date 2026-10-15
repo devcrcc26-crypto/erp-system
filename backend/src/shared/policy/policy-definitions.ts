@@ -47,7 +47,7 @@ export interface PolicyValues {
   unusedLeavePayout: { enabled: boolean; dailyRateBase: 'basic/30' };
   severancePay: { enabled: boolean; parameters: Record<string, unknown> };
   noticePay: { enabled: boolean; days: number };
-  // Inactive (stored for phase 2; not used by calculations yet)
+  // Inactive periods (attendance pay + login)
   inactivePaid: Record<InactiveType, boolean>;
   inactiveCanLogin: Record<InactiveType, boolean>;
 }
@@ -251,7 +251,6 @@ export const POLICY_DEFINITIONS: readonly PolicyDefinition[] = [
     group: 'SEPARATION',
     adminOnly: false,
     kind: 'json',
-    informational: true,
     validate: (v) => {
       if (!isObject(v)) return 'Must be an object';
       if (typeof v.enabled !== 'boolean') return 'enabled must be true or false';
@@ -264,7 +263,6 @@ export const POLICY_DEFINITIONS: readonly PolicyDefinition[] = [
     group: 'SEPARATION',
     adminOnly: false,
     kind: 'json',
-    informational: true,
     validate: (v) => {
       if (!isObject(v)) return 'Must be an object';
       if (typeof v.enabled !== 'boolean') return 'enabled must be true or false';
@@ -277,7 +275,6 @@ export const POLICY_DEFINITIONS: readonly PolicyDefinition[] = [
     group: 'SEPARATION',
     adminOnly: false,
     kind: 'json',
-    informational: true,
     validate: (v) => {
       if (!isObject(v)) return 'Must be an object';
       if (typeof v.enabled !== 'boolean') return 'enabled must be true or false';
@@ -289,7 +286,6 @@ export const POLICY_DEFINITIONS: readonly PolicyDefinition[] = [
     group: 'INACTIVE',
     adminOnly: false,
     kind: 'json',
-    informational: true,
     validate: boolRecord(INACTIVE_TYPES),
   },
   {
@@ -297,7 +293,6 @@ export const POLICY_DEFINITIONS: readonly PolicyDefinition[] = [
     group: 'INACTIVE',
     adminOnly: false,
     kind: 'json',
-    informational: true,
     validate: boolRecord(INACTIVE_TYPES),
   },
 ];

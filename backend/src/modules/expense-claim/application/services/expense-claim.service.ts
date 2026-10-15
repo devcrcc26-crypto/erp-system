@@ -18,6 +18,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { isDateInFuture } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { assertWithinEmploymentWindow } from '../../../../shared/employment/employment-guard.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   ALLOWED_UPLOAD_MIME_TYPES,
@@ -358,6 +359,11 @@ export class ExpenseClaimService
         'Every expense item requires a receipt before submitting',
       );
     }
+    await assertWithinEmploymentWindow(
+      this.prisma,
+      claim.employeeId,
+      claim.items.map((item) => item.expenseDate),
+    );
 
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       claim.employeeId,

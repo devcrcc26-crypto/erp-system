@@ -17,6 +17,9 @@ import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { AuditService } from '../../../audit/application/services/audit.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { markPayrollAttendanceSnapshotStale } from '../../../attendance/application/utils/attendance-recalc-policy.util';
+import { ApprovalReassignmentService } from '../../../approvals/application/services/approval-reassignment.service';
+import { ApprovalsService } from '../../../approvals/application/services/approvals.service';
+import { isVacantApprover } from '../../../../shared/employment/vacant-approver.util';
 import {
   formatDateOnlyUtc,
   minDate,
@@ -32,12 +35,66 @@ const PENDING_REQUEST_STATUSES = ['PENDING', 'SUBMITTED', 'IN_REVIEW'] as const;
 const PAYROLL_NOTIFY_ROLES = ['HR Manager', 'Local HR Manager'] as const;
 const LIST_LIMIT = 20;
 
+export const APPROVER_ROLE_NAMES = [
+  'HR Manager',
+  'HR Officer',
+  'Local HR Manager',
+  'General Manager',
+] as const;
+
+export type LeadershipKind = 'DEPARTMENT_LEADER' | 'DISCIPLINE_LEADER' | 'ROLE';
+
+export interface HandoverDecision {
+  /** Tier id, department id, discipline id or role id. */
+  id: string;
+  replacementId?: string | null;
+  skipReason?: string | null;
+}
+
+export interface HandoverInput {
+  tiers?: HandoverDecision[];
+  leadership?: Array<HandoverDecision & { kind: LeadershipKind }>;
+  submittedRequests?: Array<{ requestId: string; action: 'CANCEL' | 'KEEP' }>;
+}
+
+export interface HandoverRequirements {
+  tiers: Array<{ tierId: string; requestId: string; requestNumber: string; title: string; tierLabel: string }>;
+  leadership: Array<{ kind: LeadershipKind; id: string; name: string }>;
+  submittedRequests: Array<{ requestId: string; requestNumber: string; title: string; status: string }>;
+}
+
+/**
+ * Every pending tier and leadership post needs a replacement or a skip reason;
+ * every pending request they submitted needs cancel/keep. Returns what is missing.
+ */
+export function missingHandover(
+  required: HandoverRequirements,
+  input: HandoverInput | undefined,
+): { tiers: string[]; leadership: string[]; submittedRequests: string[] } {
+  const decided = (d: HandoverDecision | undefined): boolean =>
+    Boolean(d && (d.replacementId || (d.skipReason && d.skipReason.trim().length >= 3)));
+  const tierById = new Map((input?.tiers ?? []).map((d) => [d.id, d]));
+  const leadById = new Map((input?.leadership ?? []).map((d) => [`${d.kind}:${d.id}`, d]));
+  const reqById = new Map((input?.submittedRequests ?? []).map((d) => [d.requestId, d]));
+  return {
+    tiers: required.tiers.filter((t) => !decided(tierById.get(t.tierId))).map((t) => t.tierId),
+    leadership: required.leadership
+      .filter((l) => !decided(leadById.get(`${l.kind}:${l.id}`)))
+      .map((l) => `${l.kind}:${l.id}`),
+    submittedRequests: required.submittedRequests
+      .filter((r) => !reqById.has(r.requestId))
+      .map((r) => r.requestId),
+  };
+}
+
 export interface SeparateEmployeeInput {
   leavingDate: string;
   separationType: SeparationType;
   reason: string;
   /** Required when the leaving date falls in (or before) an approved / paid payroll month. */
   confirmLockedPayroll?: boolean;
+  /** Required when the person approves, leads or has pending requests. */
+  handover?: HandoverInput;
 }
 
 export interface LockedPayrollRun {
@@ -67,6 +124,8 @@ export interface SeparationPreview {
     count: number;
     items: Array<{ requestId: string; requestNumber: string; title: string; status: string }>;
   };
+  /** Everything the handover step must decide before the separation can be confirmed. */
+  handover: HandoverRequirements;
 }
 
 export interface EmploymentState {
@@ -81,6 +140,8 @@ export interface EmploymentState {
     separationReason: string | null;
     separatedAt: string | null;
   }>;
+  /** Current or next upcoming inactive period, if any. */
+  inactive: { id: string; type: string; fromDate: string; toDate: string | null; current: boolean } | null;
   /** Latest separation on the employee's latest period, if any. */
   separation: {
     periodId: string;
@@ -105,6 +166,8 @@ export class EmploymentSeparationService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    private readonly reassignment: ApprovalReassignmentService,
+    private readonly approvals: ApprovalsService,
   ) {}
 
   async getEmployment(ctx: Ctx, userId: string): Promise<EmploymentState> {
@@ -127,7 +190,21 @@ export class EmploymentSeparationService {
         cancelBlockedReason: blocked,
       };
     }
+    const today = todayInAddisUtc();
+    const inactiveRow = await this.prisma.inactivePeriod.findFirst({
+      where: { userId, OR: [{ toDate: null }, { toDate: { gte: today } }] },
+      orderBy: { fromDate: 'asc' },
+    });
     return {
+      inactive: inactiveRow
+        ? {
+            id: inactiveRow.id,
+            type: inactiveRow.type,
+            fromDate: formatDateOnlyUtc(inactiveRow.fromDate),
+            toDate: inactiveRow.toDate ? formatDateOnlyUtc(inactiveRow.toDate) : null,
+            current: inactiveRow.fromDate.getTime() <= today.getTime(),
+          }
+        : null,
       employmentStatus: user.employmentStatus,
       isActive: user.isActive,
       employmentDate: user.employmentDate ? formatDateOnlyUtc(user.employmentDate) : null,
@@ -151,11 +228,12 @@ export class EmploymentSeparationService {
       orderBy: { startDate: 'desc' },
     });
     const employmentStart = openPeriod?.startDate ?? user.employmentDate ?? null;
-    const [contract, lockedPayrollRuns, tiers, submitted] = await Promise.all([
+    const [contract, lockedPayrollRuns, tiers, submitted, handover] = await Promise.all([
       this.activeContract(ctx.companyId, userId),
       this.lockedRunsFrom(ctx.companyId, leavingDate),
       this.pendingApprovalTiers(ctx.companyId, userId),
       this.pendingSubmittedRequests(ctx.companyId, userId),
+      this.handoverRequirements(ctx.companyId, userId),
     ]);
     return {
       leavingDate: formatDateOnlyUtc(leavingDate),
@@ -172,6 +250,7 @@ export class EmploymentSeparationService {
       lockedPayrollRuns,
       pendingApprovalTiers: tiers,
       pendingSubmittedRequests: submitted,
+      handover,
     };
   }
 
@@ -199,6 +278,18 @@ export class EmploymentSeparationService {
         `The active contract ${contract.contractNumber} starts after the leaving date; adjust or delete it first`,
       );
     }
+
+    const handoverRequired = await this.handoverRequirements(ctx.companyId, userId);
+    const missing = missingHandover(handoverRequired, input.handover);
+    if (missing.tiers.length + missing.leadership.length + missing.submittedRequests.length > 0) {
+      throw new BadRequestException({
+        message:
+          'Complete the handover first: choose a replacement (or skip with a reason) for each approval and leadership role, and cancel or keep each pending request.',
+        code: 'HANDOVER_REQUIRED',
+        missing,
+      });
+    }
+    await this.validateReplacements(ctx.companyId, userId, input.handover);
 
     const lockedRuns = await this.lockedRunsFrom(ctx.companyId, leavingDate);
     if (lockedRuns.length > 0 && !input.confirmLockedPayroll) {
@@ -249,6 +340,12 @@ export class EmploymentSeparationService {
     });
 
     await this.afterPayrollAffectingChange(ctx, user, leavingDate, lockedRuns, 'separated');
+    const handoverResult = await this.applyHandover(
+      ctx,
+      userId,
+      `${user.firstName} ${user.lastName}`.trim(),
+      input.handover,
+    );
     await this.audit.create(
       this.audit.buildFromRequestContext({
         userId: ctx.userId,
@@ -265,6 +362,7 @@ export class EmploymentSeparationService {
           effectiveImmediately: effective,
           contractId: contract?.id ?? null,
           lockedPayrollRuns: lockedRuns.map((r) => r.runNumber),
+          handover: handoverResult,
         },
       }),
     );
@@ -424,6 +522,183 @@ export class EmploymentSeparationService {
       processed += 1;
     }
     return { processed, checked: due.length };
+  }
+
+  // ── handover ────────────────────────────────────────────────────────────
+
+  async handoverRequirements(companyId: string, userId: string): Promise<HandoverRequirements> {
+    const [tiers, departments, disciplines, roles, submitted] = await Promise.all([
+      this.prisma.approvalTier.findMany({
+        where: {
+          approverId: userId,
+          decision: 'PENDING',
+          request: { companyId, deletedAt: null, status: { in: [...PENDING_REQUEST_STATUSES] } },
+        },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          label: true,
+          request: { select: { id: true, requestNumber: true, title: true } },
+        },
+      }),
+      this.prisma.department.findMany({
+        where: { companyId, leaderUserId: userId, deletedAt: null },
+        select: { id: true, name: true },
+      }),
+      this.prisma.discipline.findMany({
+        where: { companyId, leaderId: userId, deletedAt: null },
+        select: { id: true, name: true },
+      }),
+      this.prisma.userRole.findMany({
+        where: {
+          userId,
+          deletedAt: null,
+          role: { companyId, deletedAt: null, name: { in: [...APPROVER_ROLE_NAMES] } },
+        },
+        select: { role: { select: { id: true, name: true } } },
+      }),
+      this.prisma.approvalRequest.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          requestedBy: userId,
+          status: { in: [...PENDING_REQUEST_STATUSES] },
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, requestNumber: true, title: true, status: true },
+      }),
+    ]);
+    return {
+      tiers: tiers.map((t) => ({
+        tierId: t.id,
+        requestId: t.request.id,
+        requestNumber: t.request.requestNumber,
+        title: t.request.title,
+        tierLabel: t.label,
+      })),
+      leadership: [
+        ...departments.map((d) => ({ kind: 'DEPARTMENT_LEADER' as const, id: d.id, name: d.name })),
+        ...disciplines.map((d) => ({ kind: 'DISCIPLINE_LEADER' as const, id: d.id, name: d.name })),
+        ...roles.map((r) => ({ kind: 'ROLE' as const, id: r.role.id, name: r.role.name })),
+      ],
+      submittedRequests: submitted.map((r) => ({
+        requestId: r.id,
+        requestNumber: r.requestNumber,
+        title: r.title,
+        status: r.status,
+      })),
+    };
+  }
+
+  private async validateReplacements(
+    companyId: string,
+    leaverId: string,
+    handover: HandoverInput | undefined,
+  ): Promise<void> {
+    const ids = new Set<string>();
+    for (const d of [...(handover?.tiers ?? []), ...(handover?.leadership ?? [])]) {
+      if (d.replacementId) ids.add(d.replacementId);
+    }
+    if (ids.has(leaverId)) {
+      throw new BadRequestException('The person leaving cannot be their own replacement');
+    }
+    if (ids.size === 0) return;
+    const users = await this.prisma.user.findMany({
+      where: activeOnly({ companyId, id: { in: [...ids] } }),
+      select: { id: true, isActive: true, employmentStatus: true },
+    });
+    const ok = new Set(users.filter((u) => !isVacantApprover(u)).map((u) => u.id));
+    const bad = [...ids].filter((id) => !ok.has(id));
+    if (bad.length > 0) {
+      throw new BadRequestException('Every replacement must be an active employee');
+    }
+  }
+
+  private async applyHandover(
+    ctx: Ctx,
+    leaverId: string,
+    leaverName: string,
+    handover: HandoverInput | undefined,
+  ): Promise<{ reassignedTiers: number; leadershipChanged: number; cancelledRequests: number; skipped: string[] }> {
+    const result = { reassignedTiers: 0, leadershipChanged: 0, cancelledRequests: 0, skipped: [] as string[] };
+    const reason = `Handover: ${leaverName} is leaving`;
+    for (const d of handover?.tiers ?? []) {
+      if (d.replacementId) {
+        await this.reassignment.reassignTier(ctx, d.id, d.replacementId, reason, {
+          skipPermissionCheck: true,
+        });
+        result.reassignedTiers += 1;
+      } else {
+        result.skipped.push(`tier ${d.id}: ${d.skipReason}`);
+      }
+    }
+    for (const d of handover?.leadership ?? []) {
+      if (!d.replacementId) {
+        result.skipped.push(`${d.kind} ${d.id}: ${d.skipReason}`);
+        continue;
+      }
+      if (d.kind === 'DEPARTMENT_LEADER') {
+        await this.prisma.department.updateMany({
+          where: { id: d.id, companyId: ctx.companyId, leaderUserId: leaverId },
+          data: { leaderUserId: d.replacementId },
+        });
+      } else if (d.kind === 'DISCIPLINE_LEADER') {
+        await this.prisma.discipline.updateMany({
+          where: { id: d.id, companyId: ctx.companyId, leaderId: leaverId },
+          data: { leaderId: d.replacementId },
+        });
+      } else {
+        const existing = await this.prisma.userRole.findFirst({
+          where: { userId: d.replacementId, roleId: d.id, deletedAt: null },
+          select: { id: true },
+        });
+        // HR chains resolve these roles by *primary* role assignment.
+        const hasPrimary = await this.prisma.userRole.count({
+          where: { userId: d.replacementId, isPrimary: true, deletedAt: null },
+        });
+        if (!existing) {
+          await this.prisma.userRole.create({
+            data: {
+              userId: d.replacementId,
+              roleId: d.id,
+              isPrimary: hasPrimary === 0,
+              assignedBy: ctx.userId,
+              createdBy: ctx.userId,
+              updatedBy: ctx.userId,
+            },
+          });
+        }
+        if (hasPrimary > 0) {
+          result.skipped.push(
+            `ROLE ${d.id}: given to the replacement as a secondary role; approval chains use primary roles, so change their primary role if they should approve`,
+          );
+        }
+      }
+      result.leadershipChanged += 1;
+    }
+    for (const r of handover?.submittedRequests ?? []) {
+      if (r.action !== 'CANCEL') continue;
+      const current = await this.prisma.approvalTier.findFirst({
+        where: {
+          requestId: r.requestId,
+          decision: 'PENDING',
+          request: { companyId: ctx.companyId, requestedBy: leaverId },
+        },
+        orderBy: { tierOrder: 'asc' },
+        select: { id: true },
+      });
+      if (!current) continue;
+      // System rejection runs the domain listeners (leave, overtime, …) like a normal decision.
+      await this.approvals.rejectTier(
+        r.requestId,
+        current.id,
+        ctx.userId,
+        `Cancelled at separation of ${leaverName}`,
+        { bypassApproverCheck: true },
+      );
+      result.cancelledRequests += 1;
+    }
+    return result;
   }
 
   // ── helpers ─────────────────────────────────────────────────────────────

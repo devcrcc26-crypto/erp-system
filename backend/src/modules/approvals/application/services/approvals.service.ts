@@ -1174,11 +1174,13 @@ export class ApprovalsService {
     tierId: string,
     userId: string,
     note?: string,
+    options?: { bypassApproverCheck?: boolean },
   ): Promise<unknown> {
     const { tier, request } = await this.loadTierForAction(
       requestId,
       tierId,
       userId,
+      options,
     );
     this.assertPendingWorkflow(request.status);
     this.assertCurrentTier(request.currentTier, tier.tierOrder);

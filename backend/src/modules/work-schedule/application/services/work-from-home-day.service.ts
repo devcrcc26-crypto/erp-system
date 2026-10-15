@@ -18,6 +18,7 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { assertWithinEmploymentWindow } from '../../../../shared/employment/employment-guard.util';
 import {
   EXCLUDED_FROM_HR_MESSAGE,
   hrProcessEmployeeWhere,
@@ -328,6 +329,10 @@ export class WorkFromHomeDayService
       );
     }
     await this.assertHrProcessEmployees(employeeIds, companyId);
+    // Named employees only; company/department-wide WFH applies to whoever is employed that day.
+    for (const employeeId of employeeIds) {
+      await assertWithinEmploymentWindow(this.prisma, employeeId, dates);
+    }
 
     this.validateScopePayload(scope, departmentIds, employeeIds);
 

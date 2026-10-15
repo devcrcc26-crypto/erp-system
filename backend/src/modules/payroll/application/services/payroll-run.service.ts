@@ -39,9 +39,17 @@ import {
   effectiveContractEnd,
   employedInMonthWhere,
   loadEmploymentWindows,
+  withContractHoldover,
   type EmploymentWindow,
 } from '../../../../shared/employment/employment-window.util';
+import {
+  inactiveDaysByType,
+  loadInactiveSpansForMonth,
+  type InactiveSpan,
+} from '../../../../shared/employment/inactive-period.util';
 import { resolveEmploymentEntryFlag } from '../utils/payroll-employment-flag.util';
+import { computeFinalSettlement } from '../utils/payroll-final-settlement.util';
+import { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 import { getPolicy, loadPolicySnapshot } from '../../../../shared/policy/policy-reader.util';
 import type { PolicyValues } from '../../../../shared/policy/policy-definitions';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
@@ -207,6 +215,7 @@ export class PayrollRunService {
     private readonly calc: PayrollCalculationService,
     private readonly notifications: NotificationService,
     private readonly workScheduleService: WorkScheduleService,
+    private readonly leaveLedger: LeaveLedgerService,
   ) {}
 
   /**
@@ -1132,6 +1141,21 @@ export class PayrollRunService {
 
     const employeeIds = employees.map((e) => e.id);
 
+    const contractSelect = {
+      id: true,
+      employeeId: true,
+      startDate: true,
+      endDate: true,
+      terminatedAt: true,
+      status: true,
+      basicSalary: true,
+      transportationAllowance: true,
+      monthlyBonus: true,
+      monthlyNetBonus: true,
+      pensionApplicable: true,
+      taxApplicable: true,
+    } satisfies Prisma.EmployeeContractSelect;
+
     const [
       contracts,
       endedContractsForEmployment,
@@ -1139,6 +1163,8 @@ export class PayrollRunService {
       overtimeSheets,
       siteAssignments,
       missingAttendanceRows,
+      latestContracts,
+      inactiveSpansByEmployee,
     ] = await Promise.all([
       this.prisma.employeeContract.findMany({
         where: {
@@ -1153,20 +1179,7 @@ export class PayrollRunService {
             { OR: [{ terminatedAt: null }, { terminatedAt: { gte: monthStart } }] },
           ],
         },
-        select: {
-          id: true,
-          employeeId: true,
-          startDate: true,
-          endDate: true,
-          terminatedAt: true,
-          status: true,
-          basicSalary: true,
-          transportationAllowance: true,
-          monthlyBonus: true,
-          monthlyNetBonus: true,
-          pensionApplicable: true,
-          taxApplicable: true,
-        },
+        select: contractSelect,
         orderBy: { startDate: 'asc' },
       }),
       this.prisma.employeeContract.findMany({
@@ -1271,10 +1284,50 @@ export class PayrollRunService {
           resolution: true,
         },
       }),
+      // Latest contract per employee (holdover when it ended without renewal).
+      this.prisma.employeeContract.findMany({
+        where: {
+          companyId: ctx.companyId,
+          employeeId: { in: employeeIds },
+          deletedAt: null,
+          status: { not: 'DRAFT' },
+          startDate: { lte: monthEnd },
+        },
+        select: contractSelect,
+        orderBy: [{ employeeId: 'asc' }, { startDate: 'desc' }],
+        distinct: ['employeeId'],
+      }),
+      loadInactiveSpansForMonth(this.prisma, employeeIds, month, year),
     ]);
 
+    const latestContractByEmployee = new Map(
+      latestContracts.map((c) => [c.employeeId, c]),
+    );
+    const rawContractsByEmployee = new Map<string, typeof contracts>();
+    for (const contract of contracts) {
+      const list = rawContractsByEmployee.get(contract.employeeId) ?? [];
+      list.push(contract);
+      rawContractsByEmployee.set(contract.employeeId, list);
+    }
+    // Contract ended without a new one while employment is open: still employed
+    // and paid on the ended contract's terms until HR renews, converts or separates.
+    const contractEndedOnByEmployee = new Map<string, Date>();
+    const monthContracts: typeof contracts = [];
+    for (const employee of employees) {
+      const held = withContractHoldover(
+        rawContractsByEmployee.get(employee.id) ?? [],
+        latestContractByEmployee.get(employee.id),
+        windowsByEmployee.get(employee.id) ?? null,
+        monthEnd,
+      );
+      if (held.endedOn) {
+        contractEndedOnByEmployee.set(employee.id, held.endedOn);
+      }
+      monthContracts.push(...held.contracts);
+    }
+
     const contractsByEmployee = new Map<string, ContractSnapshot[]>();
-    for (const { terminatedAt, ...contract } of contracts) {
+    for (const { terminatedAt, ...contract } of monthContracts) {
       // Downstream day allocation reads endDate only, so fold termination and the
       // leaving date into it here.
       const window = windowsByEmployee.get(contract.employeeId);
@@ -1358,6 +1411,8 @@ export class PayrollRunService {
           contracts: overlapping,
           employmentEndDate: employmentEndByEmployee.get(employee.id) ?? null,
           employmentWindow: windowsByEmployee.get(employee.id) ?? null,
+          contractEndedOn: contractEndedOnByEmployee.get(employee.id) ?? null,
+          inactiveSpans: inactiveSpansByEmployee.get(employee.id) ?? [],
           attendance,
           overtime: overtimeByEmployee.get(employee.id),
           siteAssignments: siteByEmployee.get(employee.id) ?? [],
@@ -1505,6 +1560,10 @@ export class PayrollRunService {
     /** End/termination when there is no overlapping contract this month. */
     employmentEndDate?: Date | null;
     employmentWindow?: EmploymentWindow | null;
+    /** Last contract ended without renewal; pay continues on its terms. */
+    contractEndedOn?: Date | null;
+    /** Inactive periods overlapping the month. */
+    inactiveSpans?: InactiveSpan[];
     attendance: AttendanceSnapshot | undefined;
     overtime: OvertimeSnapshot | undefined;
     siteAssignments: Array<{
@@ -1650,6 +1709,15 @@ export class PayrollRunService {
     let payrollDays = totalEmployedDays;
     const noteParts: string[] = [];
 
+    // Inactive periods: stays on the roster; unpaid days deducted like unpaid leave.
+    const inactive = this.inactiveSummary(
+      input.inactiveSpans ?? [],
+      input.employmentWindow ?? null,
+      monthStart,
+      monthEnd,
+      policy,
+    );
+
     if (attendance) {
       absentInWindow = this.toNumber(attendance.absentDays);
       payrollDays = this.toNumber(attendance.paidDays);
@@ -1661,8 +1729,16 @@ export class PayrollRunService {
         }
         return sum;
       }, 0);
+      // The stored counter also holds unpaid inactive days (listed separately).
+      const inactiveUnpaidFromLogs = attendance.dailyLogs.reduce(
+        (sum, log) =>
+          log.dayStatus === 'INACTIVE' ? sum + this.toNumber(log.dayDeduction) : sum,
+        0,
+      );
       const unpaidLeave =
-        unpaidFromRecord > 0 ? unpaidFromRecord : unpaidFromLogs;
+        unpaidFromRecord > 0
+          ? Math.max(0, unpaidFromRecord - inactiveUnpaidFromLogs)
+          : unpaidFromLogs;
       if (unpaidLeave > 0) {
         noteParts.push(`Unpaid leave: ${unpaidLeave} days`);
       }
@@ -1674,6 +1750,11 @@ export class PayrollRunService {
           `Would deduct ${wouldDeduct} day(s) for early departure (not applied)`,
         );
       }
+    }
+
+    if (!attendance && inactive.unpaidDays > 0) {
+      // No attendance record to carry the deduction: apply it here.
+      payrollDays = Math.max(0, payrollDays - inactive.unpaidDays);
     }
 
     const fullyAbsentWorkingDays = this.isFullyAbsentWorkingMonth(
@@ -1770,11 +1851,30 @@ export class PayrollRunService {
       missingResolution: input.missingAttendanceResolution,
       monthEndBasic,
     });
+    // Final settlement: only items enabled in the policy for this payroll month.
+    const window = input.employmentWindow ?? null;
+    const settlement =
+      window?.leftInMonth && window.end
+        ? computeFinalSettlement({
+            basicSalary: monthEndBasic,
+            leavingDate: window.end,
+            employmentStart: window.start,
+            unusedLeaveDays: policy.unusedLeavePayout.enabled
+              ? await this.unusedAnnualLeaveDays(employee.id, ctx.companyId, window.end)
+              : null,
+            policy,
+          })
+        : null;
+    const settlementApplied = settlement?.anyEnabled ? settlement : null;
+
     const employmentFlag = resolveEmploymentEntryFlag({
       baseFlag: attendanceFlag.flag,
       baseNote: attendanceFlag.flagNote,
-      window: input.employmentWindow ?? null,
+      window,
       isActive: employee.isActive,
+      inactiveNote: inactive.note,
+      contractEndedOn: input.contractEndedOn ?? null,
+      settlementNotes: settlementApplied?.notes ?? null,
     });
     const flag: PayrollEntryFlag = employmentFlag.flag;
     const flagNote = employmentFlag.flagNote;
@@ -1839,6 +1939,8 @@ export class PayrollRunService {
       pensionApplicable,
       taxApplicable,
       policy,
+      settlementTaxable: settlementApplied?.taxable ?? 0,
+      settlementNonTaxable: settlementApplied?.nonTaxable ?? 0,
     });
 
     const entryId = randomUUID();
@@ -1919,6 +2021,9 @@ export class PayrollRunService {
       incomeTax: new Decimal(result.incomeTax),
       totalDeductions: new Decimal(result.totalDeductions),
       netPay: new Decimal(result.netPay),
+      unusedLeavePayout: new Decimal(settlementApplied?.unusedLeavePayout ?? 0),
+      severancePay: new Decimal(settlementApplied?.severancePay ?? 0),
+      noticePay: new Decimal(settlementApplied?.noticePay ?? 0),
       bonusTopUp: new Decimal(effectiveBonusTopUp),
       bonusTopUpReason: fullyAbsentWorkingDays ? null : bonusTopUpReason,
       netTopUp: new Decimal(effectiveNetTopUp),
@@ -1934,6 +2039,64 @@ export class PayrollRunService {
     };
 
     return { entry, salaryPeriods };
+  }
+
+  /** Inactive days in the employed part of the month, by type, with paid/unpaid split. */
+  private inactiveSummary(
+    spans: InactiveSpan[],
+    window: EmploymentWindow | null,
+    monthStart: Date,
+    monthEnd: Date,
+    policy: PolicyValues,
+  ): { note: string | null; unpaidDays: number } {
+    if (spans.length === 0) {
+      return { note: null, unpaidDays: 0 };
+    }
+    const from =
+      window?.start && window.start.getTime() > monthStart.getTime()
+        ? window.start
+        : monthStart;
+    const to =
+      window?.end && window.end.getTime() < monthEnd.getTime() ? window.end : monthEnd;
+    const byType = inactiveDaysByType(spans, from, to);
+    if (byType.size === 0) {
+      return { note: null, unpaidDays: 0 };
+    }
+    const label: Record<string, string> = {
+      SUSPENDED: 'Suspended',
+      LONG_LEAVE: 'Long leave',
+      OTHER: 'Other',
+    };
+    let unpaidDays = 0;
+    const parts: string[] = [];
+    for (const [type, days] of byType) {
+      const paid = policy.inactivePaid[type] === true;
+      if (!paid) unpaidDays += days;
+      parts.push(`Inactive (${label[type] ?? type}) ${days} day(s) — ${paid ? 'paid' : 'unpaid'}`);
+    }
+    return { note: parts.join('; '), unpaidDays };
+  }
+
+  /** Remaining annual leave on the leaving date; null when the ledger cannot answer. */
+  private async unusedAnnualLeaveDays(
+    employeeId: string,
+    companyId: string,
+    leavingDate: Date,
+  ): Promise<number | null> {
+    try {
+      const balance = await this.leaveLedger.getLeaveBalance(
+        employeeId,
+        companyId,
+        'ANNUAL',
+        leavingDate,
+      );
+      return balance.remaining;
+    } catch (error) {
+      this.logger.warn(
+        `Unused leave balance unavailable for ${employeeId}: ${(error as Error).message}`,
+      );
+      return null;
+    }
   }
 
   private async persistEntryDrafts(
@@ -2011,6 +2174,15 @@ export class PayrollRunService {
       }
     }
 
+    // Preserve stored final-settlement lines (severance may be untaxed per policy).
+    const severance = this.toNumber(entry.severancePay);
+    const severanceUntaxed =
+      (policy.severancePay.parameters as { taxable?: unknown } | undefined)?.taxable === false;
+    const settlementTaxable =
+      this.toNumber(entry.unusedLeavePayout) +
+      this.toNumber(entry.noticePay) +
+      (severanceUntaxed ? 0 : severance);
+
     // Preserve stored OT pay (may be multi-contract, priced per period basic).
     return this.calc.calculate({
       basicSalary: this.toNumber(entry.basicSalary),
@@ -2037,6 +2209,8 @@ export class PayrollRunService {
       pensionApplicable,
       taxApplicable,
       policy,
+      settlementTaxable,
+      settlementNonTaxable: severanceUntaxed ? severance : 0,
     });
   }
 

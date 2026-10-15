@@ -20,6 +20,7 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { assertWithinEmploymentWindow, datesInRange } from '../../../../shared/employment/employment-guard.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   ALLOWED_UPLOAD_MIME_TYPES,
@@ -226,6 +227,7 @@ export class LeaveService
     const startDate = resolved.startDate;
     const endDate = resolved.endDate;
     const days = resolved.days;
+    await assertWithinEmploymentWindow(this.prisma, employeeId, datesInRange(startDate, endDate));
     // Charge each working day to the leave year that contains it (split on anniversary).
     const yearCharges = await this.leaveBalanceService.chargeDaysByLeaveYear(
       employeeId,

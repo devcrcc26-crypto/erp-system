@@ -23,6 +23,7 @@ import {
   startOfToday,
 } from '../../../../shared/utils/date-validation.util';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { assertWithinEmploymentWindow, datesInRange } from '../../../../shared/employment/employment-guard.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   buildPaginatedResult,
@@ -174,6 +175,7 @@ export class PerDiemService
     if (endDate.getTime() < startDate.getTime()) {
       throw new BadRequestException('endDate must be on or after startDate');
     }
+    await assertWithinEmploymentWindow(this.prisma, employeeId, datesInRange(startDate, endDate));
     const calendarSpan = calendarDaysInclusive(startDate, endDate);
     if (dto.days > calendarSpan) {
       throw new BadRequestException(

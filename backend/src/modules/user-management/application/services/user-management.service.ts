@@ -113,6 +113,9 @@ export class UserManagementService {
     if (query.isActive !== undefined) {
       where.isActive = query.isActive;
     }
+    if (query.employmentStatus) {
+      where.employmentStatus = query.employmentStatus;
+    }
     const { skip, take } = buildPrismaPagination(query.page, query.limit);
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({

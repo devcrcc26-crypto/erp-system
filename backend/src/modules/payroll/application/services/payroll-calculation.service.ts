@@ -65,6 +65,10 @@ export interface PayrollCalculationInput {
   taxApplicable?: boolean;
   /** Policy in force for the payroll month; omitted = code defaults. */
   policy?: PayrollCalcPolicy;
+  /** Final-settlement amounts that are taxed (in gross + taxable income, no pension). */
+  settlementTaxable?: number;
+  /** Final-settlement amounts that are not taxed (in gross only, no pension). */
+  settlementNonTaxable?: number;
 }
 
 export interface SolveBonusForNetInput {
@@ -137,6 +141,8 @@ export class PayrollCalculationService {
       pensionApplicable = true,
       taxApplicable = true,
       policy = POLICY_DEFAULTS,
+      settlementTaxable = 0,
+      settlementNonTaxable = 0,
     } = input;
 
     const payrollDays = this.round(Math.max(0, payrollDaysInput));
@@ -179,12 +185,17 @@ export class PayrollCalculationService {
 
     const totalBonus = this.round(monthlyBonus + bonusTopUp);
     const grossIncome = this.round(
-      earnedSalary + totalOtPay + totalBonus + transportAllowance,
+      earnedSalary +
+        totalOtPay +
+        totalBonus +
+        transportAllowance +
+        settlementTaxable +
+        settlementNonTaxable,
     );
 
     // Tax is calculated once on the whole month's taxable income.
     const taxableIncome = this.round(
-      earnedSalary + totalOtPay + totalBonus + taxableTransport,
+      earnedSalary + totalOtPay + totalBonus + taxableTransport + settlementTaxable,
     );
 
     // Pension % of earned salary (expatriates/freelancers: caller sets pensionApplicable false).

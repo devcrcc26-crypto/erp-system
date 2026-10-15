@@ -83,6 +83,11 @@ export interface DayDeductionContext {
   /** Policy unpaidLeaveCountsRestDays for the month. */
   unpaidLeaveCountsRestDays?: boolean;
   /**
+   * Inactive period (suspension / long leave) covering the date, with whether
+   * it is paid per the inactivePaid policy. Overrides every other rule.
+   */
+  inactiveForDate?: (date: Date) => { paid: boolean } | null;
+  /**
    * SCAN_ONLY work schedule on this date (null / absent = STANDARD). Any scan
    * is full presence; late, early departure and missing punch are skipped.
    */
@@ -167,6 +172,12 @@ export function dayDeduction(
   const hasClockIn = Boolean(day.clockIn);
   const hasClockOut = Boolean(day.clockOut);
   const hasAnyScan = hasClockIn || hasClockOut;
+
+  // Inactive (suspended / long leave): not absent; unpaid days deduct like unpaid leave.
+  const inactive = context.inactiveForDate?.(date) ?? null;
+  if (inactive) {
+    return { deduction: inactive.paid ? 0 : 1, status: 'INACTIVE' };
+  }
 
   // Unpaid leave: deduction 1, status UNPAID_LEAVE. Optionally includes rest days.
   if (context.isOnUnpaidLeave?.(date)) {
@@ -358,8 +369,15 @@ export interface MonthAbsenceSummary {
    * Unpaid leave is tracked separately in {@link unpaidLeaveDays}.
    */
   absentDays: number;
-  /** Approved unpaid leave deductions this month (separate from absentDays). */
+  /**
+   * Approved unpaid leave deductions this month (separate from absentDays).
+   * Includes unpaid inactive-period days (deducted like unpaid leave).
+   */
   unpaidLeaveDays: number;
+  /** Days inside an inactive period (paid or unpaid). */
+  inactiveDays: number;
+  /** Unpaid inactive-period days (already included in unpaidLeaveDays). */
+  inactiveUnpaidDays: number;
   /**
    * Paid days on the 30-day basis: employedDays − absentDays − unpaidLeaveDays
    * (or 0 when fully absent on every duty day).
@@ -491,6 +509,8 @@ export function summarizeMonthAbsence(
 
   let absentDays = 0;
   let unpaidLeaveDays = 0;
+  let inactiveDays = 0;
+  let inactiveUnpaidDays = 0;
   let leaveDays = 0;
   let earlyDepartureCount = 0;
   let earlyDepartureDeductedDays = 0;
@@ -508,7 +528,11 @@ export function summarizeMonthAbsence(
     };
     const result = dayDeduction(date, dayInput, input.context);
     byDate.set(key, result);
-    if (result.status === 'UNPAID_LEAVE') {
+    if (result.status === 'INACTIVE') {
+      inactiveDays += 1;
+      inactiveUnpaidDays += result.deduction;
+      unpaidLeaveDays += result.deduction;
+    } else if (result.status === 'UNPAID_LEAVE') {
       unpaidLeaveDays += result.deduction;
     } else {
       absentDays += result.deduction;
@@ -547,7 +571,7 @@ export function summarizeMonthAbsence(
     const key = dateToYyyyMmDd(date);
     const day = input.dailyLogsByDate.get(key);
     const status = byDate.get(key)?.status;
-    if (status === 'UNPAID_LEAVE') {
+    if (status === 'UNPAID_LEAVE' || status === 'INACTIVE') {
       return false;
     }
     const hasScan = Boolean(day?.clockIn || day?.clockOut);
@@ -574,6 +598,8 @@ export function summarizeMonthAbsence(
     presentDays,
     absentDays: absentRounded,
     unpaidLeaveDays: unpaidRounded,
+    inactiveDays,
+    inactiveUnpaidDays: roundDays(inactiveUnpaidDays),
     paidDays,
     leaveDays: roundDays(leaveDays),
     fullyAbsentWorkingDays,

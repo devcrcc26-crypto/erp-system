@@ -25,6 +25,14 @@
     ],
     "additionalDirectories": [
       "\\tmp"
+    ],
+    "deny": [
+      "Read(./backend/data/private/**)",
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Read(./**/.next/**)",
+      "Read(./**/node_modules/**)",
+      "Read(./**/dist/**)"
     ]
   }
 }

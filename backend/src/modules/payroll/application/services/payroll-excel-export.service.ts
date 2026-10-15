@@ -347,18 +347,18 @@ export class PayrollExcelExportService {
       .filter((e) => e.employee.excludedFromHrProcesses !== true)
       .map((e) => this.mapEntry(e))
       .sort((a, b) => {
-        const deptA = a.employee.department?.name ?? '';
-        const deptB = b.employee.department?.name ?? '';
-        const deptCmp = deptA.localeCompare(deptB, undefined, {
-          sensitivity: 'base',
-        });
-        if (deptCmp !== 0) {
-          return deptCmp;
-        }
-        return fullName(a.employee).localeCompare(fullName(b.employee), undefined, {
-          sensitivity: 'base',
-        });
+      const deptA = a.employee.department?.name ?? '';
+      const deptB = b.employee.department?.name ?? '';
+      const deptCmp = deptA.localeCompare(deptB, undefined, {
+        sensitivity: 'base',
       });
+      if (deptCmp !== 0) {
+        return deptCmp;
+      }
+      return fullName(a.employee).localeCompare(fullName(b.employee), undefined, {
+        sensitivity: 'base',
+      });
+    });
 
     await this.companySettings.getSettings(companyId);
 
@@ -401,7 +401,7 @@ export class PayrollExcelExportService {
     const filename = `Payroll_${run.year}_${mm}_${safeRun}.xlsx`;
 
     await this.audit.create({
-      companyId,
+        companyId,
       userId,
       module: 'payroll',
       action: 'export',
@@ -753,15 +753,15 @@ export class PayrollExcelExportService {
   ): void {
     const { entry, period, serial, isFirst, firstRow, lastRow, columnSums } = ctx;
     const setValue = (
-      col: number,
-      value: string | number | null,
-      numFmt?: string,
-    ): void => {
+        col: number,
+        value: string | number | null,
+        numFmt?: string,
+      ): void => {
       const cell = sheet.getCell(row, col);
       cell.value = value === '' ? null : value;
       if (typeof value === 'number' && numFmt) {
-        cell.numFmt = numFmt;
-      }
+            cell.numFmt = numFmt;
+          }
       if (typeof value === 'number' && (DATA_SUM_COLS as readonly number[]).includes(col)) {
         columnSums.set(col, round2((columnSums.get(col) ?? 0) + value));
       }
@@ -876,7 +876,7 @@ export class PayrollExcelExportService {
     setFormula(COL.holidayPay, holidayOtPayFormula(row), hPay);
     setFormula(COL.totalOt, totalOtFormula(row), totOt);
 
-    if (isFirst) {
+      if (isFirst) {
       const exempt = isPensionExempt(entry);
       setFormula(
         COL.pensionEmr,
@@ -944,7 +944,7 @@ export class PayrollExcelExportService {
       } else {
         cell.value = 0;
       }
-      cell.numFmt = MONEY_FORMAT;
+        cell.numFmt = MONEY_FORMAT;
       cell.font = { ...(cell.font ?? {}), bold: true };
     }
   }

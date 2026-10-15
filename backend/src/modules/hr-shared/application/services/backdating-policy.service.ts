@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
+import { assertWithinEmploymentWindow } from '../../../../shared/employment/employment-guard.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PAYROLL_LOCKED_RUN_STATUSES } from '../../../attendance/application/utils/attendance-recalc-policy.util';
 import { HrApprovalChainService } from './hr-approval-chain.service';
@@ -128,6 +129,8 @@ export class BackdatingPolicyService {
         error instanceof Error ? error.message : 'Invalid date',
       );
     }
+    // Field movement, WFH and site assignments: never for days outside employment.
+    await assertWithinEmploymentWindow(this.prisma, input.targetEmployeeId, input.dates);
 
     const primaryDate = input.dates.reduce(
       (min, d) => (d.getTime() < min.getTime() ? d : min),

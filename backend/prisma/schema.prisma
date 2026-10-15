@@ -113,6 +113,12 @@ enum EmploymentStatus {
   SEPARATED
 }
 
+enum InactiveType {
+  SUSPENDED
+  LONG_LEAVE
+  OTHER
+}
+
 enum SeparationType {
   RESIGNATION
   TERMINATION
@@ -926,6 +932,7 @@ model User {
   payrollPayslipsUpdated             PayrollPayslip[]            @relation("PayrollPayslipUpdater")
   employmentPeriods                  EmploymentPeriod[]          @relation("EmploymentPeriodEmployee")
   employmentPeriodsSeparated         EmploymentPeriod[]          @relation("EmploymentPeriodSeparatedBy")
+  inactivePeriods                    InactivePeriod[]            @relation("InactivePeriodEmployee")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([leavePolicyId], map: "idx_user_leave_policy")
@@ -958,6 +965,31 @@ model PolicySetting {
 
   @@index([companyId, key, effectiveFrom], map: "idx_policy_setting_company_key_from")
   @@map("policy_setting")
+}
+
+/// Suspension / long leave / other inactive spell inside an employment period.
+/// toDate = last inactive day (null = open). Pay and login follow the inactivePaid /
+/// inactiveCanLogin policies as of each day's month.
+model InactivePeriod {
+  id                      String       @id @default(uuid())
+  companyId               String       @map("company_id")
+  userId                  String       @map("user_id")
+  type                    InactiveType
+  fromDate                DateTime     @map("from_date") @db.Date
+  toDate                  DateTime?    @map("to_date") @db.Date
+  reason                  String
+  createdById             String       @map("created_by_id")
+  createdAt               DateTime     @default(now()) @map("created_at")
+  endedById               String?      @map("ended_by_id")
+  endedAt                 DateTime?    @map("ended_at")
+  /// True when this period (action or daily job) turned login off; reactivation turns it back on.
+  loginDisabledByInactive Boolean      @default(false) @map("login_disabled_by_inactive")
+
+  user User @relation("InactivePeriodEmployee", fields: [userId], references: [id])
+
+  @@index([userId], map: "idx_inactive_period_user")
+  @@index([companyId, fromDate], map: "idx_inactive_period_company_from")
+  @@map("inactive_period")
 }
 
 /// One row per employment stint; the row with endDate null is the current employment.
@@ -4317,6 +4349,8 @@ enum AttendanceDayStatus {
   ENROLMENT_GRACE
   /// After the employee's leaving date — outside employment, neither paid nor absent.
   NOT_EMPLOYED
+  /// Inside an InactivePeriod — deduction 0 (paid) or 1 (unpaid) per the inactivePaid policy.
+  INACTIVE
 }
 
 enum WorkFromHomeScope {
@@ -5795,6 +5829,8 @@ model EmployeeContract{
   probationEndDate          DateTime?                     @map("probation_end_date") @db.Date
   governedBy                String?                       @map("governed_by")
   lastWarnedAt              DateTime?                     @map("last_warned_at")
+  /// When HR was told the contract ended with no new contract (sent once).
+  endedNoticeAt             DateTime?                     @map("ended_notice_at")
   attachmentFolderId       String?                        @map("attachment_folder_id")
   createdAt                 DateTime                      @default(now()) @map("created_at")
   createdBy                 String                        @map("created_by")
@@ -6337,6 +6373,10 @@ enum PayrollEntryFlag{
   LEAVER_FINAL_MONTH
   /// Login disabled but employment period still open (kept on the roster).
   LOGIN_DISABLED_STILL_EMPLOYED
+  /// Part of the month inside an InactivePeriod (days in the note).
+  INACTIVE_IN_MONTH
+  /// Latest contract ended with no new contract; paid on it while employment is open.
+  CONTRACT_ENDED_NOT_RENEWED
 
   @@map("payroll_entry_flag")
 }
@@ -6454,6 +6494,11 @@ model PayrollEntry {
 
   // Net Pay
   netPay                   Decimal             @default(0) @map("net_pay") @db.Decimal(14, 2)
+
+  // Final settlement (leaver final month, only when enabled in policy for that month)
+  unusedLeavePayout        Decimal             @default(0) @map("unused_leave_payout") @db.Decimal(14, 2)
+  severancePay             Decimal             @default(0) @map("severance_pay") @db.Decimal(14, 2)
+  noticePay                Decimal             @default(0) @map("notice_pay") @db.Decimal(14, 2)
 
   // Bonus top-up (taxable, before tax)
   bonusTopUp               Decimal             @default(0) @map("bonus_top_up") @db.Decimal(14, 2)

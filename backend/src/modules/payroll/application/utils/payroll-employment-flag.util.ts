@@ -10,24 +10,57 @@ function formatYmd(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+export const CONTRACT_ENDED_NOT_RENEWED_NOTE =
+  'Contract ended — renew, convert or separate; paid on the ended contract terms';
+
 /**
  * Adds employment flags on top of the contract/attendance flag. An entry holds
- * one flag, so an existing data-problem flag wins and the employment note is appended.
+ * one flag, so an existing data-problem flag wins and the employment notes are
+ * appended. Employment flag priority: leaver final month, inactive in month,
+ * contract ended not renewed, login disabled while employed.
  */
 export function resolveEmploymentEntryFlag(input: {
   baseFlag: PayrollEntryFlag;
   baseNote?: string;
   window: EmploymentWindow | null;
   isActive: boolean;
+  /** e.g. "Inactive (Suspended) 10 days — unpaid"; set when the month has inactive days. */
+  inactiveNote?: string | null;
+  /** Date the last contract ended when pay continues on it (no renewal). */
+  contractEndedOn?: Date | null;
+  /** Final-settlement lines when at least one item is enabled in policy. */
+  settlementNotes?: string[] | null;
 }): { flag: PayrollEntryFlag; flagNote?: string } {
   const notes: string[] = [];
   let employmentFlag: PayrollEntryFlag | null = null;
 
   if (input.window?.leftInMonth && input.window.end) {
-    employmentFlag = 'LEAVER_FINAL_MONTH';
-    notes.push(`${LEAVER_FINAL_MONTH_NOTE} (leaving date ${formatYmd(input.window.end)})`);
-  } else if (!input.isActive && input.window?.overlapsMonth && input.window.end == null) {
-    employmentFlag = 'LOGIN_DISABLED_STILL_EMPLOYED';
+    employmentFlag ??= 'LEAVER_FINAL_MONTH';
+    const leaving = `leaving date ${formatYmd(input.window.end)}`;
+    if (input.settlementNotes && input.settlementNotes.length > 0) {
+      notes.push(
+        `Leaver final month (${leaving}) — final settlement per policy: ${input.settlementNotes.join('; ')}`,
+      );
+    } else {
+      notes.push(`${LEAVER_FINAL_MONTH_NOTE} (${leaving})`);
+    }
+  }
+  if (input.inactiveNote) {
+    employmentFlag ??= 'INACTIVE_IN_MONTH';
+    notes.push(input.inactiveNote);
+  }
+  if (input.contractEndedOn) {
+    employmentFlag ??= 'CONTRACT_ENDED_NOT_RENEWED';
+    notes.push(`${CONTRACT_ENDED_NOT_RENEWED_NOTE} (ended ${formatYmd(input.contractEndedOn)})`);
+  }
+  // Login turned off by an inactive period is expected, not a data problem.
+  if (
+    !input.isActive &&
+    !input.inactiveNote &&
+    input.window?.overlapsMonth &&
+    input.window.end == null
+  ) {
+    employmentFlag ??= 'LOGIN_DISABLED_STILL_EMPLOYED';
     notes.push(LOGIN_DISABLED_STILL_EMPLOYED_NOTE);
   }
 

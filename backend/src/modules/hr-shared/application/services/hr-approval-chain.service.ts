@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import {
+  isVacantApprover,
+  vacantApproverMessage,
+} from '../../../../shared/employment/vacant-approver.util';
 import type { ResolvedApprovalTier } from '../../../approvals/application/services/approval-resolver.service';
 import {
   AUTO_APPROVE_FALLBACK_TIER_LABEL,
@@ -1365,7 +1369,7 @@ export class HrApprovalChainService {
         engineeringDiscipline: {
           include: {
             leader: {
-              select: { id: true, deletedAt: true, isActive: true },
+              select: { id: true, deletedAt: true, isActive: true, employmentStatus: true },
             },
           },
         },
@@ -1383,11 +1387,10 @@ export class HrApprovalChainService {
     }
 
     const disciplineLeader = employee.engineeringDiscipline.leader;
-    if (
-      !disciplineLeader ||
-      disciplineLeader.deletedAt ||
-      !disciplineLeader.isActive
-    ) {
+    if (disciplineLeader && isVacantApprover(disciplineLeader)) {
+      throw new BadRequestException(vacantApproverMessage('Discipline Lead'));
+    }
+    if (!disciplineLeader) {
       throw new BadRequestException(
         "No discipline leader assigned for this employee's discipline.",
       );
@@ -1409,7 +1412,7 @@ export class HrApprovalChainService {
         engineeringDiscipline: {
           include: {
             leader: {
-              select: { id: true, deletedAt: true, isActive: true },
+              select: { id: true, deletedAt: true, isActive: true, employmentStatus: true },
             },
           },
         },
@@ -1428,7 +1431,11 @@ export class HrApprovalChainService {
     }
 
     const leader = employee.engineeringDiscipline.leader;
-    if (!leader || leader.deletedAt || !leader.isActive) {
+    // An assigned lead who left or is inactive is a vacancy, not a tier to skip.
+    if (leader && isVacantApprover(leader)) {
+      throw new BadRequestException(vacantApproverMessage('Discipline Lead'));
+    }
+    if (!leader) {
       return {
         found: false,
         reason: `No Discipline Lead assigned for ${employee.engineeringDiscipline.name}`,
@@ -1462,7 +1469,7 @@ export class HrApprovalChainService {
             name: true,
             leaderUserId: true,
             leaderUser: {
-              select: { id: true, deletedAt: true, isActive: true },
+              select: { id: true, deletedAt: true, isActive: true, employmentStatus: true },
             },
           },
         },
@@ -1477,12 +1484,10 @@ export class HrApprovalChainService {
       return { found: false, reason: 'Employee is not assigned to a department' };
     }
 
-    if (
-      !employee.department.leaderUserId ||
-      !employee.department.leaderUser ||
-      employee.department.leaderUser.deletedAt ||
-      !employee.department.leaderUser.isActive
-    ) {
+    if (employee.department.leaderUser && isVacantApprover(employee.department.leaderUser)) {
+      throw new BadRequestException(vacantApproverMessage('Department Head'));
+    }
+    if (!employee.department.leaderUserId || !employee.department.leaderUser) {
       return {
         found: false,
         reason: `No Department Head assigned for ${employee.department.name}`,
@@ -1520,9 +1525,7 @@ export class HrApprovalChainService {
       return hrOfficer;
     }
 
-    throw new BadRequestException(
-      'No HR Manager found. Please assign a user with the HR Manager role.',
-    );
+    throw new BadRequestException(vacantApproverMessage('HR Manager'));
   }
 
   /**
@@ -1544,6 +1547,7 @@ export class HrApprovalChainService {
       where: activeOnly({
         companyId,
         isActive: true,
+        employmentStatus: 'ACTIVE' as const,
         userRoles: {
           some: activeOnly({
             isPrimary: true,
@@ -1568,9 +1572,7 @@ export class HrApprovalChainService {
       'General Manager',
     );
     if (!gm) {
-      throw new BadRequestException(
-        'No user with primary role General Manager found.',
-      );
+      throw new BadRequestException(vacantApproverMessage('General Manager'));
     }
     return gm;
   }
@@ -1805,6 +1807,7 @@ export class HrApprovalChainService {
       where: activeOnly({
         companyId,
         isActive: true,
+        employmentStatus: 'ACTIVE' as const,
         userRoles: {
           some: activeOnly({
             isPrimary: true,

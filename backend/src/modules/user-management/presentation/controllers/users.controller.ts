@@ -32,9 +32,13 @@ import {
 } from '../../application/dtos/user-management.dtos';
 import { UserManagementService } from '../../application/services/user-management.service';
 import {
+  ReactivateDto,
+  RehireDto,
   SeparateEmployeeDto,
   SeparationPreviewDto,
+  SetInactiveDto,
 } from '../../application/dtos/employment-separation.dtos';
+import { EmploymentLifecycleService } from '../../application/services/employment-lifecycle.service';
 import { EmploymentSeparationService } from '../../application/services/employment-separation.service';
 
 @ApiTags('Users')
@@ -45,6 +49,7 @@ export class UsersController {
   constructor(
     private readonly userManagementService: UserManagementService,
     private readonly separationService: EmploymentSeparationService,
+    private readonly lifecycle: EmploymentLifecycleService,
   ) {}
 
   @Get(':id/employment')
@@ -83,6 +88,55 @@ export class UsersController {
     @Body() dto: SeparateEmployeeDto,
   ): Promise<unknown> {
     return this.separationService.separate(this.ctx(user), id, dto);
+  }
+
+  @Get(':id/inactive-periods')
+  @RequirePermission('users', 'view')
+  @ApiOperation({ summary: 'Inactive periods (suspension, long leave, other)' })
+  listInactive(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.lifecycle.listInactive(this.ctx(user), id);
+  }
+
+  @Post(':id/inactive')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({
+    summary:
+      'Set an employee inactive (suspension / long leave / other). Pay and login follow the inactivePaid / inactiveCanLogin policies.',
+  })
+  setInactive(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SetInactiveDto,
+  ): Promise<unknown> {
+    return this.lifecycle.setInactive(this.ctx(user), id, dto);
+  }
+
+  @Post(':id/reactivate')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({ summary: 'End the current inactive period' })
+  reactivate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: ReactivateDto,
+  ): Promise<unknown> {
+    return this.lifecycle.reactivate(this.ctx(user), id, dto.lastInactiveDate);
+  }
+
+  @Post(':id/rehire')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({
+    summary:
+      'Rehire a separated employee: new employment period + contract; login re-enabled with a temporary password shown once',
+  })
+  rehire(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: RehireDto,
+  ): Promise<unknown> {
+    return this.lifecycle.rehire(this.ctx(user), id, dto);
   }
 
   @Delete(':id/separation')

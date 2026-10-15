@@ -7,6 +7,12 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        maxForks: 2,
+      },
+    },
     include: ['**/*.{test,spec}.{ts,tsx}'],
     // Playwright e2e lives under tests/attendance and e2e — run via `npm run test:e2e` only.
     exclude: [

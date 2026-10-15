@@ -8,6 +8,10 @@ import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
 import { getPolicy } from '../../../../shared/policy/policy-reader.util';
+import {
+  assertNotInUnpaidInactivePeriod,
+  assertWithinEmploymentWindow,
+} from '../../../../shared/employment/employment-guard.util';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import {
   addUtcDays,
@@ -84,6 +88,8 @@ export class OvertimeEntryService {
     if (!employee) {
       throw new NotFoundException('Employee not found');
     }
+    await assertWithinEmploymentWindow(this.prisma, employeeId, [onDate]);
+    await assertNotInUnpaidInactivePeriod(this.prisma, companyId, employeeId, [onDate]);
 
     const calendar = await this.workScheduleService.isHolidayForEmployee(
       companyId,

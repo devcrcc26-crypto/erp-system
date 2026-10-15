@@ -20,6 +20,7 @@ import {
   AttendanceMode,
   EducationLevel,
   EmployeeType,
+  EmploymentStatus,
   Gender,
   Nationality,
   UserDiscipline,
@@ -548,6 +549,11 @@ export class UsersQueryDto extends PaginationQueryDto {
   })
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ enum: EmploymentStatus })
+  @IsOptional()
+  @IsEnum(EmploymentStatus)
+  employmentStatus?: EmploymentStatus;
 }
 
 export class CreateRoleDto {
