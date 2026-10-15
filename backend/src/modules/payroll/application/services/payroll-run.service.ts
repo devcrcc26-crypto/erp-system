@@ -30,13 +30,20 @@ import {
 } from '../../../attendance/application/utils/day-deduction.util';
 import { resolveEntryAttendanceFlag } from '../utils/payroll-attendance-flag.util';
 import {
-  ALLOWANCES_REDUCED_BY_ABSENCE,
-  LEAVER_ALLOWANCE_MODE,
   allocateContractPayrollDays,
   employedPayrollDays,
   resolveEmploymentSegmentsForMonth,
 } from '../utils/payroll-days.util';
 import { computeContractAllowances } from '../utils/payroll-allowance.util';
+import {
+  effectiveContractEnd,
+  employedInMonthWhere,
+  loadEmploymentWindows,
+  type EmploymentWindow,
+} from '../../../../shared/employment/employment-window.util';
+import { resolveEmploymentEntryFlag } from '../utils/payroll-employment-flag.util';
+import { getPolicy, loadPolicySnapshot } from '../../../../shared/policy/policy-reader.util';
+import type { PolicyValues } from '../../../../shared/policy/policy-definitions';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import {
   assignOvertimeToSalaryPeriods,
@@ -98,6 +105,7 @@ interface EmployeeSnapshot {
   employmentDate: Date | null;
   bankName: string | null;
   bankAccountNumber: string | null;
+  isActive: boolean;
 }
 
 interface AttendanceSnapshot {
@@ -319,6 +327,8 @@ export class PayrollRunService {
       where: { id: runId },
       data: {
         attendanceSnapshotStale: false,
+        policyReviewRequired: false,
+        policyReviewNote: null,
         updatedBy: ctx.userId,
       } as Prisma.PayrollRunUpdateInput,
     });
@@ -443,6 +453,8 @@ export class PayrollRunService {
       where: { id: runId },
       data: {
         attendanceSnapshotStale: false,
+        policyReviewRequired: false,
+        policyReviewNote: null,
         updatedBy: ctx.userId,
       } as Prisma.PayrollRunUpdateInput,
     });
@@ -1074,13 +1086,14 @@ export class PayrollRunService {
 
     // Approver-only accounts get no payroll entry (and so no flags / MISSING_CONTRACT).
     // Freelancers are only paid in months HR adds them to the run.
-    const employees = (
+    // Roster = employment window overlaps the month; login (isActive) is irrelevant.
+    const candidates = (
       await this.prisma.user.findMany({
         where: hrProcessEmployeeWhere({
           companyId: ctx.companyId,
-          isActive: true,
           includeInPayroll: true,
           deletedAt: null,
+          ...employedInMonthWhere(month, year),
           ...(options.onlyEmployeeIds ? { id: { in: options.onlyEmployeeIds } } : {}),
         }),
       select: {
@@ -1093,12 +1106,26 @@ export class PayrollRunService {
         employmentDate: true,
         bankName: true,
         bankAccountNumber: true,
+        isActive: true,
       },
       })
     ).filter(
       (e) => e.employeeType !== 'FREELANCER' || includeFreelancerIds.has(e.id),
     );
 
+    if (candidates.length === 0) {
+      return [];
+    }
+
+    const windowsByEmployee = await loadEmploymentWindows(
+      this.prisma,
+      candidates,
+      month,
+      year,
+    );
+    const employees = candidates.filter(
+      (e) => windowsByEmployee.get(e.id)?.overlapsMonth !== false,
+    );
     if (employees.length === 0) {
       return [];
     }
@@ -1119,22 +1146,11 @@ export class PayrollRunService {
           employeeId: { in: employeeIds },
           deletedAt: null,
           startDate: { lte: monthEnd },
+          status: { in: ['ACTIVE', 'SUPERSEDED', 'TERMINATED', 'EXPIRED'] },
+          // Effective end = min(endDate, terminatedAt), whatever the status.
           AND: [
-            {
-              OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
-            },
-            {
-              OR: [
-                { status: 'ACTIVE' },
-                {
-                  status: { in: ['SUPERSEDED', 'TERMINATED', 'EXPIRED'] },
-                  endDate: {
-                    gte: monthStart,
-                    lte: monthEnd,
-                  },
-                },
-              ],
-            },
+            { OR: [{ endDate: null }, { endDate: { gte: monthStart } }] },
+            { OR: [{ terminatedAt: null }, { terminatedAt: { gte: monthStart } }] },
           ],
         },
         select: {
@@ -1142,6 +1158,7 @@ export class PayrollRunService {
           employeeId: true,
           startDate: true,
           endDate: true,
+          terminatedAt: true,
           status: true,
           basicSalary: true,
           transportationAllowance: true,
@@ -1257,9 +1274,19 @@ export class PayrollRunService {
     ]);
 
     const contractsByEmployee = new Map<string, ContractSnapshot[]>();
-    for (const contract of contracts) {
+    for (const { terminatedAt, ...contract } of contracts) {
+      // Downstream day allocation reads endDate only, so fold termination and the
+      // leaving date into it here.
+      const window = windowsByEmployee.get(contract.employeeId);
+      let endDate = effectiveContractEnd(contract.endDate, terminatedAt);
+      if (window?.end && (!endDate || window.end.getTime() < endDate.getTime())) {
+        endDate = window.end;
+      }
+      if (endDate && endDate.getTime() < contract.startDate.getTime()) {
+        continue;
+      }
       const list = contractsByEmployee.get(contract.employeeId) ?? [];
-      list.push(contract);
+      list.push({ ...contract, endDate });
       contractsByEmployee.set(contract.employeeId, list);
     }
 
@@ -1269,9 +1296,14 @@ export class PayrollRunService {
       if (employmentEndByEmployee.has(row.employeeId)) {
         continue;
       }
-      const end = row.terminatedAt ?? row.endDate;
+      const end = effectiveContractEnd(row.endDate, row.terminatedAt);
       if (end) {
         employmentEndByEmployee.set(row.employeeId, end);
+      }
+    }
+    for (const [employeeId, window] of windowsByEmployee) {
+      if (window.end) {
+        employmentEndByEmployee.set(employeeId, window.end);
       }
     }
 
@@ -1305,6 +1337,8 @@ export class PayrollRunService {
     }
 
     const taxableThreshold = this.toNumber(run.taxableThreshold);
+    // Policies as of the payroll month — never "current".
+    const policy = await loadPolicySnapshot(this.prisma, ctx.companyId, monthStart);
     const drafts: EntryDraft[] = [];
 
     for (const employee of employees) {
@@ -1323,12 +1357,14 @@ export class PayrollRunService {
           employee,
           contracts: overlapping,
           employmentEndDate: employmentEndByEmployee.get(employee.id) ?? null,
+          employmentWindow: windowsByEmployee.get(employee.id) ?? null,
           attendance,
           overtime: overtimeByEmployee.get(employee.id),
           siteAssignments: siteByEmployee.get(employee.id) ?? [],
           missingAttendanceResolution:
             missingResolutionByEmployee.get(employee.id) ?? null,
           taxableThreshold,
+          policy,
           bonusTopUp: topUp?.bonusTopUp ?? 0,
           bonusTopUpReason: topUp?.bonusTopUpReason ?? null,
           netTopUp: topUp?.netTopUp ?? 0,
@@ -1427,6 +1463,7 @@ export class PayrollRunService {
       const context = buildOvertimeDayContext(
         weekdaySlice(schedule, onDate),
         isHoliday,
+        await getPolicy(this.prisma, companyId, 'lunchCountsAsOvertime', onDate),
       );
 
       let nextDayContext: ReturnType<typeof buildOvertimeDayContext> | undefined;
@@ -1438,6 +1475,7 @@ export class PayrollRunService {
         nextDayContext = buildOvertimeDayContext(
           weekdaySlice(nextSchedule, nextDate),
           nextHoliday,
+          await getPolicy(this.prisma, companyId, 'lunchCountsAsOvertime', nextDate),
         );
       }
 
@@ -1466,6 +1504,7 @@ export class PayrollRunService {
     contracts: ContractSnapshot[];
     /** End/termination when there is no overlapping contract this month. */
     employmentEndDate?: Date | null;
+    employmentWindow?: EmploymentWindow | null;
     attendance: AttendanceSnapshot | undefined;
     overtime: OvertimeSnapshot | undefined;
     siteAssignments: Array<{
@@ -1475,6 +1514,8 @@ export class PayrollRunService {
     }>;
     missingAttendanceResolution?: string | null;
     taxableThreshold: number;
+    /** Policies in force for the payroll month. */
+    policy: PolicyValues;
     bonusTopUp: number;
     bonusTopUpReason: string | null;
     netTopUp: number;
@@ -1490,6 +1531,7 @@ export class PayrollRunService {
       overtime,
       siteAssignments,
       taxableThreshold,
+      policy,
       bonusTopUp,
       bonusTopUpReason,
       netTopUp,
@@ -1686,8 +1728,8 @@ export class PayrollRunService {
       totalEmployedDays,
       payrollDays,
       noLeaverDays,
-      LEAVER_ALLOWANCE_MODE,
-      ALLOWANCES_REDUCED_BY_ABSENCE,
+      policy.leaverAllowanceMode,
+      policy.allowancesReducedByAbsence,
     );
     let transport = proratedAllowances.transport;
     let monthlyBonus = proratedAllowances.monthlyBonus;
@@ -1728,8 +1770,14 @@ export class PayrollRunService {
       missingResolution: input.missingAttendanceResolution,
       monthEndBasic,
     });
-    const flag: PayrollEntryFlag = attendanceFlag.flag;
-    const flagNote = attendanceFlag.flagNote;
+    const employmentFlag = resolveEmploymentEntryFlag({
+      baseFlag: attendanceFlag.flag,
+      baseNote: attendanceFlag.flagNote,
+      window: input.employmentWindow ?? null,
+      isActive: employee.isActive,
+    });
+    const flag: PayrollEntryFlag = employmentFlag.flag;
+    const flagNote = employmentFlag.flagNote;
     if (attendanceFlag.entryNote) {
       noteParts.push(attendanceFlag.entryNote);
     }
@@ -1757,6 +1805,7 @@ export class PayrollRunService {
       periods: otPeriodWindows,
       sheetTotals,
       monthEndBasic,
+      rates: policy,
     });
 
     if (assignedOt.usedMonthEndFallback) {
@@ -1789,6 +1838,7 @@ export class PayrollRunService {
       taxableThreshold,
       pensionApplicable,
       taxApplicable,
+      policy,
     });
 
     const entryId = randomUUID();
@@ -1940,9 +1990,14 @@ export class PayrollRunService {
 
   private async recalcEntryAmounts(
     entry: PayrollEntry,
-    run: Pick<PayrollRun, 'taxableThreshold'>,
+    run: Pick<PayrollRun, 'taxableThreshold' | 'companyId' | 'month' | 'year'>,
     topUps: { bonusTopUp: number; netTopUp: number },
   ): Promise<PayrollCalculationResult> {
+    const policy = await loadPolicySnapshot(
+      this.prisma,
+      run.companyId,
+      new Date(Date.UTC(run.year, run.month - 1, 1)),
+    );
     let pensionApplicable = true;
     let taxApplicable = true;
     if (entry.contractId) {
@@ -1981,6 +2036,7 @@ export class PayrollRunService {
       taxableThreshold: this.toNumber(run.taxableThreshold),
       pensionApplicable,
       taxApplicable,
+      policy,
     });
   }
 

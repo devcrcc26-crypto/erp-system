@@ -1,5 +1,22 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Decimal } from '@prisma/client/runtime/library';
+import {
+  POLICY_DEFAULTS,
+  incomeTaxFromBrackets,
+  type PolicyValues,
+} from '../../../../shared/policy/policy-definitions';
+
+/** Policy values the payroll calculation reads (as of the payroll month). */
+export type PayrollCalcPolicy = Pick<
+  PolicyValues,
+  | 'pensionEmployeePct'
+  | 'pensionEmployerPct'
+  | 'incomeTaxBrackets'
+  | 'transportTaxable'
+  | 'hoursDivisor'
+  | 'holidayHoursDivisor'
+  | 'multipliers'
+>;
 
 export interface OvertimeHours {
   normalHours: number;
@@ -46,6 +63,8 @@ export interface PayrollCalculationInput {
   pensionApplicable?: boolean;
   /** When false, income tax is 0. Defaults to true. */
   taxApplicable?: boolean;
+  /** Policy in force for the payroll month; omitted = code defaults. */
+  policy?: PayrollCalcPolicy;
 }
 
 export interface SolveBonusForNetInput {
@@ -55,6 +74,7 @@ export interface SolveBonusForNetInput {
   taxableThreshold: number;
   pensionApplicable?: boolean;
   taxApplicable?: boolean;
+  policy?: PayrollCalcPolicy;
 }
 
 export interface PayrollCalculationResult {
@@ -92,14 +112,12 @@ const ZERO_OT: OvertimeHours = {
 
 @Injectable()
 export class PayrollCalculationService {
-  /** Progressive Ethiopian income tax table. */
-  calculateIncomeTax(taxableIncome: number): number {
-    if (taxableIncome <= 2000) return 0;
-    if (taxableIncome <= 4000) return taxableIncome * 0.15 - 300;
-    if (taxableIncome <= 7000) return taxableIncome * 0.2 - 500;
-    if (taxableIncome <= 10000) return taxableIncome * 0.25 - 850;
-    if (taxableIncome <= 14000) return taxableIncome * 0.3 - 1350;
-    return taxableIncome * 0.35 - 2050;
+  /** Progressive income tax from the configured bands (default: Ethiopian table). */
+  calculateIncomeTax(
+    taxableIncome: number,
+    brackets = POLICY_DEFAULTS.incomeTaxBrackets,
+  ): number {
+    return incomeTaxFromBrackets(taxableIncome, brackets);
   }
 
   /** Main calculation returns all computed fields. */
@@ -118,6 +136,7 @@ export class PayrollCalculationService {
       taxableThreshold,
       pensionApplicable = true,
       taxApplicable = true,
+      policy = POLICY_DEFAULTS,
     } = input;
 
     const payrollDays = this.round(Math.max(0, payrollDaysInput));
@@ -127,35 +146,36 @@ export class PayrollCalculationService {
         : (basicSalary / 30) * payrollDays,
     );
 
-    // Overtime hourly base is contractual basic ÷ 192 (holiday ÷ 196), not earned.
+    // Overtime hourly base is contractual basic ÷ hoursDivisor (holiday ÷ holidayHoursDivisor), not earned.
     // Multi-contract months pass pre-priced overtimePay (per period basics).
-    const hourlyBase = basicSalary / 192;
-    const holidayHourlyBase = basicSalary / 196;
+    const hourlyBase = basicSalary / policy.hoursDivisor;
+    const holidayHourlyBase = basicSalary / policy.holidayHoursDivisor;
+    const rates = policy.multipliers;
 
     const normalOtPay = this.round(
       overtimePayOverride?.normalOtPay ??
-        hourlyBase * overtimeHours.normalHours * 1.5,
+        hourlyBase * overtimeHours.normalHours * rates.regular,
     );
     const eveningOtPay = this.round(
       overtimePayOverride?.eveningOtPay ??
-        hourlyBase * overtimeHours.eveningHours * 1.75,
+        hourlyBase * overtimeHours.eveningHours * rates.night,
     );
     const sundayOtPay = this.round(
       overtimePayOverride?.sundayOtPay ??
-        hourlyBase * overtimeHours.sundayHours * 2.0,
+        hourlyBase * overtimeHours.sundayHours * rates.weekend,
     );
     const holidayOtPay = this.round(
       overtimePayOverride?.holidayOtPay ??
-        holidayHourlyBase * overtimeHours.holidayHours * 2.5,
+        holidayHourlyBase * overtimeHours.holidayHours * rates.holiday,
     );
     const totalOtPay = this.round(
       normalOtPay + eveningOtPay + sundayOtPay + holidayOtPay,
     );
 
     // Transport and (taxable) bonus are paid in full — not prorated by paid days.
-    // CCECC rule: transportation allowance is fully non-taxable (no taxable portion).
-    const taxableTransport = 0;
-    const nonTaxableTransport = this.round(transportAllowance);
+    // Default (CCECC): transport is fully non-taxable; transportTaxable makes it fully taxable.
+    const taxableTransport = policy.transportTaxable ? this.round(transportAllowance) : 0;
+    const nonTaxableTransport = policy.transportTaxable ? 0 : this.round(transportAllowance);
 
     const totalBonus = this.round(monthlyBonus + bonusTopUp);
     const grossIncome = this.round(
@@ -167,15 +187,15 @@ export class PayrollCalculationService {
       earnedSalary + totalOtPay + totalBonus + taxableTransport,
     );
 
-    // Pension is 7% / 11% of earned salary (expatriates/freelancers: caller sets pensionApplicable false).
+    // Pension % of earned salary (expatriates/freelancers: caller sets pensionApplicable false).
     const pensionEmployee = pensionApplicable
-      ? this.round(earnedSalary * 0.07)
+      ? this.round(earnedSalary * (policy.pensionEmployeePct / 100))
       : 0;
     const pensionEmployer = pensionApplicable
-      ? this.round(earnedSalary * 0.11)
+      ? this.round(earnedSalary * (policy.pensionEmployerPct / 100))
       : 0;
     const incomeTax = taxApplicable
-      ? this.round(this.calculateIncomeTax(taxableIncome))
+      ? this.round(this.calculateIncomeTax(taxableIncome, policy.incomeTaxBrackets))
       : 0;
     const totalDeductions = this.round(pensionEmployee + incomeTax);
 
@@ -216,6 +236,7 @@ export class PayrollCalculationService {
       taxableThreshold,
       pensionApplicable = true,
       taxApplicable = true,
+      policy,
     } = input;
 
     if (!(targetNet > 0)) {
@@ -233,6 +254,7 @@ export class PayrollCalculationService {
         taxableThreshold,
         pensionApplicable,
         taxApplicable,
+        policy,
       }).netPay;
 
     const netAtZero = netAt(0);

@@ -10,10 +10,7 @@ import {
   type DayKind,
 } from '../../../work-schedule/application/utils/get-day-kind.util';
 import { dateToYyyyMmDd } from '../services/attendance-leave.util';
-import {
-  EARLY_DEPARTURE_DEDUCTION_MODE,
-  UNPAID_LEAVE_COUNTS_REST_DAYS,
-} from './attendance-policy.constants';
+import { POLICY_DEFAULTS } from '../../../../shared/policy/policy-definitions';
 import {
   evaluateEarlyDeparture,
   type EarlyDepartureBand,
@@ -77,8 +74,14 @@ export interface DayDeductionContext {
    * shown as ENROLMENT_GRACE on the daily log.
    */
   isEnrolmentGrace?: (date: Date) => boolean;
-  /** Override EARLY_DEPARTURE_DEDUCTION_MODE for tests / company settings. */
+  /** Policy earlyDepartureMode for the month (default: policy default). */
   earlyDepartureMode?: 'REPORT_ONLY' | 'ENFORCED';
+  /** Policy earlyDepartureGraceMinutes for the month. */
+  earlyDepartureGraceMinutes?: number;
+  /** Policy earlyDepartureDeductMinutes for the month. */
+  earlyDepartureDeductMinutes?: number;
+  /** Policy unpaidLeaveCountsRestDays for the month. */
+  unpaidLeaveCountsRestDays?: boolean;
   /**
    * SCAN_ONLY work schedule on this date (null / absent = STANDARD). Any scan
    * is full presence; late, early departure and missing punch are skipped.
@@ -150,9 +153,9 @@ function roundDays(value: number): number {
 /**
  * Single source of truth for attendance absence weight and payroll paid days.
  *
- * Precedence (when {@link UNPAID_LEAVE_COUNTS_REST_DAYS}): unpaid leave →
+ * Precedence (when the unpaidLeaveCountsRestDays policy is on): unpaid leave →
  * holiday / day off → paid leave → site / WFH → exempt → scan rules.
- * When the constant is false, unpaid leave is evaluated only on duty days
+ * When it is off, unpaid leave is evaluated only on duty days
  * (after holiday / day off).
  */
 export function dayDeduction(
@@ -168,7 +171,7 @@ export function dayDeduction(
   // Unpaid leave: deduction 1, status UNPAID_LEAVE. Optionally includes rest days.
   if (context.isOnUnpaidLeave?.(date)) {
     if (
-      UNPAID_LEAVE_COUNTS_REST_DAYS ||
+      (context.unpaidLeaveCountsRestDays ?? POLICY_DEFAULTS.unpaidLeaveCountsRestDays) ||
       (kind !== 'HOLIDAY' && kind !== 'DAY_OFF')
     ) {
       return { deduction: 1, status: 'UNPAID_LEAVE' };
@@ -264,7 +267,9 @@ export function dayDeduction(
     clockOut: day.clockOut,
     scheduledEnd: day.scheduledEnd,
     fieldMovement: earlyWaiver,
-    mode: context.earlyDepartureMode ?? EARLY_DEPARTURE_DEDUCTION_MODE,
+    mode: context.earlyDepartureMode ?? POLICY_DEFAULTS.earlyDepartureMode,
+    graceMinutes: context.earlyDepartureGraceMinutes,
+    deductMinutes: context.earlyDepartureDeductMinutes,
   });
 
   if (early.band === 'PENDING_APPROVAL') {

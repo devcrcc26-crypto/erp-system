@@ -1,10 +1,10 @@
 import {
-  EARLY_DEPARTURE_DEDUCT_MINUTES,
-  EARLY_DEPARTURE_DEDUCTION_MODE,
-  EARLY_DEPARTURE_GRACE_MINUTES,
-  LATE_ARRIVAL_GRACE_MINUTES,
-  type EarlyDepartureDeductionMode,
-} from './attendance-policy.constants';
+  POLICY_DEFAULTS,
+  type DeductionMode,
+} from '../../../../shared/policy/policy-definitions';
+
+/** REPORT_ONLY: store/show would-deduct, paid days unchanged. ENFORCED: subtract it. */
+export type EarlyDepartureDeductionMode = DeductionMode;
 
 export type EarlyDepartureBand =
   | 'NONE'
@@ -32,13 +32,13 @@ function timeToMinutes(value: string): number {
 }
 
 /**
- * Late flag only: clock-in after scheduleStart + LATE_ARRIVAL_GRACE_MINUTES.
- * Never contributes to pay deduction.
+ * Late flag: clock-in after scheduleStart + lateGraceMinutes (policy). Pay is
+ * only affected when the lateDeductionMode policy is ENFORCED (monthly count).
  */
 export function isLateAfterGrace(
   clockIn: string | null | undefined,
   scheduleStart: string | null | undefined,
-  graceMinutes: number = LATE_ARRIVAL_GRACE_MINUTES,
+  graceMinutes: number = POLICY_DEFAULTS.lateGraceMinutes,
 ): { isLate: boolean; lateMinutes: number } {
   if (!clockIn || !scheduleStart) {
     return { isLate: false, lateMinutes: 0 };
@@ -53,8 +53,21 @@ export function isLateAfterGrace(
 }
 
 /**
+ * Monthly late-arrival deduction: ENFORCED → 0.5 day per `latesPerHalfDay`
+ * late arrivals (whole groups only); REPORT_ONLY → 0.
+ */
+export function lateArrivalDeduction(
+  lateCount: number,
+  mode: DeductionMode = POLICY_DEFAULTS.lateDeductionMode,
+  latesPerHalfDay: number = POLICY_DEFAULTS.latesPerHalfDay,
+): number {
+  if (mode !== 'ENFORCED' || latesPerHalfDay < 1) return 0;
+  return Math.floor(lateCount / latesPerHalfDay) * 0.5;
+}
+
+/**
  * Tiered early departure vs schedule end (weekday 17:30 / Saturday half-day 12:30).
- * Same grace (EARLY_DEPARTURE_GRACE_MINUTES) applies on weekdays and Saturdays.
+ * Same grace (earlyDepartureGraceMinutes policy) applies on weekdays and Saturdays.
  */
 export function evaluateEarlyDeparture(input: {
   clockOut: string | null | undefined;
@@ -70,9 +83,9 @@ export function evaluateEarlyDeparture(input: {
   graceMinutes?: number;
   deductMinutes?: number;
 }): EarlyDepartureEvaluation {
-  const mode = input.mode ?? EARLY_DEPARTURE_DEDUCTION_MODE;
-  const grace = input.graceMinutes ?? EARLY_DEPARTURE_GRACE_MINUTES;
-  const deductAt = input.deductMinutes ?? EARLY_DEPARTURE_DEDUCT_MINUTES;
+  const mode = input.mode ?? POLICY_DEFAULTS.earlyDepartureMode;
+  const grace = input.graceMinutes ?? POLICY_DEFAULTS.earlyDepartureGraceMinutes;
+  const deductAt = input.deductMinutes ?? POLICY_DEFAULTS.earlyDepartureDeductMinutes;
 
   if (input.skipEarlyDeparture || !input.clockOut || !input.scheduledEnd) {
     return {

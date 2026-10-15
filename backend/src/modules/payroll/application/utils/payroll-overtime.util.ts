@@ -17,6 +17,10 @@ import {
   type OvertimeDayContext,
 } from '../../../overtime/application/utils/overtime-hours.util';
 import { END_OF_DAY_HHMM } from '../../../overtime/application/utils/overtime-selectable-windows.util';
+import {
+  POLICY_DEFAULTS,
+  type PolicyValues,
+} from '../../../../shared/policy/policy-definitions';
 
 export const OVERNIGHT_OT_DATE_ASSIGNMENT = 'START_DATE' as const;
 
@@ -180,10 +184,12 @@ export function overtimeEndTimeLabel(
 export function buildOvertimeDayContext(
   weekday: OvertimeWeekdaySlice | undefined,
   isHoliday: boolean,
+  lunchCountsAsOvertime: boolean = POLICY_DEFAULTS.lunchCountsAsOvertime,
 ): OvertimeDayContext {
   const isWorkingDay = Boolean(weekday?.isWorkingDay);
   const isHalfDay = Boolean(weekday?.isWorkingDay && weekday?.isHalfDay);
   return {
+    lunchCountsAsOvertime,
     isHoliday,
     isWorkingDay,
     isHalfDay,
@@ -231,19 +237,26 @@ export function datedEntriesFromExactMinutes(
   return entries.map(datedEntryFromExactMinutes);
 }
 
+export type OvertimeRatePolicy = Pick<
+  PolicyValues,
+  'hoursDivisor' | 'holidayHoursDivisor' | 'multipliers'
+>;
+
 /**
- * OT pay from contractual basic ÷ 192 (holiday ÷ 196) × hours × rate.
+ * OT pay from contractual basic ÷ hoursDivisor (holiday ÷ holidayHoursDivisor) × hours × multiplier.
  */
 export function calculateOvertimePay(
   basicSalary: number,
   hours: OvertimeHoursBuckets,
+  rates: OvertimeRatePolicy = POLICY_DEFAULTS,
 ): OvertimePayAmounts {
-  const hourlyBase = basicSalary / 192;
-  const holidayHourlyBase = basicSalary / 196;
-  const normalOtPay = round2(hourlyBase * hours.normalHours * 1.5);
-  const eveningOtPay = round2(hourlyBase * hours.eveningHours * 1.75);
-  const sundayOtPay = round2(hourlyBase * hours.sundayHours * 2.0);
-  const holidayOtPay = round2(holidayHourlyBase * hours.holidayHours * 2.5);
+  const hourlyBase = basicSalary / rates.hoursDivisor;
+  const holidayHourlyBase = basicSalary / rates.holidayHoursDivisor;
+  const m = rates.multipliers;
+  const normalOtPay = round2(hourlyBase * hours.normalHours * m.regular);
+  const eveningOtPay = round2(hourlyBase * hours.eveningHours * m.night);
+  const sundayOtPay = round2(hourlyBase * hours.sundayHours * m.weekend);
+  const holidayOtPay = round2(holidayHourlyBase * hours.holidayHours * m.holiday);
   return {
     normalOtPay,
     eveningOtPay,
@@ -280,12 +293,14 @@ export function assignOvertimeToSalaryPeriods(input: {
   sheetTotals?: OvertimeHoursBuckets | null;
   /** Basic used when there is a single period or for fallback. */
   monthEndBasic: number;
+  /** Divisors / multipliers in force for the payroll month (default: code defaults). */
+  rates?: OvertimeRatePolicy;
 }): AssignedOvertimeResult {
-  const { entries, periods, sheetTotals, monthEndBasic } = input;
+  const { entries, periods, sheetTotals, monthEndBasic, rates = POLICY_DEFAULTS } = input;
 
   if (periods.length === 0) {
     const hours = sheetTotals ?? ZERO_HOURS;
-    const pay = calculateOvertimePay(monthEndBasic, hours);
+    const pay = calculateOvertimePay(monthEndBasic, hours, rates);
     return {
       periods: [],
       totals: { ...hours, ...pay },
@@ -312,7 +327,7 @@ export function assignOvertimeToSalaryPeriods(input: {
       };
     }
     // Fallback: all sheet totals priced on month-end contract.
-    const pay = calculateOvertimePay(monthEndBasic, hours);
+    const pay = calculateOvertimePay(monthEndBasic, hours, rates);
     const last = periods[periods.length - 1]!;
     const periodResults = periods.map((p, index) => {
       if (index === periods.length - 1) {
@@ -362,7 +377,7 @@ export function assignOvertimeToSalaryPeriods(input: {
 
   const periodResults: PeriodOvertimeResult[] = periods.map((p, i) => {
     const hours = periodHours[i]!;
-    const pay = calculateOvertimePay(p.basicSalary, hours);
+    const pay = calculateOvertimePay(p.basicSalary, hours, rates);
     return {
       contractId: p.contractId,
       periodStart: p.periodStart,

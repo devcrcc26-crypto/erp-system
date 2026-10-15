@@ -26,6 +26,7 @@ export class AuthRepository implements IAuthRepository {
       where: {
         deletedAt: null,
         isActive: true,
+        employmentStatus: { not: 'SEPARATED' },
         email: {
           equals: normalizedEmail,
           mode: Prisma.QueryMode.insensitive,
@@ -46,6 +47,7 @@ export class AuthRepository implements IAuthRepository {
       where: {
         deletedAt: null,
         isActive: true,
+        employmentStatus: { not: 'SEPARATED' },
         loginNameNormalized,
       },
       include: this.userCompanyInclude(),
@@ -58,9 +60,12 @@ export class AuthRepository implements IAuthRepository {
       return null;
     }
 
+    // Login-disabled or separated accounts never get a reset (and are never reactivated by one).
     return this.prisma.user.findFirst({
       where: {
         deletedAt: null,
+        isActive: true,
+        employmentStatus: { not: 'SEPARATED' },
         email: {
           equals: normalizedEmail,
           mode: Prisma.QueryMode.insensitive,
@@ -72,7 +77,11 @@ export class AuthRepository implements IAuthRepository {
 
   async findActiveUserById(userId: string): Promise<UserWithCompany | null> {
     return this.prisma.user.findFirst({
-      where: activeOnly({ id: userId, isActive: true }),
+      where: activeOnly({
+        id: userId,
+        isActive: true,
+        employmentStatus: { not: 'SEPARATED' as const },
+      }),
       include: this.userCompanyInclude(),
     });
   }
@@ -164,13 +173,6 @@ export class AuthRepository implements IAuthRepository {
         failedLoginAttempts: 0,
         lockedUntil: null,
       },
-    });
-  }
-
-  async reactivateUser(userId: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { isActive: true },
     });
   }
 

@@ -50,6 +50,7 @@ export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
   private readonly seedMode: boolean;
   private readonly emailDisabled: boolean;
+  skippedInactiveRecipients = 0;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -87,6 +88,15 @@ export class NotificationService {
     });
     if (!recipient) {
       throw new NotFoundException('Recipient not found');
+    }
+    // Login disabled (separated, deactivated): no in-app row, no email.
+    if (!recipient.isActive) {
+      this.skippedInactiveRecipients += 1;
+      this.logger.log(
+        `Skipped notification (${dto.eventType}) to inactive user ${dto.recipientId}; ` +
+          `${this.skippedInactiveRecipients} skipped since start`,
+      );
+      return { emailQueued: false };
     }
 
     const preference = await this.prisma.notificationPreference.findFirst({

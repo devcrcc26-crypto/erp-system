@@ -4,18 +4,15 @@
  * mid-month renewal contract start). Absences are applied afterward.
  */
 
-export const PAYROLL_MONTH_DAYS = 30;
+import { POLICY_DEFAULTS } from '../../../../shared/policy/policy-definitions';
 
-/** How to handle allowances for employees who leave before the end of the month.
- *  'PRORATED' (default): allowance × employedDays / 30.
- *  'FULL': pay the full contract amount regardless of leaving date.
+/**
+ * The monthDays policy, locked at 30: the joiner/leaver/renewal day-split
+ * rules below (including the 31st-of-month handling) are built on it.
+ * Leaver-allowance mode and absence-reduces-allowances are read per payroll
+ * month from policy settings (leaverAllowanceMode, allowancesReducedByAbsence).
  */
-export const LEAVER_ALLOWANCE_MODE: 'PRORATED' | 'FULL' = 'PRORATED';
-
-/** When false (default): transport and monthly-bonus use employed/contract days.
- *  When true: they are scaled down by payrollDays / employedDays (absences reduce allowances).
- */
-export const ALLOWANCES_REDUCED_BY_ABSENCE = false;
+export const PAYROLL_MONTH_DAYS = POLICY_DEFAULTS.monthDays;
 
 export interface EmployedPayrollDaysResult {
   days: number;

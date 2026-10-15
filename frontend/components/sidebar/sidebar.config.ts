@@ -234,6 +234,13 @@ export const SIDEBAR_CONFIG: SidebarConfig = {
             { kind: 'link', id: 'hr-reports', labelKey: 'nav.hr.reports', icon: 'hr-reports', href: '/hr/reports', requires: HR },
           ],
         },
+        {
+          id: 'people-settings',
+          labelKey: 'nav.sections.hrSettings',
+          items: [
+            { kind: 'link', id: 'policy-settings', labelKey: 'nav.hr.policySettings', icon: 'hr-leave-policy', href: '/hr/policy-settings', requires: HR, keywords: ['policy', 'rules', 'tax', 'pension', 'overtime rate', 'grace', 'late'] },
+          ],
+        },
       ],
     },
     {

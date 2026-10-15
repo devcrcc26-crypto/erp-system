@@ -47,6 +47,7 @@ export const FLAG_LABELS: Record<AttendanceDayFlag, string> = {
   MISSING_CLOCK_OUT: 'Missing clock-out',
   EARLY_LEAVE: 'Early departure detected',
   ON_LEAVE_BUT_SCANNED: 'On leave but scanned',
+  SCAN_AFTER_SEPARATION: 'Scanned after leaving date',
   NONE: '',
 };
 
@@ -55,6 +56,7 @@ export const FLAG_TONES: Record<AttendanceDayFlag, string> = {
   MISSING_CLOCK_OUT: 'amber',
   EARLY_LEAVE: 'coral',
   ON_LEAVE_BUT_SCANNED: 'violet',
+  SCAN_AFTER_SEPARATION: 'neutral',
   NONE: 'neutral',
 };
 
@@ -63,6 +65,7 @@ const FLAG_ICONS: Record<AttendanceDayFlag, LucideIcon> = {
   MISSING_CLOCK_OUT: LogOut,
   EARLY_LEAVE: DoorOpen,
   ON_LEAVE_BUT_SCANNED: LogIn,
+  SCAN_AFTER_SEPARATION: Info,
   NONE: Info,
 };
 

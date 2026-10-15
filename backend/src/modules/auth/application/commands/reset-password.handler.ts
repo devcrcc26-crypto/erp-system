@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import {
   AUTH_REPOSITORY,
@@ -29,8 +25,8 @@ export class ResetPasswordHandler
   async execute(command: ResetPasswordCommand): Promise<{ message: string }> {
     const user = await this.authRepository.findUserForPasswordReset(command.email);
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid reset token');
+    if (!user || !user.isActive || user.employmentStatus === 'SEPARATED') {
+      throw new BadRequestException('Invalid or expired reset token');
     }
 
     const tokens = await this.authRepository.findActivePasswordResetTokens(
@@ -57,9 +53,6 @@ export class ResetPasswordHandler
     const passwordHash = await this.passwordService.hash(command.newPassword);
 
     await this.authRepository.updateUserPassword(user.id, passwordHash);
-    if (!user.isActive) {
-      await this.authRepository.reactivateUser(user.id);
-    }
     if (!user.emailVerifiedAt) {
       await this.authRepository.markEmailVerified(user.id);
     }

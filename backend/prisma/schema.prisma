@@ -106,6 +106,21 @@ enum EmployeeType {
   FREELANCER
 }
 
+/// Employment state, maintained by separation actions and the daily job (never edited directly).
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  SEPARATED
+}
+
+enum SeparationType {
+  RESIGNATION
+  TERMINATION
+  CONTRACT_END
+  DEATH
+  OTHER
+}
+
 enum Gender {
   MALE
   FEMALE
@@ -662,7 +677,9 @@ model User {
   /// attendance or field movement of their own; not an on-behalf target).
   excludedFromHrProcesses Boolean @default(false) @map("excluded_from_hr_processes")
   excludedReason          String? @map("excluded_reason")
+  /// "Can log in" only. Employment itself lives in employmentStatus / EmploymentPeriod.
   isActive            Boolean   @default(true) @map("is_active")
+  employmentStatus    EmploymentStatus @default(ACTIVE) @map("employment_status")
   mfaEnabled          Boolean   @default(false) @map("mfa_enabled")
   mustChangePassword  Boolean   @default(false) @map("must_change_password")
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
@@ -907,7 +924,8 @@ model User {
   payrollPayslipsReleased            PayrollPayslip[]            @relation("PayrollPayslipReleaser")
   payrollPayslipsCreated             PayrollPayslip[]            @relation("PayrollPayslipCreator")
   payrollPayslipsUpdated             PayrollPayslip[]            @relation("PayrollPayslipUpdater")
-  
+  employmentPeriods                  EmploymentPeriod[]          @relation("EmploymentPeriodEmployee")
+  employmentPeriodsSeparated         EmploymentPeriod[]          @relation("EmploymentPeriodSeparatedBy")
 
   @@unique([companyId, email], map: "uq_user_company_email")
   @@index([leavePolicyId], map: "idx_user_leave_policy")
@@ -923,6 +941,52 @@ model User {
   @@index([engineeringDisciplineId], map: "idx_user_engineering_discipline_id")
   @@index([discipline], map: "idx_user_discipline")
   @@map("user")
+}
+
+/// Effective-dated HR policy value. Versions are append-only; the version in force for a
+/// month is the latest effectiveFrom ≤ that month (ties: latest createdAt). Missing → code default.
+model PolicySetting {
+  id            String   @id @default(uuid())
+  companyId     String   @map("company_id")
+  key           String
+  value         Json
+  /// Always the 1st of a month.
+  effectiveFrom DateTime @map("effective_from") @db.Date
+  reason        String
+  createdById   String   @map("created_by_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([companyId, key, effectiveFrom], map: "idx_policy_setting_company_key_from")
+  @@map("policy_setting")
+}
+
+/// One row per employment stint; the row with endDate null is the current employment.
+/// endDate = last working day. User.employmentDate mirrors startDate of the current period.
+model EmploymentPeriod {
+  id               String          @id @default(uuid())
+  companyId        String          @map("company_id")
+  userId           String          @map("user_id")
+  startDate        DateTime        @map("start_date") @db.Date
+  endDate          DateTime?       @map("end_date") @db.Date
+  separationType   SeparationType? @map("separation_type")
+  separationReason String?         @map("separation_reason")
+  separatedById    String?         @map("separated_by_id")
+  separatedAt      DateTime?       @map("separated_at")
+  /// Snapshot so a separation can be cancelled: the contract it shortened and its prior end date.
+  separationContractId          String?   @map("separation_contract_id")
+  separationContractPrevEndDate DateTime? @map("separation_contract_prev_end_date") @db.Date
+  /// True once the separation (or daily job) turned login off; cancel turns it back on.
+  loginDisabledBySeparation     Boolean   @default(false) @map("login_disabled_by_separation")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  createdBy        String?         @map("created_by")
+  updatedAt        DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  user        User  @relation("EmploymentPeriodEmployee", fields: [userId], references: [id])
+  separatedBy User? @relation("EmploymentPeriodSeparatedBy", fields: [separatedById], references: [id])
+
+  @@index([userId], map: "idx_employment_period_user")
+  @@index([companyId, endDate], map: "idx_employment_period_company_end")
+  @@map("employment_period")
 }
 
 model UserSession {
@@ -4218,6 +4282,8 @@ enum AttendanceDayFlag {
   EARLY_LEAVE
   /// Approved leave day that still has a clock-in and/or clock-out (HR review).
   ON_LEAVE_BUT_SCANNED
+  /// Scan on a day after the employee's leaving date (info only; day is outside employment).
+  SCAN_AFTER_SEPARATION
   NONE
 }
 
@@ -4249,6 +4315,8 @@ enum AttendanceDayStatus {
   FIELD_MOVEMENT_PENDING
   /// Hire → first scan grace (not absent); first N working days only.
   ENROLMENT_GRACE
+  /// After the employee's leaving date — outside employment, neither paid nor absent.
+  NOT_EMPLOYED
 }
 
 enum WorkFromHomeScope {
@@ -6265,6 +6333,10 @@ enum PayrollEntryFlag{
   MISSING_OVERTIME_APPROVAL
   ZERO_SALARY
   MANUAL_OVERRIDE
+  /// Leaving date falls in this month; final settlement handled outside the system.
+  LEAVER_FINAL_MONTH
+  /// Login disabled but employment period still open (kept on the roster).
+  LOGIN_DISABLED_STILL_EMPLOYED
 
   @@map("payroll_entry_flag")
 }
@@ -6288,6 +6360,9 @@ model PayrollRun{
   bankLetterRefNo         String?                             @map("bank_letter_ref_no")
   notes                   String?
   attendanceSnapshotStale Boolean                             @default(false) @map("attendance_snapshot_stale")
+  /// Approved/paid run whose month is affected by a later policy change — HR must review (never auto-recalculated).
+  policyReviewRequired    Boolean                             @default(false) @map("policy_review_required")
+  policyReviewNote        String?                             @map("policy_review_note")
   submittedAt             DateTime?                           @map("submitted_at")
   submittedBy             String?                             @map("submitted_by")
   approvedAt              DateTime?                           @map("approved_at")

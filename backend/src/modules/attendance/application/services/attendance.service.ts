@@ -32,6 +32,13 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
+import {
+  cappedContractSegments,
+  effectiveContractEnd,
+  employedInMonthWhere,
+  getEmploymentWindow,
+  loadEmploymentWindows,
+} from '../../../../shared/employment/employment-window.util';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import {
   buildPaginatedResult,
@@ -95,7 +102,7 @@ import {
   markAttendanceMonthRecalcStale,
   markPayrollAttendanceSnapshotStale,
 } from '../utils/attendance-recalc-policy.util';
-import { FORGOT_TO_CLOCK_FLAG_THRESHOLD } from '../utils/attendance-policy.constants';
+import { getPolicy, loadPolicySnapshot } from '../../../../shared/policy/policy-reader.util';
 import {
   formatValidationMessage,
   sanitizeStorageEntry,
@@ -110,6 +117,7 @@ import {
 import {
   evaluateEarlyDeparture,
   isLateAfterGrace,
+  lateArrivalDeduction,
 } from '../utils/early-departure.util';
 import {
   dateToYyyyMmDd,
@@ -339,6 +347,8 @@ function resolveAttendanceDayFlag(params: {
   onLeaveButScanned?: boolean;
   /** Coverage statuses that must not raise field-movement explain flags. */
   dayStatus?: DayDeductionStatus | null;
+  /** earlyDepartureGraceMinutes policy for the day's month (default: policy default). */
+  earlyDepartureGraceMinutes?: number;
 }): AttendanceDayFlag {
   if (params.onLeaveButScanned) {
     return AttendanceDayFlag.ON_LEAVE_BUT_SCANNED;
@@ -383,6 +393,7 @@ function resolveAttendanceDayFlag(params: {
       clockOut: params.clockOut,
       scheduledEnd: params.scheduledEnd,
       fieldMovement: 'NONE',
+      graceMinutes: params.earlyDepartureGraceMinutes,
     });
     if (early.isEarlyLeaveFlag) {
       return AttendanceDayFlag.EARLY_LEAVE;
@@ -533,7 +544,10 @@ export class AttendanceService
     }
 
     const { month, year, fileName, rows } = parseResult;
-    const matchResults = await this.matchingService.matchRows(rows, companyId);
+    const matchResults = await this.matchingService.matchRows(rows, companyId, {
+      month,
+      year,
+    });
 
     const existing = await this.prisma.attendanceImportBatch.findUnique({
       where: {
@@ -570,7 +584,7 @@ export class AttendanceService
       where: hrProcessEmployeeWhere({
         companyId,
         deletedAt: null,
-        isActive: true,
+        ...employedInMonthWhere(month, year),
         includeInPayroll: true,
         attendanceMode: AttendanceMode.SCANNER,
       }),
@@ -796,7 +810,7 @@ export class AttendanceService
 
       let isLate = false;
       let lateMinutes = 0;
-      // Late flag only (15-min grace); never a pay deduction. SCAN_ONLY skips it.
+      // Late flag (policy grace). Pay effect only via lateDeductionMode at recalc. SCAN_ONLY skips it.
       if (
         !scanOnly &&
         wasPresent &&
@@ -807,6 +821,7 @@ export class AttendanceService
         const late = isLateAfterGrace(
           day.clockInLocal,
           scheduleDay.morningStart,
+          await getPolicy(this.prisma, companyId, 'lateGraceMinutes', date),
         );
         isLate = late.isLate;
         lateMinutes = late.lateMinutes;
@@ -842,6 +857,12 @@ export class AttendanceService
         isLastExportDay,
         scheduledEnd: scheduledEndForDay(scheduleDay),
         scanOnly,
+        earlyDepartureGraceMinutes: await getPolicy(
+          this.prisma,
+          companyId,
+          'earlyDepartureGraceMinutes',
+          date,
+        ),
       });
 
       logs.push({
@@ -1010,7 +1031,7 @@ export class AttendanceService
         where: hrProcessEmployeeWhere({
           companyId,
           deletedAt: null,
-          isActive: true,
+          ...employedInMonthWhere(month, year),
           id: { in: [...new Set(assignmentEmployeeIds)] },
         }),
         select: {
@@ -1233,7 +1254,7 @@ export class AttendanceService
       where: hrProcessEmployeeWhere({
         companyId,
         deletedAt: null,
-        isActive: true,
+        ...employedInMonthWhere(month, year),
         includeInPayroll: true,
         attendanceMode: AttendanceMode.EXEMPT,
       }),
@@ -1925,6 +1946,11 @@ export class AttendanceService
           )
         : new Map();
 
+    const policy = await loadPolicySnapshot(
+      this.prisma,
+      companyId,
+      new Date(Date.UTC(year, month - 1, 1)),
+    );
     const enriched = rows.map((row) => {
       // Fields added in 20261009160000; cast until prisma generate refreshes the client.
       const earlyFields = row as typeof row & {
@@ -1937,7 +1963,7 @@ export class AttendanceService
         approvedLeave: approvedLeaveByEmployee.get(row.employeeId) ?? [],
         siteDaysThisMonth: siteSummaryByRecord.get(row.id) ?? [],
         workFromHomeDaysThisMonth: wfhDaysByRecord.get(row.id) ?? 0,
-        forgotToClockFlagThreshold: FORGOT_TO_CLOCK_FLAG_THRESHOLD,
+        forgotToClockFlagThreshold: policy.forgotToClockFlagThreshold,
         earlyDepartureWouldDeductNote:
           wouldDays > 0
             ? `Would deduct ${wouldDays} day(s) (not applied)`
@@ -2423,7 +2449,11 @@ export class AttendanceService
       where: {
         companyId,
         matchMethod: AttendanceMatchMethod.NEEDS_ENROLMENT,
-        employee: hrProcessEmployeeWhere({ deletedAt: null, isActive: true }),
+        employee: hrProcessEmployeeWhere({
+          deletedAt: null,
+          isActive: true,
+          employmentStatus: { not: 'SEPARATED' as const },
+        }),
       },
       select: { employeeId: true },
       distinct: ['employeeId'],
@@ -3137,6 +3167,12 @@ export class AttendanceService
       isLastExportDay: dailyLog.isLastExportDay,
       scheduledEnd,
       scanOnly,
+      earlyDepartureGraceMinutes: await getPolicy(
+        this.prisma,
+        record.companyId,
+        'earlyDepartureGraceMinutes',
+        dailyLog.date,
+      ),
     });
 
     await this.prisma.attendanceDailyLog.update({
@@ -5044,20 +5080,25 @@ export class AttendanceService
 
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
     const monthEnd = new Date(Date.UTC(year, month, 0));
-    const contracts = await readDb.employeeContract.findMany({
+    const employmentWindow = await getEmploymentWindow(readDb, employeeId, month, year);
+    const rawContracts = await readDb.employeeContract.findMany({
       where: {
         companyId,
         employeeId,
         deletedAt: null,
         startDate: { lte: monthEnd },
-        OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+        AND: [
+          { OR: [{ endDate: null }, { endDate: { gte: monthStart } }] },
+          { OR: [{ terminatedAt: null }, { terminatedAt: { gte: monthStart } }] },
+        ],
       },
-      select: { startDate: true, endDate: true },
+      select: { startDate: true, endDate: true, terminatedAt: true },
       orderBy: { startDate: 'asc' },
     });
+    const contracts = cappedContractSegments(rawContracts, employmentWindow);
 
-    let employmentEndDate: Date | null = null;
-    if (contracts.length === 0) {
+    let employmentEndDate: Date | null = employmentWindow?.end ?? null;
+    if (contracts.length === 0 && !employmentEndDate) {
       const latestEnded = await readDb.employeeContract.findFirst({
         where: {
           companyId,
@@ -5068,18 +5109,18 @@ export class AttendanceService
         select: { endDate: true, terminatedAt: true },
         orderBy: [{ terminatedAt: 'desc' }, { endDate: 'desc' }],
       });
-      employmentEndDate =
-        latestEnded?.terminatedAt ?? latestEnded?.endDate ?? null;
+      employmentEndDate = effectiveContractEnd(
+        latestEnded?.endDate,
+        latestEnded?.terminatedAt,
+      );
     }
 
     const contractSegments = resolveEmploymentSegmentsForMonth({
-      overlappingContracts: contracts.map((c) => ({
-        startDate: c.startDate,
-        endDate: c.endDate,
-      })),
+      overlappingContracts: contracts,
       employmentDate: employee.employmentDate,
       employmentEndDate,
     });
+    const separationEnd = employmentWindow?.end ?? null;
 
     let dailyLogs = record.dailyLogs;
 
@@ -5254,6 +5295,8 @@ export class AttendanceService
     // an attendance-exempt one (paid categories such as leave still apply
     // first) instead of letting every working day become a no-scan absence.
     const presentByDecision = isCountedPresentMatchMethod(record.matchMethod);
+    // Policies as of the attendance month — never "current".
+    const policy = await loadPolicySnapshot(readDb, companyId, monthStart);
 
     const hireDate =
       employee.employmentDate ??
@@ -5301,6 +5344,7 @@ export class AttendanceService
           const flags = scheduleFlagsByDate.get(dateToYyyyMmDd(date));
           return flags ? !flags.isWorkingDay : date.getUTCDay() === 0;
         },
+        maxWorkingDays: policy.enrolmentGraceWorkingDays,
       });
     }
 
@@ -5318,7 +5362,7 @@ export class AttendanceService
     const context = buildDayDeductionContext(
       presentByDecision ? { ...employee, attendanceMode: 'EXEMPT' } : employee,
       deductionData,
-      { enrolmentGraceKeys, scanOnlyRuleByDate, scheduleFlagsByDate },
+      { enrolmentGraceKeys, scanOnlyRuleByDate, scheduleFlagsByDate, policy },
     );
 
     // Month totals over the employed window only (30-day payroll scale). Per-day
@@ -5332,6 +5376,7 @@ export class AttendanceService
       context,
     });
 
+    let lateWorkedDays = 0;
     for (const log of dailyLogs) {
       const key = dateToYyyyMmDd(log.date);
       const matchedHoliday = matchedPublicHolidayForEmployee(
@@ -5385,24 +5430,40 @@ export class AttendanceService
         const { scheduleDay } = await rememberScheduleFlags(log.date);
         scheduledHours = Number(scheduleDay?.totalHours ?? 0);
       }
-      const flag = resolveAttendanceDayFlag({
-        isHoliday,
-        isWeekend,
-        clockIn,
-        clockOut,
-        isLastExportDay: log.isLastExportDay,
-        scheduledEnd,
-        scanOnly,
-        enrolmentGrace,
-        onLeaveButScanned,
-        dayStatus: status,
-      });
+      const afterSeparation =
+        separationEnd != null && log.date.getTime() > separationEnd.getTime();
+      if (
+        log.isLate &&
+        inEmployedWindow &&
+        !afterSeparation &&
+        (status === 'PRESENT' || status === 'HALF_ABSENT' || status === 'FIELD_MOVEMENT_PENDING')
+      ) {
+        lateWorkedDays += 1;
+      }
+      const flag = afterSeparation
+        ? clockIn || clockOut
+          ? AttendanceDayFlag.SCAN_AFTER_SEPARATION
+          : AttendanceDayFlag.NONE
+        : resolveAttendanceDayFlag({
+            isHoliday,
+            isWeekend,
+            clockIn,
+            clockOut,
+            isLastExportDay: log.isLastExportDay,
+            scheduledEnd,
+            scanOnly,
+            enrolmentGrace,
+            onLeaveButScanned,
+            dayStatus: status,
+            earlyDepartureGraceMinutes: policy.earlyDepartureGraceMinutes,
+          });
       const scanReview = resolveScanReviewFields(
         log,
         inEmployedWindow ? (dayResult.scanAfterDeadlineTime ?? null) : null,
       );
 
       const coverageSuppressesScanFlags =
+        afterSeparation ||
         status === 'ON_SITE' ||
         status === 'WORK_FROM_HOME' ||
         status === 'LEAVE' ||
@@ -5413,7 +5474,8 @@ export class AttendanceService
         status === 'SUNDAY';
 
       const nextFlagResolved =
-        flag === AttendanceDayFlag.NONE
+        flag === AttendanceDayFlag.NONE ||
+        flag === AttendanceDayFlag.SCAN_AFTER_SEPARATION
           ? true
           : flag === AttendanceDayFlag.ON_LEAVE_BUT_SCANNED
             ? false
@@ -5422,7 +5484,8 @@ export class AttendanceService
               ? log.flagResolved
               : false;
       const nextFlagResolvedAt =
-        flag === AttendanceDayFlag.NONE
+        flag === AttendanceDayFlag.NONE ||
+        flag === AttendanceDayFlag.SCAN_AFTER_SEPARATION
           ? (log.flagResolvedAt ?? new Date())
           : log.flag === flag && log.flagResolved
             ? log.flagResolvedAt
@@ -5437,8 +5500,8 @@ export class AttendanceService
           isHalfDay,
           scheduledHours,
           // DAY_OFF / WORKED_ON_DAY_OFF cast until prisma generate after migrate.
-          dayStatus: status as AttendanceDayStatus,
-          dayDeduction: inEmployedWindow ? deduction : 0,
+          dayStatus: (afterSeparation ? 'NOT_EMPLOYED' : status) as AttendanceDayStatus,
+          dayDeduction: inEmployedWindow && !afterSeparation ? deduction : 0,
           isEarlyLeave: coverageSuppressesScanFlags ? false : isEarlyLeave,
           earlyLeaveMinutes: coverageSuppressesScanFlags ? 0 : earlyLeaveMinutes,
           flag,
@@ -5504,9 +5567,18 @@ export class AttendanceService
     const holidayLogs = dailyLogs.filter((log) => log.isHoliday);
     const scheduledDays = monthSummary.scheduledDays;
     const presentDays = monthSummary.presentDays;
-    const absentDays = monthSummary.absentDays;
+    // lateDeductionMode ENFORCED: 0.5 day per latesPerHalfDay lates on worked days in the window.
+    const lateDeduction = lateArrivalDeduction(
+      lateWorkedDays,
+      policy.lateDeductionMode,
+      policy.latesPerHalfDay,
+    );
+    const absentDays = Math.round((monthSummary.absentDays + lateDeduction) * 100) / 100;
     const unpaidLeaveDays = monthSummary.unpaidLeaveDays;
-    const paidDays = monthSummary.paidDays;
+    const paidDays = Math.max(
+      0,
+      Math.round((monthSummary.paidDays - lateDeduction) * 100) / 100,
+    );
     const holidayDays = holidayLogs.length;
     const lateDays = workingDayLogs.filter((log) => log.isLate).length;
     const totalLateMinutes = workingDayLogs.reduce(
@@ -5798,7 +5870,11 @@ export class AttendanceService
           scheduleDay?.morningStart &&
           clockIn
         ) {
-          const late = isLateAfterGrace(clockIn, scheduleDay.morningStart);
+          const late = isLateAfterGrace(
+            clockIn,
+            scheduleDay.morningStart,
+            await getPolicy(this.prisma, companyId, 'lateGraceMinutes', logDay),
+          );
           isLate = late.isLate;
           lateMinutes = late.lateMinutes;
         }
@@ -5823,6 +5899,12 @@ export class AttendanceService
           isLastExportDay,
           scheduledEnd: scheduledEndForDay(scheduleDay),
           scanOnly,
+          earlyDepartureGraceMinutes: await getPolicy(
+            this.prisma,
+            companyId,
+            'earlyDepartureGraceMinutes',
+            logDay,
+          ),
         });
 
         const flagResolved =
@@ -6116,7 +6198,10 @@ export class AttendanceService
         employeeId: { in: employeeIds },
         deletedAt: null,
         startDate: { lte: monthEnd },
-        OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+        AND: [
+          { OR: [{ endDate: null }, { endDate: { gte: monthStart } }] },
+          { OR: [{ terminatedAt: null }, { terminatedAt: { gte: monthStart } }] },
+        ],
       },
       select: {
         employeeId: true,
@@ -6127,17 +6212,30 @@ export class AttendanceService
       orderBy: { startDate: 'asc' },
     });
 
+    const windowsByEmployee = await loadEmploymentWindows(
+      this.prisma,
+      employees,
+      month,
+      year,
+    );
+    const rawGrouped = new Map<
+      string,
+      Array<{ startDate: Date; endDate: Date | null; terminatedAt: Date | null }>
+    >();
+    for (const contract of contractsByEmployee) {
+      const list = rawGrouped.get(contract.employeeId) ?? [];
+      list.push(contract);
+      rawGrouped.set(contract.employeeId, list);
+    }
     const contractsGrouped = new Map<
       string,
       Array<{ startDate: Date; endDate: Date | null }>
     >();
-    for (const contract of contractsByEmployee) {
-      const list = contractsGrouped.get(contract.employeeId) ?? [];
-      list.push({
-        startDate: contract.startDate,
-        endDate: contract.endDate,
-      });
-      contractsGrouped.set(contract.employeeId, list);
+    for (const [employeeId, list] of rawGrouped) {
+      contractsGrouped.set(
+        employeeId,
+        cappedContractSegments(list, windowsByEmployee.get(employeeId) ?? null),
+      );
     }
 
     const result = new Map<
@@ -6148,8 +6246,9 @@ export class AttendanceService
 
     for (const employee of employees) {
       const overlapping = contractsGrouped.get(employee.id) ?? [];
-      let employmentEndDate: Date | null = null;
-      if (overlapping.length === 0) {
+      let employmentEndDate: Date | null =
+        windowsByEmployee.get(employee.id)?.end ?? null;
+      if (overlapping.length === 0 && !employmentEndDate) {
         const latestEnded = await this.prisma.employeeContract.findFirst({
           where: {
             companyId,
@@ -6160,8 +6259,10 @@ export class AttendanceService
           select: { endDate: true, terminatedAt: true },
           orderBy: [{ terminatedAt: 'desc' }, { endDate: 'desc' }],
         });
-        employmentEndDate =
-          latestEnded?.terminatedAt ?? latestEnded?.endDate ?? null;
+        employmentEndDate = effectiveContractEnd(
+          latestEnded?.endDate,
+          latestEnded?.terminatedAt,
+        );
       }
 
       const segments = resolveEmploymentSegmentsForMonth({

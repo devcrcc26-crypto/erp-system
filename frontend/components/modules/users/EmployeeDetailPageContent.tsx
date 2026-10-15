@@ -27,11 +27,15 @@ import { ApproverOnlyTag } from '@/components/modules/users/EmployeeApproverOnly
 import EmployeeProfileDocuments from '@/components/modules/users/EmployeeProfileDocuments';
 import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhoto';
 import EmployeeRolesCard from '@/components/modules/users/EmployeeRolesCard';
+import EmployeeSeparationBanner from '@/components/modules/users/EmployeeSeparationBanner';
+import EmployeeSeparationDialog from '@/components/modules/users/EmployeeSeparationDialog';
+import { useEmployment } from '@/lib/query/employment';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanCreatePayroll,
+  useCanEditUsers,
   useCanManageEmployeePerDiemRates,
   useCanViewHr,
   useIsSystemAdmin,
@@ -193,6 +197,10 @@ export default function EmployeeDetailPageContent({
   const deleteUser = useDeleteUser();
   const resendInvitation = useResendInvitation();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const canEditUsers = useCanEditUsers();
+  const employmentQuery = useEmployment(userId, canViewHr || canEditUsers);
+  const employment = employmentQuery.data;
+  const [separationOpen, setSeparationOpen] = useState(false);
 
   const activeTab = resolveProfileTab(searchParams.get('tab'));
   const isOwnProfile = currentUserQuery.data?.id === userId;
@@ -331,6 +339,16 @@ export default function EmployeeDetailPageContent({
                   : t('users.resendVerification')}
               </Button>
             ) : null}
+            {canEditUsers &&
+            showDestructiveActions &&
+            !user.excludedFromHrProcesses &&
+            employment &&
+            employment.employmentStatus !== 'SEPARATED' &&
+            !employment.separation ? (
+              <Button danger onClick={() => setSeparationOpen(true)}>
+                {t('users.separation.action')}
+              </Button>
+            ) : null}
             <Space.Compact>
               <Button
                 type="primary"
@@ -399,6 +417,19 @@ export default function EmployeeDetailPageContent({
             </p>
           </div>
         </div>
+        {employment ? (
+          <EmployeeSeparationBanner
+            userId={user.id}
+            employment={employment}
+            canManage={canEditUsers}
+          />
+        ) : null}
+        <EmployeeSeparationDialog
+          open={separationOpen}
+          userId={user.id}
+          employeeName={fullName}
+          onClose={() => setSeparationOpen(false)}
+        />
       </div>
 
       <div className="erp-users-stat-bar erp-employee-meta-bar">

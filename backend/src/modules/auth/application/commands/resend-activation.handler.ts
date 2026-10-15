@@ -23,7 +23,13 @@ export class ResendActivationHandler
   async execute(command: ResendActivationCommand): Promise<{ message: string }> {
     const user = await this.authRepository.findActiveUserByEmail(command.email);
 
-    if (user && user.email && !user.emailVerifiedAt) {
+    if (
+      user &&
+      user.isActive &&
+      user.employmentStatus !== 'SEPARATED' &&
+      user.email &&
+      !user.emailVerifiedAt
+    ) {
       await this.accountActivationService.sendInvitation({
         id: user.id,
         email: user.email,

@@ -54,7 +54,8 @@ export class ActivateAccountHandler
 
     const user = await this.authRepository.findActiveUserById(userId);
 
-    if (!user) {
+    // Only a never-activated invitation on an enabled, non-separated account.
+    if (!user || !user.isActive || user.employmentStatus === 'SEPARATED') {
       throw new NotFoundException('User not found');
     }
 

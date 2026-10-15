@@ -30,6 +30,8 @@ export function enrolmentGraceDateKeys(params: {
    * as day off (legacy Mon–Sat grace).
    */
   isDayOff?: (date: Date) => boolean;
+  /** enrolmentGraceWorkingDays policy: cap on grace working days; null = no cap. */
+  maxWorkingDays?: number | null;
 }): Set<string> {
   const keys = new Set<string>();
   const hire = utcDateOnly(params.hireDate);
@@ -49,8 +51,10 @@ export function enrolmentGraceDateKeys(params: {
   const effectiveEnd =
     graceEnd.getTime() <= through.getTime() ? graceEnd : through;
 
+  const cap = params.maxWorkingDays ?? null;
   const cursor = new Date(hire.getTime());
   while (cursor.getTime() <= effectiveEnd.getTime()) {
+    if (cap != null && keys.size >= cap) break;
     const isOff =
       params.isDayOff?.(cursor) ?? cursor.getUTCDay() === 0;
     if (!isOff && !params.isPublicHoliday(cursor)) {

@@ -52,6 +52,8 @@ describe('ForgotPasswordHandler', () => {
       id: 'user-1',
       email: 'user@test.local',
       firstName: 'Test',
+      isActive: true,
+      employmentStatus: 'ACTIVE',
       emailVerifiedAt: new Date('2026-01-01'),
     } as Awaited<ReturnType<IAuthRepository['findUserForPasswordReset']>>);
 
@@ -74,12 +76,13 @@ describe('ForgotPasswordHandler', () => {
     );
   });
 
-  it('sends reset email for inactive but non-deleted users', async () => {
+  it('never sends a reset to a login-disabled user, with the same generic response', async () => {
     authRepository.findUserForPasswordReset.mockResolvedValue({
       id: 'user-1',
       email: 'user@test.local',
       firstName: 'Test',
       isActive: false,
+      employmentStatus: 'ACTIVE',
       emailVerifiedAt: new Date('2026-01-01'),
     } as Awaited<ReturnType<IAuthRepository['findUserForPasswordReset']>>);
 
@@ -88,10 +91,27 @@ describe('ForgotPasswordHandler', () => {
     );
 
     expect(result.message).toBe(genericMessage);
-    expect(authMailService.sendPasswordResetEmail).toHaveBeenCalledWith(
-      'user@test.local',
-      'reset-token',
+    expect(authRepository.createPasswordResetToken).not.toHaveBeenCalled();
+    expect(authMailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it('never sends a reset to a separated user (even before the job disables login)', async () => {
+    authRepository.findUserForPasswordReset.mockResolvedValue({
+      id: 'user-1',
+      email: 'user@test.local',
+      firstName: 'Test',
+      isActive: true,
+      employmentStatus: 'SEPARATED',
+      emailVerifiedAt: new Date('2026-01-01'),
+    } as Awaited<ReturnType<IAuthRepository['findUserForPasswordReset']>>);
+
+    const result = await handler.execute(
+      new ForgotPasswordCommand('user@test.local'),
     );
+
+    expect(result.message).toBe(genericMessage);
+    expect(authRepository.createPasswordResetToken).not.toHaveBeenCalled();
+    expect(authMailService.sendPasswordResetEmail).not.toHaveBeenCalled();
   });
 
   it('sends reset email for unverified users as well', async () => {
@@ -99,6 +119,8 @@ describe('ForgotPasswordHandler', () => {
       id: 'user-1',
       email: 'user@test.local',
       firstName: 'Test',
+      isActive: true,
+      employmentStatus: 'ACTIVE',
       emailVerifiedAt: null,
     } as Awaited<ReturnType<IAuthRepository['findUserForPasswordReset']>>);
 

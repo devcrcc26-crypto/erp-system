@@ -31,13 +31,72 @@ import {
   UsersQueryDto,
 } from '../../application/dtos/user-management.dtos';
 import { UserManagementService } from '../../application/services/user-management.service';
+import {
+  SeparateEmployeeDto,
+  SeparationPreviewDto,
+} from '../../application/dtos/employment-separation.dtos';
+import { EmploymentSeparationService } from '../../application/services/employment-separation.service';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @UseGuards(PermissionsGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly userManagementService: UserManagementService) {}
+  constructor(
+    private readonly userManagementService: UserManagementService,
+    private readonly separationService: EmploymentSeparationService,
+  ) {}
+
+  @Get(':id/employment')
+  @RequirePermission('users', 'view')
+  @ApiOperation({ summary: 'Employment status, periods and current separation' })
+  getEmployment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.separationService.getEmployment(this.ctx(user), id);
+  }
+
+  @Post(':id/separation/preview')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({
+    summary:
+      'Preview a separation: locked payroll months, active contract, pending approvals (no changes)',
+  })
+  previewSeparation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SeparationPreviewDto,
+  ): Promise<unknown> {
+    return this.separationService.preview(this.ctx(user), id, dto.leavingDate);
+  }
+
+  @Post(':id/separation')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({
+    summary:
+      'Separate an employee (leaving date = last working day). Future-dated allowed; locked payroll months need confirmLockedPayroll.',
+  })
+  separate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SeparateEmployeeDto,
+  ): Promise<unknown> {
+    return this.separationService.separate(this.ctx(user), id, dto);
+  }
+
+  @Delete(':id/separation')
+  @RequirePermission('users', 'edit')
+  @ApiOperation({
+    summary:
+      'Cancel a separation (allowed while the leaving date is in the future or not inside approved/paid payroll)',
+  })
+  cancelSeparation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<unknown> {
+    return this.separationService.cancel(this.ctx(user), id);
+  }
 
   private ctx(user: AuthenticatedUser): { companyId: string; userId: string } {
     return { companyId: user.companyId, userId: user.userId };

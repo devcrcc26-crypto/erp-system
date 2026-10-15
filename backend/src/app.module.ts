@@ -56,6 +56,7 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { EvaluationModule } from './modules/evaluation/evaluation.module';
 import {PayrollModule} from './modules/payroll/payroll.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
+import { PolicySettingsModule } from './modules/policy-settings/policy-settings.module';
 
 @Module({
   imports: [
@@ -116,6 +117,7 @@ import { AnnouncementsModule } from './modules/announcements/announcements.modul
     EvaluationModule,
     PayrollModule,
     AnnouncementsModule,
+    PolicySettingsModule,
   ],
   controllers: [AppController],
   providers: [

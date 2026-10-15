@@ -12,6 +12,7 @@ const UNRESOLVED_FLAG_LABEL: Record<
   MISSING_CLOCK_OUT: 'Missing clock-out',
   EARLY_LEAVE: 'Early departure',
   ON_LEAVE_BUT_SCANNED: 'On leave but scanned',
+  SCAN_AFTER_SEPARATION: 'Scanned after leaving date',
 };
 
 const RESOLVED_REASON_LABEL: Record<FieldMovementReason, string> = {

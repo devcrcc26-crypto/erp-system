@@ -35,6 +35,7 @@ export type AttendanceDayFlag =
   | 'MISSING_CLOCK_OUT'
   | 'EARLY_LEAVE'
   | 'ON_LEAVE_BUT_SCANNED'
+  | 'SCAN_AFTER_SEPARATION'
   | 'NONE';
 
 export type AttendanceMonthStatus =
@@ -116,7 +117,8 @@ export interface AttendanceDailyLog {
     | 'LEAVE'
     | 'UNPAID_LEAVE'
     | 'FIELD_MOVEMENT_PENDING'
-    | 'ENROLMENT_GRACE';
+    | 'ENROLMENT_GRACE'
+    | 'NOT_EMPLOYED';
   dayDeduction?: number;
   siteAssignmentName?: string | null;
   corrections?: AttendanceDailyLogCorrection[];

@@ -520,10 +520,15 @@ export function availableReasonTypesForFlag(
     | 'MISSING_CLOCK_OUT'
     | 'EARLY_LEAVE'
     | 'ON_LEAVE_BUT_SCANNED'
+    | 'SCAN_AFTER_SEPARATION'
     | 'NONE',
   options?: { bothScansMissing?: boolean },
 ): FieldMovementReasonType[] {
-  if (flag === 'NONE' || flag === 'ON_LEAVE_BUT_SCANNED') {
+  if (
+    flag === 'NONE' ||
+    flag === 'ON_LEAVE_BUT_SCANNED' ||
+    flag === 'SCAN_AFTER_SEPARATION'
+  ) {
     return [];
   }
   if (flag === 'MISSING_CLOCK_IN') {
@@ -551,13 +556,15 @@ export function availableForgotDirections(day: {
     | 'MISSING_CLOCK_OUT'
     | 'EARLY_LEAVE'
     | 'ON_LEAVE_BUT_SCANNED'
+    | 'SCAN_AFTER_SEPARATION'
     | 'NONE';
   bothScansMissing: boolean;
 }): ForgotDirection[] {
   if (
     day.flag === 'EARLY_LEAVE' ||
     day.flag === 'NONE' ||
-    day.flag === 'ON_LEAVE_BUT_SCANNED'
+    day.flag === 'ON_LEAVE_BUT_SCANNED' ||
+    day.flag === 'SCAN_AFTER_SEPARATION'
   ) {
     return [];
   }

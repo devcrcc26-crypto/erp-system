@@ -424,6 +424,8 @@ export class UserManagementService {
         loginName: true,
         excludedFromHrProcesses: true,
         excludedReason: true,
+        employmentStatus: true,
+        isActive: true,
       },
     });
     if (!existing) {
@@ -433,6 +435,11 @@ export class UserManagementService {
     // Deactivation via isActive=false is not a personal-data update — same rules as delete.
     if (dto.isActive === false) {
       await this.assertCanDeactivateOrDeleteUser(ctx, id);
+    }
+    if (dto.isActive === true && !existing.isActive && existing.employmentStatus === 'SEPARATED') {
+      throw new BadRequestException(
+        'This employee is separated. Cancel the separation (or rehire) instead of re-enabling login.',
+      );
     }
 
     const {

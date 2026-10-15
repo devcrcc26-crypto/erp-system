@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import Fuse from 'fuse.js';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { hrProcessEmployeeWhere } from '../../../../shared/prisma/hr-process.util';
+import { loadEmploymentWindows } from '../../../../shared/employment/employment-window.util';
 import type {
   AttendanceDailyRaw,
   AttendanceRawRow,
@@ -107,6 +108,8 @@ export class AttendanceMatchingService {
   async matchRows(
     rows: AttendanceRawRow[],
     companyId: string,
+    /** Import month: a leaver whose login is already off still matches for days they worked. */
+    period?: { month: number; year: number },
   ): Promise<AttendanceMatchResult[]> {
     const [identities, employees] = await Promise.all([
       this.prisma.attendanceIdentity.findMany({
@@ -129,9 +132,26 @@ export class AttendanceMatchingService {
           lastName: true,
           employeeId: true,
           isActive: true,
+          employmentDate: true,
         },
       }),
     ]);
+
+    if (period) {
+      const inactive = employees.filter((e) => !e.isActive);
+      const windows = await loadEmploymentWindows(
+        this.prisma,
+        inactive,
+        period.month,
+        period.year,
+      );
+      for (const employee of inactive) {
+        const window = windows.get(employee.id);
+        if (window?.fromPeriods && window.overlapsMonth) {
+          employee.isActive = true;
+        }
+      }
+    }
 
     const identityByKey = new Map<string, StoredIdentity>();
     /** Non-blank machine IDs → all stored identities sharing that ID. */

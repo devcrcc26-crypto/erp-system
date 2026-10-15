@@ -1896,6 +1896,15 @@ export default function PayrollRunDetailPageContent({
             }
           />
         ) : null}
+        {run.policyReviewRequired ? (
+          <Alert
+            className="mt-3"
+            type="warning"
+            showIcon
+            title={t('hr.payroll.actions.policyReviewRequired')}
+            description={run.policyReviewNote ?? undefined}
+          />
+        ) : null}
 
         <div className="erp-payroll-steps">
           <Steps

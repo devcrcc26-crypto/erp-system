@@ -109,6 +109,8 @@ export function countEntryFlags(
     MISSING_OVERTIME_APPROVAL: 0,
     ZERO_SALARY: 0,
     MANUAL_OVERRIDE: 0,
+    LEAVER_FINAL_MONTH: 0,
+    LOGIN_DISABLED_STILL_EMPLOYED: 0,
   };
   for (const entry of entries) {
     if (entry.flag !== 'NONE') {

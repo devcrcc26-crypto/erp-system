@@ -3,8 +3,8 @@ import {
   computeSelectableOvertimeWindows,
   enumerateWindowTimes,
   isIntervalInsideSelectableWindows,
-  LUNCH_COUNTS_AS_OVERTIME,
 } from './overtime-selectable-windows.util';
+import { POLICY_DEFAULTS } from '../../../../shared/policy/policy-definitions';
 
 const FULL = {
   isHoliday: false,
@@ -37,7 +37,7 @@ const OFF = {
 
 describe('computeSelectableOvertimeWindows', () => {
   it('1 — Monday full day: 00:00–08:30 and 17:30–24:00; lunch not selectable', () => {
-    expect(LUNCH_COUNTS_AS_OVERTIME).toBe(false);
+    expect(POLICY_DEFAULTS.lunchCountsAsOvertime).toBe(false);
     const result = computeSelectableOvertimeWindows(FULL);
     expect(result.dayKind).toBe('FULL_WORKING');
     expect(result.windows).toEqual([

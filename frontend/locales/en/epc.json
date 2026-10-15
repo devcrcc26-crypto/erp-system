@@ -75,7 +75,8 @@
       "admin": "Administration",
       "setup": "Setup",
       "structure": "Company Structure",
-      "companyFleet": "Company Fleet"
+      "companyFleet": "Company Fleet",
+      "hrSettings": "HR Settings"
     },
     "organization": {
       "vehicles": "Company Vehicles"
@@ -97,6 +98,7 @@
       "inspectionRepair": "Inspection & Repair",
       "businessTrips": "Third-Country Business Trips",
       "reports": "HR Reports",
+      "policySettings": "Policy Settings",
       "perDiem": "Per Diem",
       "employeePerDiemRates": "Employee Per Diem Rates",
       "leavePolicy": "Leave Policy",
@@ -688,6 +690,216 @@
         "myDescription": "Your overtime year totals and sheet history.",
         "you": "You"
       },
+      "policySettings": {
+        "title": "Policy Settings",
+        "description": "Rules used by attendance, payroll and overtime. Each change starts from a month you choose; earlier months keep the rules they were calculated with.",
+        "groups": {
+          "ATTENDANCE": "Attendance",
+          "PAYROLL": "Payroll",
+          "OVERTIME": "Overtime",
+          "SEPARATION": "Separation",
+          "INACTIVE": "Inactive"
+        },
+        "readOnlyNotice": "You can view these settings. Only an HR Manager or System Administrator can change them.",
+        "currentValue": "In force this month",
+        "default": "Default",
+        "setByHr": "Set by HR",
+        "scheduledFrom": "Changes to {{value}} from {{month}}",
+        "adminOnly": "System Administrator only",
+        "informational": "Saved now, used in a later release",
+        "locked": "Fixed",
+        "example": "Example",
+        "change": "Change",
+        "history": "History ({{count}})",
+        "editTitle": "Change: {{name}}",
+        "newValue": "New value",
+        "effectiveFrom": "Applies from",
+        "effectiveFromHint": "Months before this keep the current rule.",
+        "reason": "Reason",
+        "reasonRequired": "Enter the reason for this change.",
+        "save": "Save change",
+        "saved": "Policy saved.",
+        "saveError": "Could not save the policy.",
+        "affectedRunsTitle": "Payroll already exists for {{count}} affected month(s)",
+        "affectedRunStale": "{{run}} ({{status}}) will be marked stale — recalculate it.",
+        "affectedRunReview": "{{run}} ({{status}}) will be marked \"review required\". It is not recalculated.",
+        "confirmAffected": "I understand. Save and mark these runs.",
+        "historyTitle": "History: {{name}}",
+        "historyEmpty": "No changes yet — the default applies.",
+        "historyFrom": "From",
+        "historyChange": "Old → new",
+        "historyBy": "By",
+        "historyWhen": "Saved",
+        "historyReason": "Reason",
+        "unknownUser": "Unknown",
+        "noLimit": "No limit",
+        "limitTo": "Limit to",
+        "workingDays": "working days",
+        "minutes": "min",
+        "on": "On",
+        "off": "Off",
+        "bandUpTo": "Up to (ETB)",
+        "bandRate": "Rate %",
+        "bandDeduction": "Deduction (ETB)",
+        "bandAndAbove": "and above",
+        "addBand": "Add band",
+        "removeBand": "Remove band",
+        "bandsSummary": "{{count}} bands, top rate {{top}} %",
+        "enabled": "Enabled",
+        "days": "Days",
+        "parameters": "Parameters (JSON)",
+        "jsonInvalid": "Enter valid JSON.",
+        "options": {
+          "REPORT_ONLY": "Report only",
+          "ENFORCED": "Enforced",
+          "PRORATED": "Prorated",
+          "FULL": "Full amount",
+          "EARNED": "Earned salary"
+        },
+        "multiplier": {
+          "regular": "Regular",
+          "night": "Night",
+          "weekend": "Weekend",
+          "holiday": "Holiday"
+        },
+        "inactiveTypes": {
+          "SUSPENDED": "Suspended",
+          "LONG_LEAVE": "Long leave",
+          "OTHER": "Other"
+        },
+        "keys": {
+          "lateGraceMinutes": {
+            "title": "Late arrival grace",
+            "description": "Clocking in later than this after the start time counts as late.",
+            "example": "15 min: with an 08:30 start, 08:45 is on time and 08:46 is late."
+          },
+          "lateDeductionMode": {
+            "title": "Late arrivals: report or deduct",
+            "description": "Report only flags late arrivals without changing pay. Enforced turns late arrivals into deducted days.",
+            "example": "Enforced, 2 per half day: 2 late arrivals = 0.5 day deducted."
+          },
+          "latesPerHalfDay": {
+            "title": "Late arrivals per half day",
+            "description": "When late deduction is enforced, every this-many late arrivals in a month cost half a day.",
+            "example": "2: 5 late arrivals in a month = 1 day deducted (two pairs); the fifth waits for a pair."
+          },
+          "earlyDepartureGraceMinutes": {
+            "title": "Early departure grace",
+            "description": "Leaving up to this many minutes before the scheduled end is not early.",
+            "example": "30 min: with a 17:30 end, leaving at 17:00 is fine; 16:59 is flagged."
+          },
+          "earlyDepartureDeductMinutes": {
+            "title": "Early departure: half-day threshold",
+            "description": "Leaving more than this before the scheduled end can cost half a day.",
+            "example": "60 min: with a 17:30 end, leaving before 16:30 counts as over an hour early."
+          },
+          "earlyDepartureMode": {
+            "title": "Early departure: report or deduct",
+            "description": "Report only shows the would-deduct amount. Enforced deducts half a day.",
+            "example": "Enforced: leaving at 16:00 without approval = 0.5 day deducted."
+          },
+          "enrolmentGraceWorkingDays": {
+            "title": "New-starter scanner grace",
+            "description": "New employees who aren't on the scanner yet are not marked absent. No limit = until the day after their first scan.",
+            "example": "3: at most their first 3 working days are excused."
+          },
+          "forgotToClockFlagThreshold": {
+            "title": "Forgot-to-scan review flag",
+            "description": "Approved forgot-to-scan explanations in a month that flag the employee for HR review.",
+            "example": "3: the third approved forgot-to-scan in a month raises a flag."
+          },
+          "unpaidLeaveCountsRestDays": {
+            "title": "Unpaid leave includes days off",
+            "description": "When on, unpaid leave deducts every calendar day in its range, including days off and holidays.",
+            "example": "On: unpaid leave Friday–Monday = 4 days deducted. Off: duty days only."
+          },
+          "monthDays": {
+            "title": "Days in a payroll month",
+            "description": "Every month is paid on a 30-day basis. Fixed: the joiner and leaver rules depend on it.",
+            "example": "Joined on the 17th: 14 paid days, in any month."
+          },
+          "leaverAllowanceMode": {
+            "title": "Allowances for leavers",
+            "description": "How transport and monthly bonus are paid to someone who leaves during the month.",
+            "example": "Prorated: left on the 20th = 20/30 of transport and bonus. Full amount: the whole month."
+          },
+          "allowancesReducedByAbsence": {
+            "title": "Absences reduce allowances",
+            "description": "When on, absent days also reduce transport and monthly bonus.",
+            "example": "On: 2 absent days in a 30-day month = allowances × 28/30."
+          },
+          "pensionEmployeePct": {
+            "title": "Employee pension %",
+            "description": "Deducted from the employee: percent of earned salary.",
+            "example": "7 %: 20,000 earned = 1,400 deducted."
+          },
+          "pensionEmployerPct": {
+            "title": "Employer pension %",
+            "description": "Paid by the company: percent of earned salary.",
+            "example": "11 %: 20,000 earned = 2,200 company contribution."
+          },
+          "pensionBase": {
+            "title": "Pension is calculated on",
+            "description": "Fixed to earned salary (basic ÷ 30 × paid days).",
+            "example": "Basic 30,000, 20 paid days: pension base 20,000."
+          },
+          "incomeTaxBrackets": {
+            "title": "Income tax bands",
+            "description": "Tax = taxable income × the band's rate − the band's deduction, using the band the income falls in.",
+            "example": "Taxable 10,000: 10,000 × 25 % − 850 = 1,650."
+          },
+          "transportTaxable": {
+            "title": "Transport allowance is taxable",
+            "description": "When on, the transport allowance is added to taxable income.",
+            "example": "Off: a 2,550 transport allowance is never taxed."
+          },
+          "hoursDivisor": {
+            "title": "Overtime hourly divisor",
+            "description": "Overtime hourly rate = basic salary ÷ this number.",
+            "example": "192: basic 48,000 = 250 per hour."
+          },
+          "holidayHoursDivisor": {
+            "title": "Holiday overtime hourly divisor",
+            "description": "Public-holiday overtime hourly rate = basic salary ÷ this number.",
+            "example": "196: basic 49,000 = 250 per hour."
+          },
+          "multipliers": {
+            "title": "Overtime multipliers",
+            "description": "Overtime pay = hourly rate × hours × the multiplier for the time of day or day type.",
+            "example": "Regular 1.5×: 2 hours at 250 per hour = 750."
+          },
+          "lunchCountsAsOvertime": {
+            "title": "Lunch break counts as overtime",
+            "description": "When on, the lunch break on a working day can be entered as overtime.",
+            "example": "Off: 12:30–13:30 can't be claimed as overtime."
+          },
+          "unusedLeavePayout": {
+            "title": "Unused leave payout",
+            "description": "Pay unused annual leave in the final month. Saved now; payroll does not use it yet.",
+            "example": "Daily rate = basic ÷ 30: 6 unused days × 1,000 = 6,000."
+          },
+          "severancePay": {
+            "title": "Severance pay",
+            "description": "Severance on separation, with parameters entered by HR. Saved now; payroll does not use it yet.",
+            "example": "Parameters such as { \"monthsPerYear\": 1 }."
+          },
+          "noticePay": {
+            "title": "Notice pay",
+            "description": "Pay in lieu of notice. Saved now; payroll does not use it yet.",
+            "example": "30 days = one month of basic salary."
+          },
+          "inactivePaid": {
+            "title": "Inactive days are paid",
+            "description": "Whether days in each inactive type are paid. Used when inactive periods arrive in the next release.",
+            "example": "Suspended: unpaid. Long leave: unpaid."
+          },
+          "inactiveCanLogin": {
+            "title": "Inactive employees can sign in",
+            "description": "Whether people in each inactive type can still sign in. Used when inactive periods arrive in the next release.",
+            "example": "Long leave: can sign in. Suspended: cannot."
+          }
+        }
+      },
       "leavePolicy": {
         "new": "New Leave Policy",
         "edit": "Edit Leave Policy",
@@ -968,7 +1180,8 @@
             "LEAVE": "Leave",
             "UNPAID_LEAVE": "Unpaid leave",
             "FIELD_MOVEMENT_PENDING": "Field movement pending",
-            "ENROLMENT_GRACE": "Enrolment grace"
+            "ENROLMENT_GRACE": "Enrolment grace",
+            "NOT_EMPLOYED": "Not employed"
           }
         },
         "importModal": {
@@ -1064,6 +1277,7 @@
           "flagMissingClockOut": "Missing clock-out",
           "flagEarlyLeave": "Early departure",
           "flagOnLeaveButScanned": "On leave but scanned",
+          "flagScanAfterSeparation": "Scanned after leaving date",
           "flagResolved": "{{flag}} · resolved",
           "explained": "Explained: {{reason}}",
           "noExplanation": "No explanation submitted yet",
@@ -2704,6 +2918,42 @@
     "deleteEmployee": "Delete employee",
     "deleteDescription": "Deactivate {{name}} ({{email}})? They will no longer be able to sign in.",
     "deactivated": "{{name}} has been deactivated.",
+    "separation": {
+      "action": "Separate employee",
+      "title": "Separate {{name}}",
+      "confirm": "Separate",
+      "leavingDate": "Leaving date (last working day)",
+      "leavingDateHint": "Login is turned off and the contract terminated the day after this date.",
+      "leavingDateRequired": "Choose the leaving date.",
+      "type": "Separation type",
+      "typeRequired": "Choose a separation type.",
+      "reason": "Reason",
+      "reasonRequired": "A reason is required.",
+      "types": {
+        "RESIGNATION": "Resignation",
+        "TERMINATION": "Termination",
+        "CONTRACT_END": "Contract end",
+        "DEATH": "Death",
+        "OTHER": "Other"
+      },
+      "effectiveNow": "The leaving date has passed: login is turned off and the contract terminated now.",
+      "effectiveLater": "Scheduled: the employee keeps working and logging in until {{date}}.",
+      "contractEffect": "Contract {{contract}} will end on {{date}}.",
+      "noActiveContract": "No active contract to end.",
+      "pendingApprovals": "{{count}} pending approval(s) are waiting on this person and will need reassignment.",
+      "pendingSubmitted": "{{count}} request(s) they submitted are still pending.",
+      "lockedPayroll": "Payroll {{runs}} is already approved or paid for the affected month(s).",
+      "lockedPayrollConfirm": "I understand: mark the payroll stale and notify payroll.",
+      "finalSettlementNote": "Final settlement (leave payout, severance, notice) is handled outside the system.",
+      "saved": "{{name}} has been separated.",
+      "saveError": "Could not save the separation.",
+      "bannerScheduled": "Leaving on {{date}} ({{type}})",
+      "bannerSeparated": "Separated — last working day {{date}} ({{type}})",
+      "cancel": "Cancel separation",
+      "cancelTitle": "Cancel this separation?",
+      "cancelDescription": "Employment, the contract end date and login are restored to how they were before.",
+      "cancelled": "Separation cancelled."
+    },
     "deleteError": "Failed to delete employee.",
     "updated": "{{name}} updated successfully.",
     "resendError": "Failed to resend verification email.",
@@ -4790,7 +5040,9 @@
         "MISSING_CONTRACT": "Missing contract",
         "MISSING_OVERTIME_APPROVAL": "Overtime not approved",
         "ZERO_SALARY": "Zero salary",
-        "MANUAL_OVERRIDE": "Manual override"
+        "MANUAL_OVERRIDE": "Manual override",
+        "LEAVER_FINAL_MONTH": "Leaver — final month",
+        "LOGIN_DISABLED_STILL_EMPLOYED": "Login disabled, still employed"
       },
       "list": {
         "title": "Payroll runs",
@@ -4880,6 +5132,7 @@
         "exportBankLetterContinue": "Download letter",
         "attendanceStaleDraft": "Attendance changed after this run was generated — regenerate",
         "attendanceStaleApproved": "Attendance changed after this run was generated — review required",
+        "policyReviewRequired": "An HR policy changed for this month after the run was approved — review required (not recalculated automatically)",
         "recalculateSuccess": "Entries recalculated.",
         "markReviewedSuccess": "Run marked as reviewed.",
         "submitSuccess": "Run submitted for approval.",

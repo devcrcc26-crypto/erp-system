@@ -13,7 +13,9 @@ export type PayrollEntryFlag =
   | 'MISSING_CONTRACT'
   | 'MISSING_OVERTIME_APPROVAL'
   | 'ZERO_SALARY'
-  | 'MANUAL_OVERRIDE';
+  | 'MANUAL_OVERRIDE'
+  | 'LEAVER_FINAL_MONTH'
+  | 'LOGIN_DISABLED_STILL_EMPLOYED';
 
 export type MoneyField = number | string;
 
@@ -213,6 +215,8 @@ export interface PayrollRunDetail {
   totalTax: MoneyField;
   notes: string | null;
   attendanceSnapshotStale?: boolean;
+  policyReviewRequired?: boolean;
+  policyReviewNote?: string | null;
   submittedAt: string | null;
   submittedBy: string | null;
   approvedAt: string | null;

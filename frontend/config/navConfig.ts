@@ -71,6 +71,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/hr/employee-per-diem-rates/new': 'pages.hr.employeePerDiemRates.listTitle',
   '/hr/leave-policy': 'pages.hr.leavePolicy.listTitle',
   '/hr/leave-policy/new': 'pages.hr.leavePolicy.listTitle',
+  '/hr/policy-settings': 'pages.hr.policySettings.title',
   '/hr/work-schedules': 'pages.hr.workSchedules.listTitle',
   '/hr/work-schedules/new': 'pages.hr.workSchedules.listTitle',
   '/hr/public-holidays': 'pages.hr.publicHolidays.listTitle',
@@ -264,6 +265,7 @@ const PAGE_DESCRIPTION_KEYS: Record<string, string> = {
   '/hr/employee-per-diem-rates/new': 'pages.hr.employeePerDiemRates.listDescription',
   '/hr/leave-policy': 'pages.hr.leavePolicy.listDescription',
   '/hr/leave-policy/new': 'pages.hr.leavePolicy.listDescription',
+  '/hr/policy-settings': 'pages.hr.policySettings.description',
   '/hr/work-schedules': 'pages.hr.workSchedules.listDescription',
   '/hr/work-schedules/new': 'pages.hr.workSchedules.listDescription',
   '/hr/public-holidays': 'pages.hr.publicHolidays.listDescription',
@@ -689,6 +691,18 @@ function resolveRouteMetaCore(
           href: '/hr/public-holidays',
         },
         { label: t('pages.hr.publicHolidays.detail') },
+      ],
+    };
+  }
+
+  if (pathname === '/hr/policy-settings') {
+    return {
+      titleKey: 'pages.hr.policySettings.title',
+      descriptionKey: 'pages.hr.policySettings.description',
+      breadcrumbs: [
+        { label: t('nav.dashboard'), href: '/' },
+        { label: t('nav.groups.humanResources') },
+        { label: t('pages.hr.policySettings.title') },
       ],
     };
   }

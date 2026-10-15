@@ -56,6 +56,8 @@ describe('ActivateAccountHandler', () => {
     tokenService.verifyToken.mockResolvedValue(true);
     authRepository.findActiveUserById.mockResolvedValue({
       id: 'user-1',
+      isActive: true,
+      employmentStatus: 'ACTIVE',
       emailVerifiedAt: null,
     } as Awaited<ReturnType<IAuthRepository['findActiveUserById']>>);
 
@@ -117,11 +119,31 @@ describe('ActivateAccountHandler', () => {
     tokenService.verifyToken.mockResolvedValue(true);
     authRepository.findActiveUserById.mockResolvedValue({
       id: 'user-1',
+      isActive: true,
+      employmentStatus: 'ACTIVE',
       emailVerifiedAt: new Date('2026-01-01'),
     } as Awaited<ReturnType<IAuthRepository['findActiveUserById']>>);
 
     await expect(
       handler.execute(new ActivateAccountCommand('plain-token', 'NewPassword1')),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('never activates a separated account', async () => {
+    authRepository.findActiveEmailVerificationTokensByPurpose.mockResolvedValue([
+      { id: 'token-1', userId: 'user-1', tokenHash: 'hash-1' },
+    ]);
+    tokenService.verifyToken.mockResolvedValue(true);
+    authRepository.findActiveUserById.mockResolvedValue({
+      id: 'user-1',
+      isActive: true,
+      employmentStatus: 'SEPARATED',
+      emailVerifiedAt: null,
+    } as Awaited<ReturnType<IAuthRepository['findActiveUserById']>>);
+
+    await expect(
+      handler.execute(new ActivateAccountCommand('plain-token', 'NewPassword1')),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(authRepository.updateUserPassword).not.toHaveBeenCalled();
   });
 });

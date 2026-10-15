@@ -74,10 +74,12 @@ const STATUS_CONFIG: Record<DayStatus, { color: string; labelKey: string }> = {
     labelKey: 'FIELD_MOVEMENT_PENDING',
   },
   ENROLMENT_GRACE: { color: 'blue', labelKey: 'ENROLMENT_GRACE' },
+  NOT_EMPLOYED: { color: 'default', labelKey: 'NOT_EMPLOYED' },
 };
 
 /** Days where nobody is expected at the clock, so missing punches are not flagged. */
 const NO_PUNCH_EXPECTED = new Set<DayStatus>([
+  'NOT_EMPLOYED',
   'SUNDAY',
   'DAY_OFF',
   'WORKED_ON_DAY_OFF',
@@ -111,6 +113,11 @@ const FLAG_CONFIG: Record<
   ON_LEAVE_BUT_SCANNED: {
     labelKey: 'pages.hr.attendance.dailyDrawer.flagOnLeaveButScanned',
     className: 'bg-violet-50 text-violet-800 ring-violet-200',
+    icon: <LogIn size={12} strokeWidth={2.25} />,
+  },
+  SCAN_AFTER_SEPARATION: {
+    labelKey: 'pages.hr.attendance.dailyDrawer.flagScanAfterSeparation',
+    className: 'bg-slate-100 text-slate-700 ring-slate-300',
     icon: <LogIn size={12} strokeWidth={2.25} />,
   },
 };
@@ -183,6 +190,9 @@ function resolveDayFlags(
   }
   if (stored === 'ON_LEAVE_BUT_SCANNED') {
     push('ON_LEAVE_BUT_SCANNED');
+  }
+  if (stored === 'SCAN_AFTER_SEPARATION') {
+    push('SCAN_AFTER_SEPARATION');
   }
   return flags;
 }

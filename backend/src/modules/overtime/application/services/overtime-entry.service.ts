@@ -7,6 +7,7 @@ import { LeaveRequestStatus } from '@prisma/client';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { getPolicy } from '../../../../shared/policy/policy-reader.util';
 import { WorkScheduleService } from '../../../work-schedule/application/services/work-schedule.service';
 import {
   addUtcDays,
@@ -112,10 +113,17 @@ export class OvertimeEntryService {
       throw new BadRequestException(FULL_DAY_LEAVE_MESSAGE);
     }
     const leaveWindowsStart = leaveResolved.excludedWindows;
+    const lunchCountsAsOvertime = await getPolicy(
+      this.prisma,
+      companyId,
+      'lunchCountsAsOvertime',
+      onDate,
+    );
     const context = this.buildDayContext(
       weekday,
       isHoliday,
       leaveWindowsStart,
+      lunchCountsAsOvertime,
     );
 
     if (!isOvernight) {
@@ -129,6 +137,7 @@ export class OvertimeEntryService {
         afternoonEnd: context.afternoonEnd,
         leaveExcludedWindows: leaveWindowsStart,
         hasFullDayLeave: leaveResolved.hasFullDayLeave,
+        lunchCountsAsOvertime,
       });
       if (
         selectable.blockedReason === 'FULL_DAY_LEAVE' ||
@@ -170,6 +179,7 @@ export class OvertimeEntryService {
         nextWeekday,
         nextCalendar.isHoliday,
         leaveNext.excludedWindows,
+        await getPolicy(this.prisma, companyId, 'lunchCountsAsOvertime', nextDate),
       );
     }
 
@@ -259,10 +269,17 @@ export class OvertimeEntryService {
       onDate,
       weekday,
     );
+    const lunchCountsAsOvertime = await getPolicy(
+      this.prisma,
+      companyId,
+      'lunchCountsAsOvertime',
+      onDate,
+    );
     const context = this.buildDayContext(
       weekday,
       calendar.isHoliday,
       leaveResolved.excludedWindows,
+      lunchCountsAsOvertime,
     );
 
     return computeSelectableOvertimeWindows({
@@ -275,6 +292,7 @@ export class OvertimeEntryService {
       afternoonEnd: context.afternoonEnd,
       leaveExcludedWindows: leaveResolved.excludedWindows,
       hasFullDayLeave: leaveResolved.hasFullDayLeave,
+      lunchCountsAsOvertime,
     });
   }
 
@@ -373,10 +391,12 @@ export class OvertimeEntryService {
       | undefined,
     isHoliday: boolean,
     leaveExcludedWindows: Array<{ start: string; end: string }> = [],
+    lunchCountsAsOvertime?: boolean,
   ): OvertimeDayContext {
     const isWorkingDay = Boolean(weekday?.isWorkingDay);
     const isHalfDay = Boolean(weekday?.isWorkingDay && weekday?.isHalfDay);
     return {
+      lunchCountsAsOvertime,
       isHoliday,
       isWorkingDay,
       isHalfDay,

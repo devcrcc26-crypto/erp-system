@@ -1,12 +1,14 @@
 import { describe, expect, it } from '@jest/globals';
 import {
-  ALLOWANCES_REDUCED_BY_ABSENCE,
-  LEAVER_ALLOWANCE_MODE,
   allocateContractPayrollDays,
   employedPayrollDays,
 } from './payroll-days.util';
 import { computeContractAllowances } from './payroll-allowance.util';
 import { PayrollCalculationService } from '../services/payroll-calculation.service';
+import { POLICY_DEFAULTS } from '../../../../shared/policy/policy-definitions';
+
+const LEAVER_ALLOWANCE_MODE = POLICY_DEFAULTS.leaverAllowanceMode;
+const ALLOWANCES_REDUCED_BY_ABSENCE = POLICY_DEFAULTS.allowancesReducedByAbsence;
 
 function d(year: number, month: number, day: number): Date {
   return new Date(Date.UTC(year, month - 1, day));

@@ -20,6 +20,7 @@ import {
   mergeFieldMovementCoverage,
 } from './field-movement-entry-status.util';
 import type { ScanOnlyRule } from './scan-only.util';
+import type { PolicyValues } from '../../../../shared/policy/policy-definitions';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -261,6 +262,14 @@ export function buildDayDeductionContext(
      * When missing a date, falls back to Mon–Sat / Sunday off.
      */
     scheduleFlagsByDate?: ReadonlyMap<string, ScheduleDayFlags>;
+    /** Policies in force for the attendance month (omitted = policy defaults). */
+    policy?: Pick<
+      PolicyValues,
+      | 'earlyDepartureMode'
+      | 'earlyDepartureGraceMinutes'
+      | 'earlyDepartureDeductMinutes'
+      | 'unpaidLeaveCountsRestDays'
+    >;
   },
 ): DayDeductionContext {
   const graceKeys = options?.enrolmentGraceKeys;
@@ -299,6 +308,10 @@ export function buildDayDeductionContext(
       scanOnlyByDate && scanOnlyByDate.size > 0
         ? (date) => scanOnlyByDate.get(dateToYyyyMmDd(date)) ?? null
         : undefined,
+    earlyDepartureMode: options?.policy?.earlyDepartureMode,
+    earlyDepartureGraceMinutes: options?.policy?.earlyDepartureGraceMinutes,
+    earlyDepartureDeductMinutes: options?.policy?.earlyDepartureDeductMinutes,
+    unpaidLeaveCountsRestDays: options?.policy?.unpaidLeaveCountsRestDays,
   };
 }
 

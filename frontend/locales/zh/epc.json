@@ -75,7 +75,8 @@
       "admin": "行政",
       "setup": "配置",
       "structure": "公司结构",
-      "companyFleet": "公司车队"
+      "companyFleet": "公司车队",
+      "hrSettings": "人事设置"
     },
     "organization": {
       "vehicles": "公司车辆"
@@ -98,6 +99,7 @@
       "inspectionRepair": "检修申请",
       "businessTrips": "第三国出差",
       "reports": "人力资源报表",
+      "policySettings": "政策设置",
       "perDiem": "差旅补贴",
       "employeePerDiemRates": "员工差旅补贴标准",
       "leavePolicy": "假期政策",
@@ -688,6 +690,216 @@
         "myDescription": "查看您的年度加班汇总与加班表记录。",
         "you": "我"
       },
+      "policySettings": {
+        "title": "政策设置",
+        "description": "考勤、薪资和加班所用的规则。每次修改从您选择的月份开始生效；之前的月份保持原有规则。",
+        "groups": {
+          "ATTENDANCE": "考勤",
+          "PAYROLL": "薪资",
+          "OVERTIME": "加班",
+          "SEPARATION": "离职",
+          "INACTIVE": "停职"
+        },
+        "readOnlyNotice": "您可以查看这些设置。只有人事经理或系统管理员可以修改。",
+        "currentValue": "本月生效",
+        "default": "默认",
+        "setByHr": "人事设置",
+        "scheduledFrom": "自 {{month}} 起改为 {{value}}",
+        "adminOnly": "仅系统管理员",
+        "informational": "现在保存，后续版本使用",
+        "locked": "固定",
+        "example": "示例",
+        "change": "修改",
+        "history": "历史（{{count}}）",
+        "editTitle": "修改：{{name}}",
+        "newValue": "新值",
+        "effectiveFrom": "生效月份",
+        "effectiveFromHint": "此前的月份保持当前规则。",
+        "reason": "原因",
+        "reasonRequired": "请填写修改原因。",
+        "save": "保存修改",
+        "saved": "政策已保存。",
+        "saveError": "无法保存政策。",
+        "affectedRunsTitle": "受影响的 {{count}} 个月份已有薪资",
+        "affectedRunStale": "{{run}}（{{status}}）将被标记为需更新——请重新计算。",
+        "affectedRunReview": "{{run}}（{{status}}）将被标记为“需复核”，不会自动重新计算。",
+        "confirmAffected": "我已了解。保存并标记这些薪资。",
+        "historyTitle": "历史：{{name}}",
+        "historyEmpty": "尚无修改——使用默认值。",
+        "historyFrom": "生效月份",
+        "historyChange": "旧值 → 新值",
+        "historyBy": "修改人",
+        "historyWhen": "保存时间",
+        "historyReason": "原因",
+        "unknownUser": "未知",
+        "noLimit": "不限",
+        "limitTo": "限制为",
+        "workingDays": "个工作日",
+        "minutes": "分钟",
+        "on": "开",
+        "off": "关",
+        "bandUpTo": "上限（比尔）",
+        "bandRate": "税率 %",
+        "bandDeduction": "速算扣除（比尔）",
+        "bandAndAbove": "及以上",
+        "addBand": "添加档位",
+        "removeBand": "删除档位",
+        "bandsSummary": "{{count}} 档，最高税率 {{top}} %",
+        "enabled": "启用",
+        "days": "天数",
+        "parameters": "参数（JSON）",
+        "jsonInvalid": "请输入有效的 JSON。",
+        "options": {
+          "REPORT_ONLY": "仅报告",
+          "ENFORCED": "执行扣减",
+          "PRORATED": "按比例",
+          "FULL": "全额",
+          "EARNED": "实得工资"
+        },
+        "multiplier": {
+          "regular": "平时",
+          "night": "夜间",
+          "weekend": "周末",
+          "holiday": "节假日"
+        },
+        "inactiveTypes": {
+          "SUSPENDED": "停职",
+          "LONG_LEAVE": "长期休假",
+          "OTHER": "其他"
+        },
+        "keys": {
+          "lateGraceMinutes": {
+            "title": "迟到宽限",
+            "description": "晚于上班时间超过此分钟数打卡即为迟到。",
+            "example": "15 分钟：08:30 上班，08:45 不算迟到，08:46 算迟到。"
+          },
+          "lateDeductionMode": {
+            "title": "迟到：仅报告或扣减",
+            "description": "仅报告：只标记迟到，不影响工资。执行扣减：迟到会折算为扣减天数。",
+            "example": "执行扣减、每 2 次计半天：迟到 2 次 = 扣 0.5 天。"
+          },
+          "latesPerHalfDay": {
+            "title": "每半天对应的迟到次数",
+            "description": "执行迟到扣减时，每月每满此次数的迟到扣半天。",
+            "example": "2：一个月迟到 5 次 = 扣 1 天（两组），第 5 次等待凑满一组。"
+          },
+          "earlyDepartureGraceMinutes": {
+            "title": "早退宽限",
+            "description": "比下班时间提前不超过此分钟数离开不算早退。",
+            "example": "30 分钟：17:30 下班，17:00 离开没问题，16:59 会被标记。"
+          },
+          "earlyDepartureDeductMinutes": {
+            "title": "早退：半天扣减阈值",
+            "description": "比下班时间提前超过此分钟数离开，可能扣半天。",
+            "example": "60 分钟：17:30 下班，16:30 前离开算提前超过一小时。"
+          },
+          "earlyDepartureMode": {
+            "title": "早退：仅报告或扣减",
+            "description": "仅报告：显示应扣金额。执行扣减：扣半天。",
+            "example": "执行扣减：未经批准 16:00 离开 = 扣 0.5 天。"
+          },
+          "enrolmentGraceWorkingDays": {
+            "title": "新员工打卡宽限",
+            "description": "尚未录入考勤机的新员工不计缺勤。不限 = 直到首次打卡的次日。",
+            "example": "3：最多免除前 3 个工作日。"
+          },
+          "forgotToClockFlagThreshold": {
+            "title": "忘记打卡复核标记",
+            "description": "每月获批的“忘记打卡”说明达到此次数，标记给人事复核。",
+            "example": "3：当月第 3 次获批的忘记打卡会触发标记。"
+          },
+          "unpaidLeaveCountsRestDays": {
+            "title": "无薪假包含休息日",
+            "description": "开启时，无薪假按日历日扣减，包括休息日和节假日。",
+            "example": "开：周五至周一无薪假 = 扣 4 天。关：只扣工作日。"
+          },
+          "monthDays": {
+            "title": "薪资月天数",
+            "description": "每月按 30 天计薪。固定：入职、离职规则依赖于此。",
+            "example": "17 日入职：任何月份都计 14 天。"
+          },
+          "leaverAllowanceMode": {
+            "title": "离职人员津贴",
+            "description": "月中离职人员的交通补贴和月度奖金如何支付。",
+            "example": "按比例：20 日离职 = 交通补贴和奖金的 20/30。全额：整月金额。"
+          },
+          "allowancesReducedByAbsence": {
+            "title": "缺勤减少津贴",
+            "description": "开启时，缺勤天数也会减少交通补贴和月度奖金。",
+            "example": "开：30 天中缺勤 2 天 = 津贴 × 28/30。"
+          },
+          "pensionEmployeePct": {
+            "title": "个人养老金比例",
+            "description": "从员工工资扣除：实得工资的百分比。",
+            "example": "7%：实得 20,000 = 扣 1,400。"
+          },
+          "pensionEmployerPct": {
+            "title": "单位养老金比例",
+            "description": "公司缴纳：实得工资的百分比。",
+            "example": "11%：实得 20,000 = 公司缴纳 2,200。"
+          },
+          "pensionBase": {
+            "title": "养老金计算基数",
+            "description": "固定为实得工资（基本工资 ÷ 30 × 计薪天数）。",
+            "example": "基本工资 30,000、计薪 20 天：基数 20,000。"
+          },
+          "incomeTaxBrackets": {
+            "title": "个人所得税档位",
+            "description": "税额 = 应税收入 × 所在档位税率 − 该档速算扣除数。",
+            "example": "应税 10,000：10,000 × 25% − 850 = 1,650。"
+          },
+          "transportTaxable": {
+            "title": "交通补贴计税",
+            "description": "开启时，交通补贴计入应税收入。",
+            "example": "关：2,550 交通补贴从不计税。"
+          },
+          "hoursDivisor": {
+            "title": "加班小时除数",
+            "description": "加班时薪 = 基本工资 ÷ 此数。",
+            "example": "192：基本工资 48,000 = 每小时 250。"
+          },
+          "holidayHoursDivisor": {
+            "title": "节假日加班小时除数",
+            "description": "节假日加班时薪 = 基本工资 ÷ 此数。",
+            "example": "196：基本工资 49,000 = 每小时 250。"
+          },
+          "multipliers": {
+            "title": "加班倍数",
+            "description": "加班工资 = 时薪 × 小时数 × 对应时段或日期类型的倍数。",
+            "example": "平时 1.5 倍：每小时 250，加班 2 小时 = 750。"
+          },
+          "lunchCountsAsOvertime": {
+            "title": "午休计入加班",
+            "description": "开启时，工作日的午休时间可以填报为加班。",
+            "example": "关：12:30–13:30 不能申报加班。"
+          },
+          "unusedLeavePayout": {
+            "title": "未休假补偿",
+            "description": "在最后一个月支付未休年假。现在保存，薪资暂不使用。",
+            "example": "日薪 = 基本工资 ÷ 30：未休 6 天 × 1,000 = 6,000。"
+          },
+          "severancePay": {
+            "title": "遣散费",
+            "description": "离职遣散费，参数由人事录入。现在保存，薪资暂不使用。",
+            "example": "参数例如 { \"monthsPerYear\": 1 }。"
+          },
+          "noticePay": {
+            "title": "代通知金",
+            "description": "以工资代替通知期。现在保存，薪资暂不使用。",
+            "example": "30 天 = 一个月基本工资。"
+          },
+          "inactivePaid": {
+            "title": "停职期间是否计薪",
+            "description": "各停职类型的天数是否计薪。下一版本启用停职期间后使用。",
+            "example": "停职：不计薪。长期休假：不计薪。"
+          },
+          "inactiveCanLogin": {
+            "title": "停职人员能否登录",
+            "description": "各停职类型的人员是否仍可登录。下一版本启用停职期间后使用。",
+            "example": "长期休假：可登录。停职：不可登录。"
+          }
+        }
+      },
       "leavePolicy": {
         "new": "新建假期政策",
         "edit": "编辑假期政策",
@@ -968,7 +1180,8 @@
             "LEAVE": "休假",
             "UNPAID_LEAVE": "无薪假",
             "FIELD_MOVEMENT_PENDING": "外出登记待审批",
-            "ENROLMENT_GRACE": "入职登记宽限"
+            "ENROLMENT_GRACE": "入职登记宽限",
+            "NOT_EMPLOYED": "非在职"
           }
         },
         "importModal": {
@@ -1064,6 +1277,7 @@
           "flagMissingClockOut": "缺少下班打卡",
           "flagEarlyLeave": "早退",
           "flagOnLeaveButScanned": "休假但仍打卡",
+          "flagScanAfterSeparation": "离职日期后仍打卡",
           "flagResolved": "{{flag}} · 已处理",
           "explained": "已说明：{{reason}}",
           "noExplanation": "尚未提交说明",
@@ -2704,6 +2918,42 @@
     "deleteEmployee": "删除员工",
     "deleteDescription": "停用 {{name}}（{{email}}）？该员工将无法再登录。",
     "deactivated": "已停用 {{name}}。",
+    "separation": {
+      "action": "办理离职",
+      "title": "为 {{name}} 办理离职",
+      "confirm": "确认离职",
+      "leavingDate": "离职日期（最后工作日）",
+      "leavingDateHint": "该日期次日起停用登录并终止合同。",
+      "leavingDateRequired": "请选择离职日期。",
+      "type": "离职类型",
+      "typeRequired": "请选择离职类型。",
+      "reason": "原因",
+      "reasonRequired": "请填写原因。",
+      "types": {
+        "RESIGNATION": "辞职",
+        "TERMINATION": "解雇",
+        "CONTRACT_END": "合同到期",
+        "DEATH": "身故",
+        "OTHER": "其他"
+      },
+      "effectiveNow": "离职日期已过：立即停用登录并终止合同。",
+      "effectiveLater": "已排期：员工在 {{date}} 前仍可正常工作和登录。",
+      "contractEffect": "合同 {{contract}} 将于 {{date}} 结束。",
+      "noActiveContract": "没有需要结束的有效合同。",
+      "pendingApprovals": "有 {{count}} 项待审批事项由此人审批，需要重新分配。",
+      "pendingSubmitted": "此人提交的 {{count}} 项申请仍在审批中。",
+      "lockedPayroll": "受影响月份的薪资 {{runs}} 已审批或已发放。",
+      "lockedPayrollConfirm": "我已了解：将该薪资标记为需更新并通知薪资人员。",
+      "finalSettlementNote": "最终结算（未休假补偿、遣散费、通知期工资）在系统外处理。",
+      "saved": "已为 {{name}} 办理离职。",
+      "saveError": "无法保存离职信息。",
+      "bannerScheduled": "将于 {{date}} 离职（{{type}}）",
+      "bannerSeparated": "已离职 — 最后工作日 {{date}}（{{type}}）",
+      "cancel": "撤销离职",
+      "cancelTitle": "撤销此离职？",
+      "cancelDescription": "雇佣状态、合同结束日期和登录权限将恢复到离职前的状态。",
+      "cancelled": "已撤销离职。"
+    },
     "deleteError": "删除员工失败。",
     "updated": "{{name}} 更新成功。",
     "resendError": "重新发送验证邮件失败。",
@@ -4789,7 +5039,9 @@
         "MISSING_CONTRACT": "缺少合同",
         "MISSING_OVERTIME_APPROVAL": "加班未批准",
         "ZERO_SALARY": "零薪资",
-        "MANUAL_OVERRIDE": "手工调整"
+        "MANUAL_OVERRIDE": "手工调整",
+        "LEAVER_FINAL_MONTH": "离职人员 — 最后一个月",
+        "LOGIN_DISABLED_STILL_EMPLOYED": "登录已停用但仍在职"
       },
       "list": {
         "title": "薪资运行",
@@ -4879,6 +5131,7 @@
         "exportBankLetterContinue": "下载信函",
         "attendanceStaleDraft": "考勤在生成本次工资后已变更 — 请重新生成",
         "attendanceStaleApproved": "考勤在生成本次工资后已变更 — 需要复核",
+        "policyReviewRequired": "本月人事政策在薪资审批后有变更 — 需要复核（不会自动重新计算）",
         "recalculateSuccess": "已重新计算。",
         "markReviewedSuccess": "已标记为已复核。",
         "submitSuccess": "已提交审批。",

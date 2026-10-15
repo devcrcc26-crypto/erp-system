@@ -4,6 +4,8 @@ import { AuthModule } from '../auth/auth.module';
 import { DocumentsModule } from '../documents/documents.module';
 import { LeavePolicyModule } from '../leave-policy/leave-policy.module';
 import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
+import { EmploymentSeparationCron } from './application/services/employment-separation.cron';
+import { EmploymentSeparationService } from './application/services/employment-separation.service';
 import { UserImportService } from './application/services/user-import.service';
 import { UserInvitationDispatchService } from './application/services/user-invitation-dispatch.service';
 import { UserManagementService } from './application/services/user-management.service';
@@ -26,7 +28,9 @@ import { UsersController } from './presentation/controllers/users.controller';
     UserProvisioningService,
     UserImportService,
     UserInvitationDispatchService,
+    EmploymentSeparationService,
+    EmploymentSeparationCron,
   ],
-  exports: [UserManagementService, UserProvisioningService],
+  exports: [UserManagementService, UserProvisioningService, EmploymentSeparationService],
 })
 export class UserManagementModule {}

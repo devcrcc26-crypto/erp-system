@@ -104,6 +104,7 @@ export function deriveIssueTypeFromFlagged(day: {
     | 'MISSING_CLOCK_OUT'
     | 'EARLY_LEAVE'
     | 'ON_LEAVE_BUT_SCANNED'
+    | 'SCAN_AFTER_SEPARATION'
     | 'NONE';
   clockInLocal: string | null;
   clockOutLocal: string | null;

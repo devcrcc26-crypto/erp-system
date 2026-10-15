@@ -25,7 +25,10 @@ export class ForgotPasswordHandler
    * Creates a password-reset token. Always returns the same message to avoid email enumeration.
    */
   async execute(command: ForgotPasswordCommand): Promise<{ message: string }> {
-    const user = await this.authRepository.findUserForPasswordReset(command.email);
+    const found = await this.authRepository.findUserForPasswordReset(command.email);
+    // Login-disabled or separated accounts get nothing; the response stays identical.
+    const user =
+      found && found.isActive && found.employmentStatus !== 'SEPARATED' ? found : null;
 
     if (!user) {
       if (process.env.NODE_ENV === 'development') {

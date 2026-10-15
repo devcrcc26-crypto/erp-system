@@ -1,9 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
-import {
-  END_OF_DAY_HHMM,
-  END_OF_DAY_MINUTES,
-  LUNCH_COUNTS_AS_OVERTIME,
-} from './overtime-selectable-windows.util';
+import { END_OF_DAY_HHMM, END_OF_DAY_MINUTES } from './overtime-selectable-windows.util';
+import { POLICY_DEFAULTS } from '../../../../shared/policy/policy-definitions';
 
 export const OVERNIGHT_REQUIRED_MESSAGE =
   'End time is before start time. If this entry crosses midnight, mark it as overnight.';
@@ -50,6 +47,8 @@ export interface OvertimeDayContext {
   afternoonEnd: string | null;
   /** Optional extra excluded windows (e.g. half-day leave), minutes as HH:mm */
   excludedWindows?: Array<{ start: string; end: string }>;
+  /** Policy lunchCountsAsOvertime as of the entry date (default: policy default). */
+  lunchCountsAsOvertime?: boolean;
 }
 
 export interface OvertimeHoursBuckets {
@@ -260,9 +259,9 @@ function isInsideScheduledWorkingTime(
   if (isInsideWindow(minutesInDay, afternoonStart, afternoonEnd)) {
     return true;
   }
-  // Lunch gap between morning and afternoon is not overtime when the flag is off.
+  // Lunch gap between morning and afternoon is not overtime when the policy is off.
   if (
-    !LUNCH_COUNTS_AS_OVERTIME &&
+    !(context.lunchCountsAsOvertime ?? POLICY_DEFAULTS.lunchCountsAsOvertime) &&
     morningEnd != null &&
     afternoonStart != null &&
     isInsideWindow(minutesInDay, morningEnd, afternoonStart)

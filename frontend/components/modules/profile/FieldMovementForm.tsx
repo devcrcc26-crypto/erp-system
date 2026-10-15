@@ -40,6 +40,7 @@ const FLAG_LABELS: Record<FlaggedDay['flag'], string> = {
   MISSING_CLOCK_OUT: 'Missing clock-out',
   EARLY_LEAVE: 'Early departure detected',
   ON_LEAVE_BUT_SCANNED: 'On leave but scanned',
+  SCAN_AFTER_SEPARATION: 'Scanned after leaving date',
   NONE: '',
 };
 

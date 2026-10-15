@@ -8,6 +8,8 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "@/shared/prisma/prisma.service";
 import { activeOnly } from "@/shared/prisma/soft-delete.util";
+import { loadPolicySnapshot } from "@/shared/policy/policy-reader.util";
+import { todayInAddisUtc } from "@/shared/employment/separation-dates.util";
 import {
   CreateEmployeeContractDto,
   ListEmployeeContractsDto,
@@ -278,7 +280,8 @@ export class EmployeeContractService {
         userId: string,
     ): Promise<Record<string, unknown>> {
         await this.assertCanManage(companyId, userId);
-        void companyId;
+        // A salary preview shows this month's pay, so it uses this month's policy.
+        const policy = await loadPolicySnapshot(this.prisma, companyId, todayInAddisUtc());
 
         const threshold = dto.taxableThreshold ?? DEFAULT_TAXABLE_THRESHOLD;
         const pensionApplicable = dto.pensionApplicable ?? true;
@@ -300,6 +303,7 @@ export class EmployeeContractService {
             taxableThreshold: threshold,
             pensionApplicable,
             taxApplicable,
+            policy,
         });
 
         return {
@@ -333,7 +337,7 @@ export class EmployeeContractService {
         userId: string,
     ): Promise<{ monthlyBonus: number }> {
         await this.assertCanManage(companyId, userId);
-        void companyId;
+        const policy = await loadPolicySnapshot(this.prisma, companyId, todayInAddisUtc());
 
         const monthlyBonus = this.payrollCalc.solveBonusForNet({
             basicSalary: dto.basicSalary,
@@ -342,6 +346,7 @@ export class EmployeeContractService {
             taxableThreshold: dto.taxableThreshold ?? DEFAULT_TAXABLE_THRESHOLD,
             pensionApplicable: dto.pensionApplicable ?? true,
             taxApplicable: dto.taxApplicable ?? true,
+            policy,
         });
 
         return { monthlyBonus };
@@ -630,11 +635,23 @@ export class EmployeeContractService {
         const terminatedAt = dto.terminatedAt
         ? this.parseDateOnly(dto.terminatedAt)
         : this.todayUtc();
+        if (terminatedAt.getTime() < contract.startDate.getTime()) {
+            throw new BadRequestException(
+                `Termination date cannot be before the contract start (${toDateOnly(contract.startDate)})`,
+            );
+        }
+        if (contract.endDate && terminatedAt.getTime() > contract.endDate.getTime()) {
+            throw new BadRequestException(
+                `Termination date cannot be after the contract end (${toDateOnly(contract.endDate)})`,
+            );
+        }
+        // endDate is what payroll and attendance read; keep it equal to the termination.
         await this.prisma.employeeContract.update({
             where: {id},
             data: {
                 status: EmployeeContractStatus.TERMINATED,
                 terminatedAt,
+                endDate: terminatedAt,
                 terminationReason: dto.terminationReason.trim() || null,
                 updatedBy: userId,
             }

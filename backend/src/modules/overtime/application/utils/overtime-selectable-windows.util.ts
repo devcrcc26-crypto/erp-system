@@ -3,8 +3,7 @@
  * New entries are same-day only (no overnight). End of day is "24:00".
  */
 
-/** When false, the lunch gap between morning and afternoon is not OT. */
-export const LUNCH_COUNTS_AS_OVERTIME = false;
+import { POLICY_DEFAULTS } from '../../../../shared/policy/policy-definitions';
 
 export const END_OF_DAY_HHMM = '24:00';
 
@@ -34,6 +33,8 @@ export interface SelectableWindowsInput {
   /** Half-day leave portions already converted to excluded HH:mm windows. */
   leaveExcludedWindows: Array<{ start: string; end: string }>;
   hasFullDayLeave: boolean;
+  /** Policy lunchCountsAsOvertime as of the date; when false the lunch gap is not selectable. */
+  lunchCountsAsOvertime?: boolean;
 }
 
 export interface SelectableWindowsResult {
@@ -160,7 +161,7 @@ export function computeSelectableOvertimeWindows(
     }
   } else {
     // Full working day: before morning + after afternoon end.
-    // Lunch is not selectable when LUNCH_COUNTS_AS_OVERTIME is false.
+    // Lunch is selectable only when the lunchCountsAsOvertime policy is on.
     // Single-shift days (SCAN_ONLY schedules, e.g. 07:00–08:30) have no
     // afternoon: the duty window ends at morningEnd.
     const dutyEnd = afternoonEnd ?? (afternoonStart == null ? morningEnd : null);
@@ -170,7 +171,9 @@ export function computeSelectableOvertimeWindows(
     if (dutyEnd != null && dutyEnd < END_OF_DAY_MINUTES) {
       base.push({ start: dutyEnd, end: END_OF_DAY_MINUTES });
     }
-    if (LUNCH_COUNTS_AS_OVERTIME && morningEnd != null && afternoonStart != null) {
+    const lunchCounts =
+      input.lunchCountsAsOvertime ?? POLICY_DEFAULTS.lunchCountsAsOvertime;
+    if (lunchCounts && morningEnd != null && afternoonStart != null) {
       base.push({ start: morningEnd, end: afternoonStart });
     }
     if (base.length === 0) {
