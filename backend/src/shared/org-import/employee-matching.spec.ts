@@ -23,6 +23,14 @@ describe('employee-matching', () => {
     expect(hits[0]?.userId).toBe('u1');
   });
 
+  it('matches first + middle when DB lastName is empty', () => {
+    const cleared: DirectoryUser = { ...agegnehu, lastName: '' };
+    const three = matchEmployees(['Agegnehu Gelaw Tesfaye'], [cleared]);
+    expect(three[0]).toMatchObject({ status: 'EXACT', rule: 'first-middle', userId: 'u1' });
+    const two = matchEmployees(['Agegnehu Gelaw'], [cleared]);
+    expect(two[0]).toMatchObject({ status: 'EXACT', rule: 'name', userId: 'u1' });
+  });
+
   it('proposes fuzzy spelling variants without auto-applying', () => {
     const user: DirectoryUser = {
       id: 'u2',

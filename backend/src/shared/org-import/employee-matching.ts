@@ -12,7 +12,7 @@ import {
  * Order: manual alias table (org-aliases.json) → attendance identities (sheet name =
  * a MAPPED Deli attendance name) → exact name keys (as in
  * scripts/seed-contracts-from-august-2026.ts: full, reversed, first+last, first+middle)
- * → first+middle when the DB repeats the last name → compact (letters only, also with
+ * → first+middle when the DB repeats or lacks the last name → compact (letters only, also with
  * the repeated part removed) → fuzzy proposal.
  *
  * Names on both sides go through matchKey() (W/ro dropped, H/ G/ W/ expanded,
@@ -198,7 +198,8 @@ export function matchEmployees(
   for (const user of users) {
     for (const key of seedNameKeys(user)) addToIndex(byKey, key, user.id);
     const parts = userParts(user);
-    if (repeatsLastName(user) && parts.length >= 2) {
+    // First + middle also identifies users whose lastName repeats middleName or is empty.
+    if ((repeatsLastName(user) || !matchKey(user.lastName)) && parts.length >= 2) {
       addToIndex(byFirstMiddle, `${parts[0]} ${parts[1]}`, user.id);
     }
     addToIndex(byCompact, parts.join(''), user.id);
