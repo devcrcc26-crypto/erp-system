@@ -4402,84 +4402,275 @@ main::-webkit-scrollbar,
   }
 }
 
-/* Enterprise login - soft Users chrome */
+/* Enterprise login — split brand + form */
 .erp-login-page {
-  background: linear-gradient(165deg, #f4f6f8 0%, #e8edf2 48%, #f0f2f5 100%);
+  display: flex;
+  min-height: 100dvh;
+  width: 100%;
+  background: #f0f2f5;
 }
 
-.erp-login-header {
+.erp-login-fallback {
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f5;
+}
+
+.erp-login-brand {
+  position: relative;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: min(44vw, 520px);
+  flex-shrink: 0;
+  padding: 2.5rem 2.75rem 2rem;
+  color: #fff;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(29, 158, 117, 0.35), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 90% 80%, rgba(55, 138, 221, 0.18), transparent 50%),
+    linear-gradient(165deg, #152238 0%, #1b2b4b 42%, #0f1a2e 100%);
+  overflow: hidden;
+}
+
+.erp-login-brand-glow {
+  position: absolute;
+  inset: auto -20% -30% auto;
+  width: 70%;
+  height: 55%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(29, 158, 117, 0.22), transparent 70%);
+  pointer-events: none;
+}
+
+.erp-login-brand-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.14;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+  pointer-events: none;
+}
+
+.erp-login-brand-inner {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  margin-bottom: auto;
+  max-width: 22rem;
+  animation: erp-login-brand-in 0.7s ease-out both;
+}
+
+.erp-login-brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+
+.erp-login-brand-name {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.erp-login-brand-title {
+  margin: 0;
+  font-size: clamp(1.85rem, 2.4vw, 2.35rem);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.erp-login-brand-line {
+  margin: 0.85rem 0 0;
+  max-width: 18rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.erp-login-brand-foot {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.45);
+  animation: erp-login-brand-in 0.7s ease-out 0.12s both;
+}
+
+.erp-login-stage {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, #f7f8fa 0%, #eef1f4 100%);
+}
+
+.erp-login-stage-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 3.5rem;
+  padding: 0 1.25rem;
   border-bottom: 1px solid #e8ebef;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(8px);
+}
+
+.erp-login-stage-brand-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.erp-login-stage-name {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+}
+
+.erp-login-stage-product {
+  font-size: 0.6875rem;
+  color: #6b7280;
 }
 
 .erp-login-logo-chip {
   display: inline-flex;
-  width: 40px;
-  height: 40px;
+  width: 2.5rem;
+  height: 2.5rem;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 0.75rem;
   background: #fff;
   border: 1px solid #e8ebef;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.erp-login-card {
-  overflow: hidden;
-  border-radius: 16px;
-  border: 1px solid #e8ebef;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(27, 43, 75, 0.06);
-  width: 100%;
-  max-width: 420px;
+.erp-login-logo-chip--hero {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.erp-login-logo-chip--compact {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.erp-login-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
 }
 
 .erp-login-layout {
   display: flex;
+  width: 100%;
+  max-width: 26rem;
   flex-direction: column;
   align-items: stretch;
-  gap: 16px;
+  gap: 1rem;
+  animation: erp-login-form-in 0.55s ease-out 0.08s both;
+}
+
+.erp-login-card {
   width: 100%;
-  max-width: 420px;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid #e8ebef;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(27, 43, 75, 0.04),
+    0 16px 40px rgba(27, 43, 75, 0.08);
 }
 
 .erp-login-card-body {
-  padding: 28px 24px 20px;
+  padding: 1.75rem 1.5rem 1.35rem;
+}
+
+.erp-login-eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1d9e75;
+}
+
+.erp-login-heading {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.erp-login-subtitle {
+  margin: 0.4rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.erp-login-form {
+  margin-top: 1.5rem;
+}
+
+.erp-login-forgot {
+  margin: 1rem 0 0;
+  text-align: center;
+}
+
+.erp-login-forgot-link {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.erp-login-forgot-link:hover {
+  text-decoration: underline;
+}
+
+.erp-login-help {
+  margin: 0.5rem 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #94a3b8;
 }
 
 .erp-login-demo-panel {
   border: 1px solid #e8ebef;
-  border-radius: 16px;
+  border-radius: 1rem;
   background: #f8f9fb;
-  padding: 16px 20px 18px;
+  padding: 1rem 1.15rem 1.1rem;
   box-shadow: 0 8px 24px rgba(27, 43, 75, 0.04);
 }
 
-@media (min-width: 900px) {
-  .erp-login-layout {
-    flex-direction: row;
-    align-items: stretch;
-    max-width: 760px;
-    gap: 20px;
-  }
-
-  .erp-login-card {
-    flex: 1 1 420px;
-    max-width: 420px;
-  }
-
-  .erp-login-demo-panel {
-    flex: 0 0 280px;
-    width: 280px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-}
-
 .erp-login-footer {
-  border-top: 1px solid transparent;
+  padding: 0.85rem 1.25rem 1.1rem;
+  text-align: center;
+  font-size: 0.6875rem;
+  color: #94a3b8;
 }
 
 .erp-login-form .ant-input,
@@ -4493,9 +4684,10 @@ main::-webkit-scrollbar,
 }
 
 .erp-login-submit.ant-btn {
-  height: 44px !important;
-  font-weight: 600 !important;
+  height: 2.75rem !important;
+  font-weight: 650 !important;
   border-radius: 10px !important;
+  box-shadow: 0 6px 16px rgba(29, 158, 117, 0.28) !important;
 }
 
 .erp-login-demo-account {
@@ -4507,6 +4699,74 @@ main::-webkit-scrollbar,
 .erp-login-demo-account:hover {
   border-color: #1d9e75;
   background: #e1f5ee;
+}
+
+@keyframes erp-login-brand-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes erp-login-form-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 900px) {
+  .erp-login-brand {
+    display: flex;
+  }
+
+  .erp-login-stage-header {
+    display: none;
+  }
+
+  .erp-login-layout {
+    max-width: 47.5rem;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 1.25rem;
+  }
+
+  .erp-login-card {
+    flex: 1 1 26rem;
+    max-width: 26rem;
+  }
+
+  .erp-login-demo-panel {
+    flex: 0 0 17.5rem;
+    width: 17.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .erp-login-main {
+    padding: 2.5rem 2rem;
+  }
+
+  .erp-login-card-body {
+    padding: 2rem 1.75rem 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-login-brand-inner,
+  .erp-login-brand-foot,
+  .erp-login-layout {
+    animation: none;
+  }
 }
 
 /* Settings roles list */
