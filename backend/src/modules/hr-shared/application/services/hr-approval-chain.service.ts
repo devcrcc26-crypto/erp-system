@@ -124,15 +124,16 @@ export type HrOnBehalfModuleCode = (typeof HR_ON_BEHALF_MODULE_CODES)[number];
 
 export interface ExitPermitChainOptions {
   /**
-   * When true, do not skip Discipline Lead / HR Officer because the employee
+   * When true, do not skip Reports to / HR Officer because the employee
    * occupies that tier. On-behalf filings still require those people to approve.
    */
   submittedOnBehalf?: boolean;
 }
 
 /**
- * Builds Discipline Lead → Department Head → HR Manager / GM chains
+ * Builds Reports-to → Department Head → HR Manager / GM chains
  * for HR workflows (leave, overtime, flight, etc.).
+ * Standard employees use Reports to (required) instead of Discipline Lead.
  * Role-based tiers resolve only users whose matching role is marked isPrimary.
  */
 @Injectable()
@@ -180,8 +181,8 @@ export class HrApprovalChainService {
 
   /**
    * Approval chain for purchase requests.
-   * Employee → Discipline Lead → HR Officer → GM when total ETB > 10,000.
-   * HR Officer / above skip Discipline Lead (and HR self-approval).
+   * Employee → Reports to → HR Officer → GM when total ETB > 10,000.
+   * HR Officer / above skip Reports to (and HR self-approval).
    * Empty array = auto-approve (HR+ with total ≤ 10,000).
    */
   async buildPurchaseApprovalChain(
@@ -233,15 +234,12 @@ export class HrApprovalChainService {
     const tiers: ChainTierDraft[] = [];
 
     if (!isDisciplineLeadOrAbove) {
-      const disciplineLead = await this.getDisciplineLead(
-        submitterId,
-        companyId,
-      );
+      const reportsTo = await this.getReportsToRequired(submitterId, companyId);
       tiers.push({
         order: 1,
-        label: 'Discipline Lead',
-        approverId: disciplineLead.id,
-        resolver: 'DISCIPLINE_LEAD',
+        label: 'Reports to',
+        approverId: reportsTo.id,
+        resolver: 'REPORTS_TO',
       });
     }
 
@@ -282,7 +280,7 @@ export class HrApprovalChainService {
 
   /**
    * Exit permit chain for the **employee** the permit belongs to.
-   * Self-submit: Discipline Lead and HR Officer skip themselves (HR+ auto-approves).
+   * Self-submit: Reports to and HR Officer skip themselves (HR+ auto-approves).
    * On-behalf: those tiers still run, even if the employee occupies them.
    */
   async buildExitPermitApprovalChain(
@@ -324,16 +322,13 @@ export class HrApprovalChainService {
     const tiers: ChainTierDraft[] = [];
 
     if (!isDisciplineLeadOrAbove) {
-      const disciplineLead = await this.getDisciplineLead(
-        employeeId,
-        companyId,
-      );
+      const reportsTo = await this.getReportsToRequired(employeeId, companyId);
 
       tiers.push({
         order: 1,
-        label: 'Discipline Lead',
-        approverId: disciplineLead.id,
-        resolver: 'DISCIPLINE_LEAD',
+        label: 'Reports to',
+        approverId: reportsTo.id,
+        resolver: 'REPORTS_TO',
       });
     }
 
@@ -353,13 +348,13 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Single-tier Discipline Lead approval (used by per diem advances).
-   * Standard employee → Discipline Lead, else HR Manager.
+   * Single-tier first-approver chain (used by per diem advances).
+   * Standard employee → Reports to (required; blocks if unset).
    * Discipline Lead owner → Department Head if assigned, else HR Manager.
    * Department Head / HR staff / HR Manager → first tier of the org chain (GM or HR Manager).
    * Skips a candidate when they are the subject (no self-approval).
    * GM / Managing Director / System Administrator → empty chain (auto-approve).
-   * Site assignment uses {@link buildSiteAssignmentApprovalChain} instead (DL only).
+   * Site assignment uses {@link buildSiteAssignmentApprovalChain} instead.
    */
   async buildDisciplineLeadSingleTierChain(
     employeeId: string,
@@ -479,31 +474,12 @@ export class HrApprovalChainService {
       ]);
     }
 
-    const disciplineLead = await this.getDisciplineLeadSafe(
-      employeeId,
-      companyId,
-    );
-    const hrManager = await this.getHRManager(companyId);
-
-    if (disciplineLead.found) {
-      return pickSingle([
-        {
-          label: 'Discipline Lead',
-          approverId: disciplineLead.id,
-          resolver: 'DISCIPLINE_LEAD',
-        },
-      ]);
-    }
-
-    this.logger.warn(
-      `[DisciplineLeadSingleTier] Discipline Lead tier skipped for ${employeeId}: ${disciplineLead.reason}`,
-    );
-
+    const reportsTo = await this.getReportsToRequired(employeeId, companyId);
     return pickSingle([
       {
-        label: 'HR Manager',
-        approverId: hrManager.id,
-        resolver: 'ROLE:HR Manager',
+        label: 'Reports to',
+        approverId: reportsTo.id,
+        resolver: 'REPORTS_TO',
       },
     ]);
   
@@ -511,11 +487,10 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Site assignment: Employee → Discipline Lead only.
+   * Site assignment: Employee → Reports to only.
    * No Department Head / HR Manager / GM fallbacks.
    * GM / Managing Director / System Administrator → empty chain (auto-approve).
-   * Discipline Lead submitting for themselves → empty chain (no self-approval).
-   * Missing Discipline Lead → BadRequestException.
+   * Missing Reports to → BadRequestException.
    */
   async buildSiteAssignmentApprovalChain(
     employeeId: string,
@@ -531,27 +506,14 @@ export class HrApprovalChainService {
       return [];
     }
 
-    const disciplineLead = await this.getDisciplineLeadSafe(
-      employeeId,
-      companyId,
-    );
-
-    if (!disciplineLead.found) {
-      throw new BadRequestException(
-        `${disciplineLead.reason}. Site assignments require Discipline Lead approval.`,
-      );
-    }
-
-    if (disciplineLead.id === employeeId) {
-      return [];
-    }
+    const reportsTo = await this.getReportsToRequired(employeeId, companyId);
 
     return this.finalizeTiers([
       {
         order: 1,
-        label: 'Discipline Lead',
-        approverId: disciplineLead.id,
-        resolver: 'DISCIPLINE_LEAD',
+        label: 'Reports to',
+        approverId: reportsTo.id,
+        resolver: 'REPORTS_TO',
       },
     ]);
   
@@ -769,7 +731,7 @@ export class HrApprovalChainService {
   }
 
   /**
-   * On-behalf filings always require Discipline Lead (when assigned) and HR Officer,
+   * On-behalf filings always require Reports to and HR Officer,
    * including when that approver is the employee the permit is for.
    */
   private async buildOnBehalfExitPermitChain(
@@ -787,22 +749,13 @@ export class HrApprovalChainService {
 
     const tiers: ChainTierDraft[] = [];
 
-    try {
-      const disciplineLead = await this.getDisciplineLead(
-        employeeId,
-        companyId,
-      );
-      tiers.push({
-        order: 1,
-        label: 'Discipline Lead',
-        approverId: disciplineLead.id,
-        resolver: 'DISCIPLINE_LEAD',
-      });
-    } catch (error: unknown) {
-      if (!(error instanceof BadRequestException)) {
-        throw error;
-      }
-    }
+    const reportsTo = await this.getReportsToRequired(employeeId, companyId);
+    tiers.push({
+      order: 1,
+      label: 'Reports to',
+      approverId: reportsTo.id,
+      resolver: 'REPORTS_TO',
+    });
 
     const hrOfficer = await this.getHROfficer(companyId);
     tiers.push({
@@ -831,8 +784,8 @@ export class HrApprovalChainService {
 
   /**
    * Approval chain for material requisitions.
-   * Employee → Discipline Lead → HR Officer → General Manager.
-   * HR Officer / above skip Discipline Lead (and HR self-approval).
+   * Employee → Reports to → HR Officer → General Manager.
+   * HR Officer / above skip Reports to (and HR self-approval).
    * Empty array = auto-approve (GM+ submitter).
    */
   async buildMaterialRequisitionApprovalChain(
@@ -883,15 +836,12 @@ export class HrApprovalChainService {
     const tiers: ChainTierDraft[] = [];
 
     if (!isDisciplineLeadOrAbove) {
-      const disciplineLead = await this.getDisciplineLead(
-        submitterId,
-        companyId,
-      );
+      const reportsTo = await this.getReportsToRequired(submitterId, companyId);
       tiers.push({
         order: 1,
-        label: 'Discipline Lead',
-        approverId: disciplineLead.id,
-        resolver: 'DISCIPLINE_LEAD',
+        label: 'Reports to',
+        approverId: reportsTo.id,
+        resolver: 'REPORTS_TO',
       });
     }
 
@@ -1175,7 +1125,7 @@ export class HrApprovalChainService {
     });
   }
   /**
-   * Field movement / early departure: same chain as leave (Discipline Lead → HR).
+   * Field movement / early departure: same chain as leave (Reports to → HR).
    */
   async buildFieldMovementApprovalChain(
     userId: string,
@@ -1191,7 +1141,7 @@ export class HrApprovalChainService {
 
   /**
    * Org-structure approval chain with role-based routing.
-   * Standard: Discipline Lead (optional) → HR Manager.
+   * Standard: Reports to (required) → HR Manager.
    * Discipline Lead: Department Head (optional) → HR Manager.
    * Department Head: GM → HR Manager.
    * HR staff: HR Manager.
@@ -1306,24 +1256,14 @@ export class HrApprovalChainService {
       return this.finalizeTiers(tiers);
     }
 
-    // Standard employee → Discipline Lead (if assigned) → HR Manager
-    const disciplineLead = await this.getDisciplineLeadSafe(
-      employeeId,
-      companyId,
-    );
-
-    if (disciplineLead.found) {
-      tiers.push({
-        order: 1,
-        label: 'Discipline Lead',
-        approverId: disciplineLead.id,
-        resolver: 'DISCIPLINE_LEAD',
-      });
-    } else {
-      this.logger.warn(
-        `[ApprovalChain] Discipline Lead tier skipped for ${employeeId}: ${disciplineLead.reason}`,
-      );
-    }
+    // Standard employee → Reports to (required) → HR Manager
+    const reportsTo = await this.getReportsToRequired(employeeId, companyId);
+    tiers.push({
+      order: 1,
+      label: 'Reports to',
+      approverId: reportsTo.id,
+      resolver: 'REPORTS_TO',
+    });
 
     const hrManager = await this.getHRManager(companyId);
     tiers.push({
@@ -1357,7 +1297,56 @@ export class HrApprovalChainService {
   }
 
   /**
+   * Resolves the employee's Reports-to supervisor for first-tier approval.
+   * Blocks when unset, vacant/inactive, or self-referential.
+   */
+  async getReportsToRequired(
+    employeeId: string,
+    companyId: string,
+  ): Promise<{ id: string }> {
+    const employee = await this.prisma.user.findFirst({
+      where: activeOnly({ id: employeeId, companyId }),
+      select: {
+        id: true,
+        reportsToUserId: true,
+        reportsTo: {
+          select: {
+            id: true,
+            deletedAt: true,
+            isActive: true,
+            employmentStatus: true,
+          },
+        },
+      },
+    });
+
+    if (!employee) {
+      throw new BadRequestException('Employee not found');
+    }
+
+    if (!employee.reportsToUserId || !employee.reportsTo) {
+      throw new BadRequestException(
+        'Employee has no Reports to assigned - ask HR to set a supervisor before submitting.',
+      );
+    }
+
+    if (isVacantApprover(employee.reportsTo)) {
+      throw new BadRequestException(vacantApproverMessage('Reports to'));
+    }
+
+    if (employee.reportsTo.id === employeeId) {
+      throw new BadRequestException(
+        'Employee cannot report to themselves - ask HR to correct Reports to.',
+      );
+    }
+
+    return { id: employee.reportsTo.id };
+  }
+
+  /**
    * Resolves the discipline lead for an employee's engineering discipline.
+   * Kept for project-management and legacy callers; HR request chains use
+   * {@link getReportsToRequired} instead.
    */
   async getDisciplineLead(
     employeeId: string,
@@ -1579,7 +1568,7 @@ export class HrApprovalChainService {
 
   /**
    * Flight / business-trip approval chain.
-   * Standard: Discipline Lead (optional) → GM → HR Manager.
+   * Standard: Reports to (required) → GM → HR Manager.
    * Discipline Lead: Department Head (optional) → GM → HR Manager.
    * Department Head / HR staff: GM → HR Manager.
    * HR Manager: GM.
@@ -1681,24 +1670,14 @@ export class HrApprovalChainService {
       return this.finalizeTiers(tiers);
     }
 
-    // Standard employee → Discipline Lead (if assigned) → GM → HR Manager
-    const disciplineLead = await this.getDisciplineLeadSafe(
-      submitterId,
-      companyId,
-    );
-
-    if (disciplineLead.found) {
-      tiers.push({
-        order: tiers.length + 1,
-        label: 'Discipline Lead',
-        approverId: disciplineLead.id,
-        resolver: 'DISCIPLINE_LEAD',
-      });
-    } else {
-      this.logger.warn(
-        `[ApprovalChain] Discipline Lead tier skipped for ${submitterId}: ${disciplineLead.reason}`,
-      );
-    }
+    // Standard employee → Reports to (required) → GM → HR Manager
+    const reportsTo = await this.getReportsToRequired(submitterId, companyId);
+    tiers.push({
+      order: tiers.length + 1,
+      label: 'Reports to',
+      approverId: reportsTo.id,
+      resolver: 'REPORTS_TO',
+    });
 
     tiers.push({
       order: tiers.length + 1,

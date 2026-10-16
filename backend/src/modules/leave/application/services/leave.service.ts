@@ -264,7 +264,7 @@ export class LeaveService
     );
 
     // Step 1 - resolve chain for the leave owner (not necessarily the actor)
-    // Leave: Discipline Lead → HR Officer (no General Manager tier)
+    // Leave: Reports to → HR Manager (no General Manager tier)
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       employeeId,
       companyId,

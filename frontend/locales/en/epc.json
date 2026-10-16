@@ -279,7 +279,7 @@
         }
       },
       "dynamicFormDescription": "Complete the form and submit for approval.",
-      "backToList": "Back to list",
+      "backToList": "Back",
       "backToCategories": "Back to categories",
       "notFound": "Approval request not found",
       "failedToLoad": "Failed to load approval requests",
@@ -677,7 +677,7 @@
           "submitFailed": "Could not submit site assignment."
         },
         "detail": {
-          "back": "Back to list",
+          "back": "Back",
           "details": "Assignment details",
           "cancelSubmitted": "Cancel request",
           "cancelSubmittedHint": "This withdraws the request before approval. You can submit a new one later.",
@@ -3337,7 +3337,7 @@
       "editTitle": "Fix row {{line}}",
       "editHint": "Update the fields below, then apply to re-check this row.",
       "applyFix": "Apply & re-check",
-      "cancelEdit": "Back to list",
+      "cancelEdit": "Back",
       "filterAll": "All",
       "stepUpload": "Upload",
       "stepReview": "Review",
@@ -5523,7 +5523,7 @@
       "viewInApprovals": "View in Approvals",
       "issueSeal": "Issue Seal",
       "chooseDocumentOptional": "Choose document (optional)",
-      "backToList": "Back to list",
+      "backToList": "Back",
       "newEmployeeContract": "New Contract",
       "editEmployeeContract": "Edit Contract",
       "createContract": "Create Contract",
