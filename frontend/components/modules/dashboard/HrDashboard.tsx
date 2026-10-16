@@ -150,7 +150,7 @@ function truncateLabel(value: string, max = 18): string {
 }
 
 /**
- * HR home dashboard — leave/overtime/travel KPIs, charts, and recent activity.
+ * HR home dashboard - leave/overtime/travel KPIs, charts, and recent activity.
  */
 export default function HrDashboard({
   enabled = true,

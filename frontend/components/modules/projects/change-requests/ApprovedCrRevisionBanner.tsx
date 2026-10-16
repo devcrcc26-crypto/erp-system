@@ -66,7 +66,7 @@ export default function ApprovedCrRevisionBanner({
         type="warning"
         showIcon
         className="!mb-3"
-        title={`Revision required — Change Request ${cr.changeNumber} was approved. Upload revised versions of the affected documents to continue.`}
+        title={`Revision required - Change Request ${cr.changeNumber} was approved. Upload revised versions of the affected documents to continue.`}
         action={
           showViewButton ? (
             <Button

@@ -72,7 +72,7 @@ async function main(): Promise<void> {
       },
     });
     console.log(
-      `Updated LEAVE_REQUEST approval rules on ${result.count} categor(y/ies) — GM tier removed.`,
+      `Updated LEAVE_REQUEST approval rules on ${result.count} categor(y/ies) - GM tier removed.`,
     );
   } finally {
     await prisma.$disconnect();

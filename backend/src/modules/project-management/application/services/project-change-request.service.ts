@@ -111,7 +111,7 @@ const DESIGN_PACKAGE_FULL_CODE_SELECT = {
 } as const;
 
 /**
- * Manages project change requests — CRUD, submit/recall, and approval side-effects.
+ * Manages project change requests - CRUD, submit/recall, and approval side-effects.
  */
 @Injectable()
 export class ProjectChangeRequestService {
@@ -732,7 +732,7 @@ export class ProjectChangeRequestService {
           {
             recipientId: pkg.designerUserId,
             eventType: CR_APPROVED_REVISION_REQUIRED_EVENT,
-            subject: `Revision required — ${cr.changeNumber} approved`,
+            subject: `Revision required - ${cr.changeNumber} approved`,
             body: `Change request ${cr.changeNumber} on subtask ${pkg.packageCode} has been approved. Upload revised documents to continue. ${subtaskUrl}`,
             variables: {
               projectId,
@@ -915,7 +915,7 @@ export class ProjectChangeRequestService {
       title: edv.engineeringDocument.title,
       revisionLabel: edv.revisionLabel,
       status: edv.status,
-      display: `${edv.engineeringDocument.title} — Rev ${edv.revisionLabel}`,
+      display: `${edv.engineeringDocument.title} - Rev ${edv.revisionLabel}`,
     }));
   }
 

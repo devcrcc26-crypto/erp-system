@@ -1,4 +1,4 @@
-// GENERATED from backend/src/modules/attendance/application/utils/field-movement-issue-compatibility.ts — do not edit; run npm run sync:shared (in backend/)
+// GENERATED from backend/src/modules/attendance/application/utils/field-movement-issue-compatibility.ts - do not edit; run npm run sync:shared (in backend/)
 
 /**
  * Bulk-explain issue grouping and reason compatibility for field movements.

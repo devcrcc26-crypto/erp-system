@@ -137,11 +137,11 @@ describe('vacant approver at submit', () => {
       }).resolveApprover(COMPANY, REQUESTER, tier);
   }
 
-  it('department leader who is separated or inactive → "Approver position vacant: <role> — ask HR"', async () => {
+  it('department leader who is separated or inactive → "Approver position vacant: <role> - ask HR"', async () => {
     for (const employmentStatus of ['SEPARATED', 'INACTIVE'] as const) {
       const resolve = resolverWith({ [OLD_APPROVER]: { id: OLD_APPROVER, isActive: true, employmentStatus } });
       await expect(resolve({ label: 'Department Head', resolver: 'DEPARTMENT_LEADER' })).rejects.toThrow(
-        new BadRequestException('Approver position vacant: Department Head — ask HR'),
+        new BadRequestException('Approver position vacant: Department Head - ask HR'),
       );
     }
   });

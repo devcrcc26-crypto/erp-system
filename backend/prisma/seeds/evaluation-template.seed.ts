@@ -12,7 +12,7 @@ export async function seedEvaluationTemplate(
     where: { companyId, isActive: true },
   });
   if (existing) {
-    console.log('  Evaluation template already exists — skipping');
+    console.log('  Evaluation template already exists, skipping');
     return;
   }
 
@@ -24,7 +24,7 @@ export async function seedEvaluationTemplate(
       select: { id: true },
     });
     if (!actor) {
-      console.log('  No active user found — skipping evaluation template seed');
+      console.log('  No active user found, skipping evaluation template seed');
       return;
     }
     actorUserId = actor.id;

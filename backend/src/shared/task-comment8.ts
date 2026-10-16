@@ -1,7 +1,7 @@
 import { ApprovalLevel, UrgencyLevel } from '@prisma/client';
 
 /**
- * Task attribute region/combination — keys must match Prisma enum.
+ * Task attribute region/combination - keys must match Prisma enum.
  */
 export const TASK_ATTRIBUTES_VALUES = [
   'ETHIOPIA',

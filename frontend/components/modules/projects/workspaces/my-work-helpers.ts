@@ -166,7 +166,7 @@ export function projectLabel(item: MyWorkItem): string {
   const code = item.projectNumber?.trim();
   const name = item.projectName?.trim();
   if (code && name) {
-    return `${code} — ${name}`;
+    return `${code} - ${name}`;
   }
-  return name || code || '—';
+  return name || code || '-';
 }

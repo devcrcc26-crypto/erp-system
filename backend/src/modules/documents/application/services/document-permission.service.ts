@@ -1252,7 +1252,7 @@ export class DocumentPermissionService {
       );
     }
 
-    // APPROVAL folder — requester or any tier approver
+    // APPROVAL folder - requester or any tier approver
     const request = await this.prisma.approvalRequest.findFirst({
       where: activeOnly({ id: contextId, companyId }),
       select: {

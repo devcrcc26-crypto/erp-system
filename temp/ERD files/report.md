@@ -1,4 +1,4 @@
-# ERP System — Project Management Module
+# ERP System - Project Management Module
 ## Progress Report
 **Prepared:** 2026-06-25
 **Module:** Project Management
@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-The ERP system is a multi-tenant, construction-industry project management platform with a fully operational backend across twelve project management sub-modules (projects, schedule, RFIs, submittals, drawings, daily logs, meetings, correspondence, risks, issues, punch items, and closeout) and a deeply engineered EPC engineering design workflow. The backend is structurally complete: all major modules have service layers, controller endpoints, and database schemas. The most sophisticated component — the EPC design document approval workflow — is fully implemented end-to-end with a domain-layer state machine, a five-layer permission model, SLA tracking, and immutable audit trails. Immediate next steps are exposing the change request and deliverable service layers via controller endpoints, completing the frontend query layer for all modules, and hardening the Redis-backed asynchronous job path.
+The ERP system is a multi-tenant, construction-industry project management platform with a fully operational backend across twelve project management sub-modules (projects, schedule, RFIs, submittals, drawings, daily logs, meetings, correspondence, risks, issues, punch items, and closeout) and a deeply engineered EPC engineering design workflow. The backend is structurally complete: all major modules have service layers, controller endpoints, and database schemas. The most sophisticated component - the EPC design document approval workflow - is fully implemented end-to-end with a domain-layer state machine, a five-layer permission model, SLA tracking, and immutable audit trails. Immediate next steps are exposing the change request and deliverable service layers via controller endpoints, completing the frontend query layer for all modules, and hardening the Redis-backed asynchronous job path.
 
 ---
 
@@ -16,23 +16,23 @@ The ERP system is a multi-tenant, construction-industry project management platf
 
 ### 2.1 What the system is
 
-The system is a web-based ERP platform built for engineering, procurement, and construction (EPC) firms. It manages the full lifecycle of construction projects — from planning and scheduling through engineering design approval, field operations, and formal closeout. Users include project managers, site engineers, discipline-specific designers, reviewers, department chiefs, document controllers, safety officers, and external client consultants. The system enforces Chinese-standard engineering design governance workflows, including tiered review and formal submittal processes consistent with EPC project delivery methods.
+The system is a web-based ERP platform built for engineering, procurement, and construction (EPC) firms. It manages the full lifecycle of construction projects - from planning and scheduling through engineering design approval, field operations, and formal closeout. Users include project managers, site engineers, discipline-specific designers, reviewers, department chiefs, document controllers, safety officers, and external client consultants. The system enforces Chinese-standard engineering design governance workflows, including tiered review and formal submittal processes consistent with EPC project delivery methods.
 
 ### 2.2 Technology stack
 
-- **Backend framework:** NestJS (Node.js + TypeScript) — provides modular, dependency-injected application structure.
-- **Database:** PostgreSQL — stores all application data; Prisma is used as the ORM.
-- **Frontend framework:** Next.js (TypeScript) — serves the user interface via a React-based SPA with server-side rendering capability.
-- **Async job queue:** BullMQ (Redis-backed, optional) — processes workflow committed events and SLA escalation jobs asynchronously; falls back to synchronous execution when Redis is not enabled.
-- **File storage:** MinIO/S3-compatible object storage (StorageModule) — stores all uploaded documents and engineering files.
-- **Email:** MailModule (SMTP-backed) — delivers notifications and workflow alerts.
+- **Backend framework:** NestJS (Node.js + TypeScript) - provides modular, dependency-injected application structure.
+- **Database:** PostgreSQL - stores all application data; Prisma is used as the ORM.
+- **Frontend framework:** Next.js (TypeScript) - serves the user interface via a React-based SPA with server-side rendering capability.
+- **Async job queue:** BullMQ (Redis-backed, optional) - processes workflow committed events and SLA escalation jobs asynchronously; falls back to synchronous execution when Redis is not enabled.
+- **File storage:** MinIO/S3-compatible object storage (StorageModule) - stores all uploaded documents and engineering files.
+- **Email:** MailModule (SMTP-backed) - delivers notifications and workflow alerts.
 - **Auth:** JWT-based authentication with refresh tokens, password reset tokens, and optional MFA; rate limited via `@nestjs/throttler`.
 
 ### 2.3 Architecture overview
 
 The frontend communicates with the backend via a REST API secured by JWT bearer tokens. The backend is organized into NestJS feature modules: `AuthModule`, `CompanySetupModule`, `UserManagementModule`, `AuditModule`, `NotificationsModule`, `DocumentsModule`, `ReportingModule`, and `ProjectManagementModule`. Each module exposes its own controllers and owns its service layer.
 
-The `ProjectManagementModule` is the most complex: it contains 19 controllers and 55 providers (services, repositories, processors, and cron jobs). A `JwtAuthGuard` is applied globally; `PermissionsGuard` is applied per-controller and reads per-handler `@RequirePermission` decorators to enforce RBAC. Within the EPC design workflow, a second permission layer — `PermissionResolverService` + `canPerformFromContext()` — enforces five independent contextual checks before any EDV status transition is committed.
+The `ProjectManagementModule` is the most complex: it contains 19 controllers and 55 providers (services, repositories, processors, and cron jobs). A `JwtAuthGuard` is applied globally; `PermissionsGuard` is applied per-controller and reads per-handler `@RequirePermission` decorators to enforce RBAC. Within the EPC design workflow, a second permission layer - `PermissionResolverService` + `canPerformFromContext()` - enforces five independent contextual checks before any EDV status transition is committed.
 
 The database schema contains 73 models. PostgreSQL sequences (created at seed time via `CREATE SEQUENCE`) provide gap-free document numbers. All major entities use a soft-delete pattern (`deletedAt`/`deletedBy` fields) to preserve audit history. Two BullMQ queues (`workflow_committed` and `workflow_sla`) offload post-commit projection and SLA escalation work to Redis workers when Redis is enabled.
 
@@ -47,7 +47,7 @@ The database schema contains 73 models. PostgreSQL sequences (created at seed ti
 | Projects | Complete | CRUD, team management, dashboard stats | Full controller + service |
 | Schedule (Tasks, Milestones, Gantt) | Complete | Milestones CRUD, Tasks CRUD, Task Dependencies CRUD, Task Disciplines CRUD | Progress stored as integer on Task row |
 | RFIs | Complete | CRUD, RFI responses | Status transitions via PATCH |
-| Submittals | Partial | CRUD, design-package submittal, construction submittal, issue, batch-issue, batch-add-items, reviews, addReview | addReview updates status; updateSubmittal also updates status — dual write path |
+| Submittals | Partial | CRUD, design-package submittal, construction submittal, issue, batch-issue, batch-add-items, reviews, addReview | addReview updates status; updateSubmittal also updates status - dual write path |
 | Drawings | Complete | CRUD, version history, drawing links | |
 | Daily Logs | Complete | CRUD + child entries (workforce, equipment, visitors, incidents) | Status (DRAFT/SUBMITTED/APPROVED) updated via PATCH; no dedicated status-transition endpoint |
 | Meetings | Complete | CRUD + agenda items, attendees, action items | All sub-resource write endpoints present |
@@ -58,7 +58,7 @@ The database schema contains 73 models. PostgreSQL sequences (created at seed ti
 | Closeout | Partial | Get, initialize, update, checklist item toggle, warranty add/update/delete | No DELETE for the main Closeout record; Warranty model is fully implemented |
 | EPC Engineering Design Workflow | Partial | Engineering documents CRUD + version upload + EDV status transitions; Design packages CRUD + dependency graph + full review lifecycle; Review comments lifecycle; Batch approve/return; Workspace views; Revision orchestration; SLA tracking; Decision trace | No controller for ProjectChangeRequest or Deliverable entities |
 
-### 3.2 Feature detail — per module
+### 3.2 Feature detail - per module
 
 #### Projects
 - List projects with pagination and filtering
@@ -70,9 +70,9 @@ The database schema contains 73 models. PostgreSQL sequences (created at seed ti
 
 #### Schedule (Tasks, Milestones, Gantt)
 - Full CRUD for Milestones
-- Full CRUD for Tasks — fields include hierarchical parent-child relationships, dispatcher assignment, urgency level (NORMAL/URGENT/CRITICAL), language (CHINESE/ENGLISH), approval level (DEPARTMENT/INSTITUTE), progress percentage (stored as a single integer), critical path flag, and completion status tracking
-- Full CRUD for Task Dependencies — four dependency types: FS (finish-to-start), SS (start-to-start), FF (finish-to-finish), SF (start-to-finish), with lag days
-- Full CRUD for Task Disciplines — each discipline carries designer, reviewer, discipline lead, and chief engineer foreign keys; these keys drive EPC review governance
+- Full CRUD for Tasks - fields include hierarchical parent-child relationships, dispatcher assignment, urgency level (NORMAL/URGENT/CRITICAL), language (CHINESE/ENGLISH), approval level (DEPARTMENT/INSTITUTE), progress percentage (stored as a single integer), critical path flag, and completion status tracking
+- Full CRUD for Task Dependencies - four dependency types: FS (finish-to-start), SS (start-to-start), FF (finish-to-finish), SF (start-to-finish), with lag days
+- Full CRUD for Task Disciplines - each discipline carries designer, reviewer, discipline lead, and chief engineer foreign keys; these keys drive EPC review governance
 - Frontend utility `schedule-metrics.ts` computes actual vs. planned progress percentages and schedule variance from task date fields
 
 #### RFIs
@@ -86,14 +86,14 @@ The database schema contains 73 models. PostgreSQL sequences (created at seed ti
 #### Submittals
 - List and paginate submittals per project
 - Create generic submittal (direct status-field write)
-- Create design-package submittal via `WorkflowKernel.CreateDesignSubmittal` — links design packages and captures EDV snapshots
+- Create design-package submittal via `WorkflowKernel.CreateDesignSubmittal` - links design packages and captures EDV snapshots
 - Create in-construction submittal with design packages and a document folder
 - Submit in-construction submittal to discipline leader
-- Issue a submittal — freezes snapshot payloads via `SubmittalSnapshotService`
+- Issue a submittal - freezes snapshot payloads via `SubmittalSnapshotService`
 - Batch-issue multiple submittals; batch-add items to multiple DRAFT submittals
 - Add design package items to a DRAFT submittal
-- Add a review record (`addReview` — sets `SubmittalReview` row and updates parent status to the review's outcome status)
-- Update submittal via PATCH (also updates status field directly — dual write path for status)
+- Add a review record (`addReview` - sets `SubmittalReview` row and updates parent status to the review's outcome status)
+- Update submittal via PATCH (also updates status field directly - dual write path for status)
 - Submittal purpose options include: IN_CONSTRUCTION, DISCIPLINE_SITE, DISCIPLINE_CONSULTANT, DEPUTY_BID, DEPUTY_INTERIM, DEPUTY_FINAL
 - `SubmittalItem` captures a frozen snapshot (`snapshotPayload` JSON, `contentHash`) of the EDV state at issue time
 
@@ -106,7 +106,7 @@ The database schema contains 73 models. PostgreSQL sequences (created at seed ti
 
 #### Daily Logs
 - List daily logs per project with date filtering
-- Create a daily log — fields include log date, shift, weather condition, temperature, rainfall, and work summary
+- Create a daily log - fields include log date, shift, weather condition, temperature, rainfall, and work summary
 - Update a daily log header
 - Soft-delete a daily log
 - Child resource management (all cascade-delete on parent delete):
@@ -156,7 +156,7 @@ The database schema contains 73 models. PostgreSQL sequences (created at seed ti
 #### Closeout
 - Initialize project closeout (one-per-project, enforced by unique FK)
 - Read closeout with checklist items and warranty records
-- Update closeout header — fields include practical completion date, defects liability end date, final completion date, financial summary (contract value, variations, claims, final settlement)
+- Update closeout header - fields include practical completion date, defects liability end date, final completion date, financial summary (contract value, variations, claims, final settlement)
 - Status lifecycle: PRACTICAL_COMPLETION → DEFECTS_LIABILITY_PERIOD → FINAL_COMPLETION → FINANCIAL_CLOSEOUT → ARCHIVE (via PATCH)
 - Toggle closeout checklist items (category, description, isComplete, completedAt, verifiedBy)
 - Add, update, remove warranty records (supplier, start date, expiry date)
@@ -164,16 +164,16 @@ The database schema contains 73 models. PostgreSQL sequences (created at seed ti
 
 #### EPC Engineering Design Workflow
 - **Engineering documents:** Register an uploaded file as a new EngineeringDocument + Rev-0 EngineeringDocumentVersion; list documents for a discipline; get a single document; update metadata; soft-delete; upload a new version (creates new EDV row); update EDV revision label; transition EDV status via WorkflowKernel; list workflow event log per EDV
-- **EDV status machine:** Five statuses — DRAFT, IN_REVIEW, APPROVED, LOCKED, SUPERSEDED — with explicit allowed transitions enforced in `edv-state-machine.ts`. LOCKED and SUPERSEDED are terminal and immutable. Every transition is validated in `StatusWriteGateService` before being persisted.
+- **EDV status machine:** Five statuses - DRAFT, IN_REVIEW, APPROVED, LOCKED, SUPERSEDED - with explicit allowed transitions enforced in `edv-state-machine.ts`. LOCKED and SUPERSEDED are terminal and immutable. Every transition is validated in `StatusWriteGateService` before being persisted.
 - **Design packages:** CRUD; add/remove EDV items; create/delete package dependencies (FINISH_TO_START or COORDINATION_ONLY); submit package for review (opens ReviewSession, captures context snapshot); approve session at current tier; return package for rework (closes session, reverts EDVs to DRAFT); batch-approve EDVs (DEPT_CHIEF tier only); batch-return EDVs; lock all package EDVs (APPROVED → LOCKED); batch-lock multiple packages
-- **Review sessions:** Opened by SubmitPackageForReview, progresses through four tiers — DISCIPLINE_OWNER → REVIEWER → DISCIPLINE_LEAD → DEPT_CHIEF. Session carries SLA deadline, `slaDeadlineAt`, and `slaEscalatedAt` timestamps. Admin reassignment of active session assignee is available (system admin or managing director only).
+- **Review sessions:** Opened by SubmitPackageForReview, progresses through four tiers - DISCIPLINE_OWNER → REVIEWER → DISCIPLINE_LEAD → DEPT_CHIEF. Session carries SLA deadline, `slaDeadlineAt`, and `slaEscalatedAt` timestamps. Admin reassignment of active session assignee is available (system admin or managing director only).
 - **Review comments:** Add to any EDV within an active session; update own OPEN comment; transition comment status (OPEN → ACKNOWLEDGED → IN_PROGRESS → RESOLVED → VERIFIED → CLOSED) with actor-role enforcement; verify a RESOLVED comment (reviewer role); remove own OPEN comment. All comments must be VERIFIED or CLOSED before session can be approved (`DefinitionOfDoneService`).
-- **Comment routing:** `ReviewRoutingService` routes by severity — MINOR stays at current tier; MODERATE escalates from DISCIPLINE_OWNER to REVIEWER; MAJOR escalates one tier up the chain.
+- **Comment routing:** `ReviewRoutingService` routes by severity - MINOR stays at current tier; MODERATE escalates from DISCIPLINE_OWNER to REVIEWER; MAJOR escalates one tier up the chain.
 - **Review context snapshot:** `ReviewContextSnapshot` captures the set of EDV IDs and a content hash at the moment a package is submitted for review, providing a frozen reference for the review session.
 - **Revision orchestration:** `RevisionOrchestratorService.triggerRevision()` creates a new DRAFT EDV from the latest LOCKED source; any non-LOCKED, non-SUPERSEDED existing versions are moved to SUPERSEDED. This enforces the linear lockstep rule: only one active draft per document at a time.
 - **External review triggers:** `ExternalReviewTrigger` records created from RFIs, change requests, or submittal reviews are processed via `POST /projects/:projectId/revision-triggers/:triggerId/process`, spawning one new DRAFT EDV per document referenced in the trigger's submittal snapshots.
 - **Workspace views:** Review inbox (sessions assigned to current user), open comments assigned to current user, project status board KPIs, dispatcher workload/bottleneck view, review mode payload for a package, EDV version history with workflow events
-- **SLA escalation:** `ReviewSlaService` checks for overdue active sessions on a cron schedule; marks them with `slaEscalatedAt`; sends in-app or email notification to the project manager. SLA limits: DISCIPLINE_OWNER 24 h, REVIEWER 48 h, DISCIPLINE_LEAD 72 h, DEPT_CHIEF 120 h. SLA is visibility-only — it never blocks workflow or automatically reassigns.
+- **SLA escalation:** `ReviewSlaService` checks for overdue active sessions on a cron schedule; marks them with `slaEscalatedAt`; sends in-app or email notification to the project manager. SLA limits: DISCIPLINE_OWNER 24 h, REVIEWER 48 h, DISCIPLINE_LEAD 72 h, DEPT_CHIEF 120 h. SLA is visibility-only - it never blocks workflow or automatically reassigns.
 - **Decision trace:** `DecisionTraceService` builds a lineage graph for an engineering document, showing which review sessions, approvals, and revisions led to the current state.
 - **Workflow event log:** Every EDV status transition, review session event, and comment state change is written to `WorkflowEventLog` with INTENT/COMMITTED/CORRECTION phases, before/after state JSON, actor ID, and correlation ID.
 - **Idempotency:** `WorkflowKernelService.execute()` checks for prior INTENT events matching an `idempotencyKey` before executing; if found, replays the last known result without re-executing the command.
@@ -184,31 +184,31 @@ The database schema contains 73 models. PostgreSQL sequences (created at seed ti
 
 ### 4.1 EPC design document approval loop
 
-The approval loop is enforced entirely in code — not on the honour system. The sequence is:
+The approval loop is enforced entirely in code - not on the honour system. The sequence is:
 
 1. **Upload:** A designer uploads a file to object storage via the documents module. They register it via `POST …/engineering-documents/register`, which creates an `EngineeringDocument` and Rev-0 `EngineeringDocumentVersion` in status DRAFT.
 2. **Package:** The designer creates a `DesignPackage` and adds EDVs to it. A package can have cross-package FINISH_TO_START or COORDINATION_ONLY dependencies.
 3. **Submit for review:** `POST …/design-packages/:packageId/submit-for-review` calls `WorkflowKernelService.execute(SubmitPackageForReview)`. This opens a `ReviewSession` at tier `DISCIPLINE_OWNER`, assigns the session to the discipline owner FK from the `TaskDiscipline` row, and captures a `ReviewContextSnapshot` (frozen EDV ID list + content hash). EDV statuses are moved from DRAFT to IN_REVIEW.
-4. **Review tiers — four tiers enforced in order:**
+4. **Review tiers - four tiers enforced in order:**
    - **DISCIPLINE_OWNER** (24 h SLA): Reviews documents; adds `ReviewComment` records with severity MINOR, MODERATE, or MAJOR.
    - **REVIEWER** (48 h SLA): MODERATE and MAJOR comments escalate here via `ReviewRoutingService.route()`.
    - **DISCIPLINE_LEAD** (72 h SLA): MAJOR comments escalate here.
    - **DEPT_CHIEF** (120 h SLA): Final governance tier. Only at this tier is `BatchApproveEdvs` allowed.
 5. **Comment lifecycle enforcement:** Before session approval, `DefinitionOfDoneService.assertPackageApprovalAllowed()` calls `canApprovePackage()` from `comment-state-machine.ts`, which blocks if any comment is in status OPEN, ACKNOWLEDGED, IN_PROGRESS, or RESOLVED. All comments must be VERIFIED or CLOSED.
 6. **Approve:** `POST …/review-sessions/:reviewSessionId/approve` calls `WorkflowKernelService.execute(ApproveReviewSession)`. If the current tier is not DEPT_CHIEF, the session advances to the next tier and is reassigned. At DEPT_CHIEF, `BatchApproveEdvs` moves all IN_REVIEW EDVs to APPROVED.
-7. **Lock:** `POST …/design-packages/:packageId/lock-edvs` moves all APPROVED EDVs to LOCKED. LOCKED is a terminal status — the state machine in `edv-state-machine.ts` returns `LOCKED_IMMUTABLE` for any further transition attempt.
+7. **Lock:** `POST …/design-packages/:packageId/lock-edvs` moves all APPROVED EDVs to LOCKED. LOCKED is a terminal status - the state machine in `edv-state-machine.ts` returns `LOCKED_IMMUTABLE` for any further transition attempt.
 8. **Return for rework:** At any tier, `ReturnPackageForRework` closes the session, sets its outcome to RETURNED_FOR_REWORK, and transitions all IN_REVIEW EDVs back to DRAFT.
 9. **Revision loop:** When an external trigger (RFI, change request, submittal review) requires changes to a LOCKED document, `RevisionOrchestratorService.triggerRevision()` creates a new DRAFT EDV referencing the same base document. The LOCKED source is untouched. Any non-LOCKED, non-SUPERSEDED prior versions are moved to SUPERSEDED. The lockstep rule (`validateNewRevisionUpload`) blocks creation if an active DRAFT already exists.
-10. **Audit trail:** Every status transition writes a `WorkflowEventLog` row with `phase: INTENT`, before/after state, actor, and correlation ID. A second pass (via `WorkflowCommittedService` — async or sync) writes the `COMMITTED` phase event. Corrections can be appended via `POST /workflow-events/:eventId/correct` with a reason.
+10. **Audit trail:** Every status transition writes a `WorkflowEventLog` row with `phase: INTENT`, before/after state, actor, and correlation ID. A second pass (via `WorkflowCommittedService` - async or sync) writes the `COMMITTED` phase event. Corrections can be appended via `POST /workflow-events/:eventId/correct` with a reason.
 11. **State projection:** After every Phase A write, `StateProjectionService.recomputeDirtyInTx()` recalculates `projectedStatus` on the affected `DesignPackage` and `TaskDiscipline` rows (IN_PROGRESS / PENDING_LEAD / APPROVED / REWORK_REQUIRED), making dashboard KPIs eventually consistent within the same transaction.
 
 ### 4.2 Project lifecycle
 
-Projects move through statuses PLANNING → TENDER → MOBILIZATION → ACTIVE → ON_HOLD → COMPLETED → CLOSED. Transitions are via PATCH on the `status` field; no state machine enforces transition order at the backend (all statuses can be set freely). Team membership is managed separately via `PUT /projects/:projectId/team`, which replaces the full team list. Child entities (tasks, RFIs, submittals, etc.) require a valid project team membership check in `ProjectScopeService.getProjectOrThrow()` — a user not on the team receives a 404 on all project child resources, even if they have the system-level RBAC permission.
+Projects move through statuses PLANNING → TENDER → MOBILIZATION → ACTIVE → ON_HOLD → COMPLETED → CLOSED. Transitions are via PATCH on the `status` field; no state machine enforces transition order at the backend (all statuses can be set freely). Team membership is managed separately via `PUT /projects/:projectId/team`, which replaces the full team list. Child entities (tasks, RFIs, submittals, etc.) require a valid project team membership check in `ProjectScopeService.getProjectOrThrow()` - a user not on the team receives a 404 on all project child resources, even if they have the system-level RBAC permission.
 
 ### 4.3 Task lifecycle
 
-Tasks are created with status NOT_STARTED. Status transitions (NOT_STARTED → IN_PROGRESS → DELAYED → COMPLETED) are via PATCH on the `status` field; no backend state machine enforces ordering. Progress is stored as an integer (0–100) on the `Task` row — there is no per-discipline or per-subtask progress aggregation server-side. Parent-child task hierarchies are supported via `parentTaskId`. The `schedule-metrics.ts` frontend utility derives planned progress percentage from task start and finish dates against today's date, and schedule variance from the gap between actual and planned progress.
+Tasks are created with status NOT_STARTED. Status transitions (NOT_STARTED → IN_PROGRESS → DELAYED → COMPLETED) are via PATCH on the `status` field; no backend state machine enforces ordering. Progress is stored as an integer (0–100) on the `Task` row - there is no per-discipline or per-subtask progress aggregation server-side. Parent-child task hierarchies are supported via `parentTaskId`. The `schedule-metrics.ts` frontend utility derives planned progress percentage from task start and finish dates against today's date, and schedule variance from the gap between actual and planned progress.
 
 ### 4.4 RFI lifecycle
 
@@ -222,7 +222,7 @@ Two distinct paths exist:
 
 **Design-package submittal (`POST /submittals/design-package` + `POST /:id/issue`):** Creates a DRAFT submittal linked to design packages via `WorkflowKernel.CreateDesignSubmittal`. Issuing it (`IssueSubmittal`) freezes snapshots: `SubmittalSnapshotService` reads the current APPROVED/LOCKED EDV state for each linked design package and stores it as an immutable JSON payload on each `SubmittalItem`. The `contentHash` ensures tamper detectability. After issue, external review triggers can create new draft revisions on affected documents.
 
-`addReview` adds a `SubmittalReview` record and updates the parent `Submittal.status` to the review's outcome status. `updateSubmittal` (PATCH) also accepts a status field, creating a dual write path for status — both paths write directly to the database without a state machine guard on the Submittal entity itself.
+`addReview` adds a `SubmittalReview` record and updates the parent `Submittal.status` to the review's outcome status. `updateSubmittal` (PATCH) also accepts a status field, creating a dual write path for status - both paths write directly to the database without a state machine guard on the Submittal entity itself.
 
 ### 4.6 Issue lifecycle
 
@@ -287,84 +287,84 @@ The EPC workflow uses a five-layer permission model evaluated in `permission-con
 ### 6.2 Key entities and relationships
 
 **Organization domain:**
-- `Company` — top-level tenant
-- `Branch` — physical office within a company
-- `Division` — organisational division
-- `Department` — department within a division and branch
-- `CostCentre` — cost centre linked to a department
-- `Position` — job title within a department
-- `CompanySetting` — key-value configuration per company
+- `Company` - top-level tenant
+- `Branch` - physical office within a company
+- `Division` - organisational division
+- `Department` - department within a division and branch
+- `CostCentre` - cost centre linked to a department
+- `Position` - job title within a department
+- `CompanySetting` - key-value configuration per company
 
 **Identity and access:**
-- `User` — platform user with email, password hash, MFA flag, and preferences; belongs to company, branch, department, position
-- `UserSession` — JWT refresh token sessions (hashed); tracks device info and IP
-- `PasswordResetToken` — time-limited reset tokens (hashed)
-- `EmailVerificationToken` — email verification and change tokens (hashed)
-- `Role` — RBAC role with optional parent for inheritance; `isSystemRole` flag
-- `UserRole` — many-to-many user-to-role assignment with data scope entries
-- `Permission` — module + action pair (global, not per-tenant)
-- `RolePermission` — per-role, per-permission flag matrix (canView, canCreate, canEdit, canDelete, canApprove, canExport)
-- `DataScope` — scopes a user-role assignment to a specific branch/department/project
+- `User` - platform user with email, password hash, MFA flag, and preferences; belongs to company, branch, department, position
+- `UserSession` - JWT refresh token sessions (hashed); tracks device info and IP
+- `PasswordResetToken` - time-limited reset tokens (hashed)
+- `EmailVerificationToken` - email verification and change tokens (hashed)
+- `Role` - RBAC role with optional parent for inheritance; `isSystemRole` flag
+- `UserRole` - many-to-many user-to-role assignment with data scope entries
+- `Permission` - module + action pair (global, not per-tenant)
+- `RolePermission` - per-role, per-permission flag matrix (canView, canCreate, canEdit, canDelete, canApprove, canExport)
+- `DataScope` - scopes a user-role assignment to a specific branch/department/project
 
 **Audit and notifications:**
-- `AuditLog` — structured record of every user action with before/after JSON and correlation ID
-- `NotificationTemplate` — per-company, per-channel event templates
-- `Notification` — individual notification delivery records
-- `NotificationPreference` — per-user, per-event channel opt-in settings
+- `AuditLog` - structured record of every user action with before/after JSON and correlation ID
+- `NotificationTemplate` - per-company, per-channel event templates
+- `Notification` - individual notification delivery records
+- `NotificationPreference` - per-user, per-event channel opt-in settings
 
 **Documents and financials:**
-- `DocumentFolder` — hierarchical folder tree with context types (PROJECT, RFI, SUBMITTAL, etc.)
-- `Document` — file metadata with version tracking flag
-- `DocumentVersion` — each uploaded revision of a document with file key and change note
-- `DocumentAccess` — per-role, per-folder access control (canView, canUpload, canDownload, canDelete)
-- `ReportDefinition`, `ReportSchedule`, `DashboardWidget` — reporting and dashboard configuration
-- `FinancialYear`, `FinancialPeriod`, `NumberSeries` — financial calendar and document sequencing
+- `DocumentFolder` - hierarchical folder tree with context types (PROJECT, RFI, SUBMITTAL, etc.)
+- `Document` - file metadata with version tracking flag
+- `DocumentVersion` - each uploaded revision of a document with file key and change note
+- `DocumentAccess` - per-role, per-folder access control (canView, canUpload, canDownload, canDelete)
+- `ReportDefinition`, `ReportSchedule`, `DashboardWidget` - reporting and dashboard configuration
+- `FinancialYear`, `FinancialPeriod`, `NumberSeries` - financial calendar and document sequencing
 
 **Project management core:**
-- `Project` — top-level project with type, status, dates, budget, and design metadata
-- `ProjectTeam` — user-to-project membership (soft-deleted; used as access gate)
-- `Milestone` — schedule milestone with planned and actual dates
-- `Task` — schedule task with hierarchy, discipline grouping, progress integer, and status
-- `TaskDependency` — FS/SS/FF/SF dependency with lag days
+- `Project` - top-level project with type, status, dates, budget, and design metadata
+- `ProjectTeam` - user-to-project membership (soft-deleted; used as access gate)
+- `Milestone` - schedule milestone with planned and actual dates
+- `Task` - schedule task with hierarchy, discipline grouping, progress integer, and status
+- `TaskDependency` - FS/SS/FF/SF dependency with lag days
 
 **EPC design workflow:**
-- `TaskDiscipline` — discipline within a task; holds designer, reviewer, lead, chief, owner user FKs; drives EPC review governance
-- `EngineeringDocument` — logical document (drawing, report, calculation, etc.) within a discipline
-- `EngineeringDocumentVersion` — specific revision of a document; holds EDV status (DRAFT → IN_REVIEW → APPROVED → LOCKED / SUPERSEDED) and revision label
-- `DesignPackage` — grouping of EDVs for review; carries projected status
-- `DesignPackageItem` — join table linking a design package to specific EDVs
-- `DesignPackageDependency` — dependency relationship between packages
-- `ReviewSession` — one active review session per design package per tier advancement; tracks current tier, SLA deadline, and assignee
-- `ReviewContextSnapshot` — frozen EDV ID list and content hash at submission time; prevents reviewers from seeing documents not in the review scope
-- `ReviewComment` — comment on a specific EDV within a review session; with severity, status, assignee, and optional attached document versions
-- `WorkflowEventLog` — immutable append-only audit trail for all EPC workflow state changes; three phases: INTENT, COMMITTED, CORRECTION
-- `TaskDisciplineReview` — per-tier review record for a discipline (PENDING / IN_REVIEW / APPROVED / RETURNED)
+- `TaskDiscipline` - discipline within a task; holds designer, reviewer, lead, chief, owner user FKs; drives EPC review governance
+- `EngineeringDocument` - logical document (drawing, report, calculation, etc.) within a discipline
+- `EngineeringDocumentVersion` - specific revision of a document; holds EDV status (DRAFT → IN_REVIEW → APPROVED → LOCKED / SUPERSEDED) and revision label
+- `DesignPackage` - grouping of EDVs for review; carries projected status
+- `DesignPackageItem` - join table linking a design package to specific EDVs
+- `DesignPackageDependency` - dependency relationship between packages
+- `ReviewSession` - one active review session per design package per tier advancement; tracks current tier, SLA deadline, and assignee
+- `ReviewContextSnapshot` - frozen EDV ID list and content hash at submission time; prevents reviewers from seeing documents not in the review scope
+- `ReviewComment` - comment on a specific EDV within a review session; with severity, status, assignee, and optional attached document versions
+- `WorkflowEventLog` - immutable append-only audit trail for all EPC workflow state changes; three phases: INTENT, COMMITTED, CORRECTION
+- `TaskDisciplineReview` - per-tier review record for a discipline (PENDING / IN_REVIEW / APPROVED / RETURNED)
 
 **Construction operations:**
-- `Rfi` — Request for Information with priority, status, assignee, and due date
-- `RfiResponse` — append-only responses to an RFI
-- `Submittal` — formal submittal with purpose, prepared-by role, and status
-- `SubmittalReview` — review record per revision of a submittal
-- `SubmittalItem` — design package linked to a submittal with frozen snapshot payload
-- `ExternalReviewTrigger` — trigger from RFI, change request, or submittal review to initiate EDV revision loop
-- `ProjectChangeRequest` — formal change request linked to an external trigger source
-- `Deliverable` — planned deliverable linked optionally to a discipline, package, or engineering document
+- `Rfi` - Request for Information with priority, status, assignee, and due date
+- `RfiResponse` - append-only responses to an RFI
+- `Submittal` - formal submittal with purpose, prepared-by role, and status
+- `SubmittalReview` - review record per revision of a submittal
+- `SubmittalItem` - design package linked to a submittal with frozen snapshot payload
+- `ExternalReviewTrigger` - trigger from RFI, change request, or submittal review to initiate EDV revision loop
+- `ProjectChangeRequest` - formal change request linked to an external trigger source
+- `Deliverable` - planned deliverable linked optionally to a discipline, package, or engineering document
 
 **Field operations:**
-- `Drawing` — drawing register entry with revision and isLatest flag
-- `DrawingVersion` — file versions for a drawing
-- `DrawingLink` — polymorphic link from a drawing to any other entity
-- `DailyLog` — site daily log with weather, work summary, and status
-- `DailyLogWorkforce`, `DailyLogEquipment`, `DailyLogVisitor`, `DailyLogIncident` — child line items (cascade-deleted with parent)
-- `Meeting` — project meeting with type and status
-- `MeetingAgendaItem`, `MeetingAttendee`, `ActionItem` — meeting sub-records
-- `Correspondence` — formal correspondence log (letters, emails, notices, instructions, memos)
-- `Risk` — risk register entry with probability, impact, score, and mitigation plans
-- `Issue` — site or design issue with severity lifecycle
-- `PunchItem` — closeout punch list item with severity lifecycle
-- `Closeout` — one-per-project closeout record with financial summary
-- `CloseoutChecklistItem` — individual checklist items within a closeout
-- `Warranty` — warranty records within a closeout
+- `Drawing` - drawing register entry with revision and isLatest flag
+- `DrawingVersion` - file versions for a drawing
+- `DrawingLink` - polymorphic link from a drawing to any other entity
+- `DailyLog` - site daily log with weather, work summary, and status
+- `DailyLogWorkforce`, `DailyLogEquipment`, `DailyLogVisitor`, `DailyLogIncident` - child line items (cascade-deleted with parent)
+- `Meeting` - project meeting with type and status
+- `MeetingAgendaItem`, `MeetingAttendee`, `ActionItem` - meeting sub-records
+- `Correspondence` - formal correspondence log (letters, emails, notices, instructions, memos)
+- `Risk` - risk register entry with probability, impact, score, and mitigation plans
+- `Issue` - site or design issue with severity lifecycle
+- `PunchItem` - closeout punch list item with severity lifecycle
+- `Closeout` - one-per-project closeout record with financial summary
+- `CloseoutChecklistItem` - individual checklist items within a closeout
+- `Warranty` - warranty records within a closeout
 
 ### 6.3 Data integrity features
 
@@ -384,11 +384,11 @@ The EPC workflow uses a five-layer permission model evaluated in `permission-con
 
 - **Why PostgreSQL sequences are used for document numbers instead of application-level counters:** Application-level `MAX(id)+1` logic is subject to race conditions under concurrent writes. Native PostgreSQL sequences (`nextval()`) are atomic and gap-tolerant under concurrent load, guaranteeing uniqueness without locking.
 
-- **Why BullMQ is used for async jobs:** Two post-commit operations — writing COMMITTED phase workflow events and computing SLA escalations — are non-blocking and do not affect the HTTP response. Decoupling them via BullMQ (with Redis) prevents slow notification dispatch from adding latency to the synchronous workflow path. The system degrades gracefully: when `REDIS_ENABLED=false`, both operations run synchronously within the same request cycle.
+- **Why BullMQ is used for async jobs:** Two post-commit operations - writing COMMITTED phase workflow events and computing SLA escalations - are non-blocking and do not affect the HTTP response. Decoupling them via BullMQ (with Redis) prevents slow notification dispatch from adding latency to the synchronous workflow path. The system degrades gracefully: when `REDIS_ENABLED=false`, both operations run synchronously within the same request cycle.
 
 - **Why the EPC permission system uses five independent layers instead of a single role check:** Each layer guards a different attack surface. RBAC alone would allow any global Reviewer to review any project's documents. The project team membership layer restricts to assigned projects. The discipline assignment layer restricts to the specific discipline. The design phase layer enforces lifecycle gates (e.g., no submittals during design phases). The workflow state layer prevents commenting on LOCKED documents. All five must pass; relaxing any one would create a governance gap.
 
-- **Why task progress is stored as a single integer on the Task row:** This keeps task queries simple (no aggregation) and matches the source data model — in this EPC context, progress is self-reported by the task owner at a single granularity. The trade-off is that there is no server-enforced rollup from child tasks or discipline-level progress to the parent task or project-level `overallProgressPct`; both are updated independently via PATCH.
+- **Why task progress is stored as a single integer on the Task row:** This keeps task queries simple (no aggregation) and matches the source data model - in this EPC context, progress is self-reported by the task owner at a single granularity. The trade-off is that there is no server-enforced rollup from child tasks or discipline-level progress to the parent task or project-level `overallProgressPct`; both are updated independently via PATCH.
 
 - **Why the EPC revision loop creates a new DRAFT rather than mutating the existing LOCKED document:** LOCKED status is the system's contract that a document version is final and tamper-proof. Mutating a LOCKED EDV would invalidate any submittal snapshots that reference it by ID. Creating a new DRAFT revision preserves the LOCKED version as an immutable historical record while giving the designer a clean working copy, and the `RevisionOrchestratorService` explicitly rejects any trigger if no LOCKED source exists.
 
@@ -398,24 +398,24 @@ The EPC workflow uses a five-layer permission model evaluated in `permission-con
 
 ### 8.1 Missing controller endpoints (service built, not yet exposed)
 
-- **`ProjectChangeRequestService`** — registered as a provider in the module but has no controller. Change request creation, listing, updating, and approval are not reachable via HTTP.
-- **`ExternalReviewTriggerService`** — `processExternalReviewTrigger` is exposed via `EngineeringBatchController`, but no GET list endpoint exists for querying pending triggers per project.
-- **`ReviewContextSnapshotService`** — snapshot is created internally during `SubmitPackageForReview`; no read endpoint exists to fetch a session's snapshot payload for display.
-- **`DependencyGraphService`** — a service for computing the design package dependency graph is registered but has no dedicated GET endpoint.
-- **`StateProjectionService`** — internal recomputation; no endpoint to force a projection recalculation outside of a workflow mutation.
+- **`ProjectChangeRequestService`** - registered as a provider in the module but has no controller. Change request creation, listing, updating, and approval are not reachable via HTTP.
+- **`ExternalReviewTriggerService`** - `processExternalReviewTrigger` is exposed via `EngineeringBatchController`, but no GET list endpoint exists for querying pending triggers per project.
+- **`ReviewContextSnapshotService`** - snapshot is created internally during `SubmitPackageForReview`; no read endpoint exists to fetch a session's snapshot payload for display.
+- **`DependencyGraphService`** - a service for computing the design package dependency graph is registered but has no dedicated GET endpoint.
+- **`StateProjectionService`** - internal recomputation; no endpoint to force a projection recalculation outside of a workflow mutation.
 
 ### 8.2 Schema-only models (no service or API)
 
-- **`Deliverable`** — model is fully defined in schema with status (PLANNED / IN_PROGRESS / SUBMITTED / APPROVED / WAIVED) and FK links to discipline, package, and engineering document, but no `DeliverableService` or controller is registered in the module.
-- **`TaskDisciplineReview`** — per-tier review records are defined in schema and the `TaskDisciplineReviewStatus` enum (PENDING / IN_REVIEW / APPROVED / RETURNED) is declared, but no service reads or writes to this table via the API.
+- **`Deliverable`** - model is fully defined in schema with status (PLANNED / IN_PROGRESS / SUBMITTED / APPROVED / WAIVED) and FK links to discipline, package, and engineering document, but no `DeliverableService` or controller is registered in the module.
+- **`TaskDisciplineReview`** - per-tier review records are defined in schema and the `TaskDisciplineReviewStatus` enum (PENDING / IN_REVIEW / APPROVED / RETURNED) is declared, but no service reads or writes to this table via the API.
 
 ### 8.3 Known gaps to address
 
 1. The `ProjectChangeRequest` entity has a complete schema and service but is not accessible via any HTTP endpoint.
-2. The `Deliverable` entity has a complete schema but no service or API — deliverable tracking is not functional.
+2. The `Deliverable` entity has a complete schema but no service or API - deliverable tracking is not functional.
 3. Submittal status has two independent write paths (addReview and updateSubmittal PATCH), which could cause conflicting status values with no state machine guard.
 4. DailyLog status progression (DRAFT → SUBMITTED → APPROVED) has no dedicated transition endpoint; status changes piggyback on the general PATCH update.
-5. The root `Closeout` record cannot be deleted — only warranties can be removed individually.
+5. The root `Closeout` record cannot be deleted - only warranties can be removed individually.
 6. No GET endpoint for listing a project's active `ExternalReviewTrigger` records; operators cannot query the trigger queue without direct database access.
 7. No GET endpoint for listing `ReviewSession` records at the project or discipline level directly; sessions are accessible only through design package detail responses.
 8. The `TaskDisciplineReview` per-tier tracking table is never written to by any current service, meaning tier-level review history is tracked only in `WorkflowEventLog` rather than in the dedicated structured table.
@@ -432,7 +432,7 @@ The EPC workflow uses a five-layer permission model evaluated in `permission-con
 5. Add a GET endpoint to list `ReviewSession` records at the discipline level.
 
 ### Short term (next sprint)
-1. Write to `TaskDisciplineReview` from the review workflow — populate PENDING → IN_REVIEW → APPROVED / RETURNED per tier as sessions advance.
+1. Write to `TaskDisciplineReview` from the review workflow - populate PENDING → IN_REVIEW → APPROVED / RETURNED per tier as sessions advance.
 2. Add a dedicated daily log status transition endpoint (or ensure the PATCH DTO enforces valid status progression).
 3. Add a DELETE endpoint for the root `Closeout` record.
 4. Implement a read endpoint for `ReviewContextSnapshot` per session.
@@ -443,16 +443,16 @@ The EPC workflow uses a five-layer permission model evaluated in `permission-con
 
 ### Planned (later phase)
 1. Subcontractor management module (subcontract register, payment schedules, performance tracking).
-2. Client portal — scoped read-only access for external client users to view project dashboards, RFIs, and submittal status.
-3. Budgeting and cost control module — link cost centres to tasks and submittals; track actual vs. planned spend.
-4. Advanced reporting — scheduled PDF/Excel exports from `ReportDefinition` + `ReportSchedule`; populated dashboard widgets per role.
+2. Client portal - scoped read-only access for external client users to view project dashboards, RFIs, and submittal status.
+3. Budgeting and cost control module - link cost centres to tasks and submittals; track actual vs. planned spend.
+4. Advanced reporting - scheduled PDF/Excel exports from `ReportDefinition` + `ReportSchedule`; populated dashboard widgets per role.
 5. Full mobile/PWA support for site engineers to submit daily logs and punch items from the field.
 
 ---
 
-## 10. Appendix — Full API Surface
+## 10. Appendix - Full API Surface
 
-### Projects — `projects.controller.ts`
+### Projects - `projects.controller.ts`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
 | GET | /projects | projects.view | List projects |
@@ -464,7 +464,7 @@ The EPC workflow uses a five-layer permission model evaluated in `permission-con
 | PATCH | /projects/:id | projects.edit | Update project |
 | DELETE | /projects/:id | projects.delete | Soft-delete project |
 
-### Schedule — `schedule.controller.ts`
+### Schedule - `schedule.controller.ts`
 Base: `/projects/:projectId/schedule`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -487,7 +487,7 @@ Base: `/projects/:projectId/schedule`
 | PATCH | /task-dependencies/:id | schedule.edit | Update task dependency |
 | DELETE | /task-dependencies/:id | schedule.delete | Delete task dependency |
 
-### RFIs — `rfis.controller.ts`
+### RFIs - `rfis.controller.ts`
 Base: `/projects/:projectId/rfis`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -499,7 +499,7 @@ Base: `/projects/:projectId/rfis`
 | GET | /:rfiId/responses | rfis.view | List RFI responses |
 | POST | /:rfiId/responses | rfis.create | Add RFI response |
 
-### Submittals — `submittals.controller.ts`
+### Submittals - `submittals.controller.ts`
 Base: `/projects/:projectId/submittals`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -518,7 +518,7 @@ Base: `/projects/:projectId/submittals`
 | PATCH | /:id | submittals.edit | Update submittal |
 | DELETE | /:id | submittals.delete | Delete submittal |
 
-### Drawings — `drawings.controller.ts`
+### Drawings - `drawings.controller.ts`
 Base: `/projects/:projectId/drawings`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -532,7 +532,7 @@ Base: `/projects/:projectId/drawings`
 | PATCH | /:id | drawings.edit | Update drawing |
 | DELETE | /:id | drawings.delete | Delete drawing |
 
-### Daily Logs — `daily-logs.controller.ts`
+### Daily Logs - `daily-logs.controller.ts`
 Base: `/projects/:projectId/daily-logs`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -550,7 +550,7 @@ Base: `/projects/:projectId/daily-logs`
 | PATCH | /:id | daily_logs.edit | Update daily log |
 | DELETE | /:id | daily_logs.delete | Delete daily log |
 
-### Meetings — `meetings.controller.ts`
+### Meetings - `meetings.controller.ts`
 Base: `/projects/:projectId/meetings`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -569,7 +569,7 @@ Base: `/projects/:projectId/meetings`
 | PATCH | /:id | meetings.edit | Update meeting |
 | DELETE | /:id | meetings.delete | Delete meeting |
 
-### Correspondence — `correspondence.controller.ts`
+### Correspondence - `correspondence.controller.ts`
 Base: `/projects/:projectId/correspondence`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -579,7 +579,7 @@ Base: `/projects/:projectId/correspondence`
 | PATCH | /:id | correspondence.edit | Update correspondence |
 | DELETE | /:id | correspondence.delete | Delete correspondence |
 
-### Risks — `risks.controller.ts`
+### Risks - `risks.controller.ts`
 Base: `/projects/:projectId/risks`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -589,7 +589,7 @@ Base: `/projects/:projectId/risks`
 | PATCH | /:id | risks.edit | Update risk |
 | DELETE | /:id | risks.delete | Delete risk |
 
-### Issues — `issues.controller.ts`
+### Issues - `issues.controller.ts`
 Base: `/projects/:projectId/issues`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -599,7 +599,7 @@ Base: `/projects/:projectId/issues`
 | PATCH | /:issueId | issues.edit | Update issue |
 | DELETE | /:issueId | issues.delete | Delete issue |
 
-### Punch Items — `punch-items.controller.ts`
+### Punch Items - `punch-items.controller.ts`
 Base: `/projects/:projectId/punch-items`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -609,7 +609,7 @@ Base: `/projects/:projectId/punch-items`
 | PATCH | /:id | punch_items.edit | Update punch item |
 | DELETE | /:id | punch_items.delete | Delete punch item |
 
-### Closeout — `closeout.controller.ts`
+### Closeout - `closeout.controller.ts`
 Base: `/projects/:projectId/closeout`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -621,7 +621,7 @@ Base: `/projects/:projectId/closeout`
 | PATCH | /warranties/:warrantyId | closeout.edit | Update warranty record |
 | DELETE | /warranties/:warrantyId | closeout.delete | Remove warranty record |
 
-### Engineering Documents — `engineering-documents.controller.ts`
+### Engineering Documents - `engineering-documents.controller.ts`
 Base: `/projects/:projectId/task-disciplines/:taskDisciplineId/engineering-documents`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -636,7 +636,7 @@ Base: `/projects/:projectId/task-disciplines/:taskDisciplineId/engineering-docum
 | POST | /:id/versions/:versionId/transition | schedule.approve | Transition EDV status via WorkflowKernel |
 | GET | /:id/versions/:versionId/events | schedule.view | List workflow events for EDV |
 
-### Design Packages — `design-packages.controller.ts`
+### Design Packages - `design-packages.controller.ts`
 Base: `/projects/:projectId/task-disciplines/:taskDisciplineId/design-packages`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -653,11 +653,11 @@ Base: `/projects/:projectId/task-disciplines/:taskDisciplineId/design-packages`
 | POST | /:packageId/lock-edvs | schedule.view | Lock all EDVs in package |
 | POST | /:packageId/batch-approve | schedule.approve | Batch approve EDVs in package |
 | POST | /:packageId/batch-return | schedule.approve | Batch return EDVs with comments |
-| POST | /:packageId/submit-for-review | schedule.create | Submit package — opens session + snapshot |
+| POST | /:packageId/submit-for-review | schedule.create | Submit package - opens session + snapshot |
 | POST | /:packageId/review-sessions/:reviewSessionId/approve | schedule.approve | Approve review session at current tier |
 | POST | /:packageId/return-for-rework | schedule.approve | Return package for rework |
 
-### Review Comments — `review-comments.controller.ts`
+### Review Comments - `review-comments.controller.ts`
 Base: `/review-comments`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -668,23 +668,23 @@ Base: `/review-comments`
 | POST | /:commentId/verify | schedule.approve | Verify RESOLVED comment |
 | DELETE | /:commentId | schedule.view | Remove own OPEN comment |
 
-### Review Batch — `review-batch.controller.ts`
+### Review Batch - `review-batch.controller.ts`
 Base: `/review`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
 | POST | /batch-approve | schedule.approve | Batch approve EDVs in a design package |
 | POST | /batch-return | schedule.approve | Batch return EDVs with comment template |
 
-### Engineering Batch — `engineering-batch.controller.ts`
+### Engineering Batch - `engineering-batch.controller.ts`
 Base: `/projects/:projectId`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
 | POST | /engineering-documents/batch-lock | schedule.approve | Lock all EDVs across multiple packages |
 | GET | /engineering-documents/:id/decision-trace | schedule.view | Decision trace lineage for a document |
-| POST | /engineering-documents/:id/trigger-revision | schedule.edit | Trigger external revision — new DRAFT from LOCKED |
+| POST | /engineering-documents/:id/trigger-revision | schedule.edit | Trigger external revision - new DRAFT from LOCKED |
 | POST | /revision-triggers/:triggerId/process | schedule.edit | Process PENDING external review trigger |
 
-### EPC Workspace — `epc-workspace.controller.ts`
+### EPC Workspace - `epc-workspace.controller.ts`
 Base: root (no prefix)
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|
@@ -697,7 +697,7 @@ Base: root (no prefix)
 | GET | /design-packages/:designPackageId/review-mode | schedule.view | Review mode payload for a package |
 | GET | /engineering-documents/:engineeringDocumentId/version-history | schedule.view | EDV version history with workflow events |
 
-### Workflow Events — `workflow-events.controller.ts`
+### Workflow Events - `workflow-events.controller.ts`
 Base: `/workflow-events`
 | Method | Route | Permission required | Description |
 |--------|-------|-------------------|-------------|

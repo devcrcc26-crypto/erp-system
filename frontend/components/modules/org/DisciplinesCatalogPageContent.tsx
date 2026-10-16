@@ -190,7 +190,7 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
               </p>
             ) : null}
             <p className="erp-users-cell-sub m-0 mt-0.5 md:hidden">
-              {row.leader ? formatUserName(row.leader) : '—'}
+              {row.leader ? formatUserName(row.leader) : '-'}
             </p>
           </div>
         ),
@@ -201,7 +201,7 @@ export default function DisciplinesCatalogPageContent(): React.ReactNode {
         responsive: ['md'],
         render: (_value, record) => (
           <span className="erp-users-cell-sub">
-            {record.leader ? formatUserName(record.leader) : '—'}
+            {record.leader ? formatUserName(record.leader) : '-'}
           </span>
         ),
       },

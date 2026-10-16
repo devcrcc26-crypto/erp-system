@@ -52,8 +52,30 @@ export interface Position {
   updatedAt: string;
 }
 
+export interface SeniorityLevel {
+  id: string;
+  companyId: string;
+  name: string;
+  nameZh: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** Employees on this level (excluding deleted accounts). */
+  _count?: { users: number };
+}
+
+export interface SeniorityLevelInput {
+  name?: string;
+  nameZh?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
 export const orgKeys = {
   all: ['org'] as const,
+  seniorityLevels: (isActive?: boolean) =>
+    ['org', 'seniority-levels', isActive ?? 'all'] as const,
   departments: (params: PaginationParams & { isActive?: boolean }) =>
     [...orgKeys.all, 'departments', params] as const,
   department: (id: string) => [...orgKeys.all, 'department', id] as const,
@@ -307,6 +329,57 @@ export function useDeletePosition() {
   return useMutation({
     mutationFn: (id: string) =>
       apiDelete<{ message: string }>(`/positions/${id}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
+    },
+  });
+}
+
+/** Whole seniority catalogue in display order (short list, not paginated). */
+export function useSeniorityLevels(
+  params: { isActive?: boolean } = {},
+  enabled = true,
+) {
+  const search = new URLSearchParams();
+  if (params.isActive !== undefined) {
+    search.set('isActive', String(params.isActive));
+  }
+  const query = search.toString();
+  return useQuery({
+    queryKey: orgKeys.seniorityLevels(params.isActive),
+    queryFn: () =>
+      apiGet<SeniorityLevel[]>(`/seniority-levels${query ? `?${query}` : ''}`),
+    enabled,
+  });
+}
+
+export function useCreateSeniorityLevel() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SeniorityLevelInput & { name: string }) =>
+      apiPost<SeniorityLevel>('/seniority-levels', body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
+    },
+  });
+}
+
+export function useUpdateSeniorityLevel() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: SeniorityLevelInput }) =>
+      apiPatch<SeniorityLevel>(`/seniority-levels/${id}`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgKeys.all });
+    },
+  });
+}
+
+export function useDeleteSeniorityLevel() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiDelete<{ message: string }>(`/seniority-levels/${id}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orgKeys.all });
     },

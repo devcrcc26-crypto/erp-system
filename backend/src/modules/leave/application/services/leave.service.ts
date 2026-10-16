@@ -108,8 +108,8 @@ const LEAVE_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Leave request lifecycle — owns leave data; delegates tier workflow to ApprovalsService.
- * Leave day counts come from WorkScheduleService — the canonical source of
+ * Leave request lifecycle - owns leave data; delegates tier workflow to ApprovalsService.
+ * Leave day counts come from WorkScheduleService - the canonical source of
  * working days, half days, weekends, and public holidays. Do not hardcode
  * those rules in this service.
  */
@@ -262,7 +262,7 @@ export class LeaveService
       ['SITE_ASSIGNMENT', 'WORK_FROM_HOME', 'FIELD_MOVEMENT'],
     );
 
-    // Step 1 — resolve chain for the leave owner (not necessarily the actor)
+    // Step 1 - resolve chain for the leave owner (not necessarily the actor)
     // Leave: Discipline Lead → HR Officer (no General Manager tier)
     const resolvedTiers = await this.hrApprovalChain.buildOrgApprovalChain(
       employeeId,
@@ -270,7 +270,7 @@ export class LeaveService
       false,
     );
 
-    // Step 2 — initialize balance for each leave year touched (outside transaction)
+    // Step 2 - initialize balance for each leave year touched (outside transaction)
     for (const charge of yearCharges) {
       await this.leaveBalanceService.ensureBalance(
         employeeId,
@@ -279,7 +279,7 @@ export class LeaveService
       );
     }
 
-    // Step 3 — check balance per leave year (outside transaction)
+    // Step 3 - check balance per leave year (outside transaction)
     await this.leaveBalanceService.assertSufficientBalanceForCharges(
       employeeId,
       companyId,
@@ -287,11 +287,11 @@ export class LeaveService
       yearCharges,
     );
 
-    const title = `${this.formatLeaveType(dto.leaveType)} leave — ${formatDateOnly(startDate)} to ${formatDateOnly(endDate)}`;
+    const title = `${this.formatLeaveType(dto.leaveType)} leave - ${formatDateOnly(startDate)} to ${formatDateOnly(endDate)}`;
     const now = new Date();
     const leaveId = randomUUID();
 
-    // HR+ / Discipline Lead with no remaining tiers — auto-approve (no self-approval).
+    // HR+ / Discipline Lead with no remaining tiers - auto-approve (no self-approval).
     if (resolvedTiers.length === 0) {
       const requestNumber = await this.nextLeaveRequestNumber();
       await this.prisma.leaveRequest.create({
@@ -352,7 +352,7 @@ export class LeaveService
       return this.fetchLeaveDetail(leaveId, companyId);
     }
 
-    // Step 4 — approval write only (requestedBy = leave owner / chain subject)
+    // Step 4 - approval write only (requestedBy = leave owner / chain subject)
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: 'LEAVE_REQUEST',
@@ -469,7 +469,7 @@ export class LeaveService
 
   /**
    * Cancels a DRAFT, SUBMITTED, or IN_REVIEW leave request (owner or HR), or
-   * an APPROVED one (HR only — reverses its USED ledger entry and recalculates
+   * an APPROVED one (HR only - reverses its USED ledger entry and recalculates
    * attendance).
    */
   async cancelRequest(

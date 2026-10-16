@@ -57,7 +57,7 @@ export default function DisciplineRolesModal({
       open={open}
       title={
         discipline
-          ? `Edit roles — ${formatDisciplineLabel(discipline.disciplineIndex)}`
+          ? `Edit roles - ${formatDisciplineLabel(discipline.disciplineIndex)}`
           : 'Edit discipline roles'
       }
       centered

@@ -58,7 +58,7 @@ async function main(): Promise<void> {
           companyId: company.id,
           name: 'Driver',
           description:
-            'Company vehicle drivers — refueling and fleet self-service',
+            'Company vehicle drivers, refueling and fleet self-service',
           isSystemRole: false,
           isActive: true,
           createdBy: SYSTEM_USER_ID,
@@ -166,7 +166,7 @@ async function main(): Promise<void> {
       'Employee newly granted create on:',
       grantedToEmployee.length > 0
         ? grantedToEmployee.sort().join(', ')
-        : '(none — already had create on all non-refueling modules)',
+        : '(none, already had create on all non-refueling modules)',
     );
   } finally {
     await prisma.$disconnect();

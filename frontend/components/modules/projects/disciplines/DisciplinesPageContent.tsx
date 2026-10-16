@@ -138,7 +138,7 @@ export default function DisciplinesPageContent({
             disciplineCatalogIdByTaskDisciplineId.get(entry.taskDisciplineId) ??
             null,
           taskId,
-          taskName: taskNameById.get(taskId) ?? '—',
+          taskName: taskNameById.get(taskId) ?? '-',
           taskDisciplineId: entry.taskDisciplineId,
           projectId,
           projectName,
@@ -262,7 +262,7 @@ export default function DisciplinesPageContent({
       title: 'Due date',
       key: 'dueDate',
       width: 110,
-      render: (_value, record) => record.dueDate ?? '—',
+      render: (_value, record) => record.dueDate ?? '-',
     },
     {
       title: 'EPC Workspace',

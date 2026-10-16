@@ -434,7 +434,7 @@ export default function ImportModal({
                       ellipsis: true,
                       render: (_: unknown, row: PreviewRow) => (
                         <span className="erp-users-cell-sub">
-                          {row.cells[column.field] || '—'}
+                          {row.cells[column.field] || '-'}
                         </span>
                       ),
                     })),
@@ -455,7 +455,7 @@ export default function ImportModal({
                       key: 'message',
                       render: (value: string | undefined) => (
                         <span className="erp-users-cell-sub">
-                          {value || '—'}
+                          {value || '-'}
                         </span>
                       ),
                     },

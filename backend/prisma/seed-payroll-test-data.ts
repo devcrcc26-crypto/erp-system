@@ -117,7 +117,7 @@ function salaryBandForTitle(title: string): {
 async function main(): Promise<void> {
   const { host, database } = assertPayrollSeedGuards();
   console.log(`[seed] Target database: ${host}/${database}`);
-  console.log('[seed] SEED_MODE=true — notifications and emails suppressed');
+  console.log('[seed] SEED_MODE=true - notifications and emails suppressed');
 
   const counts: Counts = {};
   const catalog: TestCatalog = {};
@@ -196,7 +196,7 @@ async function main(): Promise<void> {
       select: { id: true, firstName: true, lastName: true },
     });
     if (!admin) {
-      throw new Error('Admin user not found — run prisma db seed first');
+      throw new Error('Admin user not found - run prisma db seed first');
     }
     const actorId = admin.id;
 
@@ -487,16 +487,16 @@ async function main(): Promise<void> {
     bump(counts, 'leavePolicyRule', 3);
 
     policyNotes.push(
-      'PATERNITY (3 days): no LeaveType policy rule bucket — requests use ANNUAL balance mapping only',
+      'PATERNITY (3 days): no LeaveType policy rule bucket - requests use ANNUAL balance mapping only',
     );
     policyNotes.push(
-      'MARRIAGE (3 days): LeaveType not in schema — cannot configure',
+      'MARRIAGE (3 days): LeaveType not in schema - cannot configure',
     );
     policyNotes.push(
       'BEREAVEMENT (3 days): use COMPASSIONATE leave type; no dedicated balance row (deducts ANNUAL)',
     );
     policyNotes.push(
-      'HALF-DAY leave: seed uses full-day stand-ins on halfDayLeave employee (Aug 20 + Sep 6) — enable MORNING/AFTERNOON in seed when needed',
+      'HALF-DAY leave: seed uses full-day stand-ins on halfDayLeave employee (Aug 20 + Sep 6) - enable MORNING/AFTERNOON in seed when needed',
     );
     policyNotes.push(
       'MATERNITY long leave: skipped for catalog.maternityLeave when entitled balance < requested days (check policy/service-month rules)',
@@ -510,7 +510,7 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     if (!defaultSchedule) {
-      throw new Error('Default work schedule not found — seed work schedules first');
+      throw new Error('Default work schedule not found - seed work schedules first');
     }
 
     let policyAssigns = 0;
@@ -709,7 +709,7 @@ async function main(): Promise<void> {
     });
 
     await wfhService.create(
-      { date: '2026-08-14', reason: 'Company-wide WFH — seed', scope: WorkFromHomeScope.ALL },
+      { date: '2026-08-14', reason: 'Company-wide WFH - seed', scope: WorkFromHomeScope.ALL },
       companyId,
       actorId,
     );
@@ -719,7 +719,7 @@ async function main(): Promise<void> {
       await wfhService.create(
         {
           date: '2026-09-04',
-          reason: 'Department WFH — seed',
+          reason: 'Department WFH - seed',
           scope: WorkFromHomeScope.DEPARTMENTS,
           departmentIds: [wfhDept],
         },
@@ -729,7 +729,7 @@ async function main(): Promise<void> {
       bump(counts, 'workFromHomeDay');
     }
     await wfhService.create(
-      { date: '2026-10-02', reason: 'Company-wide WFH — seed', scope: WorkFromHomeScope.ALL },
+      { date: '2026-10-02', reason: 'Company-wide WFH - seed', scope: WorkFromHomeScope.ALL },
       companyId,
       actorId,
     );
@@ -782,7 +782,7 @@ async function main(): Promise<void> {
             Number(end.slice(5, 7)),
             Number(end.slice(8, 10)),
           ),
-          reason: 'Payroll test seed (direct approved — pre-window start)',
+          reason: 'Payroll test seed (direct approved - pre-window start)',
           status: SiteAssignmentStatus.APPROVED,
           submittedAt: new Date(),
           completedAt: new Date(),
@@ -882,7 +882,7 @@ async function main(): Promise<void> {
       cancelledSite.id,
       companyId,
       actorId,
-      'Seed — cancel after approval test case',
+      'Seed - cancel after approval test case',
     );
     bump(counts, 'siteAssignment', 2);
 

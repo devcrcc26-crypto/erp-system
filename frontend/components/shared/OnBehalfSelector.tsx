@@ -203,7 +203,7 @@ export default function OnBehalfSelector({
                         <div className="truncate text-xs opacity-60">
                           {[employee.employeeId, employee.department]
                             .filter(Boolean)
-                            .join(' · ') || '—'}
+                            .join(' · ') || '-'}
                         </div>
                       </div>
                     </div>

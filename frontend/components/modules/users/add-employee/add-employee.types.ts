@@ -7,8 +7,10 @@ export interface AddEmployeeFormValues extends EmployeeProfileFormValues {
   chineseName?: string;
   email?: string;
   phone?: string;
+  secondaryPhone?: string;
   departmentId?: string;
   positionId?: string;
+  seniorityLevelId?: string;
   reportsToUserId?: string;
   /** @deprecated Prefer roleAssignments. */
   roleId?: string;
@@ -19,11 +21,12 @@ export interface AddEmployeeFormValues extends EmployeeProfileFormValues {
   }>;
   engineeringDisciplineId?: string;
   isActive: boolean;
-  /** Approver only — edit mode, users.edit only. */
+  /** OA login name (exact sign-in name). */
+  loginName?: string;
+  /** Approver only - users.edit only (add and edit). */
   excludedFromHrProcesses?: boolean;
   excludedReason?: string;
   dateOfBirth?: Dayjs;
-  experienceStartDate?: Dayjs;
 }
 
 export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
@@ -35,6 +38,10 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
     'gender',
     'email',
     'phone',
+    'secondaryPhone',
+    'loginName',
+    'excludedFromHrProcesses',
+    'excludedReason',
     'roleAssignments',
   ],
   [
@@ -55,6 +62,7 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
     'employmentDate',
     'departmentId',
     'positionId',
+    'seniorityLevelId',
     'reportsToUserId',
     'engineeringDisciplineId',
     'bankName',
@@ -62,7 +70,7 @@ export const ADD_EMPLOYEE_STEP_FIELDS: (keyof AddEmployeeFormValues)[][] = [
     'bankAccountNumber',
     'tin',
   ],
-  ['educationLevel', 'fieldOfStudy', 'experienceStartDate'],
+  ['educationLevel', 'fieldOfStudy', 'yearsOfExperience'],
   ['leavePolicyId', 'workScheduleId'],
   [],
 ];

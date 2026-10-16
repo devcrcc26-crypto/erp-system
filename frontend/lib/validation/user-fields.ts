@@ -1,6 +1,6 @@
 /**
  * Employee field rules + Ant Design Form helpers.
- * Mirrored from backend user-field.rules.ts — change both together.
+ * Mirrored from backend user-field.rules.ts - change both together.
  */
 
 import type { Rule } from 'antd/es/form';
@@ -238,7 +238,8 @@ export function disableExperienceDates(
   };
 }
 
-export function experienceStartDateRules(t: Translate): Rule[] {
+/** Employment date: not in the future and not before the date of birth. */
+export function employmentDateRules(t: Translate): Rule[] {
   return [
     {
       validator: async (_rule, value: unknown) => {
@@ -267,7 +268,3 @@ export function experienceStartDateRules(t: Translate): Rule[] {
   ];
 }
 
-/** Same date rules as experience since (not future, not before DOB). */
-export function employmentDateRules(t: Translate): Rule[] {
-  return experienceStartDateRules(t);
-}

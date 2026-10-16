@@ -9,7 +9,7 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     if (!company) {
-      throw new Error('No company found — run full seed first');
+      throw new Error('No company found - run full seed first');
     }
     const actor = '00000000-0000-4000-8000-000000000001';
     await seedOrgStructure(prisma, {

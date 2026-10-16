@@ -540,14 +540,14 @@ export interface SubmittalItem {
   snapshotPayload: SubmittalEdvSnapshotRow[];
   contentHash: string | null;
   capturedAt: string | null;
-  /** External party — site representative fields */
+  /** External party - site representative fields */
   siteRepType?: string | null;
   siteRepName?: string | null;
   siteRepEmail?: string | null;
   siteRepPhone?: string | null;
   siteRepCompany?: string | null;
   siteRepresentativeUserId?: string | null;
-  /** External party — consultant fields */
+  /** External party - consultant fields */
   consultantName?: string | null;
   consultantTitle?: string | null;
   consultantEmail?: string | null;

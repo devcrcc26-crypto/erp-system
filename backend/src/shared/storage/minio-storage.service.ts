@@ -31,7 +31,7 @@ export class MinioStorageService implements IStorageService, OnModuleInit {
    */
   async onModuleInit(): Promise<void> {
     try {
-      // Use MINIO_ENDPOINT directly as the full URL — it already includes
+      // Use MINIO_ENDPOINT directly as the full URL - it already includes
       // the protocol and path (https://[ref].supabase.co/storage/v1/s3)
       const endpoint = this.configService.get<string>('MINIO_ENDPOINT', '');
 
@@ -52,7 +52,7 @@ export class MinioStorageService implements IStorageService, OnModuleInit {
         this.bucketsInitialized.add(bucket);
       }
 
-      this.logger.log(`S3 storage ready — endpoint: ${endpoint}`);
+      this.logger.log(`S3 storage ready - endpoint: ${endpoint}`);
     } catch (error: unknown) {
       this.logger.warn(
         'S3 storage unavailable - document upload/download disabled until storage is running',

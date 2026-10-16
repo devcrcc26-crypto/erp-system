@@ -178,7 +178,7 @@ export class PayrollCalculationService {
       normalOtPay + eveningOtPay + sundayOtPay + holidayOtPay,
     );
 
-    // Transport and (taxable) bonus are paid in full — not prorated by paid days.
+    // Transport and (taxable) bonus are paid in full - not prorated by paid days.
     // Default (CCECC): transport is fully non-taxable; transportTaxable makes it fully taxable.
     const taxableTransport = policy.transportTaxable ? this.round(transportAllowance) : 0;
     const nonTaxableTransport = policy.transportTaxable ? 0 : this.round(transportAllowance);

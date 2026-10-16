@@ -1513,7 +1513,7 @@ export class ReviewWorkflowService {
   ): Promise<void> {
     if (!input.taskDisciplineId) {
       this.logger.warn(
-        'Skipping TaskDisciplineReview write — taskDisciplineId unavailable',
+        'Skipping TaskDisciplineReview write - taskDisciplineId unavailable',
       );
       return;
     }
@@ -1666,7 +1666,7 @@ export class ReviewWorkflowService {
         supportingDesignerUserId?: string | null;
       };
     }) | null,
-    // Only passed by approveReviewSession — enables the DEPT_CHIEF to approve
+    // Only passed by approveReviewSession - enables the DEPT_CHIEF to approve
     // the INSTITUTE_CHIEF tier on behalf of an external Institute Chief with
     // no system account. Omitted entirely elsewhere (e.g. returnPackageForRework)
     // so this bypass never applies to other actions.
@@ -2025,7 +2025,7 @@ export class ReviewWorkflowService {
   /**
    * Resolves whether the actor should apply designer or reviewer comment transitions.
    * Assignee stays the designer (directed-to); authors/governance tiers verify as reviewers
-   * via createdBy / approval-chain match — not via assignee flip.
+   * via createdBy / approval-chain match - not via assignee flip.
    */
   private resolveCommentActor(
     userId: string,

@@ -154,7 +154,7 @@ export interface DesignPackage {
   disciplinaryLeaderUserId: string | null;
   deptDeputyChiefUserId: string | null;
   instituteChiefUserId: string | null;
-  /** External Institute Chief name — set instead of instituteChiefUserId when they have no system account. Only one of the two is ever populated. */
+  /** External Institute Chief name - set instead of instituteChiefUserId when they have no system account. Only one of the two is ever populated. */
   instituteChiefName: string | null;
   disciplineOwnerUserId: string | null;
   supportingDesignerUserId: string | null;
@@ -381,7 +381,7 @@ export interface ReviewModeComment {
   verifiedAt?: string | null;
   commentedOn?: CommentEdvSnapshot;
   responseRevision?: CommentEdvSnapshot | null;
-  /** Primary markup file (commentDocumentVersion FK) — backward compat. */
+  /** Primary markup file (commentDocumentVersion FK) - backward compat. */
   attachment?: ReviewCommentAttachment | null;
   /** Response file attached when the comment was resolved (responseDocumentVersion FK). */
   responseAttachment?: ReviewCommentAttachment | null;

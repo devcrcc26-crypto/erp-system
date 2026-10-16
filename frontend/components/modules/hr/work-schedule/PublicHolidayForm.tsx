@@ -103,7 +103,7 @@ function ReviewItem({
 }
 
 /**
- * Create / edit public holiday — StepperForm (details → options → review).
+ * Create / edit public holiday - StepperForm (details → options → review).
  */
 export default function PublicHolidayForm({
   holiday,
@@ -299,18 +299,18 @@ export default function PublicHolidayForm({
             <div className="erp-ph-review-grid">
               <ReviewItem
                 label={t('hr.publicHoliday.name')}
-                value={review.name?.trim() || '—'}
+                value={review.name?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.publicHoliday.nameZh')}
-                value={review.nameZh?.trim() || '—'}
+                value={review.nameZh?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.publicHoliday.date')}
                 value={
                   review.date
                     ? formatProjectDate(review.date.format('YYYY-MM-DD'))
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -333,7 +333,7 @@ export default function PublicHolidayForm({
               />
               <ReviewItem
                 label={t('hr.publicHoliday.notes')}
-                value={review.notes?.trim() || '—'}
+                value={review.notes?.trim() || '-'}
                 wide
               />
             </div>

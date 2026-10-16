@@ -87,7 +87,7 @@ function ensureSpace(doc: jsPDF, y: number, needed: number): number {
 
 function dash(value: string | null | undefined): string {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : '—';
+  return trimmed ? trimmed : '-';
 }
 
 /**
@@ -102,8 +102,8 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
   const projectLabel = request.project
     ? [request.project.projectCode, request.project.name]
         .filter(Boolean)
-        .join(' — ')
-    : '—';
+        .join(' - ')
+    : '-';
 
   let y = PAGE_MARGIN;
 
@@ -154,14 +154,14 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
         labels.requiredByDate,
         request.requiredByDate
           ? formatProjectDate(request.requiredByDate)
-          : '—',
+          : '-',
       ],
       [labels.project, projectLabel],
       [labels.itemCount, String(request.itemCount ?? request.items.length)],
       [labels.estimatedTotal, formatEtbAmount(request.totalEstimatedEtb)],
       [
         labels.submittedAt,
-        request.submittedAt ? formatProjectDate(request.submittedAt) : '—',
+        request.submittedAt ? formatProjectDate(request.submittedAt) : '-',
       ],
       [labels.createdAt, formatProjectDate(request.createdAt)],
     ],
@@ -184,7 +184,7 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
           formatCurrencyAmount(item.totalPrice, item.currency),
           formatEtbAmount(item.totalPriceEtb),
         ])
-      : [['—', labels.none, '—', '—', '—', '—', '—', '—']];
+      : [['-', labels.none, '-', '-', '-', '-', '-', '-']];
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
@@ -230,7 +230,7 @@ export function exportPurchaseRequestPdf(input: PurchaseRequestPdfInput): void {
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(
-      `${labels.footer} — ${labels.title} — ${labels.page} ${page} ${labels.of} ${pageCount}`,
+      `${labels.footer} - ${labels.title} - ${labels.page} ${page} ${labels.of} ${pageCount}`,
       PAGE_MARGIN,
       doc.internal.pageSize.getHeight() - 8,
     );

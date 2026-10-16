@@ -180,7 +180,7 @@ function DailyLogsTable({
       width: 140,
       ellipsis: true,
       render: (_: unknown, row: AttendanceDailyLog) =>
-        row.holidayName ?? '—',
+        row.holidayName ?? '-',
     },
     {
       title: t('pages.hr.attendance.daily.clockIn'),
@@ -192,7 +192,7 @@ function DailyLogsTable({
             row.isLate ? { color: '#BA7517', fontWeight: 600 } : undefined
           }
         >
-          {row.clockInLocal ?? '—'}
+          {row.clockInLocal ?? '-'}
         </span>
       ),
     },
@@ -208,7 +208,7 @@ function DailyLogsTable({
               : undefined
           }
         >
-          {row.clockOutLocal ?? (row.missingClockOut ? '—' : '—')}
+          {row.clockOutLocal ?? (row.missingClockOut ? '-' : '-')}
         </span>
       ),
     },
@@ -218,7 +218,7 @@ function DailyLogsTable({
       width: 80,
       align: 'right',
       render: (_: unknown, row: AttendanceDailyLog) =>
-        row.recordedHours == null ? '—' : formatNumber(row.recordedHours),
+        row.recordedHours == null ? '-' : formatNumber(row.recordedHours),
     },
     {
       title: t('pages.hr.attendance.daily.late'),

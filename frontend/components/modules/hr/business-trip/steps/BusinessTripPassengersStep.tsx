@@ -11,7 +11,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { BusinessTripPassengerValues } from './business-trip-stepper.types';
 
 /**
- * Step 3 — passengers (always international document fields).
+ * Step 3 - passengers (always international document fields).
  */
 export default function BusinessTripPassengersStep({
   values,
@@ -37,7 +37,7 @@ export default function BusinessTripPassengersStep({
 
   const options = selectablePassengers.map((p) => ({
     value: p.id,
-    label: p.name + (p.position ? ` — ${p.position}` : ''),
+    label: p.name + (p.position ? ` - ${p.position}` : ''),
   }));
 
   function handleSelect(employeeIds: string[]): void {

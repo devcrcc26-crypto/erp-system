@@ -92,7 +92,7 @@ export interface ScheduleSubtaskEntry {
 
 /**
  * Loads design packages for all project disciplines and groups them by parent task.
- * Secondary fetch — does not block the task list from rendering.
+ * Secondary fetch - does not block the task list from rendering.
  */
 export function useScheduleSubtasks(projectId: string, enabled = true): {
   byTaskId: Map<string, ScheduleSubtaskEntry[]>;

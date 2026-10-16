@@ -23,7 +23,7 @@ export class EmployeeContractCronService {
   ) {}
 
   /**
-   * Runs every day at 08:00 — notifies HR Officers about contracts expiring soon.
+   * Runs every day at 08:00 - notifies HR Officers about contracts expiring soon.
    */
   @Cron('0 8 * * *')
   async checkExpiringContracts(): Promise<void> {
@@ -75,7 +75,7 @@ export class EmployeeContractCronService {
 
       const employeeName = `${contract.employee.firstName} ${contract.employee.lastName}`;
       const endDateLabel = this.formatDateOnly(contract.endDate);
-      const subject = `Contract Expiry Warning — ${employeeName}`;
+      const subject = `Contract Expiry Warning - ${employeeName}`;
       const body = `${employeeName}'s contract (${contract.contractNumber}) expires in ${daysRemaining} days on ${endDateLabel}. Please review and take action.`;
 
       const hrOfficer = await this.prisma.user.findFirst({
@@ -96,7 +96,7 @@ export class EmployeeContractCronService {
 
       if (!hrOfficer) {
         this.logger.warn(
-          `No HR Officer found for company ${contract.employee.companyId} — skipping contract ${contract.contractNumber}`,
+          `No HR Officer found for company ${contract.employee.companyId} - skipping contract ${contract.contractNumber}`,
         );
         continue;
       }

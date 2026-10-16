@@ -55,7 +55,7 @@ function DetailSection({
 }
 
 /**
- * Per diem request detail — Users / employee profile chrome.
+ * Per diem request detail - Users / employee profile chrome.
  */
 export default function PerDiemRequestDetailPageContent({
   requestId,
@@ -312,10 +312,10 @@ export default function PerDiemRequestDetailPageContent({
                     : t('hr.form.tripTypeTravel')}
                 </MetaItem>
                 <MetaItem label={t('hr.form.departureTime')}>
-                  {request.departureTime ?? '—'}
+                  {request.departureTime ?? '-'}
                 </MetaItem>
                 <MetaItem label={t('hr.form.returnTime')}>
-                  {request.returnTime ?? '—'}
+                  {request.returnTime ?? '-'}
                 </MetaItem>
                 <MetaItem label={t('hr.labels.dailyRate')}>
                   {formatEtbAmount(request.dailyRate)}
@@ -324,11 +324,11 @@ export default function PerDiemRequestDetailPageContent({
                   {request.pvNumber ? (
                     <span className="erp-users-id-chip">{request.pvNumber}</span>
                   ) : (
-                    '—'
+                    '-'
                   )}
                 </MetaItem>
                 <MetaItem label={t('pages.hr.perDiem.pvDate')}>
-                  {request.pvDate ? formatProjectDate(request.pvDate) : '—'}
+                  {request.pvDate ? formatProjectDate(request.pvDate) : '-'}
                 </MetaItem>
                 <MetaItem label={t('pages.hr.perDiem.paid')}>
                   {request.paidAt ? (
@@ -338,14 +338,14 @@ export default function PerDiemRequestDetailPageContent({
                   ) : request.status === 'APPROVED' ? (
                     t('pages.hr.perDiem.unpaid')
                   ) : (
-                    '—'
+                    '-'
                   )}
                 </MetaItem>
                 {request.paidAt ? (
                   <MetaItem label={t('pages.hr.perDiem.paidBy')}>
                     {request.payer
                       ? formatPerDiemEmployeeName(request.payer)
-                      : '—'}
+                      : '-'}
                   </MetaItem>
                 ) : null}
                 {request.paymentReference ? (
@@ -369,7 +369,7 @@ export default function PerDiemRequestDetailPageContent({
                       })}
                     </button>
                   ) : (
-                    '—'
+                    '-'
                   )}
                 </MetaItem>
                 <MetaItem label={t('hr.table.employee')}>
@@ -387,7 +387,7 @@ export default function PerDiemRequestDetailPageContent({
                           )
                         }
                       >
-                        {request.siteAssignment.requestNumber} —{' '}
+                        {request.siteAssignment.requestNumber} -{' '}
                         {request.siteAssignment.siteName}
                       </button>
                     </MetaItem>

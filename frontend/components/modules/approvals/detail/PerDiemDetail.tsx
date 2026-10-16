@@ -13,7 +13,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 /**
  * Per diem request body for the Approvals detail inbox.
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function PerDiemDetail({
   sourceId,
@@ -77,11 +77,11 @@ export default function PerDiemDetail({
           <MetaItem label="Destination Category">
             {request.destinationCategory}
           </MetaItem>
-          <MetaItem label="Departure time">{request.departureTime ?? '—'}</MetaItem>
-          <MetaItem label="Return time">{request.returnTime ?? '—'}</MetaItem>
-          <MetaItem label="PV number">{request.pvNumber ?? '—'}</MetaItem>
+          <MetaItem label="Departure time">{request.departureTime ?? '-'}</MetaItem>
+          <MetaItem label="Return time">{request.returnTime ?? '-'}</MetaItem>
+          <MetaItem label="PV number">{request.pvNumber ?? '-'}</MetaItem>
           <MetaItem label="PV date">
-            {request.pvDate ? formatProjectDate(request.pvDate) : '—'}
+            {request.pvDate ? formatProjectDate(request.pvDate) : '-'}
           </MetaItem>
           <MetaItem label="Dates">
             {formatProjectDate(request.startDate)}  - {formatProjectDate(request.endDate)}

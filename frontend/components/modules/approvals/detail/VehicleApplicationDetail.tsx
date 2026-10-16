@@ -14,7 +14,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
  * Vehicle application body for the Approvals detail inbox (read-only).
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function VehicleApplicationDetail({
   sourceId,
@@ -98,7 +98,7 @@ export default function VehicleApplicationDetail({
           ) : null}
           {application.project ? (
             <MetaItem label={t('hr.labels.project')}>
-              {application.project.projectCode} — {application.project.name}
+              {application.project.projectCode} - {application.project.name}
             </MetaItem>
           ) : null}
           {application.notes ? (

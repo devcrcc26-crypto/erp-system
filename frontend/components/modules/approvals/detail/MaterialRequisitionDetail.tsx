@@ -69,14 +69,14 @@ export default function MaterialRequisitionDetail({
       dataIndex: 'itemCode',
       key: 'itemCode',
       width: 120,
-      render: (value: string | null | undefined) => value || '—',
+      render: (value: string | null | undefined) => value || '-',
     },
     {
       title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (value: string | null | undefined) => value || '—',
+      render: (value: string | null | undefined) => value || '-',
     },
     {
       title: t('hr.table.quantity'),
@@ -100,11 +100,11 @@ export default function MaterialRequisitionDetail({
             label: t('hr.table.requiredBy'),
             value: requisition.requiredByDate
               ? formatProjectDate(requisition.requiredByDate)
-              : '—',
+              : '-',
           },
           {
             label: t('hr.form.warehouseLocation'),
-            value: requisition.warehouseLocation ?? '—',
+            value: requisition.warehouseLocation ?? '-',
           },
         ]}
       />

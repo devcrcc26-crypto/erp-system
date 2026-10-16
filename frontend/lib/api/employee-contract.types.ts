@@ -68,7 +68,7 @@ export interface EmployeeContractDetail extends EmployeeContractListItem {
   } | null;
 }
 
-/** GET /hr/employee-contracts/my/active — pay fields are never returned. */
+/** GET /hr/employee-contracts/my/active - pay fields are never returned. */
 export interface MyActiveContract {
   id: string;
   contractNumber: string;

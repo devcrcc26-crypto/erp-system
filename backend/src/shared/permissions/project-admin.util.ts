@@ -1,6 +1,6 @@
 export const PROJECT_ADMINISTRATOR_ROLE = 'Project Administrator';
 
-/** Company Role.name for System Administrator — company-wide full access. */
+/** Company Role.name for System Administrator - company-wide full access. */
 export const SYSTEM_ADMINISTRATOR_ROLE = 'System Administrator';
 
 /**
@@ -30,7 +30,7 @@ export function hasFullProjectDataAccess(
 /**
  * Project Admin-class roles: all projects readable. Site Coordinator /
  * Document Controller included for company-wide project read scope after
- * ProjectTeam bypass removal — write for these two remains gated by creator
+ * ProjectTeam bypass removal - write for these two remains gated by creator
  * via isProjectAdminWritable. Project Administrator now has unrestricted
  * write via hasFullProjectDataAccess above.
  */

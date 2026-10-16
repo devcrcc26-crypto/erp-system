@@ -55,7 +55,7 @@ const INITIAL_ADDITIONAL: FlightAdditionalValues = {
 };
 
 /**
- * Multi-step flight application form — same StepperForm chrome as Add Employee.
+ * Multi-step flight application form - same StepperForm chrome as Add Employee.
  */
 export function FlightApplicationForm({
   onSuccess,

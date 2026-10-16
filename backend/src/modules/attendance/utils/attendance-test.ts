@@ -43,7 +43,7 @@ function printTable(results: AttendanceMatchResult[]): void {
 
   for (const row of results) {
     console.log(
-      `${pad(row.attendanceName, 28)} | ${pad(row.matchedEmployeeName ?? '—', 28)} | ${pad(row.matchedEmployeeErpId ?? '—', 14)} | ${pad(row.confidence, 12)} | ${String(row.data.dailyData.length).padStart(4)} | ${row.score ?? '—'}`,
+      `${pad(row.attendanceName, 28)} | ${pad(row.matchedEmployeeName ?? '-', 28)} | ${pad(row.matchedEmployeeErpId ?? '-', 14)} | ${pad(row.confidence, 12)} | ${String(row.data.dailyData.length).padStart(4)} | ${row.score ?? '-'}`,
     );
   }
 }

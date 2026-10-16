@@ -1,5 +1,5 @@
 /**
- * Project design properties — backend source of truth; keys must match Prisma enum.
+ * Project design properties - backend source of truth; keys must match Prisma enum.
  */
 export const PROJECT_DESIGN_PROPERTIES_VALUES = [
   'PRELIMINARY',

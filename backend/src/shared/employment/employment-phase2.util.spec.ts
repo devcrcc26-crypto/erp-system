@@ -73,7 +73,7 @@ describe('vacant approvers', () => {
     expect(isVacantApprover({ isActive: true, employmentStatus: 'SEPARATED', deletedAt: null })).toBe(true);
     expect(isVacantApprover({ isActive: false, employmentStatus: 'ACTIVE', deletedAt: null })).toBe(true);
     expect(isVacantApprover({ isActive: true, employmentStatus: 'ACTIVE', deletedAt: new Date() })).toBe(true);
-    expect(vacantApproverMessage('Department Head')).toBe('Approver position vacant: Department Head — ask HR');
+    expect(vacantApproverMessage('Department Head')).toBe('Approver position vacant: Department Head - ask HR');
   });
 });
 

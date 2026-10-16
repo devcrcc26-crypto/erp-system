@@ -340,7 +340,7 @@ function EditMeetingForm({
     () =>
       (subtasksQuery.data ?? []).map((s) => ({
         value: s.id,
-        label: `${s.fullCode} — ${s.name}`,
+        label: `${s.fullCode} - ${s.name}`,
         taskDisciplineId: s.taskDisciplineId,
       })),
     [subtasksQuery.data],
@@ -529,7 +529,7 @@ function ActionItemViewModal({
     >
       <Descriptions column={1} size="small" bordered>
         <Descriptions.Item label="Title">
-          {item.title?.trim() || '—'}
+          {item.title?.trim() || '-'}
         </Descriptions.Item>
         <Descriptions.Item label="Description">
           <span className="whitespace-pre-wrap">{item.description}</span>
@@ -537,10 +537,10 @@ function ActionItemViewModal({
         <Descriptions.Item label="Assigned to">
           {item.ownerId
             ? resolveUserDisplay(item.ownerId, item.ownerName)
-            : (item.assignedToName ?? '—')}
+            : (item.assignedToName ?? '-')}
         </Descriptions.Item>
         <Descriptions.Item label="Due date">
-          {item.dueDate ? formatProjectDate(item.dueDate) : '—'}
+          {item.dueDate ? formatProjectDate(item.dueDate) : '-'}
         </Descriptions.Item>
         <Descriptions.Item label="Status">
           {item.status === 'CLOSED' ? 'Done' : 'Open'}
@@ -555,14 +555,14 @@ function ActionItemViewModal({
               {item.linkedIssueNumber ?? item.linkedIssueId}
             </Button>
           ) : (
-            '—'
+            '-'
           )}
         </Descriptions.Item>
         <Descriptions.Item label="Created by">
           {resolveUserDisplay(item.createdBy)}
         </Descriptions.Item>
         <Descriptions.Item label="Created">
-          {item.createdAt ? formatProjectDate(item.createdAt) : '—'}
+          {item.createdAt ? formatProjectDate(item.createdAt) : '-'}
         </Descriptions.Item>
       </Descriptions>
     </Modal>
@@ -870,7 +870,7 @@ export default function MeetingDetailContent({
       title: 'Discipline',
       dataIndex: 'roleAtMeeting',
       key: 'roleAtMeeting',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string | null) => v ?? '-',
     },
     {
       title: 'Type',
@@ -1074,7 +1074,7 @@ export default function MeetingDetailContent({
               </Descriptions.Item>
               {(meeting.startTime || meeting.endTime) && (
                 <Descriptions.Item label="Time">
-                  {meeting.startTime ?? '—'} – {meeting.endTime ?? '—'}
+                  {meeting.startTime ?? '-'} – {meeting.endTime ?? '-'}
                 </Descriptions.Item>
               )}
               {meeting.location && (

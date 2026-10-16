@@ -1,5 +1,5 @@
 /**
- * Org structure import — dry run (steps 1–4 + gap preview).
+ * Org structure import - dry run (steps 1–4 + gap preview).
  *
  *   $env:SEED_MODE='true'
  *   npx ts-node -r tsconfig-paths/register scripts/org-import-dry-run.ts
@@ -351,7 +351,7 @@ async function main(): Promise<void> {
     lines.push(
       '### Duplicate sheet rows (not imported)',
       '',
-      ...duplicateRows.map((m) => `- ${m.sheetName} — ${m.reason}`),
+      ...duplicateRows.map((m) => `- ${m.sheetName} - ${m.reason}`),
       '',
     );
   }

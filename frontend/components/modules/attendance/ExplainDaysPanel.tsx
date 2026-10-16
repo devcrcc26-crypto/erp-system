@@ -458,7 +458,7 @@ export default function ExplainDaysPanel({
               : firstKey;
       const detail = row.errors[firstKey] ?? firstKey;
       messages.push(
-        `${formatLongDate(row.day.date)}: ${label} — ${detail}`,
+        `${formatLongDate(row.day.date)}: ${label} - ${detail}`,
       );
     }
     return messages;
@@ -659,7 +659,7 @@ export default function ExplainDaysPanel({
         record.day.issueType ? (
           <IssueTypeBadge issueType={record.day.issueType} />
         ) : (
-          '—'
+          '-'
         ),
     },
     {

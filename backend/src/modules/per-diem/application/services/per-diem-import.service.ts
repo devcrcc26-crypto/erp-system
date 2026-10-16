@@ -124,7 +124,7 @@ export class PerDiemImportService {
     instructions.addRow([
       'employeeId',
       'If no email',
-      'User UUID — required when employeeEmail is blank',
+      'User UUID - required when employeeEmail is blank',
     ]);
     instructions.addRow([
       'destinationCategory',

@@ -2,7 +2,7 @@ import { summarizeAttendanceDays } from './attendance-absence.util';
 
 describe('attendance-absence.util', () => {
   describe('summarizeAttendanceDays', () => {
-    it('every working day counts 1 — half-day (Saturday) schedules are never 0.5', () => {
+    it('every working day counts 1 - half-day (Saturday) schedules are never 0.5', () => {
       const summary = summarizeAttendanceDays([
         {
           isHoliday: false,

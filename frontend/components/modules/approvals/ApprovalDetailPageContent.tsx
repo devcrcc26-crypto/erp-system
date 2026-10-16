@@ -630,7 +630,7 @@ export default function ApprovalDetailPageContent({
             <p className="erp-users-stat-label">
               {t('pages.approvals.table.submitted')}
             </p>
-            <p className="erp-employee-meta-value">{submittedDate || '—'}</p>
+            <p className="erp-employee-meta-value">{submittedDate || '-'}</p>
           </div>
         </div>
         <div className="erp-users-stat">
@@ -639,7 +639,7 @@ export default function ApprovalDetailPageContent({
               {t('pages.approvals.table.currentTier')}
             </p>
             <p className="erp-employee-meta-value truncate">
-              {currentTierLabel ?? '—'}
+              {currentTierLabel ?? '-'}
             </p>
           </div>
         </div>

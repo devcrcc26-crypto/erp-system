@@ -105,7 +105,7 @@ const USER_SELECT = {
 
 /**
  * Company work schedules, employee assignments, and working-day calculation.
- * Leave, overtime, and attendance must call this service — never hardcode weekends
+ * Leave, overtime, and attendance must call this service - never hardcode weekends
  * or holidays in those modules. When a company has no schedule configured, day
  * counts temporarily use a Mon–Fri fallback so leave requests are not blocked.
  */
@@ -739,7 +739,7 @@ export class WorkScheduleService {
 
   /**
    * Deletes a schedule (soft delete) and moves everyone on it to the company
-   * default. The default itself cannot be deleted — another schedule must be
+   * default. The default itself cannot be deleted - another schedule must be
    * made default first, which is also how the default is transferred.
    */
   async removeSchedule(

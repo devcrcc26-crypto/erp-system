@@ -86,7 +86,7 @@ const CLAIM_DETAIL_INCLUDE = {
 } as const;
 
 /**
- * Expense claim lifecycle — owns claim/item data; delegates tier workflow to ApprovalsService.
+ * Expense claim lifecycle - owns claim/item data; delegates tier workflow to ApprovalsService.
  */
 @Injectable()
 export class ExpenseClaimService

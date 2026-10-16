@@ -13,7 +13,7 @@ interface RailItemBase {
   caption?: string;
   /** Compact rail: icon over a caption, full label in a hover/focus tooltip. */
   compact: boolean;
-  /** Current page lives here (link) or inside this folder — highlighted even while its panel is open. */
+  /** Current page lives here (link) or inside this folder - highlighted even while its panel is open. */
   active: boolean;
   badgeCount?: number;
   badgeLabel?: string;
@@ -31,7 +31,7 @@ interface RailFolderProps extends RailItemBase {
   /** Id of the panel this folder shows and hides. */
   controlsId: string;
   onToggle: () => void;
-  /** DOM id — lets the shell return focus here when a panel closes. */
+  /** DOM id - lets the shell return focus here when a panel closes. */
   buttonId?: string;
 }
 

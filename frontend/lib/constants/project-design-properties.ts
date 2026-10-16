@@ -1,5 +1,5 @@
 /**
- * Project design properties values and labels — must match backend enum keys.
+ * Project design properties values and labels - must match backend enum keys.
  */
 export const PROJECT_DESIGN_PROPERTIES_VALUES = [
   'PRELIMINARY',

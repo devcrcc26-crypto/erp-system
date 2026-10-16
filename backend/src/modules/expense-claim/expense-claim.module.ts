@@ -7,7 +7,7 @@ import { ExpenseClaimImportController } from './presentation/controllers/expense
 import { ExpenseClaimController } from './presentation/controllers/expense-claim.controller';
 
 /**
- * Expense claim module — multi-item reimbursement requests with per-item
+ * Expense claim module - multi-item reimbursement requests with per-item
  * currency conversion, receipt attachment, and a 3-tier approval chain.
  */
 @Module({

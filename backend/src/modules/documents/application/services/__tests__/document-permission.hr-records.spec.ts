@@ -15,7 +15,7 @@ describe.each([
     model: 'consumablesRequisition',
   },
 ] as const)(
-  'DocumentPermissionService — $contextType attachments',
+  'DocumentPermissionService - $contextType attachments',
   ({ contextType, model }) => {
     const companyId = 'company-1';
     const recordId = 'record-1';

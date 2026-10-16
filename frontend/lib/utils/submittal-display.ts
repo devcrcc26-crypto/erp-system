@@ -10,7 +10,7 @@ export function formatSubmittalItemCodesSummary(
     .map((item) => item.fullSubtaskCode ?? item.packageCode)
     .filter((code): code is string => Boolean(code));
   if (codes.length === 0) {
-    return '—';
+    return '-';
   }
   if (codes.length <= 2) {
     return codes.join(', ');

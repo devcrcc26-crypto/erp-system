@@ -54,7 +54,7 @@ const LIST_PATH = '/hr/leave-policy';
 const NEW_PATH = '/hr/leave-policy/new';
 
 /**
- * Leave policy list — Employees / leave v2 chrome.
+ * Leave policy list - Employees / leave v2 chrome.
  */
 export default function LeavePolicyListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -195,7 +195,7 @@ export default function LeavePolicyListPageContent(): React.ReactNode {
         ellipsis: true,
         responsive: ['lg'],
         render: (value: string | null) => (
-          <span className="erp-users-cell-sub">{value || '—'}</span>
+          <span className="erp-users-cell-sub">{value || '-'}</span>
         ),
       },
       {

@@ -360,13 +360,13 @@ export default function IssueDetailDrawer({
               bordered
             >
               <Descriptions.Item label="Issue Type">
-                {issue.issueType ?? '—'}
+                {issue.issueType ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Raised By">
-                {issue.raisedByName ?? '—'}
+                {issue.raisedByName ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Assigned To">
-                {issue.assignedToName ?? '—'}
+                {issue.assignedToName ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Date Raised">
                 {formatProjectDate(issue.createdAt)}
@@ -397,7 +397,7 @@ export default function IssueDetailDrawer({
               )}
               {issue.linkedDesignPackage && (
                 <Descriptions.Item label="Subtask">
-                  {issue.linkedDesignPackage.fullCode} —{' '}
+                  {issue.linkedDesignPackage.fullCode} -{' '}
                   {issue.linkedDesignPackage.name}
                 </Descriptions.Item>
               )}

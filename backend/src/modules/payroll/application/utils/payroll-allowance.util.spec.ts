@@ -35,7 +35,7 @@ function slices(
 }
 
 // ---------------------------------------------------------------------------
-// computeContractAllowances — unit tests
+// computeContractAllowances - unit tests
 // ---------------------------------------------------------------------------
 
 describe('computeContractAllowances', () => {
@@ -205,7 +205,7 @@ describe('computeContractAllowances', () => {
 // Abenezer full payroll calculation test
 // ---------------------------------------------------------------------------
 
-describe('Abenezer Aug 2026 — full payroll with mid-month renewal', () => {
+describe('Abenezer Aug 2026 - full payroll with mid-month renewal', () => {
   /**
    * Abenezer Tilahun: old contract 50,000 / 2,550 / 56,000 (Aug 1-23)
    * new contract 70,000 / 2,800 / 60,846.16 (Aug 24–31, 7 payroll days)

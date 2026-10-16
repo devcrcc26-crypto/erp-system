@@ -8,8 +8,8 @@ Do **not** hardcode weekends, Saturdays as half days, or public holidays in leav
 
 | Layer | Path |
 |-------|------|
-| Schema | `backend/prisma/schema.prisma` — `WorkSchedule`, `WorkScheduleDay`, `EmployeeScheduleAssignment`, `PublicHoliday`, `LeaveRequestPeriod` |
-| Seed | `backend/prisma/seed/work-schedules.seed.ts` — **CRCC Standard** only (no holidays) |
+| Schema | `backend/prisma/schema.prisma` - `WorkSchedule`, `WorkScheduleDay`, `EmployeeScheduleAssignment`, `PublicHoliday`, `LeaveRequestPeriod` |
+| Seed | `backend/prisma/seed/work-schedules.seed.ts` - **CRCC Standard** only (no holidays) |
 | Engine | `backend/src/modules/work-schedule/application/services/work-schedule.service.ts` |
 | UI | `/hr/work-schedules`, `/hr/public-holidays` |
 
@@ -79,7 +79,7 @@ Legacy `startDate` + `endDate` on submit is still accepted and treated as one pe
 
 ## Public holidays
 
-- Created and deactivated by HR — never seeded
+- Created and deactivated by HR - never seeded
 - `DELETE` deactivates (`isActive: false`); HR can reactivate
 - Daily 07:00 cron notifies all **HR Officer** users when `daysUntil <= notifyDaysBefore`
 - Duplicates are skipped if a notification with the same holiday link was already created today
@@ -87,7 +87,7 @@ Legacy `startDate` + `endDate` on submit is still accepted and treated as one pe
 ## Adding this to a new module
 
 1. Import `WorkScheduleModule` (or use the exported `WorkScheduleService` from a module that already imports it)
-2. Resolve `employeeId` and `companyId` from the JWT / employee record — never from an untrusted body field for tenancy
+2. Resolve `employeeId` and `companyId` from the JWT / employee record - never from an untrusted body field for tenancy
 3. Call `calculateWorkingDays` or `calculateWorkingHours`
 4. Persist the numeric result your module needs (leave days, overtime eligibility, attendance expected hours)
 5. Do not copy CRCC Standard hours into application code
@@ -100,11 +100,11 @@ Overtime hour buckets (`regularHours`, `nightHours`, `weekendHours`, `holidayHou
 
 Priority, first match wins:
 
-1. **Holiday** — `PublicHoliday` is active and `appliesToNationality` matches the employee (`ALL` for everyone; `ETHIOPIAN` / `CHINESE` only for that nationality; `nationality: null` only gets `ALL`)
-2. **Weekend** — that weekday has `WorkScheduleDay.isWorkingDay = false`
-3. **Half-day overflow** — `isHalfDay` and the block is outside morning hours (e.g. after 12:30 on CRCC Standard Saturday) → counted as **weekend**
-4. **Night** — 22:00–06:00 (hardcoded; not schedule-dependent)
-5. **Regular** — everything else
+1. **Holiday** - `PublicHoliday` is active and `appliesToNationality` matches the employee (`ALL` for everyone; `ETHIOPIAN` / `CHINESE` only for that nationality; `nationality: null` only gets `ALL`)
+2. **Weekend** - that weekday has `WorkScheduleDay.isWorkingDay = false`
+3. **Half-day overflow** - `isHalfDay` and the block is outside morning hours (e.g. after 12:30 on CRCC Standard Saturday) → counted as **weekend**
+4. **Night** - 22:00–06:00 (hardcoded; not schedule-dependent)
+5. **Regular** - everything else
 
 Interactive save **ignores** client `isHoliday`. The calendar sets `OvertimeEntry.isHoliday`. The column is kept for historical rows; those rows are not retroactively reclassified.
 
@@ -127,7 +127,7 @@ Excel still accepts `isHoliday`. If it is true and the date **is** a registered 
 
 ### Approval `unregisteredHolidayDates`
 
-On submit (and resubmit), overtime writes `ApprovalRequest.formData.unregisteredHolidayDates: string[]` — unique `YYYY-MM-DD` values where `isHoliday` is true but the date is not in `PublicHoliday` for that employee. The approvals inbox (and sheet detail) show a warning banner when the array is non-empty. Every tier sees the same `formData`.
+On submit (and resubmit), overtime writes `ApprovalRequest.formData.unregisteredHolidayDates: string[]` - unique `YYYY-MM-DD` values where `isHoliday` is true but the date is not in `PublicHoliday` for that employee. The approvals inbox (and sheet detail) show a warning banner when the array is non-empty. Every tier sees the same `formData`.
 
 ### Calling `WorkScheduleService` from a new module
 
@@ -136,7 +136,7 @@ On submit (and resubmit), overtime writes `ApprovalRequest.formData.unregistered
 3. For working-day counts: `calculateWorkingDays` / `resolveLeavePeriods`
 4. For a single date's holiday: `isHolidayForEmployee(companyId, nationality, date)`
 5. For expected hours: `calculateWorkingHours`
-6. For overtime buckets: inject `OvertimeEntryService.classifyEntry` — do not copy the splitter
+6. For overtime buckets: inject `OvertimeEntryService.classifyEntry` - do not copy the splitter
 
 ## Integration status
 

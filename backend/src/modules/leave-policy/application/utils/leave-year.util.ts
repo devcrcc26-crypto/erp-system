@@ -5,7 +5,7 @@
  * calendar year is used. Feb 29 anniversaries fall on Feb 28 in other years.
  *
  * All civil dates are interpreted in Africa/Addis_Ababa and compared as
- * YYYY-MM-DD strings — never as timestamps.
+ * YYYY-MM-DD strings - never as timestamps.
  */
 
 export const LEAVE_YEAR_TIMEZONE = 'Africa/Addis_Ababa';
@@ -79,7 +79,7 @@ export function toDateOnlyUtc(value: Date | string): Date {
   return parseDateOnlyKey(toDateOnlyKey(value));
 }
 
-/** @deprecated Prefer toDateOnlyKey — kept for existing call sites. */
+/** @deprecated Prefer toDateOnlyKey - kept for existing call sites. */
 export function dateOnlyKey(value: Date): string {
   return toDateOnlyKey(value);
 }

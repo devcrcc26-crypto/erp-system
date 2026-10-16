@@ -162,7 +162,7 @@ function ReviewItem({
 }
 
 /**
- * New leave request — multi-period dates counted from the work schedule.
+ * New leave request - multi-period dates counted from the work schedule.
  */
 export default function LeaveRequestFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -641,7 +641,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
               <div className="erp-leave-form-balance mb-4">
                 <p className="erp-leave-form-balance-title">
                   {leaveType
-                    ? `${formatLeaveType(leaveType, t)} — ${t('hr.section.leaveBalance')}${balanceYearLabel != null ? ` (${balanceYearLabel})` : ''}`
+                    ? `${formatLeaveType(leaveType, t)} - ${t('hr.section.leaveBalance')}${balanceYearLabel != null ? ` (${balanceYearLabel})` : ''}`
                     : `${t('hr.section.leaveBalance')}${balanceYearLabel != null ? ` (${balanceYearLabel})` : ''}`}
                 </p>
                 {balanceForDate ? (
@@ -710,7 +710,7 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                 />
                 <ReviewItem
                   label={t('hr.form.days')}
-                  value={preview ? String(preview.totalDays) : '—'}
+                  value={preview ? String(preview.totalDays) : '-'}
                 />
                 {selectedBalance && preview ? (
                   <ReviewItem

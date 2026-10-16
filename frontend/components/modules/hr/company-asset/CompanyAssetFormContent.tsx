@@ -12,7 +12,7 @@ import { useCompanyAsset } from '@/lib/query/company-asset';
 const LIST_PATH = '/hr/company-asset';
 
 /**
- * New / edit company asset — shared HR form banner + stepper form.
+ * New / edit company asset - shared HR form banner + stepper form.
  */
 export default function CompanyAssetFormContent({
   assetId,

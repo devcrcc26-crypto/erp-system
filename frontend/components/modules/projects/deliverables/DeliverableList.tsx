@@ -1,4 +1,4 @@
-// Gap completion — new
+// Gap completion - new
 
 'use client';
 

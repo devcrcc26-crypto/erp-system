@@ -9,7 +9,7 @@ import { useCapabilitiesReady } from '@/hooks/use-pm-capabilities';
 import { useAuthStore } from '@/stores/auth.store';
 
 /**
- * LEGACY — unused. Kept so the v2 home (DashboardPageContent) is easy to revert.
+ * LEGACY - unused. Kept so the v2 home (DashboardPageContent) is easy to revert.
  * Company home dashboard. The PM overview is hidden: HR users see the
  * company HR overview; everyone else sees their own HR stats (leave,
  * overtime, holidays). Restore GmDashboard / PmDashboard to bring PM back.

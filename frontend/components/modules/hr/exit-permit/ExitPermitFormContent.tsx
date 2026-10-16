@@ -9,7 +9,7 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 const EXIT_PERMIT_LIST_PATH = '/hr/equipment-and-materials-exit-permit';
 
 /**
- * New exit permit — shared HR form banner + stepper form.
+ * New exit permit - shared HR form banner + stepper form.
  */
 export default function ExitPermitFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

@@ -10,7 +10,7 @@ import { formatFullSubtaskCode } from '@/lib/utils/submittal-display';
 import { subtaskStatusDisplay, workItemHref } from './my-work-helpers';
 
 /**
- * One subtask (design package) table row — used both nested under a
+ * One subtask (design package) table row - used both nested under a
  * MyWorkDisciplineGroup and standalone in the "Other subtasks" section.
  */
 export default function MyWorkSubtaskRow({
@@ -35,13 +35,13 @@ export default function MyWorkSubtaskRow({
       <tr className="border-t border-[var(--color-border-tertiary)] hover:bg-slate-50">
         <td className={`px-4 py-3 ${indentClass}`}>
           <div className="text-sm font-medium text-slate-900">
-            {item.subtaskName ?? '—'}
+            {item.subtaskName ?? '-'}
           </div>
-          <div className="text-xs text-slate-500">{subCode || '—'}</div>
+          <div className="text-xs text-slate-500">{subCode || '-'}</div>
         </td>
         <td className="px-4 py-3 text-sm text-slate-700">{item.projectName}</td>
         <td className="px-4 py-3 text-sm text-slate-500">
-          {item.overseasTaskNumber ?? item.taskIdCode ?? '—'}
+          {item.overseasTaskNumber ?? item.taskIdCode ?? '-'}
         </td>
         <td className="px-4 py-3 text-sm text-slate-500">
           {item.disciplineName}
@@ -50,13 +50,13 @@ export default function MyWorkSubtaskRow({
             : ''}
         </td>
         <td className="px-4 py-3 text-sm text-slate-700">
-          {item.roleLabel ?? '—'}
+          {item.roleLabel ?? '-'}
         </td>
         <td className="px-4 py-3">
           {status ? (
             <StatusBadge label={status.label} variant={status.variant} />
           ) : (
-            <span className="text-xs text-slate-400">—</span>
+            <span className="text-xs text-slate-400">-</span>
           )}
         </td>
         <td className="px-4 py-3 text-right">

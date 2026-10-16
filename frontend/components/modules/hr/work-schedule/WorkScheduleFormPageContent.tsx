@@ -24,7 +24,7 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 const LIST_PATH = '/hr/work-schedules';
 
 /**
- * Create / edit work schedule — shell keeps list title/subtitle; page has hero banner.
+ * Create / edit work schedule - shell keeps list title/subtitle; page has hero banner.
  * On edit, asks whether to recalculate attendance from a chosen date.
  */
 export default function WorkScheduleFormPageContent({

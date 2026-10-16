@@ -155,7 +155,7 @@ function splitByWeight(total: number, weights: number[]): number[] {
 }
 
 // Transport and bonus are Σ(contract amount × days / 30) on the backend, with any
-// attendance/leaver scale applied uniformly — so splitting the stored total by
+// attendance/leaver scale applied uniformly - so splitting the stored total by
 // amount × days reproduces each contract's share exactly.
 function buildContractLines(row: PayrollEntryDetail): ContractLine[] | null {
   if (row.salaryPeriods.length < 2) {
@@ -223,7 +223,7 @@ function resolveUserLabel(
   directory: Map<string, { firstName: string; lastName: string; chineseName: string | null }>,
 ): string {
   if (!userId) {
-    return '—';
+    return '-';
   }
   const user = directory.get(userId);
   if (!user) {
@@ -750,7 +750,7 @@ export default function PayrollRunDetailPageContent({
                 {formatUserName(row.employee)}
               </p>
               <p className="erp-payroll-employee-id">
-                {row.employee.employeeId ?? '—'}
+                {row.employee.employeeId ?? '-'}
               </p>
               {row.employee.employeeType === 'FREELANCER' ? (
                 <span className="erp-payroll-split-pill erp-payroll-freelancer-pill">
@@ -1035,7 +1035,7 @@ export default function PayrollRunDetailPageContent({
         width: 120,
         render: (flag: PayrollEntryFlag) =>
           flag === 'NONE' ? (
-            '—'
+            '-'
           ) : (
             <Tag variant="filled" className="erp-payroll-flag">
               {t(payrollFlagLabelKey(flag))}
@@ -1052,7 +1052,7 @@ export default function PayrollRunDetailPageContent({
               render: (_: unknown, row: PayrollEntryDetail) => {
                 const payslipId = row.payslip?.generatedAt ? row.payslip.id : null;
                 if (!payslipId) {
-                  return '—';
+                  return '-';
                 }
                 return (
                   <Tooltip title={t('hr.payroll.payslips.openPdf')}>
@@ -1085,7 +1085,7 @@ export default function PayrollRunDetailPageContent({
             <p className="erp-payroll-employee-name truncate">
               {formatUserName(entry.employee)}
             </p>
-            <p className="erp-payroll-employee-id">{entry.employee.employeeId ?? '—'}</p>
+            <p className="erp-payroll-employee-id">{entry.employee.employeeId ?? '-'}</p>
           </div>
           {entry.flag !== 'NONE' ? (
             <Tag variant="filled" className="erp-payroll-flag">
@@ -1169,18 +1169,18 @@ export default function PayrollRunDetailPageContent({
           ) : null}
           <div className="erp-payroll-fact">
             <p className="erp-payroll-fact-label">{t('hr.payroll.entry.department')}</p>
-            <p className="erp-payroll-fact-value">{row.employee.department?.name ?? '—'}</p>
+            <p className="erp-payroll-fact-value">{row.employee.department?.name ?? '-'}</p>
           </div>
           <div className="erp-payroll-fact">
             <p className="erp-payroll-fact-label">{t('hr.payroll.entry.discipline')}</p>
             <p className="erp-payroll-fact-value">
-              {row.employee.engineeringDiscipline?.name ?? '—'}
+              {row.employee.engineeringDiscipline?.name ?? '-'}
             </p>
           </div>
           <div className="erp-payroll-fact erp-payroll-fact--wide">
             <p className="erp-payroll-fact-label">{t('hr.payroll.entry.bank')}</p>
             <p className="erp-payroll-fact-value">
-              {row.bankName ?? '—'}
+              {row.bankName ?? '-'}
               {row.bankAccountNumber ? ` · ${row.bankAccountNumber}` : ''}
             </p>
           </div>
@@ -1214,7 +1214,7 @@ export default function PayrollRunDetailPageContent({
                         emptyZero: false,
                       }),
                       reason: row.netTopUpReason?.trim()
-                        ? ` — ${row.netTopUpReason.trim()}`
+                        ? ` - ${row.netTopUpReason.trim()}`
                         : '',
                     })
                   : null}
@@ -1225,7 +1225,7 @@ export default function PayrollRunDetailPageContent({
         <div className="erp-payroll-entry-side">
           <p className="erp-payroll-fact-label">{t('hr.payroll.entry.salaryPeriods')}</p>
           {row.salaryPeriods.length === 0 ? (
-            <p className="erp-payroll-fact-value m-0">—</p>
+            <p className="erp-payroll-fact-value m-0">-</p>
           ) : (
             <ul className="erp-payroll-entry-periods">
               {row.salaryPeriods.map((period) => {
@@ -1777,7 +1777,7 @@ export default function PayrollRunDetailPageContent({
                     emptyZero: false,
                   }),
                   reason: bonusEntry.bonusTopUpReason?.trim()
-                    ? ` — ${bonusEntry.bonusTopUpReason.trim()}`
+                    ? ` - ${bonusEntry.bonusTopUpReason.trim()}`
                     : '',
                 })}
               </p>
@@ -1789,7 +1789,7 @@ export default function PayrollRunDetailPageContent({
                     emptyZero: false,
                   }),
                   reason: bonusEntry.netTopUpReason?.trim()
-                    ? ` — ${bonusEntry.netTopUpReason.trim()}`
+                    ? ` - ${bonusEntry.netTopUpReason.trim()}`
                     : '',
                 })}
               </p>

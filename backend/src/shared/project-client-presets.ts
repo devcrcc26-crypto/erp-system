@@ -1,5 +1,5 @@
 /**
- * Suggested project client names — DB column remains free-text; any value is allowed.
+ * Suggested project client names - DB column remains free-text; any value is allowed.
  * Keys must match display labels exactly.
  */
 export const PROJECT_CLIENT_PRESET_VALUES = [

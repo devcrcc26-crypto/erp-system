@@ -146,7 +146,7 @@ const SUBMITTAL_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.SUBMITTAL_ISSUE,
 ]);
 
-/** Stage gates — action denied when project is in a locked design stage. */
+/** Stage gates - action denied when project is in a locked design stage. */
 const STAGE_LOCKED_ACTIONS: Readonly<
   Partial<Record<EpcWorkflowAction, readonly ProjectDesignStage[]>>
 > = {
@@ -172,7 +172,7 @@ const DESIGN_PACKAGE_ITEM_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.DESIGN_PACKAGE_ITEM_REMOVE,
 ]);
 
-/** Primary designer only — supporting designer cannot submit or progress comments. */
+/** Primary designer only - supporting designer cannot submit or progress comments. */
 const DESIGNER_SUBMIT_ACTIONS: ReadonlySet<EpcWorkflowAction> = new Set([
   EpcWorkflowAction.DESIGN_PACKAGE_SUBMIT,
   EpcWorkflowAction.REVISION_TRIGGER,
@@ -371,7 +371,7 @@ export function evaluateDisciplineAssignmentLayer(
 }
 
 /**
- * Layer 4 — project design stage gates.
+ * Layer 4 - project design stage gates.
  */
 export function evaluateProjectDesignStageLayer(
   input: PermissionContextInput,

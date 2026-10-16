@@ -257,14 +257,14 @@ export class MaterialRequisitionImportService {
       instructions.addRow([
         'employeeId',
         'If no email',
-        'User UUID — required when employeeEmail is blank',
+        'User UUID - required when employeeEmail is blank',
       ]);
     }
     if (input.includeHeader) {
       instructions.addRow([
         'title',
         'Yes',
-        'Requisition title — rows with the same employee+title share one DRAFT',
+        'Requisition title - rows with the same employee+title share one DRAFT',
       ]);
       instructions.addRow(['purpose', 'Yes', 'Business purpose']);
       instructions.addRow([
@@ -277,7 +277,7 @@ export class MaterialRequisitionImportService {
       instructions.addRow([
         'projectCode',
         'No',
-        'Project code — used when projectId is blank',
+        'Project code - used when projectId is blank',
       ]);
     }
     instructions.addRow(['itemName', 'Yes', 'Line item name']);

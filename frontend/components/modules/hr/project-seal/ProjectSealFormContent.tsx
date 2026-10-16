@@ -7,7 +7,7 @@ import type { ProjectSealDetail } from '@/lib/api/project-seal.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New project seal usage request — shared HR form banner + stepper form.
+ * New project seal usage request - shared HR form banner + stepper form.
  */
 export default function ProjectSealFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

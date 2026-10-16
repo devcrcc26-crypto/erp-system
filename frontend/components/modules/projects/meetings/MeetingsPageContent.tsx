@@ -104,7 +104,7 @@ function MeetingCreateFormBody({
     () =>
       (projectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
-        label: `${p.projectCode} — ${p.name}`,
+        label: `${p.projectCode} - ${p.name}`,
       })),
     [projectsQuery.data?.data],
   );
@@ -130,7 +130,7 @@ function MeetingCreateFormBody({
     () =>
       (subtasksQuery.data ?? []).map((s) => ({
         value: s.id,
-        label: `${s.fullCode} — ${s.name}`,
+        label: `${s.fullCode} - ${s.name}`,
         taskDisciplineId: s.taskDisciplineId,
       })),
     [subtasksQuery.data],

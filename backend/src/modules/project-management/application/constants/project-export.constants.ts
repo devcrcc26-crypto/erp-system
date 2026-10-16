@@ -83,7 +83,7 @@ export const TASK_LIST_STANDARD_COLUMNS: BilingualColumn[] = [
 ];
 
 /**
- * The first 17 standard task columns only — Overseas Task Number through
+ * The first 17 standard task columns only - Overseas Task Number through
  * Task Supervising Company Chief Engineer / Department Chief Engineer.
  * Used by the "task list (summary)" export, which omits disciplines and
  * the trailing change-request/commercial columns.
@@ -111,7 +111,7 @@ export const TASK_LIST_TRAILING_COLUMNS: BilingualColumn[] = [
   { zh: '实际完成时间', en: 'Actual Completion Date', width: 22 },
 ];
 
-/** Client template discipline order — 13 blocks × 5 role columns each. */
+/** Client template discipline order - 13 blocks × 5 role columns each. */
 export const EXPORT_DISCIPLINES: ExportDisciplineDefinition[] = [
   {
     label: 'Highway',

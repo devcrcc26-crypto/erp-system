@@ -8,7 +8,7 @@ import { VehicleRefuelingImportController } from './presentation/controllers/veh
 import { VehicleRefuelingController } from './presentation/controllers/vehicle-refueling.controller';
 
 /**
- * Vehicle refueling module — single-call submit with HR Officer approval
+ * Vehicle refueling module - single-call submit with HR Officer approval
  * tier (or direct APPROVED for HR and above). Includes receipt attachment and
  * the Excel import that creates DRAFT requests.
  */

@@ -54,7 +54,7 @@ const CATEGORY_ROUTES: Record<string, string> = {
 
 /**
  * Two-step flow: pick a category, then fill and submit a dynamic form.
- * Field Movement always appears — the dedicated form handles empty flagged days.
+ * Field Movement always appears - the dedicated form handles empty flagged days.
  */
 export default function NewApprovalRequestPageContent(): React.ReactNode {
   const router = useRouter();
@@ -86,7 +86,7 @@ export default function NewApprovalRequestPageContent(): React.ReactNode {
       t,
       selectedCategory.name,
     );
-    return `${categoryName} — ${today}`;
+    return `${categoryName} - ${today}`;
   }, [selectedCategory, t]);
 
   function handleSelectCategory(category: ApprovalCategorySummary): void {

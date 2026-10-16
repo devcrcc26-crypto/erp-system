@@ -109,7 +109,7 @@ type FetchState =
 
 function monthName(month: number | null): string {
   if (month == null) {
-    return '—';
+    return '-';
   }
   return MONTH_OPTIONS.find((o) => o.value === month)?.label ?? String(month);
 }
@@ -134,12 +134,12 @@ function dayNeedsAttention(
 
 function blockingLogLabel(log: NonNullable<DayEntry['submittedLog']>): string {
   if (log.status === 'DRAFT') {
-    return `${log.requestNumber} — unsubmitted draft (not in Approvals yet)`;
+    return `${log.requestNumber} - unsubmitted draft (not in Approvals yet)`;
   }
   if (log.pendingApproverName) {
-    return `${log.requestNumber} — waiting on ${log.pendingApproverName}`;
+    return `${log.requestNumber} - waiting on ${log.pendingApproverName}`;
   }
-  return `${log.requestNumber} — ${log.status}`;
+  return `${log.requestNumber} - ${log.status}`;
 }
 
 function plural(count: number, noun: string): string {
@@ -485,7 +485,7 @@ export default function FieldMovementForm({
     selectableDays.some((day) => day.selected) && !allSelected;
   const anySelected = selectedCount > 0;
   const periodLabel =
-    month != null && year != null ? `${monthName(month)} ${year}` : '—';
+    month != null && year != null ? `${monthName(month)} ${year}` : '-';
   const pendingRequestNumbers = useMemo(() => {
     return [
       ...new Set(
@@ -1427,7 +1427,7 @@ export default function FieldMovementForm({
                     </span>
                     <div className="fm-review-item__body">
                       <p className="fm-review-item__title">
-                        {titleParts.join(' — ')}
+                        {titleParts.join(' - ')}
                       </p>
                       <p className="fm-review-item__dates">
                         {formatDateList(days.map((day) => day.date))}
@@ -1449,7 +1449,7 @@ export default function FieldMovementForm({
                 <p className="fm-review-item__dates m-0 whitespace-pre-wrap">
                   {combineLateReasons(reviewSourceDays) ||
                     logLateReason.trim() ||
-                    '—'}
+                    '-'}
                 </p>
               </div>
             ) : null}

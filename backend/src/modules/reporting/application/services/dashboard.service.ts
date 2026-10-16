@@ -1104,7 +1104,7 @@ export class DashboardService {
       const projectId = pkg.taskDiscipline.task.projectId;
       activity.push({
         type: 'REVIEW_SESSION',
-        title: `Review pending: ${pkg.packageCode} — ${pkg.name}`,
+        title: `Review pending: ${pkg.packageCode} - ${pkg.name}`,
         date: row.updatedAt.toISOString(),
         link: `/projects/${projectId}/review-inbox`,
       });

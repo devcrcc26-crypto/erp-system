@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { formatOrdinal } from './ordinal';
 
 describe('formatOrdinal', () => {
-  it('formats the "Not enrolled — nth month" ordinals', () => {
+  it('formats the "Not enrolled - nth month" ordinals', () => {
     expect(formatOrdinal(1)).toBe('1st');
     expect(formatOrdinal(2)).toBe('2nd');
     expect(formatOrdinal(3)).toBe('3rd');

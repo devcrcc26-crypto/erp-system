@@ -151,7 +151,7 @@ export function toDriverSelectOptions(
       const position = user.position?.title?.trim();
       return {
         value: user.id,
-        label: position ? `${name} — ${position}` : name,
+        label: position ? `${name} - ${position}` : name,
       };
     });
 }

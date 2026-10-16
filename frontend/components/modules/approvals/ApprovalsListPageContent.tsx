@@ -139,7 +139,7 @@ function resolveDefaultInbox(canViewHr: boolean): InboxTab {
 }
 
 /**
- * Approval inbox — Users chrome with client-side search/filters.
+ * Approval inbox - Users chrome with client-side search/filters.
  */
 export default function ApprovalsListPageContent(): React.ReactNode {
   const router = useRouter();
@@ -307,7 +307,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
               row.category?.code ?? row.categoryCode,
               t,
               row.category?.name,
-            ) || '—'}
+            ) || '-'}
           </span>
         ),
       },
@@ -377,7 +377,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
           return current?.label ? (
             <span className="erp-users-role-tag">{current.label}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           );
         },
       },

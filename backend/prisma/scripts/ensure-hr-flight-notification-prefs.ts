@@ -73,7 +73,7 @@ async function main(): Promise<void> {
       }
     }
 
-    console.log(`Done — ${users.length} user(s)`);
+    console.log(`Done - ${users.length} user(s)`);
   } finally {
     await prisma.$disconnect();
   }

@@ -19,7 +19,7 @@ import type {
 } from '@/lib/api/reporting.types';
 import { formatRelativeTime } from '@/lib/utils/date-format';
 
-/** Shared recharts style constants — flat axes, subtle grid, clean tooltip. */
+/** Shared recharts style constants - flat axes, subtle grid, clean tooltip. */
 export const CHART_AXIS_STYLE = { fontSize: 11, fill: '#64748b' };
 export const CHART_GRID_COLOR = 'rgba(0,0,0,0.05)';
 export const CHART_TOOLTIP_STYLE = {
@@ -42,7 +42,7 @@ const STAT_ACCENT: Record<StatColor, { bg: string; fg: string }> = {
 };
 
 /**
- * KPI cell for dashboard stat bars — Users chrome (`erp-users-stat`).
+ * KPI cell for dashboard stat bars - Users chrome (`erp-users-stat`).
  */
 export function StatCard({
   label,
@@ -99,7 +99,7 @@ export function StatCard({
 }
 
 /**
- * Chart / panel card — Users `erp-pro-card` + section header chrome.
+ * Chart / panel card - Users `erp-pro-card` + section header chrome.
  */
 export function ChartCard({
   title,
@@ -141,7 +141,7 @@ export function ChartCard({
 }
 
 /**
- * List section card — same Users panel chrome as ChartCard, without icon badge.
+ * List section card - same Users panel chrome as ChartCard, without icon badge.
  */
 export function SectionCard({
   title,
@@ -177,7 +177,7 @@ const ATTENTION_COLOR_CLASS: Record<'red' | 'amber' | 'blue', string> = {
 };
 
 /**
- * Portfolio "needs attention" alert list — colored rows, only non-zero items.
+ * Portfolio "needs attention" alert list - colored rows, only non-zero items.
  */
 export function AttentionNeeded({
   stats,
@@ -239,7 +239,7 @@ export function AttentionNeeded({
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <CheckCircleOutlined className="mb-2 text-3xl text-[#639922]" />
           <p className="erp-users-cell-sub m-0">
-            All clear — nothing needs attention
+            All clear - nothing needs attention
           </p>
         </div>
       ) : (

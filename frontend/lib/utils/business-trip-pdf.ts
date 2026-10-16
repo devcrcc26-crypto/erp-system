@@ -103,7 +103,7 @@ function ensureSpace(doc: jsPDF, y: number, needed: number): number {
 
 function dash(value: string | null | undefined): string {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : '—';
+  return trimmed ? trimmed : '-';
 }
 
 /**
@@ -175,7 +175,7 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
     [labels.departure, formatProjectDate(trip.departureDate)],
     [
       labels.return,
-      trip.returnDate ? formatProjectDate(trip.returnDate) : '—',
+      trip.returnDate ? formatProjectDate(trip.returnDate) : '-',
     ],
   ];
   autoTable(doc, {
@@ -292,9 +292,9 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
           passenger.visaRequired ? labels.required : labels.notRequired,
           passenger.visaStatus
             ? formatVisaStatus(passenger.visaStatus, t)
-            : '—',
+            : '-',
         ])
-      : [[labels.none, '—', '—', '—', '—']];
+      : [[labels.none, '-', '-', '-', '-']];
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
@@ -341,7 +341,7 @@ export function exportBusinessTripPdf(input: BusinessTripPdfInput): void {
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(
-      `${labels.footer} — ${labels.title} — ${labels.page} ${page} ${labels.of} ${pageCount}`,
+      `${labels.footer} - ${labels.title} - ${labels.page} ${page} ${labels.of} ${pageCount}`,
       PAGE_MARGIN,
       doc.internal.pageSize.getHeight() - 8,
     );

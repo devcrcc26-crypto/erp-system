@@ -17,7 +17,7 @@ import {
 } from '@/lib/utils/date-validation';
 
 /**
- * Step 1 — international trip routing details.
+ * Step 1 - international trip routing details.
  */
 export default function BusinessTripDetailsStep({
   values,

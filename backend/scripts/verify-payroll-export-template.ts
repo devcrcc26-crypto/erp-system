@@ -1,6 +1,6 @@
 /**
  * Verifies the cleaned payroll export template contains no employee PII/amounts.
- * Prints counts only — never salary or name values.
+ * Prints counts only - never salary or name values.
  */
 import * as ExcelJS from 'exceljs';
 import {

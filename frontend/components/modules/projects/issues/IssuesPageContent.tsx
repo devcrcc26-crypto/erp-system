@@ -126,7 +126,7 @@ export function IssueFormDrawer({
     () =>
       (projectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
-        label: `${p.projectCode} — ${p.name}`,
+        label: `${p.projectCode} - ${p.name}`,
       })),
     [projectsQuery.data?.data],
   );
@@ -151,7 +151,7 @@ export function IssueFormDrawer({
           formatDisciplineLabel(row.disciplineIndex);
         return {
           value: row.id,
-          label: `${disciplineNumber} — ${row.disciplineName}`,
+          label: `${disciplineNumber} - ${row.disciplineName}`,
         };
       }),
     [disciplinesQuery.data],
@@ -167,7 +167,7 @@ export function IssueFormDrawer({
     () =>
       (subtasksQuery.data ?? []).map((pkg) => ({
         value: pkg.id,
-        label: `${pkg.packageCode} — ${pkg.name}`,
+        label: `${pkg.packageCode} - ${pkg.name}`,
       })),
     [subtasksQuery.data],
   );
@@ -322,7 +322,7 @@ export function IssueFormDrawer({
         {taskDisciplineId && (
           <Typography.Text type="secondary" className="!-mt-3 !mb-4 !block">
             Auto-filled from the subtask&apos;s discipline lead when a subtask is
-            selected — you can still change it above.
+            selected - you can still change it above.
           </Typography.Text>
         )}
         <Form.Item label="Source type" name="sourceEntityType">

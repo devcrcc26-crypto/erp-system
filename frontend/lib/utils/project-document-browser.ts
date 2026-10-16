@@ -81,7 +81,7 @@ export function resolveProjectDocumentEntityHref(
     case 'RISK':
       return `/projects/${projectId}/risks?highlight=${record.folderContextId}`;
     case 'TASK_DISCIPLINE':
-      // Discipline workspace detail is lead/admin only — send browsers to the list.
+      // Discipline workspace detail is lead/admin only - send browsers to the list.
       return `/projects/${projectId}/disciplines`;
     default:
       return null;

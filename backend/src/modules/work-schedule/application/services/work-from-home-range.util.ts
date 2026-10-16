@@ -152,7 +152,7 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ] as const;
 
-/** "Aug 11 – Aug 15 (4 days)" — single day: "Aug 11 (1 day)". */
+/** "Aug 11 – Aug 15 (4 days)" - single day: "Aug 11 (1 day)". */
 export function formatWorkFromHomeRangeLabel(
   startDate: string,
   endDate: string,

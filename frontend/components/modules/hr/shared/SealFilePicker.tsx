@@ -83,7 +83,7 @@ export function SealLocalFileTiles({
 }
 
 /**
- * Seal add-form file picker — same icon tiles as detail document gallery.
+ * Seal add-form file picker - same icon tiles as detail document gallery.
  */
 export default function SealFilePicker({
   files,

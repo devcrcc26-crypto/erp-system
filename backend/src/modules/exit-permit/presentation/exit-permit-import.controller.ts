@@ -2,7 +2,7 @@ import { createHrImportController } from '../../hr-shared/application/import-exp
 import { ExitPermitImportService } from '../application/services/exit-permit-import.service';
 
 /**
- * `GET/POST /hr/exit-permits/import*` — template, preview and commit.
+ * `GET/POST /hr/exit-permits/import*` - template, preview and commit.
  */
 export const ExitPermitImportController = createHrImportController({
   route: 'hr/exit-permits/import',

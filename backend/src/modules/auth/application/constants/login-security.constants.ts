@@ -7,7 +7,7 @@ export const AUTH_LOGIN_LOCKOUT_MINUTES = 15;
 /** Minimum password length (new passwords and resets). */
 export const AUTH_PASSWORD_MIN_LENGTH = 8;
 
-/** Generic credential failure message — never enumerate accounts. */
+/** Generic credential failure message - never enumerate accounts. */
 export const AUTH_INVALID_CREDENTIALS_MESSAGE =
   'Incorrect name or password';
 

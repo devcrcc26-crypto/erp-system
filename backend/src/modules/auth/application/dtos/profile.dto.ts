@@ -142,8 +142,24 @@ export class ProfileResponseDto {
   @ApiProperty({ nullable: true, example: '2024-03-01' })
   employmentDate!: string | null;
 
-  @ApiProperty({ nullable: true, example: '2015-09-01' })
-  experienceStartDate!: string | null;
+  @ApiProperty({
+    nullable: true,
+    example: 6.5,
+    description: 'Current years of experience (recorded value plus time since the as-of date)',
+  })
+  yearsOfExperience!: number | null;
+
+  @ApiProperty({ nullable: true, example: '2026-10-16' })
+  yearsOfExperienceAsOf!: string | null;
+
+  @ApiProperty({ nullable: true })
+  secondaryPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  seniorityLevelName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  seniorityLevelNameZh!: string | null;
 
   @ApiProperty({ nullable: true })
   addressCountry!: string | null;

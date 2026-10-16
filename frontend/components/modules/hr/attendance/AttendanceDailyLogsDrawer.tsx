@@ -264,7 +264,7 @@ function ClockCell({
     );
   }
   if (!original) {
-    return <span className="text-slate-400">—</span>;
+    return <span className="text-slate-400">-</span>;
   }
   return (
     <span className="font-mono text-[13px] text-slate-900 tabular-nums">
@@ -475,7 +475,7 @@ export default function AttendanceDailyLogsDrawer({
   const logs = query.data?.dailyLogs ?? [];
   const employee = query.data?.employee;
   const employeeName = employee ? formatUserName(employee) : '';
-  const employeeCode = employee?.employeeId?.trim() || '—';
+  const employeeCode = employee?.employeeId?.trim() || '-';
   const periodLabel = t('pages.hr.attendance.dailyDrawer.period', {
     month: t(`hr.months.${month}`),
     year,
@@ -630,7 +630,7 @@ export default function AttendanceDailyLogsDrawer({
         render: (_: unknown, row: AttendanceDailyLog) => {
           const flags = resolveDayFlags(row);
           if (flags.length === 0) {
-            return <span className="text-slate-400">—</span>;
+            return <span className="text-slate-400">-</span>;
           }
           const explanation = row.fieldMovementEntries?.find(
             (entry) =>

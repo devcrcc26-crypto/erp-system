@@ -41,7 +41,7 @@ export default function PayrollEmploymentReviewPanel({
               <li key={entry.entryId} className="text-sm">
                 <strong>{entry.employeeName}</strong>
                 {entry.employeeCode ? ` (${entry.employeeCode})` : ''}
-                {' — '}
+                {' - '}
                 {t(payrollFlagLabelKey(entry.flag))}
                 {entry.flagNote ? (
                   <div className="text-xs text-[var(--erp-text-secondary,#4B5563)]">

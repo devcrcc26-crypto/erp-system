@@ -7,7 +7,7 @@ import type { PurchaseRequestDetail } from '@/lib/api/purchase-request.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New purchase request — shared HR form banner + stepper form.
+ * New purchase request - shared HR form banner + stepper form.
  */
 export default function PurchaseRequestFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

@@ -24,7 +24,7 @@ export interface UsersExportLabels {
   nationalId: string;
   educationLevel: string;
   fieldOfStudy: string;
-  experienceStartDate: string;
+  yearsOfExperienceAsOf: string;
   yearsOfExperience: string;
   addressCountry: string;
   addressRegion: string;
@@ -57,7 +57,7 @@ export interface UsersExportRow {
   nationalId: string;
   educationLevel: string;
   fieldOfStudy: string;
-  experienceStartDate: string;
+  yearsOfExperienceAsOf: string;
   yearsOfExperience: string;
   addressCountry: string;
   addressRegion: string;
@@ -160,7 +160,7 @@ export function buildUsersExportRows(
     nationalId: cell(user.nationalId),
     educationLevel: cell(user.educationLevel),
     fieldOfStudy: cell(user.fieldOfStudy),
-    experienceStartDate: formatDateOnly(user.experienceStartDate),
+    yearsOfExperienceAsOf: formatDateOnly(user.yearsOfExperienceAsOf),
     yearsOfExperience:
       user.yearsOfExperience === null || user.yearsOfExperience === undefined
         ? ''
@@ -207,7 +207,7 @@ const COLUMN_KEYS: Array<keyof UsersExportRow> = [
   'nationalId',
   'educationLevel',
   'fieldOfStudy',
-  'experienceStartDate',
+  'yearsOfExperienceAsOf',
   'yearsOfExperience',
   'addressCountry',
   'addressRegion',
@@ -240,7 +240,7 @@ const COLUMN_WIDTHS: Record<keyof UsersExportRow, number> = {
   nationalId: 16,
   educationLevel: 14,
   fieldOfStudy: 18,
-  experienceStartDate: 18,
+  yearsOfExperienceAsOf: 18,
   yearsOfExperience: 12,
   addressCountry: 14,
   addressRegion: 14,

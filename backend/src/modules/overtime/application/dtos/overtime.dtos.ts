@@ -89,7 +89,7 @@ export class UpsertOvertimeEntryDto {
   @ApiPropertyOptional({
     default: false,
     description:
-      'Import-only holiday override. Ignored on interactive save — PublicHoliday is the source of truth.',
+      'Import-only holiday override. Ignored on interactive save - PublicHoliday is the source of truth.',
   })
   @IsOptional()
   @Type(() => Boolean)
@@ -156,7 +156,7 @@ export class SelectableOvertimeWindowsQueryDto {
 }
 
 /**
- * Opens (or creates) an employee's sheet for a month — self or on behalf of an employee.
+ * Opens (or creates) an employee's sheet for a month - self or on behalf of an employee.
  */
 export class OpenOvertimeSheetDto extends OnBehalfSubmissionDto {
   @ApiProperty({ minimum: 1, maximum: 12 })

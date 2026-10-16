@@ -128,7 +128,7 @@ function excludedCatalogIds(sorted: Emp[]): Set<string> {
 async function main(): Promise<void> {
   const { host, database } = assertPayrollSeedGuards();
   console.log(`[topup] Target database: ${host}/${database}`);
-  console.log(`[topup] SEED_MODE=true — notifications/emails suppressed`);
+  console.log(`[topup] SEED_MODE=true - notifications/emails suppressed`);
 
   resetSeedSuppressedNotificationCount();
   resetSeedSuppressedEmailCount();
@@ -1207,7 +1207,7 @@ async function main(): Promise<void> {
         }
       }
 
-      // Hawassa has no August assignment — Aug ON_SITE=0 is expected
+      // Hawassa has no August assignment - Aug ON_SITE=0 is expected
       const hasAugSite = saRanges.some(
         (r) =>
           r.startDate.getTime() <= utcDate(SEED_YEAR, 8, 31).getTime() &&
@@ -1253,7 +1253,7 @@ async function main(): Promise<void> {
     // ── Report ────────────────────────────────────────────────────────────
     console.log('\n========== PAYROLL TOP-UP REPORT ==========\n');
 
-    console.log('Table 1 — Field movement');
+    console.log('Table 1 - Field movement');
     console.log(
       'employee | date | case | deduction | paid_before | paid_after',
     );
@@ -1267,7 +1267,7 @@ async function main(): Promise<void> {
       }
     }
 
-    console.log('\nTable 2 — Half-day leave');
+    console.log('\nTable 2 - Half-day leave');
     console.log(
       'label | employee | date | portion | scans | deduction | balance_charged | paid_before | paid_after',
     );
@@ -1281,7 +1281,7 @@ async function main(): Promise<void> {
       }
     }
 
-    console.log('\nTable 3 — Site employees');
+    console.log('\nTable 3 - Site employees');
     console.log(
       'employee | site | ON_SITE Aug | ON_SITE Sep | paid Aug before/after | paid Sep before/after',
     );

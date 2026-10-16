@@ -1,4 +1,4 @@
-// Gap completion — new
+// Gap completion - new
 
 'use client';
 
@@ -297,7 +297,7 @@ export default function ChangeRequestDrawer({
               <Alert
                 type="success"
                 showIcon
-                message="Approved — The designer has been notified to upload revised documents."
+                message="Approved - The designer has been notified to upload revised documents."
               />
             )}
             {cr.status === 'REJECTED' && (
@@ -360,7 +360,7 @@ export default function ChangeRequestDrawer({
                   <Descriptions.Item label="Title">{cr.title}</Descriptions.Item>
                   {cr.linkedDesignPackage && (
                     <Descriptions.Item label="Subtask">
-                      {cr.linkedDesignPackage.packageCode} —{' '}
+                      {cr.linkedDesignPackage.packageCode} -{' '}
                       {cr.linkedDesignPackage.name}
                     </Descriptions.Item>
                   )}
@@ -400,7 +400,7 @@ export default function ChangeRequestDrawer({
                 ) : (
                   affectedDocs.map((edv) => (
                     <Tag key={edv.id}>
-                      {edv.title} — Rev {edv.revisionLabel}
+                      {edv.title} - Rev {edv.revisionLabel}
                     </Tag>
                   ))
                 )}

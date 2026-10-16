@@ -1,5 +1,5 @@
 /**
- * Project responsible department — backend source of truth; keys must match Prisma enum.
+ * Project responsible department - backend source of truth; keys must match Prisma enum.
  */
 export const PROJECT_RESPONSIBLE_DEPARTMENT_VALUES = [
   'MUNICIPAL_TRANSPORTATION_DEPARTMENT',

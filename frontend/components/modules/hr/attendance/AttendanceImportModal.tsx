@@ -612,14 +612,14 @@ export default function AttendanceImportModal({
       dataIndex: 'matchedEmployeeName',
       key: 'matchedEmployeeName',
       ellipsis: true,
-      render: (value: string | null) => value ?? '—',
+      render: (value: string | null) => value ?? '-',
     },
     {
       title: t('pages.hr.attendance.importModal.colEmployeeId'),
       dataIndex: 'matchedEmployeeErpId',
       key: 'matchedEmployeeErpId',
       width: 120,
-      render: (value: string | null) => value ?? '—',
+      render: (value: string | null) => value ?? '-',
     },
     {
       title: t('pages.hr.attendance.importModal.colMatchType'),
@@ -652,7 +652,7 @@ export default function AttendanceImportModal({
           const label = employeeLabels[overrideId];
           return (
             <span className="inline-flex items-center gap-1">
-              {label?.name ?? row.matchedEmployeeName ?? '—'}
+              {label?.name ?? row.matchedEmployeeName ?? '-'}
               <Tag color="purple">
                 {t('pages.hr.attendance.importModal.matchManual')}
               </Tag>
@@ -661,7 +661,7 @@ export default function AttendanceImportModal({
         }
         return (
           <Space orientation="vertical" size={0}>
-            <span>{row.matchedEmployeeName ?? '—'}</span>
+            <span>{row.matchedEmployeeName ?? '-'}</span>
             {row.matchNote ? (
               <span className="text-[11px] text-amber-700">{row.matchNote}</span>
             ) : null}
@@ -676,9 +676,9 @@ export default function AttendanceImportModal({
       render: (_: unknown, row: ReviewRow) => {
         const overrideId = reviewOverrides[row.reviewIndex];
         if (overrideId) {
-          return employeeLabels[overrideId]?.employeeId ?? '—';
+          return employeeLabels[overrideId]?.employeeId ?? '-';
         }
-        return row.matchedEmployeeErpId ?? '—';
+        return row.matchedEmployeeErpId ?? '-';
       },
     },
     {
@@ -689,9 +689,9 @@ export default function AttendanceImportModal({
       align: 'right',
       render: (_: unknown, row: ReviewRow) => {
         if (reviewOverrides[row.reviewIndex]) {
-          return '—';
+          return '-';
         }
-        return row.score == null ? '—' : `${row.score}%`;
+        return row.score == null ? '-' : `${row.score}%`;
       },
     },
     {
@@ -772,14 +772,14 @@ export default function AttendanceImportModal({
       dataIndex: 'employeeId',
       key: 'employeeId',
       width: 120,
-      render: (value: string | null) => value ?? '—',
+      render: (value: string | null) => value ?? '-',
     },
     {
       title: t('pages.hr.attendance.importModal.colDepartment'),
       dataIndex: 'departmentName',
       key: 'departmentName',
       ellipsis: true,
-      render: (value: string | null) => value ?? '—',
+      render: (value: string | null) => value ?? '-',
     },
     {
       title: t('pages.hr.attendance.importModal.colPresence'),
@@ -882,7 +882,7 @@ export default function AttendanceImportModal({
       dataIndex: 'attendanceId',
       key: 'attendanceId',
       width: 110,
-      render: (value: string) => (value && value !== '-' ? value : '—'),
+      render: (value: string) => (value && value !== '-' ? value : '-'),
     },
     {
       title: t('pages.hr.attendance.importModal.colReason'),
@@ -1201,7 +1201,7 @@ export default function AttendanceImportModal({
                       dataIndex: 'attendanceId',
                       key: 'attendanceId',
                       render: (value: string) =>
-                        value && value !== '-' ? value : '—',
+                        value && value !== '-' ? value : '-',
                     },
                     {
                       title: t('pages.hr.attendance.importModal.colReason'),
@@ -1234,13 +1234,13 @@ export default function AttendanceImportModal({
                       dataIndex: 'attendanceId',
                       key: 'attendanceId',
                       render: (value: string) =>
-                        value && value !== '-' ? value : '—',
+                        value && value !== '-' ? value : '-',
                     },
                     {
                       title: t('pages.hr.attendance.importModal.colReason'),
                       key: 'reason',
                       render: (_: unknown, row: RejectedRow) =>
-                        ignoredReasons[row.rejectedIndex] ?? '—',
+                        ignoredReasons[row.rejectedIndex] ?? '-',
                     },
                     {
                       title: t('pages.hr.attendance.importModal.colAssign'),
@@ -1472,11 +1472,11 @@ export default function AttendanceImportModal({
                         {
                           date: existingBatch?.importedAt
                             ? formatDisplayDateTime(existingBatch.importedAt)
-                            : '—',
+                            : '-',
                           count:
                             existingBatch?._count.records ??
                             existingBatch?.matchedRows ??
-                            '—',
+                            '-',
                         },
                       )}
                     </p>

@@ -26,7 +26,7 @@ export interface HrListPrimaryAction {
  * The shared HR list-page action cluster: export, import and the page's
  * primary button.
  *
- * On a wide toolbar they render as one joined `Space.Compact` group — an
+ * On a wide toolbar they render as one joined `Space.Compact` group - an
  * export dropdown, an import button, then the primary button. On a narrow
  * toolbar the export and import actions collapse into a single overflow menu
  * and the primary button becomes icon-only.
@@ -39,7 +39,7 @@ export default function HrListActions({
   extra,
   extraMenuItems = [],
 }: {
-  /** True on narrow toolbars — pass the page's `isCompact`. */
+  /** True on narrow toolbars - pass the page's `isCompact`. */
   compact: boolean;
   exports?: HrExcelExportAction[];
   /** Omit to hide the import button (no permission, or no importer). */

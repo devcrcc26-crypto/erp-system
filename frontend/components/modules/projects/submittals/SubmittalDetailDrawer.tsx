@@ -229,7 +229,7 @@ export default function SubmittalDetailDrawer({
     submittal?.submittalPurpose === 'DISCIPLINE_SITE' ||
     submittal?.submittalPurpose === 'DISCIPLINE_CONSULTANT';
 
-  // External release party detection — check ALL items, not just [0]
+  // External release party detection - check ALL items, not just [0]
   const hasSiteRep =
     isExternalRelease &&
     (submittal?.items ?? []).some(
@@ -704,7 +704,7 @@ export default function SubmittalDetailDrawer({
               <Alert
                 type="success"
                 showIcon
-                message="Site review complete — ready to issue"
+                message="Site review complete - ready to issue"
                 description="All site representatives have approved. You can now issue this release."
               />
             )}
@@ -713,7 +713,7 @@ export default function SubmittalDetailDrawer({
             <Alert
               type="success"
               showIcon
-              message="Consultant review complete — ready to issue"
+              message="Consultant review complete - ready to issue"
               description="The consultant has reviewed. You can now issue this release."
             />
           )}
@@ -735,7 +735,7 @@ export default function SubmittalDetailDrawer({
             />
           )}
 
-          {/* Withdraw button — available when in-progress (not SUBMITTED/WITHDRAWN) */}
+          {/* Withdraw button - available when in-progress (not SUBMITTED/WITHDRAWN) */}
           {isExternalRelease &&
             submittal.status !== 'SUBMITTED' &&
             submittal.status !== 'WITHDRAWN' && (
@@ -877,7 +877,7 @@ export default function SubmittalDetailDrawer({
               <div className="erp-drawer-list">
                 {submittal.items.map((item) => (
                   <div key={item.id} className={`px-4 py-3 ${layout.drawerMutedText}`}>
-                    {item.fullSubtaskCode ?? item.packageCode ?? '—'} —{' '}
+                    {item.fullSubtaskCode ?? item.packageCode ?? '-'} -{' '}
                     {item.packageName ?? 'Unknown subtask'}
                     {!item.snapshotCaptured ? ' (pending)' : ''}
                   </div>
@@ -1108,7 +1108,7 @@ export default function SubmittalDetailDrawer({
                     >
                       <Input.TextArea
                         rows={4}
-                        placeholder="Required — provide comment or attach file"
+                        placeholder="Required - provide comment or attach file"
                       />
                     </Form.Item>
                     <Form.Item label="Attachment (optional if comment provided)">

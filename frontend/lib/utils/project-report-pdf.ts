@@ -299,7 +299,7 @@ export function exportProjectReportPdf(input: ProjectReportPdfInput): void {
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(
-      `${labels.footer} — ${labels.title} — Page ${page} of ${pageCount}`,
+      `${labels.footer} - ${labels.title} - Page ${page} of ${pageCount}`,
       PAGE_MARGIN,
       doc.internal.pageSize.getHeight() - 8,
     );

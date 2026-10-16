@@ -1,5 +1,5 @@
 /**
- * Project status values and labels — must match backend ProjectStatus enum keys.
+ * Project status values and labels - must match backend ProjectStatus enum keys.
  */
 export const PROJECT_STATUS_VALUES = [
   'NOT_STARTED',

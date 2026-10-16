@@ -751,7 +751,7 @@ const CATEGORIES: CategorySeedDef[] = [
     code: 'PAYROLL_RUN',
     name: 'Payroll Run Approval',
     description:
-      'Monthly payroll approval — not user-requestable. Runs are created and approved only from /hr/payroll.',
+      'Monthly payroll approval, not user-requestable. Runs are created and approved only from /hr/payroll.',
     module: 'HR',
     numberPrefix: 'PR',
     icon: 'dollar-circle',
@@ -906,7 +906,7 @@ export async function seedApprovalCategories(
 
 /**
  * Removes prior approval data for the company so re-seed can replace codes safely.
- * Nulls module FKs first — live HR docs reference approval_request and block deleteMany.
+ * Nulls module FKs first - live HR docs reference approval_request and block deleteMany.
  */
 async function clearCompanyApprovalCategories(
   prisma: PrismaClient,

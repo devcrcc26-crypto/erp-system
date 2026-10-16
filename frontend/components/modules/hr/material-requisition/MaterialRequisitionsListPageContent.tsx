@@ -107,7 +107,7 @@ function MaterialRequisitionStat({
 }
 
 /**
- * Material requisitions list — Users chrome (stat bar, filter row, rounded table).
+ * Material requisitions list - Users chrome (stat bar, filter row, rounded table).
  */
 export default function MaterialRequisitionsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -285,7 +285,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
         responsive: ['xl'],
         render: (value: string | null | undefined) => (
           <span className="erp-users-cell-sub">
-            {value ? formatProjectDate(value) : '—'}
+            {value ? formatProjectDate(value) : '-'}
           </span>
         ),
       },
@@ -312,7 +312,7 @@ export default function MaterialRequisitionsListPageContent(): React.ReactNode {
           value ? (
             <span className="erp-users-role-tag">{value}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
     ],

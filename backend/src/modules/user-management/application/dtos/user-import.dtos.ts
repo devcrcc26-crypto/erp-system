@@ -90,8 +90,10 @@ export class ImportRowPreviewDto {
   @ApiPropertyOptional({ description: 'Company hire date ISO YYYY-MM-DD' })
   employmentDate?: string;
 
-  @ApiPropertyOptional({ description: 'ISO date YYYY-MM-DD' })
-  experienceStartDate?: string;
+  @ApiPropertyOptional({
+    description: 'Years of experience as of the import date (0–70, one decimal)',
+  })
+  yearsOfExperience?: string;
 
   @ApiPropertyOptional()
   addressCountry?: string;

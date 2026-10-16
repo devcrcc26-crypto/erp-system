@@ -100,7 +100,7 @@ function sumBudgetAmount(items: readonly ClientItem[]): number {
 }
 
 /**
- * Consumables requisition create form — same StepperForm chrome as Add Employee.
+ * Consumables requisition create form - same StepperForm chrome as Add Employee.
  */
 export default function ConsumablesRequisitionForm({
   onSuccess,
@@ -342,7 +342,7 @@ export default function ConsumablesRequisitionForm({
               row.unitPrice != null ? formatEtbAmount(row.unitPrice) : null,
             ]
               .filter(Boolean)
-              .join(' · ') || '—'}
+              .join(' · ') || '-'}
           </p>
         </div>
       ),
@@ -354,7 +354,7 @@ export default function ConsumablesRequisitionForm({
       width: 110,
       responsive: ['md'],
       render: (value: string | undefined) => (
-        <span className="erp-users-cell-sub">{value || '—'}</span>
+        <span className="erp-users-cell-sub">{value || '-'}</span>
       ),
     },
     {
@@ -365,7 +365,7 @@ export default function ConsumablesRequisitionForm({
       ellipsis: true,
       responsive: ['lg'],
       render: (value: string | undefined) => (
-        <span className="erp-users-cell-sub">{value || '—'}</span>
+        <span className="erp-users-cell-sub">{value || '-'}</span>
       ),
     },
     {
@@ -375,7 +375,7 @@ export default function ConsumablesRequisitionForm({
       ellipsis: true,
       responsive: ['xl'],
       render: (value: string | undefined) => (
-        <span className="erp-users-cell-sub">{value || '—'}</span>
+        <span className="erp-users-cell-sub">{value || '-'}</span>
       ),
     },
     {
@@ -406,7 +406,7 @@ export default function ConsumablesRequisitionForm({
       responsive: ['md'],
       render: (_: unknown, row: ClientItem) => (
         <span className="erp-users-cell-sub tabular-nums">
-          {row.unitPrice != null ? formatEtbAmount(row.unitPrice) : '—'}
+          {row.unitPrice != null ? formatEtbAmount(row.unitPrice) : '-'}
         </span>
       ),
     },
@@ -421,7 +421,7 @@ export default function ConsumablesRequisitionForm({
           computeLineBudget(row.quantity, row.unitPrice ?? undefined);
         return (
           <span className="erp-users-cell-strong tabular-nums">
-            {amount != null ? formatEtbAmount(amount) : '—'}
+            {amount != null ? formatEtbAmount(amount) : '-'}
           </span>
         );
       },
@@ -727,7 +727,7 @@ export default function ConsumablesRequisitionForm({
               <div className="erp-form-grid-2">
                 <ReviewItem
                   label={t('hr.form.title')}
-                  value={detailsSnapshot.title?.trim() || '—'}
+                  value={detailsSnapshot.title?.trim() || '-'}
                 />
                 <ReviewItem
                   label={t('hr.section.items')}
@@ -740,17 +740,17 @@ export default function ConsumablesRequisitionForm({
                       ? formatDisplayDate(
                           detailsSnapshot.requiredByDate.format('YYYY-MM-DD'),
                         )
-                      : '—'
+                      : '-'
                   }
                 />
                 <ReviewItem
                   label={t('hr.labels.purpose')}
-                  value={detailsSnapshot.purpose?.trim() || '—'}
+                  value={detailsSnapshot.purpose?.trim() || '-'}
                 />
                 <ReviewItem
                   label={t('hr.form.totalBudgetAmount')}
                   value={
-                    totalBudget > 0 ? formatEtbAmount(totalBudget) : '—'
+                    totalBudget > 0 ? formatEtbAmount(totalBudget) : '-'
                   }
                 />
               </div>
@@ -924,7 +924,7 @@ function ItemBudgetPreview({
     <Form.Item label={t('hr.form.budgetAmount')}>
       <Input
         readOnly
-        value={budgetAmount != null ? formatEtbAmount(budgetAmount) : '—'}
+        value={budgetAmount != null ? formatEtbAmount(budgetAmount) : '-'}
         style={{ background: tokens.colorPageBg }}
       />
     </Form.Item>

@@ -7,7 +7,7 @@ import type { FlightApplicationDetail } from '@/lib/api/flight.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New flight application — shared HR form banner + stepper form.
+ * New flight application - shared HR form banner + stepper form.
  */
 export default function FlightApplicationFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

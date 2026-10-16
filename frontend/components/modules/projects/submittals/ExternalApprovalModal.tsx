@@ -103,11 +103,11 @@ export default function ExternalApprovalModal({
         onFinish={(values: ApprovalFormValues) => void handleSubmit(values)}
       >
         <Form.Item label="Recorded by">
-          <Typography.Text>{recordedByName || '—'}</Typography.Text>
+          <Typography.Text>{recordedByName || '-'}</Typography.Text>
         </Form.Item>
 
         <Form.Item label="On behalf of">
-          <Typography.Text>{onBehalfOf || '—'}</Typography.Text>
+          <Typography.Text>{onBehalfOf || '-'}</Typography.Text>
         </Form.Item>
 
         <Form.Item label="Approval date" name="approvedAt">

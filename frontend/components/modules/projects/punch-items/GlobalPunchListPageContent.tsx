@@ -67,7 +67,7 @@ const CATEGORY_OPTIONS = [
 ];
 
 /**
- * Global Punch List — cross-project portfolio list for D.Lead / PM / PA / SA.
+ * Global Punch List - cross-project portfolio list for D.Lead / PM / PA / SA.
  */
 export default function GlobalPunchListPageContent(): React.ReactNode {
   const router = useRouter();
@@ -161,7 +161,7 @@ export default function GlobalPunchListPageContent(): React.ReactNode {
     () =>
       (allProjectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
-        label: `${p.projectCode} — ${p.name}`,
+        label: `${p.projectCode} - ${p.name}`,
       })),
     [allProjectsQuery.data?.data],
   );
@@ -212,7 +212,7 @@ export default function GlobalPunchListPageContent(): React.ReactNode {
         dataIndex: 'category',
         key: 'category',
         render: (value: string | null) =>
-          value ? formatPunchCategory(value) : '—',
+          value ? formatPunchCategory(value) : '-',
       },
       {
         title: 'Severity',
@@ -230,13 +230,13 @@ export default function GlobalPunchListPageContent(): React.ReactNode {
         dataIndex: 'roomOrArea',
         key: 'roomOrArea',
         ellipsis: true,
-        render: (value: string | null) => value ?? '—',
+        render: (value: string | null) => value ?? '-',
       },
       {
         title: 'Assigned To',
         key: 'assignedTo',
         render: (_: unknown, record: PunchItem) =>
-          resolveUserDisplay(record.assignedTo, record.assignedToName, '—'),
+          resolveUserDisplay(record.assignedTo, record.assignedToName, '-'),
       },
       {
         title: 'Due',
@@ -260,8 +260,8 @@ export default function GlobalPunchListPageContent(): React.ReactNode {
         key: 'project',
         render: (_: unknown, record: PunchItem) =>
           record.projectCode
-            ? `${record.projectCode}${record.projectName ? ` — ${record.projectName}` : ''}`
-            : '—',
+            ? `${record.projectCode}${record.projectName ? ` - ${record.projectName}` : ''}`
+            : '-',
       },
     ],
     [resolveUserDisplay, router],
@@ -290,7 +290,7 @@ export default function GlobalPunchListPageContent(): React.ReactNode {
     <>
       <FormLayout
         title="Punch List"
-        description="Walkthrough defects across projects — open, verified, and closed."
+        description="Walkthrough defects across projects - open, verified, and closed."
         extra={
           canCreate ? (
             <Button

@@ -26,7 +26,7 @@ export type ImportCellValue = string | number | boolean | undefined;
 export interface ValidatedImportRow {
   /** 1-based worksheet row number, as shown to the user. */
   line: number;
-  /** Raw trimmed strings, keyed by field — useful for building row labels. */
+  /** Raw trimmed strings, keyed by field - useful for building row labels. */
   raw: Record<string, string>;
   /** Coerced values, keyed by field. Absent when the cell was blank. */
   values: Record<string, ImportCellValue>;

@@ -31,7 +31,7 @@ function makeService(prisma: unknown): ApprovalsService {
   );
 }
 
-describe('ApprovalsService — isUserRequestable', () => {
+describe('ApprovalsService - isUserRequestable', () => {
   it('lists only user-requestable categories the user may create', async () => {
     const findMany = jest.fn(async () => [
       {

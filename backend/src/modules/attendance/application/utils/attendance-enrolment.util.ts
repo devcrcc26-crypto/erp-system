@@ -9,7 +9,7 @@ export const NOT_ENROLLED_RECORD_NOTE =
   'Not yet enrolled on the attendance machine';
 
 export const NOT_ENROLLED_PAYROLL_NOTE =
-  'Not enrolled on the attendance machine — counted present.';
+  'Not enrolled on the attendance machine - counted present.';
 
 /** Match methods whose month has no scans and is counted present by decision. */
 const COUNTED_PRESENT_MATCH_METHODS = new Set([

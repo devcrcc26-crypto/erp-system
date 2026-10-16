@@ -1,5 +1,5 @@
 /*
- * My Profile (v2) — same panel language as the dashboard, header, catalogue
+ * My Profile (v2) - same panel language as the dashboard, header, catalogue
  * and Employees list: white panels, 16px radius, soft shadow, no hard borders,
  * soft tiles for facts. Scoped under `.erp-profile-page.erp-profile-v2`, which
  * both My Profile and the HR employee detail page (EmployeeDetailPageContent,
@@ -131,27 +131,56 @@
 
 .erp-profile-page.erp-profile-v2 .erp-employee-section {
   overflow: hidden;
+  width: 100%;
+  height: auto;
   border: 1px solid var(--pv2-divider);
   border-radius: 12px;
   background: #ffffff;
   box-shadow: none;
 }
 
+/* Overview: two independent columns so cards pack up under shorter neighbours. */
+.erp-profile-page.erp-profile-v2 .erp-employee-overview-cols {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.erp-profile-page.erp-profile-v2 .erp-employee-overview-col {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .erp-profile-page.erp-profile-v2 .erp-employee-overview-cols {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .erp-profile-page.erp-profile-v2 .erp-employee-overview-col {
+    flex: 1 1 0;
+  }
+}
+
 .erp-profile-page.erp-profile-v2 .erp-employee-section-header {
-  padding: 14px 20px 0;
-  border-bottom: 0;
-  background: transparent;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--pv2-divider);
+  background: #ffffff;
 }
 
 .erp-profile-page.erp-profile-v2 .erp-employee-section-title {
-  color: var(--pv2-muted);
-  font-size: calc(13px * var(--erp-font-scale));
+  color: var(--pv2-strong);
+  font-size: calc(15px * var(--erp-font-scale));
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: -0.01em;
+  text-transform: none;
 }
 
 .erp-profile-page.erp-profile-v2 .erp-employee-section-body {
-  padding: 12px 20px 18px;
+  padding: 16px 20px 20px;
 }
 
 .erp-profile-page.erp-profile-v2 .erp-employee-section--docs .erp-employee-section-body {
@@ -159,8 +188,8 @@
 }
 
 /*
- * Field labels inside the tabs: normal case, so they read as a level below
- * the uppercase section titles; values a touch larger and darker.
+ * Field labels inside the tabs: normal case, readable muted slate;
+ * values a touch larger and darker.
  */
 .erp-profile-page.erp-profile-v2 .erp-employee-tab-panel .erp-users-stat-label {
   color: var(--pv2-muted);
@@ -190,26 +219,79 @@
   background: var(--pv2-tile);
 }
 
-/* Leave balance cards: soft tiles instead of bordered cards. */
-.erp-profile-page.erp-profile-v2 .erp-leave-balance-card {
+/* Leave balance & Per diem rate cards: soft tiles instead of bordered cards. */
+.erp-profile-page.erp-profile-v2 .erp-leave-balance-card,
+.erp-profile-page.erp-profile-v2 .erp-per-diem-rate-card {
   border: 0;
+  border-radius: 12px;
   background: var(--pv2-tile);
   box-shadow: none;
 }
 
-.erp-profile-page.erp-profile-v2 .erp-leave-balance-label {
+.erp-profile-page.erp-profile-v2 .erp-leave-balance-label,
+.erp-profile-page.erp-profile-v2 .erp-per-diem-rate-label {
   color: var(--pv2-muted);
   font-size: calc(13px * var(--erp-font-scale));
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .erp-profile-page.erp-profile-v2 .erp-leave-balance-meta,
-.erp-profile-page.erp-profile-v2 .erp-leave-balance-empty {
+.erp-profile-page.erp-profile-v2 .erp-leave-balance-empty,
+.erp-profile-page.erp-profile-v2 .erp-per-diem-rate-unit,
+.erp-profile-page.erp-profile-v2 .erp-per-diem-rate-source,
+.erp-profile-page.erp-profile-v2 .erp-per-diem-rate-empty {
   color: var(--pv2-muted);
 }
 
-/* Tables inside the tabs (leave, overtime, per diem history, …). */
+/* Profile documents: soft tiles and clean empty state. */
+.erp-profile-page.erp-profile-v2 .erp-profile-docs-empty {
+  border: 1px dashed #d0d5dd;
+  border-radius: 12px;
+  background: var(--pv2-tile);
+  color: var(--pv2-muted);
+}
+
+.erp-profile-page.erp-profile-v2 .erp-profile-doc-card {
+  border: 1px solid var(--pv2-divider);
+  border-radius: 12px;
+  background: #ffffff;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.erp-profile-page.erp-profile-v2 .erp-profile-doc-card:hover {
+  border-color: #d0d5dd;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.05);
+}
+
+.erp-profile-page.erp-profile-v2 .erp-profile-doc-preview {
+  background: var(--pv2-tile);
+  border-bottom: 1px solid var(--pv2-divider);
+}
+
+.erp-profile-page.erp-profile-v2 .erp-profile-doc-meta {
+  color: var(--pv2-muted);
+}
+
+/* Tables inside the tabs (leave, overtime, per diem history, employment, …). */
 .erp-profile-page.erp-profile-v2 .ant-table-thead > tr > th {
+  background: var(--pv2-tile) !important;
   color: var(--pv2-muted) !important;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--pv2-divider) !important;
+}
+
+.erp-profile-page.erp-profile-v2 .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--pv2-divider);
+  color: #1f2937;
+}
+
+.erp-profile-page.erp-profile-v2 .ant-table-tbody > tr:hover > td {
+  background: var(--pv2-tile) !important;
 }
 
 /* Ant Design's measure row lives in <tbody>; keep it collapsed (the global
@@ -247,10 +329,10 @@
   }
 
   .erp-profile-page.erp-profile-v2 .erp-employee-section-header {
-    padding: 12px 14px 0;
+    padding: 12px 14px 10px;
   }
 
   .erp-profile-page.erp-profile-v2 .erp-employee-section-body {
-    padding: 10px 14px 14px;
+    padding: 12px 14px 14px;
   }
 }

@@ -2,7 +2,7 @@
  * Who may create/manage subtasks and open the discipline workspace page:
  * discipline leader of that task-discipline, or elevated company roles
  * (System Administrator / Managing Director / Project Manager / Project Administrator
- * — mirrored by EPC `navFullAccess`).
+ * - mirrored by EPC `navFullAccess`).
  *
  * Designers and approval-tier assignees are intentionally excluded.
  */

@@ -6,12 +6,12 @@ const DIVISIONS = [
   {
     name: 'Production Department',
     code: 'PROD',
-    description: 'Production division — design and engineering departments',
+    description: 'Production division - design and engineering departments',
   },
   {
     name: 'Functional Department',
     code: 'FUNC',
-    description: 'Functional division — finance, HR, operations, and support',
+    description: 'Functional division - finance, HR, operations, and support',
   },
 ] as const;
 
@@ -232,7 +232,7 @@ async function ensureDepartment(
         divisionId: params.divisionId,
         branchId: params.branchId,
         isActive: true,
-        // leaderUserId intentionally left untouched — set when Q1 employee data arrives
+        // leaderUserId intentionally left untouched - set when Q1 employee data arrives
         updatedBy: params.createdBy,
       },
     });
@@ -248,7 +248,7 @@ async function ensureDepartment(
       nameZh: params.nameZh,
       code: await nextDepartmentCode(prisma),
       isActive: true,
-      // leaderUserId omitted — populated when Q1 employee data arrives
+      // leaderUserId omitted - populated when Q1 employee data arrives
       createdBy: params.createdBy,
       updatedBy: params.createdBy,
     },
@@ -340,7 +340,7 @@ export async function seedOrgStructure(
       (row) => row.divisionName === division.name,
     )) {
       const note = dept.surveySiblingNote
-        ? ' — sibling of Municipal Transport (no parentDepartmentId yet)'
+        ? ' - sibling of Municipal Transport (no parentDepartmentId yet)'
         : '';
       console.log(
         `    · ${dept.name} / ${dept.nameZh} [${dept.code}] (${dept.created ? 'created' : 'already existed'})${note}`,

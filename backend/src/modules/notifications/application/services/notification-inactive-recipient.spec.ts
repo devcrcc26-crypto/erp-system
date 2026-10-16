@@ -22,7 +22,7 @@ const dto = {
   body: 'Body',
 };
 
-describe('NotificationService — inactive recipients', () => {
+describe('NotificationService - inactive recipients', () => {
   it('skips in-app and email for a login-disabled recipient and counts it', async () => {
     const { service, prisma, mail } = makeService({ id: 'u1', isActive: false, email: 'a@b.c' });
     const result = await service.send(ctx, dto);

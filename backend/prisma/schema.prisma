@@ -138,6 +138,9 @@ enum EducationLevel {
   BSC
   DIPLOMA
   CERTIFICATE
+  TECHNICIAN
+  SECONDARY
+  PRIMARY
   OTHER
 }
 
@@ -273,6 +276,7 @@ model Company {
   disciplines      Discipline[]
   costCentres      CostCentre[]
   positions        Position[]
+  seniorityLevels  SeniorityLevel[]
   financialYears   FinancialYear[]
   financialPeriods FinancialPeriod[]
   numberSeries     NumberSeries[]
@@ -472,7 +476,7 @@ model Department {
   @@map("department")
 }
 
-/// Flat engineering discipline catalog (Highway, Structure, etc.) — not org HR department.
+/// Flat engineering discipline catalog (Highway, Structure, etc.) - not org HR department.
 model Discipline {
   id            String    @id @default(uuid())
   companyId     String    @map("company_id")
@@ -547,6 +551,29 @@ model Position {
   @@index([companyId], map: "idx_position_company_id")
   @@index([companyId, deletedAt], map: "idx_position_company_deleted")
   @@map("position")
+}
+
+/// Seniority lookup (Junior / Middle / Senior …), managed in the app like positions.
+model SeniorityLevel {
+  id        String    @id @default(uuid())
+  companyId String    @map("company_id")
+  name      String
+  nameZh    String?   @map("name_zh")
+  sortOrder Int       @default(0) @map("sort_order")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  createdBy String    @map("created_by")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  updatedBy String    @map("updated_by")
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  company Company @relation(fields: [companyId], references: [id])
+  users   User[]
+
+  @@index([companyId], map: "idx_seniority_level_company_id")
+  @@index([companyId, deletedAt], map: "idx_seniority_level_company_deleted")
+  @@map("seniority_level")
 }
 
 // ─── Financial ───────────────────────────────────────────────────────────────
@@ -632,8 +659,9 @@ model User {
   departmentId            String?   @map("department_id")
   engineeringDisciplineId String?   @map("engineering_discipline_id")
   positionId          String?   @map("position_id")
+  seniorityLevelId    String?   @map("seniority_level_id")
   reportsToUserId     String?   @map("reports_to_user_id")
-  /// @deprecated Use engineeringDisciplineId — retained for migration/audit.
+  /// @deprecated Use engineeringDisciplineId - retained for migration/audit.
   discipline          UserDiscipline? @map("discipline")
   employeeId            String?         @unique @map("employee_id")
   firstName           String    @map("first_name")
@@ -647,6 +675,7 @@ model User {
   email               String?
   pendingEmail        String?   @map("pending_email")
   phone               String?
+  secondaryPhone      String?   @map("secondary_phone")
   addressCountry        String?         @map("address_country")
   addressRegion         String?         @map("address_region")
   addressCity           String?         @map("address_city")
@@ -663,8 +692,11 @@ model User {
   fieldOfStudy          String?         @map("field_of_study")
   /// Company hire / employment start date (payroll & attendance joiner window).
   employmentDate        DateTime?       @map("employment_date") @db.Date
-  /// Career experience start (years-of-experience display), not company hire date.
-  experienceStartDate   DateTime?       @map("experience_start_date") @db.Date
+  /// Career experience in years as entered by HR (never imported). The shown
+  /// value is this plus the time elapsed since yearsOfExperienceAsOf.
+  yearsOfExperience     Float?          @map("years_of_experience")
+  /// Set by the server whenever yearsOfExperience is saved.
+  yearsOfExperienceAsOf DateTime?       @map("years_of_experience_as_of") @db.Date
   emergencyContacts     Json?           @map("emergency_contacts")
   leavePolicyId         String?         @map("leave_policy_id")
   workScheduleId        String?         @map("work_schedule_id")
@@ -704,6 +736,7 @@ model User {
   department             Department?             @relation(fields: [departmentId], references: [id])
   engineeringDiscipline  Discipline?             @relation("UserEngineeringDiscipline", fields: [engineeringDisciplineId], references: [id])
   position               Position?               @relation(fields: [positionId], references: [id])
+  seniorityLevel         SeniorityLevel?         @relation(fields: [seniorityLevelId], references: [id])
   reportsTo              User?                   @relation("UserReportsTo", fields: [reportsToUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   directReports          User[]                  @relation("UserReportsTo")
   sessions               UserSession[]
@@ -946,6 +979,7 @@ model User {
   @@index([departmentId], map: "idx_user_department_id")
   @@index([reportsToUserId], map: "idx_user_reports_to_user_id")
   @@index([engineeringDisciplineId], map: "idx_user_engineering_discipline_id")
+  @@index([seniorityLevelId], map: "idx_user_seniority_level_id")
   @@index([discipline], map: "idx_user_discipline")
   @@map("user")
 }
@@ -1534,17 +1568,17 @@ enum ProjectType {
   COMMERCIAL
   INFRASTRUCTURE
   INDUSTRIAL
-  ROAD // Length of Road (km) — roadLengthKm
-  RAILWAY // Length of Railway (km) — railwayLengthKm
-  URBAN_RAIL_TRANSIT // Length of Urban Rail Transit (km) — urbanRailLengthKm
-  BUILDING // Gross Floor Area (m²) — grossFloorAreaM2
-  BRIDGE // Type-specific fields not yet defined — confirm with client before adding
-  TUNNEL // Type-specific fields not yet defined — confirm with client before adding
-  WATER_SUPPLY_DRAINAGE // Type-specific fields not yet defined — confirm with client before adding
-  PORT_HARBOR // Type-specific fields not yet defined — confirm with client before adding
-  AIRPORT // Type-specific fields not yet defined — confirm with client before adding
-  POWER_ENERGY // Type-specific fields not yet defined — confirm with client before adding
-  MIXED_USE // Gross Floor Area (m²) — grossFloorAreaM2
+  ROAD // Length of Road (km) - roadLengthKm
+  RAILWAY // Length of Railway (km) - railwayLengthKm
+  URBAN_RAIL_TRANSIT // Length of Urban Rail Transit (km) - urbanRailLengthKm
+  BUILDING // Gross Floor Area (m²) - grossFloorAreaM2
+  BRIDGE // Type-specific fields not yet defined - confirm with client before adding
+  TUNNEL // Type-specific fields not yet defined - confirm with client before adding
+  WATER_SUPPLY_DRAINAGE // Type-specific fields not yet defined - confirm with client before adding
+  PORT_HARBOR // Type-specific fields not yet defined - confirm with client before adding
+  AIRPORT // Type-specific fields not yet defined - confirm with client before adding
+  POWER_ENERGY // Type-specific fields not yet defined - confirm with client before adding
+  MIXED_USE // Gross Floor Area (m²) - grossFloorAreaM2
   OTHER
 }
 
@@ -2044,7 +2078,7 @@ model Project {
   budget            Decimal?      @db.Decimal(18, 2)
   currency                String?
   client                  String?
-  /// @deprecated Use departmentId FK — retained for migration/audit.
+  /// @deprecated Use departmentId FK - retained for migration/audit.
   responsibleDepartment   ProjectResponsibleDepartment @default(MUNICIPAL_TRANSPORTATION_DEPARTMENT) @map("responsible_department")
   departmentId            String?       @map("department_id")
   designProperties        ProjectDesignProperties      @default(PRELIMINARY) @map("design_properties")
@@ -2161,7 +2195,7 @@ model Task {
   status                TaskStatus        @default(NOT_STARTED)
   isCritical            Boolean           @default(false) @map("is_critical")
   commissionMode        CommissionMode?   @map("commission_mode")
-  /// @deprecated Use commissionMode — retained for migration/audit.
+  /// @deprecated Use commissionMode - retained for migration/audit.
   commissioningMethod   String?           @map("commissioning_method")
   requiresArchiving     Boolean           @default(false) @map("requires_archiving")
   taskAttributes        TaskAttributes?   @map("task_attributes")
@@ -2210,7 +2244,7 @@ model TaskDiscipline {
   taskId                 String                       @map("task_id")
   companyId              String                       @map("company_id")
   disciplineId           String?                      @map("discipline_id")
-  /// @deprecated Use disciplineId — retained for migration/audit.
+  /// @deprecated Use disciplineId - retained for migration/audit.
   disciplineName         String                       @map("discipline_name")
   projectedStatus        TaskDisciplineProjectedStatus @default(IN_PROGRESS) @map("projected_status")
   designerName         String?                      @map("designer_name")
@@ -4336,20 +4370,20 @@ enum AttendanceDayStatus {
   SUNDAY
   /// Schedule day off (incl. Sunday when the schedule says so).
   DAY_OFF
-  /// Scanned on a schedule day off — info only; deduction 0, no pay change.
+  /// Scanned on a schedule day off - info only; deduction 0, no pay change.
   WORKED_ON_DAY_OFF
   HOLIDAY
   WORK_FROM_HOME
   ON_SITE
   LEAVE
-  /// Approved UNPAID leave — deduction 1; not attended / not paid.
+  /// Approved UNPAID leave - deduction 1; not attended / not paid.
   UNPAID_LEAVE
   FIELD_MOVEMENT_PENDING
   /// Hire → first scan grace (not absent); first N working days only.
   ENROLMENT_GRACE
-  /// After the employee's leaving date — outside employment, neither paid nor absent.
+  /// After the employee's leaving date - outside employment, neither paid nor absent.
   NOT_EMPLOYED
-  /// Inside an InactivePeriod — deduction 0 (paid) or 1 (unpaid) per the inactivePaid policy.
+  /// Inside an InactivePeriod - deduction 0 (paid) or 1 (unpaid) per the inactivePaid policy.
   INACTIVE
 }
 
@@ -4377,7 +4411,7 @@ enum AttendanceMatchMethod {
   MANUAL
   EXEMPT
   MANUAL_PRESENT
-  /// Not yet enrolled on the attendance machine — counted present.
+  /// Not yet enrolled on the attendance machine - counted present.
   NEEDS_ENROLMENT
   /// Missing from file but every working day covered by approved site / WFH / leave.
   COVERED
@@ -6080,7 +6114,7 @@ enum EvaluationDisputeStage {
 }
 
 /**
- * Versioned evaluation form template — created by HR or Discipline Lead.
+ * Versioned evaluation form template - created by HR or Discipline Lead.
  * A new version is created when the form changes so old evaluations
  * keep their original criteria.
  */
@@ -6306,7 +6340,7 @@ model EvaluationScore {
 }
 
 /**
- * Dispute record — created when employee disputes result.
+ * Dispute record - created when employee disputes result.
  * Tracks the full dispute chain: employee → DL → HR.
  */
 model EvaluationDispute {
@@ -6400,7 +6434,7 @@ model PayrollRun{
   bankLetterRefNo         String?                             @map("bank_letter_ref_no")
   notes                   String?
   attendanceSnapshotStale Boolean                             @default(false) @map("attendance_snapshot_stale")
-  /// Approved/paid run whose month is affected by a later policy change — HR must review (never auto-recalculated).
+  /// Approved/paid run whose month is affected by a later policy change - HR must review (never auto-recalculated).
   policyReviewRequired    Boolean                             @default(false) @map("policy_review_required")
   policyReviewNote        String?                             @map("policy_review_note")
   submittedAt             DateTime?                           @map("submitted_at")

@@ -27,7 +27,7 @@ import { calculateOvertimeHours } from '../src/modules/overtime/application/util
 const prisma = new PrismaClient();
 
 const COMPANY_ID = '00000000-0000-4000-8000-000000000001';
-/** Prompt SYSTEM_USER_ID does not exist as a User row — use admin for FKs. */
+/** Prompt SYSTEM_USER_ID does not exist as a User row - use admin for FKs. */
 const ADMIN_USER_ID = '4cdeb292-ebad-4c3d-85ff-9c5b0ad49fd0';
 const MS_DONG_USER_ROLE_ID = '4e7df873-7f88-4580-9eeb-5e10dcdbba98';
 const SAMUEL_ID = '16040ab7-b923-4fe4-87cf-cc3a916c7325';
@@ -583,7 +583,7 @@ async function main(): Promise<void> {
     employeeId: EMPLOYEES.armias,
     leaveType: LeaveType.ANNUAL,
     status: 'SUBMITTED',
-    title: 'Annual Leave — Armias Habtu',
+    title: 'Annual Leave - Armias Habtu',
     reason: 'Family visit to Gondar',
     start: '2026-10-05',
     end: '2026-10-09',
@@ -594,7 +594,7 @@ async function main(): Promise<void> {
     employeeId: EMPLOYEES.dagmawi,
     leaveType: LeaveType.SICK,
     status: 'IN_REVIEW',
-    title: 'Sick Leave — Dagmawi Tesfaye',
+    title: 'Sick Leave - Dagmawi Tesfaye',
     reason: 'Medical treatment',
     start: '2026-09-28',
     end: '2026-09-30',
@@ -605,7 +605,7 @@ async function main(): Promise<void> {
     employeeId: EMPLOYEES.heaven,
     leaveType: LeaveType.ANNUAL,
     status: 'APPROVED',
-    title: 'Annual Leave — Heaven Jada',
+    title: 'Annual Leave - Heaven Jada',
     reason: 'Annual family vacation',
     start: '2026-09-15',
     end: '2026-09-19',
@@ -616,7 +616,7 @@ async function main(): Promise<void> {
     employeeId: EMPLOYEES.naod,
     leaveType: LeaveType.ANNUAL,
     status: 'RETURNED',
-    title: 'Annual Leave — Naod Kiflu',
+    title: 'Annual Leave - Naod Kiflu',
     reason: 'Personal travel',
     start: '2026-10-12',
     end: '2026-10-16',
@@ -627,7 +627,7 @@ async function main(): Promise<void> {
     employeeId: msDong.id,
     leaveType: LeaveType.ANNUAL,
     status: 'SUBMITTED',
-    title: 'Annual Leave — Jinxia Dong',
+    title: 'Annual Leave - Jinxia Dong',
     reason: 'National holiday travel',
     start: '2026-10-01',
     end: '2026-10-03',
@@ -737,7 +737,7 @@ async function main(): Promise<void> {
     month: 9,
     year: 2026,
     status: 'SUBMITTED',
-    title: 'Overtime — Hailab Getu — September 2026',
+    title: 'Overtime - Hailab Getu - September 2026',
     entries: [
       {
         date: '2026-09-06',
@@ -767,7 +767,7 @@ async function main(): Promise<void> {
     month: 8,
     year: 2026,
     status: 'APPROVED',
-    title: 'Overtime — Armias Habtu — August 2026',
+    title: 'Overtime - Armias Habtu - August 2026',
     entries: [
       {
         date: '2026-08-20',
@@ -847,7 +847,7 @@ async function main(): Promise<void> {
   await createFlight({
     employeeId: EMPLOYEES.naod,
     status: 'SUBMITTED',
-    title: 'Flight: Addis Ababa to Dire Dawa — Naod Kiflu',
+    title: 'Flight: Addis Ababa to Dire Dawa - Naod Kiflu',
     destination: 'Dire Dawa',
     departure: '2026-10-10',
     returnDate: '2026-10-14',
@@ -856,7 +856,7 @@ async function main(): Promise<void> {
   await createFlight({
     employeeId: EMPLOYEES.heaven,
     status: 'APPROVED',
-    title: 'Flight: Addis Ababa to Bahir Dar — Heaven Jada',
+    title: 'Flight: Addis Ababa to Bahir Dar - Heaven Jada',
     destination: 'Bahir Dar',
     departure: '2026-09-10',
     returnDate: '2026-09-12',
@@ -943,7 +943,7 @@ async function main(): Promise<void> {
   await createPerDiem({
     employeeId: EMPLOYEES.dagmawi,
     status: 'SUBMITTED',
-    title: 'Per Diem — Dagmawi Tesfaye — October 2026',
+    title: 'Per Diem - Dagmawi Tesfaye - October 2026',
     destination: 'Dire Dawa',
     start: '2026-10-10',
     end: '2026-10-14',
@@ -953,7 +953,7 @@ async function main(): Promise<void> {
   await createPerDiem({
     employeeId: EMPLOYEES.hailab,
     status: 'APPROVED',
-    title: 'Per Diem — Hailab Getu — September 2026',
+    title: 'Per Diem - Hailab Getu - September 2026',
     destination: 'Hawassa',
     start: '2026-09-15',
     end: '2026-09-18',
@@ -1023,18 +1023,18 @@ async function main(): Promise<void> {
   await createExitPermit({
     employeeId: EMPLOYEES.armias,
     status: 'SUBMITTED',
-    title: 'Exit Permit — Armias Habtu',
+    title: 'Exit Permit - Armias Habtu',
     date: '2026-10-08',
     itemName: 'A1 drawing rolls (5), USB drive with digital files',
-    issue: 'Submitting drawings to client office — Ministry of Works, Addis Ababa',
+    issue: 'Submitting drawings to client office - Ministry of Works, Addis Ababa',
   });
   await createExitPermit({
     employeeId: EMPLOYEES.naod,
     status: 'APPROVED',
-    title: 'Exit Permit — Naod Kiflu',
+    title: 'Exit Permit - Naod Kiflu',
     date: '2026-09-20',
     itemName: 'Tender documents (3 copies), company stamp',
-    issue: 'Delivery of tender documents — Ethiopian Roads Authority',
+    issue: 'Delivery of tender documents - Ethiopian Roads Authority',
   });
   console.log(`✓ ${exitCounter - 1} exit permits seeded`);
 
@@ -1061,19 +1061,19 @@ async function main(): Promise<void> {
   console.log(`  · approval_tier: ${tierCount}`);
   console.log('\n  Test accounts:');
   console.log(
-    '  · Armias Habtu (EM-010) — leave SUBMITTED, overtime APPROVED, exit SUBMITTED',
+    '  · Armias Habtu (EM-010) - leave SUBMITTED, overtime APPROVED, exit SUBMITTED',
   );
   console.log(
-    '  · Dagmawi Tesfaye (EM-021) — leave IN_REVIEW, per diem SUBMITTED',
+    '  · Dagmawi Tesfaye (EM-021) - leave IN_REVIEW, per diem SUBMITTED',
   );
   console.log(
-    '  · Hailab Getu (EM-038) — overtime SUBMITTED, per diem APPROVED',
+    '  · Hailab Getu (EM-038) - overtime SUBMITTED, per diem APPROVED',
   );
-  console.log('  · Heaven Jada (EM-043) — leave APPROVED, flight APPROVED');
+  console.log('  · Heaven Jada (EM-043) - leave APPROVED, flight APPROVED');
   console.log(
-    '  · Naod Kiflu (EM-080) — leave RETURNED, flight SUBMITTED, exit APPROVED',
+    '  · Naod Kiflu (EM-080) - leave RETURNED, flight SUBMITTED, exit APPROVED',
   );
-  console.log('  · Ms. Dong (EM-049) — own leave SUBMITTED → goes to GM');
+  console.log('  · Ms. Dong (EM-049) - own leave SUBMITTED → goes to GM');
   console.log('\n  Approval chains:');
   console.log('  · Standard: Samuel (DL) → Ms. Dong (HR Manager)');
   console.log(

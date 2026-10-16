@@ -38,12 +38,12 @@ export default function SidebarSearch({
   query: string;
   onQueryChange: (value: string) => void;
   results: readonly SidebarLocatedLink[];
-  /** Element id of the input — the shell focuses it for Cmd/Ctrl+K. */
+  /** Element id of the input - the shell focuses it for Cmd/Ctrl+K. */
   inputId: string;
   /** Id of the element rendered by `SidebarSearchResults`. */
   resultsId: string;
   onNavigate?: () => void;
-  /** Esc on an empty field — e.g. close the docked search panel. */
+  /** Esc on an empty field - e.g. close the docked search panel. */
   onEscapeEmpty?: () => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
 }): React.ReactNode {

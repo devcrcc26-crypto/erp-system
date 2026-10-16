@@ -85,7 +85,7 @@ export function formatBusinessTripSubmitterName(
   user?: BusinessTripUserSummary | null,
 ): string {
   if (!user) {
-    return '—';
+    return '-';
   }
   return formatUserName(user);
 }
@@ -97,11 +97,11 @@ export function formatEtb(
   amount: number | string | null | undefined,
 ): string {
   if (amount == null || amount === '') {
-    return '—';
+    return '-';
   }
   const num = typeof amount === 'string' ? Number(amount) : amount;
   if (Number.isNaN(num)) {
-    return '—';
+    return '-';
   }
   return `ETB ${num.toLocaleString(undefined, {
     minimumFractionDigits: 0,
@@ -164,7 +164,7 @@ export function getCurrentStep(
     case 'RETURNED':
       return {
         step: tr(t, 'hr.status.RETURNED', 'Returned'),
-        description: 'Changes requested — please resubmit',
+        description: 'Changes requested - please resubmit',
         color: 'orange',
       };
     case 'REJECTED':
@@ -263,7 +263,7 @@ export function getCurrentStepLabel(
   if (trip.currentTierLabel) {
     return trip.currentTierLabel;
   }
-  return getCurrentStep(trip, t)?.step ?? '—';
+  return getCurrentStep(trip, t)?.step ?? '-';
 }
 
 /**

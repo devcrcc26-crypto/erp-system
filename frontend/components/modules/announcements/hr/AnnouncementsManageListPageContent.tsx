@@ -160,7 +160,7 @@ export default function AnnouncementsManageListPageContent({
               requireAcknowledgement={row.requireAcknowledgement}
             />
           ) : (
-            <span className="text-[13px] text-[#6b7280]">—</span>
+            <span className="text-[13px] text-[#6b7280]">-</span>
           ),
       },
     ],

@@ -20,7 +20,7 @@ export interface FileUploadInputProps {
 }
 
 /**
- * Lightweight multi-file picker — selection only; parent owns upload.
+ * Lightweight multi-file picker - selection only; parent owns upload.
  * Selected files are shown with type icons (PDF, Word, image, etc.).
  */
 export default function FileUploadInput({

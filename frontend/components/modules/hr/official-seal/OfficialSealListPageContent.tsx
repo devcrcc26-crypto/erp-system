@@ -103,7 +103,7 @@ function OfficialSealStat({
 }
 
 /**
- * Official seal list — Users chrome (stat bar, filter row, soft table).
+ * Official seal list - Users chrome (stat bar, filter row, soft table).
  */
 export default function OfficialSealListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -290,7 +290,7 @@ export default function OfficialSealListPageContent(): React.ReactNode {
           ) : row.currentTierLabel ? (
             <span className="erp-users-role-tag">{row.currentTierLabel}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
     ],

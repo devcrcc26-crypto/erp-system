@@ -153,7 +153,7 @@ export function exportVehicleApplicationPdf(input: {
           {
             label: 'Vehicle',
             value: application.vehicle
-              ? `${application.vehicle.plateNumber} — ${application.vehicle.make} ${application.vehicle.model}`
+              ? `${application.vehicle.plateNumber} - ${application.vehicle.make} ${application.vehicle.model}`
               : null,
           },
           { label: 'Drive Type', value: exportEnumLabel(application.driveType) },
@@ -201,5 +201,5 @@ function formatProject(
   }
   return [application.project.projectCode, application.project.name]
     .filter(Boolean)
-    .join(' — ');
+    .join(' - ');
 }

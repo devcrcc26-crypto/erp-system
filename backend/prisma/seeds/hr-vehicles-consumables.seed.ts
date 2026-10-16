@@ -49,7 +49,7 @@ interface ConsumablesItemDraft {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Approval helper — 1-tier HR Officer chain
+// Approval helper - 1-tier HR Officer chain
 // ────────────────────────────────────────────────────────────────────────────
 
 async function createHrOnlyApprovalChain(
@@ -202,7 +202,7 @@ async function seedConsumables(
   }> = [
     {
       employee: weiChen,
-      title: 'Engineering Office Supplies — August 2026',
+      title: 'Engineering Office Supplies - August 2026',
       purpose:
         'Monthly replenishment of stationery for engineering department.',
       department: 'Structural Engineering',
@@ -241,7 +241,7 @@ async function seedConsumables(
     },
     {
       employee: weiChen,
-      title: 'Cleaning Supplies — Engineering Floor',
+      title: 'Cleaning Supplies - Engineering Floor',
       purpose: 'Cleaning materials for engineering office area.',
       department: 'Structural Engineering',
       requiredByDate: '2026-08-15',
@@ -272,7 +272,7 @@ async function seedConsumables(
     },
     {
       employee: xiaomingLi,
-      title: 'Whiteboard Supplies — Meeting Room',
+      title: 'Whiteboard Supplies - Meeting Room',
       purpose: 'Whiteboard markers and erasers for engineering meeting room.',
       department: 'Engineering Management',
       requiredByDate: '2026-08-08',
@@ -310,7 +310,7 @@ async function seedConsumables(
     },
     {
       employee: xiaomingLi,
-      title: 'Printer Consumables — Department Printer',
+      title: 'Printer Consumables - Department Printer',
       purpose: 'Toner and paper for department laser printer.',
       department: 'Engineering Management',
       requiredByDate: '2026-09-01',
@@ -334,7 +334,7 @@ async function seedConsumables(
     },
     {
       employee: otherEmployees[0]!,
-      title: 'Site Office Consumables — Hawassa',
+      title: 'Site Office Consumables - Hawassa',
       purpose: 'Consumables for site office at Hawassa project.',
       department: 'Site Management',
       requiredByDate: '2026-08-18',
@@ -372,7 +372,7 @@ async function seedConsumables(
     },
     {
       employee: otherEmployees[0]!,
-      title: 'Safety Consumables — Site Team',
+      title: 'Safety Consumables - Site Team',
       purpose: 'Disposable safety items for site team weekly use.',
       department: 'Site Management',
       requiredByDate: '2026-08-20',
@@ -465,7 +465,7 @@ async function seedConsumables(
     },
     {
       employee: otherEmployees[2]!,
-      title: 'First Aid Supplies — Office',
+      title: 'First Aid Supplies - Office',
       purpose: 'Replenishment of office first aid kit.',
       department: 'HSE',
       requiredByDate: '2026-08-05',
@@ -496,7 +496,7 @@ async function seedConsumables(
     },
     {
       employee: otherEmployees[3]!,
-      title: 'Archive Supplies — Document Room',
+      title: 'Archive Supplies - Document Room',
       purpose: 'Filing and archiving materials for project documents.',
       department: 'Document Control',
       requiredByDate: '2026-09-05',
@@ -581,7 +581,7 @@ async function seedConsumables(
     });
 
     console.log(
-      `✓ CR ${requestNumber} — ${req.title} — ${req.items.length} items — ${req.status}`,
+      `✓ CR ${requestNumber} - ${req.title} - ${req.items.length} items - ${req.status}`,
     );
   }
 }
@@ -747,7 +747,7 @@ async function seedVehicleApplications(
     const approvalRequest = await createHrOnlyApprovalChain(
       app.employee.id,
       'VEHICLE_APPLICATION',
-      `Vehicle request — ${app.destination} (${app.departureDateTime.split('T')[0]})`,
+      `Vehicle request - ${app.destination} (${app.departureDateTime.split('T')[0]})`,
       app.status,
       companyId,
       hrOfficerId,
@@ -796,7 +796,7 @@ async function seedVehicleApplications(
     }
 
     console.log(
-      `✓ VA ${applicationNumber} — ${app.destination} — ${vehicle.plateNumber} — ${app.status}`,
+      `✓ VA ${applicationNumber} - ${app.destination} - ${vehicle.plateNumber} - ${app.status}`,
     );
   }
 }
@@ -836,7 +836,7 @@ async function seedVehicleRefueling(
       employee: weiChen,
       vehicleIndex: 0,
       fuelDate: '2026-08-10',
-      fuelStation: 'NOC Petrol Station — Bole Road',
+      fuelStation: 'NOC Petrol Station - Bole Road',
       currentMileage: 45230,
       requestedLitres: 60,
       unitPriceEtb: 60,
@@ -847,7 +847,7 @@ async function seedVehicleRefueling(
       employee: weiChen,
       vehicleIndex: 1,
       fuelDate: '2026-08-20',
-      fuelStation: 'Total Energies — Meskel Square',
+      fuelStation: 'Total Energies - Meskel Square',
       currentMileage: 32100,
       requestedLitres: 45,
       unitPriceEtb: 60,
@@ -858,7 +858,7 @@ async function seedVehicleRefueling(
       employee: xiaomingLi,
       vehicleIndex: 2,
       fuelDate: '2026-08-15',
-      fuelStation: 'Oromo Oil — Megenagna',
+      fuelStation: 'Oromo Oil - Megenagna',
       currentMileage: 28500,
       requestedLitres: 80,
       unitPriceEtb: 60,
@@ -869,7 +869,7 @@ async function seedVehicleRefueling(
       employee: xiaomingLi,
       vehicleIndex: 0,
       fuelDate: '2026-08-28',
-      fuelStation: 'NOC Petrol Station — CMC Road',
+      fuelStation: 'NOC Petrol Station - CMC Road',
       currentMileage: 45890,
       requestedLitres: 65,
       unitPriceEtb: 60,
@@ -880,7 +880,7 @@ async function seedVehicleRefueling(
       employee: otherEmployees[0]!,
       vehicleIndex: 3,
       fuelDate: '2026-08-22',
-      fuelStation: 'Total Energies — Sarbet',
+      fuelStation: 'Total Energies - Sarbet',
       currentMileage: 62400,
       requestedLitres: 120,
       unitPriceEtb: 60,
@@ -891,7 +891,7 @@ async function seedVehicleRefueling(
       employee: otherEmployees[0]!,
       vehicleIndex: 4,
       fuelDate: '2026-08-18',
-      fuelStation: 'Oromo Oil — Kality',
+      fuelStation: 'Oromo Oil - Kality',
       currentMileage: 89200,
       requestedLitres: 100,
       unitPriceEtb: 60,
@@ -902,7 +902,7 @@ async function seedVehicleRefueling(
       employee: otherEmployees[1]!,
       vehicleIndex: 1,
       fuelDate: '2026-08-25',
-      fuelStation: 'NOC Petrol Station — Kazanchis',
+      fuelStation: 'NOC Petrol Station - Kazanchis',
       currentMileage: 31800,
       requestedLitres: 50,
       unitPriceEtb: 60,
@@ -913,7 +913,7 @@ async function seedVehicleRefueling(
       employee: otherEmployees[1]!,
       vehicleIndex: 2,
       fuelDate: '2026-09-05',
-      fuelStation: 'Total Energies — Lideta',
+      fuelStation: 'Total Energies - Lideta',
       currentMileage: 29100,
       requestedLitres: 75,
       unitPriceEtb: 60,
@@ -924,7 +924,7 @@ async function seedVehicleRefueling(
       employee: otherEmployees[2]!,
       vehicleIndex: 0,
       fuelDate: '2026-08-12',
-      fuelStation: 'Oromo Oil — Ayer Tena',
+      fuelStation: 'Oromo Oil - Ayer Tena',
       currentMileage: 44750,
       requestedLitres: 55,
       unitPriceEtb: 60,
@@ -935,7 +935,7 @@ async function seedVehicleRefueling(
       employee: otherEmployees[3]!,
       vehicleIndex: 1,
       fuelDate: '2026-09-01',
-      fuelStation: 'NOC Petrol Station — Gotera',
+      fuelStation: 'NOC Petrol Station - Gotera',
       currentMileage: 32500,
       requestedLitres: 40,
       unitPriceEtb: 60,
@@ -950,7 +950,7 @@ async function seedVehicleRefueling(
     const approvalRequest = await createHrOnlyApprovalChain(
       ref.employee.id,
       'VEHICLE_REFUELING',
-      `Fuel request — ${vehicle.plateNumber} — ${ref.fuelDate}`,
+      `Fuel request - ${vehicle.plateNumber} - ${ref.fuelDate}`,
       ref.status,
       companyId,
       hrOfficerId,
@@ -987,7 +987,7 @@ async function seedVehicleRefueling(
     });
 
     console.log(
-      `✓ VR ${requestNumber} — ${vehicle.plateNumber} — ${ref.requestedLitres}L — ETB ${ref.totalCostEtb} — ${ref.status}`,
+      `✓ VR ${requestNumber} - ${vehicle.plateNumber} - ${ref.requestedLitres}L - ETB ${ref.totalCostEtb} - ${ref.status}`,
     );
   }
 }
@@ -1055,7 +1055,7 @@ async function main(): Promise<void> {
     },
   });
   if (vehicles.length === 0) {
-    throw new Error('No vehicles found — run vehicle seed first');
+    throw new Error('No vehicles found - run vehicle seed first');
   }
 
   const fallbackDriver = await prisma.user.findFirst({

@@ -7,7 +7,7 @@ import { ConsumablesRequisitionImportController } from './presentation/controlle
 import { ConsumablesRequisitionController } from './presentation/controllers/consumables-requisition.controller';
 
 /**
- * Consumables requisition module — low-value consumable stock requests with a
+ * Consumables requisition module - low-value consumable stock requests with a
  * single HR Officer approval tier (or direct APPROVED for HR and above).
  */
 @Module({

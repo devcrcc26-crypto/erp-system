@@ -79,7 +79,7 @@ export function useGlobalPortfolioListMode(): boolean {
 }
 
 /**
- * Global construction submittals — full-access, designer / discipline-lead, or module view.
+ * Global construction submittals - full-access, designer / discipline-lead, or module view.
  */
 export function useCanViewSubmittals(): boolean {
   const epc = useEpcCapabilities();
@@ -93,7 +93,7 @@ export function useCanViewSubmittals(): boolean {
 }
 
 /**
- * Global external releases — full-access, designer / discipline-lead, or module view.
+ * Global external releases - full-access, designer / discipline-lead, or module view.
  * Same visibility formula as construction submittals (shares the `submittals` module).
  */
 export function useCanViewExternalReleases(): boolean {
@@ -108,7 +108,7 @@ export function useCanViewExternalReleases(): boolean {
 }
 
 /**
- * Global change requests — full-access, designer / discipline-lead, or module view.
+ * Global change requests - full-access, designer / discipline-lead, or module view.
  */
 export function useCanViewChangeRequests(): boolean {
   const epc = useEpcCapabilities();
@@ -122,7 +122,7 @@ export function useCanViewChangeRequests(): boolean {
 }
 
 /**
- * Global RFIs — full-access / FK designer-lead always; otherwise only when
+ * Global RFIs - full-access / FK designer-lead always; otherwise only when
  * rfis.canView without portfolio projects.canView (project sidebar otherwise).
  */
 export function useCanViewRfis(): boolean {
@@ -139,7 +139,7 @@ export function useCanViewRfis(): boolean {
 }
 
 /**
- * Global Issues — full-access / FK designer-lead always; otherwise only when
+ * Global Issues - full-access / FK designer-lead always; otherwise only when
  * issues.canView without portfolio projects.canView (project sidebar otherwise).
  */
 export function useCanViewIssues(): boolean {
@@ -156,7 +156,7 @@ export function useCanViewIssues(): boolean {
 }
 
 /**
- * Global Meetings — full-access / FK designer-lead always; otherwise only when
+ * Global Meetings - full-access / FK designer-lead always; otherwise only when
  * meetings.canView without portfolio projects.canView (project sidebar otherwise).
  */
 export function useCanViewMeetings(): boolean {
@@ -173,7 +173,7 @@ export function useCanViewMeetings(): boolean {
 }
 
 /**
- * Global Correspondence — full-access only (project managers use the
+ * Global Correspondence - full-access only (project managers use the
  * project sidebar; the global page is reserved for portfolio administrators).
  */
 export function useCanViewCorrespondence(): boolean {
@@ -182,7 +182,7 @@ export function useCanViewCorrespondence(): boolean {
 }
 
 /**
- * Global Risks — full-access always; discipline leads always (risks are
+ * Global Risks - full-access always; discipline leads always (risks are
  * management-level, not a designer concern); otherwise only when
  * risks.canView without portfolio projects.canView (project sidebar otherwise).
  */
@@ -199,7 +199,7 @@ export function useCanViewRisks(): boolean {
 }
 
 /**
- * Global Punch List — discipline leads always; otherwise only when
+ * Global Punch List - discipline leads always; otherwise only when
  * punchItems.canView without portfolio projects.canView (project sidebar otherwise).
  */
 export function useCanViewPunchList(): boolean {
@@ -212,7 +212,7 @@ export function useCanViewPunchList(): boolean {
 }
 
 /**
- * Global Daily Logs — full-access / FK designer-lead always; otherwise only when
+ * Global Daily Logs - full-access / FK designer-lead always; otherwise only when
  * dailyLogs.canView without portfolio projects.canView (project sidebar otherwise).
  */
 export function useCanViewDailyLogs(): boolean {

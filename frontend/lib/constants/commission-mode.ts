@@ -1,5 +1,5 @@
 /**
- * Task commission mode — same values as ProjectContractType.
+ * Task commission mode - same values as ProjectContractType.
  */
 export {
   PROJECT_CONTRACT_TYPE_VALUES as COMMISSION_MODE_VALUES,

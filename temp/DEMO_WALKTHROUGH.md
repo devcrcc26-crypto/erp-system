@@ -1,4 +1,4 @@
-# Construction ERP — Step-by-Step Demo Guide
+# Construction ERP - Step-by-Step Demo Guide
 
 **Password for every demo account:** `Admin@12345`
 
@@ -8,7 +8,7 @@ Open the website. Follow the steps below in order. Every step tells you exactly 
 
 ---
 
-## Step 0 — Sign in
+## Step 0 - Sign in
 
 1. Open the login page.
 2. Look at the **Demo accounts** panel on the right (or below on a phone).
@@ -19,7 +19,7 @@ You are now signed in. Continue to Walkthrough 1.
 
 ---
 
-## Walkthrough 1 — Browse projects (10 min)
+## Walkthrough 1 - Browse projects (10 min)
 
 **Do this as Project Manager** (click **Project Manager** in the demo panel, then click **Sign in**).
 
@@ -39,9 +39,9 @@ You are now signed in. Continue to Walkthrough 1.
 
 ---
 
-## Walkthrough 2 — Download project list to Excel (5 min)
+## Walkthrough 2 - Download project list to Excel (5 min)
 
-**Do this as System Administrator** (sign out first — click your name → **Sign out** — then click **System Administrator** in the demo panel → click **Sign in**).
+**Do this as System Administrator** (sign out first - click your name → **Sign out** - then click **System Administrator** in the demo panel → click **Sign in**).
 
 1. Click **Projects** in the left menu.
 2. Click **Export Excel** at the top right.
@@ -54,13 +54,13 @@ You are now signed in. Continue to Walkthrough 1.
 
 ---
 
-## Walkthrough 3 — Design approval (30 min)
+## Walkthrough 3 - Design approval (30 min)
 
 Use project **LJZ-2024-001** for most of this. Sign out and sign in again each time the steps say to change person.
 
 ---
 
-### 3A — Designer views design packages
+### 3A - Designer views design packages
 
 1. Click your name → **Sign out**.
 2. Click **Designer** in the demo panel.
@@ -79,7 +79,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-### 3B — Reviewer opens review inbox
+### 3B - Reviewer opens review inbox
 
 1. Click your name → **Sign out**.
 2. Click **Reviewer** in the demo panel.
@@ -90,13 +90,13 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 7. Click one item in the inbox list.
 8. Read the review details on screen.
 9. Scroll to **Comments** if you see them.
-10. Click **Approve** or **Return for revision** if those buttons appear (clicking is optional — just see that they are there).
+10. Click **Approve** or **Return for revision** if those buttons appear (clicking is optional - just see that they are there).
 
 **You are done when:** You see items in the review inbox and opened one.
 
 ---
 
-### 3C — Discipline Lead
+### 3C - Discipline Lead
 
 1. Click your name → **Sign out**.
 2. Click **Discipline Lead** in the demo panel.
@@ -105,11 +105,11 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 5. Click **Review inbox**.
 6. Look at the list. Open one item if any appear.
 
-**You are done when:** You checked the Lead inbox (items may or may not be there — that is OK).
+**You are done when:** You checked the Lead inbox (items may or may not be there - that is OK).
 
 ---
 
-### 3D — Department Chief
+### 3D - Department Chief
 
 1. Click your name → **Sign out**.
 2. Click **Department Chief** in the demo panel.
@@ -122,7 +122,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-### 3E — Institute Chief
+### 3E - Institute Chief
 
 1. Click your name → **Sign out**.
 2. Click **Institute Chief** in the demo panel.
@@ -135,7 +135,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-### 3F — Discipline Owner
+### 3F - Discipline Owner
 
 1. Click your name → **Sign out**.
 2. Click **Discipline Owner** in the demo panel.
@@ -150,7 +150,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-### 3G — See a revision (optional)
+### 3G - See a revision (optional)
 
 1. Click your name → **Sign out**.
 2. Click **Designer** in the demo panel.
@@ -164,7 +164,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-## Walkthrough 4 — Closed project (5 min)
+## Walkthrough 4 - Closed project (5 min)
 
 **Do this as Project Manager.**
 
@@ -173,7 +173,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 3. Click **Sign in**.
 4. Click **Projects**.
 5. Click **ZMC-2023-002** (Zhongshan Medical Centre).
-6. Look at the status — it should say **Closed**.
+6. Look at the status - it should say **Closed**.
 7. Click **Schedule** → open a task → click **Design packages**.
 8. Click a package and check the status says **Approved**.
 9. Click **Documents** in the project menu.
@@ -185,7 +185,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-## Walkthrough 5 — Documents (10 min)
+## Walkthrough 5 - Documents (10 min)
 
 **Do this as Document Controller.**
 
@@ -206,7 +206,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-## Walkthrough 6 — Site records (10 min)
+## Walkthrough 6 - Site records (10 min)
 
 **Do this as Site Engineer.**
 
@@ -228,7 +228,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-## Walkthrough 7 — User list (5 min)
+## Walkthrough 7 - User list (5 min)
 
 **Do this as System Administrator.**
 
@@ -246,7 +246,7 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-## Walkthrough 8 — Download task list (5 min)
+## Walkthrough 8 - Download task list (5 min)
 
 **Do this as Project Manager.**
 
@@ -264,28 +264,28 @@ Use project **LJZ-2024-001** for most of this. Sign out and sign in again each t
 
 ---
 
-## Walkthrough 9 — Different project types (5 min)
+## Walkthrough 9 - Different project types (5 min)
 
 **Do this as Project Manager.**
 
 1. Click **Projects** in the left menu.
 2. Click **New project** at the top right.
 3. Click the **Project type** dropdown.
-4. Scroll the list — look for Road, Railway, Building, Airport, etc.
+4. Scroll the list - look for Road, Railway, Building, Airport, etc.
 5. Click **Cancel** to close the form without saving.
 6. In the search box, type `TYPE-ROAD`.
 7. Press **Enter**.
 8. Click **TYPE-ROAD-001**.
-9. Read the project details — look for **road length**.
+9. Read the project details - look for **road length**.
 10. Click **Projects** to go back.
 11. Search `TYPE-BLD`, press **Enter**, click **TYPE-BLD-001**.
-12. Read the project details — look for **floor area**.
+12. Read the project details - look for **floor area**.
 
 **You are done when:** You saw the type dropdown and opened a road project and a building project.
 
 ---
 
-## Demo accounts — quick reference
+## Demo accounts - quick reference
 
 Click the role in the **Demo accounts** panel on the login page. Password is always **`Admin@12345`**.
 
@@ -304,7 +304,7 @@ Click the role in the **Demo accounts** panel on the login page. Password is alw
 
 ---
 
-## Projects — quick reference
+## Projects - quick reference
 
 | Click this project | Code |
 |--------------------|------|
@@ -321,14 +321,14 @@ Click the role in the **Demo accounts** panel on the login page. Password is alw
 
 | You see this | Do this |
 |--------------|---------|
-| Warning about demo email on Forgot password | Ignore it — demo accounts do not get real emails |
+| Warning about demo email on Forgot password | Ignore it - demo accounts do not get real emails |
 | A menu item is missing | Sign in as a different role from the table above |
 | Review inbox is empty | Try another project (LJZ, DEMO-001, or DEMO-002) or another role |
 | File will not open | Tell your facilitator |
 
 ---
 
-## 1-hour plan — do these in order
+## 1-hour plan - do these in order
 
 | Minutes | Do this |
 |---------|---------|
@@ -341,7 +341,7 @@ Click the role in the **Demo accounts** panel on the login page. Password is alw
 
 ---
 
-## Checklist — tick as you go
+## Checklist - tick as you go
 
 - [ ] Clicked a demo account and signed in  
 - [ ] Clicked Projects and opened LJZ-2024-001  

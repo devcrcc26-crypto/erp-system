@@ -112,7 +112,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   dashboard: DashboardOutlined,
   projects: ProjectOutlined,
 
-  // Sidebar rail domains — one per module group
+  // Sidebar rail domains - one per module group
   'domain-projects': ProjectOutlined,
   'domain-hr': lucideNavIcon(Users),
   'domain-time': lucideNavIcon(CalendarClock),
@@ -157,7 +157,7 @@ export const NAV_ICON_COMPONENTS: Record<string, NavIconComponent> = {
   approvals: AuditOutlined,
   announcements: lucideNavIcon(Megaphone),
 
-  // HR — Lucide icons matched to module titles
+  // HR - Lucide icons matched to module titles
   'hr-leave': lucideNavIcon(CalendarDays),
   'hr-leave-policy': lucideNavIcon(ClipboardList),
   'hr-work-schedules': lucideNavIcon(CalendarClock),

@@ -209,7 +209,7 @@ async function main(): Promise<void> {
       const [oldRow, newRow] = group;
       const user = resolve(oldRow!.name);
       if (!user) {
-        reportLines.push(`- **${oldRow!.name}**: unmatched — skipped`);
+        reportLines.push(`- **${oldRow!.name}**: unmatched - skipped`);
         continue;
       }
 

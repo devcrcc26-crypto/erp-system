@@ -67,7 +67,7 @@ function nextKey(): string {
 }
 
 /**
- * Material requisition create form — same StepperForm chrome as Add Employee.
+ * Material requisition create form - same StepperForm chrome as Add Employee.
  */
 export default function MaterialRequisitionForm({
   onSuccess,
@@ -247,14 +247,14 @@ export default function MaterialRequisitionForm({
       dataIndex: 'itemCode',
       key: 'itemCode',
       width: 110,
-      render: (value: string | undefined) => value || '—',
+      render: (value: string | undefined) => value || '-',
     },
     {
       title: t('hr.table.description'),
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (value: string | undefined) => value || '—',
+      render: (value: string | undefined) => value || '-',
     },
     {
       title: t('hr.table.quantity'),
@@ -515,7 +515,7 @@ export default function MaterialRequisitionForm({
               <div className="erp-form-grid-2">
                 <ReviewItem
                   label={t('hr.form.title')}
-                  value={detailsSnapshot.title?.trim() || '—'}
+                  value={detailsSnapshot.title?.trim() || '-'}
                 />
                 <ReviewItem
                   label={t('hr.section.items')}
@@ -528,16 +528,16 @@ export default function MaterialRequisitionForm({
                       ? formatDisplayDate(
                           detailsSnapshot.requiredByDate.format('YYYY-MM-DD'),
                         )
-                      : '—'
+                      : '-'
                   }
                 />
                 <ReviewItem
                   label={t('hr.form.warehouseLocation')}
-                  value={detailsSnapshot.warehouseLocation?.trim() || '—'}
+                  value={detailsSnapshot.warehouseLocation?.trim() || '-'}
                 />
                 <ReviewItem
                   label={t('hr.labels.purpose')}
-                  value={detailsSnapshot.purpose?.trim() || '—'}
+                  value={detailsSnapshot.purpose?.trim() || '-'}
                 />
               </div>
             </FormLayout>

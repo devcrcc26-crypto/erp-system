@@ -24,7 +24,7 @@ interface OfficialSealImportPayload {
 const OFFICIAL_SEAL_IMPORT_SCHEMA: ImportColumnSchema = {
   sheetName: 'Official Seal Usage',
   templateFileName: 'official-seal-import-template',
-  note: 'Each row creates one DRAFT official seal usage request. Attachments cannot be imported — add the document to the draft before submitting it.',
+  note: 'Each row creates one DRAFT official seal usage request. Attachments cannot be imported - add the document to the draft before submitting it.',
   columns: buildSealImportColumns('official'),
 };
 
@@ -70,7 +70,7 @@ export class OfficialSealImportService extends HrModuleImportServiceBase<Officia
     const fileName = text('fileName');
     return {
       status: 'ok',
-      label: `${this.excel.employeeLabel(employee.employee)} — ${fileName}`,
+      label: `${this.excel.employeeLabel(employee.employee)} - ${fileName}`,
       dedupeKey: [
         employee.employee.id,
         fileName.toLowerCase(),

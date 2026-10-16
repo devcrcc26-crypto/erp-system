@@ -8,7 +8,7 @@ import { resolveHrProcessExclusionUpdate } from '../utils/hr-process-exclusion.u
 import { UsersController } from '../../presentation/controllers/users.controller';
 import { PERMISSION_KEY } from '../../../../shared/permissions/require-permission.decorator';
 
-describe('approver-only flag (excludedFromHrProcesses) — users API', () => {
+describe('approver-only flag (excludedFromHrProcesses) - users API', () => {
   describe('permission: users.edit', () => {
     const required = (method: keyof UsersController): unknown =>
       Reflect.getMetadata(PERMISSION_KEY, UsersController.prototype[method]);
@@ -103,7 +103,8 @@ describe('approver-only flag (excludedFromHrProcesses) — users API', () => {
             id: targetId,
             firstName: 'Abebe',
             lastName: 'Kebede',
-            experienceStartDate: null,
+            yearsOfExperience: null,
+            yearsOfExperienceAsOf: null,
             bankAccountNumber: null,
             userRoles: [],
           }),

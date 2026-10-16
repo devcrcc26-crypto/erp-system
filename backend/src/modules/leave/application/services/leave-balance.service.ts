@@ -70,7 +70,7 @@ export class LeaveBalanceService {
   }
 
   /**
-   * Shared balance read for validator and UI — ledger for the leave year
+   * Shared balance read for validator and UI - ledger for the leave year
    * containing `date`, never a stale generated remaining column alone.
    */
   async getLeaveBalance(
@@ -179,7 +179,7 @@ export class LeaveBalanceService {
       return buildPaginatedResult([], total, page, limit);
     }
 
-    // One ensure + one batched cache read per page — not 3× getLeaveBalance
+    // One ensure + one batched cache read per page - not 3× getLeaveBalance
     // per employee (that exhausted the Postgres pool / reset connections).
     const yearByEmployee = new Map<string, number>();
     for (const employee of employees) {
@@ -236,7 +236,7 @@ export class LeaveBalanceService {
 
   /**
    * All leave-type balances for an employee leave year (default: current).
-   * Uses getLeaveBalance (ledger) — same source as validation.
+   * Uses getLeaveBalance (ledger) - same source as validation.
    */
   async getBalance(
     employeeId: string,
@@ -552,7 +552,7 @@ export class LeaveBalanceService {
 
   /**
    * Balance import: entitled + broughtForward become an OPENING_BALANCE (empty
-   * year) or an ADJUSTMENT for the difference — never an in-place overwrite.
+   * year) or an ADJUSTMENT for the difference - never an in-place overwrite.
    */
   async upsertEntitlement(
     employeeId: string,

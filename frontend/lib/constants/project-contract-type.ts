@@ -1,5 +1,5 @@
 /**
- * Project contract type values and labels — must match backend ProjectContractType enum keys.
+ * Project contract type values and labels - must match backend ProjectContractType enum keys.
  */
 export const PROJECT_CONTRACT_TYPE_VALUES = [
   'CONTRACT',

@@ -106,7 +106,7 @@ function ProjectSealStat({
 }
 
 /**
- * Project seal list — Users chrome (stat bar, filter row, soft table).
+ * Project seal list - Users chrome (stat bar, filter row, soft table).
  */
 export default function ProjectSealListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -222,7 +222,7 @@ export default function ProjectSealListPageContent(): React.ReactNode {
         render: (_: unknown, row: ProjectSealListItem) => (
           <div className="min-w-0">
             <p className="erp-users-cell-strong m-0 truncate">
-              {formatProjectSealEmployeeName(row.employee) || '—'}
+              {formatProjectSealEmployeeName(row.employee) || '-'}
             </p>
             <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
               {isNarrow
@@ -293,7 +293,7 @@ export default function ProjectSealListPageContent(): React.ReactNode {
           ) : row.currentTierLabel ? (
             <span className="erp-users-role-tag">{row.currentTierLabel}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
     ],

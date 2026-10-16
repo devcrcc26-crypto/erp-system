@@ -1,6 +1,6 @@
 /**
  * Schedule-aware leave day weights for balance charging.
- * Payroll uses different rules — do not reuse this for payroll.
+ * Payroll uses different rules - do not reuse this for payroll.
  */
 
 import { BadRequestException } from '@nestjs/common';

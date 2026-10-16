@@ -508,8 +508,8 @@ export default function DesignPackageDetailPageContent({
               <p className={layout.drawerMetaLabel}>Site Representative</p>
               <p className="text-sm font-medium">
                 {pkg.siteRepType === 'INTERNAL'
-                  ? (pkg.siteRepresentativeName ?? '—')
-                  : (pkg.siteRepName ?? '—')}
+                  ? (pkg.siteRepresentativeName ?? '-')
+                  : (pkg.siteRepName ?? '-')}
               </p>
               {pkg.siteRepType !== 'INTERNAL' && pkg.siteRepCompany ? (
                 <p className={layout.drawerMutedText}>{pkg.siteRepCompany}</p>
@@ -527,7 +527,7 @@ export default function DesignPackageDetailPageContent({
               <p className={layout.drawerMetaLabel}>Client Consultant</p>
               <p className="text-sm font-medium">
                 {pkg.consultantName}
-                {pkg.consultantTitle ? ` — ${pkg.consultantTitle}` : ''}
+                {pkg.consultantTitle ? ` - ${pkg.consultantTitle}` : ''}
               </p>
               {pkg.consultantCompany ? (
                 <p className={layout.drawerMutedText}>{pkg.consultantCompany}</p>
@@ -747,7 +747,7 @@ export default function DesignPackageDetailPageContent({
           void reopenDesignPackage
             .mutateAsync({ packageId })
             .then(() => {
-              messageApi.success('Subtask reopened — unlock documents as needed');
+              messageApi.success('Subtask reopened - unlock documents as needed');
               setReopenPackageOpen(false);
               void packageQuery.refetch();
               void documentsQuery.refetch();

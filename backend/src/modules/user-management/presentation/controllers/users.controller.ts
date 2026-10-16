@@ -378,7 +378,7 @@ export class UsersController {
   @RequirePermission('users', 'edit')
   @ApiOperation({
     summary:
-      'Admin/HR password reset — returns a temporary password once; forces mustChangePassword',
+      'Admin/HR password reset - returns a temporary password once; forces mustChangePassword',
   })
   resetPassword(
     @CurrentUser() user: AuthenticatedUser,

@@ -101,7 +101,7 @@ function VehicleRefuelingStat({
 }
 
 /**
- * Vehicle refueling list — Users chrome (stat bar, filter row, soft table).
+ * Vehicle refueling list - Users chrome (stat bar, filter row, soft table).
  */
 export default function VehicleRefuelingListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -247,7 +247,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
         render: (_: unknown, row: VehicleRefuelingListItem) => (
           <div className="min-w-0">
             <p className="erp-users-cell-strong m-0 truncate">
-              {row.vehicle?.plateNumber ?? '—'}
+              {row.vehicle?.plateNumber ?? '-'}
             </p>
             <p className="erp-users-cell-sub m-0 mt-0.5 truncate">
               {row.vehicle
@@ -302,7 +302,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
         responsive: ['lg'],
         render: (value: number | string | null | undefined) => (
           <span className="erp-users-cell-sub tabular-nums">
-            {value ?? '—'}
+            {value ?? '-'}
           </span>
         ),
       },
@@ -315,7 +315,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
         responsive: ['lg'],
         render: (value: number | string | null | undefined) => (
           <span className="erp-users-cell-sub tabular-nums">
-            {value != null ? formatEtbAmount(value) : '—'}
+            {value != null ? formatEtbAmount(value) : '-'}
           </span>
         ),
       },
@@ -349,7 +349,7 @@ export default function VehicleRefuelingListPageContent(): React.ReactNode {
           return row.currentTierLabel ? (
             <span className="erp-users-role-tag">{row.currentTierLabel}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           );
         },
       },

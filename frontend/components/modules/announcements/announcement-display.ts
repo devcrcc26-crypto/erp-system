@@ -19,15 +19,15 @@ export function localized(
 }
 
 export function formatAnnouncementDate(value: string | null | undefined): string {
-  return value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '—';
+  return value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '-';
 }
 
 export function formatAnnouncementDay(value: string | null | undefined): string {
-  return value ? dayjs(value).format('YYYY-MM-DD') : '—';
+  return value ? dayjs(value).format('YYYY-MM-DD') : '-';
 }
 
 export function personName(person: AnnouncementPerson | null | undefined): string {
-  return person ? formatUserName(person) : '—';
+  return person ? formatUserName(person) : '-';
 }
 
 export function priorityLabelKey(priority: AnnouncementPriority): string {

@@ -229,7 +229,7 @@ describe('leave year (employment anniversary)', () => {
   });
 });
 
-describe('LeaveLedgerService — contract hook', () => {
+describe('LeaveLedgerService - contract hook', () => {
   it('renewal on the anniversary grants entitlement once (re-saving never grants twice)', async () => {
     const t = build({
       users: [employee()],
@@ -345,7 +345,7 @@ describe('LeaveLedgerService — contract hook', () => {
   });
 });
 
-describe('LeaveLedgerService — HR entries and used days', () => {
+describe('LeaveLedgerService - HR entries and used days', () => {
   it('opening balance + used = expected; the cache matches the ledger', async () => {
     const leave = {
       id: 'lv1', companyId: COMPANY, employeeId: 'e1', leaveType: LeaveType.ANNUAL,

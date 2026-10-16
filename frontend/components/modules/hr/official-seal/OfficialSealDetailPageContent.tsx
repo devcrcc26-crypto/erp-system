@@ -78,7 +78,7 @@ function DetailSection({
 }
 
 /**
- * Official seal detail — Users / employee profile chrome.
+ * Official seal detail - Users / employee profile chrome.
  */
 export default function OfficialSealDetailPageContent({
   sealId,
@@ -196,7 +196,7 @@ export default function OfficialSealDetailPageContent({
     ? formatSealCategory(seal.sealCategory, t)
     : seal.copyCount != null
       ? String(seal.copyCount)
-      : '—';
+      : '-';
   const metaCategoryLabel = seal.sealCategory?.trim()
     ? t('hr.form.sealCategory')
     : t('hr.form.copyCount');
@@ -377,7 +377,7 @@ export default function OfficialSealDetailPageContent({
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('hr.labels.issued')}</p>
             <p className="erp-employee-meta-value">
-              {seal.issuedAt ? formatProjectDate(seal.issuedAt) : '—'}
+              {seal.issuedAt ? formatProjectDate(seal.issuedAt) : '-'}
             </p>
           </div>
         </div>

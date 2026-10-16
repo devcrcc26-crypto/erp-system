@@ -90,14 +90,14 @@ export default function FlightSummary({
           }
         />
         <div className="sm:col-span-2">
-          <ReviewItem label={t('hr.labels.route')} value={routeLabel || '—'} />
+          <ReviewItem label={t('hr.labels.route')} value={routeLabel || '-'} />
         </div>
         <ReviewItem
           label={t('hr.labels.departure')}
           value={
             tripDetails.departureDate
               ? formatDisplayDateTime(tripDetails.departureDate.toISOString())
-              : '—'
+              : '-'
           }
         />
         <ReviewItem
@@ -115,7 +115,7 @@ export default function FlightSummary({
         <div className="sm:col-span-2">
           <ReviewItem
             label={t('hr.labels.purpose')}
-            value={tripDetails.purpose || '—'}
+            value={tripDetails.purpose || '-'}
           />
         </div>
         <div className="sm:col-span-2">
@@ -124,7 +124,7 @@ export default function FlightSummary({
             value={
               passengers.length > 0
                 ? passengers.map((p) => p.name).join(', ')
-                : '—'
+                : '-'
             }
           />
         </div>

@@ -58,7 +58,7 @@ export default function BusinessTripCurrentStepBanner({
         <span className="text-sm font-semibold">{currentStep.step}</span>
         {currentStep.description ? (
           <>
-            <span className="hidden sm:inline text-xs opacity-40">—</span>
+            <span className="hidden sm:inline text-xs opacity-40">-</span>
             <span className="text-xs sm:text-sm opacity-80">
               {currentStep.description}
             </span>

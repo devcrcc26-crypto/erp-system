@@ -101,7 +101,7 @@ export async function resolveSourceEntityLabel(
       return id;
     }
     const date = record.logDate.toISOString().slice(0, 10);
-    return `Daily Log — ${date}`;
+    return `Daily Log - ${date}`;
   }
 
   if (type === 'SUBMITTAL_REVIEW') {
@@ -112,7 +112,7 @@ export async function resolveSourceEntityLabel(
     if (!record || record.submittal.projectId !== projectId) {
       return id;
     }
-    return `Submittal Review — ${record.submittal.submittalNumber}`;
+    return `Submittal Review - ${record.submittal.submittalNumber}`;
   }
 
   if (type === 'RFI') {
@@ -123,7 +123,7 @@ export async function resolveSourceEntityLabel(
     if (!record) {
       return id;
     }
-    return `RFI ${record.rfiNumber} — ${record.title}`;
+    return `RFI ${record.rfiNumber} - ${record.title}`;
   }
 
   if (type === 'ISSUE') {
@@ -134,7 +134,7 @@ export async function resolveSourceEntityLabel(
     if (!record) {
       return id;
     }
-    return `Issue ${record.issueNumber} — ${record.issueType}`;
+    return `Issue ${record.issueNumber} - ${record.issueType}`;
   }
 
   if (type === 'CHANGE_REQUEST') {
@@ -145,7 +145,7 @@ export async function resolveSourceEntityLabel(
     if (!record) {
       return id;
     }
-    return `CR ${record.changeNumber} — ${record.title}`;
+    return `CR ${record.changeNumber} - ${record.title}`;
   }
 
   return id;

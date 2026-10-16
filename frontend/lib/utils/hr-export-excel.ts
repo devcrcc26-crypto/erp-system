@@ -21,7 +21,7 @@ export interface HrExportSheet {
 }
 
 /**
- * Base Excel export builder — takes sheet definitions with their column
+ * Base Excel export builder - takes sheet definitions with their column
  * definitions and row data and downloads the workbook.
  */
 export async function downloadHrExcelWorkbook(input: {

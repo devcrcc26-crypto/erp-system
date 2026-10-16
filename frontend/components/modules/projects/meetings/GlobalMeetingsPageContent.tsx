@@ -45,7 +45,7 @@ function scopeLabel(meeting: MyMeeting): string {
 }
 
 /**
- * Global Meetings list — cross-project, user-scoped or portfolio-wide.
+ * Global Meetings list - cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalMeetingsPageContent(): React.ReactNode {
   const { params, resetPage, bindMeta } = useTablePagination();
@@ -169,8 +169,8 @@ export default function GlobalMeetingsPageContent(): React.ReactNode {
         key: 'time',
         render: (_: unknown, record: MyMeeting) =>
           record.startTime || record.endTime
-            ? `${record.startTime ?? '—'} – ${record.endTime ?? '—'}`
-            : '—',
+            ? `${record.startTime ?? '-'} – ${record.endTime ?? '-'}`
+            : '-',
       },
       {
         title: 'Scope',
@@ -197,7 +197,7 @@ export default function GlobalMeetingsPageContent(): React.ReactNode {
         title: 'Project',
         key: 'project',
         render: (_: unknown, record: MyMeeting) =>
-          record.projectCode?.trim() || '—',
+          record.projectCode?.trim() || '-',
       },
     ],
     [],
@@ -252,7 +252,7 @@ export default function GlobalMeetingsPageContent(): React.ReactNode {
             showIcon
             className="!mb-4"
             title="Meeting APIs are not connected yet."
-            description="This page is ready — data will appear when the backend is available."
+            description="This page is ready - data will appear when the backend is available."
           />
         )}
 

@@ -76,7 +76,7 @@ export interface ApprovalDetailSidebarProps {
 }
 
 /**
- * Approval detail sidebar — tier timeline, conditions, and status.
+ * Approval detail sidebar - tier timeline, conditions, and status.
  */
 export default function ApprovalDetailSidebar({
   request,

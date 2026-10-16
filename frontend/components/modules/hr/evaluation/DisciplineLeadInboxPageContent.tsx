@@ -252,7 +252,7 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
                     {row.employee.employeeId}
                   </span>
                 ) : (
-                  <p className="erp-users-email m-0 mt-0.5">—</p>
+                  <p className="erp-users-email m-0 mt-0.5">-</p>
                 )}
               </div>
             </div>
@@ -309,7 +309,7 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
         render: (_value, row) => {
           const score = row.adjustedScore ?? row.finalScore;
           if (score == null) {
-            return <span className="erp-users-cell-sub">—</span>;
+            return <span className="erp-users-cell-sub">-</span>;
           }
           return (
             <div className="flex items-center gap-2">
@@ -345,7 +345,7 @@ export default function DisciplineLeadInboxPageContent(): React.ReactNode {
               variant="warning"
             />
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
       {

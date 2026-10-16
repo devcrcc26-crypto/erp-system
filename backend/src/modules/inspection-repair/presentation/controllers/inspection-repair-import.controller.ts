@@ -2,7 +2,7 @@ import { createHrImportController } from '../../../hr-shared/application/import-
 import { InspectionRepairImportService } from '../../application/services/inspection-repair-import.service';
 
 /**
- * `GET/POST /hr/inspection-repair/import*` — template, preview and commit.
+ * `GET/POST /hr/inspection-repair/import*` - template, preview and commit.
  */
 export const InspectionRepairImportController = createHrImportController({
   route: 'hr/inspection-repair/import',

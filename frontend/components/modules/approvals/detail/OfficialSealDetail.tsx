@@ -19,7 +19,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 /**
  * Official seal body for the Approvals detail inbox (read-only).
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function OfficialSealDetail({
   sourceId,
@@ -67,7 +67,7 @@ export default function OfficialSealDetail({
           },
           {
             label: t('hr.labels.issued'),
-            value: seal.issuedAt ? formatProjectDate(seal.issuedAt) : '—',
+            value: seal.issuedAt ? formatProjectDate(seal.issuedAt) : '-',
           },
           {
             label: t('hr.labels.issuedBy'),

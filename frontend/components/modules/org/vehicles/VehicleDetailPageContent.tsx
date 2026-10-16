@@ -257,7 +257,7 @@ export default function VehicleDetailPageContent({
             {formatFuelType(vehicle.fuelType, t)}
           </MetaItem>
           <MetaItem label={t('vehicles.form.color')}>
-            {vehicle.color?.trim() || '—'}
+            {vehicle.color?.trim() || '-'}
           </MetaItem>
           <MetaItem label={t('hr.table.status')}>
             <StatusBadge
@@ -282,7 +282,7 @@ export default function VehicleDetailPageContent({
                 {vehicle.notes}
               </p>
             ) : (
-              '—'
+              '-'
             )}
           </MetaItem>
         </div>

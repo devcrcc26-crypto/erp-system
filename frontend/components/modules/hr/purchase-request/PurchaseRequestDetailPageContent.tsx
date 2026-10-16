@@ -111,7 +111,7 @@ function DetailSection({
 }
 
 /**
- * Purchase request detail — Users / employee profile chrome.
+ * Purchase request detail - Users / employee profile chrome.
  */
 export default function PurchaseRequestDetailPageContent({
   requestId,
@@ -275,7 +275,7 @@ export default function PurchaseRequestDetailPageContent({
         ? formatUserName(currentUser.data)
         : authUser
           ? formatUserName(authUser)
-          : '—';
+          : '-';
       exportPurchaseRequestPdf({
         request,
         companyName: authUser?.companyName ?? 'Company',
@@ -640,7 +640,7 @@ export default function PurchaseRequestDetailPageContent({
             <p className="erp-employee-meta-value">
               {request.requiredByDate
                 ? formatProjectDate(request.requiredByDate)
-                : '—'}
+                : '-'}
             </p>
           </div>
         </div>

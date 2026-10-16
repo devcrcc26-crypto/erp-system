@@ -3,7 +3,7 @@
  *  1. TERMINATED contracts whose endDate is null or later than terminatedAt →
  *     endDate = terminatedAt (payroll/attendance read endDate).
  *  2. Report (no changes) users with login disabled (isActive=false) whose
- *     employment is still open — HR must separate them or re-enable login.
+ *     employment is still open - HR must separate them or re-enable login.
  *
  * Dry run by default; --apply writes fix 1. SEED_MODE required; non-localhost needs --allow-remote.
  *
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
     }
 
     if (!args.apply) {
-      console.log('Dry run — nothing written. Re-run with --apply to fix end dates.');
+      console.log('Dry run - nothing written. Re-run with --apply to fix end dates.');
       return;
     }
     let fixed = 0;

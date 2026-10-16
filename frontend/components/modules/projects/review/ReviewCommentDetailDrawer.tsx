@@ -199,7 +199,7 @@ export default function ReviewCommentDetailDrawer({
   onDelete?: () => void;
   /** When set, shows an "Open in review mode" footer link and (for 'directed-to-me') the progressive workflow action. */
   mode?: 'raised-by-me' | 'directed-to-me';
-  /** Required alongside `mode` — carries projectId/taskDisciplineId/reviewSessionId not present on ReviewCommentDetail. */
+  /** Required alongside `mode` - carries projectId/taskDisciplineId/reviewSessionId not present on ReviewCommentDetail. */
   myCommentItem?: MyCommentItem | null;
   /** Called after Acknowledge/Start/Revise succeeds, so the parent list can refetch. */
   onChanged?: () => void;
@@ -212,7 +212,7 @@ export default function ReviewCommentDetailDrawer({
     open &&
       Boolean(commentId) &&
       !isRaisedByMe &&
-      // Review-mode panel already has a full comment payload — avoid a redundant GET.
+      // Review-mode panel already has a full comment payload - avoid a redundant GET.
       !(fallbackComment && mode == null),
   );
   const transitionComment = useTransitionReviewComment();
@@ -257,7 +257,7 @@ export default function ReviewCommentDetailDrawer({
         : '-');
 
   const drawerTitle = isRaisedByMe
-    ? `Comments I raised — ${myCommentItem?.subtaskId ?? myCommentItem?.packageCode ?? ''}`
+    ? `Comments I raised - ${myCommentItem?.subtaskId ?? myCommentItem?.packageCode ?? ''}`
     : resolvedDocumentLabel !== '-'
       ? `Comment - ${resolvedDocumentLabel}`
       : 'Comment detail';

@@ -123,19 +123,19 @@ export default function TriggerRevisionPanel({
     if (triggerSource === 'RFI') {
       return (rfisQuery.data?.data ?? []).map((rfi) => ({
         value: rfi.id,
-        label: `${rfi.rfiNumber} — ${rfi.title}`,
+        label: `${rfi.rfiNumber} - ${rfi.title}`,
       }));
     }
     if (triggerSource === 'CHANGE_REQUEST') {
       return (changeRequestsQuery.data?.data ?? []).map((cr) => ({
         value: cr.id,
-        label: `${cr.changeNumber} — ${cr.title}`,
+        label: `${cr.changeNumber} - ${cr.title}`,
       }));
     }
     if (triggerSource === 'SUBMITTAL_REVIEW') {
       return (submittalsQuery.data?.data ?? []).map((submittal) => ({
         value: submittal.id,
-        label: `${submittal.submittalNumber} — ${submittal.title}`,
+        label: `${submittal.submittalNumber} - ${submittal.title}`,
       }));
     }
     return [];
@@ -189,7 +189,7 @@ export default function TriggerRevisionPanel({
       });
       messageApi.success(
         result.newEdvId
-          ? 'Draft revision created — upload your revised file above, then check Version history below.'
+          ? 'Draft revision created - upload your revised file above, then check Version history below.'
           : 'External revision triggered successfully.',
       );
       closeModal();

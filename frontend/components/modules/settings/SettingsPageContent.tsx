@@ -242,7 +242,7 @@ function RoleList({
 }
 
 /**
- * Settings — roles & permissions with Users chrome.
+ * Settings - roles & permissions with Users chrome.
  */
 export default function SettingsPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -375,13 +375,13 @@ export default function SettingsPageContent(): React.ReactNode {
         />
         <SettingsStat
           label={t('settings.stats.modules')}
-          value={String(modules.length || '—')}
+          value={String(modules.length || '-')}
           accent="blue"
           icon={<AppstoreOutlined />}
         />
         <SettingsStat
           label={t('settings.stats.granted')}
-          value={selectedRole ? String(grantedCount) : '—'}
+          value={selectedRole ? String(grantedCount) : '-'}
           accent="amber"
           icon={<SafetyCertificateOutlined />}
         />
@@ -540,7 +540,7 @@ export default function SettingsPageContent(): React.ReactNode {
 
                           if (!permission) {
                             return (
-                              <span className="erp-users-cell-sub">—</span>
+                              <span className="erp-users-cell-sub">-</span>
                             );
                           }
 

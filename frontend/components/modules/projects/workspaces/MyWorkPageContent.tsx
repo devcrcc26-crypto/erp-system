@@ -245,20 +245,20 @@ export default function MyWorkPageContent({
                           {item.taskName}
                         </div>
                         <div className="text-xs text-slate-500">
-                          {(item.overseasTaskNumber ?? item.taskIdCode) || '—'}
+                          {(item.overseasTaskNumber ?? item.taskIdCode) || '-'}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-700">
                         {item.projectName}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-500">
-                        {item.overseasTaskNumber ?? item.taskIdCode ?? '—'}
+                        {item.overseasTaskNumber ?? item.taskIdCode ?? '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-500">—</td>
+                      <td className="px-4 py-3 text-sm text-slate-500">-</td>
                       <td className="px-4 py-3 text-sm text-slate-700">
                         {KIND_LABELS.RESPONSIBLE_PERSON}
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-400">—</td>
+                      <td className="px-4 py-3 text-xs text-slate-400">-</td>
                       <td className="px-4 py-3 text-right">
                         <Link href={workItemHref(item)}>
                           <Button size="small">Open</Button>

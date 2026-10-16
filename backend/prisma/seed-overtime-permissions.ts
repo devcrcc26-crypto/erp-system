@@ -142,7 +142,7 @@ async function main(): Promise<void> {
     }
 
     console.log(
-      `Overtime permissions seeded — view: ${viewRoles.map((r) => r.name).join(', ')}; create: ${createRoles.map((r) => r.name).join(', ')}`,
+      `Overtime permissions seeded - view: ${viewRoles.map((r) => r.name).join(', ')}; create: ${createRoles.map((r) => r.name).join(', ')}`,
     );
   } finally {
     await prisma.$disconnect();

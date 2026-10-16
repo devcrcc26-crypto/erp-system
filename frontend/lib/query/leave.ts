@@ -88,7 +88,7 @@ function buildListQuery(params: ListLeaveRequestsParams): string {
 const FETCH_PAGE_SIZE = 100;
 
 /**
- * Loads every page for a leave list endpoint (no client search — filter locally).
+ * Loads every page for a leave list endpoint (no client search - filter locally).
  */
 async function fetchAllLeaveRequestPages(
   path: string,

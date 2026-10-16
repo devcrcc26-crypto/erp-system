@@ -118,7 +118,7 @@ describe('UserImportService', () => {
     };
   }
 
-  it('accepts DD/MM/YYYY experienceStartDate values', async () => {
+  it('accepts yearsOfExperience with one decimal (comma or point)', async () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Users');
     sheet.addRow([
@@ -126,7 +126,7 @@ describe('UserImportService', () => {
       'firstName',
       'lastName',
       'role',
-      'experienceStartDate',
+      'yearsOfExperience',
       'gender',
       'position',
     ]);
@@ -135,7 +135,7 @@ describe('UserImportService', () => {
       'Abebe',
       'Gereme',
       'Employee',
-      '12/8/2026',
+      '6,5',
       'Male',
       'Structure Eng.',
     ]);
@@ -148,7 +148,7 @@ describe('UserImportService', () => {
     expect(result.valid).toBe(1);
     expect(result.rows[0]).toMatchObject({
       status: 'ok',
-      experienceStartDate: '2026-08-12',
+      yearsOfExperience: '6.5',
       gender: 'MALE',
       positionId: 'pos-struct',
     });

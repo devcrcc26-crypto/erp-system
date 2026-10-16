@@ -56,7 +56,7 @@ function JsonBlock({
     return (
       <div className="rounded-xl border border-dashed border-[#e8ebef] bg-[#f8f9fb] px-4 py-6 text-center">
         <p className="m-0 text-sm leading-relaxed text-[#9AA4B2]">
-          {emptyLabel ?? '—'}
+          {emptyLabel ?? '-'}
         </p>
       </div>
     );
@@ -70,7 +70,7 @@ function JsonBlock({
 }
 
 /**
- * Audit log detail — Users / employee profile chrome.
+ * Audit log detail - Users / employee profile chrome.
  */
 export default function AuditLogDetailPageContent({
   auditLogId,
@@ -187,7 +187,7 @@ export default function AuditLogDetailPageContent({
               {t('auditLogs.columns.recordReference')}
             </p>
             <p className="erp-employee-meta-value">
-              {log.recordReference?.trim() || '—'}
+              {log.recordReference?.trim() || '-'}
             </p>
           </div>
         </div>
@@ -242,7 +242,7 @@ export default function AuditLogDetailPageContent({
               </span>
             </MetaItem>
             <MetaItem label={t('auditLogs.columns.recordReference')}>
-              {log.recordReference ?? '—'}
+              {log.recordReference ?? '-'}
             </MetaItem>
             <MetaItem label={t('auditLogs.columns.timestamp')}>
               {formatDisplayDateTime(log.createdAt)}
@@ -258,11 +258,11 @@ export default function AuditLogDetailPageContent({
                   {log.ipAddress}
                 </span>
               ) : (
-                '—'
+                '-'
               )}
             </MetaItem>
             <MetaItem label={t('auditLogs.detail.deviceInfo')}>
-              {log.deviceInfo ?? '—'}
+              {log.deviceInfo ?? '-'}
             </MetaItem>
             <MetaItem label={t('auditLogs.detail.correlationId')}>
               {log.correlationId ? (
@@ -270,7 +270,7 @@ export default function AuditLogDetailPageContent({
                   {log.correlationId}
                 </span>
               ) : (
-                '—'
+                '-'
               )}
             </MetaItem>
             <MetaItem label={t('auditLogs.detail.sessionId')}>
@@ -279,7 +279,7 @@ export default function AuditLogDetailPageContent({
                   {log.sessionId}
                 </span>
               ) : (
-                '—'
+                '-'
               )}
             </MetaItem>
           </div>

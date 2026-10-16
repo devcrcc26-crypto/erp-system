@@ -67,7 +67,7 @@ function statusesForMode(mode: StatusMode): SiteAssignmentStatus[] | undefined {
 }
 
 /**
- * Site assignments list — Employees / leave v2 chrome.
+ * Site assignments list - Employees / leave v2 chrome.
  */
 export default function SiteAssignmentsListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -204,10 +204,10 @@ export default function SiteAssignmentsListPageContent(): React.ReactNode {
         render: (_: unknown, row) =>
           row.project ? (
             <span className="erp-users-cell-sub">
-              {row.project.projectCode} — {row.project.name}
+              {row.project.projectCode} - {row.project.name}
             </span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
       {

@@ -30,6 +30,7 @@
     "myProfile": "我的资料",
     "departments": "部门",
     "positions": "职位",
+    "seniorityLevels": "职级",
     "disciplinesCatalog": "专业",
     "menuApplication": "应用",
     "menuProject": "项目",
@@ -318,7 +319,7 @@
           "attachment": "附件"
         },
         "explainDays": {
-          "title": "说明异常考勤 — {{period}}",
+          "title": "说明异常考勤 - {{period}}",
           "subtitle": "选择同一问题类型的日期，填写说明并保存草稿。进入下一步可复查并提交审批。未说明的日期可稍后再填。",
           "selectionCount": "已选 {{selected}} / {{total}}",
           "selectAll": "全选兼容日期",
@@ -382,7 +383,7 @@
       "submittedByOn": "{{name}} 于 {{date}} 提交",
       "resubmittedCount": "已重新提交 {{count}} 次",
       "decide": "决策",
-      "decideForTier": "决策 — {{label}}",
+      "decideForTier": "决策 - {{label}}",
       "reassign": {
         "button": "转派",
         "buttonAria": "转派“{{label}}”审批",
@@ -402,7 +403,7 @@
       "resolve": "解决",
       "resolveConditionsFirst": "请先解决全部条件后再操作。",
       "waitingEmployeeResponse": "等待员工回复",
-      "employeeRespondedReady": "员工已回复 — 可解决条件",
+      "employeeRespondedReady": "员工已回复 - 可解决条件",
       "responseLabel": "回复",
       "attachmentsOnly": "（仅附件）",
       "fileCount": "{{count}} 个文件",
@@ -412,7 +413,7 @@
       "returnedHint": "请修改后重新提交。",
       "returnedWithNote": "审批人备注：{{note}}。请修改后重新提交。",
       "rejectedTitle": "此申请已拒绝",
-      "lateSubmissionBadge": "迟交 — {{month}}",
+      "lateSubmissionBadge": "迟交 - {{month}}",
       "lateSubmissionReason": "原因：{{reason}}",
       "lateSubmissionOnBehalf": "由 {{name}} 代录",
       "resubmit": {
@@ -459,11 +460,11 @@
         "resolveFailed": "解决条件失败"
       },
       "waiting": {
-        "approved": "已全部批准 — 无需进一步操作",
-        "rejected": "申请已拒绝 — 无需进一步操作",
-        "cancelled": "申请已取消 — 无需进一步操作",
-        "returnedRequester": "已退回 — 请修改后重新提交",
-        "returnedOther": "已退回提交人 — 等待重新提交",
+        "approved": "已全部批准 - 无需进一步操作",
+        "rejected": "申请已拒绝 - 无需进一步操作",
+        "cancelled": "申请已取消 - 无需进一步操作",
+        "returnedRequester": "已退回 - 请修改后重新提交",
+        "returnedOther": "已退回提交人 - 等待重新提交",
         "onTier": "等待 {{label}}（{{name}}）",
         "none": "暂无待办审批操作"
       },
@@ -659,7 +660,7 @@
           "projectPlaceholder": "关联项目",
           "dateRange": "日期范围",
           "periods": "时段",
-          "periodsHint": "每个时段为包含起止日的日期范围。不连续的日期请再添加一个时段——每个时段会生成单独的申请。",
+          "periodsHint": "每个时段为包含起止日的日期范围。不连续的日期请再添加一个时段--每个时段会生成单独的申请。",
           "addPeriod": "添加时段",
           "removePeriod": "删除时段",
           "periodRequired": "请至少选择一个日期范围。",
@@ -748,11 +749,11 @@
         "saved": "政策已保存。",
         "saveError": "无法保存政策。",
         "affectedRunsTitle": "受影响的 {{count}} 个月份已有薪资",
-        "affectedRunStale": "{{run}}（{{status}}）将被标记为需更新——请重新计算。",
+        "affectedRunStale": "{{run}}（{{status}}）将被标记为需更新--请重新计算。",
         "affectedRunReview": "{{run}}（{{status}}）将被标记为“需复核”，不会自动重新计算。",
         "confirmAffected": "我已了解。保存并标记这些薪资。",
         "historyTitle": "历史：{{name}}",
-        "historyEmpty": "尚无修改——使用默认值。",
+        "historyEmpty": "尚无修改--使用默认值。",
         "historyFrom": "生效月份",
         "historyChange": "旧值 → 新值",
         "historyBy": "修改人",
@@ -1048,7 +1049,7 @@
           "holidayDays": "节假日天数"
         },
         "daily": {
-          "title": "每日明细 — {{month}} {{year}}",
+          "title": "每日明细 - {{month}} {{year}}",
           "date": "日期",
           "day": "星期",
           "status": "状态",
@@ -1109,11 +1110,11 @@
           "saveCorrection": "保存更正",
           "correctSuccess": "每日记录已更正。",
           "banner": {
-            "pending": "待审核 — 请在批准前核对本月全部员工记录",
-            "reviewed": "已审核 — 可进行批准",
+            "pending": "待审核 - 请在批准前核对本月全部员工记录",
+            "reviewed": "已审核 - 可进行批准",
             "approved": "已于 {{date}} 由 {{name}} 批准并锁定",
-            "unlocked": "已于 {{date}} 解锁 — 原因：{{reason}}",
-            "recalcStale": "本月已锁定后批准了排班 — 请解锁月份以将现场派驻 / 居家办公 / 请假应用到考勤"
+            "unlocked": "已于 {{date}} 解锁 - 原因：{{reason}}",
+            "recalcStale": "本月已锁定后批准了排班 - 请解锁月份以将现场派驻 / 居家办公 / 请假应用到考勤"
           },
           "status": {
             "PENDING_REVIEW": "待审核",
@@ -1136,7 +1137,7 @@
           "importMeta": "于 {{date}} 从 {{file}} 导入 · 已处理 {{count}} 名员工",
           "wouldDeduct": "将扣 {{days}} 天（未执行）",
           "deducted": "已扣 {{days}} 天",
-          "earlyDeparturePending": "早退 — 审批中",
+          "earlyDeparturePending": "早退 - 审批中",
           "scanReview": {
             "title": "晚于最晚打卡时间的打卡",
             "subtitle": "仅打卡班次：员工计为出勤，但首次打卡晚于班次的最晚打卡时间。无论如何处理均不影响工资。",
@@ -1155,7 +1156,7 @@
             "markLate": "记为迟到",
             "change": "修改",
             "notePlaceholder": "备注（可选）",
-            "reviewTitle": "{{decision}} — {{name}}，{{date}}",
+            "reviewTitle": "{{decision}} - {{name}}，{{date}}",
             "save": "保存",
             "saved": "审核已保存。",
             "saveFailed": "保存审核失败。",
@@ -1201,8 +1202,8 @@
             "WORKED_ON_DAY_OFF": "休息日出勤",
             "WORK_FROM_HOME": "居家办公",
             "ON_SITE": "现场",
-            "onSiteAt": "现场 — {{siteName}}",
-            "onSiteScannedIn": "现场 — {{time}} 打卡",
+            "onSiteAt": "现场 - {{siteName}}",
+            "onSiteScannedIn": "现场 - {{time}} 打卡",
             "alsoOnSite": "同时在现场",
             "LEAVE": "休假",
             "UNPAID_LEAVE": "无薪假",
@@ -1244,13 +1245,13 @@
           "onBehalfRequired": "您没有代该员工提交的权限。",
           "siteSubmitted": "现场派驻已提交审批。",
           "wfhSubmitted": "居家办公申请已提交审批。",
-          "coveredAutoImport": "已全部覆盖 — 将自动导入",
+          "coveredAutoImport": "已全部覆盖 - 将自动导入",
           "matchMethodCovered": "排班覆盖",
           "ignoredSection": "已忽略（{{count}}）",
           "ignoredEmpty": "本文件没有已忽略的考勤身份。",
-          "ignoredStored": "此前已忽略 — 已离职",
+          "ignoredStored": "此前已忽略 - 已离职",
           "undoIgnore": "撤销",
-          "ignoreLeftCompany": "忽略 — 已离职",
+          "ignoreLeftCompany": "忽略 - 已离职",
           "ignoreTitle": "忽略此得力身份？",
           "ignoreReasonPlaceholder": "为何忽略此人？",
           "ignoreReasonRequired": "原因至少需要 3 个字符。",
@@ -1292,7 +1293,7 @@
           "rejectedFollowUp": "请在得力 e+ 中设置其工号后下月再导入，或在下次导入时手动匹配。",
           "importAnother": "导入其他月份",
           "stepOf": "第 {{current}} 步，共 3 步 · {{label}}",
-          "notEnrolledMonth": "未录入考勤机 — 第 {{n}} 个月"
+          "notEnrolledMonth": "未录入考勤机 - 第 {{n}} 个月"
         },
         "dailyDrawer": {
           "period": "{{year}} 年 {{month}}",
@@ -2003,7 +2004,7 @@
           "reasonHint": "显示在日历上（例如办公室关闭或混合办公周五）。",
           "reasonPlaceholder": "例如：办公室维护关闭",
           "scope": "谁居家办公",
-          "scopeHint": "直接分配 — 不会发送审批申请。员工也可通过“新建申请”提交居家办公申请。",
+          "scopeHint": "直接分配 - 不会发送审批申请。员工也可通过“新建申请”提交居家办公申请。",
           "disciplineLeadHint": "您只能为自己负责学科下的员工分配居家办公。",
           "departments": "部门",
           "departmentsPlaceholder": "选择一个或多个部门",
@@ -2338,6 +2339,39 @@
         "projects": "项目",
         "activeProjects": "进行中",
         "noLeader": "无负责人"
+      }
+    },
+    "seniorityLevels": {
+      "title": "职级",
+      "description": "可分配给员工的职级，按显示顺序排列。",
+      "accessDenied": "您无权访问职级。",
+      "loadFailed": "加载职级失败",
+      "add": "新增职级",
+      "edit": "编辑职级",
+      "view": "查看职级",
+      "created": "职级已创建",
+      "updated": "职级已更新",
+      "createFailed": "创建职级失败",
+      "updateFailed": "更新职级失败",
+      "empty": "尚未定义职级",
+      "deleteTitle": "删除职级？",
+      "deleteDescription": "将删除\"{{name}}\"。该职级下员工的职级将被清空。",
+      "deleted": "职级已删除",
+      "deleteFailed": "删除职级失败",
+      "table": {
+        "name": "职级",
+        "order": "顺序",
+        "people": "人数"
+      },
+      "form": {
+        "name": "名称",
+        "nameRequired": "请输入名称",
+        "namePlaceholder": "例如：Senior",
+        "nameZh": "中文名称",
+        "nameZhPlaceholder": "例如：高级",
+        "sortOrder": "显示顺序",
+        "sortOrderHelp": "数字越小越靠前。",
+        "activeHelp": "停用的职级仍保留在现有员工上，但不会出现在员工表单中。"
       }
     },
     "positions": {
@@ -2873,7 +2907,7 @@
     "loginName": "登录名",
     "loginNameNotSet": "未设置",
     "approverOnly": "仅审批人",
-    "approverOnlySwitch": "仅审批人 — 不参与人事流程",
+    "approverOnlySwitch": "仅审批人 - 不参与人事流程",
     "approverOnlyHint": "不参与本人的考勤、薪资、合同、请假、加班、外勤、驻场、居家办公或绩效考核，但仍可审批申请。",
     "approverOnlyReason": "原因",
     "approverOnlyReasonPlaceholder": "例如：外部董事，仅负责审批",
@@ -2886,10 +2920,11 @@
     "loginNameDiffersWarning": "登录名与全名不一致",
     "loginNameEditTitle": "编辑登录名",
     "loginNameEditHint": "员工登录时输入的准确姓名。",
+    "loginNameCreateHint": "可选。留空时默认使用全名",
     "loginNameRequired": "请填写登录名",
     "loginNameUpdated": "登录名已更新。",
     "loginNameUpdateError": "无法更新登录名。",
-    "loginNameNotChangedToast": "登录名未更改 — 员工仍使用 {{loginName}} 登录",
+    "loginNameNotChangedToast": "登录名未更改 - 员工仍使用 {{loginName}} 登录",
     "loginNameColumn": "登录名",
     "showLoginNameColumn": "显示登录名",
     "sendInvitation": "发送邀请",
@@ -2917,7 +2952,7 @@
     "addRole": "添加角色",
     "addAnotherRole": "添加另一个角色",
     "noRole": "无角色",
-    "noRoleTooltip": "未分配角色 — 员工无法使用受角色控制的功能",
+    "noRoleTooltip": "未分配角色 - 员工无法使用受角色控制的功能",
     "filterNoRole": "仅显示无角色员工",
     "selectRoleToAdd": "选择要添加的角色",
     "removeRole": "移除角色",
@@ -2946,6 +2981,8 @@
     "deleteEmployee": "删除员工",
     "deleteDescription": "停用 {{name}}（{{email}}）？该员工将无法再登录。",
     "deactivated": "已停用 {{name}}。",
+    "yearsValue": "{{years}} 年",
+    "yearsOfExperienceRecorded": "记录于 {{date}}",
     "separation": {
       "action": "办理离职",
       "title": "为 {{name}} 办理离职",
@@ -2976,7 +3013,7 @@
       "saved": "已为 {{name}} 办理离职。",
       "saveError": "无法保存离职信息。",
       "bannerScheduled": "将于 {{date}} 离职（{{type}}）",
-      "bannerSeparated": "已离职 — 最后工作日 {{date}}（{{type}}）",
+      "bannerSeparated": "已离职 - 最后工作日 {{date}}（{{type}}）",
       "cancel": "撤销离职",
       "cancelTitle": "撤销此离职？",
       "cancelDescription": "雇佣状态、合同结束日期和登录权限将恢复到离职前的状态。",
@@ -3001,7 +3038,7 @@
     },
     "employment": {
       "statusActive": "在职",
-      "statusInactive": "非活动 — {{type}}（{{from}} → {{to}}）",
+      "statusInactive": "非活动 - {{type}}（{{from}} → {{to}}）",
       "statusInactiveShort": "非活动",
       "statusSeparated": "已离职 {{date}}（{{type}}）",
       "statusSeparatedShort": "已离职",
@@ -3215,7 +3252,14 @@
       "fieldOfStudy": "专业方向",
       "fieldOfStudyPlaceholder": "例如：土木工程",
       "employmentDate": "入职日期",
-      "experienceStartDate": "工作开始时间",
+      "secondaryPhone": "备用电话",
+      "phoneFormatHint": "埃塞俄比亚号码将保存为 +251… 格式",
+      "seniority": "职级",
+      "noSeniorityLevelsHint": "尚未设置职级--请在 公司架构 → 职级 中添加",
+      "yearsOfExperienceHint": "截至今天的工作年限，之后会自动累加。",
+      "yearsOfExperienceRecordedHint": "记录于 {{date}}，会自动累加。仅在需要更正时修改。",
+      "yearsOfExperienceInvalid": "请输入 0 到 {{max}} 之间的数字",
+      "yearsOfExperiencePlaceholder": "例如 6.5",
       "yearsOfExperience": "工作年限",
       "leavePolicy": "假期政策",
       "noLeavePoliciesHint": "暂无可用政策 - 请在 HR → 假期政策 中创建",
@@ -3249,7 +3293,7 @@
       "description": "上传电子表格批量添加员工。有邮箱的行将收到激活链接；无邮箱的行仅作为记录保存（无法登录）。",
       "downloadTemplate": "下载模板",
       "chooseFile": "选择 .xlsx 文件",
-      "requiredColumns": "必填：firstName。可选：lastName、email、middleName、chineseName、role、phone、discipline、gender、department、position、employeeId、nationality、employeeType、dateOfBirth、nationalId、tin、educationLevel、fieldOfStudy、experienceStartDate、addressCountry、addressRegion、addressCity、addressSubcity、addressWoreda、addressHouseNumber、leavePolicy。",
+      "requiredColumns": "必填：firstName。可选：lastName、email、middleName、chineseName、role、phone、discipline、gender、department、position、employeeId、nationality、employeeType、dateOfBirth、nationalId、tin、educationLevel、fieldOfStudy、yearsOfExperience、addressCountry、addressRegion、addressCity、addressSubcity、addressWoreda、addressHouseNumber、leavePolicy。",
       "ready": "就绪",
       "invalid": "无效",
       "duplicate": "重复",
@@ -3326,7 +3370,7 @@
         "discipline": "专业",
         "employeeType": "员工类型",
         "leavePolicy": "休假政策",
-        "experienceStartDate": "工作起始日期",
+        "yearsOfExperience": "工作年限",
         "gender": "性别",
         "nationality": "国籍",
         "dateOfBirth": "出生日期",
@@ -3742,7 +3786,7 @@
       "requiredColumns": "必填列：{{columns}}",
       "vehicleApplications": {
         "title": "导入车辆申请",
-        "description": "上传表格以创建草稿状态的车辆申请。系统不会自动提交或审批——请在列表中逐条复核后提交。",
+        "description": "上传表格以创建草稿状态的车辆申请。系统不会自动提交或审批--请在列表中逐条复核后提交。",
         "export": "导出申请"
       },
       "vehicleRefuelings": {
@@ -3768,12 +3812,12 @@
       },
       "officialSeals": {
         "title": "导入公章使用申请",
-        "description": "上传表格以创建草稿状态的公章使用申请。附件不会被导入——请在提交前添加文件。",
+        "description": "上传表格以创建草稿状态的公章使用申请。附件不会被导入--请在提交前添加文件。",
         "export": "导出申请"
       },
       "projectSeals": {
         "title": "导入项目章使用申请",
-        "description": "上传表格以创建草稿状态的项目章使用申请。附件不会被导入——请在提交前添加文件。",
+        "description": "上传表格以创建草稿状态的项目章使用申请。附件不会被导入--请在提交前添加文件。",
         "export": "导出申请"
       }
     },
@@ -3990,9 +4034,12 @@
     "educationLevel": {
       "PHD": "博士",
       "MSC": "硕士",
-      "BSC": "学士",
+      "BSC": "学士学位",
       "DIPLOMA": "大专",
       "CERTIFICATE": "证书",
+      "TECHNICIAN": "技术员",
+      "SECONDARY": "中学",
+      "PRIMARY": "小学",
       "OTHER": "其他"
     },
     "labels": {
@@ -4030,7 +4077,7 @@
       "pensionApplicable": "适用养老金",
       "taxApplicable": "适用个税",
       "salaryPreview": "薪资预览",
-      "salaryPreviewNormalMonth": "预估实发 — 正常月（无加班、无缺勤）",
+      "salaryPreviewNormalMonth": "预估实发 - 正常月（无加班、无缺勤）",
       "salaryPreviewEmpty": "输入基本工资后可预览个税、养老金与实发估算。",
       "taxableIncome": "应税收入",
       "incomeTax": "个税",
@@ -4603,7 +4650,7 @@
       "linkedSiteAssignmentHint": "选择已批准的现场派驻后，将自动填充目的地与日期，并将类别锁定为国内。",
       "perDiemCategoryAutoDetected": "已自动识别差旅补贴类别：{{category}}",
       "domesticRateAutoApplied": "埃塞俄比亚国内航班已自动适用国内标准",
-      "linkedTravelHint": "可选 — 关联已批准的航班或出差申请，可自动填充目的地、日期和差旅补贴类别",
+      "linkedTravelHint": "可选 - 关联已批准的航班或出差申请，可自动填充目的地、日期和差旅补贴类别",
       "vehicleApplicationLoadFailed": "加载用车申请失败",
       "vehicleApplicationSubmitted": "用车申请已提交审批",
       "vehicleApplicationApproved": "用车申请已批准",
@@ -4857,7 +4904,7 @@
       "pensionApplicable": "适用养老金",
       "taxApplicable": "适用个税",
       "salaryPreview": "薪资预览",
-      "salaryPreviewNormalMonth": "预估实发 — 正常月（无加班、无缺勤）",
+      "salaryPreviewNormalMonth": "预估实发 - 正常月（无加班、无缺勤）",
       "salaryPreviewEmpty": "输入基本工资后可预览个税、养老金与实发估算。",
       "taxableIncome": "应税收入",
       "incomeTax": "个税",
@@ -5153,7 +5200,7 @@
         "MISSING_OVERTIME_APPROVAL": "加班未批准",
         "ZERO_SALARY": "零薪资",
         "MANUAL_OVERRIDE": "手工调整",
-        "LEAVER_FINAL_MONTH": "离职人员 — 最后一个月",
+        "LEAVER_FINAL_MONTH": "离职人员 - 最后一个月",
         "LOGIN_DISABLED_STILL_EMPLOYED": "登录已停用但仍在职",
         "INACTIVE_IN_MONTH": "本月有非活动期",
         "CONTRACT_ENDED_NOT_RENEWED": "合同已到期未续签"
@@ -5244,9 +5291,9 @@
         "exportBankLetterWarnTitle": "员工缺少银行账号",
         "exportBankLetterWarnDescription": "{{count}} 名员工没有银行账号：{{names}}。他们仍会列在信函中，账号单元格留空，可手动填写。是否下载包含全部 {{included}} 名员工的信函？",
         "exportBankLetterContinue": "下载信函",
-        "attendanceStaleDraft": "考勤在生成本次工资后已变更 — 请重新生成",
-        "attendanceStaleApproved": "考勤在生成本次工资后已变更 — 需要复核",
-        "policyReviewRequired": "本月人事政策在薪资审批后有变更 — 需要复核（不会自动重新计算）",
+        "attendanceStaleDraft": "考勤在生成本次工资后已变更 - 请重新生成",
+        "attendanceStaleApproved": "考勤在生成本次工资后已变更 - 需要复核",
+        "policyReviewRequired": "本月人事政策在薪资审批后有变更 - 需要复核（不会自动重新计算）",
         "recalculateSuccess": "已重新计算。",
         "markReviewedSuccess": "已标记为已复核。",
         "submitSuccess": "已提交审批。",
@@ -5557,9 +5604,9 @@
       "domestic": "国内 (埃塞俄比亚)",
       "regional": "周边国家",
       "international": "国际",
-      "domesticDescription": "埃塞俄比亚 — 日补贴（ETB）",
-      "regionalDescription": "周边国家 — 乌干达、肯尼亚、坦桑尼亚、卢旺达等",
-      "internationalDescription": "其他国家 — 中东、亚洲、欧洲、美洲"
+      "domesticDescription": "埃塞俄比亚 - 日补贴（ETB）",
+      "regionalDescription": "周边国家 - 乌干达、肯尼亚、坦桑尼亚、卢旺达等",
+      "internationalDescription": "其他国家 - 中东、亚洲、欧洲、美洲"
     },
     "inspectionType": {
       "INSPECTION": "检查",
@@ -5848,7 +5895,7 @@
       "selectDestinationCategory": "选择目的地类别",
       "selectLinkedTravel": "选择关联航班或出差",
       "selectSiteAssignment": "选择已批准的现场派驻",
-      "noLinkedTravel": "— 不关联行程（独立差旅补贴）—",
+      "noLinkedTravel": "- 不关联行程（独立差旅补贴）-",
       "selectOriginCountry": "选择出发国家",
       "selectDestinationCountry": "选择目的地国家",
       "selectDepartureCity": "选择出发城市",
@@ -5989,12 +6036,12 @@
       "month": "月份",
       "openSheet": "打开工时表",
       "overtimeDescription": "选择月份；如为他人填报加班，请同时选择员工，然后打开工时表添加记录。",
-      "overtimeTitle": "加班 — {{name}}"
+      "overtimeTitle": "加班 - {{name}}"
     },
     "dateRules": {
       "overnight": "跨夜（跨越午夜）",
       "overnightRequired": "结束时间早于开始时间。如果此记录跨越午夜，请启用跨夜。",
-      "overnightNote": "此记录跨越午夜 — 共 {{hours}} 小时",
+      "overnightNote": "此记录跨越午夜 - 共 {{hours}} 小时",
       "endAfterStart": "结束时间必须晚于同一天的开始时间。",
       "returnAfterDeparture": "返回时间必须晚于出发时间"
     }
@@ -6088,7 +6135,7 @@
       "dismiss": "隐藏紧急公告"
     },
     "ackModal": {
-      "kicker": "紧急 — 请确认",
+      "kicker": "紧急 - 请确认",
       "remaining": "有 {{count}} 条公告需要您确认"
     },
     "widget": {

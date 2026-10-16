@@ -1,4 +1,4 @@
-# Comment 8 Walkthrough — Demo Accounts & Features
+# Comment 8 Walkthrough - Demo Accounts & Features
 
 **Password for every account:** `Admin@12345`
 
@@ -13,7 +13,7 @@ This layers Comment 8 data on top of the existing PM / EPC demo projects. The fl
 
 ---
 
-## Quick reference — which account for what
+## Quick reference - which account for what
 
 | Login | Person | Primary walkthrough |
 |-------|--------|---------------------|
@@ -42,7 +42,7 @@ This layers Comment 8 data on top of the existing PM / EPC demo projects. The fl
 |---------|------|------------|----------------------|
 | Lujiazui Mixed-Use Tower | `LJZ-2024-001` | MTD (Municipal Transportation) | Flagship task `OS-LJZ-2024-8842`, 5 subtasks with all 7 role FKs, discipline catalog links |
 | Podium & Retail Development | `PDR-2025-003` | ADD (Architectural Design) | Owner-tier (Hassan) review scenarios |
-| Airport Expansion Phase 2 | `DEMO-002` | ADD | Dept-chief tier (Rania) — EPC inbox from seed-epc-demo |
+| Airport Expansion Phase 2 | `DEMO-002` | ADD | Dept-chief tier (Rania) - EPC inbox from seed-epc-demo |
 | Marina Tower Construction | `DEMO-001` | MTD | Baseline PM demo project |
 | Zhongshan Medical Centre | `ZMC-2023-002` | MTD | Completed / closed EPC reference |
 
@@ -53,18 +53,18 @@ This layers Comment 8 data on top of the existing PM / EPC demo projects. The fl
 
 ---
 
-## Walkthrough 1 — Settings & catalog (Admin, 10 min)
+## Walkthrough 1 - Settings & catalog (Admin, 10 min)
 
 1. Sign in as **System Administrator** (`admin@company.local`).
 2. Open **Settings → Departments**.
-3. Confirm **Municipal Transportation Department (MTD)** — leader: Rania Aziz.
-4. Confirm **Architectural Design Department (ADD)** — leader: Hassan Al-Rashid.
-5. Open **Settings → Engineering Disciplines** — 17 standard disciplines (Highway, Architecture, Structure(Building), etc.).
-6. Open **Settings → Users** — verify Wei Chen and Khalid Nasser have engineering discipline assigned.
+3. Confirm **Municipal Transportation Department (MTD)** - leader: Rania Aziz.
+4. Confirm **Architectural Design Department (ADD)** - leader: Hassan Al-Rashid.
+5. Open **Settings → Engineering Disciplines** - 17 standard disciplines (Highway, Architecture, Structure(Building), etc.).
+6. Open **Settings → Users** - verify Wei Chen and Khalid Nasser have engineering discipline assigned.
 
 ---
 
-## Walkthrough 2 — Task detail & Comment 8 fields (PM, 15 min)
+## Walkthrough 2 - Task detail & Comment 8 fields (PM, 15 min)
 
 1. Sign in as **Project Manager** (`pm@company.local`).
 2. Open **Projects → LJZ-2024-001**.
@@ -78,12 +78,12 @@ This layers Comment 8 data on top of the existing PM / EPC demo projects. The fl
    - Assigned person: Wei Chen
    - Approval level: Design institute review
    - Task attributes, contact form, on-site / HQ assignment dates
-5. Open **Disciplines** tab — Civil, Structural, MEP, Architecture linked to catalog.
-6. Open **Subtasks** — five packages with designer, reviewer, discipline lead, deputy chief, institute chief, owner roles.
+5. Open **Disciplines** tab - Civil, Structural, MEP, Architecture linked to catalog.
+6. Open **Subtasks** - five packages with designer, reviewer, discipline lead, deputy chief, institute chief, owner roles.
 
 ---
 
-## Walkthrough 3 — My Work (per role, 20 min)
+## Walkthrough 3 - My Work (per role, 20 min)
 
 Sign out between each account. Open **My Work** from the main nav (or project-scoped **My Work** inside LJZ).
 
@@ -97,33 +97,33 @@ Sign out between each account. Open **My Work** from the main nav (or project-sc
 
 ---
 
-## Walkthrough 4 — Department scoping (10 min)
+## Walkthrough 4 - Department scoping (10 min)
 
 1. Sign in as **Department Chief** (`deptchief@company.local` / Rania).
-2. Open **Projects** — you should see MTD projects (LJZ, DEMO-001, ZMC) and **not** ADD-only projects like PDR.
+2. Open **Projects** - you should see MTD projects (LJZ, DEMO-001, ZMC) and **not** ADD-only projects like PDR.
 3. Sign out; sign in as **Discipline Owner** (`owner@company.local` / Hassan).
-4. Open **Projects** — you should see ADD projects (PDR, DEMO-002).
+4. Open **Projects** - you should see ADD projects (PDR, DEMO-002).
 
 ---
 
-## Walkthrough 5 — Review workflow (30 min)
+## Walkthrough 5 - Review workflow (30 min)
 
 Follow the tier chain on **LJZ-2024-001** (see also `DEMO_WALKTHROUGH.md` Walkthrough 3):
 
-1. **Designer** — subtasks tab, draft packages.
-2. **Reviewer** — Review inbox, structural package.
-3. **Discipline Lead** — MEP package pending lead.
-4. **Department Chief** — DEMO-002 dept-chief inbox.
-5. **Institute Chief** — LJZ institute-tier items.
-6. **Discipline Owner** — PDR-2025-003 owner tier.
+1. **Designer** - subtasks tab, draft packages.
+2. **Reviewer** - Review inbox, structural package.
+3. **Discipline Lead** - MEP package pending lead.
+4. **Department Chief** - DEMO-002 dept-chief inbox.
+5. **Institute Chief** - LJZ institute-tier items.
+6. **Discipline Owner** - PDR-2025-003 owner tier.
 
 ---
 
-## Walkthrough 6 — Excel export (Admin, 5 min)
+## Walkthrough 6 - Excel export (Admin, 5 min)
 
 1. Sign in as **admin@company.local**.
 2. **Projects → Export Excel**.
-3. Open the file — confirm columns include supervising chief, assigned person, dispatcher, department.
+3. Open the file - confirm columns include supervising chief, assigned person, dispatcher, department.
 
 ---
 
@@ -134,7 +134,7 @@ cd backend
 npx prisma db seed
 ```
 
-If rich demo projects fail, check `taskAttributes` uses enum values (`CHINA`, `ETHIOPIA`, `COMBINE1`, `COMBINE2`) — fixed in `seed-demo-projects.ts`.
+If rich demo projects fail, check `taskAttributes` uses enum values (`CHINA`, `ETHIOPIA`, `COMBINE1`, `COMBINE2`) - fixed in `seed-demo-projects.ts`.
 
 For a clean PM demo only:
 
@@ -146,5 +146,5 @@ SEED_PM_DEMO=false npx prisma db seed   # foundation only
 
 ## Related docs
 
-- [`DEMO_WALKTHROUGH.md`](../DEMO_WALKTHROUGH.md) — full ERP demo (RFIs, submittals, EPC tiers).
-- [`docs/COMMENT8_PHASE7_VERIFICATION.md`](COMMENT8_PHASE7_VERIFICATION.md) — phase 7 test ledger.
+- [`DEMO_WALKTHROUGH.md`](../DEMO_WALKTHROUGH.md) - full ERP demo (RFIs, submittals, EPC tiers).
+- [`docs/COMMENT8_PHASE7_VERIFICATION.md`](COMMENT8_PHASE7_VERIFICATION.md) - phase 7 test ledger.

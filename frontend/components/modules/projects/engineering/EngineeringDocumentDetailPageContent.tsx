@@ -22,7 +22,7 @@ export default function EngineeringDocumentDetailPageContent({
     <div className={layout.pageStack}>
       <FormLayout
         title="Engineering Document"
-        description="External revisions add a new version on this document — not a new document row. Check version history after triggering."
+        description="External revisions add a new version on this document - not a new document row. Check version history after triggering."
       >
         <div className={layout.sectionStack}>
           <TriggerRevisionPanel

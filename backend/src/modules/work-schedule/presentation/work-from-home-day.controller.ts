@@ -76,7 +76,7 @@ export class WorkFromHomeDayController {
   @Post('requests/:approvalRequestId/cancel')
   @ApiOperation({
     summary:
-      'Cancel a work-from-home request (pending: employee / filer / HR; approved: HR — removes its day rows)',
+      'Cancel a work-from-home request (pending: employee / filer / HR; approved: HR - removes its day rows)',
   })
   cancelRequest(
     @CurrentUser() user: AuthenticatedUser,

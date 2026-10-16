@@ -167,7 +167,7 @@ export default function PurchaseRequestDetail({
             label: t('hr.table.requiredBy'),
             value: request.requiredByDate
               ? formatProjectDate(request.requiredByDate)
-              : '—',
+              : '-',
           },
         ]}
       />

@@ -113,7 +113,7 @@ export type MappedMyRfi = MappedRfi & {
 };
 
 /**
- * Manages project RFIs — CRUD, responses, numbering, and notifications.
+ * Manages project RFIs - CRUD, responses, numbering, and notifications.
  */
 @Injectable()
 export class RfisService {
@@ -1232,7 +1232,7 @@ export class RfisService {
         {
           recipientId: rfi.assignedTo,
           eventType: RFI_ASSIGNED_EVENT,
-          subject: `RFI assigned to you — ${rfi.rfiNumber}`,
+          subject: `RFI assigned to you - ${rfi.rfiNumber}`,
           body: `${raisedByName} raised RFI ${rfi.rfiNumber} and assigned it to you for response.`,
           variables: {
             projectId: rfi.projectId,
@@ -1296,7 +1296,7 @@ export class RfisService {
           {
             recipientId,
             eventType: RFI_RESPONDED_EVENT,
-            subject: `Response received — ${rfi.rfiNumber}`,
+            subject: `Response received - ${rfi.rfiNumber}`,
             body: `${responderName} responded to RFI ${rfi.rfiNumber}.`,
             variables,
           },
@@ -1331,7 +1331,7 @@ export class RfisService {
         {
           recipientId: rfi.assignedTo,
           eventType: RFI_CLOSED_EVENT,
-          subject: `RFI closed — ${rfi.rfiNumber}`,
+          subject: `RFI closed - ${rfi.rfiNumber}`,
           body: `RFI ${rfi.rfiNumber} has been closed by ${closedByName}.`,
           variables: {
             projectId: rfi.projectId,

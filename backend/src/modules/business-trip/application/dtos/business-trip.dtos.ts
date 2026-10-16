@@ -82,7 +82,7 @@ export class BusinessTripPassengerDto {
 
 /**
  * Multipart / JSON submit body for a new business trip.
- * isInternational is always true — not accepted from the client.
+ * isInternational is always true - not accepted from the client.
  */
 export class SubmitBusinessTripDto extends OnBehalfSubmissionDto {
   @ApiProperty({ enum: FlightTripType })

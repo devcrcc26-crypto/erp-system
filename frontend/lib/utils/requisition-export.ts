@@ -22,7 +22,7 @@ import {
 } from '@/lib/utils/hr-export-excel';
 
 /**
- * Excel exports for the three requisition-shaped modules — purchase requests,
+ * Excel exports for the three requisition-shaped modules - purchase requests,
  * material requisitions and consumables requisitions. Each produces a header
  * sheet plus an `Items` sheet keyed by request number.
  */

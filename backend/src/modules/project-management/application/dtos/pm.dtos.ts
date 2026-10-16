@@ -583,7 +583,7 @@ export class CreateTaskDisciplineDto {
 
   @ApiPropertyOptional({
     deprecated: true,
-    description: 'Deprecated — derived from disciplineId.',
+    description: 'Deprecated - derived from disciplineId.',
   })
   @IsOptional()
   @IsString()
@@ -1671,7 +1671,7 @@ export class RespondCorrespondenceDto {
 
 export class CreateRiskDto {
   @ApiPropertyOptional({
-    description: 'Ignored on create — the risk number is always server-generated.',
+    description: 'Ignored on create - the risk number is always server-generated.',
   })
   @IsOptional()
   @IsString()

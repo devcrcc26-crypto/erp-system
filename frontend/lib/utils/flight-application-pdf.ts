@@ -93,7 +93,7 @@ function ensureSpace(doc: jsPDF, y: number, needed: number): number {
 
 function dash(value: string | null | undefined): string {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : '—';
+  return trimmed ? trimmed : '-';
 }
 
 /**
@@ -175,7 +175,7 @@ export function exportFlightApplicationPdf(
       labels.return,
       application.returnDate
         ? formatProjectDate(application.returnDate)
-        : '—',
+        : '-',
     ],
     [labels.purpose, dash(application.purpose)],
   ];
@@ -242,9 +242,9 @@ export function exportFlightApplicationPdf(
           passenger.visaRequired ? labels.required : labels.notRequired,
           passenger.visaStatus
             ? formatVisaStatus(passenger.visaStatus, t)
-            : '—',
+            : '-',
         ])
-      : [[labels.none, '—', '—', '—', '—']];
+      : [[labels.none, '-', '-', '-', '-']];
   autoTable(doc, {
     startY: y,
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
@@ -291,7 +291,7 @@ export function exportFlightApplicationPdf(
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(
-      `${labels.footer} — ${labels.title} — ${labels.page} ${page} ${labels.of} ${pageCount}`,
+      `${labels.footer} - ${labels.title} - ${labels.page} ${page} ${labels.of} ${pageCount}`,
       PAGE_MARGIN,
       doc.internal.pageSize.getHeight() - 8,
     );

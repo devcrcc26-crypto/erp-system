@@ -25,7 +25,7 @@ interface VehicleApplicationImportPayload {
 const VEHICLE_APPLICATION_IMPORT_SCHEMA: ImportColumnSchema = {
   sheetName: 'Vehicle Applications',
   templateFileName: 'vehicle-application-import-template',
-  note: 'Each row creates one DRAFT vehicle application. Nothing is submitted or approved — review and submit each draft from the list page.',
+  note: 'Each row creates one DRAFT vehicle application. Nothing is submitted or approved - review and submit each draft from the list page.',
   columns: [
     {
       field: 'employeeEmail',

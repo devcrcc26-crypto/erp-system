@@ -88,7 +88,7 @@ export default function ConditionResponsePanel({
 
       {alreadyResponded ? (
         <Typography.Text type="secondary">
-          Response submitted — awaiting review
+          Response submitted - awaiting review
           {latestResponse?.note?.trim()
             ? `: “${latestResponse.note.trim()}”`
             : ''}

@@ -37,8 +37,8 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Typed leave body for Approvals detail — editable when RETURNED by requester.
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Typed leave body for Approvals detail - editable when RETURNED by requester.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function LeaveRequestDetail({
   sourceId,

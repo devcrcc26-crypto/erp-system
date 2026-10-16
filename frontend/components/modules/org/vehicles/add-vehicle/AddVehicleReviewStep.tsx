@@ -30,7 +30,7 @@ export default function AddVehicleReviewStep({
   );
   const driverLabel =
     driverOptions.find((option) => option.value === values.assignedDriverId)
-      ?.label ?? '—';
+      ?.label ?? '-';
 
   return (
     <FormLayout
@@ -59,7 +59,7 @@ export default function AddVehicleReviewStep({
         <Descriptions.Item label={t('vehicles.form.fuelType')}>
           {values.fuelType
             ? formatFuelType(values.fuelType, t)
-            : '—'}
+            : '-'}
         </Descriptions.Item>
         <Descriptions.Item label={t('hr.table.make')}>
           {values.make}
@@ -71,7 +71,7 @@ export default function AddVehicleReviewStep({
           {values.year}
         </Descriptions.Item>
         <Descriptions.Item label={t('vehicles.form.color')}>
-          {values.color?.trim() || '—'}
+          {values.color?.trim() || '-'}
         </Descriptions.Item>
         <Descriptions.Item label={t('hr.table.assignedDriver')}>
           {driverLabel}
@@ -82,10 +82,10 @@ export default function AddVehicleReviewStep({
             : t('common.active')}
         </Descriptions.Item>
         <Descriptions.Item label={t('vehicles.form.notes')}>
-          {values.notes?.trim() || '—'}
+          {values.notes?.trim() || '-'}
         </Descriptions.Item>
         <Descriptions.Item label={t('vehicles.form.photo')}>
-          {photoFileName ?? '—'}
+          {photoFileName ?? '-'}
         </Descriptions.Item>
       </Descriptions>
     </FormLayout>

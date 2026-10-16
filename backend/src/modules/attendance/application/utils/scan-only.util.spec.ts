@@ -60,12 +60,12 @@ function scans(
     clockIn,
     clockOut,
     isLastExportDay: false,
-    // Office end — must never produce an early-departure band on SCAN_ONLY.
+    // Office end - must never produce an early-departure band on SCAN_ONLY.
     scheduledEnd: '17:30',
   };
 }
 
-describe('SCAN_ONLY work schedule — dayDeduction', () => {
+describe('SCAN_ONLY work schedule - dayDeduction', () => {
   it('single 07:00 scan → PRESENT, 0 deduction, no missing punch, no early departure', () => {
     const r = dayDeduction(MONDAY, scans(MONDAY, '07:00', null), scanOnlyContext());
     expect(r).toMatchObject({
@@ -235,7 +235,7 @@ describe('SCAN_ONLY work schedule — dayDeduction', () => {
   });
 
   it('month summary: present days counted, no early-departure counts, absences deducted', () => {
-    // October 2026: 1 Sunday-free cleaner pattern — scans every Mon–Sat except
+    // October 2026: 1 Sunday-free cleaner pattern - scans every Mon–Sat except
     // two absences (6th, 7th) and one late scan (8th).
     const daily = new Map<string, DayDeductionDayInput>();
     for (let day = 1; day <= 31; day += 1) {

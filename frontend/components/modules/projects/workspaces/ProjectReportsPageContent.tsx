@@ -164,7 +164,7 @@ function ChartLegend({ data }: { data: ChartDatum[] }): React.ReactNode {
   );
 }
 
-/** Donut chart — task status mix */
+/** Donut chart - task status mix */
 function TaskStatusDonutChart({ data }: { data: ChartDatum[] }): React.ReactNode {
   if (!hasChartData(data)) {
     return <ChartEmpty />;
@@ -196,7 +196,7 @@ function TaskStatusDonutChart({ data }: { data: ChartDatum[] }): React.ReactNode
   );
 }
 
-/** Horizontal bar chart — site operations counts */
+/** Horizontal bar chart - site operations counts */
 function SiteOpsHorizontalChart({ data }: { data: ChartDatum[] }): React.ReactNode {
   if (!hasChartData(data)) {
     return <ChartEmpty />;
@@ -235,7 +235,7 @@ function SiteOpsHorizontalChart({ data }: { data: ChartDatum[] }): React.ReactNo
   );
 }
 
-/** Full pie chart — design package status split */
+/** Full pie chart - design package status split */
 function PackagePieChart({ data }: { data: ChartDatum[] }): React.ReactNode {
   if (!hasChartData(data)) {
     return <ChartEmpty />;
@@ -275,7 +275,7 @@ function PackagePieChart({ data }: { data: ChartDatum[] }): React.ReactNode {
   );
 }
 
-/** Radar chart — discipline status profile */
+/** Radar chart - discipline status profile */
 function DisciplineRadarChart({ data }: { data: ChartDatum[] }): React.ReactNode {
   if (!hasChartData(data)) {
     return <ChartEmpty />;

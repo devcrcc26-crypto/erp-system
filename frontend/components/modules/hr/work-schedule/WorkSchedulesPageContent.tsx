@@ -141,7 +141,7 @@ function StatTile({
 }
 
 /**
- * Work schedule list — Tailwind v2 chrome with floating stats and soft cards.
+ * Work schedule list - Tailwind v2 chrome with floating stats and soft cards.
  */
 export default function WorkSchedulesPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();

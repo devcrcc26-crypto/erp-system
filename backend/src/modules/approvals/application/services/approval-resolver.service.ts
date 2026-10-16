@@ -17,7 +17,7 @@ export interface ApprovalRuleTierConfig {
   resolver: string;
   userId?: string;
   roleId?: string;
-  /** Role name or id — preferred seed field. */
+  /** Role name or id - preferred seed field. */
   roleCode?: string;
   /** Alias for roleCode (e.g. MANAGER, FINANCE, or a seeded Role.name). */
   role?: string;

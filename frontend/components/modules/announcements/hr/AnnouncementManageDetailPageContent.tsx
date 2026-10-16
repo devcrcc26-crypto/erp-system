@@ -72,7 +72,7 @@ export default function AnnouncementManageDetailPageContent({ id }: { id: string
         render: (_, row) => (
           <div>
             <p className="m-0 font-semibold text-[#0f172a]">{formatUserName(row.user)}</p>
-            <p className="m-0 text-xs text-[#4b5563]">{row.user.employeeId ?? '—'}</p>
+            <p className="m-0 text-xs text-[#4b5563]">{row.user.employeeId ?? '-'}</p>
           </div>
         ),
       },
@@ -81,7 +81,7 @@ export default function AnnouncementManageDetailPageContent({ id }: { id: string
         key: 'department',
         responsive: ['md'],
         render: (_, row) =>
-          row.user.department ? localized(locale, row.user.department.name, row.user.department.nameZh) : '—',
+          row.user.department ? localized(locale, row.user.department.name, row.user.department.nameZh) : '-',
       },
       {
         title: t('announcements.recipients.readAt'),
@@ -344,14 +344,14 @@ export default function AnnouncementManageDetailPageContent({ id }: { id: string
                 <p className="erp-ann-stat-value">
                   {stats.read}
                   <small>
-                    {stats.recipients > 0 ? `${Math.round((stats.read / stats.recipients) * 100)}%` : '—'}
+                    {stats.recipients > 0 ? `${Math.round((stats.read / stats.recipients) * 100)}%` : '-'}
                   </small>
                 </p>
               </div>
               <div className="erp-ann-stat">
                 <p className="erp-ann-stat-label">{t('announcements.recipients.acknowledged')}</p>
                 <p className="erp-ann-stat-value">
-                  {item.requireAcknowledgement ? stats.acknowledged : '—'}
+                  {item.requireAcknowledgement ? stats.acknowledged : '-'}
                   {item.requireAcknowledgement && stats.recipients > 0 ? (
                     <small>{`${Math.round((stats.acknowledged / stats.recipients) * 100)}%`}</small>
                   ) : null}

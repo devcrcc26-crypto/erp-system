@@ -4,7 +4,7 @@ import { formatUserName } from '@/lib/utils/user-display';
 
 export function formatAuditLogUserName(log: AuditLog): string {
   if (!log.user) {
-    return '—';
+    return '-';
   }
   return formatUserName(log.user);
 }

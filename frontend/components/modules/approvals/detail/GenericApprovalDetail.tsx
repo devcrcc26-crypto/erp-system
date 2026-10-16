@@ -52,7 +52,7 @@ function CommentAttachment({
 }
 
 /**
- * Generic approval body — form data + comments.
+ * Generic approval body - form data + comments.
  */
 export default function GenericApprovalDetail({
   request,
@@ -75,7 +75,7 @@ export default function GenericApprovalDetail({
           },
         ];
       }
-      // Other raw ids (e.g. departmentId) mean nothing to a reader — omit them.
+      // Other raw ids (e.g. departmentId) mean nothing to a reader - omit them.
       if (typeof value === 'string' && isUuidLike(value)) {
         return [];
       }

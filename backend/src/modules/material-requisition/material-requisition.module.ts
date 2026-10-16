@@ -7,7 +7,7 @@ import { MaterialRequisitionImportController } from './presentation/controllers/
 import { MaterialRequisitionController } from './presentation/controllers/material-requisition.controller';
 
 /**
- * Material requisition module — warehouse stock issue requests with a fixed
+ * Material requisition module - warehouse stock issue requests with a fixed
  * Discipline Lead → HR Officer → General Manager approval chain.
  */
 @Module({

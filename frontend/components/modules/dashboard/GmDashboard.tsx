@@ -9,7 +9,7 @@ import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
 export type GmDashboardTab = 'pm' | 'hr';
 
 /**
- * Company-wide home for GM / MD / System Administrator — PM and HR overviews behind a toggle.
+ * Company-wide home for GM / MD / System Administrator - PM and HR overviews behind a toggle.
  * The "Dashboard" title comes from the sticky shell header (route-driven); the PM/HR
  * toggle is rendered in the main content action row.
  */

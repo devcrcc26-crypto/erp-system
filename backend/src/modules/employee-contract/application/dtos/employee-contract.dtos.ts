@@ -293,7 +293,7 @@ export class SalaryPreviewDto {
   taxableThreshold?: number;
 }
 
-/** Solve bonus for an agreed take-home — calculator only, never stored. */
+/** Solve bonus for an agreed take-home - calculator only, never stored. */
 export class BonusFromNetDto {
   @ApiProperty({ example: 13000 })
   @Type(() => Number)

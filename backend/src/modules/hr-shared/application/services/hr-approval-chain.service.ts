@@ -73,17 +73,17 @@ export const AUTO_APPROVE_ROLES: readonly string[] = [
   'System Administrator',
 ];
 
-/** HR staff roles — their org requests go directly to HR Manager. */
+/** HR staff roles - their org requests go directly to HR Manager. */
 export const HR_STAFF_ROLES: readonly string[] = [
   'HR Assistant',
   'HR Specialist',
   'Local HR Manager',
 ];
 
-/** Keep for backward compatibility — same as HR_MANAGER_ROLES. */
+/** Keep for backward compatibility - same as HR_MANAGER_ROLES. */
 export const HR_OR_FULL_ACCESS_ROLES: readonly string[] = HR_MANAGER_ROLES;
 
-/** Keep for backward compatibility — same as HR_MANAGER_ROLES. */
+/** Keep for backward compatibility - same as HR_MANAGER_ROLES. */
 export const HR_APPROVER_ROLES: readonly string[] = HR_MANAGER_ROLES;
 
 /** Roles that have HR module access (used for permission checks). */
@@ -932,7 +932,7 @@ export class HrApprovalChainService {
 
   /**
    * Approval chain for consumables requisitions.
-   * Empty array = HR Officer / above — direct APPROVED (no approval request).
+   * Empty array = HR Officer / above - direct APPROVED (no approval request).
    * Otherwise a single HR Officer tier.
    */
   async buildConsumablesApprovalChain(
@@ -972,7 +972,7 @@ export class HrApprovalChainService {
 
   /**
    * Approval chain for vehicle applications.
-   * Empty array = HR Officer / above — direct APPROVED (no approval request).
+   * Empty array = HR Officer / above - direct APPROVED (no approval request).
    * Otherwise a single HR Officer tier.
    */
   async buildVehicleApplicationApprovalChain(
@@ -1012,7 +1012,7 @@ export class HrApprovalChainService {
 
   /**
    * Approval chain for vehicle refueling requests.
-   * Empty array = HR Officer / above — direct APPROVED (no approval request).
+   * Empty array = HR Officer / above - direct APPROVED (no approval request).
    * Otherwise a single HR Officer tier.
    */
   async buildVehicleRefuelingApprovalChain(
@@ -1052,7 +1052,7 @@ export class HrApprovalChainService {
 
   /**
  * Approval chain for official seal requests.
- * Empty array = General Manager / above — direct APPROVED (no approval request).
+ * Empty array = General Manager / above - direct APPROVED (no approval request).
  * if HR Officer / above, a single HR Officer tier. Then a General Manager tier.
  * Otherwise a single HR Officer and General Manager tier.
  */
@@ -1400,7 +1400,7 @@ export class HrApprovalChainService {
   }
 
   /**
-   * Soft-fail discipline lead lookup — skips the tier instead of throwing.
+   * Soft-fail discipline lead lookup - skips the tier instead of throwing.
    */
   async getDisciplineLeadSafe(
     employeeId: string,

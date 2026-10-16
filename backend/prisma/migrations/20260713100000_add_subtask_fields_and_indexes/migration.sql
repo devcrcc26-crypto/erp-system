@@ -1,5 +1,5 @@
 -- Change 6 Phase 1: subtask ID system + subtask metadata fields
--- All new columns are nullable — existing rows unaffected until Phase 2 backfill.
+-- All new columns are nullable - existing rows unaffected until Phase 2 backfill.
 
 -- AlterTable: task_discipline.discipline_index
 ALTER TABLE "task_discipline" ADD COLUMN "discipline_index" INTEGER;

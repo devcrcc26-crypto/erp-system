@@ -112,7 +112,7 @@ export function computeFinalSettlement(input: FinalSettlementInput): FinalSettle
   let unusedLeavePayout = 0;
   if (policy.unusedLeavePayout.enabled) {
     if (input.unusedLeaveDays == null) {
-      notes.push('Unused leave payout: balance unavailable — handled outside the system');
+      notes.push('Unused leave payout: balance unavailable - handled outside the system');
     } else {
       const days = Math.max(0, input.unusedLeaveDays);
       unusedLeavePayout = round2(days * dailyRate);
@@ -129,10 +129,10 @@ export function computeFinalSettlement(input: FinalSettlementInput): FinalSettle
     const minYears = finiteNumber(params.minYearsOfService) ?? 0;
     if (perYear == null) {
       notes.push(
-        'Severance: parameters.monthsOfBasicPerYearOfService not set — handled outside the system',
+        'Severance: parameters.monthsOfBasicPerYearOfService not set - handled outside the system',
       );
     } else if (years < minYears) {
-      notes.push(`Severance: ${years.toFixed(2)} service year(s) below minimum ${minYears} — none`);
+      notes.push(`Severance: ${years.toFixed(2)} service year(s) below minimum ${minYears} - none`);
     } else {
       const maxMonths = finiteNumber(params.maxMonths);
       let months = perYear * years;

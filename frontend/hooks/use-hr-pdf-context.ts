@@ -21,7 +21,7 @@ export function useHrPdfContext(): HrPdfContext {
   return useMemo(
     () => ({
       companyName: user?.companyName,
-      preparedBy: user ? formatUserName(user) : '—',
+      preparedBy: user ? formatUserName(user) : '-',
     }),
     [user],
   );

@@ -59,7 +59,7 @@ function humanizeStatus(value: string): string {
 }
 
 /**
- * HR reports — workforce, leave, overtime, travel, contracts, expenses and
+ * HR reports - workforce, leave, overtime, travel, contracts, expenses and
  * evaluations for a chosen period, with charts and exportable tables.
  */
 export default function HrReportsPageContent(): React.ReactNode {
@@ -310,7 +310,7 @@ export default function HrReportsPageContent(): React.ReactNode {
       title: t(`${PAGE}.columns.department`),
       dataIndex: 'department',
       key: 'department',
-      render: (value: string | null) => value || '—',
+      render: (value: string | null) => value || '-',
     },
     {
       title: t(`${PAGE}.columns.requests`),
@@ -338,7 +338,7 @@ export default function HrReportsPageContent(): React.ReactNode {
       title: t(`${PAGE}.columns.department`),
       dataIndex: 'department',
       key: 'department',
-      render: (value: string | null) => value || '—',
+      render: (value: string | null) => value || '-',
     },
     {
       title: t(`${PAGE}.columns.sheets`),

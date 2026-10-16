@@ -27,7 +27,7 @@ interface LeavePolicyFormPageContentProps {
 }
 
 /**
- * Create / edit leave policy — v2 hero + stepper form.
+ * Create / edit leave policy - v2 hero + stepper form.
  */
 export default function LeavePolicyFormPageContent({
   policyId,

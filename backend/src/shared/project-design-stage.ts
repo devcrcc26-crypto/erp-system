@@ -1,5 +1,5 @@
 /**
- * Project design stage — backend source of truth; keys must match Prisma enum.
+ * Project design stage - backend source of truth; keys must match Prisma enum.
  */
 export const PROJECT_DESIGN_STAGE_VALUES = [
   'TENDER',

@@ -108,7 +108,7 @@ export interface HrDashboardStats {
   overtimeThisMonth: HrDashboardOvertimeRow[];
 }
 
-/** Query for GET /hr/reports — omitted dates default to 1 January → today. */
+/** Query for GET /hr/reports - omitted dates default to 1 January → today. */
 export interface HrReportParams {
   from?: string;
   to?: string;

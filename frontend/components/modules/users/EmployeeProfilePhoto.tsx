@@ -173,10 +173,12 @@ export default function EmployeeProfilePhoto({
           src={imageSrc}
           icon={!imageSrc && !initials ? <UserOutlined /> : undefined}
           style={{
-            backgroundColor: imageSrc ? undefined : tokens.colorPrimary,
+            backgroundColor: imageSrc ? undefined : '#e8f7f2',
+            color: imageSrc ? undefined : '#0f6e56',
+            fontWeight: 600,
             flexShrink: 0,
-            border: `1px solid ${tokens.colorBorder}`,
-            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            border: '1px solid rgba(29, 158, 117, 0.18)',
+            boxShadow: '0 1px 2px rgba(16, 24, 40, 0.05)',
           }}
         >
           {initials}
@@ -205,14 +207,14 @@ export default function EmployeeProfilePhoto({
             size="small"
             icon={<CameraOutlined />}
             loading={uploadPending}
-            style={{ borderRadius: 2 }}
+            style={{ borderRadius: 8 }}
           />
         </Tooltip>
       ) : (
         <Button
           icon={<CameraOutlined />}
           loading={uploadPending}
-          style={{ borderRadius: 2 }}
+          style={{ borderRadius: 10 }}
         >
           {photoDocumentId ? t('users.changePhoto') : t('users.uploadPhoto')}
         </Button>
@@ -230,7 +232,7 @@ export default function EmployeeProfilePhoto({
             icon={<DeleteOutlined />}
             loading={deletePending}
             onClick={() => setConfirmRemove(true)}
-            style={{ borderRadius: 2 }}
+            style={{ borderRadius: 8 }}
           />
         </Tooltip>
       ) : (
@@ -239,7 +241,7 @@ export default function EmployeeProfilePhoto({
           icon={<DeleteOutlined />}
           loading={deletePending}
           onClick={() => setConfirmRemove(true)}
-          style={{ borderRadius: 2 }}
+          style={{ borderRadius: 10 }}
         >
           {t('users.removePhoto')}
         </Button>

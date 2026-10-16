@@ -1,7 +1,7 @@
 /**
  * Which create actions the field movement page offers.
  *
- * - "Add" (self): the user takes part in HR processes — has an employee record
+ * - "Add" (self): the user takes part in HR processes - has an employee record
  *   and is not an approver-only account.
  * - "Add on behalf": the user may file for at least one employee. The eligible
  *   list (GET /hr/on-behalf/eligible-employees) is the same rule used for leave

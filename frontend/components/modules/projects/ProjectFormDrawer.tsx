@@ -294,7 +294,7 @@ export default function ProjectFormDrawer({
             <InputNumber
               className="!w-full"
               min={0}
-              placeholder={`Optional — ${field.unit}`}
+              placeholder={`Optional - ${field.unit}`}
             />
           </Form.Item>
         ))}

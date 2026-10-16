@@ -54,7 +54,7 @@ describe('EmployeeProfileDocuments', () => {
     expect(call.labels).toEqual(['passport', 'degree']);
     await waitFor(() => expect(mockSuccess).toHaveBeenCalledWith('users.documentsUploaded'));
 
-    // Only the picker button exists — no second "upload" step.
+    // Only the picker button exists - no second "upload" step.
     expect(
       screen.getAllByRole('button', { name: /users\.form\.uploadDocuments/ }),
     ).toHaveLength(1);

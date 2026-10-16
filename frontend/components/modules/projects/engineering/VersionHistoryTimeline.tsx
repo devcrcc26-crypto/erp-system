@@ -37,7 +37,7 @@ export default function VersionHistoryTimeline({
     <div id="version-history">
       <FormLayout
         title="Version history"
-        description="Each row is a revision of this document. Trigger revision adds a new draft entry here — not a new document in the discipline list."
+        description="Each row is a revision of this document. Trigger revision adds a new draft entry here - not a new document in the discipline list."
         extra={
           <Segmented
             value={loopFilter}
@@ -83,7 +83,7 @@ function VersionEntryBlock({ entry }: { entry: VersionHistoryEntry }): React.Rea
       </div>
       <div className="mb-3 text-sm text-slate-700">
         <span className="text-slate-500">File:</span>{' '}
-        <span className="font-medium">{entry.fileName ?? '—'}</span>
+        <span className="font-medium">{entry.fileName ?? '-'}</span>
         {entry.fileVersionNumber != null ? (
           <span className="ml-2 text-xs text-slate-500">
             (file v{entry.fileVersionNumber})

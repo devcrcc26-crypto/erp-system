@@ -104,7 +104,7 @@ export async function buildImportTemplate(
   });
   instructions.addRow({
     column: 'Status',
-    notes: 'Imported records are always created as DRAFT — nothing is submitted or approved.',
+    notes: 'Imported records are always created as DRAFT - nothing is submitted or approved.',
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
@@ -149,7 +149,7 @@ function describeAcceptedValues(
       )
       .map((other) => other.label);
     return siblings.length > 0
-      ? `Text — supply this or ${siblings.join(' / ')}`
+      ? `Text - supply this or ${siblings.join(' / ')}`
       : 'Text';
   }
   return column.maxLength ? `Text (max ${column.maxLength})` : 'Text';

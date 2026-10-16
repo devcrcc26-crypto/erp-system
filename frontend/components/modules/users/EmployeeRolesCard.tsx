@@ -238,25 +238,30 @@ export default function EmployeeRolesCard({
             return (
               <li
                 key={assignment.id}
-                className="erp-employee-role-row flex flex-wrap items-center gap-2 rounded-md border border-[var(--border-color,#E5E7EB)] px-3 py-2"
+                data-primary={isPrimary ? 'true' : undefined}
+                className="erp-employee-role-row flex flex-wrap items-center gap-2 rounded-[10px] bg-[#f7f8fa] px-3.5 py-2.5"
               >
                 <span
-                  className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${
+                  data-primary={isPrimary ? 'true' : undefined}
+                  className={`erp-employee-role-dot inline-block h-2 w-2 shrink-0 rounded-full ${
                     isPrimary
-                      ? 'bg-[var(--color-primary,#F47B20)]'
-                      : 'border-2 border-[var(--color-primary,#F47B20)] bg-transparent'
+                      ? 'bg-[#1d9e75]'
+                      : 'border-2 border-slate-400 bg-transparent'
                   }`}
                   aria-hidden
                 />
                 <Tag
                   color={getRoleColor(assignment.role.name)}
-                  className="m-0"
-                  style={{ fontWeight: isPrimary ? 600 : 400 }}
+                  className="m-0 rounded-full border-0 px-2.5 py-0.5 text-xs"
+                  style={{ fontWeight: isPrimary ? 600 : 500 }}
                 >
                   {formatRoleDisplayName(assignment.role.name)}
                 </Tag>
                 {isPrimary ? (
-                  <Tag color="success" className="m-0">
+                  <Tag
+                    color="success"
+                    className="m-0 rounded-full border-0 px-2.5 py-0.5 text-xs font-semibold"
+                  >
                     {t('users.primaryRole')}
                   </Tag>
                 ) : null}

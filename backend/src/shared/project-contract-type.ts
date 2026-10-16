@@ -1,5 +1,5 @@
 /**
- * Project contract type — backend source of truth; keys must match Prisma ProjectContractType enum.
+ * Project contract type - backend source of truth; keys must match Prisma ProjectContractType enum.
  */
 export const PROJECT_CONTRACT_TYPE_VALUES = [
   'CONTRACT',

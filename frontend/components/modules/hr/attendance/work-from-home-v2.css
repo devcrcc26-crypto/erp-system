@@ -1,5 +1,5 @@
 /*
- * Work-from-home days — table chrome matched to Employees (`.erp-employees-v2`).
+ * Work-from-home days - table chrome matched to Employees (`.erp-employees-v2`).
  * Scoped under `.erp-wfh-v2`.
  */
 .erp-wfh-v2 {
@@ -15,7 +15,7 @@
   --wfh-primary-strong: #0f6e56;
 }
 
-/* Edge-to-edge like Employees — cancel attendance-v2 inset padding. */
+/* Edge-to-edge like Employees - cancel attendance-v2 inset padding. */
 .erp-wfh-v2 .erp-pro-table-card-body {
   padding: 0;
 }

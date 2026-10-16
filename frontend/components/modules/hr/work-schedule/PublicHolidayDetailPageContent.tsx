@@ -72,7 +72,7 @@ function DetailSection({
 }
 
 /**
- * Public holiday detail — leave / employees v2 hero and soft sections.
+ * Public holiday detail - leave / employees v2 hero and soft sections.
  */
 export default function PublicHolidayDetailPageContent({
   holidayId,
@@ -336,7 +336,7 @@ export default function PublicHolidayDetailPageContent({
           </div>
           <div className="erp-ph-field">
             <p className="erp-ph-field-label">{t('hr.publicHoliday.nameZh')}</p>
-            <p className="erp-ph-field-value">{holiday.nameZh || '—'}</p>
+            <p className="erp-ph-field-value">{holiday.nameZh || '-'}</p>
           </div>
           <div className="erp-ph-field">
             <p className="erp-ph-field-label">{t('hr.publicHoliday.date')}</p>

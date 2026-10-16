@@ -182,7 +182,7 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     if (!employeeRole) {
-      throw new Error('Employee role not found — run configuration seed first');
+      throw new Error('Employee role not found - run configuration seed first');
     }
 
     const leavePolicy = await prisma.leavePolicy.findFirst({
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
         select: { id: true },
       });
       if (existingById) {
-        console.log(`${employeeId}  ${fullName}  [skip — employeeId already exists]`);
+        console.log(`${employeeId}  ${fullName}  [skip - employeeId already exists]`);
         skipped += 1;
         continue;
       }

@@ -190,7 +190,7 @@ export class ProjectExportService {
   /**
    * Generates a bilingual task list workbook with only the 17 standard
    * task columns (Overseas Task Number through Task Supervising Company
-   * Chief Engineer / Department Chief Engineer) — no disciplines or
+   * Chief Engineer / Department Chief Engineer) - no disciplines or
    * change-request/commercial columns.
    */
   async exportTaskListSummary(

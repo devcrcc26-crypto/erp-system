@@ -177,7 +177,7 @@ export class OfficialSealService
     const approval = (await this.approvalsService.submitRequest(
       {
         categoryCode: "OFFICIAL_SEAL_USAGE",
-        title: `Official Seal — ${dto.fileName}`,
+        title: `Official Seal - ${dto.fileName}`,
         formData: {
           fileName: dto.fileName,
           description: dto.description,

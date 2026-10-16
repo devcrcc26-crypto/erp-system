@@ -172,17 +172,17 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
     {
       kind: 'pair',
       left: `Employee / 员工:  ${model.employeeName}`,
-      right: `ID / 工号: ${model.employeeCode || '—'}`,
+      right: `ID / 工号: ${model.employeeCode || '-'}`,
     },
     {
       kind: 'pair',
-      left: `Department / 部门: ${model.department || '—'}`,
-      right: `Discipline / 专业: ${model.discipline || '—'}`,
+      left: `Department / 部门: ${model.department || '-'}`,
+      right: `Discipline / 专业: ${model.discipline || '-'}`,
     },
     {
       kind: 'pair',
-      left: `Bank / 银行: ${model.bankName || '—'}`,
-      right: `Account / 账号: ${model.bankAccountMasked || '—'}`,
+      left: `Bank / 银行: ${model.bankName || '-'}`,
+      right: `Account / 账号: ${model.bankAccountMasked || '-'}`,
     },
     {
       kind: 'pair',
@@ -282,7 +282,7 @@ export function buildPayslipLines(model: PayslipPdfModel): PayslipLine[] {
       lines.push({
         kind: 'note',
         text: reason
-          ? `Includes one-time net top-up ${formatEtb(model.netTopUp)} — ${reason}`
+          ? `Includes one-time net top-up ${formatEtb(model.netTopUp)} - ${reason}`
           : `Includes one-time net top-up ${formatEtb(model.netTopUp)}`,
       });
     }

@@ -148,14 +148,14 @@ export class UpdateDivisionDto extends PartialType(CreateDivisionDto) {}
 export class CreateDepartmentDto {
   @ApiPropertyOptional({
     description:
-      'Optional — defaults to the company primary division when omitted.',
+      'Optional - defaults to the company primary division when omitted.',
   })
   @IsOptional()
   @IsString()
   divisionId?: string;
 
   @ApiPropertyOptional({
-    description: 'Optional — defaults to the company primary branch when omitted.',
+    description: 'Optional - defaults to the company primary branch when omitted.',
   })
   @IsOptional()
   @IsString()
@@ -243,6 +243,35 @@ export class CreatePositionDto {
 }
 
 export class UpdatePositionDto extends PartialType(CreatePositionDto) {}
+
+export class CreateSeniorityLevelDto {
+  @ApiProperty({ example: 'Senior', maxLength: 100 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  name!: string;
+
+  @ApiPropertyOptional({ description: 'Chinese name', maxLength: 100 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  nameZh?: string;
+
+  @ApiPropertyOptional({ description: 'Display order, lowest first', default: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(999)
+  sortOrder?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class UpdateSeniorityLevelDto extends PartialType(CreateSeniorityLevelDto) {}
 
 export class CreateFinancialYearDto {
   @ApiProperty()

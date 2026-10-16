@@ -119,7 +119,7 @@ export default function SettingsDepartmentsPanel(): React.ReactNode {
       ) {
         setAlignConfirm(true);
         messageApi.warning(
-          'Leader belongs to another department — save again to align.',
+          'Leader belongs to another department - save again to align.',
         );
         return;
       }

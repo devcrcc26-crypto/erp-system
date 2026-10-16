@@ -12,7 +12,7 @@ import {
 
 /**
  * True when the session may open the company Departments page.
- * Uses session EPC nav probes — does not list /departments (avoids 403 noise for design roles).
+ * Uses session EPC nav probes - does not list /departments (avoids 403 noise for design roles).
  * HR Officers also see Organization (departments / positions) via hr.view.
  */
 export function useCanViewDepartmentsNav(): boolean {

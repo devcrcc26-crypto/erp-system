@@ -260,7 +260,7 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     if (!company) {
-      throw new Error('No company found — run the main seed first');
+      throw new Error('No company found - run the main seed first');
     }
 
     const actor = await prisma.user.findFirst({

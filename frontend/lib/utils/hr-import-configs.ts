@@ -8,7 +8,7 @@ import type {
  *
  * These mirror the backend column schemas so the modal can pre-validate a file
  * before uploading it. When a backend schema changes, change the matching
- * entry here too — see `IMPORT_EXPORT.md`.
+ * entry here too - see `IMPORT_EXPORT.md`.
  */
 
 const EMPLOYEE_COLUMNS: HrImportColumn[] = [

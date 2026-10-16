@@ -17,7 +17,7 @@ import {
   ImportPreviewResponseDto,
   ImportRowPreviewDto,
 } from '../dtos/user-import.dtos';
-import { TIN_PATTERN } from '../dtos/user-field.rules';
+import { TIN_PATTERN, YEARS_OF_EXPERIENCE_MAX } from '../dtos/user-field.rules';
 import { UserInvitationDispatchService } from './user-invitation-dispatch.service';
 import {
   ProvisionedUser,
@@ -125,9 +125,10 @@ const HEADER_ALIASES: Record<string, keyof ParsedImportRow> = {
   fieldofstudy: 'fieldOfStudy',
   'field of study': 'fieldOfStudy',
   field_of_study: 'fieldOfStudy',
-  experiencestartdate: 'experienceStartDate',
-  'experience start date': 'experienceStartDate',
-  experience_start_date: 'experienceStartDate',
+  yearsofexperience: 'yearsOfExperience',
+  'years of experience': 'yearsOfExperience',
+  years_of_experience: 'yearsOfExperience',
+  experience: 'yearsOfExperience',
   employmentdate: 'employmentDate',
   'employment date': 'employmentDate',
   'employment start date': 'employmentDate',
@@ -233,7 +234,7 @@ interface ParsedImportRow {
   educationLevel?: string;
   fieldOfStudy?: string;
   employmentDate?: string;
-  experienceStartDate?: string;
+  yearsOfExperience?: string;
   leavePolicy?: string;
 }
 
@@ -292,7 +293,7 @@ export class UserImportService {
       { header: 'educationLevel', key: 'educationLevel', width: 14 },
       { header: 'fieldOfStudy', key: 'fieldOfStudy', width: 18 },
       { header: 'employmentDate', key: 'employmentDate', width: 18 },
-      { header: 'experienceStartDate', key: 'experienceStartDate', width: 18 },
+      { header: 'yearsOfExperience', key: 'yearsOfExperience', width: 18 },
       { header: 'addressCountry', key: 'addressCountry', width: 14 },
       { header: 'addressRegion', key: 'addressRegion', width: 14 },
       { header: 'addressCity', key: 'addressCity', width: 14 },
@@ -323,7 +324,7 @@ export class UserImportService {
       educationLevel: 'BSC',
       fieldOfStudy: 'Civil Engineering',
       employmentDate: '2024-03-01',
-      experienceStartDate: '2015-01-01',
+      yearsOfExperience: '8',
       addressCountry: 'Ethiopia',
       addressRegion: 'Addis Ababa',
       addressCity: 'Addis Ababa',
@@ -353,7 +354,7 @@ export class UserImportService {
       educationLevel: 'MSC',
       fieldOfStudy: '',
       employmentDate: '',
-      experienceStartDate: '',
+      yearsOfExperience: '',
       addressCountry: '',
       addressRegion: '',
       addressCity: '',
@@ -376,12 +377,12 @@ export class UserImportService {
     instructions.addRow([
       'chineseName',
       'No',
-      'Chinese full name (中文姓名) — recommended when email is blank',
+      'Chinese full name (中文姓名) - recommended when email is blank',
     ]);
     instructions.addRow([
       'role',
       'No',
-      'Optional — must match an existing role name exactly (e.g. Employee) when provided',
+      'Optional - must match an existing role name exactly (e.g. Employee) when provided',
     ]);
     instructions.addRow(['phone', 'No', 'Optional contact number']);
     instructions.addRow([
@@ -413,7 +414,7 @@ export class UserImportService {
     instructions.addRow([
       'educationLevel',
       'No',
-      'PHD, MSC, BSC, DIPLOMA, CERTIFICATE, or OTHER',
+      'PHD, MSC, BSC, DIPLOMA, CERTIFICATE, TECHNICIAN, SECONDARY, PRIMARY, or OTHER',
     ]);
     instructions.addRow(['fieldOfStudy', 'No', '']);
     instructions.addRow([
@@ -422,9 +423,9 @@ export class UserImportService {
       'YYYY-MM-DD or DD/MM/YYYY (aliases: hire date, date of employment)',
     ]);
     instructions.addRow([
-      'experienceStartDate',
+      'yearsOfExperience',
       'No',
-      'YYYY-MM-DD or DD/MM/YYYY (career experience since)',
+      'Years of career experience as of the import date, e.g. 8 or 6.5',
     ]);
     instructions.addRow(['addressCountry', 'No', '']);
     instructions.addRow(['addressRegion', 'No', '']);
@@ -499,7 +500,10 @@ export class UserImportService {
           tin: row.tin,
           fieldOfStudy: row.fieldOfStudy,
           employmentDate: row.employmentDate,
-          experienceStartDate: row.experienceStartDate,
+          yearsOfExperience:
+            row.yearsOfExperience != null && row.yearsOfExperience !== ''
+              ? Number(row.yearsOfExperience)
+              : undefined,
           addressCountry: row.addressCountry,
           addressRegion: row.addressRegion,
           addressCity: row.addressCity,
@@ -612,8 +616,7 @@ export class UserImportService {
         const cellValue = row.getCell(colNumber).value;
         const isDateField =
           field === 'dateOfBirth' ||
-          field === 'employmentDate' ||
-          field === 'experienceStartDate';
+          field === 'employmentDate';
         const value = isDateField
           ? this.cellToDateString(cellValue).trim()
           : this.cellToString(cellValue).trim();
@@ -697,8 +700,8 @@ export class UserImportService {
           case 'employmentDate':
             parsed.employmentDate = value || undefined;
             break;
-          case 'experienceStartDate':
-            parsed.experienceStartDate = value || undefined;
+          case 'yearsOfExperience':
+            parsed.yearsOfExperience = value || undefined;
             break;
           case 'leavePolicy':
             parsed.leavePolicy = value || undefined;
@@ -786,7 +789,7 @@ export class UserImportService {
       educationLevel: row.educationLevel as ImportRowPreviewDto['educationLevel'],
       dateOfBirth: row.dateOfBirth,
       employmentDate: row.employmentDate,
-      experienceStartDate: row.experienceStartDate,
+      yearsOfExperience: row.yearsOfExperience,
       discipline: row.discipline as ImportRowPreviewDto['discipline'],
       nationalId: row.nationalId,
       tin: row.tin,
@@ -872,15 +875,12 @@ export class UserImportService {
       };
     }
 
-    const experienceStartDateResult = this.parseImportDate(
-      row.experienceStartDate,
-      'experienceStartDate',
-    );
-    if (!experienceStartDateResult.ok) {
+    const yearsOfExperienceResult = this.parseImportYears(row.yearsOfExperience);
+    if (!yearsOfExperienceResult.ok) {
       return {
         ...base,
         status: 'error',
-        message: experienceStartDateResult.message,
+        message: yearsOfExperienceResult.message,
       };
     }
 
@@ -983,7 +983,7 @@ export class UserImportService {
       educationLevel: educationLevelResult.value,
       dateOfBirth: dateOfBirthResult.value,
       employmentDate: employmentDateResult.value,
-      experienceStartDate: experienceStartDateResult.value,
+      yearsOfExperience: yearsOfExperienceResult.value,
     };
 
     const trimmedEmail = row.email.trim();
@@ -1171,6 +1171,30 @@ export class UserImportService {
       return catalog.get(this.normalizeLookupKey(aliased));
     }
     return undefined;
+  }
+
+  /** Years of experience: 0 to YEARS_OF_EXPERIENCE_MAX, at most one decimal. */
+  private parseImportYears(
+    value: string | undefined,
+  ):
+    | { ok: true; value: string | undefined }
+    | { ok: false; message: string } {
+    const trimmed = value?.trim() ?? '';
+    if (!trimmed) {
+      return { ok: true, value: undefined };
+    }
+    const normalised = trimmed.replace(',', '.');
+    const years = Number(normalised);
+    if (
+      !/^\d+(\.\d)?$/.test(normalised) ||
+      years > YEARS_OF_EXPERIENCE_MAX
+    ) {
+      return {
+        ok: false,
+        message: `yearsOfExperience must be a number from 0 to ${YEARS_OF_EXPERIENCE_MAX} with at most one decimal`,
+      };
+    }
+    return { ok: true, value: String(years) };
   }
 
   private parseImportDate(

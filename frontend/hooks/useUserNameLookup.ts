@@ -27,7 +27,7 @@ export function useUserNameLookup(): (userId: string) => string {
 }
 
 /**
- * Prefers API-provided display names, then directory lookup — never raw UUIDs.
+ * Prefers API-provided display names, then directory lookup - never raw UUIDs.
  */
 export function useUserDisplayResolver(): (
   userId: string | null | undefined,

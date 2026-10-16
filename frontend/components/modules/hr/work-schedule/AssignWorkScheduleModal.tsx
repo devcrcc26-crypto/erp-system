@@ -25,7 +25,7 @@ interface AssignFormValues {
 }
 
 /**
- * Assigns a work schedule to an employee — import-modal chrome + labeled form.
+ * Assigns a work schedule to an employee - import-modal chrome + labeled form.
  * After confirm, asks whether to recalculate attendance from the effective date.
  */
 export default function AssignWorkScheduleModal({

@@ -1,4 +1,4 @@
-// Gap completion — new
+// Gap completion - new
 
 import type {
   ReviewTier,
@@ -140,7 +140,7 @@ export function reviewTierLabel(tier: ReviewTier): string {
 /**
  * Bilingual tier label for governance-facing surfaces (comment tier badges,
  * return-reason banners). DISCIPLINE_OWNER has no confirmed Chinese text yet
- * — English-only until supplied.
+ * - English-only until supplied.
  */
 export function reviewTierBilingualLabel(tier: ReviewTier | string): string {
   const labels: Record<ReviewTier, string> = {

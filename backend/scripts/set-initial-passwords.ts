@@ -157,7 +157,7 @@ async function main(): Promise<void> {
       ? []
       : [
           '',
-          'Users with no login name — run backfill first:',
+          'Users with no login name - run backfill first:',
           ...plan.noLoginName.map(
             (u) =>
               `- ${u.id} (${[u.firstName, u.middleName, u.lastName].filter(Boolean).join(' ')})`,
@@ -192,7 +192,7 @@ async function main(): Promise<void> {
   );
   if (plan.noLoginName.length > 0) {
     console.log(
-      `${plan.noLoginName.length} user(s) have no login name — run backfill first (listed in login-setup-report.md)`,
+      `${plan.noLoginName.length} user(s) have no login name - run backfill first (listed in login-setup-report.md)`,
     );
   }
   if (excelWritten) {

@@ -1,5 +1,5 @@
 /**
- * Project design stage values and labels — must match backend enum keys.
+ * Project design stage values and labels - must match backend enum keys.
  */
 export const PROJECT_DESIGN_STAGE_VALUES = [
   'TENDER',

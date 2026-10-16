@@ -346,7 +346,7 @@ export default function ChangeRequestDetailPageContent({
                     <Descriptions.Item label="Title">{cr.title}</Descriptions.Item>
                     {cr.linkedDesignPackage && (
                       <Descriptions.Item label="Subtask">
-                        {cr.linkedDesignPackage.packageCode} —{' '}
+                        {cr.linkedDesignPackage.packageCode} -{' '}
                         {cr.linkedDesignPackage.name}
                       </Descriptions.Item>
                     )}
@@ -373,7 +373,7 @@ export default function ChangeRequestDetailPageContent({
                       {resolveUserName(cr.createdBy)}
                     </Descriptions.Item>
                     <Descriptions.Item label="Assigned to">
-                      {cr.assignedTo ? resolveUserName(cr.assignedTo) : '—'}
+                      {cr.assignedTo ? resolveUserName(cr.assignedTo) : '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Created date">
                       {formatProjectDate(cr.createdAt)}
@@ -433,7 +433,7 @@ export default function ChangeRequestDetailPageContent({
                       content: (
                         <div className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                            Created — {resolveUserName(cr.createdBy)}
+                            Created - {resolveUserName(cr.createdBy)}
                           </span>
                           <span className={layout.drawerMutedText}>
                             {formatProjectDate(cr.createdAt)}
@@ -447,7 +447,7 @@ export default function ChangeRequestDetailPageContent({
                             content: (
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                                  {cr.status === 'REJECTED' ? 'Rejected' : 'Approved'} —{' '}
+                                  {cr.status === 'REJECTED' ? 'Rejected' : 'Approved'} -{' '}
                                   {resolveUserName(cr.approvedBy)}
                                 </span>
                                 {cr.approvedAt && (
@@ -549,7 +549,7 @@ export default function ChangeRequestDetailPageContent({
           <Alert
             type="success"
             showIcon
-            title="Approved — The designer has been notified to upload revised documents."
+            title="Approved - The designer has been notified to upload revised documents."
           />
         )}
 

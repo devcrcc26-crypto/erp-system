@@ -133,7 +133,7 @@ export function RfiFormDrawer({
     () =>
       (projectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
-        label: `${p.projectCode} — ${p.name}`,
+        label: `${p.projectCode} - ${p.name}`,
       })),
     [projectsQuery.data?.data],
   );
@@ -146,7 +146,7 @@ export function RfiFormDrawer({
     () =>
       (subtasksQuery.data ?? []).map((pkg) => ({
         value: pkg.id,
-        label: `${pkg.fullCode} — ${pkg.name}`,
+        label: `${pkg.fullCode} - ${pkg.name}`,
       })),
     [subtasksQuery.data],
   );
@@ -634,7 +634,7 @@ export default function RfisPageContent({
     <>
       <FormLayout
         title="RFIs"
-        description="Requests for information — track clarifications from design to closeout."
+        description="Requests for information - track clarifications from design to closeout."
         extra={
           <Button
             type="primary"
@@ -652,7 +652,7 @@ export default function RfisPageContent({
             showIcon
             className="!mb-4"
             title="RFI APIs are not connected yet."
-            description="This page is ready — data will appear when the project management backend module is available."
+            description="This page is ready - data will appear when the project management backend module is available."
           />
         )}
 

@@ -7,7 +7,7 @@ import type { ExpenseClaimDetail } from '@/lib/api/expense-claim.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New expense claim page — shared HR form banner + stepper form.
+ * New expense claim page - shared HR form banner + stepper form.
  */
 export default function ExpenseClaimFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

@@ -472,7 +472,7 @@ export class EmploymentSeparationService {
       const later = await this.prisma.employmentPeriod.count({
         where: { userId: period.userId, startDate: { gt: period.endDate! } },
       });
-      if (later > 0) continue; // rehired since — this period is history
+      if (later > 0) continue; // rehired since - this period is history
 
       const contract = period.separationContractId
         ? await this.prisma.employeeContract.findFirst({
@@ -895,7 +895,7 @@ export class EmploymentSeparationService {
           recipientId,
           eventType: 'payroll.employee_separation_after_approval',
           subject: `Payroll affected: ${name} ${verb}`,
-          body: `${name} was ${verb} with leaving date ${formatDateOnlyUtc(leavingDate)}, inside already approved/paid payroll (${runList}). The run is marked stale — review and recalculate if needed.`,
+          body: `${name} was ${verb} with leaving date ${formatDateOnlyUtc(leavingDate)}, inside already approved/paid payroll (${runList}). The run is marked stale - review and recalculate if needed.`,
           link: `/payroll/runs/${lockedRuns[0].id}`,
         });
       } catch (error) {

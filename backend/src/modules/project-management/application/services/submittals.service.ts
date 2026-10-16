@@ -443,12 +443,12 @@ export class SubmittalsService {
     }
     if (!pkg.designerUserId) {
       throw new BadRequestException(
-        'Subtask has no designer assigned — cannot route for review',
+        'Subtask has no designer assigned - cannot route for review',
       );
     }
     if (!pkg.disciplinaryLeaderUserId) {
       throw new BadRequestException(
-        'Subtask has no discipline leader assigned — cannot route for approval',
+        'Subtask has no discipline leader assigned - cannot route for approval',
       );
     }
 
@@ -577,7 +577,7 @@ export class SubmittalsService {
 
     if (!designerUserId) {
       throw new BadRequestException(
-        'Linked subtask has no designer assigned — cannot resubmit for review',
+        'Linked subtask has no designer assigned - cannot resubmit for review',
       );
     }
 
@@ -613,7 +613,7 @@ export class SubmittalsService {
 
       if (!latestReview) {
         throw new BadRequestException(
-          'No prior review found — cannot resubmit this submittal',
+          'No prior review found - cannot resubmit this submittal',
         );
       }
 
@@ -835,7 +835,7 @@ export class SubmittalsService {
   }
 
   /**
-   * Site rep comments without approving — stays UNDER_SITE_REVIEW (option B).
+   * Site rep comments without approving - stays UNDER_SITE_REVIEW (option B).
    */
   async commentSiteReview(
     ctx: PmContext,
@@ -2484,7 +2484,7 @@ export class SubmittalsService {
           {
             recipientId,
             eventType: SITE_REVIEW_REQUESTED_EVENT,
-            subject: `Site review required — ${submittalNumber}`,
+            subject: `Site review required - ${submittalNumber}`,
             body: `External release ${submittalNumber} is waiting for your site review before it can be issued.`,
             variables: { projectId, submittalId, submittalNumber, link },
           },
@@ -2514,7 +2514,7 @@ export class SubmittalsService {
         {
           recipientId: submittedBy,
           eventType: SITE_REVIEW_APPROVED_EVENT,
-          subject: `Site review approved — ${submittalNumber}`,
+          subject: `Site review approved - ${submittalNumber}`,
           body: `A site representative approved their review on ${submittalNumber}. Waiting for remaining approvals.`,
           variables: {
             projectId,
@@ -2561,7 +2561,7 @@ export class SubmittalsService {
           {
             recipientId,
             eventType: SITE_REVIEW_ALL_APPROVED_EVENT,
-            subject: `Site review complete — ${submittalNumber}`,
+            subject: `Site review complete - ${submittalNumber}`,
             body: `All site representatives approved ${submittalNumber}. You can now issue the release.`,
             variables: {
               projectId,
@@ -2610,7 +2610,7 @@ export class SubmittalsService {
           {
             recipientId,
             eventType: SITE_REVIEW_COMMENTED_EVENT,
-            subject: `Site review comment — ${submittalNumber}`,
+            subject: `Site review comment - ${submittalNumber}`,
             body: `A site representative commented on ${submittalNumber}: ${comment}`,
             variables: {
               projectId,
@@ -2645,7 +2645,7 @@ export class SubmittalsService {
         {
           recipientId: siteRepUserId,
           eventType: SITE_REVIEW_REREQUESTED_EVENT,
-          subject: `Re-review requested — ${submittalNumber}`,
+          subject: `Re-review requested - ${submittalNumber}`,
           body: `Please re-review external release ${submittalNumber} after the latest changes.`,
           variables: {
             projectId,

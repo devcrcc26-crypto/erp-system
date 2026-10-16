@@ -52,7 +52,7 @@ function renderBalanceCell(
   lowLabel: string,
 ): React.ReactNode {
   if (!balance) {
-    return <span className="erp-users-cell-sub">—</span>;
+    return <span className="erp-users-cell-sub">-</span>;
   }
 
   const isLow = balance.remaining <= LOW_BALANCE_THRESHOLD;
@@ -82,7 +82,7 @@ function renderBalanceCell(
 }
 
 /**
- * HR leave balances tab — Employees v2 chrome (floating stats, soft card).
+ * HR leave balances tab - Employees v2 chrome (floating stats, soft card).
  */
 export default function LeaveBalancesListPageContent(): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -187,7 +187,7 @@ export default function LeaveBalancesListPageContent(): React.ReactNode {
         render: (_: unknown, row: EmployeeLeaveBalanceSummary) =>
           row.employee.gender === 'MALE'
             ? (
-                <span className="erp-users-cell-sub">—</span>
+                <span className="erp-users-cell-sub">-</span>
               )
             : renderBalanceCell(row.maternity, lowLabel),
       },

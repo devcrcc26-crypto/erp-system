@@ -93,7 +93,7 @@ export class SubmitLeaveRequestDto extends OnBehalfSubmissionDto {
 
   @ApiPropertyOptional({
     example: 5,
-    description: 'Ignored — working days are calculated from the work schedule',
+    description: 'Ignored - working days are calculated from the work schedule',
   })
   @IsOptional()
   @Type(() => Number)

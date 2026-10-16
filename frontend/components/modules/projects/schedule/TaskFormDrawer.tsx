@@ -463,7 +463,7 @@ export default function TaskFormDrawer({
     <Drawer
       {...wideDetailDrawerProps}
       open={open}
-      title={isEditing ? `Edit task — ${formatLocalizedName(task!)}` : 'Add task'}
+      title={isEditing ? `Edit task - ${formatLocalizedName(task!)}` : 'Add task'}
       onClose={onClose}
       extra={
         <Button type="primary" onClick={() => form.submit()}>

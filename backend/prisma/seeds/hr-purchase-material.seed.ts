@@ -239,7 +239,7 @@ async function createApprovalChain(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Exchange rate helper (standalone — no Nest DI)
+// Exchange rate helper (standalone - no Nest DI)
 // ────────────────────────────────────────────────────────────────────────────
 
 function todayDateOnly(): Date {
@@ -409,7 +409,7 @@ async function seedPurchaseRequests(
   }> = [
     {
       employee: weiChen,
-      title: 'Structural Drawing Supplies — August 2026',
+      title: 'Structural Drawing Supplies, August 2026',
       justification:
         'Required for ongoing structural design work. Current stock depleted.',
       vendorName: 'Addis Office Supplies Ltd',
@@ -533,7 +533,7 @@ async function seedPurchaseRequests(
     },
     {
       employee: xiaomingLi,
-      title: 'Office Furniture — Engineering Room',
+      title: 'Office Furniture - Engineering Room',
       justification:
         'New engineering room requires furniture for 3 additional staff.',
       vendorName: 'Addis Furniture Center',
@@ -673,7 +673,7 @@ async function seedPurchaseRequests(
     },
     {
       employee: otherEmployees[2],
-      title: 'IT Equipment — Engineering Department',
+      title: 'IT Equipment - Engineering Department',
       justification:
         'Replacement laptops for engineers whose machines are over 5 years old.',
       vendorName: 'Techno Computers Addis',
@@ -812,7 +812,7 @@ async function seedPurchaseRequests(
     });
 
     console.log(
-      `✓ PR ${requestNumber} — ${pr.title} — ETB ${totalEtb.toFixed(2)} — ${pr.status} — ${includeGm ? '3 tiers' : '2 tiers'}`,
+      `✓ PR ${requestNumber} - ${pr.title} - ETB ${totalEtb.toFixed(2)} - ${pr.status} - ${includeGm ? '3 tiers' : '2 tiers'}`,
     );
   }
 }
@@ -843,12 +843,12 @@ async function seedMaterialRequisitions(
   }> = [
     {
       employee: weiChen,
-      title: 'Structural Materials — August 2026',
+      title: 'Structural Materials - August 2026',
       purpose:
         'Foundation reinforcement materials for Hawassa site project phase 2.',
       requiredByDate: '2026-08-18',
       projectId: activeProjects[0]?.id,
-      warehouseLocation: 'Main Warehouse — Addis Ababa',
+      warehouseLocation: 'Main Warehouse - Addis Ababa',
       status: 'APPROVED',
       items: [
         {
@@ -883,11 +883,11 @@ async function seedMaterialRequisitions(
     },
     {
       employee: weiChen,
-      title: 'Formwork Materials — September 2026',
+      title: 'Formwork Materials - September 2026',
       purpose: 'Formwork for column and beam casting on Bahir Dar project.',
       requiredByDate: '2026-09-05',
       projectId: activeProjects[1]?.id,
-      warehouseLocation: 'Main Warehouse — Addis Ababa',
+      warehouseLocation: 'Main Warehouse - Addis Ababa',
       status: 'IN_REVIEW',
       items: [
         {
@@ -953,7 +953,7 @@ async function seedMaterialRequisitions(
         'Materials required for electrical installation testing on completed floors.',
       requiredByDate: '2026-08-22',
       projectId: activeProjects[1]?.id,
-      warehouseLocation: 'Main Warehouse — Addis Ababa',
+      warehouseLocation: 'Main Warehouse - Addis Ababa',
       status: 'APPROVED',
       items: [
         {
@@ -1017,7 +1017,7 @@ async function seedMaterialRequisitions(
       purpose: 'Waterproofing membrane and accessories for basement slab.',
       requiredByDate: '2026-08-28',
       projectId: activeProjects[2]?.id,
-      warehouseLocation: 'Main Warehouse — Addis Ababa',
+      warehouseLocation: 'Main Warehouse - Addis Ababa',
       status: 'APPROVED',
       items: [
         {
@@ -1045,7 +1045,7 @@ async function seedMaterialRequisitions(
     },
     {
       employee: otherEmployees[0],
-      title: 'Office Consumables — Engineering',
+      title: 'Office Consumables - Engineering',
       purpose: 'Monthly replenishment of engineering office consumables.',
       requiredByDate: '2026-08-08',
       projectId: null,
@@ -1081,7 +1081,7 @@ async function seedMaterialRequisitions(
       purpose: 'Storm drainage pipes and fittings for site drainage works.',
       requiredByDate: '2026-09-12',
       projectId: activeProjects[1]?.id,
-      warehouseLocation: 'Main Warehouse — Addis Ababa',
+      warehouseLocation: 'Main Warehouse - Addis Ababa',
       status: 'SUBMITTED',
       items: [
         {
@@ -1109,12 +1109,12 @@ async function seedMaterialRequisitions(
     },
     {
       employee: otherEmployees[2],
-      title: 'Painting Materials — Interior Finish',
+      title: 'Painting Materials - Interior Finish',
       purpose:
         'Interior paint and accessories for completed residential floors.',
       requiredByDate: '2026-09-18',
       projectId: activeProjects[2]?.id,
-      warehouseLocation: 'Main Warehouse — Addis Ababa',
+      warehouseLocation: 'Main Warehouse - Addis Ababa',
       status: 'REJECTED',
       items: [
         {
@@ -1154,7 +1154,7 @@ async function seedMaterialRequisitions(
         'Welding rods and accessories for structural steel connections.',
       requiredByDate: '2026-08-25',
       projectId: activeProjects[0]?.id,
-      warehouseLocation: 'Main Warehouse — Addis Ababa',
+      warehouseLocation: 'Main Warehouse - Addis Ababa',
       status: 'IN_REVIEW',
       items: [
         {
@@ -1239,7 +1239,7 @@ async function seedMaterialRequisitions(
     });
 
     console.log(
-      `✓ MR ${requestNumber} — ${mr.title} — ${mr.items.length} items — ${mr.status}`,
+      `✓ MR ${requestNumber} - ${mr.title} - ${mr.items.length} items - ${mr.status}`,
     );
   }
 }
@@ -1304,12 +1304,12 @@ async function main(): Promise<void> {
     select: { id: true, name: true },
   });
   if (activeProjects.length === 0) {
-    console.warn('⚠ No projects found — projectId will be null on all records');
+    console.warn('⚠ No projects found - projectId will be null on all records');
   }
 
   const usdRate = await getExchangeRate(SupportedCurrency.USD, companyId);
   const cnyRate = await getExchangeRate(SupportedCurrency.CNY, companyId);
-  console.log(`Exchange rates — USD/ETB: ${usdRate}, CNY/ETB: ${cnyRate}`);
+  console.log(`Exchange rates - USD/ETB: ${usdRate}, CNY/ETB: ${cnyRate}`);
 
   const ctx: ChainContext = { xiaomingLi, jinxia, davidWu };
 

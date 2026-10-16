@@ -224,7 +224,7 @@ describe('writeLoginCredentialsWorkbook', () => {
 });
 
 describe('dry-run contract', () => {
-  it('dry-run (apply=false) must not write Excel — caller only writes on apply', () => {
+  it('dry-run (apply=false) must not write Excel - caller only writes on apply', () => {
     const plan = planInitialPasswordUpdates(
       [user({ id: '1', passwordHash: null })],
       { reset: false },

@@ -37,7 +37,14 @@ export default function EmploymentHistorySection({
             title: t('users.employment.periodEnd'),
             dataIndex: 'endDate',
             render: (value: string | null) =>
-              value ?? <Tag color="green">{t('users.employment.current')}</Tag>,
+              value ?? (
+                <Tag
+                  color="green"
+                  className="m-0 rounded-full border-0 px-2.5 py-0.5 text-xs font-medium"
+                >
+                  {t('users.employment.current')}
+                </Tag>
+              ),
           },
           {
             title: t('users.separation.type'),
@@ -53,7 +60,7 @@ export default function EmploymentHistorySection({
         ]}
       />
       <div>
-        <h4 className="m-0 mb-2 text-sm font-semibold">
+        <h4 className="m-0 mb-2 text-[13px] font-semibold text-slate-700">
           {t('users.employment.inactiveHistory')}
         </h4>
         <Table<InactivePeriod>

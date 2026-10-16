@@ -94,7 +94,7 @@ function passengerTicketState(
 }
 
 /**
- * Flight application detail — Users / employee profile chrome.
+ * Flight application detail - Users / employee profile chrome.
  */
 export default function FlightApplicationDetailPageContent({
   applicationId,
@@ -174,7 +174,7 @@ export default function FlightApplicationDetailPageContent({
         ? formatUserName(currentUser.data)
         : authUser
           ? formatUserName(authUser)
-          : '—';
+          : '-';
       exportFlightApplicationPdf({
         application,
         companyName: authUser?.companyName ?? 'Company',

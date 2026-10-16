@@ -7,7 +7,7 @@ import { FlightImportController } from './presentation/controllers/flight-import
 import { FlightController } from './presentation/controllers/flight.controller';
 
 /**
- * Flight application module — HR flight booking requests with
+ * Flight application module - HR flight booking requests with
  * multi-tier approval, ticket attachment, and passenger acknowledgement.
  * NotificationService is available globally (registered in AppModule via NotificationsModule.register()).
  */

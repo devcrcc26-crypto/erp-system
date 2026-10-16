@@ -50,7 +50,7 @@ import {
 import { tokens } from '@/lib/theme/tokens';
 
 /**
- * Global Risks list — cross-project, user-scoped or portfolio-wide.
+ * Global Risks list - cross-project, user-scoped or portfolio-wide.
  */
 export default function GlobalRisksPageContent(): React.ReactNode {
   const router = useRouter();
@@ -142,11 +142,11 @@ export default function GlobalRisksPageContent(): React.ReactNode {
       portfolioMode
         ? (allProjectsQuery.data?.data ?? []).map((p) => ({
             value: p.id,
-            label: `${p.projectCode} — ${p.name}`,
+            label: `${p.projectCode} - ${p.name}`,
           }))
         : (myProjectsQuery.data ?? []).map((p) => ({
             value: p.id,
-            label: `${p.projectCode} — ${p.name}`,
+            label: `${p.projectCode} - ${p.name}`,
           })),
     [portfolioMode, allProjectsQuery.data?.data, myProjectsQuery.data],
   );
@@ -206,7 +206,7 @@ export default function GlobalRisksPageContent(): React.ReactNode {
           score != null ? (
             <StatusBadge label={String(score)} variant={riskScoreVariant(score)} />
           ) : (
-            '—'
+            '-'
           ),
       },
       {
@@ -220,12 +220,12 @@ export default function GlobalRisksPageContent(): React.ReactNode {
       {
         title: 'Owner',
         key: 'owner',
-        render: (_: unknown, record: Risk) => record.ownerName ?? '—',
+        render: (_: unknown, record: Risk) => record.ownerName ?? '-',
       },
       {
         title: 'Project',
         key: 'project',
-        render: (_: unknown, record: Risk) => record.projectCode?.trim() || '—',
+        render: (_: unknown, record: Risk) => record.projectCode?.trim() || '-',
       },
       {
         title: '',
@@ -297,7 +297,7 @@ export default function GlobalRisksPageContent(): React.ReactNode {
             showIcon
             className="!mb-4"
             title="Risk APIs are not connected yet."
-            description="This page is ready — data will appear when the backend is available."
+            description="This page is ready - data will appear when the backend is available."
           />
         )}
 

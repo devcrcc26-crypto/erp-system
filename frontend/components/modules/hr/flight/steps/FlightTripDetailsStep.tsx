@@ -23,7 +23,7 @@ import {
 } from '@/lib/utils/date-validation';
 
 /**
- * Step 1 — trip routing and travel metadata (FormLayout chrome from parent).
+ * Step 1 - trip routing and travel metadata (FormLayout chrome from parent).
  */
 export default function FlightTripDetailsStep({
   values,

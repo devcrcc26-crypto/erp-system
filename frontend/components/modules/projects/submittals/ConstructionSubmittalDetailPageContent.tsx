@@ -312,12 +312,12 @@ export default function ConstructionSubmittalDetailPageContent({
       ? submittal.items
           .map(
             (item) =>
-              `${item.fullSubtaskCode ?? item.packageCode ?? '—'} — ${
+              `${item.fullSubtaskCode ?? item.packageCode ?? '-'} - ${
                 item.packageName ?? 'Unknown subtask'
               }`,
           )
           .join('; ')
-      : '—';
+      : '-';
 
   return (
     <div className={layout.pageStack}>
@@ -765,7 +765,7 @@ export default function ConstructionSubmittalDetailPageContent({
                       >
                         <Input.TextArea
                           rows={4}
-                          placeholder="Required — provide comment or attach file"
+                          placeholder="Required - provide comment or attach file"
                         />
                       </Form.Item>
                       <Form.Item label="Attachment (optional if comment provided)">

@@ -172,7 +172,7 @@ function StatusActionModal({
     close: {
       title: 'Close Risk',
       description:
-        'Close this risk? This means the risk is no longer active — either the mitigation was verified or the condition no longer applies.',
+        'Close this risk? This means the risk is no longer active - either the mitigation was verified or the condition no longer applies.',
       confirmLabel: 'Close Risk',
       notesRequired: false,
     },
@@ -371,7 +371,7 @@ function BestMitigationCard({
           Best Mitigation
         </span>
         <span className="text-xs text-[var(--color-text-secondary)]">
-          Attempt {best.attemptNumber} — {formatProjectDate(best.assessedAt)}
+          Attempt {best.attemptNumber} - {formatProjectDate(best.assessedAt)}
         </span>
       </div>
 
@@ -410,7 +410,7 @@ function BestMitigationCard({
         {reductionPct !== null && reductionPct !== 0
           ? ` (${reductionPct > 0 ? `${reductionPct}% reduction` : `${Math.abs(reductionPct)}% increase`})`
           : ''}
-        {best.assessorName ? ` — Assessed by: ${best.assessorName}` : ''}
+        {best.assessorName ? ` - Assessed by: ${best.assessorName}` : ''}
       </p>
     </div>
   );
@@ -747,7 +747,7 @@ export default function RiskDetailPageContent({
                                     Residual: {m.residualScore} (
                                     {formatRiskLikelihood(m.residualLikelihood)} ×{' '}
                                     {formatRiskImpactLevel(m.residualImpact)})
-                                    {m.assessorName ? ` — ${m.assessorName}` : ''}
+                                    {m.assessorName ? ` - ${m.assessorName}` : ''}
                                   </p>
                                 </div>
                               ))}
@@ -774,7 +774,7 @@ export default function RiskDetailPageContent({
                       content: (
                         <div className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium text-slate-700">
-                            {dayjs(review.reviewedAt).format('MMM D, YYYY HH:mm')} —{' '}
+                            {dayjs(review.reviewedAt).format('MMM D, YYYY HH:mm')} -{' '}
                             {resolveUserDisplay(review.reviewedBy, review.reviewedByName)}
                           </span>
                           {review.previousStatus !== review.newStatus &&
@@ -783,21 +783,21 @@ export default function RiskDetailPageContent({
                                 Status:{' '}
                                 {review.previousStatus
                                   ? formatRiskStatus(review.previousStatus as RiskStatus)
-                                  : '—'}{' '}
+                                  : '-'}{' '}
                                 → {formatRiskStatus(review.newStatus as RiskStatus)}
                               </span>
                             )}
                           {review.previousScore !== review.newScore && (
                             <span className="text-xs text-slate-500">
-                              Score: {review.previousScore ?? '—'} →{' '}
-                              {review.newScore ?? '—'}
+                              Score: {review.previousScore ?? '-'} →{' '}
+                              {review.newScore ?? '-'}
                             </span>
                           )}
                           {review.previousResidualScore !==
                             review.newResidualScore && (
                             <span className="text-xs text-slate-500">
-                              Residual score: {review.previousResidualScore ?? '—'} →{' '}
-                              {review.newResidualScore ?? '—'}
+                              Residual score: {review.previousResidualScore ?? '-'} →{' '}
+                              {review.newResidualScore ?? '-'}
                             </span>
                           )}
                           {review.notes && (

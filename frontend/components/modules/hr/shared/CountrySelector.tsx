@@ -112,7 +112,7 @@ export default function CountrySelector({
           }}
           suffix={
             <span className="text-[11px] text-[var(--color-amber-500,#F59E0B)]">
-              Manual entry — per diem category needs manual selection
+              Manual entry - per diem category needs manual selection
             </span>
           }
         />

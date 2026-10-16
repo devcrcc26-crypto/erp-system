@@ -325,7 +325,7 @@ export default function OvertimeHistoryPageContent({
         width: 120,
         responsive: ['md'],
         render: (value: string | null | undefined) =>
-          value ? formatProjectDate(value) : '—',
+          value ? formatProjectDate(value) : '-',
       },
     ],
     [t],

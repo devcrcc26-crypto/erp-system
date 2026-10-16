@@ -105,7 +105,7 @@ export function ensureProjectAttachmentPdf(
   const projectDir = path.join(__dirname, 'generated', projectCode, 'attachments');
   fs.mkdirSync(projectDir, { recursive: true });
   const absolutePath = path.join(projectDir, fileName);
-  const title = `${projectCode} — ${fileName}`;
+  const title = `${projectCode} - ${fileName}`;
   const buffer = minimalPdfBuffer(title);
   fs.writeFileSync(absolutePath, buffer);
   const entry: SeedPdfEntry = { fileKey, absolutePath, fileSizeBytes: buffer.length };
@@ -126,7 +126,7 @@ export function createSeedPdfFiles(): Map<string, SeedPdfEntry> {
   for (const fileName of ENGINEERING_SEED_FILES) {
     const absolutePath = path.join(engineeringDir, fileName);
     const fileKey = `demo/engineering/${fileName}`;
-    const title = `Engineering seed — ${fileName}`;
+    const title = `Engineering seed - ${fileName}`;
     const buffer = minimalPdfBuffer(title);
     fs.writeFileSync(absolutePath, buffer);
     registry.set(fileKey, {
@@ -143,7 +143,7 @@ export function createSeedPdfFiles(): Map<string, SeedPdfEntry> {
     for (const fileName of COMMON_FILES) {
       const fileKey = `demo/${projectCode}/${fileName}`;
       const absolutePath = path.join(projectDir, fileName);
-      const title = `${projectCode} — ${fileName}`;
+      const title = `${projectCode} - ${fileName}`;
       const buffer = minimalPdfBuffer(title);
       fs.writeFileSync(absolutePath, buffer);
       registry.set(fileKey, {

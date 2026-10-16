@@ -290,7 +290,7 @@ export class PayrollExcelExportService {
 
   /**
    * Builds an HR salary-sheet Excel workbook for a payroll run from the
-   * cleaned template (Data + Payroll). Buffer only — not stored on disk.
+   * cleaned template (Data + Payroll). Buffer only - not stored on disk.
    */
   async exportRun(
     runId: string,
@@ -919,7 +919,7 @@ export class PayrollExcelExportService {
       if (postTax > 0) {
         netCell.note =
           `Includes post-tax net bonus/top-up ${postTax.toFixed(2)}` +
-          (entry.netTopUpReason ? ` — ${entry.netTopUpReason}` : '');
+          (entry.netTopUpReason ? ` - ${entry.netTopUpReason}` : '');
       }
     }
   }

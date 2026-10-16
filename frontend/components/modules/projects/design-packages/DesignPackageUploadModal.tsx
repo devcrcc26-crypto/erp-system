@@ -155,7 +155,7 @@ export default function DesignPackageUploadModal({
       coreDocumentVersionId = await resolveCoreDocumentVersionId(uploaded);
       if (!coreDocumentVersionId) {
         setInlineError(
-          'Upload succeeded but the file version was not found. The file is in Document Control — register and attach manually, or retry.',
+          'Upload succeeded but the file version was not found. The file is in Document Control - register and attach manually, or retry.',
         );
         setStep('idle');
         return;
@@ -205,7 +205,7 @@ export default function DesignPackageUploadModal({
         );
       } else if (!registerSucceeded) {
         setInlineError(
-          `Uploading succeeded but registration failed: ${errorMessage(error, 'unknown error')}. The file is in Document Control — fix the error and retry register/attach, or clean up the orphaned upload.`,
+          `Uploading succeeded but registration failed: ${errorMessage(error, 'unknown error')}. The file is in Document Control - fix the error and retry register/attach, or clean up the orphaned upload.`,
         );
       } else {
         setInlineError(

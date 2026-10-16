@@ -1,6 +1,7 @@
 /**
- * Assign positions + experience_start_date to CC-0001…CC-0095 from the
- * employment roster spreadsheet (name / position / date of employment).
+ * Assign positions to CC-0001…CC-0095 from the employment roster spreadsheet
+ * (name / position / date of employment). The roster date is only logged:
+ * years of experience are entered by HR, never seeded.
  *
  * Usage:
  *   $env:SEED_MODE='true'
@@ -14,8 +15,8 @@ const SAMUEL_ID = '16040ab7-b923-4fe4-87cf-cc3a916c7325';
 interface RosterRow {
   employeeId: string;
   positionLabel: string;
-  /** ISO date YYYY-MM-DD (parsed from DD/MM/YYYY roster dates). */
-  experienceStartDate: string;
+  /** ISO date YYYY-MM-DD (parsed from DD/MM/YYYY roster dates); logged only. */
+  rosterDate: string;
 }
 
 /** Map spreadsheet labels → exact `position.title` in DB. */
@@ -228,7 +229,7 @@ function buildRoster(): RosterRow[] {
   return ROSTER_RAW.map((row, index) => ({
     employeeId: `CC-${String(index + 1).padStart(4, '0')}`,
     positionLabel: row.position,
-    experienceStartDate: parseRosterDate(row.date),
+    rosterDate: parseRosterDate(row.date),
   }));
 }
 
@@ -280,13 +281,6 @@ async function main(): Promise<void> {
         console.log(
           `${row.employeeId}  NO MATCH for "${row.positionLabel}" → skipped position`,
         );
-        await prisma.user.updateMany({
-          where: { employeeId: row.employeeId, deletedAt: null },
-          data: {
-            experienceStartDate: new Date(row.experienceStartDate),
-            updatedBy: SAMUEL_ID,
-          },
-        });
         continue;
       }
 
@@ -296,7 +290,6 @@ async function main(): Promise<void> {
         where: { employeeId: row.employeeId, deletedAt: null },
         data: {
           positionId: position.id,
-          experienceStartDate: new Date(row.experienceStartDate),
           updatedBy: SAMUEL_ID,
         },
       });
@@ -308,7 +301,7 @@ async function main(): Promise<void> {
       }
 
       console.log(
-        `${row.employeeId}  ${position.title}  @ ${row.experienceStartDate}  (from "${row.positionLabel}")`,
+        `${row.employeeId}  ${position.title}  @ ${row.rosterDate}  (from "${row.positionLabel}")`,
       );
       updated += 1;
     }

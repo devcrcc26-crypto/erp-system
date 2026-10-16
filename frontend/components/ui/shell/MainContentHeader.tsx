@@ -11,7 +11,7 @@ import { useHeaderExtraStore } from '@/stores/header-extra.store';
 import { SHELL_TOP_HEADER_HEIGHT } from '@/components/ui/shell/shell-layout';
 
 /**
- * Sticky shell header — light chrome, single responsive layout.
+ * Sticky shell header - light chrome, single responsive layout.
  * Hamburger opens mobile nav only; desktop uses the sidebar logo + rail toggle.
  */
 export default function MainContentHeader({

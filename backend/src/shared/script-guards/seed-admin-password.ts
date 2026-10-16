@@ -43,7 +43,7 @@ export function resolveSeedAdminPassword(): string {
   process.exit(1);
 }
 
-/** Console-safe description — never prints the password value. */
+/** Console-safe description - never prints the password value. */
 export function seedAdminPasswordSourceLabel(): string {
   return process.env.SEED_ADMIN_PASSWORD?.trim()
     ? '(from SEED_ADMIN_PASSWORD)'

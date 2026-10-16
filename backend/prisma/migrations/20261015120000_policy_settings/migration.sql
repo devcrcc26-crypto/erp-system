@@ -1,4 +1,4 @@
--- HR policy settings (effective-dated) — additive only.
+-- HR policy settings (effective-dated) - additive only.
 CREATE TABLE IF NOT EXISTS "policy_setting" (
   "id" TEXT NOT NULL,
   "company_id" TEXT NOT NULL,

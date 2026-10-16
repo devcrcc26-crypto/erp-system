@@ -143,7 +143,7 @@ function AssessmentBreakdown({
                       )
                     ) : (
                       <span style={{ color: 'var(--color-text-tertiary)' }}>
-                        —
+                        -
                       </span>
                     )}
                   </div>
@@ -291,7 +291,7 @@ export default function ContractEvaluationHistory({
       <div className="erp-pro-card erp-evaluation-trend-card">
         <div className="erp-pro-card-body">
           <h4 className="mb-3 mt-0 text-[13px] font-semibold text-[#374151]">
-            Performance Trend — {employeeName}
+            Performance Trend - {employeeName}
           </h4>
           <EvaluationTrendChart evaluations={evaluations} />
         </div>

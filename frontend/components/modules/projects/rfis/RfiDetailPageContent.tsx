@@ -157,7 +157,7 @@ export default function RfiDetailPageContent({
         {
           id: rfi.linkedCrId,
           changeNumber: rfi.linkedCrNumber ?? rfi.linkedCrId,
-          title: '—',
+          title: '-',
           status: 'SUBMITTED' as ChangeRequestStatus,
         },
       ];
@@ -372,13 +372,13 @@ export default function RfiDetailPageContent({
                       {rfi.title}
                     </Descriptions.Item>
                     <Descriptions.Item label="Raised By">
-                      {rfi.raisedByName ?? '—'}
+                      {rfi.raisedByName ?? '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Assigned To">
-                      {rfi.assignedToName ?? '—'}
+                      {rfi.assignedToName ?? '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Source">
-                      {formatRfiSource(rfi.rfiSource) ?? '—'}
+                      {formatRfiSource(rfi.rfiSource) ?? '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Priority">
                       <StatusBadge
@@ -410,7 +410,7 @@ export default function RfiDetailPageContent({
                     )}
                     {rfi.linkedDesignPackage && (
                       <Descriptions.Item label="Subtask">
-                        {rfi.linkedDesignPackage.fullCode} —{' '}
+                        {rfi.linkedDesignPackage.fullCode} -{' '}
                         {rfi.linkedDesignPackage.name}
                       </Descriptions.Item>
                     )}
@@ -430,7 +430,7 @@ export default function RfiDetailPageContent({
                 <div className={layout.cardSurface + ' ' + layout.cardPadding}>
                   <p className={`mb-2 ${layout.drawerHeading}`}>Description</p>
                   <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
-                    {rfi.description?.trim() ? rfi.description : '—'}
+                    {rfi.description?.trim() ? rfi.description : '-'}
                   </p>
                 </div>
               </div>

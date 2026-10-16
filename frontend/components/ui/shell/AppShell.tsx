@@ -23,7 +23,7 @@ import { useProjectContextStore } from '@/stores/project-context.store';
 /**
  * Application shell: skip link, sidebar (desktop column + mobile drawer), and
  * main content. Project workspace navigation lives inside the sidebar's
- * Project Management folder — there is no separate project column.
+ * Project Management folder - there is no separate project column.
  */
 export default function AppShell({
   children,

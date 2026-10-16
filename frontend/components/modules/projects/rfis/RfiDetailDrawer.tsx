@@ -163,7 +163,7 @@ export default function RfiDetailDrawer({
         {
           id: rfi.linkedCrId,
           changeNumber: rfi.linkedCrNumber ?? rfi.linkedCrId,
-          title: '—',
+          title: '-',
           status: 'SUBMITTED' as ChangeRequestStatus,
         },
       ];
@@ -382,10 +382,10 @@ export default function RfiDetailDrawer({
               bordered
             >
               <Descriptions.Item label="Raised By">
-                {rfi.raisedByName ?? '—'}
+                {rfi.raisedByName ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Assigned To">
-                {rfi.assignedToName ?? '—'}
+                {rfi.assignedToName ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Date Raised">
                 {formatProjectDate(rfi.dateRaised ?? rfi.createdAt)}
@@ -404,7 +404,7 @@ export default function RfiDetailDrawer({
                 </Descriptions.Item>
               )}
               <Descriptions.Item label="Source">
-                {formatRfiSource(rfi.rfiSource) ?? '—'}
+                {formatRfiSource(rfi.rfiSource) ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Priority">
                 <StatusBadge
@@ -414,7 +414,7 @@ export default function RfiDetailDrawer({
               </Descriptions.Item>
               {rfi.linkedDesignPackage && (
                 <Descriptions.Item label="Subtask">
-                  {rfi.linkedDesignPackage.fullCode} —{' '}
+                  {rfi.linkedDesignPackage.fullCode} -{' '}
                   {rfi.linkedDesignPackage.name}
                 </Descriptions.Item>
               )}
@@ -434,7 +434,7 @@ export default function RfiDetailDrawer({
           <section className={layout.drawerSection}>
             <p className={`mb-1 ${layout.drawerHeading}`}>Description</p>
             <p className={`whitespace-pre-wrap ${layout.drawerMutedText}`}>
-              {rfi.description?.trim() ? rfi.description : '—'}
+              {rfi.description?.trim() ? rfi.description : '-'}
             </p>
           </section>
 

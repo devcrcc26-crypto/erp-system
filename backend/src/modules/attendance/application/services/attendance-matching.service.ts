@@ -103,7 +103,7 @@ export class AttendanceMatchingService {
 
   /**
    * Matches parsed attendance rows against identities and employees.
-   * Read-only — does not write to the database.
+   * Read-only - does not write to the database.
    */
   async matchRows(
     rows: AttendanceRawRow[],

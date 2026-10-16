@@ -801,7 +801,7 @@ export class MeetingsService {
         {
           recipientId: item.ownerId,
           eventType: ACTION_ITEM_ASSIGNED_EVENT,
-          subject: `Action item assigned — ${meeting.meetingNumber}`,
+          subject: `Action item assigned - ${meeting.meetingNumber}`,
           body: `You have been assigned an action item from meeting ${meeting.meetingNumber}: ${item.description}\nDue: ${item.dueDate ?? 'No due date'}`,
           variables: {
             projectId,
@@ -1153,7 +1153,7 @@ export class MeetingsService {
         select: { packageCode: true, name: true },
       });
       withOrganizer.designPackageName = pkg
-        ? `${pkg.packageCode} — ${pkg.name}`
+        ? `${pkg.packageCode} - ${pkg.name}`
         : null;
     }
 

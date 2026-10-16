@@ -870,7 +870,7 @@ export class EvaluationService {
       ctx.userId,
       ctx.userId,
       'evaluation.consolidation_complete',
-      'Evaluation consolidated — share result',
+      'Evaluation consolidated - share result',
       `The ${this.evaluationLabel(consolidatedEval)} for ${this.employeeName(consolidatedEval.employee)} has been consolidated. Final score: ${this.formatScore(consolidatedEval.finalScore)}. Please share the result with the employee.`,
       { allowSelf: true },
     );

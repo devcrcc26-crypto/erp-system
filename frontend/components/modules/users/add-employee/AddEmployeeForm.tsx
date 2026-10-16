@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Form, Input, Select, Skeleton, Switch } from 'antd';
+import { Alert, Button, Form, Input, Select, Skeleton, Switch } from 'antd';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
@@ -51,6 +51,7 @@ import {
   useDepartments,
   useEngineeringDisciplineOptions,
   usePositions,
+  useSeniorityLevels,
 } from '@/lib/query/org';
 import { useRoles } from '@/lib/query/roles';
 
@@ -70,11 +71,14 @@ function buildFormValuesFromUser(user: UserDetail): AddEmployeeFormValues {
     chineseName: user.chineseName ?? '',
     email: user.email ?? '',
     phone: user.phone ?? '',
+    secondaryPhone: user.secondaryPhone ?? '',
     departmentId: user.departmentId ?? undefined,
     positionId: user.positionId ?? undefined,
+    seniorityLevelId: user.seniorityLevelId ?? undefined,
     reportsToUserId: user.reportsToUserId ?? undefined,
     engineeringDisciplineId: user.engineeringDisciplineId ?? undefined,
     isActive: user.isActive,
+    loginName: user.loginName ?? '',
     excludedFromHrProcesses: Boolean(user.excludedFromHrProcesses),
     excludedReason: user.excludedReason ?? '',
     roleAssignments,
@@ -167,10 +171,18 @@ export default function AddEmployeeForm({
   const rolesQuery = useRoles();
   const roles = rolesQuery.data?.data ?? [];
   const viewerIsAdmin = useIsSystemAdmin();
-  // Approver-only flag: PATCH /users/:id accepts it only for users.edit.
+  // Login name + approver-only: create/update accept them; users.edit only.
   const canEditUsers = useCanEditUsers();
-  const showApproverOnly = isEdit && canEditUsers;
+  const showApproverOnly = canEditUsers;
+  const showLoginName = canEditUsers;
   const approverOnlyValue = Form.useWatch('excludedFromHrProcesses', form);
+  const firstNameWatch = Form.useWatch('firstName', form);
+  const middleNameWatch = Form.useWatch('middleName', form);
+  const lastNameWatch = Form.useWatch('lastName', form);
+  const suggestedLoginName = [firstNameWatch, middleNameWatch, lastNameWatch]
+    .map((part) => (typeof part === 'string' ? part.trim() : ''))
+    .filter((part) => part.length > 0)
+    .join(' ');
   const availableRoles = useMemo(
     () =>
       roles
@@ -193,6 +205,19 @@ export default function AddEmployeeForm({
     useEngineeringDisciplineOptions(true, true);
   const departmentsQuery = useDepartments({ page: 1, limit: 100 }, true);
   const positionsQuery = usePositions({ page: 1, limit: 100 }, true);
+  const seniorityLevelsQuery = useSeniorityLevels();
+  const currentSeniorityLevelId = userQuery.data?.seniorityLevelId ?? null;
+  // Active levels, plus the employee's current one even if since deactivated.
+  const seniorityOptions = useMemo(
+    () =>
+      (seniorityLevelsQuery.data ?? [])
+        .filter((level) => level.isActive || level.id === currentSeniorityLevelId)
+        .map((level) => ({
+          value: level.id,
+          label: level.nameZh ? `${level.name} / ${level.nameZh}` : level.name,
+        })),
+    [seniorityLevelsQuery.data, currentSeniorityLevelId],
+  );
 
   const departmentOptions = useMemo(
     () =>
@@ -283,12 +308,18 @@ export default function AddEmployeeForm({
           lastName: (values.lastName ?? '').trim(),
           chineseName: values.chineseName?.trim() || undefined,
           phone: values.phone?.trim() || undefined,
+          // '' clears the secondary phone.
+          secondaryPhone: values.secondaryPhone?.trim() ?? '',
           departmentId: values.departmentId ?? null,
           positionId: values.positionId ?? null,
+          seniorityLevelId: values.seniorityLevelId ?? null,
           reportsToUserId: values.reportsToUserId ?? null,
           engineeringDisciplineId: values.engineeringDisciplineId ?? null,
           isActive: values.isActive,
           ...buildEmployeeProfilePayload(values),
+          ...(showLoginName && values.loginName?.trim()
+            ? { loginName: values.loginName.trim() }
+            : {}),
           ...(showApproverOnly
             ? {
                 excludedFromHrProcesses: Boolean(values.excludedFromHrProcesses),
@@ -332,7 +363,9 @@ export default function AddEmployeeForm({
         ]
           .filter(Boolean)
           .join(' ');
-        const loginName = previous?.loginName?.trim() ?? '';
+        const submittedLogin =
+          values.loginName?.trim() || previous?.loginName?.trim() || '';
+        const previousLogin = previous?.loginName?.trim() ?? '';
         const normalize = (value: string): string =>
           value
             .normalize('NFC')
@@ -340,10 +373,11 @@ export default function AddEmployeeForm({
             .toLowerCase()
             .replace(/\s+/g, ' ');
         const loginNameUnchangedToast =
-          loginName &&
+          submittedLogin &&
           newFullName &&
-          normalize(loginName) !== normalize(newFullName)
-            ? t('users.loginNameNotChangedToast', { loginName })
+          normalize(submittedLogin) === normalize(previousLogin) &&
+          normalize(submittedLogin) !== normalize(newFullName)
+            ? t('users.loginNameNotChangedToast', { loginName: submittedLogin })
             : null;
 
         onSuccess({
@@ -360,8 +394,10 @@ export default function AddEmployeeForm({
         lastName: (values.lastName ?? '').trim(),
         chineseName: values.chineseName?.trim() || undefined,
         phone: values.phone?.trim() || undefined,
+        secondaryPhone: values.secondaryPhone?.trim() || undefined,
         departmentId: values.departmentId,
         positionId: values.positionId,
+        seniorityLevelId: values.seniorityLevelId,
         reportsToUserId: values.reportsToUserId,
         engineeringDisciplineId: values.engineeringDisciplineId,
         isActive: values.isActive,
@@ -370,8 +406,21 @@ export default function AddEmployeeForm({
       if (invitedAddress) {
         body.email = invitedAddress;
       }
+      if (showLoginName && values.loginName?.trim()) {
+        body.loginName = values.loginName.trim();
+      }
 
       const user = await createUser.mutateAsync(body);
+
+      if (showApproverOnly && values.excludedFromHrProcesses) {
+        await updateUser.mutateAsync({
+          userId: user.id,
+          body: {
+            excludedFromHrProcesses: true,
+            excludedReason: values.excludedReason?.trim() || null,
+          },
+        });
+      }
 
       await syncUserRoles({
         userId: user.id,
@@ -492,9 +541,51 @@ export default function AddEmployeeForm({
                   label={t('users.form.phone')}
                   name="phone"
                   rules={phoneRules(t)}
+                  extra={t('users.form.phoneFormatHint')}
                 >
-                  <Input />
+                  <Input inputMode="tel" placeholder="+251 9XX XXX XXX" />
                 </Form.Item>
+                <Form.Item
+                  label={t('users.form.secondaryPhone')}
+                  name="secondaryPhone"
+                  rules={phoneRules(t)}
+                >
+                  <Input inputMode="tel" placeholder="+251 9XX XXX XXX" />
+                </Form.Item>
+                {showLoginName ? (
+                  <Form.Item
+                    label={t('users.loginName')}
+                    name="loginName"
+                    extra={
+                      <>
+                        <span>
+                          {isEdit
+                            ? t('users.loginNameEditHint')
+                            : t('users.loginNameCreateHint')}
+                        </span>
+                        {suggestedLoginName ? (
+                          <Button
+                            type="link"
+                            size="small"
+                            className="!ml-2 !h-auto !px-0"
+                            onClick={() =>
+                              form.setFieldsValue({
+                                loginName: suggestedLoginName,
+                              })
+                            }
+                          >
+                            {t('users.loginNameUseFullName')}
+                          </Button>
+                        ) : null}
+                      </>
+                    }
+                  >
+                    <Input
+                      autoComplete="off"
+                      placeholder={suggestedLoginName || undefined}
+                    />
+                  </Form.Item>
+                ) : null}
               </div>
               <Form.Item
                 label={t('users.form.roles')}
@@ -601,6 +692,19 @@ export default function AddEmployeeForm({
                     loading={positionsQuery.isLoading}
                     placeholder={t('users.filterPosition')}
                     options={positionOptions}
+                    optionFilterProp="label"
+                  />
+                </Form.Item>
+                <Form.Item label={t('users.form.seniority')} name="seniorityLevelId">
+                  <Select
+                    allowClear
+                    loading={seniorityLevelsQuery.isLoading}
+                    placeholder={
+                      seniorityOptions.length === 0
+                        ? t('users.form.noSeniorityLevelsHint')
+                        : t('common.select')
+                    }
+                    options={seniorityOptions}
                     optionFilterProp="label"
                   />
                 </Form.Item>
@@ -722,6 +826,8 @@ export default function AddEmployeeForm({
       hasEmail,
       isEdit,
       showApproverOnly,
+      showLoginName,
+      suggestedLoginName,
       approverOnlyValue,
       userId,
       userQuery.data,
@@ -732,6 +838,8 @@ export default function AddEmployeeForm({
       departmentOptions,
       positionsQuery.isLoading,
       positionOptions,
+      seniorityLevelsQuery.isLoading,
+      seniorityOptions,
       disciplinesLoading,
       disciplineOptions,
       pendingDocuments,

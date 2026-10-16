@@ -576,7 +576,7 @@ export class WorkFromHomeDayService
   }
 
   /**
-   * Employee (or on-behalf) request for a date range — opens one
+   * Employee (or on-behalf) request for a date range - opens one
    * Employee → Discipline Lead approval carrying the list of working days.
    */
   async submitRequest(
@@ -619,7 +619,7 @@ export class WorkFromHomeDayService
         companyId,
       );
 
-    const title = `Work from home — ${formatWorkFromHomeRangeLabel(
+    const title = `Work from home - ${formatWorkFromHomeRangeLabel(
       plan.startDate,
       plan.endDate,
       plan.workingDays,
@@ -670,7 +670,7 @@ export class WorkFromHomeDayService
       employeeId,
       {
         resolvedTiers: {
-          ruleName: 'Work from home — Discipline Lead only',
+          ruleName: 'Work from home - Discipline Lead only',
           tiers: resolvedTiers,
         },
         createdByUserId: userId,
@@ -695,8 +695,8 @@ export class WorkFromHomeDayService
 
   /**
    * Cancels a work-from-home request. Pending: the employee, the person who
-   * filed it, or HR — nothing was created, so nothing is removed. Approved:
-   * HR only — removes the day rows this request added and recalculates.
+   * filed it, or HR - nothing was created, so nothing is removed. Approved:
+   * HR only - removes the day rows this request added and recalculates.
    */
   async cancelRequest(
     approvalRequestId: string,
@@ -987,7 +987,7 @@ export class WorkFromHomeDayService
 
     if (existing.scope !== WorkFromHomeScope.EMPLOYEES) {
       // ALL / matching DEPARTMENTS rows already covered above; another
-      // department's row cannot take a single employee — HR must adjust it.
+      // department's row cannot take a single employee - HR must adjust it.
       this.logger.warn(
         `WFH ${date.toISOString().slice(0, 10)}: department-scoped day exists; employee ${employeeId} not added`,
       );

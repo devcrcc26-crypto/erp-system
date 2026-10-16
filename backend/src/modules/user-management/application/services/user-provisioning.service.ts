@@ -12,6 +12,7 @@ import { AccountActivationService } from '../../../auth/application/services/acc
 import { PasswordService } from '../../../auth/application/services/password.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { normalizeEmail } from '../../../../shared/utils/email.util';
+import { todayDateOnly } from '../../domain/years-of-experience';
 
 type AuditContext = { companyId: string; userId: string };
 
@@ -45,7 +46,8 @@ export interface ProvisionInvitedUserInput {
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
   employmentDate?: Date | string;
-  experienceStartDate?: Date | string;
+  /** Years of experience as of today; the as-of date is set on write. */
+  yearsOfExperience?: number;
   addressCountry?: string;
   addressRegion?: string;
   addressCity?: string;
@@ -55,7 +57,7 @@ export interface ProvisionInvitedUserInput {
   leavePolicyId?: string;
 }
 
-/** Record-only user (no email) — cannot authenticate or use email flows. */
+/** Record-only user (no email) - cannot authenticate or use email flows. */
 export type ProvisionRecordOnlyUserInput = Omit<
   ProvisionInvitedUserInput,
   'email'
@@ -333,7 +335,8 @@ export class UserProvisioningService {
     | 'educationLevel'
     | 'fieldOfStudy'
     | 'employmentDate'
-    | 'experienceStartDate'
+    | 'yearsOfExperience'
+    | 'yearsOfExperienceAsOf'
     | 'addressCountry'
     | 'addressRegion'
     | 'addressCity'
@@ -354,7 +357,9 @@ export class UserProvisioningService {
       educationLevel: input.educationLevel ?? null,
       fieldOfStudy: input.fieldOfStudy?.trim() || null,
       employmentDate: this.toNullableDate(input.employmentDate),
-      experienceStartDate: this.toNullableDate(input.experienceStartDate),
+      yearsOfExperience: input.yearsOfExperience ?? null,
+      yearsOfExperienceAsOf:
+        input.yearsOfExperience != null ? todayDateOnly() : null,
       addressCountry: input.addressCountry?.trim() || null,
       addressRegion: input.addressRegion?.trim() || null,
       addressCity: input.addressCity?.trim() || null,

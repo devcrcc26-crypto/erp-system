@@ -150,7 +150,7 @@ export class EmployeeContractController {
     )
     @ApiOperation({
         summary:
-            'Solve monthly bonus for a target net (calculator only — not stored)',
+            'Solve monthly bonus for a target net (calculator only - not stored)',
     })
     async bonusFromNet(
         @CurrentUser() user: AuthenticatedUser,

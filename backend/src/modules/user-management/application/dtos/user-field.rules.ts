@@ -1,5 +1,5 @@
 /**
- * Employee field rules. Mirrored in frontend/lib/validation/user-fields.ts —
+ * Employee field rules. Mirrored in frontend/lib/validation/user-fields.ts -
  * change both together so the form and the API accept the same values.
  */
 
@@ -27,6 +27,7 @@ export const EMAIL_MAX = 254;
 export const ADDRESS_MAX = 100;
 export const HOUSE_NUMBER_MAX = 20;
 export const FIELD_OF_STUDY_MAX = 100;
+export const YEARS_OF_EXPERIENCE_MAX = 70;
 
 /** Ethiopian Labour Proclamation 1156/2019 minimum working age is 15. */
 export const MIN_EMPLOYEE_AGE = 15;

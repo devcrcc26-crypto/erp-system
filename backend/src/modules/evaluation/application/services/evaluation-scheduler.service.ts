@@ -71,7 +71,7 @@ export class EvaluationSchedulerService {
   }
 
   /**
-   * Manual trigger for HR — returns how many evaluations were auto-resolved.
+   * Manual trigger for HR - returns how many evaluations were auto-resolved.
    */
   async triggerManualAutoResolve(companyId: string): Promise<{
     resolved: number;

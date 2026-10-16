@@ -66,22 +66,22 @@ function expectBuckets(
   expect(result.holidayHours).toBe(expected.holidayHours ?? 0);
 }
 
-describe('calculateOvertimeHours — CRCC classification matrix', () => {
-  it('1 — Mon 18:00–21:00 weekday → 3 h Regular', () => {
+describe('calculateOvertimeHours - CRCC classification matrix', () => {
+  it('1 - Mon 18:00–21:00 weekday → 3 h Regular', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '18:00', '21:00', WD),
       { regularHours: 3 },
     );
   });
 
-  it('2 — Mon 18:00–23:00 weekday → 4 h Regular + 1 h Night', () => {
+  it('2 - Mon 18:00–23:00 weekday → 4 h Regular + 1 h Night', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '18:00', '23:00', WD),
       { regularHours: 4, nightHours: 1 },
     );
   });
 
-  it('3 — Mon 22:00–02:00 overnight (WD / WD) → 4 h Night', () => {
+  it('3 - Mon 22:00–02:00 overnight (WD / WD) → 4 h Night', () => {
     expectBuckets(
       calculateOvertimeHours(
         utcDate('2026-09-14'),
@@ -95,28 +95,28 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
     );
   });
 
-  it('4 — Mon 09:00–17:00 weekday → 0 h (schedule + lunch excluded)', () => {
+  it('4 - Mon 09:00–17:00 weekday → 0 h (schedule + lunch excluded)', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '09:00', '17:00', WD),
       {},
     );
   });
 
-  it('5 — Mon 17:00–19:00 weekday → 1.5 h Regular', () => {
+  it('5 - Mon 17:00–19:00 weekday → 1.5 h Regular', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '17:00', '19:00', WD),
       { regularHours: 1.5 },
     );
   });
 
-  it('6 — Mon 12:30–13:30 lunch gap → 0 h (lunch not OT)', () => {
+  it('6 - Mon 12:30–13:30 lunch gap → 0 h (lunch not OT)', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '12:30', '13:30', WD),
       {},
     );
   });
 
-  it('7 — Sat 09:00–12:00 half day (inside morning) → 0 h', () => {
+  it('7 - Sat 09:00–12:00 half day (inside morning) → 0 h', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-12'), '09:00', '12:00', HALF),
       {},
@@ -128,28 +128,28 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
     ).toBe(0);
   });
 
-  it('8 — Sat 13:00–17:00 half day afternoon → 4 h Weekend', () => {
+  it('8 - Sat 13:00–17:00 half day afternoon → 4 h Weekend', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-12'), '13:00', '17:00', HALF),
       { weekendHours: 4 },
     );
   });
 
-  it('9 — Sun 08:00–12:00 off day → 4 h Weekend', () => {
+  it('9 - Sun 08:00–12:00 off day → 4 h Weekend', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-13'), '08:00', '12:00', OFF),
       { weekendHours: 4 },
     );
   });
 
-  it('9b — Sat-off employee Saturday OT → all Weekend (not half-day rules)', () => {
+  it('9b - Sat-off employee Saturday OT → all Weekend (not half-day rules)', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-12'), '08:00', '17:00', OFF),
       { weekendHours: 9 },
     );
   });
 
-  it('10 — Sat 20:00 – Sun 02:00 half then off overnight → 4 W + 2 W', () => {
+  it('10 - Sat 20:00 – Sun 02:00 half then off overnight → 4 W + 2 W', () => {
     expectBuckets(
       calculateOvertimeHours(
         utcDate('2026-09-12'),
@@ -163,7 +163,7 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
     );
   });
 
-  it('11 — Fri 20:00 – Sat 02:00 WD then half overnight → 2 R + 4 N', () => {
+  it('11 - Fri 20:00 – Sat 02:00 WD then half overnight → 2 R + 4 N', () => {
     expectBuckets(
       calculateOvertimeHours(
         utcDate('2026-09-11'),
@@ -177,14 +177,14 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
     );
   });
 
-  it('12 — Public holiday 09:00–13:00 → 4 h Holiday', () => {
+  it('12 - Public holiday 09:00–13:00 → 4 h Holiday', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-11'), '09:00', '13:00', HOLIDAY),
       { holidayHours: 4 },
     );
   });
 
-  it('13 — Sep 10 20:00 – Sep 11 02:00 WD then holiday → 2 R + 2 N + 2 H', () => {
+  it('13 - Sep 10 20:00 – Sep 11 02:00 WD then holiday → 2 R + 2 N + 2 H', () => {
     expectBuckets(
       calculateOvertimeHours(
         utcDate('2026-09-10'),
@@ -198,28 +198,28 @@ describe('calculateOvertimeHours — CRCC classification matrix', () => {
     );
   });
 
-  it('14 — WFH treated as working day 18:00–20:00 → 2 h Regular', () => {
+  it('14 - WFH treated as working day 18:00–20:00 → 2 h Regular', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-08-14'), '18:00', '20:00', WD),
       { regularHours: 2 },
     );
   });
 
-  it('16 — Mon 18:07–19:52 → 1.75 h Regular', () => {
+  it('16 - Mon 18:07–19:52 → 1.75 h Regular', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '18:07', '19:52', WD),
       { regularHours: 1.75 },
     );
   });
 
-  it('minute-precise — 23:00–23:10 → 0.17 h Night', () => {
+  it('minute-precise - 23:00–23:10 → 0.17 h Night', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '23:00', '23:10', WD),
       { nightHours: 0.17 },
     );
   });
 
-  it('minute-precise — 17:30–19:20 → 1.83 h Regular', () => {
+  it('minute-precise - 17:30–19:20 → 1.83 h Regular', () => {
     expectBuckets(
       calculateOvertimeHours(utcDate('2026-09-14'), '17:30', '19:20', WD),
       { regularHours: 1.83 },
@@ -331,13 +331,13 @@ describe('totalOvertimeHours', () => {
 describe('buildOvertimeScheduleNote', () => {
   it('describes a Saturday half day', () => {
     expect(buildOvertimeScheduleNote(utcDate('2026-09-12'), HALF)).toBe(
-      'Saturday half day — after morning ends classified as weekend; before morning uses night/regular rules',
+      'Saturday half day - after morning ends classified as weekend; before morning uses night/regular rules',
     );
   });
 
   it('describes a Sunday off day', () => {
     expect(buildOvertimeScheduleNote(utcDate('2026-09-13'), OFF)).toBe(
-      'Sunday is a non-working day — hours classified as weekend',
+      'Sunday is a non-working day - hours classified as weekend',
     );
   });
 

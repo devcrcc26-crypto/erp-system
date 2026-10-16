@@ -139,10 +139,15 @@ export interface UserProfile {
   nationality?: 'ETHIOPIAN' | 'CHINESE' | null;
   dateOfBirth?: string | null;
   gender?: 'MALE' | 'FEMALE' | null;
-  educationLevel?: 'PHD' | 'MSC' | 'BSC' | 'DIPLOMA' | 'CERTIFICATE' | 'OTHER' | null;
+  educationLevel?: EducationLevel | null;
   fieldOfStudy?: string | null;
   employmentDate?: string | null;
-  experienceStartDate?: string | null;
+  /** Current years of experience (recorded value grown since the as-of date). */
+  yearsOfExperience?: number | null;
+  yearsOfExperienceAsOf?: string | null;
+  secondaryPhone?: string | null;
+  seniorityLevelName?: string | null;
+  seniorityLevelNameZh?: string | null;
   addressCountry?: string | null;
   addressRegion?: string | null;
   addressCity?: string | null;
@@ -161,7 +166,7 @@ export interface ProfileEmergencyContact {
   lastName: string;
   phone: string | null;
   email: string | null;
-  /** Only present when recorded — the HR form does not capture it today. */
+  /** Only present when recorded - the HR form does not capture it today. */
   relationship: string | null;
 }
 
@@ -194,7 +199,16 @@ export type EmployeeType =
   | 'CONTRACT'
   | 'TEMPORARY'
   | 'FREELANCER';
-export type EducationLevel = 'PHD' | 'MSC' | 'BSC' | 'DIPLOMA' | 'CERTIFICATE' | 'OTHER';
+export type EducationLevel =
+  | 'PHD'
+  | 'MSC'
+  | 'BSC'
+  | 'DIPLOMA'
+  | 'CERTIFICATE'
+  | 'TECHNICIAN'
+  | 'SECONDARY'
+  | 'PRIMARY'
+  | 'OTHER';
 
 export interface EmergencyContact {
   firstName: string;
@@ -228,6 +242,8 @@ export interface User {
   department?: { id: string; name: string } | null;
   positionId: string | null;
   position?: { id: string; title: string } | null;
+  seniorityLevelId?: string | null;
+  seniorityLevel?: { id: string; name: string; nameZh: string | null } | null;
   reportsToUserId: string | null;
   reportsTo?: {
     id: string;
@@ -258,8 +274,9 @@ export interface User {
   employmentDate?: string | null;
   /** ACTIVE / INACTIVE (suspension, long leave …) / SEPARATED. */
   employmentStatus?: 'ACTIVE' | 'INACTIVE' | 'SEPARATED';
-  experienceStartDate?: string | null;
+  /** Current value: recorded years plus the time since yearsOfExperienceAsOf. */
   yearsOfExperience?: number | null;
+  yearsOfExperienceAsOf?: string | null;
   emergencyContacts?: EmergencyContact[] | null;
   leavePolicyId?: string | null;
   leavePolicy?: { id: string; name: string } | null;
@@ -271,11 +288,12 @@ export interface User {
   lastName: string;
   chineseName: string | null;
   loginName?: string | null;
-  /** Approver only — excluded from HR processes (set by users.edit). */
+  /** Approver only - excluded from HR processes (set by users.edit). */
   excludedFromHrProcesses?: boolean;
   excludedReason?: string | null;
   email: string | null;
   phone: string | null;
+  secondaryPhone?: string | null;
   preferredLanguage: string | null;
   preferredTimezone: string | null;
   preferredDateFormat: string | null;
@@ -325,11 +343,15 @@ export interface CreateUserRequest {
   firstName: string;
   lastName?: string;
   chineseName?: string;
+  /** OA login name; defaults to full name when omitted. */
+  loginName?: string;
   password?: string;
   phone?: string;
+  secondaryPhone?: string;
   branchId?: string;
   departmentId?: string;
   positionId?: string;
+  seniorityLevelId?: string;
   reportsToUserId?: string;
   discipline?: UserDiscipline;
   engineeringDisciplineId?: string;
@@ -354,7 +376,7 @@ export interface CreateUserRequest {
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
   employmentDate?: string;
-  experienceStartDate?: string;
+  yearsOfExperience?: number | null;
   emergencyContacts?: EmergencyContact[];
   leavePolicyId?: string;
   workScheduleId?: string;
@@ -369,13 +391,17 @@ export interface UpdateUserRequest {
   /** users.edit only (PATCH /users/:id); audited. */
   excludedFromHrProcesses?: boolean;
   excludedReason?: string | null;
+  /** OA login name (users.edit); audited. */
+  loginName?: string;
   firstName?: string;
   lastName?: string;
   chineseName?: string;
   phone?: string;
+  secondaryPhone?: string;
   branchId?: string;
   departmentId?: string | null;
   positionId?: string | null;
+  seniorityLevelId?: string | null;
   reportsToUserId?: string | null;
   leavePolicyId?: string | null;
   workScheduleId?: string | null;
@@ -402,7 +428,7 @@ export interface UpdateUserRequest {
   educationLevel?: EducationLevel;
   fieldOfStudy?: string;
   employmentDate?: string;
-  experienceStartDate?: string;
+  yearsOfExperience?: number | null;
   emergencyContacts?: EmergencyContact[];
   bankName?: string;
   bankBranch?: string;
@@ -445,7 +471,7 @@ export interface ImportRowPreview {
   nationalId?: string;
   tin?: string;
   fieldOfStudy?: string;
-  experienceStartDate?: string;
+  yearsOfExperience?: string;
   addressCountry?: string;
   addressRegion?: string;
   addressCity?: string;
@@ -636,7 +662,7 @@ export interface AuditLogStats {
 export interface AuthCapabilities {
   canManageUsers: boolean;
   canCreateUsers: boolean;
-  /** users.edit — edit employees, login name, approver-only flag, reset password. */
+  /** users.edit - edit employees, login name, approver-only flag, reset password. */
   canEditUsers: boolean;
   canManageRoles: boolean;
   canEditRoles: boolean;
@@ -653,11 +679,11 @@ export interface AuthCapabilities {
   canEditPayroll: boolean;
   canApprovePayroll: boolean;
   canExportPayroll: boolean;
-  /** announcements.create OR edit OR approve — opens /hr/announcements. */
+  /** announcements.create OR edit OR approve - opens /hr/announcements. */
   canManageAnnouncements?: boolean;
-  /** announcements.approve — publish, schedule, archive, remind. */
+  /** announcements.approve - publish, schedule, archive, remind. */
   canPublishAnnouncements?: boolean;
-  /** announcements.export — read statistics as Excel. */
+  /** announcements.export - read statistics as Excel. */
   canExportAnnouncements?: boolean;
   canViewFlight: boolean;
   canCreateFlight: boolean;

@@ -96,7 +96,7 @@ export class ExpenseClaimImportService {
         currency: 'ETB',
       },
       note:
-        'Each row adds a line item to a DRAFT claim for that employee and title (claim is created if needed). Receipts are not imported — upload them before submit. Claims are not auto-submitted.',
+        'Each row adds a line item to a DRAFT claim for that employee and title (claim is created if needed). Receipts are not imported - upload them before submit. Claims are not auto-submitted.',
     });
   }
 
@@ -231,14 +231,14 @@ export class ExpenseClaimImportService {
       instructions.addRow([
         'employeeId',
         'If no email',
-        'User UUID — required when employeeEmail is blank',
+        'User UUID - required when employeeEmail is blank',
       ]);
     }
     if (input.includeClaimHeader) {
       instructions.addRow([
         'title',
         'Yes',
-        'Claim title — rows with the same employee+title share one DRAFT claim',
+        'Claim title - rows with the same employee+title share one DRAFT claim',
       ]);
       instructions.addRow(['claimDescription', 'No', 'Optional claim notes']);
     }

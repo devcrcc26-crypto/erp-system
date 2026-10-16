@@ -70,7 +70,7 @@ function DetailSection({
 }
 
 /**
- * Vehicle refueling detail — Users / employee profile chrome.
+ * Vehicle refueling detail - Users / employee profile chrome.
  */
 export default function VehicleRefuelingDetailPageContent({
   refuelingId,
@@ -320,7 +320,7 @@ export default function VehicleRefuelingDetailPageContent({
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('hr.table.litres')}</p>
             <p className="erp-employee-meta-value">
-              {refueling.requestedLitres?.toString() ?? '—'}
+              {refueling.requestedLitres?.toString() ?? '-'}
             </p>
           </div>
         </div>
@@ -330,7 +330,7 @@ export default function VehicleRefuelingDetailPageContent({
             <p className="erp-employee-meta-value">
               {refueling.totalCostEtb != null
                 ? formatEtbAmount(refueling.totalCostEtb)
-                : '—'}
+                : '-'}
             </p>
           </div>
         </div>
@@ -418,20 +418,20 @@ export default function VehicleRefuelingDetailPageContent({
                   {refueling.fuelStation}
                 </MetaItem>
                 <MetaItem label={t('hr.form.currentMileage')}>
-                  {refueling.currentMileage?.toString() ?? '—'}
+                  {refueling.currentMileage?.toString() ?? '-'}
                 </MetaItem>
                 <MetaItem label={t('hr.form.requestedLitres')}>
-                  {refueling.requestedLitres?.toString() ?? '—'}
+                  {refueling.requestedLitres?.toString() ?? '-'}
                 </MetaItem>
                 <MetaItem label={t('hr.form.unitPriceEtb')}>
                   {refueling.unitPriceEtb != null
                     ? formatEtbAmount(refueling.unitPriceEtb)
-                    : '—'}
+                    : '-'}
                 </MetaItem>
                 <MetaItem label={t('hr.form.totalCostEtb')}>
                   {refueling.totalCostEtb != null
                     ? formatEtbAmount(refueling.totalCostEtb)
-                    : '—'}
+                    : '-'}
                 </MetaItem>
                 {refueling.driver ? (
                   <MetaItem label={t('hr.form.driver')}>

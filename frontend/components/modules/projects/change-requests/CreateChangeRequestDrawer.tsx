@@ -1,4 +1,4 @@
-// Gap completion — new
+// Gap completion - new
 
 'use client';
 
@@ -75,7 +75,7 @@ export default function CreateChangeRequestDrawer({
     () =>
       (projectsQuery.data?.data ?? []).map((project) => ({
         value: project.id,
-        label: `${project.projectCode} — ${project.name}`,
+        label: `${project.projectCode} - ${project.name}`,
       })),
     [projectsQuery.data?.data],
   );
@@ -108,7 +108,7 @@ export default function CreateChangeRequestDrawer({
     () =>
       (subtasksQuery.data ?? []).map((pkg) => ({
         value: pkg.id,
-        label: `${pkg.fullCode} — ${pkg.name}`,
+        label: `${pkg.fullCode} - ${pkg.name}`,
       })),
     [subtasksQuery.data],
   );

@@ -36,7 +36,7 @@ export function normalizeLineEndings(content: string): string {
 
 export function renderGenerated(sourcePath: string, source: string): string {
   return (
-    `// GENERATED from backend/${sourcePath} — do not edit; run npm run sync:shared (in backend/)\n\n` +
+    `// GENERATED from backend/${sourcePath} - do not edit; run npm run sync:shared (in backend/)\n\n` +
     normalizeLineEndings(source)
   );
 }

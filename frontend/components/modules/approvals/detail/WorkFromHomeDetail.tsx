@@ -80,17 +80,17 @@ export default function WorkFromHomeDetail({
           `${KEY}.daysCount`,
           { count: dates.length },
         )})`
-      : '—';
+      : '-';
 
   const employeeName = (() => {
     const fromRequester = formatApprovalUserName(request.requester);
-    if (fromRequester !== '—') {
+    if (fromRequester !== '-') {
       return fromRequester;
     }
     if (form.employeeId) {
       return lookupUserName(form.employeeId);
     }
-    return '—';
+    return '-';
   })();
 
   const viewerId = currentUser.data?.id;
@@ -148,12 +148,12 @@ export default function WorkFromHomeDetail({
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <MetaItem label={t('pages.hr.workFromHome.fields.reason')}>
-            {form.reason || '—'}
+            {form.reason || '-'}
           </MetaItem>
           {form.cancelledAt ? (
             <MetaItem label={t(`${KEY}.cancelledOn`)}>
               {formatProjectDate(form.cancelledAt)}
-              {form.cancelReason ? ` — ${form.cancelReason}` : ''}
+              {form.cancelReason ? ` - ${form.cancelReason}` : ''}
             </MetaItem>
           ) : null}
           {form.notAppliedDates && form.notAppliedDates.length > 0 ? (

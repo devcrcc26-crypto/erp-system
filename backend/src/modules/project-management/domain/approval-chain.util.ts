@@ -33,7 +33,7 @@ export type EffectiveApprovalChain = {
 };
 
 /**
- * Resolves the effective approval chain — subtask-level FKs override discipline defaults.
+ * Resolves the effective approval chain - subtask-level FKs override discipline defaults.
  */
 export function getEffectiveApprovalChain(
   pkg: PackageApprovalChainOverrides,

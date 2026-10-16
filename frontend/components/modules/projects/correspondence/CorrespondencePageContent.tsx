@@ -209,7 +209,7 @@ export function CorrespondenceFormDrawer({
     () =>
       (projectsQuery.data?.data ?? []).map((p) => ({
         value: p.id,
-        label: `${p.projectCode} — ${p.name}`,
+        label: `${p.projectCode} - ${p.name}`,
       })),
     [projectsQuery.data?.data],
   );
@@ -223,7 +223,7 @@ export function CorrespondenceFormDrawer({
     () =>
       (parentOptionsQuery.data?.data ?? []).map((c) => ({
         value: c.id,
-        label: `${c.referenceNumber} — ${c.subject}`,
+        label: `${c.referenceNumber} - ${c.subject}`,
       })),
     [parentOptionsQuery.data?.data],
   );

@@ -23,7 +23,7 @@ export class ProjectScopeService {
   /**
    * Asserts the caller may open a PM module on this project.
    * Uses the same visibility as project reads (full access, Project Admin,
-   * department leadership, discipline assignee, or subtask role) — never
+   * department leadership, discipline assignee, or subtask role) - never
    * ProjectTeam membership or visibleModules.
    */
   async assertModuleAccess(

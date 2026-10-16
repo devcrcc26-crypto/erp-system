@@ -126,7 +126,7 @@ function matchesFilter(
 }
 
 /**
- * Payroll runs list — Users / per-diem list chrome (stat bar, filters, card table).
+ * Payroll runs list - Users / per-diem list chrome (stat bar, filters, card table).
  */
 export default function PayrollRunsListPageContent(): React.ReactNode {
   const router = useRouter();
@@ -181,7 +181,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
         : t('hr.payroll.list.noCurrentRun'),
       lastPaidNet: lastPaid
         ? formatPayrollMoney(lastPaid.totalNetPay, { emptyZero: false })
-        : '—',
+        : '-',
     };
   }, [allRows, currentMonth, currentYear, t]);
 
@@ -316,7 +316,7 @@ export default function PayrollRunsListPageContent(): React.ReactNode {
           count > 0 ? (
             <span className="erp-payroll-flag-count">{count}</span>
           ) : (
-            <span className="erp-users-cell-sub">—</span>
+            <span className="erp-users-cell-sub">-</span>
           ),
       },
       {

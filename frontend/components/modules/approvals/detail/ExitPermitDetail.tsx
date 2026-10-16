@@ -24,7 +24,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 /**
  * Exit permit body for the Approvals detail inbox (read-only).
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function ExitPermitDetail({
   sourceId,
@@ -102,7 +102,7 @@ export default function ExitPermitDetail({
       dataIndex: 'unit',
       key: 'unit',
       width: 72,
-      render: (value: string | null | undefined) => value?.trim() || '—',
+      render: (value: string | null | undefined) => value?.trim() || '-',
     },
   ];
   return (

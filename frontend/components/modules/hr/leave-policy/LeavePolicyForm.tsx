@@ -171,7 +171,7 @@ interface LeavePolicyFormProps {
 }
 
 /**
- * Leave policy create/edit — StepperForm (details → rules → review).
+ * Leave policy create/edit - StepperForm (details → rules → review).
  */
 export default function LeavePolicyForm({
   policy,
@@ -456,11 +456,11 @@ export default function LeavePolicyForm({
             <div className="erp-leave-policy-review-grid">
               <ReviewItem
                 label={t('hr.leavePolicy.name')}
-                value={review.name?.trim() || '—'}
+                value={review.name?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.leavePolicy.governedBy')}
-                value={review.governedBy?.trim() || '—'}
+                value={review.governedBy?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.leavePolicy.isActive')}
@@ -470,7 +470,7 @@ export default function LeavePolicyForm({
               />
               <ReviewItem
                 label={t('hr.leavePolicy.description')}
-                value={review.description?.trim() || '—'}
+                value={review.description?.trim() || '-'}
                 wide
               />
             </div>
@@ -483,11 +483,11 @@ export default function LeavePolicyForm({
                 <div className="erp-leave-policy-review-grid">
                   <ReviewItem
                     label={t('hr.leavePolicy.baseDays')}
-                    value={String(review.annualBaseDays ?? '—')}
+                    value={String(review.annualBaseDays ?? '-')}
                   />
                   <ReviewItem
                     label={t('hr.leavePolicy.minimumServiceMonths')}
-                    value={String(review.annualMinimumServiceMonths ?? '—')}
+                    value={String(review.annualMinimumServiceMonths ?? '-')}
                   />
                   <ReviewItem
                     label={t('hr.leavePolicy.isProgressive')}
@@ -499,21 +499,21 @@ export default function LeavePolicyForm({
                   />
                   <ReviewItem
                     label={t('hr.leavePolicy.maxCarryForwardDays')}
-                    value={String(review.annualMaxCarryForwardDays ?? '—')}
+                    value={String(review.annualMaxCarryForwardDays ?? '-')}
                   />
                   {review.annualIsProgressive ? (
                     <>
                       <ReviewItem
                         label={t('hr.leavePolicy.incrementDays')}
-                        value={String(review.annualIncrementDays ?? '—')}
+                        value={String(review.annualIncrementDays ?? '-')}
                       />
                       <ReviewItem
                         label={t('hr.leavePolicy.incrementEveryYears')}
-                        value={String(review.annualIncrementEveryYears ?? '—')}
+                        value={String(review.annualIncrementEveryYears ?? '-')}
                       />
                       <ReviewItem
                         label={t('hr.leavePolicy.maxDaysCap')}
-                        value={String(review.annualMaxDaysCap ?? '—')}
+                        value={String(review.annualMaxDaysCap ?? '-')}
                       />
                     </>
                   ) : null}
@@ -539,11 +539,11 @@ export default function LeavePolicyForm({
                 <div className="erp-leave-policy-review-grid">
                   <ReviewItem
                     label={t('hr.leavePolicy.baseDays')}
-                    value={String(review.maternityBaseDays ?? '—')}
+                    value={String(review.maternityBaseDays ?? '-')}
                   />
                   <ReviewItem
                     label={t('hr.leavePolicy.minimumServiceMonths')}
-                    value={String(review.maternityMinimumServiceMonths ?? '—')}
+                    value={String(review.maternityMinimumServiceMonths ?? '-')}
                   />
                 </div>
               </div>
@@ -555,7 +555,7 @@ export default function LeavePolicyForm({
                 <div className="erp-leave-policy-review-grid">
                   <ReviewItem
                     label={t('hr.leavePolicy.baseDays')}
-                    value={String(review.sickBaseDays ?? '—')}
+                    value={String(review.sickBaseDays ?? '-')}
                   />
                   <ReviewItem
                     label={t('hr.leavePolicy.requiresReceipt')}

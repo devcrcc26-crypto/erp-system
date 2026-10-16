@@ -224,11 +224,11 @@ function PayslipBreakdown({ payslip }: { payslip: EmployeePayslip }): React.Reac
         </div>
         <div className="erp-payslip-fact">
           <p>{t('profile.payroll.bank')}</p>
-          <p>{payslip.bankName || '—'}</p>
+          <p>{payslip.bankName || '-'}</p>
         </div>
         <div className="erp-payslip-fact erp-payslip-fact--wide">
           <p>{t('profile.payroll.account')}</p>
-          <p>{payslip.bankAccountMasked || '—'}</p>
+          <p>{payslip.bankAccountMasked || '-'}</p>
         </div>
       </div>
 

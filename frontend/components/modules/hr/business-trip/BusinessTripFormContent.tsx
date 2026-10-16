@@ -7,7 +7,7 @@ import type { BusinessTripDetail } from '@/lib/api/business-trip.types';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * New business trip — shared HR form banner + stepper form.
+ * New business trip - shared HR form banner + stepper form.
  */
 export default function BusinessTripFormContent(): React.ReactNode {
   const { t } = useEpcTranslation();

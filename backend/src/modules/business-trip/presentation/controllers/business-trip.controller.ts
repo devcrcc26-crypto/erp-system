@@ -231,7 +231,7 @@ export class BusinessTripController {
     @Body() body: Record<string, unknown>,
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<unknown> {
-    // Multipart nested passengers arrive as a JSON string — parse before validate.
+    // Multipart nested passengers arrive as a JSON string - parse before validate.
     const dto = await parseBusinessTripSubmitDto(body ?? {});
     return this.businessTripService.submitTrip(
       dto,

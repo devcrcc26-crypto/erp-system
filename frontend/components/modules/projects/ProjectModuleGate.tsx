@@ -14,7 +14,7 @@ interface ProjectModuleGateProps {
 
 /**
  * Gates PM module pages by project readability (subtask / discipline /
- * leadership scope) — not ProjectTeam membership.
+ * leadership scope) - not ProjectTeam membership.
  */
 export default function ProjectModuleGate({
   projectId,

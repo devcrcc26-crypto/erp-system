@@ -275,7 +275,7 @@ export class EngineeringDocumentsService {
     // Return-for-rework reverts IN_REVIEW → DRAFT on the same EDV. Creating a
     // second draft via TransitionEdvStatus requires revision.trigger (primary
     // designer only) and fails for package/supporting designers. Replace the
-    // returned draft's file instead — same permission model as upload itself.
+    // returned draft's file instead - same permission model as upload itself.
     const isReworkUpload = await this.conflictGuard.isReturnedForRework(
       ctx.companyId,
       engineeringDocumentId,
@@ -635,7 +635,7 @@ export class EngineeringDocumentsService {
   }
 
   /**
-   * Asserts the caller is the discipline lead, designer, or supporting designer —
+   * Asserts the caller is the discipline lead, designer, or supporting designer -
    * or a designer / supporting designer on any active subtask under this discipline.
    */
   private async assertDesignerAssignment(

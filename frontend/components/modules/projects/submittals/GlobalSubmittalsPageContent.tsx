@@ -50,7 +50,7 @@ import { useUserDisplayResolver } from '@/hooks/useUserNameLookup';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 
 /**
- * Global construction submittals list — cross-project, current-user relevant only.
+ * Global construction submittals list - cross-project, current-user relevant only.
  */
 export default function GlobalSubmittalsPageContent(): React.ReactNode {
   const router = useRouter();
@@ -120,7 +120,7 @@ export default function GlobalSubmittalsPageContent(): React.ReactNode {
     () =>
       (projectsQuery.data?.data ?? []).map((project) => ({
         value: project.id,
-        label: `${project.projectCode} — ${project.name}`,
+        label: `${project.projectCode} - ${project.name}`,
       })),
     [projectsQuery.data?.data],
   );

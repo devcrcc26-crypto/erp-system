@@ -30,12 +30,12 @@ const CORE_ROLES = [
   'Accountant',
   'Procurement Officer',
   'Storekeeper',
-  'HR Officer', // keep — legacy, maps to HR Manager going forward
-  'HR Manager', // NEW — Ms. Dong, full HR access + final approver
-  'Local HR Manager', // NEW — Mekides, full HR access except approvals
-  'HR Specialist', // NEW — Ms. Tang, view all HR + manage flight tickets
-  'HR Assistant', // NEW — Asli, limited HR view + data entry
-  'Department Head', // NEW — view own department employees
+  'HR Officer', // keep - legacy, maps to HR Manager going forward
+  'HR Manager', // NEW - Ms. Dong, full HR access + final approver
+  'Local HR Manager', // NEW - Mekides, full HR access except approvals
+  'HR Specialist', // NEW - Ms. Tang, view all HR + manage flight tickets
+  'HR Assistant', // NEW - Asli, limited HR view + data entry
+  'Department Head', // NEW - view own department employees
   'Safety Officer',
   'Employee',
   'General Manager',
@@ -268,14 +268,14 @@ const PERMISSION_DEFINITIONS: Array<{
   { module: 'per-diem', action: 'approve', description: 'Approve per diem requests' },
   { module: 'per-diem', action: 'export', description: 'Export per diem data' },
 
-  // Payroll (future module — seed now)
+  // Payroll (future module - seed now)
   { module: 'payroll', action: 'view', description: 'View payroll records and payslips' },
   { module: 'payroll', action: 'create', description: 'Run payroll calculations' },
   { module: 'payroll', action: 'edit', description: 'Edit payroll entries' },
   { module: 'payroll', action: 'approve', description: 'Approve and lock payroll' },
   { module: 'payroll', action: 'export', description: 'Export payroll and bank files' },
 
-  // Announcements — company news and system "What's new" posts
+  // Announcements - company news and system "What's new" posts
   { module: 'announcements', action: 'view', description: 'View received announcements' },
   { module: 'announcements', action: 'create', description: 'Create announcement drafts' },
   { module: 'announcements', action: 'edit', description: 'Edit announcements' },
@@ -390,7 +390,7 @@ function localHrManagerFlags(): PermissionFlags {
   };
 }
 
-/** Announcements: create, edit, publish (approve) and export — no delete. */
+/** Announcements: create, edit, publish (approve) and export - no delete. */
 function announcementManagerFlags(): PermissionFlags {
   return {
     canView: true,
@@ -402,7 +402,7 @@ function announcementManagerFlags(): PermissionFlags {
   };
 }
 
-/** Announcements: drafts only — the service blocks editing after publish. */
+/** Announcements: drafts only - the service blocks editing after publish. */
 function announcementDraftFlags(): PermissionFlags {
   return viewCreateEditFlags();
 }
@@ -1292,7 +1292,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Human Resources module access (hr.view) — exact role set from product requirements.
+  // Human Resources module access (hr.view) - exact role set from product requirements.
   // System Administrator already receives full flags in the admin loop above.
   const hrViewPermission = permissions.find(
     (permission) => permission.module === 'hr' && permission.action === 'view',
@@ -1320,7 +1320,7 @@ async function main(): Promise<void> {
     module: string;
     flags: PermissionFlags;
   }> = [
-    // ── HR Manager (Ms. Dong) — full access to all HR modules ──
+    // ── HR Manager (Ms. Dong) - full access to all HR modules ──
     { roleName: 'HR Manager', module: 'hr', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'users', flags: hrManagerFlags() },
     { roleName: 'HR Manager', module: 'departments', flags: viewOnlyFlags() },
@@ -1342,7 +1342,7 @@ async function main(): Promise<void> {
     { roleName: 'HR Manager', module: 'documents', flags: viewOnlyFlags() },
     { roleName: 'HR Manager', module: 'company', flags: viewOnlyFlags() },
 
-    // ── Local HR Manager (Mekides) — full HR access except approve ──
+    // ── Local HR Manager (Mekides) - full HR access except approve ──
     { roleName: 'Local HR Manager', module: 'hr', flags: localHrManagerFlags() },
     { roleName: 'Local HR Manager', module: 'users', flags: localHrManagerFlags() },
     { roleName: 'Local HR Manager', module: 'departments', flags: viewOnlyFlags() },
@@ -1371,7 +1371,7 @@ async function main(): Promise<void> {
     { roleName: 'Local HR Manager', module: 'notifications', flags: viewOnlyFlags() },
     { roleName: 'Local HR Manager', module: 'documents', flags: viewOnlyFlags() },
 
-    // ── HR Specialist (Ms. Tang) — view all HR + manage flight tickets ──
+    // ── HR Specialist (Ms. Tang) - view all HR + manage flight tickets ──
     { roleName: 'HR Specialist', module: 'hr', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'users', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'leave', flags: viewExportFlags() },
@@ -1400,7 +1400,7 @@ async function main(): Promise<void> {
     { roleName: 'HR Specialist', module: 'notifications', flags: viewOnlyFlags() },
     { roleName: 'HR Specialist', module: 'documents', flags: viewOnlyFlags() },
 
-    // ── HR Assistant (Asli) — limited HR view + data entry ──
+    // ── HR Assistant (Asli) - limited HR view + data entry ──
     { roleName: 'HR Assistant', module: 'hr', flags: viewCreateFlags() },
     { roleName: 'HR Assistant', module: 'users', flags: viewCreateFlags() },
     { roleName: 'HR Assistant', module: 'leave', flags: viewOnlyFlags() },
@@ -1418,7 +1418,7 @@ async function main(): Promise<void> {
     { roleName: 'HR Assistant', module: 'notifications', flags: viewOnlyFlags() },
     { roleName: 'HR Assistant', module: 'documents', flags: viewOnlyFlags() },
 
-    // ── Department Head — view own department employees ──
+    // ── Department Head - view own department employees ──
     { roleName: 'Department Head', module: 'hr', flags: viewOnlyFlags() },
     { roleName: 'Department Head', module: 'users', flags: viewOnlyFlags() },
     { roleName: 'Department Head', module: 'leave', flags: viewOnlyFlags() },
@@ -1432,7 +1432,7 @@ async function main(): Promise<void> {
     { roleName: 'Department Head', module: 'notifications', flags: viewOnlyFlags() },
     { roleName: 'Department Head', module: 'documents', flags: viewOnlyFlags() },
 
-    // ── Discipline Lead — view own discipline employees ──
+    // ── Discipline Lead - view own discipline employees ──
     { roleName: 'Discipline Lead', module: 'hr', flags: viewOnlyFlags() },
     { roleName: 'Discipline Lead', module: 'users', flags: viewOnlyFlags() },
     {
@@ -1469,7 +1469,7 @@ async function main(): Promise<void> {
     { roleName: 'Discipline Lead', module: 'notifications', flags: viewOnlyFlags() },
     { roleName: 'Discipline Lead', module: 'documents', flags: viewOnlyFlags() },
 
-    // ── General Manager — view all ──
+    // ── General Manager - view all ──
     { roleName: 'General Manager', module: 'attendance', flags: viewOnlyFlags() },
     {
       roleName: 'General Manager',
@@ -1493,7 +1493,7 @@ async function main(): Promise<void> {
       flags: viewApproveExportFlags(),
     },
 
-    // ── Employee — self-service only ──
+    // ── Employee - self-service only ──
     { roleName: 'Employee', module: 'attendance', flags: viewOnlyFlags() },
     { roleName: 'Employee', module: 'field-movement', flags: viewCreateFlags() },
     { roleName: 'Employee', module: 'exit-permit', flags: viewCreateFlags() },
@@ -1502,7 +1502,7 @@ async function main(): Promise<void> {
     { roleName: 'Employee', module: 'approvals', flags: viewCreateFlags() },
   ];
 
-  // Upsert all new role permissions — write full intended flags onto each
+  // Upsert all new role permissions - write full intended flags onto each
   // module action row so merged module permissions match the role matrix.
   const actionToFlag: Record<string, keyof PermissionFlags> = {
     view: 'canView',
@@ -1531,7 +1531,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Announcements — every other role can view what it receives. HR roles get
+  // Announcements - every other role can view what it receives. HR roles get
   // their matrix rows above; System Administrator already has full flags.
   const announcementPermissions = permissions.filter(
     (permission) => permission.module === 'announcements',
@@ -1551,7 +1551,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Organization sidebar — HR Officer manages user accounts; view org catalogs for assignment.
+  // Organization sidebar - HR Officer manages user accounts; view org catalogs for assignment.
   const departmentsView = permissions.find(
     (permission) =>
       permission.module === 'departments' && permission.action === 'view',
@@ -1978,7 +1978,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Employee gets read-only project portfolio access (not construction submittals —
+  // Employee gets read-only project portfolio access (not construction submittals -
   // those are gated by Designer / Discipline Lead FK personas or admin roles).
   const employeePmViewFlags = viewOnlyFlags();
   for (const permission of permissions) {

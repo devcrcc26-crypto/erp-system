@@ -62,7 +62,7 @@ function resolveReviewerTier(
 
 /**
  * Resolves a user's primary routing role and secondary review-tier role on a
- * subtask — mirrors backend `resolveSubtaskRoles` (domain/subtask-role-resolver.util.ts)
+ * subtask - mirrors backend `resolveSubtaskRoles` (domain/subtask-role-resolver.util.ts)
  * and applies the same package-FK-wins-over-discipline-default merge as
  * `getEffectiveApprovalChain`. Precedence: DESIGNER > SUPPORTING_DESIGNER >
  * REVIEWER > DISCIPLINE_LEAD > DEPT_CHIEF > INSTITUTE_CHIEF > DISCIPLINE_OWNER.

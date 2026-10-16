@@ -241,7 +241,7 @@ describe('project-nav-visibility', () => {
   });
 });
 
-describe('canViewGlobalNavKey — submittals', () => {
+describe('canViewGlobalNavKey - submittals', () => {
   const moduleCaps = {
     canView: false,
     canCreate: false,
@@ -326,7 +326,7 @@ describe('canViewGlobalNavKey — submittals', () => {
   });
 });
 
-describe('canViewGlobalNavKey — change requests', () => {
+describe('canViewGlobalNavKey - change requests', () => {
   const moduleCaps = {
     canView: false,
     canCreate: false,
@@ -382,7 +382,7 @@ describe('canViewGlobalNavKey — change requests', () => {
   });
 });
 
-describe('canViewGlobalNavKey — rfis', () => {
+describe('canViewGlobalNavKey - rfis', () => {
   const moduleCaps = {
     canView: false,
     canCreate: false,
@@ -471,7 +471,7 @@ describe('canViewGlobalNavKey — rfis', () => {
   });
 });
 
-describe('canViewGlobalNavKey — daily-logs', () => {
+describe('canViewGlobalNavKey - daily-logs', () => {
   const moduleCaps = {
     canView: false,
     canCreate: false,
@@ -533,7 +533,7 @@ describe('canViewGlobalNavKey — daily-logs', () => {
   });
 });
 
-describe('canViewGlobalNavKey — punch-list', () => {
+describe('canViewGlobalNavKey - punch-list', () => {
   const moduleCaps = {
     canView: false,
     canCreate: false,

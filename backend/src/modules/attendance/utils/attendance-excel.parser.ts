@@ -13,7 +13,7 @@ export interface AttendanceRawRow {
   attendanceName: string;
   attendanceId: string;
   /**
-   * Column H machine total — kept for preview/debug only.
+   * Column H machine total - kept for preview/debug only.
    * Persisted payable hours are recalculated from daily logs + holidays.
    */
   payableHours: number;
@@ -233,7 +233,7 @@ function readDailyData(
 
 /**
  * Parses a Deli e+ monthly attendance Excel export into raw rows with daily
- * clock times. Does not match employees — extraction only.
+ * clock times. Does not match employees - extraction only.
  */
 export async function parseAttendanceExcel(
   buffer: Buffer,

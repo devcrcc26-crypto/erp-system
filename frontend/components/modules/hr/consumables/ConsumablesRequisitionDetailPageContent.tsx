@@ -94,7 +94,7 @@ function DetailSection({
 }
 
 /**
- * Consumables requisition detail — Users / employee profile chrome.
+ * Consumables requisition detail - Users / employee profile chrome.
  */
 export default function ConsumablesRequisitionDetailPageContent({
   requisitionId,
@@ -250,7 +250,7 @@ export default function ConsumablesRequisitionDetailPageContent({
         ? formatUserName(currentUser.data)
         : authUser
           ? formatUserName(authUser)
-          : '—';
+          : '-';
       exportConsumablesRequisitionPdf({
         requisition,
         companyName: authUser?.companyName ?? 'Company',
@@ -314,7 +314,7 @@ export default function ConsumablesRequisitionDetailPageContent({
         width: 120,
         responsive: ['md'],
         render: (value: string | null | undefined) => (
-          <span className="erp-users-cell-sub">{value || '—'}</span>
+          <span className="erp-users-cell-sub">{value || '-'}</span>
         ),
       },
       {
@@ -324,7 +324,7 @@ export default function ConsumablesRequisitionDetailPageContent({
         ellipsis: true,
         responsive: ['lg'],
         render: (value: string | null | undefined) => (
-          <span className="erp-users-cell-sub">{value || '—'}</span>
+          <span className="erp-users-cell-sub">{value || '-'}</span>
         ),
       },
       {
@@ -571,7 +571,7 @@ export default function ConsumablesRequisitionDetailPageContent({
             <p className="erp-employee-meta-value">
               {requisition.requiredByDate
                 ? formatProjectDate(requisition.requiredByDate)
-                : '—'}
+                : '-'}
             </p>
           </div>
         </div>
@@ -579,7 +579,7 @@ export default function ConsumablesRequisitionDetailPageContent({
           <div className="min-w-0">
             <p className="erp-users-stat-label">{t('hr.table.department')}</p>
             <p className="erp-employee-meta-value truncate">
-              {requisition.department ?? '—'}
+              {requisition.department ?? '-'}
             </p>
           </div>
         </div>

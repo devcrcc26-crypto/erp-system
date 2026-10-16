@@ -565,7 +565,7 @@ export default function TaskDetailContent({
             className="text-[13px]"
             style={{ color: tokens.colorTextSecondary }}
           >
-            No subtasks yet — planned and actual work days will appear here once
+            No subtasks yet - planned and actual work days will appear here once
             subtasks are created.
           </p>
         ) : (

@@ -121,7 +121,7 @@ function BusinessTripStat({
 }
 
 /**
- * Business trips list — Users chrome (stat bar, filter row, rounded table).
+ * Business trips list - Users chrome (stat bar, filter row, rounded table).
  * Search and filters run on the frontend against a full list fetch.
  */
 export default function BusinessTripsListPageContent(): React.ReactNode {
@@ -321,8 +321,8 @@ export default function BusinessTripsListPageContent(): React.ReactNode {
         responsive: ['xl'],
         render: (_: unknown, row: BusinessTripListItem) => {
           const label = getCurrentStepLabel(row, t);
-          if (!label || label === '—') {
-            return <span className="erp-users-cell-sub">—</span>;
+          if (!label || label === '-') {
+            return <span className="erp-users-cell-sub">-</span>;
           }
           return <span className="erp-users-role-tag">{label}</span>;
         },

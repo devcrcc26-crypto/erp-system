@@ -27,8 +27,8 @@ function SessionCapabilitiesSync({
       return;
     }
     // Sign out only when the session itself is gone (401 after the client's
-    // refresh attempt). A 403 — e.g. MUST_CHANGE_PASSWORD on the forced
-    // change-password screen — or a network error must not wipe the tokens,
+    // refresh attempt). A 403 - e.g. MUST_CHANGE_PASSWORD on the forced
+    // change-password screen - or a network error must not wipe the tokens,
     // or the very next request (changing the password) goes out unauthenticated.
     if (!(query.error instanceof ApiRequestError && query.error.status === 401)) {
       return;

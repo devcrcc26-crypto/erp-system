@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS risk_review (
 
 CREATE INDEX IF NOT EXISTS idx_risk_review_risk_id ON risk_review(risk_id);
 
--- Additive enum extensions — existing rows/values (e.g. COST, MONITORING) untouched.
+-- Additive enum extensions - existing rows/values (e.g. COST, MONITORING) untouched.
 ALTER TYPE "RiskCategory" ADD VALUE IF NOT EXISTS 'TECHNICAL';
 ALTER TYPE "RiskCategory" ADD VALUE IF NOT EXISTS 'FINANCIAL';
 ALTER TYPE "RiskCategory" ADD VALUE IF NOT EXISTS 'LEGAL';

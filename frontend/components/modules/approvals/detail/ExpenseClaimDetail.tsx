@@ -21,7 +21,7 @@ import { formatProjectDate } from '@/lib/utils/project-display';
 
 /**
  * Expense claim body for the Approvals detail inbox.
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function ExpenseClaimDetail({
   sourceId,

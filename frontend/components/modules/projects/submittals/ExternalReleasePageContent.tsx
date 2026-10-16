@@ -154,7 +154,7 @@ export default function ExternalReleasePageContent({
         title: 'Issued by',
         key: 'issuedBy',
         render: (_value: unknown, record) =>
-          record.submittedByName ?? record.submittedBy ?? '—',
+          record.submittedByName ?? record.submittedBy ?? '-',
       },
       {
         title: 'Status',

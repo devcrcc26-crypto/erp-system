@@ -1,4 +1,4 @@
-// GENERATED from backend/src/modules/attendance/application/utils/field-movement-field-rules.ts — do not edit; run npm run sync:shared (in backend/)
+// GENERATED from backend/src/modules/attendance/application/utils/field-movement-field-rules.ts - do not edit; run npm run sync:shared (in backend/)
 
 /**
  * Single source of truth for field-movement entry field visibility,

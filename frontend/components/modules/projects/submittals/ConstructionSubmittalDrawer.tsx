@@ -94,7 +94,7 @@ export default function ConstructionSubmittalDrawer({
   const [stageBlocked, setStageBlocked] = useState(false);
 
   const capabilitiesReady = useCapabilitiesReady();
-  // Prefer /projects (access-scoped) over My Work — My Work omits projects without assignments.
+  // Prefer /projects (access-scoped) over My Work - My Work omits projects without assignments.
   const projectsQuery = useAllProjects(
     {},
     open && showProjectSelector && capabilitiesReady,
@@ -132,7 +132,7 @@ export default function ConstructionSubmittalDrawer({
     () =>
       (projectsQuery.data?.data ?? []).map((project) => ({
         value: project.id,
-        label: `${project.projectCode} — ${project.name}`,
+        label: `${project.projectCode} - ${project.name}`,
       })),
     [projectsQuery.data?.data],
   );

@@ -25,7 +25,7 @@ const ICON = { size: 18, strokeWidth: 1.9 } as const;
 
 /**
  * Evaluations assigned to me as Discipline Lead or Team Lead. Leads are
- * defined by assignment, not role name — the same queries the Evaluation
+ * defined by assignment, not role name - the same queries the Evaluation
  * Inbox page uses, so the two share cache.
  */
 export function useLeadEvaluations(enabled: boolean) {

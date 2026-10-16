@@ -73,7 +73,7 @@ export function resolveDefaultCommentAssignee(
 /**
  * Display label for the return/comment default assignee using discipline
  * name fields already loaded in review mode (avoids GET /users/:id which
- * requires users.view — unavailable to most approval-tier roles).
+ * requires users.view - unavailable to most approval-tier roles).
  */
 export function resolveDefaultCommentAssigneeLabel(
   assigneeId: string | undefined,

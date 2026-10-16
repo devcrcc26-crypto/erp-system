@@ -319,7 +319,7 @@ export default function EmployeeOvertimeProfileSection({
         responsive: ['md'],
         render: (value: string | null | undefined) => (
           <span className="erp-users-cell-sub">
-            {value ? formatProjectDate(value) : '—'}
+            {value ? formatProjectDate(value) : '-'}
           </span>
         ),
       },

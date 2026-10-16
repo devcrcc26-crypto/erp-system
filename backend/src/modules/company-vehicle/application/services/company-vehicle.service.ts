@@ -42,7 +42,7 @@ const ASSIGNED_DRIVER_SELECT = {
 } as const;
 
 /**
- * Company vehicle fleet management — CRUD + availability checking.
+ * Company vehicle fleet management - CRUD + availability checking.
  */
 @Injectable()
 export class CompanyVehicleService {
@@ -448,7 +448,7 @@ export class CompanyVehicleService {
 
   /**
    * Presigned download URL for a vehicle photo (HR/vehicles viewers).
-   * Bypasses documents.view — photos live in a COMPANY folder.
+   * Bypasses documents.view - photos live in a COMPANY folder.
    */
   async getVehiclePhotoDownloadUrl(
     vehicleId: string,

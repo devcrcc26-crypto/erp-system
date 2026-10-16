@@ -27,7 +27,7 @@ const REASON_LABELS: Record<FieldMovementReason, string> = {
 
 /**
  * Field movement body for the Approvals detail inbox (read-only).
- * Header is rendered by ApprovalDetailPageContent — do not duplicate it here.
+ * Header is rendered by ApprovalDetailPageContent - do not duplicate it here.
  */
 export default function FieldMovementDetail({
   sourceId,
@@ -68,7 +68,7 @@ export default function FieldMovementDetail({
   );
   const employeeName = log.employee
     ? formatUserName(log.employee)
-    : '—';
+    : '-';
   const employeeCode = log.employee?.employeeId
     ? ` (${log.employee.employeeId})`
     : '';
@@ -133,7 +133,7 @@ export default function FieldMovementDetail({
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="text-sm font-semibold text-[#1A1A1A]">
                     {REASON_LABELS[reason] ?? reason}
-                    {destination ? ` — ${destination}` : ''}
+                    {destination ? ` - ${destination}` : ''}
                   </span>
                   <Tag>{entries.length} day(s)</Tag>
                 </div>
@@ -177,7 +177,7 @@ export default function FieldMovementDetail({
 
       <SectionCard title={t('hr.table.notes') || 'Overall notes'}>
         <p className="m-0 text-sm text-[#6B7280]">
-          {log.notes?.trim() || '—'}
+          {log.notes?.trim() || '-'}
         </p>
       </SectionCard>
     </div>

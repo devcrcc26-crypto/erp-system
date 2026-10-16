@@ -90,7 +90,7 @@ function BalanceTile({
           className="m-0 mt-2 text-sm"
           style={{ color: tokens.colorTextSecondary }}
         >
-          —
+          -
         </p>
       </div>
     );
@@ -477,14 +477,14 @@ export default function LeaveHistoryPageContent({
             value:
               annual != null
                 ? `${annual.remaining} / ${annual.entitled + annual.broughtForward}`
-                : '—',
+                : '-',
           },
           {
             label: t('hr.leaveType.SICK'),
             value:
               sick != null
                 ? `${sick.remaining} / ${sick.entitled + sick.broughtForward}`
-                : '—',
+                : '-',
           },
         ]}
       />

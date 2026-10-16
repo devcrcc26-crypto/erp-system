@@ -230,7 +230,7 @@ export class OnBehalfService {
 
   /**
    * Throws when the employee is an approver-only account (no HR processes of
-   * their own) — used for self-submissions, which skip the on-behalf checks.
+   * their own) - used for self-submissions, which skip the on-behalf checks.
    */
   async assertTakesPartInHrProcesses(
     employeeId: string,
@@ -251,7 +251,7 @@ export class OnBehalfService {
   /**
    * Subject of an HR-process request (leave, overtime, field movement, site
    * assignment, WFH): the on-behalf target or the actor, and never an
-   * approver-only account — including approver-only users filing for themselves.
+   * approver-only account - including approver-only users filing for themselves.
    */
   async resolveHrProcessSubjectId(
     actorUserId: string,
@@ -345,7 +345,7 @@ export class OnBehalfService {
   /**
    * After an on-behalf submission is linked to its approval request, approves the
    * creator's own tier when requested. Other tiers are untouched. Failures are logged,
-   * never thrown — the request simply stays pending on the creator's tier.
+   * never thrown - the request simply stays pending on the creator's tier.
    */
   async applyAutoApprove(input: {
     moduleCode: HrOnBehalfModuleCode;

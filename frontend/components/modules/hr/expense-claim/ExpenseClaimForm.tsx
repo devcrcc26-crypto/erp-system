@@ -109,7 +109,7 @@ function ReviewItem({
 }
 
 /**
- * Expense claim create form — same StepperForm chrome as Add Employee.
+ * Expense claim create form - same StepperForm chrome as Add Employee.
  */
 export default function ExpenseClaimForm({
   onSuccess,
@@ -385,7 +385,7 @@ export default function ExpenseClaimForm({
             </span>
           </Tooltip>
         ) : (
-          '—'
+          '-'
         ),
     },
     {
@@ -665,7 +665,7 @@ export default function ExpenseClaimForm({
               <div className="erp-form-grid-2">
                 <ReviewItem
                   label={t('hr.form.title')}
-                  value={detailsSnapshot.title?.trim() || '—'}
+                  value={detailsSnapshot.title?.trim() || '-'}
                 />
                 <ReviewItem
                   label={t('hr.section.items')}
@@ -677,7 +677,7 @@ export default function ExpenseClaimForm({
                 />
                 <ReviewItem
                   label={t('hr.form.description')}
-                  value={detailsSnapshot.description?.trim() || '—'}
+                  value={detailsSnapshot.description?.trim() || '-'}
                 />
               </div>
             </FormLayout>

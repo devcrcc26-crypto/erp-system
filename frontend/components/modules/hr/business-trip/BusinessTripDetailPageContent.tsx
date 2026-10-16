@@ -97,7 +97,7 @@ function passengerTicketState(
 }
 
 /**
- * Business trip detail — Users / employee profile chrome.
+ * Business trip detail - Users / employee profile chrome.
  */
 export default function BusinessTripDetailPageContent({
   tripId,
@@ -177,7 +177,7 @@ export default function BusinessTripDetailPageContent({
         ? formatUserName(currentUser.data)
         : authUser
           ? formatUserName(authUser)
-          : '—';
+          : '-';
       exportBusinessTripPdf({
         trip,
         companyName: authUser?.companyName ?? 'Company',

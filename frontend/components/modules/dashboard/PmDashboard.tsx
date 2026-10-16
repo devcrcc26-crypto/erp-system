@@ -225,7 +225,7 @@ function PunchListByStatus({
 }
 
 /**
- * Company-wide PM dashboard — KPI row, status charts, attention needed, recent activity.
+ * Company-wide PM dashboard - KPI row, status charts, attention needed, recent activity.
  */
 export default function PmDashboard({
   enabled = true,

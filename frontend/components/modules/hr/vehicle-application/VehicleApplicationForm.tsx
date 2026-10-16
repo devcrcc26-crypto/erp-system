@@ -74,7 +74,7 @@ function resolveVehicleDriverId(
 }
 
 /**
- * Stepped vehicle application create form — same chrome as Add Employee.
+ * Stepped vehicle application create form - same chrome as Add Employee.
  */
 export default function VehicleApplicationForm({
   onSuccess,
@@ -388,7 +388,7 @@ export default function VehicleApplicationForm({
             title={t('hr.form.selectVehicle')}
             description={
               selectedVehicle
-                ? `${selectedVehicle.plateNumber} — ${selectedVehicle.make} ${selectedVehicle.model}`
+                ? `${selectedVehicle.plateNumber} - ${selectedVehicle.make} ${selectedVehicle.model}`
                 : t('pages.hr.vehicleApplication.vehicleStepDescription')
             }
           >
@@ -629,13 +629,13 @@ export default function VehicleApplicationForm({
                 value={
                   departureAt
                     ? formatProjectDate(departureAt.toISOString())
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
                 label={t('hr.labels.return')}
                 value={
-                  returnAt ? formatProjectDate(returnAt.toISOString()) : '—'
+                  returnAt ? formatProjectDate(returnAt.toISOString()) : '-'
                 }
               />
               <ReviewItem
@@ -643,7 +643,7 @@ export default function VehicleApplicationForm({
                 value={
                   selectedVehicle
                     ? `${selectedVehicle.plateNumber} (${selectedVehicle.make} ${selectedVehicle.model})`
-                    : '—'
+                    : '-'
                 }
               />
               <ReviewItem
@@ -656,7 +656,7 @@ export default function VehicleApplicationForm({
               />
               <ReviewItem
                 label={t('hr.labels.destination')}
-                value={formValues?.destination?.trim() || '—'}
+                value={formValues?.destination?.trim() || '-'}
               />
               <ReviewItem
                 label={t('hr.labels.passengers')}
@@ -664,7 +664,7 @@ export default function VehicleApplicationForm({
               />
               <ReviewItem
                 label={t('hr.labels.purpose')}
-                value={formValues?.purpose?.trim() || '—'}
+                value={formValues?.purpose?.trim() || '-'}
               />
               {formValues?.passengerNames?.trim() ? (
                 <ReviewItem
