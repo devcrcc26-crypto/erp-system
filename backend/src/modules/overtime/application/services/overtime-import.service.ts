@@ -12,6 +12,11 @@ import {
   OvertimeImportPreviewResponseDto,
   OvertimeImportRowPreviewDto,
 } from '../dtos/overtime-import.dtos';
+import {
+  entryToSameDayOccupiedWindow,
+  parseHhMmToMinutesStrict,
+  timeIntervalsOverlap,
+} from '../utils/overtime-selectable-windows.util';
 import { OvertimeService } from './overtime.service';
 
 type AuditContext = { companyId: string; userId: string };
@@ -666,28 +671,60 @@ export class OvertimeImportService {
     }
 
     if (options.mode === 'sheet') {
-      const overlap = await this.prisma.overtimeEntry.findFirst({
-        where: {
-          sheetId: options.sheetId,
-          date: new Date(
-            Date.UTC(dateYear, dateMonth - 1, Number(dateParts[3])),
-          ),
-          startTime: this.timeToDate(startTimeResult.value),
-          endTime: this.timeToDate(endTimeResult.value),
-        },
-        select: { id: true },
+      const entryDate = new Date(
+        Date.UTC(dateYear, dateMonth - 1, Number(dateParts[3])),
+      );
+      const candidate = entryToSameDayOccupiedWindow({
+        startHhMm: startTimeResult.value,
+        endHhMm: endTimeResult.value,
       });
-      if (overlap) {
-        return {
-          ...base,
-          status: 'duplicate',
-          message: 'An entry with this date and time already exists on the sheet',
-          date: dateResult.value,
-          startTime: startTimeResult.value,
-          endTime: endTimeResult.value,
-          isHoliday,
-          taskDescription: row.taskDescription.trim(),
-        };
+      if (candidate) {
+        const existing = await this.prisma.overtimeEntry.findMany({
+          where: {
+            sheetId: options.sheetId,
+            date: entryDate,
+          },
+          select: {
+            startTime: true,
+            endTime: true,
+            endsAtEndOfDay: true,
+            isOvernight: true,
+          },
+        });
+        const newStart = parseHhMmToMinutesStrict(candidate.start);
+        const newEnd = parseHhMmToMinutesStrict(candidate.end);
+        const overlaps = existing.some((entry) => {
+          const occupied = entryToSameDayOccupiedWindow({
+            startHhMm: this.formatStoredTime(entry.startTime),
+            endHhMm: entry.endsAtEndOfDay
+              ? '24:00'
+              : this.formatStoredTime(entry.endTime),
+            endsAtEndOfDay: entry.endsAtEndOfDay,
+            isOvernight: entry.isOvernight,
+          });
+          if (!occupied) {
+            return false;
+          }
+          return timeIntervalsOverlap(
+            newStart,
+            newEnd,
+            parseHhMmToMinutesStrict(occupied.start),
+            parseHhMmToMinutesStrict(occupied.end),
+          );
+        });
+        if (overlaps) {
+          return {
+            ...base,
+            status: 'duplicate',
+            message:
+              'An overlapping overtime entry already exists on this sheet for that date and time',
+            date: dateResult.value,
+            startTime: startTimeResult.value,
+            endTime: endTimeResult.value,
+            isHoliday,
+            taskDescription: row.taskDescription.trim(),
+          };
+        }
       }
     }
 
@@ -900,6 +937,12 @@ export class OvertimeImportService {
   private timeToDate(value: string): Date {
     const [hours, minutes] = value.split(':').map(Number);
     return new Date(Date.UTC(1970, 0, 1, hours, minutes, 0));
+  }
+
+  private formatStoredTime(value: Date): string {
+    const hours = value.getUTCHours().toString().padStart(2, '0');
+    const minutes = value.getUTCMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
   private parseImportDate(

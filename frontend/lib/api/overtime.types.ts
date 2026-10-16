@@ -141,6 +141,10 @@ export interface PreviewOvertimeEntryResult {
 export interface SelectableOvertimeWindowsParams {
   employeeId: string;
   date: string;
+  /** When set, existing sheet entries for the date are excluded from pickers. */
+  sheetId?: string;
+  /** Entry being edited — its own times stay selectable. */
+  excludeEntryId?: string;
 }
 
 export interface SelectableOvertimeWindowsResult {

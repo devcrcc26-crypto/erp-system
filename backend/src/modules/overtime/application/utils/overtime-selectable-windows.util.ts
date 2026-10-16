@@ -97,6 +97,80 @@ function subtractWindows(
 }
 
 /**
+ * True when half-open intervals [aStart, aEnd) and [bStart, bEnd) overlap.
+ */
+export function timeIntervalsOverlap(
+  aStart: number,
+  aEnd: number,
+  bStart: number,
+  bEnd: number,
+): boolean {
+  return aStart < bEnd && aEnd > bStart;
+}
+
+/**
+ * Removes already-booked intervals from selectable HH:mm windows
+ * (e.g. existing overtime entries on the same sheet/date).
+ */
+export function subtractOccupiedFromWindows(
+  windows: TimeWindowHhMm[],
+  occupied: TimeWindowHhMm[],
+): TimeWindowHhMm[] {
+  if (windows.length === 0 || occupied.length === 0) {
+    return windows;
+  }
+  const remaining = subtractWindows(
+    windows.map((w) => ({
+      start: parseHhMmToMinutesStrict(w.start),
+      end: parseHhMmToMinutesStrict(w.end),
+    })),
+    occupied.map((w) => ({
+      start: parseHhMmToMinutesStrict(w.start),
+      end: parseHhMmToMinutesStrict(w.end),
+    })),
+  );
+  return remaining.map((w) => ({
+    start: minutesToHhMm(w.start),
+    end: minutesToHhMm(w.end),
+  }));
+}
+
+/**
+ * Maps a stored same-day (or overnight) entry onto an occupied window clipped
+ * to that calendar day [00:00, 24:00).
+ */
+export function entryToSameDayOccupiedWindow(entry: {
+  startHhMm: string;
+  endHhMm: string;
+  endsAtEndOfDay?: boolean;
+  isOvernight?: boolean;
+}): TimeWindowHhMm | null {
+  const start = parseHhMmToMinutesStrict(entry.startHhMm);
+  let end: number;
+  if (
+    entry.endsAtEndOfDay ||
+    (!entry.isOvernight &&
+      (entry.endHhMm === END_OF_DAY_HHMM ||
+        entry.endHhMm === '24:00' ||
+        parseHhMmToMinutesStrict(entry.endHhMm) === 0))
+  ) {
+    end = END_OF_DAY_MINUTES;
+  } else if (entry.isOvernight) {
+    // Overnight entries occupy the remainder of the start day for same-day pickers.
+    end = END_OF_DAY_MINUTES;
+  } else {
+    end = parseHhMmToMinutesStrict(entry.endHhMm);
+  }
+  if (end <= start) {
+    return null;
+  }
+  return {
+    start: minutesToHhMm(start),
+    end: minutesToHhMm(end),
+  };
+}
+
+/**
  * Computes selectable OT windows for an employee on a date.
  */
 export function computeSelectableOvertimeWindows(

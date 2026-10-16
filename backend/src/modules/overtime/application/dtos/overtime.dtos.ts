@@ -153,6 +153,22 @@ export class SelectableOvertimeWindowsQueryDto {
   @ApiProperty({ example: '2026-10-08' })
   @IsDateString()
   date!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When set, existing entries on this sheet for the date are removed from selectable windows',
+  })
+  @IsOptional()
+  @IsUUID()
+  sheetId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Entry being edited — its own interval stays selectable',
+  })
+  @IsOptional()
+  @IsUUID()
+  excludeEntryId?: string;
 }
 
 /**

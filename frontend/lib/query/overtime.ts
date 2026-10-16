@@ -368,6 +368,12 @@ export function useSelectableOvertimeWindows() {
         employeeId: params.employeeId,
         date: params.date,
       });
+      if (params.sheetId) {
+        search.set('sheetId', params.sheetId);
+      }
+      if (params.excludeEntryId) {
+        search.set('excludeEntryId', params.excludeEntryId);
+      }
       return apiGet<SelectableOvertimeWindowsResult>(
         `${OVERTIME_PATH}/selectable-windows?${search.toString()}`,
       );
