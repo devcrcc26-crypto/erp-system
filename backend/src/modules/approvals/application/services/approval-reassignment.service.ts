@@ -82,10 +82,22 @@ export class ApprovalReassignmentService {
     }
     const newApprover = await this.prisma.user.findFirst({
       where: activeOnly({ id: newApproverId, companyId: ctx.companyId }),
-      select: { id: true, isActive: true, employmentStatus: true, firstName: true, lastName: true },
+      select: {
+        id: true,
+        isActive: true,
+        employmentStatus: true,
+        firstName: true,
+        lastName: true,
+        excludedFromHrProcesses: true,
+      },
     });
     if (!newApprover || isVacantApprover(newApprover)) {
       throw new BadRequestException('The new approver must be an active employee');
+    }
+    if (!newApprover.excludedFromHrProcesses) {
+      throw new BadRequestException(
+        'The new approver must be an approver-only employee',
+      );
     }
 
     await this.prisma.approvalTier.update({

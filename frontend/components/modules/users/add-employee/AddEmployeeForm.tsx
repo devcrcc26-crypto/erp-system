@@ -729,6 +729,8 @@ export default function AddEmployeeForm({
                   <UserSelect
                     placeholder={t('users.form.reportsToPlaceholder')}
                     excludeUserIds={userId ? [userId] : []}
+                    activeEmploymentOnly
+                    approverOnly
                   />
                 </Form.Item>
               </div>
