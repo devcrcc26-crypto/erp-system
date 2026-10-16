@@ -42,8 +42,12 @@ import {
 } from '../utils/overtime-entry-guards.util';
 import {
   computeSelectableOvertimeWindows,
+  entryToSameDayOccupiedWindow,
   isIntervalInsideSelectableWindows,
+  minutesToHhMm,
+  subtractOccupiedFromWindows,
   type SelectableWindowsResult,
+  type TimeWindowHhMm,
 } from '../utils/overtime-selectable-windows.util';
 
 export interface ClassifiedOvertimeEntry extends OvertimeHoursBuckets {
@@ -288,7 +292,7 @@ export class OvertimeEntryService {
       lunchCountsAsOvertime,
     );
 
-    return computeSelectableOvertimeWindows({
+    const base = computeSelectableOvertimeWindows({
       isHoliday: calendar.isHoliday,
       isWorkingDay: context.isWorkingDay,
       isHalfDay: context.isHalfDay,
@@ -300,6 +304,82 @@ export class OvertimeEntryService {
       hasFullDayLeave: leaveResolved.hasFullDayLeave,
       lunchCountsAsOvertime,
     });
+
+    if (!dto.sheetId || base.windows.length === 0) {
+      return base;
+    }
+
+    const occupied = await this.loadOccupiedWindowsForSheetDate(
+      dto.sheetId,
+      companyId,
+      onDate,
+      dto.excludeEntryId,
+    );
+    if (occupied.length === 0) {
+      return base;
+    }
+
+    const windows = subtractOccupiedFromWindows(base.windows, occupied);
+    return {
+      ...base,
+      windows,
+      message:
+        windows.length === 0 && !base.blockedReason
+          ? 'All selectable times on this day are already used by other entries.'
+          : base.message,
+    };
+  }
+
+  /**
+   * Existing overtime intervals on a sheet/date, for carving out of pickers.
+   */
+  private async loadOccupiedWindowsForSheetDate(
+    sheetId: string,
+    companyId: string,
+    onDate: Date,
+    excludeEntryId: string | undefined,
+  ): Promise<TimeWindowHhMm[]> {
+    const sheet = await this.prisma.overtimeSheet.findFirst({
+      where: activeOnly({ id: sheetId, companyId }),
+      select: { id: true },
+    });
+    if (!sheet) {
+      return [];
+    }
+
+    const entries = await this.prisma.overtimeEntry.findMany({
+      where: {
+        sheetId,
+        date: onDate,
+        ...(excludeEntryId ? { id: { not: excludeEntryId } } : {}),
+      },
+      select: {
+        startTime: true,
+        endTime: true,
+        endsAtEndOfDay: true,
+        isOvernight: true,
+      },
+    });
+
+    const occupied: TimeWindowHhMm[] = [];
+    for (const entry of entries) {
+      const window = entryToSameDayOccupiedWindow({
+        startHhMm: this.formatTimeOfDay(entry.startTime),
+        endHhMm: entry.endsAtEndOfDay
+          ? '24:00'
+          : this.formatTimeOfDay(entry.endTime),
+        endsAtEndOfDay: entry.endsAtEndOfDay,
+        isOvernight: entry.isOvernight,
+      });
+      if (window) {
+        occupied.push(window);
+      }
+    }
+    return occupied;
+  }
+
+  private formatTimeOfDay(value: Date): string {
+    return minutesToHhMm(value.getUTCHours() * 60 + value.getUTCMinutes());
   }
 
   /**

@@ -110,6 +110,8 @@ export default function OvertimeEntryFormDrawer({
         .mutateAsync({
           employeeId,
           date: watchedDate.format('YYYY-MM-DD'),
+          sheetId,
+          excludeEntryId: editingEntry?.id,
         })
         .then((result) => {
           setWindows(result);
@@ -147,7 +149,7 @@ export default function OvertimeEntryFormDrawer({
       window.clearTimeout(handle);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, employeeId, watchedDate]);
+  }, [open, employeeId, watchedDate, sheetId, editingEntry?.id]);
 
   useEffect(() => {
     if (!open || !employeeId || !watchedDate || !watchedStart || !watchedEnd) {

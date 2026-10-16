@@ -252,7 +252,9 @@ export default function OvertimeEntryForm({
                 type="warning"
                 showIcon
                 className="md:col-span-2"
-                title={t('hr.labels.noSelectableWindows')}
+                title={
+                  windows.message ?? t('hr.labels.noSelectableWindows')
+                }
               />
             ) : null}
 

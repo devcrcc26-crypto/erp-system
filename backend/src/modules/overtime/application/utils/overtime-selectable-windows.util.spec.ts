@@ -1,8 +1,11 @@
 import { describe, expect, it } from '@jest/globals';
 import {
   computeSelectableOvertimeWindows,
+  entryToSameDayOccupiedWindow,
   enumerateWindowTimes,
   isIntervalInsideSelectableWindows,
+  subtractOccupiedFromWindows,
+  timeIntervalsOverlap,
 } from './overtime-selectable-windows.util';
 import { POLICY_DEFAULTS } from '../../../../shared/policy/policy-definitions';
 
@@ -156,5 +159,50 @@ describe('enumerateWindowTimes', () => {
       afterMinutes: 23 * 60,
     });
     expect(ends).toContain('24:00');
+  });
+});
+
+describe('subtractOccupiedFromWindows', () => {
+  it('removes an existing evening entry from selectable evening window', () => {
+    const base = computeSelectableOvertimeWindows(FULL);
+    const remaining = subtractOccupiedFromWindows(base.windows, [
+      { start: '18:00', end: '20:00' },
+    ]);
+    expect(remaining).toEqual([
+      { start: '00:00', end: '08:30' },
+      { start: '17:30', end: '18:00' },
+      { start: '20:00', end: '24:00' },
+    ]);
+    expect(isIntervalInsideSelectableWindows('18:00', '19:00', remaining)).toBe(
+      false,
+    );
+    expect(isIntervalInsideSelectableWindows('20:00', '21:00', remaining)).toBe(
+      true,
+    );
+  });
+
+  it('drops fragments shorter than 15 minutes', () => {
+    const remaining = subtractOccupiedFromWindows(
+      [{ start: '17:30', end: '24:00' }],
+      [{ start: '17:30', end: '23:50' }],
+    );
+    expect(remaining).toEqual([]);
+  });
+});
+
+describe('entryToSameDayOccupiedWindow / timeIntervalsOverlap', () => {
+  it('maps ends-at-end-of-day to 24:00', () => {
+    expect(
+      entryToSameDayOccupiedWindow({
+        startHhMm: '22:00',
+        endHhMm: '00:00',
+        endsAtEndOfDay: true,
+      }),
+    ).toEqual({ start: '22:00', end: '24:00' });
+  });
+
+  it('detects partial overlap between intervals', () => {
+    expect(timeIntervalsOverlap(18 * 60, 20 * 60, 19 * 60, 21 * 60)).toBe(true);
+    expect(timeIntervalsOverlap(18 * 60, 20 * 60, 20 * 60, 21 * 60)).toBe(false);
   });
 });
