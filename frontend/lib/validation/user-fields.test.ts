@@ -12,7 +12,7 @@ import {
   disableExperienceDates,
   disableFutureDates,
   employeeIdRules,
-  experienceStartDateRules,
+  employmentDateRules,
   nameFieldRules,
   nationalIdRules,
   optionalEmailRule,
@@ -140,8 +140,8 @@ describe('user field rules', () => {
     expect(await check(rules, undefined)).toBeNull();
   });
 
-  it('keeps the experience start date after the birth date and out of the future', async () => {
-    const rules = experienceStartDateRules(t);
+  it('keeps the employment date after the birth date and out of the future', async () => {
+    const rules = employmentDateRules(t);
     const dateOfBirth = dayjs().subtract(30, 'year');
     expect(await check(rules, dayjs().add(1, 'day'), { dateOfBirth })).toBe(
       'validation.dateNotFuture',

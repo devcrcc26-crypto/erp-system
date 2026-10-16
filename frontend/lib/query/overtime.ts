@@ -260,6 +260,29 @@ export function useUploadOvertimeEntryAttachments(sheetId: string) {
 }
 
 /**
+ * Removes one attachment from an overtime entry.
+ */
+export function useRemoveOvertimeEntryAttachment(sheetId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      entryId,
+      documentId,
+    }: {
+      entryId: string;
+      documentId: string;
+    }) =>
+      apiDelete<OvertimeSheetDetail>(
+        `${OVERTIME_PATH}/${sheetId}/entries/${entryId}/attachments/${documentId}`,
+      ),
+    onSuccess: (updated) => {
+      invalidateSheetLists(queryClient);
+      void queryClient.setQueryData(overtimeKeys.detail(sheetId), updated);
+    },
+  });
+}
+
+/**
  * Submits a sheet for approval.
  */
 export function useSubmitOvertimeSheet(sheetId: string) {

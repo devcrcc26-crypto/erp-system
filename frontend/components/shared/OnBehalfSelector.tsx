@@ -46,7 +46,7 @@ function initials(employee: OnBehalfEligibleEmployee): string {
 export function useOnBehalf(moduleCode: OnBehalfModuleCode) {
   const currentUser = useCurrentUser();
   const [employeeId, setEmployeeId] = useState<string | undefined>();
-  const [autoApproveTier, setAutoApproveTier] = useState(true);
+  const [autoApproveTier, setAutoApproveTier] = useState(false);
   const eligibleQuery = useOnBehalfEligibleEmployees(
     currentUser.data?.id,
     currentUser.data?.companyId,
@@ -75,7 +75,7 @@ export function useOnBehalf(moduleCode: OnBehalfModuleCode) {
     payload,
     reset: (): void => {
       setEmployeeId(undefined);
-      setAutoApproveTier(true);
+      setAutoApproveTier(false);
     },
   };
 }
@@ -211,7 +211,7 @@ export default function OnBehalfSelector({
                 }}
                 onChange={(id: string | undefined) => {
                   onChange(id);
-                  onAutoApproveTierChange(true);
+                  onAutoApproveTierChange(false);
                 }}
               />
             </div>

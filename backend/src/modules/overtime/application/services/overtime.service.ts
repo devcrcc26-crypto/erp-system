@@ -102,6 +102,7 @@ const SHEET_DETAIL_INCLUDE = {
     orderBy: [{ date: 'asc' as const }, { startTime: 'asc' as const }],
     include: {
       documents: {
+        where: { document: { deletedAt: null } },
         include: { document: { select: DOCUMENT_SELECT } },
         orderBy: { createdAt: 'asc' as const },
       },
@@ -689,6 +690,44 @@ export class OvertimeService
         });
       });
     }
+
+    return this.getSheet(sheetId, companyId, userId);
+  }
+
+  /**
+   * Removes one attachment from an overtime entry (soft-deletes the document).
+   */
+  async removeEntryAttachment(
+    sheetId: string,
+    entryId: string,
+    documentId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<unknown> {
+    await this.requireEditableSheet(sheetId, companyId, userId);
+    const link = await this.prisma.overtimeEntryDocument.findFirst({
+      where: {
+        entryId,
+        documentId,
+        entry: { sheetId },
+        document: activeOnly({ companyId }),
+      },
+      select: { id: true, documentId: true },
+    });
+    if (!link) {
+      throw new NotFoundException('Attachment not found');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.overtimeEntryDocument.delete({ where: { id: link.id } });
+      await tx.document.update({
+        where: { id: link.documentId },
+        data: {
+          deletedAt: new Date(),
+          deletedBy: userId,
+        },
+      });
+    });
 
     return this.getSheet(sheetId, companyId, userId);
   }
