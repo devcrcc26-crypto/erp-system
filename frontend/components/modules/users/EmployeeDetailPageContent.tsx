@@ -1,15 +1,26 @@
 'use client';
 
-import { useState } from 'react';
-import { Alert, Button, Grid, Skeleton, Space, Tag } from 'antd';
+import '@/components/modules/profile/profile-v2.css';
+import './employee-detail-v2.css';
+
+import { useRef, useState } from 'react';
+import { Alert, Button, Dropdown, Grid, Skeleton } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   BarChartOutlined,
   CalendarOutlined,
   DollarOutlined,
   EditOutlined,
+  MailOutlined,
+  MoreOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  RedoOutlined,
+  ScheduleOutlined,
   StarOutlined,
   UserDeleteOutlined,
   UserOutlined,
+  UserSwitchOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
 import { ArrowLeft } from 'lucide-react';
@@ -48,7 +59,7 @@ import {
   useIsSystemAdmin,
 } from '@/hooks/use-auth-capabilities';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
-import { getRoleColor, formatRoleDisplayName } from '@/lib/utils/role-colors';
+import { formatRoleDisplayName } from '@/lib/utils/role-colors';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { EmergencyContact, UserDetail } from '@/lib/api/types';
 import {
@@ -68,7 +79,6 @@ import {
   userStatusVariant,
 } from '@/lib/utils/user-status';
 
-import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
 const USER_STATUS_DOT: Record<'success' | 'warning' | 'default', string> = {
   success: '#16a34a',
   warning: '#d97706',
@@ -100,35 +110,58 @@ function formatAddress(user: UserDetail): string {
   return parts.length > 0 ? parts.join(', ') : '-';
 }
 
-type ProfileTab =
-  | 'overview'
-  | 'leave'
-  | 'attendance'
-  | 'workSchedule'
-  | 'perDiem'
-  | 'payroll'
-  | 'evaluations';
+const PROFILE_TABS = [
+  'overview',
+  'leave',
+  'attendance',
+  'workSchedule',
+  'perDiem',
+  'payroll',
+  'evaluations',
+] as const;
+
+type ProfileTab = (typeof PROFILE_TABS)[number];
+
+const TAB_ICONS: Record<ProfileTab, React.ReactNode> = {
+  overview: <UserOutlined />,
+  leave: <CalendarOutlined />,
+  attendance: <BarChartOutlined />,
+  workSchedule: <ScheduleOutlined />,
+  perDiem: <WalletOutlined />,
+  payroll: <DollarOutlined />,
+  evaluations: <StarOutlined />,
+};
 
 function resolveProfileTab(value: string | null): ProfileTab {
-  if (value === 'leave') {
-    return 'leave';
-  }
-  if (value === 'attendance') {
-    return 'attendance';
-  }
-  if (value === 'workSchedule') {
-    return 'workSchedule';
-  }
-  if (value === 'perDiem') {
-    return 'perDiem';
-  }
-  if (value === 'evaluations') {
-    return 'evaluations';
-  }
-  if (value === 'payroll') {
-    return 'payroll';
-  }
-  return 'overview';
+  return PROFILE_TABS.find((tab) => tab === value) ?? 'overview';
+}
+
+/** Fact tile in the identity card; empty values read as a muted dash. */
+function MetaStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}): React.ReactNode {
+  const empty = value == null || value === '' || value === '-';
+  return (
+    <div className="erp-users-stat">
+      <div className="min-w-0">
+        <p className="erp-users-stat-label">{label}</p>
+        <p
+          className={
+            empty
+              ? 'erp-employee-meta-value erp-profile-meta-empty'
+              : 'erp-employee-meta-value'
+          }
+          title={empty ? undefined : (value ?? undefined)}
+        >
+          {empty ? '—' : value}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function DetailSection({
@@ -168,7 +201,7 @@ function UserStatusIndicator({
   const label = userStatusLabel(user, t);
 
   return (
-    <span className="erp-users-status">
+    <span className="erp-users-status" data-variant={variant}>
       <span
         aria-hidden
         className="erp-users-status-dot"
@@ -180,7 +213,10 @@ function UserStatusIndicator({
 }
 
 /**
- * Employee detail - visual language aligned with the Users list page.
+ * Employee detail (HR view). Same v2 layout as My Profile — identity card
+ * with fact tiles, then a pill-tab workspace — via the shared
+ * `erp-profile-page erp-profile-v2` styles; HR-only chrome (top bar, actions)
+ * lives in `employee-detail-v2.css`.
  */
 export default function EmployeeDetailPageContent({
   userId,
@@ -212,10 +248,27 @@ export default function EmployeeDetailPageContent({
     'inactive' | 'reactivate' | 'rehire' | null
   >(null);
 
-  const activeTab = resolveProfileTab(searchParams.get('tab'));
+  const tabRefs = useRef<Partial<Record<ProfileTab, HTMLButtonElement | null>>>({});
+
   const isOwnProfile = currentUserQuery.data?.id === userId;
   const showPerDiemTab = isOwnProfile || canManagePerDiemRates;
   const showPayrollTab = isOwnProfile || canCreatePayroll;
+  const visibleTabs = PROFILE_TABS.filter(
+    (tab) =>
+      (tab !== 'perDiem' || showPerDiemTab) && (tab !== 'payroll' || showPayrollTab),
+  );
+  const requestedTab = resolveProfileTab(searchParams.get('tab'));
+  const activeTab = visibleTabs.includes(requestedTab) ? requestedTab : 'overview';
+
+  const tabLabels: Record<ProfileTab, string> = {
+    overview: t('users.tabOverview'),
+    leave: t('users.tabLeave'),
+    attendance: t('users.tabAttendance'),
+    workSchedule: t('users.tabWorkSchedule'),
+    perDiem: isNarrow ? t('users.tabPerDiemShort') : t('users.tabPerDiem'),
+    payroll: t('users.tabPayroll'),
+    evaluations: t('users.tabEvaluations'),
+  };
 
   function setActiveTab(tab: ProfileTab): void {
     const params = new URLSearchParams(searchParams.toString());
@@ -226,6 +279,28 @@ export default function EmployeeDetailPageContent({
     }
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
+
+  /** WAI-ARIA tabs: arrows / Home / End move focus and select. */
+  function handleTabKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
+    const index = visibleTabs.indexOf(activeTab);
+    let next: number | null = null;
+    if (event.key === 'ArrowRight') {
+      next = (index + 1) % visibleTabs.length;
+    } else if (event.key === 'ArrowLeft') {
+      next = (index - 1 + visibleTabs.length) % visibleTabs.length;
+    } else if (event.key === 'Home') {
+      next = 0;
+    } else if (event.key === 'End') {
+      next = visibleTabs.length - 1;
+    }
+    if (next === null) {
+      return;
+    }
+    event.preventDefault();
+    const tab = visibleTabs[next];
+    setActiveTab(tab);
+    tabRefs.current[tab]?.focus();
   }
 
   const user = detailQuery.data;
@@ -281,7 +356,7 @@ export default function EmployeeDetailPageContent({
 
   if (detailQuery.isLoading) {
     return (
-      <div className="erp-pro-list-page erp-users-page">
+      <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2">
         <div className="erp-pro-card p-6">
           <Skeleton active avatar paragraph={{ rows: 8 }} />
         </div>
@@ -328,79 +403,115 @@ export default function EmployeeDetailPageContent({
     user.userRoles.find((assignment) => assignment.isPrimary)?.role.name ??
     user.userRoles[0]?.role.name;
 
+  // Rare or destructive actions live in the overflow menu, so the top bar
+  // only ever shows Edit plus one menu button.
+  const lifecycleItems: NonNullable<MenuProps['items']> = [];
+  if (showResend) {
+    lifecycleItems.push({
+      key: 'resend',
+      icon: <MailOutlined />,
+      label: t('users.resendVerification'),
+      disabled: resendInvitation.isPending,
+      onClick: () => void handleResend(),
+    });
+  }
+  if (canManageEmployment && isSeparated) {
+    lifecycleItems.push({
+      key: 'rehire',
+      icon: <RedoOutlined />,
+      label: t('users.employment.rehire'),
+      onClick: () => setEmploymentDialog('rehire'),
+    });
+  }
+  if (canManageEmployment && !isSeparated && employment?.inactive) {
+    lifecycleItems.push({
+      key: 'reactivate',
+      icon: <PlayCircleOutlined />,
+      label: t('users.employment.reactivate'),
+      onClick: () => setEmploymentDialog('reactivate'),
+    });
+  }
+  if (
+    canManageEmployment &&
+    !isSeparated &&
+    !employment?.inactive &&
+    !employment?.separation
+  ) {
+    lifecycleItems.push({
+      key: 'inactive',
+      icon: <PauseCircleOutlined />,
+      label: t('users.employment.setInactive'),
+      onClick: () => setEmploymentDialog('inactive'),
+    });
+  }
+  const dangerItems: NonNullable<MenuProps['items']> = [];
+  if (canManageEmployment && !isSeparated && !employment?.separation) {
+    dangerItems.push({
+      key: 'separate',
+      icon: <UserSwitchOutlined />,
+      label: t('users.separation.action'),
+      danger: true,
+      onClick: () => setSeparationOpen(true),
+    });
+  }
+  if (showDestructiveActions) {
+    dangerItems.push({
+      key: 'delete',
+      icon: <UserDeleteOutlined />,
+      label: t('common.delete'),
+      danger: true,
+      onClick: () => setConfirmDelete(true),
+    });
+  }
+  const overflowItems: MenuProps['items'] = [
+    ...lifecycleItems,
+    ...(lifecycleItems.length > 0 && dangerItems.length > 0
+      ? [{ type: 'divider' as const }]
+      : []),
+    ...dangerItems,
+  ];
+
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page ${DETAIL_PAGE_V2}`}>
-      <div className="erp-pro-card">
-        <div className="erp-pro-card-toolbar erp-employee-toolbar">
-          <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
+    <div className="erp-pro-list-page erp-users-page erp-employee-detail-page erp-profile-page erp-profile-v2 erp-employee-detail-v2">
+      <div className="erp-pro-card erp-profile-identity">
+        <div className="erp-employee-toolbar">
+          <Button
+            type="text"
+            icon={<ArrowLeft size={16} aria-hidden />}
+            onClick={() => router.push('/users')}
+            aria-label={isNarrow ? t('users.backToList') : undefined}
+            className="erp-employee-toolbar-back"
+          >
+            {isNarrow ? undefined : t('users.backToList')}
+          </Button>
+          <div className="erp-employee-toolbar-actions">
             <Button
-              type="text"
-              icon={<ArrowLeft size={16} />}
-              onClick={() => router.push('/users')}
-              aria-label={t('users.backToList')}
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => router.push(`/users/${user.id}/edit`)}
             >
-              {isNarrow ? undefined : t('users.backToList')}
+              {t('common.edit')}
             </Button>
-          </div>
-          <div className="erp-employee-toolbar-actions flex flex-wrap items-center justify-end gap-2">
-            {showResend ? (
-              <Button
-                loading={resendInvitation.isPending}
-                onClick={() => void handleResend()}
-                className="erp-employee-toolbar-resend"
+            {overflowItems.length > 0 ? (
+              <Dropdown
+                menu={{ items: overflowItems }}
+                trigger={['click']}
+                placement="bottomRight"
               >
-                {isCompact
-                  ? t('users.resendVerificationShort')
-                  : t('users.resendVerification')}
-              </Button>
-            ) : null}
-            {canManageEmployment && isSeparated ? (
-              <Button onClick={() => setEmploymentDialog('rehire')}>
-                {t('users.employment.rehire')}
-              </Button>
-            ) : null}
-            {canManageEmployment && !isSeparated && employment?.inactive ? (
-              <Button onClick={() => setEmploymentDialog('reactivate')}>
-                {t('users.employment.reactivate')}
-              </Button>
-            ) : null}
-            {canManageEmployment &&
-            !isSeparated &&
-            !employment?.inactive &&
-            !employment?.separation ? (
-              <Button onClick={() => setEmploymentDialog('inactive')}>
-                {t('users.employment.setInactive')}
-              </Button>
-            ) : null}
-            {canManageEmployment && !isSeparated && !employment?.separation ? (
-              <Button danger onClick={() => setSeparationOpen(true)}>
-                {t('users.separation.action')}
-              </Button>
-            ) : null}
-            <Space.Compact>
-              <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={() => router.push(`/users/${user.id}/edit`)}
-                aria-label={t('common.update')}
-              >
-                {isNarrow ? undefined : t('common.update')}
-              </Button>
-              {showDestructiveActions ? (
                 <Button
-                  danger
-                  icon={<UserDeleteOutlined />}
-                  onClick={() => setConfirmDelete(true)}
-                  aria-label={t('common.delete')}
+                  icon={<MoreOutlined />}
+                  loading={resendInvitation.isPending}
+                  aria-label={t('users.moreActions')}
+                  title={t('users.moreActions')}
                 >
-                  {isNarrow ? undefined : t('common.delete')}
+                  {isCompact ? undefined : t('common.actions')}
                 </Button>
-              ) : null}
-            </Space.Compact>
+              </Dropdown>
+            ) : null}
           </div>
         </div>
 
-        <div className="erp-employee-hero">
+        <div className="erp-employee-hero erp-profile-hero">
           <EmployeeProfilePhoto
             userId={user.id}
             photoDocumentId={user.photoDocumentId}
@@ -411,7 +522,7 @@ export default function EmployeeDetailPageContent({
             variant="hero"
           />
           <div className="erp-employee-hero-copy min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <div className="erp-profile-hero-badges mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               {user.employeeId ? (
                 <span className="erp-users-id-chip">{user.employeeId}</span>
               ) : null}
@@ -421,13 +532,9 @@ export default function EmployeeDetailPageContent({
               ) : null}
               {user.excludedFromHrProcesses ? <ApproverOnlyTag /> : null}
               {primaryRole ? (
-                <Tag
-                  color={getRoleColor(primaryRole)}
-                  className="m-0"
-                  style={{ fontWeight: 600 }}
-                >
+                <span className="erp-users-role-tag">
                   {formatRoleDisplayName(primaryRole)}
-                </Tag>
+                </span>
               ) : null}
             </div>
             <div className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 sm:justify-start">
@@ -455,6 +562,26 @@ export default function EmployeeDetailPageContent({
             canManage={canEditUsers}
           />
         ) : null}
+
+        <div className="erp-users-stat-bar erp-employee-meta-bar erp-profile-meta">
+          <MetaStat label={t('common.department')} value={user.department?.name} />
+          <MetaStat label={t('common.position')} value={user.position?.title} />
+          <MetaStat
+            label={t('users.form.reportsTo')}
+            value={user.reportsTo ? formatUserName(user.reportsTo) : null}
+          />
+          <MetaStat
+            label={t('common.discipline')}
+            value={user.engineeringDiscipline?.name}
+          />
+          <MetaStat label={t('users.form.phone')} value={user.phone} />
+          <MetaStat
+            label={t('users.form.employmentDate')}
+            value={
+              user.employmentDate ? formatProjectDate(user.employmentDate) : null
+            }
+          />
+        </div>
         <EmployeeSeparationDialog
           open={separationOpen}
           userId={user.id}
@@ -484,143 +611,39 @@ export default function EmployeeDetailPageContent({
         />
       </div>
 
-      <div className="erp-users-stat-bar erp-employee-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('common.department')}</p>
-            <p className="erp-employee-meta-value">
-              {displayValue(user.department?.name)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('common.position')}</p>
-            <p className="erp-employee-meta-value">
-              {displayValue(user.position?.title)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('users.form.reportsTo')}</p>
-            <p className="erp-employee-meta-value">
-              {user.reportsTo ? formatUserName(user.reportsTo) : '-'}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('common.discipline')}</p>
-            <p className="erp-employee-meta-value">
-              {displayValue(user.engineeringDiscipline?.name)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('users.form.phone')}</p>
-            <p className="erp-employee-meta-value">
-              {displayValue(user.phone)}
-            </p>
-          </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">
-              {t('users.exportTable.lastLogin')}
-            </p>
-            <p className="erp-employee-meta-value">
-              {user.lastLogin ? formatProjectDate(user.lastLogin) : '-'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="erp-pro-card">
-        <div className="erp-profile-tabbar erp-employee-tabbar" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'overview'}
-            onClick={() => setActiveTab('overview')}
-          >
-            <UserOutlined />
-            <span className="erp-employee-tab-label">
-              {t('users.tabOverview')}
-            </span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'leave'}
-            onClick={() => setActiveTab('leave')}
-          >
-            <CalendarOutlined />
-            <span className="erp-employee-tab-label">{t('users.tabLeave')}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'attendance'}
-            onClick={() => setActiveTab('attendance')}
-          >
-            <BarChartOutlined />
-            <span className="erp-employee-tab-label">
-              {t('users.tabAttendance')}
-            </span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'workSchedule'}
-            onClick={() => setActiveTab('workSchedule')}
-          >
-            <CalendarOutlined />
-            <span className="erp-employee-tab-label">
-              {t('users.tabWorkSchedule')}
-            </span>
-          </button>
-          {showPerDiemTab ? (
+      <div className="erp-pro-card erp-profile-workspace">
+        <div
+          className="erp-profile-tabbar erp-employee-tabbar erp-employee-tabbar--scroll"
+          role="tablist"
+          aria-label={fullName}
+          onKeyDown={handleTabKeyDown}
+        >
+          {visibleTabs.map((tab) => (
             <button
+              key={tab}
+              ref={(element) => {
+                tabRefs.current[tab] = element;
+              }}
+              id={`employee-tab-${tab}`}
               type="button"
               role="tab"
-              aria-selected={activeTab === 'perDiem'}
-              onClick={() => setActiveTab('perDiem')}
+              aria-selected={activeTab === tab}
+              aria-controls={`employee-panel-${tab}`}
+              tabIndex={activeTab === tab ? 0 : -1}
+              onClick={() => setActiveTab(tab)}
             >
-              <WalletOutlined />
-              <span className="erp-employee-tab-label">
-                {isNarrow ? t('users.tabPerDiemShort') : t('users.tabPerDiem')}
-              </span>
+              {TAB_ICONS[tab]}
+              <span className="erp-employee-tab-label">{tabLabels[tab]}</span>
             </button>
-          ) : null}
-          {showPayrollTab ? (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'payroll'}
-              onClick={() => setActiveTab('payroll')}
-            >
-              <DollarOutlined />
-              <span className="erp-employee-tab-label">
-                {t('users.tabPayroll')}
-              </span>
-            </button>
-          ) : null}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'evaluations'}
-            onClick={() => setActiveTab('evaluations')}
-          >
-            <StarOutlined />
-            <span className="erp-employee-tab-label">
-              {t('users.tabEvaluations')}
-            </span>
-          </button>
+          ))}
         </div>
 
-        <div className="erp-employee-tab-panel">
+        <div
+          id={`employee-panel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`employee-tab-${activeTab}`}
+          className="erp-employee-tab-panel"
+        >
           {activeTab === 'leave' ? (
             <div className="flex flex-col gap-4">
               {canViewHr ? (
@@ -674,7 +697,7 @@ export default function EmployeeDetailPageContent({
                       {displayValue(user.middleName)}
                     </MetaItem>
                     <MetaItem label={t('users.form.lastName')}>
-                      {user.lastName}
+                      {displayValue(user.lastName)}
                     </MetaItem>
                     <MetaItem label={t('users.form.chineseName')}>
                       {displayValue(user.chineseName)}

@@ -1,9 +1,10 @@
 /*
  * My Profile (v2) — same panel language as the dashboard, header, catalogue
  * and Employees list: white panels, 16px radius, soft shadow, no hard borders,
- * soft tiles for facts. Scoped under `.erp-profile-page.erp-profile-v2` (the
- * profile root only), so the HR employee detail page — which shares the
- * `erp-employee-*` classes — is unchanged. Selectors start with both root
+ * soft tiles for facts. Scoped under `.erp-profile-page.erp-profile-v2`, which
+ * both My Profile and the HR employee detail page (EmployeeDetailPageContent,
+ * plus `employee-detail-v2.css` for its top bar) put on their root, so the two
+ * views of an employee look the same. Selectors start with both root
  * classes so they win over the older `.erp-profile-page …` flush rules.
  *
  * Contrast on white: muted #4B5563 7.6:1 (was #94A3B8, 2.6:1); strong #0F172A.
@@ -61,7 +62,7 @@
 
 .erp-profile-page.erp-profile-v2 .erp-profile-hero .erp-users-cell-sub {
   color: var(--pv2-muted);
-  font-size: calc(13px * var(--erp-font-scale));
+  font-size: calc(14px * var(--erp-font-scale));
 }
 
 .erp-profile-page.erp-profile-v2 .erp-profile-hero .erp-users-id-chip {
@@ -104,7 +105,7 @@
 .erp-profile-page.erp-profile-v2 .erp-profile-meta .erp-users-stat-value,
 .erp-profile-page.erp-profile-v2 .erp-profile-meta .erp-employee-meta-value {
   color: var(--pv2-strong);
-  font-size: calc(14px * var(--erp-font-scale));
+  font-size: calc(15px * var(--erp-font-scale));
   font-weight: 600;
 }
 
@@ -144,7 +145,7 @@
 
 .erp-profile-page.erp-profile-v2 .erp-employee-section-title {
   color: var(--pv2-muted);
-  font-size: 12px;
+  font-size: calc(13px * var(--erp-font-scale));
   font-weight: 600;
   letter-spacing: 0.06em;
 }
@@ -163,7 +164,7 @@
  */
 .erp-profile-page.erp-profile-v2 .erp-employee-tab-panel .erp-users-stat-label {
   color: var(--pv2-muted);
-  font-size: 12px;
+  font-size: calc(13px * var(--erp-font-scale));
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
@@ -174,11 +175,13 @@
   .erp-users-stat-label
   + div {
   color: var(--pv2-strong);
-  font-size: calc(14px * var(--erp-font-scale));
+  font-size: calc(15px * var(--erp-font-scale));
 }
 
 .erp-profile-page.erp-profile-v2 .erp-employee-tab-panel .erp-users-cell-sub {
   color: var(--pv2-muted);
+  font-size: calc(13px * var(--erp-font-scale));
+  line-height: 1.45;
 }
 
 .erp-profile-page.erp-profile-v2 .erp-employee-contact-card {
@@ -196,7 +199,7 @@
 
 .erp-profile-page.erp-profile-v2 .erp-leave-balance-label {
   color: var(--pv2-muted);
-  font-size: 12px;
+  font-size: calc(13px * var(--erp-font-scale));
 }
 
 .erp-profile-page.erp-profile-v2 .erp-leave-balance-meta,

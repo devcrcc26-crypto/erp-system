@@ -310,33 +310,33 @@ export default function AddEmployeeReviewStep({
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="erp-users-stat-bar erp-review-meta-bar">
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('common.department')}</p>
-            <p className="erp-employee-meta-value">{departmentName}</p>
+        <div className="erp-review-meta-bar">
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('common.department')}</p>
+              <p className="erp-employee-meta-value">{departmentName}</p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('common.position')}</p>
-            <p className="erp-employee-meta-value">{positionName}</p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('common.position')}</p>
+              <p className="erp-employee-meta-value">{positionName}</p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('users.form.reportsTo')}</p>
-            <p className="erp-employee-meta-value">{reportsToName}</p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('users.form.reportsTo')}</p>
+              <p className="erp-employee-meta-value">{reportsToName}</p>
+            </div>
           </div>
-        </div>
-        <div className="erp-users-stat">
-          <div className="min-w-0">
-            <p className="erp-users-stat-label">{t('users.form.phone')}</p>
-            <p className="erp-employee-meta-value">
-              {values.phone?.trim() || '-'}
-            </p>
+          <div className="erp-users-stat">
+            <div className="min-w-0">
+              <p className="erp-users-stat-label">{t('users.form.phone')}</p>
+              <p className="erp-employee-meta-value">
+                {values.phone?.trim() || '-'}
+              </p>
+            </div>
           </div>
         </div>
       </div>

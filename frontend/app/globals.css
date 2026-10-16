@@ -1989,16 +1989,24 @@ main::-webkit-scrollbar,
   line-height: 1.45;
 }
 
-.erp-review-identity {
+/* Review step (v2): identity card with soft fact tiles, then white section
+   cards — same language as the employee detail page. Muted text #4B5563
+   (7.6:1 on white). */
+.erp-employee-form-page .erp-review-identity {
   overflow: hidden;
+  border: 0;
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
 }
 
 .erp-review-identity-body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
-  padding: 22px 24px;
+  gap: 20px;
+  padding: 24px 24px 20px;
   text-align: center;
 }
 
@@ -2010,45 +2018,65 @@ main::-webkit-scrollbar,
   }
 }
 
+.erp-review-identity .erp-users-name {
+  color: #0f172a;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.erp-review-identity .erp-users-email,
+.erp-review-identity .erp-users-cell-sub,
+.erp-review-identity .erp-users-name-alt {
+  color: #4b5563;
+}
+
+.erp-review-identity .erp-users-id-chip {
+  border: 0;
+  border-radius: 8px;
+  background: #f2f4f7;
+  color: #344054;
+}
+
 .erp-review-avatar {
-  border-radius: 12px !important;
+  border-radius: 16px !important;
   flex-shrink: 0;
 }
 
 .erp-review-meta-bar {
-  grid-template-columns: repeat(4, 1fr);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 24px 24px;
 }
 
-.erp-review-meta-bar .erp-users-stat:nth-child(4n) {
-  border-right: none;
+.erp-review-meta-bar .erp-users-stat {
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #f7f8fa;
+}
+
+.erp-review-meta-bar .erp-users-stat-label {
+  color: #4b5563;
+  font-size: 12px;
+  letter-spacing: 0.06em;
 }
 
 @media (max-width: 900px) {
   .erp-review-meta-bar {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .erp-review-meta-bar .erp-users-stat:nth-child(2n) {
-    border-right: none;
-  }
-
-  .erp-review-meta-bar .erp-users-stat:nth-child(-n + 2) {
-    border-bottom: 1px solid #eef1f4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 767px) {
+  .erp-review-identity-body {
+    gap: 16px;
+    padding: 20px 16px 16px;
+  }
+
   .erp-review-meta-bar {
-    grid-template-columns: 1fr;
-  }
-
-  .erp-review-meta-bar .erp-users-stat {
-    border-right: none;
-    border-bottom: 1px solid #eef1f4;
-  }
-
-  .erp-review-meta-bar .erp-users-stat:last-child {
-    border-bottom: none;
+    gap: 8px;
+    padding: 0 16px 16px;
   }
 }
 
@@ -2066,10 +2094,12 @@ main::-webkit-scrollbar,
 
 .erp-review-section {
   overflow: hidden;
-  border: 1px solid #e8ebef;
-  border-radius: 12px;
+  border: 0;
+  border-radius: 16px;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
 }
 
 .erp-review-section-header {
@@ -2077,22 +2107,27 @@ main::-webkit-scrollbar,
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 16px 20px 12px;
   border-bottom: 1px solid #eef1f4;
-  background: #fbfcfd;
+  background: #fff;
 }
 
 .erp-review-section-title {
   margin: 0;
-  font-size: calc(12px * var(--erp-font-scale));
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #94a3b8;
+  font-size: calc(15px * var(--erp-font-scale));
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: #0f172a;
+}
+
+.erp-review-section-header .erp-users-count-pill {
+  padding: 2px 10px;
+  background: rgba(29, 158, 117, 0.1);
+  color: #0f6e56;
 }
 
 .erp-review-section-body {
-  padding: 16px;
+  padding: 16px 20px 20px;
 }
 
 .erp-review-fields {
@@ -2113,16 +2148,14 @@ main::-webkit-scrollbar,
 
 .erp-review-field-label {
   margin: 0 0 4px;
-  font-size: calc(11px * var(--erp-font-scale));
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #94a3b8;
+  font-size: calc(13px * var(--erp-font-scale));
+  font-weight: 500;
+  color: #4b5563;
 }
 
 .erp-review-field-value {
   display: block;
-  font-size: calc(14px * var(--erp-font-scale));
+  font-size: calc(15px * var(--erp-font-scale));
   font-weight: 550;
   line-height: 1.4;
   color: #0f172a;
@@ -2144,9 +2177,9 @@ main::-webkit-scrollbar,
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid #e8ebef;
-  border-radius: 10px;
-  background: #fbfcfd;
+  border: 0;
+  border-radius: 12px;
+  background: #f7f8fa;
 }
 
 .erp-employee-form-page .erp-stepper-form > .min-h-0 > .flex.flex-col {
@@ -2159,17 +2192,33 @@ main::-webkit-scrollbar,
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: #4b5563;
   line-height: 1.4;
 }
 
+/* Step bar (v2): floating panel like the form cards below it. */
 .erp-employee-form-page .erp-stepper-form__steps-shell {
   margin-bottom: 4px;
-  padding: 14px 18px !important;
+  padding: 16px 20px !important;
   background: #fff;
-  border: 1px solid #e8ebef;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  border: 0;
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06);
+}
+
+.erp-employee-form-page .erp-stepper-form__steps-shell .ant-steps-item-title {
+  font-size: calc(13px * var(--erp-font-scale));
+}
+
+.erp-employee-form-page .erp-stepper-form__steps-shell .ant-steps-item-wait .ant-steps-item-title {
+  color: #4b5563 !important;
+}
+
+.erp-employee-form-page .erp-stepper-form__steps-shell .ant-steps-item-process .ant-steps-item-title {
+  color: #0f172a !important;
+  font-weight: 600;
 }
 
 .erp-employee-form-page .erp-stepper-form__footer {
@@ -2179,7 +2228,7 @@ main::-webkit-scrollbar,
 }
 
 .erp-employee-form-page .erp-stepper-form__footer .ant-btn {
-  border-radius: 8px !important;
+  border-radius: 10px !important;
   height: 36px;
 }
 
@@ -2198,11 +2247,11 @@ main::-webkit-scrollbar,
 .erp-emergency-contacts__empty {
   padding: 28px 16px;
   border: 1px dashed #d5dde5;
-  border-radius: 10px;
-  background: #fbfcfd;
+  border-radius: 12px;
+  background: #f7f8fa;
   text-align: center;
   font-size: calc(13px * var(--erp-font-scale));
-  color: #94a3b8;
+  color: #4b5563;
 }
 
 .erp-emergency-contacts__list {
@@ -2211,12 +2260,12 @@ main::-webkit-scrollbar,
   gap: 12px;
 }
 
+/* Soft tile (v2) instead of a bordered card; inputs stay white on it. */
 .erp-emergency-contacts__card {
   padding: 14px 16px 16px;
-  border: 1px solid #e8ebef;
+  border: 0;
   border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  background: #f7f8fa;
 }
 
 .erp-emergency-contacts__card-head {

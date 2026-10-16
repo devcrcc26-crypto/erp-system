@@ -147,6 +147,18 @@ async function main(): Promise<void> {
     await prisma.$executeRawUnsafe(
       `CREATE SEQUENCE IF NOT EXISTS "department_code_seq" START WITH 1 INCREMENT BY 1`,
     );
+    // Copied databases can hold DEPT-n codes the sequence never issued; move it past
+    // the highest one (never backwards) so nextval does not collide.
+    await prisma.$executeRawUnsafe(`
+      SELECT setval('department_code_seq', x.max_n)
+      FROM (
+        SELECT COALESCE(MAX(CAST(substring(code FROM 6) AS INTEGER)), 0) AS max_n
+        FROM department
+        WHERE code ~ '^DEPT-[0-9]+$'
+      ) x, department_code_seq s
+      WHERE x.max_n > 0
+        AND (x.max_n > s.last_value OR (x.max_n = s.last_value AND NOT s.is_called))
+    `);
     const result = await prisma.$queryRaw<Array<{ nextval: bigint }>>`
       SELECT nextval('department_code_seq')
     `;
@@ -231,11 +243,12 @@ async function main(): Promise<void> {
       console.warn(`Department not in DB yet (dry-run): ${deptName}`);
     }
 
-    let engineeringDisciplineId: string | null = null;
+    // Keep the current discipline unless discipline-map.json maps this 岗位.
+    let engineeringDisciplineId: string | null = user.engineeringDisciplineId;
     if (row.postZh && disciplineMap[row.postZh]) {
       const discName = disciplineMap[row.postZh]!;
       engineeringDisciplineId =
-        disciplineByName.get(discName.toLowerCase()) ?? null;
+        disciplineByName.get(discName.toLowerCase()) ?? engineeringDisciplineId;
     }
 
     const { userId: supervisorId, canonical } = resolveSupervisorUserId(
