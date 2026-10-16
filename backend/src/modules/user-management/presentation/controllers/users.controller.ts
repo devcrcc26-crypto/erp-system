@@ -166,6 +166,18 @@ export class UsersController {
     return this.userManagementService.listUsers(this.ctx(user), query);
   }
 
+  @Get('org-gaps')
+  @RequirePermission('hr', 'view')
+  @ApiOperation({ summary: 'Org structure gap report (read-only)' })
+  async getOrgGaps(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ success: true; data: Awaited<ReturnType<UserManagementService['getOrgGapReport']>> }> {
+    const data = await this.userManagementService.getOrgGapReport(
+      user.companyId,
+    );
+    return { success: true, data };
+  }
+
   @Get('directory')
   @RequireAnyPermission(
     { module: 'projects', action: 'view' },

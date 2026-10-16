@@ -99,6 +99,7 @@
       "businessTrips": "Third-Country Business Trips",
       "reports": "HR Reports",
       "policySettings": "Policy Settings",
+      "orgGaps": "Org gaps",
       "perDiem": "Per Diem",
       "employeePerDiemRates": "Employee Per Diem Rates",
       "leavePolicy": "Leave Policy",
@@ -703,6 +704,18 @@
         "myTitle": "My overtime hours & history",
         "myDescription": "Your overtime year totals and sheet history.",
         "you": "You"
+      },
+      "orgGaps": {
+        "title": "Org gaps",
+        "description": "Read-only view of employees missing supervisor, department or discipline, units without leaders, and HR directory supervisors with no user account.",
+        "loadError": "Could not load org gap report.",
+        "noSupervisor": "No supervisor",
+        "noDepartment": "No department",
+        "noDiscipline": "No discipline",
+        "supervisorsNoAccount": "Supervisors without accounts",
+        "employeesNoSupervisor": "Employees without supervisor",
+        "employeesNoDepartment": "Employees without department",
+        "employeesNoDiscipline": "Employees without discipline"
       },
       "policySettings": {
         "title": "Policy Settings",

@@ -100,6 +100,7 @@
       "businessTrips": "第三国出差",
       "reports": "人力资源报表",
       "policySettings": "政策设置",
+      "orgGaps": "组织缺口",
       "perDiem": "差旅补贴",
       "employeePerDiemRates": "员工差旅补贴标准",
       "leavePolicy": "假期政策",
@@ -703,6 +704,18 @@
         "myTitle": "我的加班工时与记录",
         "myDescription": "查看您的年度加班汇总与加班表记录。",
         "you": "我"
+      },
+      "orgGaps": {
+        "title": "组织缺口",
+        "description": "只读查看：缺少上级、部门或专业的员工，缺少负责人的部门/专业，以及人事名册中尚无账号的上级。",
+        "loadError": "无法加载组织缺口报告。",
+        "noSupervisor": "无上级",
+        "noDepartment": "无部门",
+        "noDiscipline": "无专业",
+        "supervisorsNoAccount": "无账号的上级",
+        "employeesNoSupervisor": "无上级员工",
+        "employeesNoDepartment": "无部门员工",
+        "employeesNoDiscipline": "无专业员工"
       },
       "policySettings": {
         "title": "政策设置",

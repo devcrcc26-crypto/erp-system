@@ -32,6 +32,19 @@ import { PaginationQueryDto } from '../../../../shared/dtos/pagination-query.dto
 import { PermissionService } from '../../../../shared/permissions/permission.service';
 import { PrismaService } from '../../../../shared/prisma/prisma.service';
 import { activeOnly } from '../../../../shared/prisma/soft-delete.util';
+import { findReportsToCycle } from '../../../../shared/org/reports-to-cycle.util';
+import {
+  buildOrgGapReport,
+  type OrgGapReport,
+} from '../../../../shared/org/org-gap-report';
+import {
+  buildSupervisorAccountIndex,
+  resolveSupervisorUserId,
+} from '../../../../shared/org-import/supervisor-lookup';
+import { readDirectoryOrgRows } from '../../../../shared/org-import/directory-sheet';
+import { isSupervisorInApproverJson } from '../../../../shared/org-import/approver-json';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import {
   buildOrderBy,
   buildPaginatedResult,
@@ -1935,6 +1948,129 @@ export class UserManagementService {
     if (!manager) {
       throw new NotFoundException('Reports-to user not found');
     }
+    if (userId) {
+      const cycle = await findReportsToCycle(
+        userId,
+        reportsToUserId,
+        async (id) => {
+          const row = await this.prisma.user.findFirst({
+            where: activeOnly({ id, companyId }),
+            select: { reportsToUserId: true },
+          });
+          return row?.reportsToUserId ?? null;
+        },
+      );
+      if (cycle) {
+        throw new BadRequestException(
+          'Reports-to assignment would create a reporting cycle',
+        );
+      }
+    }
+  }
+
+  /**
+   * Read-only org-structure gap report for HR (employees, units, directory supervisors).
+   */
+  async getOrgGapReport(companyId: string): Promise<OrgGapReport> {
+    const users = await this.prisma.user.findMany({
+      where: activeOnly({ companyId }),
+      select: {
+        id: true,
+        employeeId: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        loginName: true,
+        chineseName: true,
+        excludedFromHrProcesses: true,
+        departmentId: true,
+        engineeringDisciplineId: true,
+        reportsToUserId: true,
+        employmentStatus: true,
+        isActive: true,
+        department: { select: { name: true } },
+        engineeringDiscipline: { select: { name: true } },
+      },
+    });
+
+    const managerActive = (id: string | null): boolean => {
+      if (!id) return false;
+      const u = users.find((x) => x.id === id);
+      return Boolean(u?.isActive && u.employmentStatus === 'ACTIVE');
+    };
+
+    let supervisorsWithoutAccount: string[] = [];
+    try {
+      const rows = readDirectoryOrgRows();
+      const index = buildSupervisorAccountIndex(users);
+      const approverPath = join(
+        process.cwd(),
+        'data',
+        'private',
+        'approver-only-users.json',
+      );
+      const approverJson = existsSync(approverPath)
+        ? (JSON.parse(readFileSync(approverPath, 'utf8')) as Array<{
+            fullName: string;
+          }>)
+        : [];
+      const missing = new Set<string>();
+      for (const row of rows) {
+        if (!row.reportToRaw) continue;
+        const { userId, canonical } = resolveSupervisorUserId(
+          row.reportToRaw,
+          index,
+        );
+        if (!userId && canonical && !isSupervisorInApproverJson(canonical, approverJson)) {
+          missing.add(canonical);
+        }
+      }
+      supervisorsWithoutAccount = [...missing].sort((a, b) =>
+        a.localeCompare(b),
+      );
+    } catch {
+      supervisorsWithoutAccount = [];
+    }
+
+    const departments = await this.prisma.department.findMany({
+      where: activeOnly({ companyId }),
+      select: { id: true, name: true, leaderUserId: true },
+    });
+
+    const disciplines = await this.prisma.discipline.findMany({
+      where: activeOnly({ companyId }),
+      select: { id: true, name: true, leaderId: true },
+    });
+
+    return buildOrgGapReport({
+      users: users.map((u) => ({
+        id: u.id,
+        employeeId: u.employeeId,
+        name: formatDisplayFullName(u),
+        approverOnly: u.excludedFromHrProcesses,
+        departmentId: u.departmentId,
+        departmentName: u.department?.name ?? null,
+        disciplineId: u.engineeringDisciplineId,
+        disciplineName: u.engineeringDiscipline?.name ?? null,
+        reportsToUserId: u.reportsToUserId,
+        reportsToVacant:
+          u.reportsToUserId != null && !managerActive(u.reportsToUserId),
+      })),
+      departments: departments.map((d) => ({
+        id: d.id,
+        name: d.name,
+        leaderUserId: d.leaderUserId,
+        leaderVacant:
+          d.leaderUserId != null && !managerActive(d.leaderUserId),
+      })),
+      disciplines: disciplines.map((d) => ({
+        id: d.id,
+        name: d.name,
+        leaderUserId: d.leaderId,
+        leaderVacant: d.leaderId != null && !managerActive(d.leaderId),
+      })),
+      supervisorsWithoutAccount,
+    });
   }
 
   private mapUserResponse<T extends { experienceStartDate?: Date | null }>(
