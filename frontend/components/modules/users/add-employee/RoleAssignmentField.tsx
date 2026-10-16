@@ -80,7 +80,7 @@ export default function RoleAssignmentField({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="erp-role-assignment-field flex flex-col gap-2">
       {value.map((assignment, index) => {
         const availableForThisRow = availableRoles.filter(
           (role) =>
@@ -92,7 +92,7 @@ export default function RoleAssignmentField({
         return (
           <div
             key={`${assignment.roleId}-${index}`}
-            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+            className="flex min-w-0 items-center gap-2"
           >
             <Select
               showSearch
@@ -103,7 +103,7 @@ export default function RoleAssignmentField({
                 value: role.id,
                 label: formatRoleDisplayName(role.name),
               }))}
-              style={{ flex: 1 }}
+              className="min-w-0 flex-1"
               disabled={disabled}
               loading={loading}
               aria-label={t('users.form.role')}
@@ -155,7 +155,7 @@ export default function RoleAssignmentField({
           availableRoles.length === 0 ||
           value.length >= availableRoles.length
         }
-        style={{ alignSelf: 'flex-start' }}
+        className="!self-start"
       >
         {t('users.addAnotherRole')}
       </Button>

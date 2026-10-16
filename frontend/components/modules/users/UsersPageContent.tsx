@@ -139,7 +139,7 @@ function UserListAvatar({ user }: { user: User }): React.ReactNode {
     <ImagePreviewTrigger
       src={photoQuery.data?.url}
       alt={formatUserName(user)}
-      className="!rounded-md"
+      className="!rounded-xl"
     >
       <Avatar
         size={40}
@@ -720,7 +720,7 @@ export default function UsersPageContent(): React.ReactNode {
         />
       </div>
 
-      <div className="erp-pro-card">
+      <div className="erp-pro-card erp-employees-list-card">
         <div className="erp-pro-card-toolbar erp-users-toolbar">
           <div className="erp-users-toolbar-title flex min-w-0 items-center gap-2.5">
             <h3 className="erp-pro-card-toolbar-title">{t('users.allUsers')}</h3>
@@ -997,15 +997,17 @@ export default function UsersPageContent(): React.ReactNode {
                   const fullName = formatUserName(record);
 
                   return (
-                    <div className="flex min-w-0 items-center gap-3">
+                    <div className="erp-users-person">
                       <UserListAvatar user={record} />
                       <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-baseline gap-1.5">
+                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                           <TruncateText
                             value={fullName}
                             className="erp-users-name whitespace-normal break-words"
                           />
-                          {record.excludedFromHrProcesses ? <ApproverOnlyTag /> : null}
+                          {record.excludedFromHrProcesses ? (
+                            <ApproverOnlyTag />
+                          ) : null}
                         </div>
                         {record.email ? (
                           <TruncateText

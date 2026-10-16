@@ -554,7 +554,10 @@ export default function AddEmployeeReviewStep({
           {pendingDocuments.length > 0 ? (
             <ul className="erp-review-doc-list">
               {pendingDocuments.map((doc, index) => (
-                <li key={`${doc.file.name}-${index}`} className="erp-review-doc-item">
+                <li
+                  key={`${doc.file.name}-${index}`}
+                  className="erp-review-doc-item"
+                >
                   <ProfileFileTypeIcon
                     name={doc.file.name}
                     fileType={doc.file.type}
