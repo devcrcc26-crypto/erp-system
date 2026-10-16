@@ -27,6 +27,7 @@ export default function UserSelect({
   className,
   mode,
   activeEmploymentOnly = false,
+  approverOnly = false,
 }: {
   value?: string | string[];
   onChange?: (userId: string | string[] | undefined) => void;
@@ -40,6 +41,8 @@ export default function UserSelect({
   mode?: 'multiple';
   /** Hide inactive (suspended / long leave) and separated employees. */
   activeEmploymentOnly?: boolean;
+  /** Only Approver-only employees (excludedFromHrProcesses). */
+  approverOnly?: boolean;
 }): React.ReactNode {
   const usersQuery = useFullUsersDirectory({
     enabled: !disabled,
@@ -54,6 +57,7 @@ export default function UserSelect({
         (user) =>
           user.isActive &&
           (!activeEmploymentOnly || (user.employmentStatus ?? 'ACTIVE') === 'ACTIVE') &&
+          (!approverOnly || user.excludedFromHrProcesses === true) &&
           !excludeUserIds.includes(user.id) &&
           (!engineeringDisciplineId ||
             user.engineeringDisciplineId === engineeringDisciplineId),
@@ -81,6 +85,7 @@ export default function UserSelect({
     valueUserQuery.data,
     mode,
     activeEmploymentOnly,
+    approverOnly,
   ]);
 
   const handleChange: SelectProps['onChange'] = (nextValue) => {

@@ -97,6 +97,7 @@ export default function ApprovalReassignDialog({
         >
           <UserSelect
             activeEmploymentOnly
+            approverOnly
             excludeUserIds={[
               requesterId,
               ...(tier ? [tier.approverId] : []),

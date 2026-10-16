@@ -1451,6 +1451,7 @@ export class UserManagementService {
       engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },
       isActive: true,
       employmentStatus: true,
+      excludedFromHrProcesses: true,
       userRoles: this.userRolesListSelect(),
     };
   }
@@ -1967,10 +1968,15 @@ export class UserManagementService {
     }
     const manager = await this.prisma.user.findFirst({
       where: activeOnly({ id: reportsToUserId, companyId }),
-      select: { id: true },
+      select: { id: true, excludedFromHrProcesses: true },
     });
     if (!manager) {
       throw new NotFoundException('Reports-to user not found');
+    }
+    if (!manager.excludedFromHrProcesses) {
+      throw new BadRequestException(
+        'Reports-to must be an approver-only employee',
+      );
     }
     if (userId) {
       const cycle = await findReportsToCycle(

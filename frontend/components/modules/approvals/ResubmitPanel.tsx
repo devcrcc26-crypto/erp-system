@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Upload } from 'antd';
-import { FileOutlined } from '@ant-design/icons';
+import { Button, Input } from 'antd';
 import { RotateCcw, Send } from 'lucide-react';
 import { DocumentPreviewGroup } from '@/components/shared/preview';
+import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type { ApprovalResponse } from '@/lib/api/approvals.types';
@@ -87,25 +87,14 @@ export default function ResubmitPanel({
         </div>
 
         <div className="erp-resubmit-field">
-          <Upload
+          <FileUploadInput
+            files={files}
+            onChange={setFiles}
             multiple
-            beforeUpload={(file) => {
-              setFiles((prev) => [...prev, file]);
-              return false;
-            }}
-            onRemove={(file) => {
-              setFiles((prev) => prev.filter((f) => f.name !== file.name));
-            }}
-            fileList={files.map((f, i) => ({
-              uid: `${i}-${f.name}`,
-              name: f.name,
-              status: 'done' as const,
-            }))}
-          >
-            <Button icon={<FileOutlined />} className="erp-resubmit-upload-btn">
-              {t('pages.approvals.resubmit.attachFiles')}
-            </Button>
-          </Upload>
+            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+            placeholder={t('pages.approvals.resubmit.attachFiles')}
+            disabled={resubmitMutation.isPending}
+          />
         </div>
 
         <div className="erp-resubmit-actions">
