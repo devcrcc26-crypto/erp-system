@@ -4,6 +4,8 @@ import { Button, Modal } from 'antd';
 import type { ReactNode } from 'react';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 
+export type ConfirmDialogTone = 'default' | 'success' | 'warning' | 'danger';
+
 export default function ConfirmDialog({
   open,
   title,
@@ -13,6 +15,8 @@ export default function ConfirmDialog({
   confirmLoading = false,
   confirmDisabled = false,
   danger = false,
+  tone,
+  icon,
   onConfirm,
   onCancel,
   children,
@@ -26,13 +30,27 @@ export default function ConfirmDialog({
   confirmLoading?: boolean;
   confirmDisabled?: boolean;
   danger?: boolean;
+  /** Visual tone for the icon chip. Defaults from `danger`. */
+  tone?: ConfirmDialogTone;
+  /** Override the default icon. */
+  icon?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
   children?: ReactNode;
-  /** Extra class on the modal root, e.g. `erp-confirm-dialog--v2` for the v2 look. */
+  /** Extra class on the modal root, e.g. `erp-approval-modal` for the v2 look. */
   className?: string;
 }): React.ReactNode {
-  const rootClassName = className ? `erp-confirm-dialog ${className}` : 'erp-confirm-dialog';
+  const resolvedTone: ConfirmDialogTone =
+    tone ?? (danger ? 'danger' : 'default');
+  const hasForm = Boolean(children);
+  const rootClassName = [
+    'erp-confirm-dialog',
+    hasForm ? 'erp-confirm-dialog--form' : '',
+    className ?? '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <Modal
       open={open}
@@ -41,7 +59,7 @@ export default function ConfirmDialog({
       onCancel={onCancel}
       centered
       // Dialogs with inputs (e.g. an approval note) need room to write; plain confirms stay compact.
-      width={children ? 560 : 420}
+      width={hasForm ? 560 : 420}
       rootClassName={rootClassName}
       className={rootClassName}
       classNames={{
@@ -49,7 +67,7 @@ export default function ConfirmDialog({
       }}
       styles={{
         content: {
-          borderRadius: 14,
+          borderRadius: 16,
           overflow: 'hidden',
           padding: 0,
         },
@@ -60,14 +78,15 @@ export default function ConfirmDialog({
     >
       <div className="erp-confirm-dialog-body">
         <div
-          className={`erp-confirm-dialog-icon${danger ? ' erp-confirm-dialog-icon--danger' : ''}`}
+          className={`erp-confirm-dialog-icon erp-confirm-dialog-icon--${resolvedTone}`}
           aria-hidden
         >
-          {danger ? (
-            <Trash2 size={22} strokeWidth={1.75} />
-          ) : (
-            <AlertTriangle size={22} strokeWidth={1.75} />
-          )}
+          {icon ??
+            (resolvedTone === 'danger' ? (
+              <Trash2 size={22} strokeWidth={1.75} />
+            ) : (
+              <AlertTriangle size={22} strokeWidth={1.75} />
+            ))}
         </div>
 
         <div className="erp-confirm-dialog-copy">
@@ -75,7 +94,9 @@ export default function ConfirmDialog({
           {description ? (
             <div className="erp-confirm-dialog-description">{description}</div>
           ) : null}
-          {children}
+          {children ? (
+            <div className="erp-confirm-dialog-fields">{children}</div>
+          ) : null}
         </div>
 
         <div className="erp-confirm-dialog-actions">
@@ -88,7 +109,7 @@ export default function ConfirmDialog({
           </Button>
           <Button
             type="primary"
-            danger={danger}
+            danger={danger || resolvedTone === 'danger'}
             loading={confirmLoading}
             disabled={confirmDisabled}
             onClick={onConfirm}

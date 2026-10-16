@@ -708,6 +708,9 @@ export default function ApprovalDetailPageContent({
 
       <ConfirmDialog
         open={actionModal === 'approve'}
+        className="erp-approval-modal"
+        tone="success"
+        icon={<CheckOutlined />}
         title={t('pages.approvals.dialog.approveTitle')}
         description={t('pages.approvals.dialog.approveDescription')}
         confirmLabel={t('pages.approvals.dialog.approveConfirm')}
@@ -715,17 +718,24 @@ export default function ApprovalDetailPageContent({
         onCancel={closeModal}
         onConfirm={() => void handleApprove()}
       >
-        <Input.TextArea
-          autoSize={{ minRows: 6, maxRows: 12 }}
-          placeholder={t('pages.approvals.dialog.notePlaceholder')}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          className="mt-3"
-        />
+        <div className="erp-confirm-dialog-field">
+          <p className="erp-confirm-dialog-field-label">
+            {t('pages.approvals.dialog.noteLabel')}
+          </p>
+          <Input.TextArea
+            autoSize={{ minRows: 4, maxRows: 10 }}
+            placeholder={t('pages.approvals.dialog.notePlaceholder')}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </div>
       </ConfirmDialog>
 
       <ConfirmDialog
         open={actionModal === 'conditional'}
+        className="erp-approval-modal"
+        tone="warning"
+        icon={<WarningOutlined />}
         title={t('pages.approvals.dialog.conditionalTitle')}
         description={t('pages.approvals.dialog.conditionalDescription')}
         confirmLabel={t('pages.approvals.dialog.conditionalConfirm')}
@@ -733,24 +743,35 @@ export default function ApprovalDetailPageContent({
         onCancel={closeModal}
         onConfirm={() => void handleConditionalApprove()}
       >
-        <Input.TextArea
-          autoSize={{ minRows: 4, maxRows: 8 }}
-          placeholder={t('pages.approvals.dialog.conditionPlaceholder')}
-          value={conditionText}
-          onChange={(event) => setConditionText(event.target.value)}
-          className="mt-3"
-        />
-        <Input.TextArea
-          autoSize={{ minRows: 5, maxRows: 10 }}
-          placeholder={t('pages.approvals.dialog.notePlaceholder')}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          className="mt-2"
-        />
+        <div className="erp-confirm-dialog-field">
+          <p className="erp-confirm-dialog-field-label">
+            {t('pages.approvals.dialog.conditionLabel')}
+          </p>
+          <Input.TextArea
+            autoSize={{ minRows: 3, maxRows: 8 }}
+            placeholder={t('pages.approvals.dialog.conditionPlaceholder')}
+            value={conditionText}
+            onChange={(event) => setConditionText(event.target.value)}
+          />
+        </div>
+        <div className="erp-confirm-dialog-field">
+          <p className="erp-confirm-dialog-field-label">
+            {t('pages.approvals.dialog.noteLabel')}
+          </p>
+          <Input.TextArea
+            autoSize={{ minRows: 3, maxRows: 8 }}
+            placeholder={t('pages.approvals.dialog.notePlaceholder')}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </div>
       </ConfirmDialog>
 
       <ConfirmDialog
         open={actionModal === 'return'}
+        className="erp-approval-modal"
+        tone="warning"
+        icon={<RollbackOutlined />}
         title={t('pages.approvals.dialog.returnTitle')}
         description={t('pages.approvals.dialog.returnDescription')}
         confirmLabel={t('pages.approvals.dialog.returnConfirm')}
@@ -758,32 +779,43 @@ export default function ApprovalDetailPageContent({
         onCancel={closeModal}
         onConfirm={() => void handleReturn()}
       >
-        <Input.TextArea
-          autoSize={{ minRows: 6, maxRows: 12 }}
-          placeholder={t('pages.approvals.dialog.returnNotePlaceholder')}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          className="mt-3"
-        />
+        <div className="erp-confirm-dialog-field">
+          <p className="erp-confirm-dialog-field-label">
+            {t('pages.approvals.dialog.returnNoteLabel')}
+          </p>
+          <Input.TextArea
+            autoSize={{ minRows: 4, maxRows: 10 }}
+            placeholder={t('pages.approvals.dialog.returnNotePlaceholder')}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </div>
       </ConfirmDialog>
 
       <ConfirmDialog
         open={actionModal === 'reject'}
+        className="erp-approval-modal"
+        tone="danger"
+        danger
+        icon={<CloseOutlined />}
         title={t('pages.approvals.dialog.rejectTitle')}
         description={t('pages.approvals.dialog.rejectDescription')}
         confirmLabel={t('pages.approvals.dialog.rejectConfirm')}
-        danger
         confirmLoading={actionLoading}
         onCancel={closeModal}
         onConfirm={() => void handleReject()}
       >
-        <Input.TextArea
-          autoSize={{ minRows: 6, maxRows: 12 }}
-          placeholder={t('pages.approvals.dialog.rejectNotePlaceholder')}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          className="mt-3"
-        />
+        <div className="erp-confirm-dialog-field">
+          <p className="erp-confirm-dialog-field-label">
+            {t('pages.approvals.dialog.rejectNoteLabel')}
+          </p>
+          <Input.TextArea
+            autoSize={{ minRows: 4, maxRows: 10 }}
+            placeholder={t('pages.approvals.dialog.rejectNotePlaceholder')}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </div>
       </ConfirmDialog>
     </div>
   );

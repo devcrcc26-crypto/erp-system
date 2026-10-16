@@ -502,3 +502,282 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Resubmit card + response history ── */
+
+.erp-resubmit-card {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--ap2-radius, 16px);
+  background: #ffffff;
+  box-shadow: var(
+    --ap2-shadow,
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06)
+  );
+}
+
+.erp-resubmit-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eef1f4;
+  background: #fffaeb;
+}
+
+.erp-resubmit-card-icon {
+  display: inline-flex;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #b54708;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
+.erp-resubmit-card-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-resubmit-card-subtitle {
+  margin: 4px 0 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.erp-resubmit-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 20px 18px;
+}
+
+.erp-resubmit-return-note {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fffaeb;
+}
+
+.erp-resubmit-return-note-label {
+  margin: 0;
+  color: #b54708;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.erp-resubmit-return-note-text {
+  margin: 6px 0 0;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.erp-resubmit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.erp-resubmit-field-label {
+  margin: 0;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-resubmit-textarea.ant-input,
+.erp-resubmit-textarea textarea.ant-input,
+.erp-resubmit-card .ant-input,
+.erp-resubmit-card textarea.ant-input {
+  border-radius: 10px !important;
+}
+
+.erp-resubmit-upload-btn.ant-btn,
+.erp-resubmit-submit.ant-btn {
+  border-radius: 10px !important;
+  font-weight: 600;
+}
+
+.erp-resubmit-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.erp-resubmit-submit.ant-btn-primary {
+  background: #1d9e75;
+  border-color: #1d9e75;
+  height: 38px;
+  padding-inline: 18px;
+}
+
+.erp-resubmit-submit.ant-btn-primary:hover {
+  background: #0f6e56 !important;
+  border-color: #0f6e56 !important;
+}
+
+.erp-resubmit-history {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--ap2-radius, 16px);
+  background: #ffffff;
+  box-shadow: var(
+    --ap2-shadow,
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 16px rgba(16, 24, 40, 0.06)
+  );
+}
+
+.erp-resubmit-history-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.erp-resubmit-history-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.erp-resubmit-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px 16px;
+  list-style: none;
+}
+
+.erp-resubmit-history-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f7f8fa;
+}
+
+.erp-resubmit-history-item-label {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.erp-resubmit-history-item-meta {
+  margin: 4px 0 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.erp-resubmit-history-item-note {
+  margin: 8px 0 0;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.erp-resubmit-history-item-docs {
+  margin-top: 10px;
+}
+
+/* ── Portaled approval modals (ConfirmDialog + reassign) ── */
+
+.erp-approval-modal {
+  --ap2-radius: 16px;
+  --ap2-muted: #4b5563;
+  --ap2-strong: #0f172a;
+  --ap2-body: #1f2937;
+  --ap2-divider: #eef1f4;
+  --ap2-subtle: #f7f8fa;
+  --ap2-primary: #1d9e75;
+  --ap2-primary-strong: #0f6e56;
+}
+
+.erp-approval-modal.erp-confirm-dialog .ant-modal-content,
+.erp-approval-modal.erp-confirm-dialog .ant-modal-container,
+.erp-approval-modal.erp-confirm-dialog .erp-confirm-dialog-content {
+  border-radius: var(--ap2-radius) !important;
+}
+
+.erp-approval-modal .ant-modal-content,
+.erp-approval-modal .ant-modal-container {
+  padding: 24px !important;
+  border-radius: var(--ap2-radius) !important;
+  box-shadow:
+    0 12px 32px rgba(16, 24, 40, 0.12),
+    0 2px 6px rgba(16, 24, 40, 0.06) !important;
+}
+
+.erp-approval-modal.erp-confirm-dialog .ant-modal-content,
+.erp-approval-modal.erp-confirm-dialog .ant-modal-container {
+  padding: 0 !important;
+}
+
+.erp-approval-modal .ant-modal-header {
+  margin-bottom: 8px;
+}
+
+.erp-approval-modal .ant-modal-title {
+  color: var(--ap2-strong);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.erp-approval-modal .erp-approval-modal-hint {
+  margin: 0 0 16px;
+  color: var(--ap2-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.erp-approval-modal .ant-form-item-label > label {
+  color: var(--ap2-body);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-approval-modal .ant-select-selector,
+.erp-approval-modal .ant-input,
+.erp-approval-modal textarea.ant-input,
+.erp-approval-modal .ant-modal-footer .ant-btn {
+  border-radius: 10px !important;
+}
+
+.erp-approval-modal .ant-modal-footer {
+  margin-top: 8px;
+}
+
+.erp-approval-modal .ant-modal-footer .ant-btn-primary {
+  background: var(--ap2-primary);
+  border-color: var(--ap2-primary);
+}
+
+.erp-approval-modal .ant-modal-footer .ant-btn-primary:hover {
+  background: var(--ap2-primary-strong) !important;
+  border-color: var(--ap2-primary-strong) !important;
+}
+
+.erp-approval-modal.erp-confirm-dialog .erp-confirm-dialog-btn.ant-btn-primary:not(.ant-btn-dangerous) {
+  background: var(--ap2-primary);
+  border-color: var(--ap2-primary);
+}
+
+.erp-approval-modal.erp-confirm-dialog .erp-confirm-dialog-btn.ant-btn-primary:not(.ant-btn-dangerous):hover {
+  background: var(--ap2-primary-strong) !important;
+  border-color: var(--ap2-primary-strong) !important;
+}
