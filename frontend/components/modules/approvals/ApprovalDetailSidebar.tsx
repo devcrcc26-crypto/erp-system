@@ -2,14 +2,13 @@
 
 import { useState } from 'react';
 import { Alert, Button } from 'antd';
-import { CheckCircle2, Circle, Clock3 } from 'lucide-react';
+import { CheckCircle2, Circle, Clock3, RotateCcw, XCircle } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import type {
   ApprovalRequestDetail,
   ApprovalResponse,
   ApprovalTier,
 } from '@/lib/api/approvals.types';
-import { tokens } from '@/lib/theme/tokens';
 import {
   approvalTierDecisionVariant,
   findCurrentTier,
@@ -22,12 +21,46 @@ import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { useCanReassignApprovals } from '@/hooks/use-auth-capabilities';
 import ApprovalReassignDialog from '@/components/modules/approvals/ApprovalReassignDialog';
 
+import './approvals-v2.css';
+
 /** Request statuses in which a pending tier can still be reassigned (matches the API). */
-const REASSIGNABLE_REQUEST_STATUSES: ReadonlyArray<ApprovalRequestDetail['status']> = [
-  'PENDING',
-  'SUBMITTED',
-  'IN_REVIEW',
-];
+const REASSIGNABLE_REQUEST_STATUSES: ReadonlyArray<
+  ApprovalRequestDetail['status']
+> = ['PENDING', 'SUBMITTED', 'IN_REVIEW'];
+
+type TierCardState =
+  | 'approved'
+  | 'rejected'
+  | 'returned'
+  | 'current'
+  | 'pending';
+
+function resolveTierState(
+  tier: ApprovalTier,
+  isCurrent: boolean,
+): TierCardState {
+  if (tier.decision === 'APPROVED') return 'approved';
+  if (tier.decision === 'REJECTED') return 'rejected';
+  if (tier.decision === 'RETURNED') return 'returned';
+  if (isCurrent) return 'current';
+  return 'pending';
+}
+
+function TierStateIcon({ state }: { state: TierCardState }): React.ReactNode {
+  if (state === 'approved') {
+    return <CheckCircle2 size={16} strokeWidth={2} aria-hidden />;
+  }
+  if (state === 'rejected') {
+    return <XCircle size={16} strokeWidth={2} aria-hidden />;
+  }
+  if (state === 'returned') {
+    return <RotateCcw size={16} strokeWidth={2} aria-hidden />;
+  }
+  if (state === 'current') {
+    return <Clock3 size={16} strokeWidth={2} aria-hidden />;
+  }
+  return <Circle size={16} strokeWidth={2} aria-hidden />;
+}
 
 function resolveWaitingMessage(
   status: ApprovalRequestDetail['status'],
@@ -76,7 +109,7 @@ export interface ApprovalDetailSidebarProps {
 }
 
 /**
- * Approval detail sidebar - tier timeline, conditions, and status.
+ * Approval detail sidebar - soft tier cards, conditions, and status.
  */
 export default function ApprovalDetailSidebar({
   request,
@@ -94,209 +127,176 @@ export default function ApprovalDetailSidebar({
   const sorted = [...tiers].sort((a, b) => a.tierOrder - b.tierOrder);
   const activeCurrent = findCurrentTier(sorted, request.currentTier);
   const canReassign =
-    useCanReassignApprovals() && REASSIGNABLE_REQUEST_STATUSES.includes(request.status);
+    useCanReassignApprovals() &&
+    REASSIGNABLE_REQUEST_STATUSES.includes(request.status);
   const [reassignTier, setReassignTier] = useState<ApprovalTier | null>(null);
 
   return (
     <aside className="flex flex-col gap-3 lg:sticky lg:top-4">
-      <div className="erp-pro-card overflow-hidden">
-        <div className="erp-employee-section-header !rounded-none border-b border-[#eef1f4]">
-          <h3 className="erp-employee-section-title">
+      <div className="erp-approval-chain">
+        <div className="erp-approval-chain-header">
+          <h3 className="erp-approval-chain-title">
             {t('hr.section.approvalChain')}
           </h3>
         </div>
-        <div className="px-3 py-4 sm:px-5">
+        <div className="erp-approval-chain-body">
           {sorted.length === 0 ? (
             <p className="erp-users-cell-sub m-0">
               {t('hr.empty.noApprovalChain')}
             </p>
           ) : (
-            <ol className="m-0 flex list-none flex-col gap-0 p-0">
-              {sorted.map((tier, tierIndex) => {
-                const conditions = parseTierConditions(tier.conditions);
-                const isCurrent = tier.id === activeCurrent?.id;
-                const isLast = tierIndex === sorted.length - 1;
-                const dotColor =
-                  tier.decision === 'APPROVED'
-                    ? tokens.colorGreen600
-                    : tier.decision === 'REJECTED'
-                      ? '#D32F2F'
-                      : tier.decision === 'RETURNED'
-                        ? tokens.colorAmber400
-                        : isCurrent
-                          ? '#F47B20'
-                          : tokens.colorGray600;
-                const Icon =
-                  tier.decision === 'APPROVED'
-                    ? CheckCircle2
-                    : tier.decision === 'PENDING' ||
-                        tier.decision === 'CONDITIONALLY_APPROVED'
-                      ? Clock3
-                      : Circle;
+            sorted.map((tier) => {
+              const conditions = parseTierConditions(tier.conditions);
+              const isCurrent = tier.id === activeCurrent?.id;
+              const state = resolveTierState(tier, isCurrent);
 
-                return (
-                  <li key={tier.id} className="relative flex gap-3">
-                    <div className="flex w-5 flex-col items-center">
-                      <span
-                        className="z-[1] mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white"
-                        aria-hidden
-                      >
-                        <Icon size={16} color={dotColor} />
-                      </span>
-                      {!isLast ? (
-                        <span
-                          className="mt-1 w-px flex-1 bg-[#e8ebef]"
-                          aria-hidden
-                        />
-                      ) : null}
-                    </div>
-                    <div className={`min-w-0 flex-1 ${isLast ? 'pb-0' : 'pb-4'}`}>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="erp-users-cell-strong text-sm">
-                          {tier.label}
-                        </span>
+              return (
+                <article
+                  key={tier.id}
+                  className="erp-approval-tier-card"
+                  data-state={state}
+                >
+                  <span className="erp-approval-tier-index" aria-hidden>
+                    <TierStateIcon state={state} />
+                  </span>
+                  <div className="erp-approval-tier-main">
+                    <div className="erp-approval-tier-top">
+                      <p className="erp-approval-tier-label">{tier.label}</p>
+                      <StatusBadge
+                        label={formatApprovalStatus(tier.decision, t)}
+                        variant={approvalTierDecisionVariant(tier.decision)}
+                      />
+                      {isCurrent ? (
                         <StatusBadge
-                          label={formatApprovalStatus(tier.decision, t)}
-                          variant={approvalTierDecisionVariant(tier.decision)}
+                          label={t('pages.approvals.currentTierBadge')}
+                          variant="cyan"
                         />
-                        {isCurrent ? (
-                          <StatusBadge
-                            label={t('pages.approvals.currentTierBadge')}
-                            variant="cyan"
-                          />
-                        ) : null}
-                      </div>
-                      <p className="erp-users-cell-sub m-0 mt-1 text-xs">
-                        {formatApprovalUserName(tier.approver)}
-                        {tier.resolver ? ` · ${tier.resolver}` : ''}
-                      </p>
-                      {canReassign && tier.decision === 'PENDING' ? (
-                        <Button
-                          size="small"
-                          className="mt-1.5"
-                          onClick={() => setReassignTier(tier)}
-                          aria-label={t('pages.approvals.reassign.buttonAria', {
-                            label: tier.label,
-                          })}
-                        >
-                          {t('pages.approvals.reassign.button')}
-                        </Button>
-                      ) : null}
-                      {tier.decidedAt ? (
-                        <p className="erp-users-cell-sub m-0 mt-0.5 text-xs">
-                          {t('pages.approvals.decidedOn', {
-                            date: formatProjectDate(tier.decidedAt),
-                          })}
-                        </p>
-                      ) : null}
-                      {tier.comment ? (
-                        <p className="erp-users-cell-sub m-0 mt-1.5 text-xs leading-relaxed">
-                          {tier.comment}
-                        </p>
-                      ) : null}
-                      {conditions.length > 0 ? (
-                        <div className="mt-2 flex flex-col gap-2">
-                          <p className="erp-users-stat-label m-0">
-                            {t('pages.approvals.conditions')}
-                          </p>
-                          {conditions.map((condition, index) => {
-                            const conditionHasResponse = responses.some(
-                              (r) =>
-                                r.responseType === 'CONDITION_RESPONSE' &&
-                                r.conditionIndex === index,
-                            );
-                            const canResolve =
-                              !condition.resolved &&
-                              currentUserId === tier.approverId;
-                            const resolveDisabled = !conditionHasResponse;
-                            const conditionResponses = responses.filter(
-                              (r) =>
-                                r.responseType === 'CONDITION_RESPONSE' &&
-                                r.conditionIndex === index,
-                            );
-                            return (
-                              <div
-                                key={`${tier.id}-c-${index}`}
-                                className={`rounded-lg px-2.5 py-2 ${
-                                  condition.resolved
-                                    ? 'bg-[#EAF3DE]'
-                                    : 'bg-[#FAEEDA]'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="m-0 text-xs leading-relaxed text-[var(--color-text-primary)]">
-                                    {condition.resolved ? '✓ ' : '○ '}
-                                    {condition.text}
-                                  </p>
-                                  {canResolve ? (
-                                    <Button
-                                      type="link"
-                                      size="small"
-                                      className="!h-auto !p-0"
-                                      disabled={resolveDisabled}
-                                      title={
-                                        resolveDisabled
-                                          ? t(
-                                              'pages.approvals.waitingEmployeeResponse',
-                                            )
-                                          : undefined
-                                      }
-                                      loading={resolveLoading}
-                                      onClick={() =>
-                                        onResolveCondition(tier, index)
-                                      }
-                                    >
-                                      {t('pages.approvals.resolve')}
-                                    </Button>
-                                  ) : null}
-                                </div>
-                                {!condition.resolved ? (
-                                  <p
-                                    className={`m-0 mt-1 text-xs ${
-                                      conditionHasResponse
-                                        ? 'text-[#639922]'
-                                        : 'text-[#BA7517]'
-                                    }`}
-                                  >
-                                    {conditionHasResponse
-                                      ? t(
-                                          'pages.approvals.employeeRespondedReady',
-                                        )
-                                      : t(
-                                          'pages.approvals.waitingEmployeeResponse',
-                                        )}
-                                  </p>
-                                ) : null}
-                                {conditionResponses.map((resp) => (
-                                  <p
-                                    key={resp.id}
-                                    className="erp-users-cell-sub m-0 mt-1.5 text-xs"
-                                  >
-                                    {t('pages.approvals.responseLabel')}:{' '}
-                                    {resp.note?.trim() ||
-                                      t('pages.approvals.attachmentsOnly')}
-                                    {(resp.documents?.length ?? 0) > 0
-                                      ? ` · ${t('pages.approvals.fileCount', {
-                                          count: resp.documents?.length ?? 0,
-                                        })}`
-                                      : ''}
-                                  </p>
-                                ))}
-                              </div>
-                            );
-                          })}
-                        </div>
                       ) : null}
                     </div>
-                  </li>
-                );
-              })}
-            </ol>
+                    <p className="erp-approval-tier-meta">
+                      {formatApprovalUserName(tier.approver)}
+                      {tier.resolver ? ` · ${tier.resolver}` : ''}
+                    </p>
+                    {canReassign && tier.decision === 'PENDING' ? (
+                      <Button
+                        size="small"
+                        className="mt-1.5 !rounded-[10px]"
+                        onClick={() => setReassignTier(tier)}
+                        aria-label={t('pages.approvals.reassign.buttonAria', {
+                          label: tier.label,
+                        })}
+                      >
+                        {t('pages.approvals.reassign.button')}
+                      </Button>
+                    ) : null}
+                    {tier.decidedAt ? (
+                      <p className="erp-approval-tier-meta">
+                        {t('pages.approvals.decidedOn', {
+                          date: formatProjectDate(tier.decidedAt),
+                        })}
+                      </p>
+                    ) : null}
+                    {tier.comment ? (
+                      <p className="erp-approval-tier-comment">{tier.comment}</p>
+                    ) : null}
+                    {conditions.length > 0 ? (
+                      <div className="mt-1 flex flex-col gap-2">
+                        {conditions.map((condition, index) => {
+                          const conditionHasResponse = responses.some(
+                            (r) =>
+                              r.responseType === 'CONDITION_RESPONSE' &&
+                              r.conditionIndex === index,
+                          );
+                          const canResolve =
+                            !condition.resolved &&
+                            currentUserId === tier.approverId;
+                          const resolveDisabled = !conditionHasResponse;
+                          const conditionResponses = responses.filter(
+                            (r) =>
+                              r.responseType === 'CONDITION_RESPONSE' &&
+                              r.conditionIndex === index,
+                          );
+                          return (
+                            <div
+                              key={`${tier.id}-c-${index}`}
+                              className="erp-approval-condition"
+                              data-resolved={
+                                condition.resolved ? 'true' : 'false'
+                              }
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="erp-approval-condition-text">
+                                  {condition.resolved ? '✓ ' : '○ '}
+                                  {condition.text}
+                                </p>
+                                {canResolve ? (
+                                  <Button
+                                    type="link"
+                                    size="small"
+                                    className="!h-auto !p-0"
+                                    disabled={resolveDisabled}
+                                    title={
+                                      resolveDisabled
+                                        ? t(
+                                            'pages.approvals.waitingEmployeeResponse',
+                                          )
+                                        : undefined
+                                    }
+                                    loading={resolveLoading}
+                                    onClick={() =>
+                                      onResolveCondition(tier, index)
+                                    }
+                                  >
+                                    {t('pages.approvals.resolve')}
+                                  </Button>
+                                ) : null}
+                              </div>
+                              {!condition.resolved ? (
+                                <p
+                                  className={`m-0 mt-1 text-xs ${
+                                    conditionHasResponse
+                                      ? 'text-[#639922]'
+                                      : 'text-[#BA7517]'
+                                  }`}
+                                >
+                                  {conditionHasResponse
+                                    ? t(
+                                        'pages.approvals.employeeRespondedReady',
+                                      )
+                                    : t(
+                                        'pages.approvals.waitingEmployeeResponse',
+                                      )}
+                                </p>
+                              ) : null}
+                              {conditionResponses.map((resp) => (
+                                <p
+                                  key={resp.id}
+                                  className="erp-approval-tier-meta"
+                                >
+                                  {t('pages.approvals.responseLabel')}:{' '}
+                                  {resp.note?.trim() ||
+                                    t('pages.approvals.attachmentsOnly')}
+                                  {(resp.documents?.length ?? 0) > 0
+                                    ? ` · ${t('pages.approvals.fileCount', {
+                                        count: resp.documents?.length ?? 0,
+                                      })}`
+                                    : ''}
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })
           )}
 
           {isActiveApprover && currentTier ? (
             actionsDisabled ? (
-              <p className="m-0 mt-4 border-t border-[#eef1f4] pt-4 text-xs text-[#BA7517]">
+              <p className="erp-approval-chain-footer m-0 text-xs text-[#BA7517]">
                 {t('pages.approvals.resolveConditionsFirst')}
               </p>
             ) : null
@@ -311,7 +311,7 @@ export default function ApprovalDetailSidebar({
                     : 'info'
               }
               showIcon
-              className="mt-4"
+              className="erp-approval-chain-footer !rounded-[12px]"
               title={resolveWaitingMessage(
                 request.status,
                 currentTier,

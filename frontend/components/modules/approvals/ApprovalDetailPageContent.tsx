@@ -1,5 +1,7 @@
 'use client';
 
+import './approvals-v2.css';
+
 import { useMemo, useState } from 'react';
 import { Button, Dropdown, Grid, Input, Skeleton, Tag } from 'antd';
 import type { MenuProps } from 'antd';
@@ -70,7 +72,10 @@ import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 import { DETAIL_PAGE_V2 } from '@/components/ui/list-page-v2';
+
 type ActionModalKind = 'approve' | 'conditional' | 'return' | 'reject' | null;
+
+const DETAIL_ROOT = `erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page erp-approvals-v2 ${DETAIL_PAGE_V2}`;
 
 function resolveCategoryCode(request: ApprovalRequestDetail): string {
   return (request.categoryCode ?? request.category?.code ?? '').trim();
@@ -494,7 +499,7 @@ export default function ApprovalDetailPageContent({
 
   if (detailQuery.isLoading && !request) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <div className="erp-pro-card p-6">
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
@@ -504,7 +509,7 @@ export default function ApprovalDetailPageContent({
 
   if (detailQuery.isError || !request) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page ${DETAIL_PAGE_V2}`}>
+      <div className={DETAIL_ROOT}>
         <ErpNotice
           tone="error"
           title={getFriendlyApiErrorMessage(
@@ -538,7 +543,7 @@ export default function ApprovalDetailPageContent({
   const currentTierLabel = currentTier?.label?.trim() || null;
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-employee-detail-page erp-approvals-detail-page ${DETAIL_PAGE_V2}`}>
+    <div className={DETAIL_ROOT}>
       <div className="erp-pro-card">
         <div className="erp-pro-card-toolbar erp-employee-toolbar">
           <div className="erp-employee-toolbar-back flex min-w-0 items-center gap-2">
@@ -590,7 +595,7 @@ export default function ApprovalDetailPageContent({
                 />
               ) : null}
               {categoryName ? (
-                <Tag className="!m-0 rounded-lg border-[#e8ebef] bg-[#f8fafc] text-[var(--color-text-secondary)]">
+                <Tag className="!m-0 rounded-lg border-0 bg-[#f2f4f7] text-[#344054]">
                   {categoryName}
                 </Tag>
               ) : null}
@@ -645,8 +650,8 @@ export default function ApprovalDetailPageContent({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_360px]">
-        <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
+      <div className="erp-approvals-detail-grid">
+        <div className="flex min-w-0 flex-col gap-4">
           <LateSubmissionBanner
             lateSubmission={request.lateSubmission}
             onBehalfSubmittedByName={request.onBehalf?.submittedBy.name}

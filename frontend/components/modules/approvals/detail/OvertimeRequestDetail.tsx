@@ -1,16 +1,19 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Alert, Button, Skeleton, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import Link from 'next/link';
 import {
-  MetaItem,
-  SectionCard,
-  SummaryStrip,
-} from '@/components/modules/hr/shared/hr-page-chrome';
+  FieldTimeOutlined,
+  PaperClipOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
+import Link from 'next/link';
 import DataTable from '@/components/ui/DataTable/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
 import AttachmentDownloadList from '@/components/ui/FileUploadInput/AttachmentDownloadList';
+import TableEmptyState from '@/components/ui/TableEmptyState';
 import { ApiRequestError } from '@/lib/api/errors';
 import type { OvertimeEntry } from '@/lib/api/overtime.types';
 import { useOvertimeSheet } from '@/lib/query/overtime';
@@ -23,12 +26,13 @@ import {
   overtimeStatusVariant,
   unregisteredHolidayDatesFromFormData,
 } from '@/lib/utils/overtime-display';
-import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+
+import '@/components/modules/hr/overtime/overtime-entries-v2.css';
 
 /**
  * Typed overtime sheet body for Approvals detail.
- * When RETURNED, links to the sheet page for entry editing.
+ * Entries table matches OvertimeSheetDetailPageContent (v2).
  */
 export default function OvertimeRequestDetail({
   sourceId,
@@ -46,9 +50,151 @@ export default function OvertimeRequestDetail({
     formData ?? sheet?.approvalRequest?.formData,
   );
 
+  const columns: ColumnsType<OvertimeEntry> = useMemo(
+    () => [
+      {
+        title: t('hr.table.date'),
+        dataIndex: 'date',
+        key: 'date',
+        width: 150,
+        render: (date: string, row: OvertimeEntry) => {
+          const day = dayjs(date);
+          const kind =
+            row.isHoliday || Number(row.holidayHours) > 0
+              ? 'holiday'
+              : Number(row.weekendHours) > 0
+                ? 'weekend'
+                : 'workday';
+          return (
+            <div className="erp-ot-date" data-kind={kind}>
+              <span className="erp-ot-date-day" aria-hidden>
+                {day.format('DD')}
+              </span>
+              <span className="erp-ot-date-meta" aria-hidden>
+                <strong>{day.format('ddd')}</strong>
+                <span>{day.format('MMM YYYY')}</span>
+              </span>
+              <span className="sr-only">{day.format('dddd, D MMMM YYYY')}</span>
+            </div>
+          );
+        },
+      },
+      {
+        title: t('pages.hr.overtime.timeRange'),
+        key: 'time',
+        width: 140,
+        render: (_: unknown, row: OvertimeEntry) => (
+          <div>
+            <span className="erp-ot-time">
+              {row.startTime}
+              <span className="erp-ot-time-arrow" aria-hidden>
+                →
+              </span>
+              <span className="sr-only"> – </span>
+              {row.endTime}
+            </span>
+            {row.isOvernight ? (
+              <div className="erp-ot-pills">
+                <span className="erp-ot-pill" data-kind="night">
+                  {t('pages.hr.overtime.overnight')}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        title: t('pages.hr.overtime.hoursColumn'),
+        key: 'hoursBreakdown',
+        width: 230,
+        render: (_: unknown, row: OvertimeEntry) => {
+          const parts = (
+            [
+              ['regular', row.regularHours],
+              ['night', row.nightHours],
+              ['weekend', row.weekendHours],
+              ['holiday', row.holidayHours],
+            ] as const
+          ).filter(([, hours]) => Number(hours) > 0);
+          return (
+            <div>
+              <span className="erp-ot-hours-total">
+                {formatOvertimeHours(row.totalHours)}h
+              </span>
+              {parts.length > 0 ? (
+                <div className="erp-ot-pills">
+                  {parts.map(([kind, hours]) => {
+                    const pill = (
+                      <span key={kind} className="erp-ot-pill" data-kind={kind}>
+                        {formatOvertimeHours(hours)}h{' '}
+                        {t(`hr.overtimeCategory.${kind}`)}
+                      </span>
+                    );
+                    return kind === 'holiday' && row.holidayName ? (
+                      <Tooltip key={kind} title={row.holidayName}>
+                        {pill}
+                      </Tooltip>
+                    ) : (
+                      pill
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        title: t('hr.labels.taskDescription'),
+        dataIndex: 'taskDescription',
+        key: 'taskDescription',
+        render: (text: string, row: OvertimeEntry) => {
+          const fileCount = row.documents?.length ?? 0;
+          return (
+            <div className="min-w-[200px]">
+              <p
+                className={`erp-ot-task${text ? '' : ' erp-ot-task--empty'}`}
+                title={text || undefined}
+              >
+                {text || '—'}
+              </p>
+              {fileCount > 0 || row.attendanceWarning ? (
+                <div className="erp-ot-task-chips">
+                  {fileCount > 0 ? (
+                    <span className="erp-ot-pill">
+                      <PaperClipOutlined aria-hidden />
+                      {fileCount === 1
+                        ? t('pages.hr.overtime.attachmentsCountOne')
+                        : t('pages.hr.overtime.attachmentsCount', {
+                            count: fileCount,
+                          })}
+                    </span>
+                  ) : null}
+                  {row.attendanceWarning ? (
+                    <Tooltip title={row.attendanceWarning}>
+                      <span
+                        className="erp-ot-pill"
+                        data-kind="warning"
+                        tabIndex={0}
+                      >
+                        <WarningOutlined aria-hidden />
+                        {t('pages.hr.overtime.attendanceFlag')}
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          );
+        },
+      },
+    ],
+    [t],
+  );
+
   if (detailQuery.isLoading && !sheet) {
     return (
-      <div className="bg-white rounded-none border border-[rgba(0,0,0,0.08)] px-3 py-4 sm:px-5">
+      <div className="erp-pro-card px-5 py-6">
         <Skeleton active paragraph={{ rows: 6 }} />
       </div>
     );
@@ -62,7 +208,7 @@ export default function OvertimeRequestDetail({
         title={
           detailQuery.error instanceof ApiRequestError
             ? detailQuery.error.message
-            : 'Overtime sheet not found'
+            : t('hr.messages.overtimeSheetNotFound')
         }
       />
     );
@@ -73,90 +219,16 @@ export default function OvertimeRequestDetail({
     Boolean(currentUser.data?.id) &&
     sheet.employeeId === currentUser.data?.id;
 
-  const hourColumn = (
-    key: 'regularHours' | 'nightHours' | 'weekendHours' | 'holidayHours',
-    title: string,
-  ): ColumnsType<OvertimeEntry>[number] => ({
-    title,
-    dataIndex: key,
-    key,
-    width: 84,
-    align: 'right',
-    responsive: ['lg'],
-    render: (v: number, row: OvertimeEntry) => {
-      const hours = (
-        <span className="tabular-nums">{formatOvertimeHours(v)}</span>
-      );
-      return key === 'holidayHours' && row.holidayName ? (
-        <Tooltip title={row.holidayName}>{hours}</Tooltip>
-      ) : (
-        hours
-      );
-    },
-  });
-
-  const columns: ColumnsType<OvertimeEntry> = [
-    {
-      title: t('hr.table.date'),
-      dataIndex: 'date',
-      key: 'date',
-      width: 150,
-      render: (v: string, row: OvertimeEntry) => (
-        <div className="min-w-0">
-          <span className="whitespace-nowrap">{formatProjectDate(v)}</span>
-          <p className="erp-users-cell-sub m-0 mt-0.5 whitespace-nowrap tabular-nums">
-            {row.startTime} – {row.endTime}
-            {row.isOvernight ? ' (+1)' : ''}
-          </p>
-        </div>
-      ),
-    },
-    {
-      title: t('hr.labels.taskDescription'),
-      dataIndex: 'taskDescription',
-      key: 'taskDescription',
-      render: (value: string) => (
-        <div className="min-w-[180px] whitespace-pre-wrap break-words">
-          {value?.trim() || '-'}
-        </div>
-      ),
-    },
-    hourColumn('regularHours', t('hr.overtimeCategory.regular')),
-    hourColumn('nightHours', t('hr.overtimeCategory.night')),
-    hourColumn('weekendHours', t('hr.overtimeCategory.weekend')),
-    hourColumn('holidayHours', t('hr.overtimeCategory.holiday')),
-    {
-      title: t('hr.overtimeCategory.total'),
-      dataIndex: 'totalHours',
-      key: 'totalHours',
-      width: 84,
-      align: 'right',
-      render: (v: number) => (
-        <span className="erp-users-cell-strong tabular-nums whitespace-nowrap">
-          {formatOvertimeHours(v)}
-        </span>
-      ),
-    },
-    {
-      title: t('hr.labels.attachments'),
-      key: 'attachments',
-      width: 110,
-      render: (_: unknown, row: OvertimeEntry) => (
-        <AttachmentDownloadList
-          documents={row.documents}
-          emptyLabel="-"
-          compact
-        />
-      ),
-    },
-  ];
+  const employeeName = formatOvertimeEmployeeName(sheet.employee);
+  const periodLabel = formatOvertimePeriod(sheet.month, sheet.year, t);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {canEdit ? (
         <Alert
           type="info"
           showIcon
+          className="!rounded-xl"
           title="This sheet was returned. Edit entries on the overtime sheet, then resubmit from this page."
         />
       ) : null}
@@ -165,6 +237,7 @@ export default function OvertimeRequestDetail({
         <Alert
           type="warning"
           showIcon
+          className="!rounded-xl"
           title={t('hr.overtime.unregisteredHolidayBanner', {
             count: unregisteredHolidayDates.length,
             dates: unregisteredHolidayDates.join(', '),
@@ -172,11 +245,16 @@ export default function OvertimeRequestDetail({
         />
       ) : null}
 
-      <SectionCard
-        title="Overtime Sheet"
-        bodyClassName="px-3 py-4 sm:px-5"
-        action={
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="erp-pro-card overflow-hidden">
+        <div className="erp-ot-entries-header">
+          <div className="min-w-0">
+            <h3 className="erp-ot-entries-title m-0">
+              <span className="erp-users-id-chip">{sheet.sheetNumber}</span>
+              <span className="truncate">{employeeName}</span>
+            </h3>
+            <p className="erp-users-cell-sub m-0 mt-1">{periodLabel}</p>
+          </div>
+          <div className="erp-ot-entries-actions">
             <StatusBadge
               label={formatOvertimeStatus(sheet.status, t)}
               variant={overtimeStatusVariant(sheet.status)}
@@ -189,56 +267,106 @@ export default function OvertimeRequestDetail({
               </Link>
             ) : null}
           </div>
-        }
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-          <MetaItem label="Sheet #">{sheet.sheetNumber}</MetaItem>
-          <MetaItem label="Employee">
-            {formatOvertimeEmployeeName(sheet.employee)}
-          </MetaItem>
-          <MetaItem label="Period">
-            {formatOvertimePeriod(sheet.month, sheet.year, t)}
-          </MetaItem>
         </div>
-      </SectionCard>
+      </div>
 
-      <SummaryStrip
-        items={[
-          {
-            label: t('hr.overtimeCategory.regular'),
-            value: `${formatOvertimeHours(sheet.totalRegularHours)} hrs`,
-          },
-          {
-            label: t('hr.overtimeCategory.night'),
-            value: `${formatOvertimeHours(sheet.totalNightHours)} hrs`,
-          },
-          {
-            label: t('hr.overtimeCategory.weekend'),
-            value: `${formatOvertimeHours(sheet.totalWeekendHours)} hrs`,
-          },
-          {
-            label: t('hr.overtimeCategory.holiday'),
-            value: `${formatOvertimeHours(sheet.totalHolidayHours)} hrs`,
-          },
-          {
-            label: t('hr.overtimeCategory.total'),
-            value: `${formatOvertimeHours(sheet.totalHours)} hrs`,
-            emphasize: true,
-          },
-        ]}
-      />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
+        {(
+          [
+            {
+              label: t('hr.overtimeCategory.regular'),
+              value: sheet.totalRegularHours,
+              color: 'text-blue-700',
+            },
+            {
+              label: t('hr.overtimeCategory.night'),
+              value: sheet.totalNightHours,
+              color: 'text-violet-700',
+            },
+            {
+              label: t('hr.overtimeCategory.weekend'),
+              value: sheet.totalWeekendHours,
+              color: 'text-amber-700',
+            },
+            {
+              label: t('hr.overtimeCategory.holiday'),
+              value: sheet.totalHolidayHours,
+              color: 'text-red-700',
+            },
+            {
+              label: t('hr.overtimeCategory.total'),
+              value: sheet.totalHours,
+              color: 'text-[#0f6e56]',
+              total: true,
+            },
+          ] as const
+        ).map((item) => {
+          const hours = Number(item.value);
+          const isTotal = 'total' in item && item.total;
+          return (
+            <div
+              key={item.label}
+              className={`rounded-2xl px-5 py-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_4px_16px_rgba(16,24,40,0.06)] ${
+                isTotal ? 'bg-[#f0faf6]' : 'bg-white'
+              }`}
+            >
+              <p className="m-0 text-xs font-semibold tracking-[0.06em] text-gray-600 uppercase">
+                {item.label}
+              </p>
+              <p
+                className={`m-0 mt-1 font-semibold tabular-nums ${isTotal ? 'text-2xl' : 'text-xl'} ${
+                  hours > 0 ? item.color : 'text-gray-400'
+                }`}
+              >
+                {hours > 0 ? `${formatOvertimeHours(hours)}h` : '-'}
+              </p>
+            </div>
+          );
+        })}
+      </div>
 
-      <SectionCard title="Entries" bodyClassName="px-3 py-4 sm:px-5">
+      <section
+        className="erp-pro-card erp-ot-entries min-w-0"
+        aria-labelledby="approval-ot-entries-title"
+      >
+        <div className="erp-ot-entries-header">
+          <h3 id="approval-ot-entries-title" className="erp-ot-entries-title">
+            {t('hr.section.entries')}
+            <span className="erp-ot-entries-count">
+              {(sheet.entries?.length ?? 0).toLocaleString()}
+            </span>
+          </h3>
+        </div>
         <DataTable<OvertimeEntry>
           rowKey="id"
-          className="erp-pro-table"
-          size="small"
-          pagination={false}
-          scroll={{ x: 'max-content' }}
+          className="erp-pro-table erp-users-table"
+          size="middle"
           columns={columns}
           dataSource={sheet.entries ?? []}
+          pagination={false}
+          scroll={{ x: 760 }}
+          expandable={{
+            expandedRowRender: (entry) => (
+              <div className="erp-ot-expanded">
+                <p className="erp-ot-expanded-title">
+                  {t('hr.section.attachments')}
+                </p>
+                <AttachmentDownloadList documents={entry.documents} />
+              </div>
+            ),
+            rowExpandable: (entry) => (entry.documents?.length ?? 0) > 0,
+          }}
+          locale={{
+            emptyText: (
+              <TableEmptyState
+                icon={<FieldTimeOutlined />}
+                title={t('pages.hr.overtime.entriesEmptyTitle')}
+                description={t('hr.empty.noEntries')}
+              />
+            ),
+          }}
         />
-      </SectionCard>
+      </section>
     </div>
   );
 }
