@@ -30,9 +30,16 @@ export interface SelectableWindowsInput {
   morningEnd: string | null;
   afternoonStart: string | null;
   afternoonEnd: string | null;
-  /** Half-day leave portions already converted to excluded HH:mm windows. */
+  /**
+   * Leave (full or half) already converted to duty-hour HH:mm windows to carve out.
+   * Full-day leave must list scheduled working hours only — not 00:00–24:00.
+   */
   leaveExcludedWindows: Array<{ start: string; end: string }>;
-  hasFullDayLeave: boolean;
+  /**
+   * @deprecated Ignored. Full-day leave is applied via leaveExcludedWindows
+   * so OT outside duty hours stays selectable.
+   */
+  hasFullDayLeave?: boolean;
   /** Policy lunchCountsAsOvertime as of the date; when false the lunch gap is not selectable. */
   lunchCountsAsOvertime?: boolean;
 }
@@ -40,6 +47,7 @@ export interface SelectableWindowsInput {
 export interface SelectableWindowsResult {
   dayKind: OvertimeDayKind;
   windows: TimeWindowHhMm[];
+  /** Always null — full-day leave no longer blocks the whole calendar day. */
   blockedReason: 'FULL_DAY_LEAVE' | null;
   message: string | null;
 }
@@ -176,15 +184,8 @@ export function entryToSameDayOccupiedWindow(entry: {
 export function computeSelectableOvertimeWindows(
   input: SelectableWindowsInput,
 ): SelectableWindowsResult {
-  if (input.hasFullDayLeave) {
-    return {
-      dayKind: 'FULL_DAY_LEAVE',
-      windows: [],
-      blockedReason: 'FULL_DAY_LEAVE',
-      message: "You're on approved leave this day.",
-    };
-  }
-
+  // Full-day leave is expressed as duty-hour leaveExcludedWindows only.
+  // OT outside scheduled working hours stays selectable.
   const leaveExcluded = input.leaveExcludedWindows.map((w) => ({
     start: parseHhMmToMinutesStrict(w.start),
     end: parseHhMmToMinutesStrict(w.end),

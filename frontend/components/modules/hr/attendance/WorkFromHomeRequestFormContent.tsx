@@ -8,6 +8,7 @@ import { Alert, DatePicker, Form, Input, Spin } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
+import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import {
@@ -223,6 +224,13 @@ export default function WorkFromHomeRequestFormContent(): React.ReactNode {
                   }}
                 />
               </Form.Item>
+              <DayCoverageNotice
+                className="md:col-span-2"
+                employeeId={onBehalf.effectiveEmployeeId}
+                from={startKey}
+                to={endKey}
+                focus="WORK_FROM_HOME"
+              />
               {range ? (
                 <div className="md:col-span-2">
                   {previewQuery.isLoading ? (

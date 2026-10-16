@@ -6031,6 +6031,21 @@
       "itemDetails": "明细详情",
       "amountAndCurrency": "金额与币种"
     },
+    "dayCoverage": {
+      "title": "这些日期已有记录",
+      "checking": "正在检查已有记录…",
+      "itemApproved": "{{date}}：已批准的{{module}}{{ref}}",
+      "itemRequested": "{{date}}：待处理的{{module}}{{ref}}",
+      "reference": "（{{ref}}）",
+      "overtimeEntry": "{{date}}：加班 {{start}}–{{end}}",
+      "modules": {
+        "leave": "请假",
+        "siteAssignment": "驻场安排",
+        "workFromHome": "居家办公",
+        "fieldMovement": "外勤说明",
+        "attendance": "考勤"
+      }
+    },
     "onBehalf": {
       "title": "提交信息",
       "description": "为他人提交？请选择此申请所属的员工。",

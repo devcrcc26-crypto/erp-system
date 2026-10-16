@@ -35,6 +35,7 @@ export default function OvertimeEntryFormDrawer({
   sheetYear,
   employeeId,
   editingEntry,
+  sheetEntries,
   onClose,
 }: {
   open: boolean;
@@ -43,6 +44,7 @@ export default function OvertimeEntryFormDrawer({
   sheetYear: number;
   employeeId: string;
   editingEntry: OvertimeEntry | null;
+  sheetEntries?: OvertimeEntry[];
   onClose: () => void;
 }): React.ReactNode {
   const { t } = useEpcTranslation();
@@ -273,6 +275,9 @@ export default function OvertimeEntryFormDrawer({
         periodLabel={periodLabel}
         windows={windows}
         windowsLoading={windowsMutation.isPending}
+        employeeId={employeeId}
+        sheetEntries={sheetEntries}
+        excludeEntryId={editingEntry?.id}
         onFinish={handleSubmit}
         onAddNextDay={handleAddNextDay}
       />

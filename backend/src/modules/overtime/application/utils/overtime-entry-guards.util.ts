@@ -1,7 +1,9 @@
-import { BadRequestException } from '@nestjs/common';
-
+/**
+ * Legacy message — full-day leave no longer blocks all OT; only duty hours
+ * are excluded via {@link buildFullDayLeaveExcludedWindows}.
+ */
 export const FULL_DAY_LEAVE_MESSAGE =
-  'Cannot record overtime on a day with approved full-day leave.';
+  'Cannot record overtime during scheduled working hours on an approved leave day.';
 
 export const PAYROLL_LOCKED_MESSAGE =
   "Overtime entries are locked because this month's payroll run is finalized.";
@@ -53,7 +55,38 @@ export function buildLeaveExcludedWindows(
 }
 
 /**
- * Rejects full-day leave coverage and returns half-day excluded windows.
+ * Duty hours covered by approved full-day leave (morning start → afternoon end,
+ * including lunch). Empty when there is no scheduled duty that day (day off /
+ * holiday with no slices) — OT outside duty stays allowed.
+ */
+export function buildFullDayLeaveExcludedWindows(
+  weekday: WeekdayScheduleSlice | undefined,
+): Array<{ start: string; end: string }> {
+  if (!weekday) {
+    return [{ start: '08:30', end: '17:30' }];
+  }
+
+  const morningStart = weekday.morningStart;
+  const morningEnd = weekday.morningEnd;
+  const afternoonStart = weekday.afternoonStart;
+  const afternoonEnd = weekday.afternoonEnd;
+
+  if (morningStart && afternoonEnd) {
+    return [{ start: morningStart, end: afternoonEnd }];
+  }
+  if (morningStart && morningEnd) {
+    return [{ start: morningStart, end: morningEnd }];
+  }
+  if (afternoonStart && afternoonEnd) {
+    return [{ start: afternoonStart, end: afternoonEnd }];
+  }
+  // No duty slices (schedule day off) — nothing to exclude; OT may use the whole day.
+  return [];
+}
+
+/**
+ * Maps approved leave portions to duty-hour windows that overtime must not cover.
+ * Full-day leave excludes scheduled working hours only (not the whole calendar day).
  */
 export function collectLeaveExcludedWindows(
   periods: Array<{ dayPortion: LeaveDayPortionInput }>,
@@ -62,7 +95,8 @@ export function collectLeaveExcludedWindows(
   const windows: Array<{ start: string; end: string }> = [];
   for (const period of periods) {
     if (period.dayPortion === 'FULL') {
-      throw new BadRequestException(FULL_DAY_LEAVE_MESSAGE);
+      windows.push(...buildFullDayLeaveExcludedWindows(weekday));
+      continue;
     }
     if (period.dayPortion === 'MORNING' || period.dayPortion === 'AFTERNOON') {
       windows.push(buildLeaveExcludedWindows(period.dayPortion, weekday));

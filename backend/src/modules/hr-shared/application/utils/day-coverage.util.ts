@@ -1,8 +1,9 @@
 /**
- * Cross-module day coverage: a day already covered by one HR record (leave,
- * site assignment, work from home, field movement) or by attendance scans must
- * not be covered again by another. Pure rules + messages; loading lives in
- * DayCoverageService.
+ * Cross-module day coverage: a day already covered by leave, site assignment,
+ * work from home, or field movement must not be covered again by another of
+ * those. Attendance scans are available after month-end and must not hard-block
+ * create-time requests (ATTENDANCE remains loadable for legacy/read paths only).
+ * Pure rules + messages; loading lives in DayCoverageService.
  */
 
 export type CoverModule =

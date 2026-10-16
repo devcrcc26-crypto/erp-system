@@ -931,7 +931,8 @@ export class WorkFromHomeDayService
       companyId,
       employeeId,
       candidates,
-      ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME', 'FIELD_MOVEMENT', 'ATTENDANCE'],
+      // Attendance arrives after month-end — do not skip WFH days for scans at request time.
+      ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME', 'FIELD_MOVEMENT'],
     );
     return planWorkFromHomeRange({ start, end, schedule: scheduleDays, covers });
   }

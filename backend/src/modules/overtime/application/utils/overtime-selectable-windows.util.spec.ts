@@ -117,14 +117,23 @@ describe('computeSelectableOvertimeWindows', () => {
     ).toBe(false);
   });
 
-  it('11 - full-day leave → no windows', () => {
+  it('11 - full-day leave duty hours excluded; evening OT still selectable', () => {
     const result = computeSelectableOvertimeWindows({
       ...FULL,
-      hasFullDayLeave: true,
+      leaveExcludedWindows: [{ start: '08:30', end: '17:30' }],
     });
-    expect(result.dayKind).toBe('FULL_DAY_LEAVE');
-    expect(result.windows).toEqual([]);
-    expect(result.message).toBe("You're on approved leave this day.");
+    expect(result.dayKind).toBe('FULL_WORKING');
+    expect(result.windows).toEqual([
+      { start: '00:00', end: '08:30' },
+      { start: '17:30', end: '24:00' },
+    ]);
+    expect(result.blockedReason).toBeNull();
+    expect(
+      isIntervalInsideSelectableWindows('18:00', '20:00', result.windows),
+    ).toBe(true);
+    expect(
+      isIntervalInsideSelectableWindows('09:00', '10:00', result.windows),
+    ).toBe(false);
   });
 
   it('half-day leave morning excludes morning OT window portion', () => {

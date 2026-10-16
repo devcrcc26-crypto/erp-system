@@ -80,7 +80,8 @@ function coverReason(cover: DayCover): WorkFromHomeSkipReason {
  * Splits a range into the working days that will be created (per the
  * employee's schedule) and skipped days with a reason. Precedence:
  * holiday → schedule day off → leave / site / already WFH /
- * pending WFH / field movement / attendance scans (approved before requested).
+ * pending WFH / field movement.
+ * Attendance is not used at request time (imported after month-end).
  */
 export function planWorkFromHomeRange(input: {
   start: Date;

@@ -34,4 +34,15 @@ describe('overtime entry leave rules', () => {
       { start: '14:00', end: '18:00' },
     ]);
   });
+
+  it('full-day leave maps to continuous duty window', () => {
+    expect(
+      collectLeaveExcludedWindows([{ dayPortion: 'FULL' }], {
+        morningStart: '09:00',
+        morningEnd: '12:00',
+        afternoonStart: '14:00',
+        afternoonEnd: '18:00',
+      }),
+    ).toEqual([{ start: '09:00', end: '18:00' }]);
+  });
 });

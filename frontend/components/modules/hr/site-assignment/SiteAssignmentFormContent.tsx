@@ -8,6 +8,7 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
+import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import {
@@ -144,6 +145,27 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
       (sum, row) => sum + calendarDays(row.range[0], row.range[1]),
       0,
     );
+  }, [periods]);
+
+  const coverageSpan = useMemo(() => {
+    const filled = filledPeriods(periods);
+    if (filled.length === 0) {
+      return null;
+    }
+    let from = filled[0].range[0];
+    let to = filled[0].range[1];
+    for (const row of filled) {
+      if (row.range[0].isBefore(from, 'day')) {
+        from = row.range[0];
+      }
+      if (row.range[1].isAfter(to, 'day')) {
+        to = row.range[1];
+      }
+    }
+    return {
+      from: from.format('YYYY-MM-DD'),
+      to: to.format('YYYY-MM-DD'),
+    };
   }, [periods]);
 
   const anyPeriodBeforeCurrentMonth = useMemo(
@@ -411,6 +433,13 @@ export default function SiteAssignmentFormContent(): React.ReactNode {
                     })}
                   </p>
                 ) : null}
+                <DayCoverageNotice
+                  className="mt-3"
+                  employeeId={onBehalf.effectiveEmployeeId}
+                  from={coverageSpan?.from ?? null}
+                  to={coverageSpan?.to ?? null}
+                  focus="SITE_ASSIGNMENT"
+                />
                 {periodError ? (
                   <p className="erp-sa-period-editor-error" role="alert">
                     {periodError}

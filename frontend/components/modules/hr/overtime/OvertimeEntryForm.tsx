@@ -13,8 +13,10 @@ import {
 } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import type { Dayjs } from 'dayjs';
+import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import type {
+  OvertimeEntry,
   PreviewOvertimeEntryResult,
   SelectableOvertimeWindowsResult,
 } from '@/lib/api/overtime.types';
@@ -89,6 +91,10 @@ interface OvertimeEntryFormProps {
   periodLabel: string;
   windows: SelectableOvertimeWindowsResult | null;
   windowsLoading: boolean;
+  employeeId?: string;
+  /** Other entries on the sheet — shown when the selected date already has OT. */
+  sheetEntries?: OvertimeEntry[];
+  excludeEntryId?: string;
   onFinish?: (values: OvertimeEntryFormValues) => void | Promise<void>;
   onAddNextDay?: (nextDate: Dayjs) => void;
 }
@@ -162,6 +168,9 @@ export default function OvertimeEntryForm({
   periodLabel,
   windows,
   windowsLoading,
+  employeeId,
+  sheetEntries,
+  excludeEntryId,
   onFinish,
   onAddNextDay,
 }: OvertimeEntryFormProps): React.ReactNode {
@@ -169,6 +178,26 @@ export default function OvertimeEntryForm({
   const watchedDate = Form.useWatch('date', form);
   const watchedStart = Form.useWatch('startTime', form);
   const watchedEnd = Form.useWatch('endTime', form);
+  const dateKey = watchedDate?.format('YYYY-MM-DD') ?? null;
+
+  const overtimeExtraLines = useMemo(() => {
+    if (!dateKey || !sheetEntries?.length) {
+      return [];
+    }
+    return sheetEntries
+      .filter(
+        (entry) =>
+          entry.date === dateKey &&
+          entry.id !== excludeEntryId,
+      )
+      .map((entry) =>
+        t('hr.dayCoverage.overtimeEntry', {
+          date: entry.date,
+          start: entry.startTime,
+          end: entry.endTime,
+        }),
+      );
+  }, [dateKey, excludeEntryId, sheetEntries, t]);
 
   const startOptions = useMemo(() => {
     if (!windows?.windows?.length) {
@@ -223,6 +252,14 @@ export default function OvertimeEntryForm({
                 disabledDate={disabledDate}
               />
             </Form.Item>
+
+            <DayCoverageNotice
+              className="md:col-span-2"
+              employeeId={employeeId}
+              from={dateKey}
+              to={dateKey}
+              extraLines={overtimeExtraLines}
+            />
 
             {windowsLoading ? (
               <div className="md:col-span-2 flex items-center gap-2 py-1">

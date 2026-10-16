@@ -15,6 +15,7 @@ import type { Dayjs } from 'dayjs';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import HrFormPageShell from '@/components/modules/hr/shared/HrFormPageShell';
+import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import LeavePeriodBreakdownTable from '@/components/modules/hr/leave/LeavePeriodBreakdownTable';
 import FormLayout from '@/components/ui/FormLayout/FormLayout';
 import FileUploadInput from '@/components/ui/FileUploadInput/FileUploadInput';
@@ -237,6 +238,29 @@ export default function LeaveRequestFormContent(): React.ReactNode {
     const balanceLeaveType = resolveBalanceLeaveType(leaveType);
     return balancesQuery.data.find((row) => row.leaveType === balanceLeaveType);
   }, [balancesQuery.data, leaveType]);
+
+  const coverageSpan = useMemo(() => {
+    const ranges = periods
+      .map((row) => row.range)
+      .filter((range): range is [Dayjs, Dayjs] => Boolean(range?.[0] && range[1]));
+    if (ranges.length === 0) {
+      return null;
+    }
+    let from = ranges[0][0];
+    let to = ranges[0][1];
+    for (const range of ranges) {
+      if (range[0].isBefore(from, 'day')) {
+        from = range[0];
+      }
+      if (range[1].isAfter(to, 'day')) {
+        to = range[1];
+      }
+    }
+    return {
+      from: from.format('YYYY-MM-DD'),
+      to: to.format('YYYY-MM-DD'),
+    };
+  }, [periods]);
 
   const balanceYearLabel =
     selectedBalance?.year ?? balancesQuery.data?.[0]?.year;
@@ -604,6 +628,13 @@ export default function LeaveRequestFormContent(): React.ReactNode {
                     </div>
                   ))}
                 </div>
+                <DayCoverageNotice
+                  className="mt-3"
+                  employeeId={onBehalf.effectiveEmployeeId}
+                  from={coverageSpan?.from ?? null}
+                  to={coverageSpan?.to ?? null}
+                  focus="LEAVE"
+                />
                 {previewError ? (
                   <Alert
                     type="error"

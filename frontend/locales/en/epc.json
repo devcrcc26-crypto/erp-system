@@ -6032,6 +6032,21 @@
       "itemDetails": "Item details",
       "amountAndCurrency": "Amount & currency"
     },
+    "dayCoverage": {
+      "title": "Existing records on these dates",
+      "checking": "Checking existing records…",
+      "itemApproved": "{{date}}: approved {{module}}{{ref}}",
+      "itemRequested": "{{date}}: pending {{module}}{{ref}}",
+      "reference": " ({{ref}})",
+      "overtimeEntry": "{{date}}: overtime {{start}}–{{end}}",
+      "modules": {
+        "leave": "leave",
+        "siteAssignment": "site assignment",
+        "workFromHome": "work from home",
+        "fieldMovement": "field movement",
+        "attendance": "attendance"
+      }
+    },
     "onBehalf": {
       "title": "Submission details",
       "description": "Filing for someone else? Choose the employee this request belongs to.",
