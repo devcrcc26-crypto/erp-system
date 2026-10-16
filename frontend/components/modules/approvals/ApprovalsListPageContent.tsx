@@ -1,5 +1,7 @@
 'use client';
 
+import './approvals-v2.css';
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
@@ -8,7 +10,6 @@ import {
   Input,
   Select,
   Spin,
-  Tabs,
   Tooltip,
 } from 'antd';
 import {
@@ -20,6 +21,8 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  TeamOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
@@ -59,7 +62,10 @@ import { getFriendlyApiErrorMessage } from '@/lib/utils/friendly-api-error';
 import { formatProjectDate } from '@/lib/utils/project-display';
 
 import { LIST_PAGE_V2 } from '@/components/ui/list-page-v2';
+
 type InboxTab = 'PENDING_MY_ACTION' | 'MY_REQUESTS' | 'ALL';
+
+const PAGE_ROOT = `erp-pro-list-page erp-users-page erp-approvals-page erp-approvals-v2 ${LIST_PAGE_V2}`;
 
 const NEW_PATH = '/approvals/new';
 const LIST_PATH = '/approvals';
@@ -387,8 +393,8 @@ export default function ApprovalsListPageContent(): React.ReactNode {
 
   if (listQuery.isLoading && !listQuery.data) {
     return (
-      <div className={`erp-pro-list-page erp-users-page erp-approvals-page ${LIST_PAGE_V2}`}>
-        <div className="flex justify-center rounded-xl border border-[#e8ebef] bg-white p-12">
+      <div className={PAGE_ROOT}>
+        <div className="erp-pro-card flex justify-center p-12">
           <Spin />
         </div>
       </div>
@@ -396,7 +402,7 @@ export default function ApprovalsListPageContent(): React.ReactNode {
   }
 
   return (
-    <div className={`erp-pro-list-page erp-users-page erp-approvals-page ${LIST_PAGE_V2}`}>
+    <div className={PAGE_ROOT}>
       {listQuery.isError ? (
         <ErpNotice
           tone="error"
@@ -409,41 +415,53 @@ export default function ApprovalsListPageContent(): React.ReactNode {
         />
       ) : null}
 
-      <Tabs
-        activeKey={inbox}
-        onChange={(key) => {
-          setInbox(key as InboxTab);
-          resetPage();
-        }}
-        items={[
-          {
-            key: 'MY_REQUESTS',
-            label: t('pages.approvals.tabs.myRequests'),
-          },
-          {
-            key: 'PENDING_MY_ACTION',
-            label: (
-              <span className="inline-flex items-center gap-1.5">
-                {t('pages.approvals.tabs.pendingMyAction')}
-                {pendingActionCount > 0 ? (
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#D32F2F] px-1 text-[10px] font-bold text-white">
-                    {pendingActionCount > 99 ? '99+' : pendingActionCount}
-                  </span>
-                ) : null}
+      <div className="erp-pro-card">
+        <div className="erp-approvals-tabbar" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={inbox === 'MY_REQUESTS'}
+            onClick={() => {
+              setInbox('MY_REQUESTS');
+              resetPage();
+            }}
+          >
+            <UserOutlined aria-hidden />
+            <span>{t('pages.approvals.tabs.myRequests')}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={inbox === 'PENDING_MY_ACTION'}
+            onClick={() => {
+              setInbox('PENDING_MY_ACTION');
+              resetPage();
+            }}
+          >
+            <ClockCircleOutlined aria-hidden />
+            <span>{t('pages.approvals.tabs.pendingMyAction')}</span>
+            {pendingActionCount > 0 ? (
+              <span className="erp-approvals-tab-badge">
+                {pendingActionCount > 99 ? '99+' : pendingActionCount}
               </span>
-            ),
-          },
-          ...(isFullAccess
-            ? [
-                {
-                  key: 'ALL' as const,
-                  label: t('pages.approvals.tabs.allRequests'),
-                },
-              ]
-            : []),
-        ]}
-        className="erp-list-tabs mb-3"
-      />
+            ) : null}
+          </button>
+          {isFullAccess ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={inbox === 'ALL'}
+              onClick={() => {
+                setInbox('ALL');
+                resetPage();
+              }}
+            >
+              <TeamOutlined aria-hidden />
+              <span>{t('pages.approvals.tabs.allRequests')}</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
 
       <div className="erp-users-stat-bar">
         <ApprovalsStat
