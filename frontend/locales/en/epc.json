@@ -382,6 +382,20 @@
       "resubmittedCount": "Resubmitted {{count}} time(s)",
       "decide": "Decide",
       "decideForTier": "Decide - {{label}}",
+      "reassign": {
+        "button": "Reassign",
+        "buttonAria": "Reassign the {{label}} approval",
+        "title": "Reassign {{label}}",
+        "confirm": "Reassign",
+        "current": "Currently assigned to {{name}}.",
+        "newApprover": "New approver",
+        "newApproverHint": "Active employees only (not inactive or separated). They are notified.",
+        "newApproverRequired": "Choose the new approver.",
+        "reason": "Reason",
+        "reasonRequired": "A reason of at least 3 characters is required.",
+        "saved": "{{label}} has been reassigned.",
+        "error": "Could not reassign the approval."
+      },
       "currentTierBadge": "Current",
       "conditions": "Conditions",
       "resolve": "Resolve",
@@ -786,7 +800,7 @@
           "earlyDepartureGraceMinutes": {
             "title": "Early departure grace",
             "description": "Leaving up to this many minutes before the scheduled end is not early.",
-            "example": "30 min: with a 17:30 end, leaving at 17:00 is fine; 16:59 is flagged."
+            "example": "15 min (default): with a 17:30 end, leaving at 17:15 is fine; 17:14 is flagged."
           },
           "earlyDepartureDeductMinutes": {
             "title": "Early departure: half-day threshold",
@@ -801,7 +815,7 @@
           "enrolmentGraceWorkingDays": {
             "title": "New-starter scanner grace",
             "description": "New employees who aren't on the scanner yet are not marked absent. No limit = until the day after their first scan.",
-            "example": "3: at most their first 3 working days are excused."
+            "example": "5 (default): at most their first 5 working days are excused; later no-scan days are flagged."
           },
           "forgotToClockFlagThreshold": {
             "title": "Forgot-to-scan review flag",
@@ -811,7 +825,7 @@
           "unpaidLeaveCountsRestDays": {
             "title": "Unpaid leave includes days off",
             "description": "When on, unpaid leave deducts every calendar day in its range, including days off and holidays.",
-            "example": "On: unpaid leave Friday–Monday = 4 days deducted. Off: duty days only."
+            "example": "On: unpaid leave Friday–Monday = 4 days deducted. Off (default): duty days only; days off and holidays stay paid."
           },
           "monthDays": {
             "title": "Days in a payroll month",
@@ -1181,7 +1195,8 @@
             "UNPAID_LEAVE": "Unpaid leave",
             "FIELD_MOVEMENT_PENDING": "Field movement pending",
             "ENROLMENT_GRACE": "Enrolment grace",
-            "NOT_EMPLOYED": "Not employed"
+            "NOT_EMPLOYED": "Not employed",
+            "INACTIVE": "Inactive"
           }
         },
         "importModal": {
@@ -2944,7 +2959,7 @@
       "pendingSubmitted": "{{count}} request(s) they submitted are still pending.",
       "lockedPayroll": "Payroll {{runs}} is already approved or paid for the affected month(s).",
       "lockedPayrollConfirm": "I understand: mark the payroll stale and notify payroll.",
-      "finalSettlementNote": "Final settlement (leave payout, severance, notice) is handled outside the system.",
+      "finalSettlementNote": "Final settlement (leave payout, severance, notice) is calculated in payroll only for items enabled in HR policy settings; otherwise it is handled outside the system.",
       "saved": "{{name}} has been separated.",
       "saveError": "Could not save the separation.",
       "bannerScheduled": "Leaving on {{date}} ({{type}})",
@@ -2952,7 +2967,88 @@
       "cancel": "Cancel separation",
       "cancelTitle": "Cancel this separation?",
       "cancelDescription": "Employment, the contract end date and login are restored to how they were before.",
-      "cancelled": "Separation cancelled."
+      "cancelled": "Separation cancelled.",
+      "handoverNext": "Next: handover ({{count}})",
+      "handoverIntro": "Before confirming, hand over everything this person holds: pick a replacement (or skip with a reason) for each approval and role, and cancel or keep each request they submitted.",
+      "handoverComplete": "Handover complete. You can confirm the separation.",
+      "handoverTiers": "Pending approvals waiting on them ({{count}})",
+      "handoverRoles": "Leader / approver roles they hold ({{count}})",
+      "handoverSubmitted": "Pending requests they submitted ({{count}})",
+      "handoverReplace": "Replacement",
+      "handoverSkip": "Skip",
+      "handoverPickReplacement": "Choose the replacement",
+      "handoverSkipReason": "Reason for skipping (at least 3 characters)",
+      "handoverKeep": "Keep",
+      "handoverCancelRequest": "Cancel request",
+      "leadershipKinds": {
+        "DEPARTMENT_LEADER": "Department head",
+        "DISCIPLINE_LEADER": "Discipline lead",
+        "ROLE": "Approver role"
+      }
+    },
+    "employment": {
+      "statusActive": "Active",
+      "statusInactive": "Inactive — {{type}} ({{from}} → {{to}})",
+      "statusInactiveShort": "Inactive",
+      "statusSeparated": "Separated {{date}} ({{type}})",
+      "statusSeparatedShort": "Separated",
+      "filterEmploymentStatus": "Employment status",
+      "openEnded": "open-ended",
+      "current": "Current",
+      "historyTitle": "Employment history",
+      "periodStart": "Start",
+      "periodEnd": "Last working day",
+      "noPeriods": "No employment periods recorded.",
+      "inactiveHistory": "Inactive periods",
+      "noInactive": "No inactive periods.",
+      "inactiveType": "Type",
+      "inactiveTypes": {
+        "SUSPENDED": "Suspended",
+        "LONG_LEAVE": "Long leave",
+        "OTHER": "Other"
+      },
+      "from": "From",
+      "to": "To",
+      "toOptional": "To (optional)",
+      "toHint": "Leave empty if the end date is not known yet; use Reactivate to end it.",
+      "toBeforeFrom": "The end date cannot be before the start date.",
+      "typeRequired": "Choose a type.",
+      "fromRequired": "Choose a date.",
+      "setInactive": "Set inactive",
+      "setInactiveTitle": "Set {{name}} inactive",
+      "setInactiveHint": "Days in the period show as Inactive in attendance (not absent). Pay and login follow the HR policy for the chosen type; the employee stays on the payroll roster.",
+      "inactiveSaved": "{{name}} has been set inactive.",
+      "reactivate": "Reactivate",
+      "reactivateTitle": "Reactivate {{name}}",
+      "reactivateCurrent": "{{type}} since {{from}} will end. Attendance and payroll are recalculated.",
+      "reactivateUpcoming": "The inactive period starting {{from}} has not begun and will be removed.",
+      "lastInactiveDate": "Last inactive day (optional)",
+      "lastInactiveDateHint": "Default: yesterday, so the employee is active from today.",
+      "reactivated": "{{name}} has been reactivated.",
+      "rehire": "Rehire",
+      "rehireTitle": "Rehire {{name}}",
+      "rehireHint": "Creates a new employment period and contract. The employment date becomes the new start date (leave year, service years and joiner month start from it); earlier periods are kept. Login is re-enabled with a temporary password.",
+      "rehireStart": "New start date",
+      "signedAt": "Contract signed on",
+      "contractType": "Contract type",
+      "contractTypes": {
+        "FIXED_TERM": "Fixed term",
+        "OPEN_ENDED": "Open-ended",
+        "PROBATION": "Probation",
+        "RENEWAL": "Renewal"
+      },
+      "contractEnd": "Contract end date",
+      "basicSalary": "Basic salary",
+      "basicSalaryRequired": "Enter the basic salary.",
+      "transport": "Transport allowance",
+      "monthlyBonus": "Monthly bonus",
+      "pension": "Pension applies",
+      "pensionDefault": "Default for employee type",
+      "pensionHint": "Default: yes, except freelancers.",
+      "rehired": "{{name}} has been rehired.",
+      "temporaryPasswordTitle": "Temporary password (shown once)",
+      "temporaryPasswordHint": "Give this to the employee. They must change it at first login.",
+      "saveError": "Could not save the change."
     },
     "deleteError": "Failed to delete employee.",
     "updated": "{{name}} updated successfully.",
@@ -5034,6 +5130,10 @@
         "PAID": "Paid",
         "CANCELLED": "Cancelled"
       },
+      "employmentReview": {
+        "title": "{{count}} employee(s) need an employment review before you continue",
+        "confirm": "I've reviewed these {{count}} employees"
+      },
       "flags": {
         "NONE": "None",
         "MISSING_ATTENDANCE": "Missing attendance",
@@ -5042,7 +5142,9 @@
         "ZERO_SALARY": "Zero salary",
         "MANUAL_OVERRIDE": "Manual override",
         "LEAVER_FINAL_MONTH": "Leaver — final month",
-        "LOGIN_DISABLED_STILL_EMPLOYED": "Login disabled, still employed"
+        "LOGIN_DISABLED_STILL_EMPLOYED": "Login disabled, still employed",
+        "INACTIVE_IN_MONTH": "Inactive in month",
+        "CONTRACT_ENDED_NOT_RENEWED": "Contract ended — not renewed"
       },
       "list": {
         "title": "Payroll runs",

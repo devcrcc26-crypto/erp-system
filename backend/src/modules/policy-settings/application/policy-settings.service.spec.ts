@@ -121,7 +121,7 @@ describe('PolicySettingsService', () => {
         service.save(ctx, 'notAPolicy', { value: 1, effectiveFrom: '2026-11-01', reason: 'x y z' }),
       ).rejects.toThrow('Unknown policy');
       await expect(
-        service.save(ctx, 'earlyDepartureDeductMinutes', { value: 20, effectiveFrom: '2026-11-01', reason: 'x y z' }),
+        service.save(ctx, 'earlyDepartureDeductMinutes', { value: 10, effectiveFrom: '2026-11-01', reason: 'x y z' }),
       ).rejects.toThrow('longer than the early-departure grace');
     });
   });

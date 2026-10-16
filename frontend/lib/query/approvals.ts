@@ -346,3 +346,19 @@ export function useRespondToApprovalCondition(requestId: string) {
     },
   });
 }
+
+/** HR Manager / System Administrator: move a pending tier to another active user. */
+export function useReassignApprovalTier(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { tierId: string; newApproverId: string; reason: string }) =>
+      apiPost<{ tierId: string; requestId: string; approverId: string }>(
+        `/approvals/tiers/${payload.tierId}/reassign`,
+        { newApproverId: payload.newApproverId, reason: payload.reason },
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.detail(requestId) });
+      void queryClient.invalidateQueries({ queryKey: approvalKeys.lists() });
+    },
+  });
+}

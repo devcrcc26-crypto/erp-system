@@ -6,6 +6,37 @@ export const LEAVER_FINAL_MONTH_NOTE =
 export const LOGIN_DISABLED_STILL_EMPLOYED_NOTE =
   'Login disabled but employment is still open — separate the employee or re-enable login';
 
+/** Flags HR must explicitly review before a run is submitted or approved. */
+export const EMPLOYMENT_REVIEW_FLAGS = [
+  'CONTRACT_ENDED_NOT_RENEWED',
+  'LOGIN_DISABLED_STILL_EMPLOYED',
+  'LEAVER_FINAL_MONTH',
+  'INACTIVE_IN_MONTH',
+] as const satisfies readonly PayrollEntryFlag[];
+
+export type EmploymentReviewFlag = (typeof EMPLOYMENT_REVIEW_FLAGS)[number];
+
+/**
+ * The employment flag an entry carries, even when a data-problem flag took the
+ * flag slot and the employment note was appended to flagNote instead.
+ */
+export function employmentReviewFlag(entry: {
+  flag: PayrollEntryFlag;
+  flagNote?: string | null;
+}): EmploymentReviewFlag | null {
+  if ((EMPLOYMENT_REVIEW_FLAGS as readonly string[]).includes(entry.flag)) {
+    return entry.flag as EmploymentReviewFlag;
+  }
+  const note = entry.flagNote ?? '';
+  if (note.includes('Leaver final month')) return 'LEAVER_FINAL_MONTH';
+  if (note.includes('Inactive (')) return 'INACTIVE_IN_MONTH';
+  if (note.includes('Contract ended — renew')) return 'CONTRACT_ENDED_NOT_RENEWED';
+  if (note.includes('Login disabled but employment is still open')) {
+    return 'LOGIN_DISABLED_STILL_EMPLOYED';
+  }
+  return null;
+}
+
 function formatYmd(date: Date): string {
   return date.toISOString().slice(0, 10);
 }

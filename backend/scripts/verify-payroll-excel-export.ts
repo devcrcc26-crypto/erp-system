@@ -13,6 +13,8 @@ async function main(): Promise<void> {
   const service = new PayrollExcelExportService(
     prisma as never,
     new PayrollCompanySettingsService(prisma as never),
+    // Standalone run: export audit entries are not needed.
+    { create: async () => undefined, buildFromRequestContext: (x: unknown) => x } as never,
   );
 
   const run = await prisma.payrollRun.findFirst({
@@ -22,7 +24,7 @@ async function main(): Promise<void> {
     throw new Error('August 2026 payroll run not found');
   }
 
-  const file = await service.exportRun(run.id, run.companyId);
+  const file = await service.exportRun(run.id, run.companyId, run.createdBy);
   console.log('FILENAME', file.filename);
 
   const workbook = new ExcelJS.Workbook();

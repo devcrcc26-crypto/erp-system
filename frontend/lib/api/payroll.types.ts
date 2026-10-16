@@ -15,7 +15,9 @@ export type PayrollEntryFlag =
   | 'ZERO_SALARY'
   | 'MANUAL_OVERRIDE'
   | 'LEAVER_FINAL_MONTH'
-  | 'LOGIN_DISABLED_STILL_EMPLOYED';
+  | 'LOGIN_DISABLED_STILL_EMPLOYED'
+  | 'INACTIVE_IN_MONTH'
+  | 'CONTRACT_ENDED_NOT_RENEWED';
 
 export type MoneyField = number | string;
 
@@ -238,6 +240,29 @@ export interface CreatePayrollRunPayload {
 
 export interface SubmitPayrollRunPayload {
   acknowledgeFlags?: boolean;
+  /** Number of employment-flagged employees reviewed (required when there are any). */
+  confirmEmploymentReview?: number;
+}
+
+export interface ApprovePayrollRunPayload {
+  /** Number of employment-flagged employees reviewed (required when there are any). */
+  confirmEmploymentReview?: number;
+}
+
+export type EmploymentReviewFlag =
+  | 'CONTRACT_ENDED_NOT_RENEWED'
+  | 'LOGIN_DISABLED_STILL_EMPLOYED'
+  | 'LEAVER_FINAL_MONTH'
+  | 'INACTIVE_IN_MONTH';
+
+/** An entry HR must review before submitting / approving the run. */
+export interface PayrollEmploymentReviewEntry {
+  entryId: string;
+  employeeId: string;
+  employeeCode: string | null;
+  employeeName: string;
+  flag: EmploymentReviewFlag;
+  flagNote: string | null;
 }
 
 export interface UpdatePayrollEntryPayload {

@@ -835,7 +835,7 @@ export default function UserImportModal({
       onClose={onClose}
       footer={footer}
       destroyOnHidden
-      maskClosable={!isBusy}
+      mask={{ closable: !isBusy }}
       closable={!isBusy}
       title={
         <div className="flex min-w-0 items-center gap-3 py-1">

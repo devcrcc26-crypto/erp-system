@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
+import PayrollEmploymentReviewPanel from '@/components/modules/hr/payroll/PayrollEmploymentReviewPanel';
 import { useAppMessage } from '@/hooks/use-app-message';
 import {
   useCanAccessPayroll,
@@ -73,6 +74,7 @@ import {
   useCancelPayrollRun,
   useGeneratePayslips,
   useGmApprovePayrollRun,
+  usePayrollEmploymentReview,
   useMarkPayrollRunPaid,
   useMarkPayrollRunReviewed,
   usePayrollRun,
@@ -279,6 +281,15 @@ export default function PayrollRunDetailPageContent({
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [submitAcknowledge, setSubmitAcknowledge] = useState(false);
+  // Submit / HR approve / GM approve need an explicit review of employment-flagged entries.
+  const reviewStep =
+    confirmAction === 'submit' || confirmAction === 'approve' || confirmAction === 'gmApprove';
+  const employmentReviewQuery = usePayrollEmploymentReview(runId, reviewStep);
+  const employmentReview = employmentReviewQuery.data ?? [];
+  const [employmentReviewed, setEmploymentReviewed] = useState(false);
+  const reviewBlocked =
+    employmentReviewQuery.isLoading || (employmentReview.length > 0 && !employmentReviewed);
+  const confirmEmploymentReview = employmentReviewed ? employmentReview.length : undefined;
   const [submitFlagCounts, setSubmitFlagCounts] = useState<Record<string, number> | null>(
     null,
   );
@@ -530,17 +541,20 @@ export default function PayrollRunDetailPageContent({
           messageApi.success(t('hr.payroll.actions.markReviewedSuccess'));
           break;
         case 'submit':
-          await submitMutation.mutateAsync({ acknowledgeFlags: submitAcknowledge || undefined });
+          await submitMutation.mutateAsync({
+            acknowledgeFlags: submitAcknowledge || undefined,
+            confirmEmploymentReview,
+          });
           messageApi.success(t('hr.payroll.actions.submitSuccess'));
           setSubmitFlagCounts(null);
           setSubmitAcknowledge(false);
           break;
         case 'approve':
-          await approveMutation.mutateAsync();
+          await approveMutation.mutateAsync({ confirmEmploymentReview });
           messageApi.success(t('hr.payroll.actions.approveSuccess'));
           break;
         case 'gmApprove':
-          await gmApproveMutation.mutateAsync();
+          await gmApproveMutation.mutateAsync({ confirmEmploymentReview });
           messageApi.success(t('hr.payroll.actions.gmApproveSuccess'));
           break;
         case 'markPaid':
@@ -555,7 +569,19 @@ export default function PayrollRunDetailPageContent({
           break;
       }
       setConfirmAction(null);
+      setEmploymentReviewed(false);
     } catch (error) {
+      if (
+        error instanceof ApiRequestError &&
+        error.status === 400 &&
+        (error.details as { code?: string } | undefined)?.code === 'EMPLOYMENT_REVIEW_REQUIRED'
+      ) {
+        // The list changed since it was shown: reload it and ask again.
+        setEmploymentReviewed(false);
+        void employmentReviewQuery.refetch();
+        notifyApiError(error, 'Request failed', messageApi);
+        return;
+      }
       if (
         confirmAction === 'submit' &&
         error instanceof ApiRequestError &&
@@ -1637,7 +1663,12 @@ export default function PayrollRunDetailPageContent({
       />
 
       <ConfirmDialog
-        open={Boolean(confirmAction && confirmAction !== 'submit')}
+        open={Boolean(
+          confirmAction &&
+            confirmAction !== 'submit' &&
+            confirmAction !== 'approve' &&
+            confirmAction !== 'gmApprove',
+        )}
         title={confirmMeta?.title ?? ''}
         description={confirmMeta?.description ?? ''}
         confirmLabel={t('hr.payroll.confirm.confirmButton')}
@@ -1648,16 +1679,39 @@ export default function PayrollRunDetailPageContent({
       />
 
       <Modal
+        title={confirmMeta?.title ?? ''}
+        open={confirmAction === 'approve' || confirmAction === 'gmApprove'}
+        onCancel={() => {
+          setConfirmAction(null);
+          setEmploymentReviewed(false);
+        }}
+        onOk={() => void runConfirmedAction()}
+        okButtonProps={{ disabled: reviewBlocked }}
+        okText={t('hr.payroll.confirm.confirmButton')}
+        confirmLoading={confirmLoading}
+        className="erp-payroll-modal"
+      >
+        <p className="erp-payroll-modal-hint">{confirmMeta?.description ?? ''}</p>
+        <PayrollEmploymentReviewPanel
+          entries={employmentReview}
+          loading={employmentReviewQuery.isLoading}
+          reviewed={employmentReviewed}
+          onReviewedChange={setEmploymentReviewed}
+        />
+      </Modal>
+
+      <Modal
         title={t('hr.payroll.confirm.submitTitle')}
         open={confirmAction === 'submit'}
         onCancel={() => {
           setConfirmAction(null);
           setSubmitAcknowledge(false);
           setSubmitFlagCounts(null);
+          setEmploymentReviewed(false);
         }}
         onOk={() => void runConfirmedAction()}
         okButtonProps={{
-          disabled: totalFlagged > 0 && !submitAcknowledge,
+          disabled: (totalFlagged > 0 && !submitAcknowledge) || reviewBlocked,
         }}
         okText={t('hr.payroll.actions.submit')}
         confirmLoading={submitMutation.isPending}
@@ -1693,6 +1747,12 @@ export default function PayrollRunDetailPageContent({
             {t('hr.payroll.confirm.submitAcknowledgeFlags')}
           </Checkbox>
         ) : null}
+        <PayrollEmploymentReviewPanel
+          entries={employmentReview}
+          loading={employmentReviewQuery.isLoading}
+          reviewed={employmentReviewed}
+          onReviewedChange={setEmploymentReviewed}
+        />
       </Modal>
 
       <Modal

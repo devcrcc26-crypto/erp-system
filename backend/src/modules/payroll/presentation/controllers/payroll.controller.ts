@@ -24,6 +24,7 @@ import { RequireAnyPermission } from '../../../../shared/permissions/require-any
 import { AuthenticatedUser } from '../../../../shared/types/jwt-payload.type';
 import {
   AddPayrollFreelancersDto,
+  ApprovePayrollRunDto,
   CreatePayrollRunDto,
   SubmitPayrollRunDto,
   UpdatePayrollCompanySettingsDto,
@@ -223,7 +224,25 @@ export class PayrollController {
   ): Promise<unknown> {
     return this.payrollRunService.submitRun(id, this.ctx(user), {
       acknowledgeFlags: dto.acknowledgeFlags,
+      confirmEmploymentReview: dto.confirmEmploymentReview,
     });
+  }
+
+  @Get('runs/:id/employment-review')
+  @RequireAnyPermission(
+    { module: 'payroll', action: 'create' },
+    { module: 'payroll', action: 'approve' },
+    { module: 'payroll', action: 'edit' },
+  )
+  @ApiOperation({
+    summary:
+      'Entries to review before submit/approve: contract ended, login disabled, leaver final month, inactive in month',
+  })
+  employmentReview(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<unknown> {
+    return this.payrollRunService.employmentReviewEntries(id, user.companyId);
   }
 
   @Post('runs/:id/approve')
@@ -231,9 +250,12 @@ export class PayrollController {
   @ApiOperation({ summary: 'HR Manager approve (SUBMITTED → APPROVED)' })
   approveRun(
     @Param('id') id: string,
+    @Body() dto: ApprovePayrollRunDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
-    return this.payrollRunService.approveRun(id, this.ctx(user));
+    return this.payrollRunService.approveRun(id, this.ctx(user), {
+      confirmEmploymentReview: dto.confirmEmploymentReview,
+    });
   }
 
   @Post('runs/:id/gm-approve')
@@ -241,9 +263,12 @@ export class PayrollController {
   @ApiOperation({ summary: 'GM approve (APPROVED → GM_APPROVED)' })
   gmApproveRun(
     @Param('id') id: string,
+    @Body() dto: ApprovePayrollRunDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<unknown> {
-    return this.payrollRunService.gmApproveRun(id, this.ctx(user));
+    return this.payrollRunService.gmApproveRun(id, this.ctx(user), {
+      confirmEmploymentReview: dto.confirmEmploymentReview,
+    });
   }
 
   @Post('runs/:id/mark-paid')

@@ -208,6 +208,19 @@ export function useIsSystemAdmin(): boolean {
 }
 
 /**
+ * True when the session may reassign pending approval tiers
+ * (HR Manager or System Administrator; the API enforces the same rule).
+ */
+export function useCanReassignApprovals(): boolean {
+  const isSystemAdmin = useIsSystemAdmin();
+  const currentUser = useCurrentUser();
+  if (isSystemAdmin) {
+    return true;
+  }
+  return Boolean(currentUser.data?.roles?.some((role) => role.name === 'HR Manager'));
+}
+
+/**
  * True when the session may set / adjust leave balances
  * (System Administrator, General Manager, or HR roles).
  */

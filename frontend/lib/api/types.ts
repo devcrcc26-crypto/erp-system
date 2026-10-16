@@ -256,6 +256,8 @@ export interface User {
   educationLevel?: EducationLevel | null;
   fieldOfStudy?: string | null;
   employmentDate?: string | null;
+  /** ACTIVE / INACTIVE (suspension, long leave …) / SEPARATED. */
+  employmentStatus?: 'ACTIVE' | 'INACTIVE' | 'SEPARATED';
   experienceStartDate?: string | null;
   yearsOfExperience?: number | null;
   emergencyContacts?: EmergencyContact[] | null;

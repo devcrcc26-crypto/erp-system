@@ -1366,6 +1366,7 @@ export class UserManagementService {
       educationLevel: true,
       fieldOfStudy: true,
       employmentDate: true,
+      employmentStatus: true,
       experienceStartDate: true,
       emergencyContacts: true,
       excludedFromHrProcesses: true,
@@ -1421,6 +1422,7 @@ export class UserManagementService {
       engineeringDisciplineId: true,
       engineeringDiscipline: { select: { id: true, name: true, nameZh: true } },
       isActive: true,
+      employmentStatus: true,
       userRoles: this.userRolesListSelect(),
     };
   }

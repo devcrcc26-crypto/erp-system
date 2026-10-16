@@ -1,13 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Checkbox, DatePicker, Form, Input, Modal, Select, Spin } from 'antd';
+import { Alert, Button, Checkbox, DatePicker, Form, Input, Modal, Select, Spin } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
 import { ApiRequestError } from '@/lib/api/errors';
-import { SEPARATION_TYPES, type SeparationType } from '@/lib/api/employment';
+import {
+  SEPARATION_TYPES,
+  type HandoverPayload,
+  type HandoverRequirements,
+  type SeparationType,
+} from '@/lib/api/employment';
 import { useSeparateEmployee, useSeparationPreview } from '@/lib/query/employment';
+import EmployeeHandoverStep, {
+  type HandoverState,
+  emptyHandoverState,
+  handoverComplete,
+  handoverItemCount,
+  toHandoverPayload,
+} from '@/components/modules/users/EmployeeHandoverStep';
 
 interface FormValues {
   leavingDate: Dayjs;
@@ -32,27 +44,42 @@ export default function EmployeeSeparationDialog({
   const [form] = Form.useForm<FormValues>();
   const [leavingDate, setLeavingDate] = useState<string | null>(null);
   const [confirmLocked, setConfirmLocked] = useState(false);
+  const [step, setStep] = useState<'details' | 'handover'>('details');
+  const [handover, setHandover] = useState<HandoverState>(emptyHandoverState);
   const previewQuery = useSeparationPreview(userId, open ? leavingDate : null);
   const separate = useSeparateEmployee(userId);
   const preview = previewQuery.data;
   const lockedRuns = preview?.lockedPayrollRuns ?? [];
   const needsLockedConfirm = lockedRuns.length > 0;
+  const requirements: HandoverRequirements | undefined = preview?.handover;
+  const needsHandover = requirements ? handoverItemCount(requirements) > 0 : false;
+  const handoverDone = requirements ? handoverComplete(requirements, handover) : false;
 
   function close(): void {
     form.resetFields();
     setLeavingDate(null);
     setConfirmLocked(false);
+    setStep('details');
+    setHandover(emptyHandoverState);
     onClose();
+  }
+
+  async function next(): Promise<void> {
+    await form.validateFields();
+    setStep('handover');
   }
 
   async function submit(): Promise<void> {
     const values = await form.validateFields();
+    const handoverPayload: HandoverPayload | undefined =
+      requirements && needsHandover ? toHandoverPayload(requirements, handover) : undefined;
     try {
       await separate.mutateAsync({
         leavingDate: values.leavingDate.format('YYYY-MM-DD'),
         separationType: values.separationType,
         reason: values.reason.trim(),
         confirmLockedPayroll: needsLockedConfirm ? confirmLocked : undefined,
+        handover: handoverPayload,
       });
       messageApi.success(t('users.separation.saved', { name: employeeName }));
       close();
@@ -67,16 +94,51 @@ export default function EmployeeSeparationDialog({
     <Modal
       open={open}
       title={t('users.separation.title', { name: employeeName })}
-      okText={t('users.separation.confirm')}
-      okButtonProps={{
-        danger: true,
-        disabled: needsLockedConfirm && !confirmLocked,
-      }}
-      confirmLoading={separate.isPending}
-      onOk={() => void submit()}
       onCancel={close}
       destroyOnHidden
+      width={step === 'handover' ? 760 : undefined}
+      footer={
+        <div className="flex flex-wrap justify-end gap-2">
+          {step === 'handover' ? (
+            <Button onClick={() => setStep('details')}>{t('common.back')}</Button>
+          ) : (
+            <Button onClick={close}>{t('common.cancel')}</Button>
+          )}
+          {step === 'details' && needsHandover ? (
+            <Button
+              type="primary"
+              disabled={!preview || (needsLockedConfirm && !confirmLocked)}
+              onClick={() => void next()}
+            >
+              {t('users.separation.handoverNext', { count: handoverItemCount(requirements!) })}
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              danger
+              loading={separate.isPending}
+              disabled={
+                !preview ||
+                (needsLockedConfirm && !confirmLocked) ||
+                (needsHandover && !handoverDone)
+              }
+              onClick={() => void submit()}
+            >
+              {t('users.separation.confirm')}
+            </Button>
+          )}
+        </div>
+      }
     >
+      {step === 'handover' && requirements ? (
+        <EmployeeHandoverStep
+          userId={userId}
+          requirements={requirements}
+          value={handover}
+          onChange={setHandover}
+        />
+      ) : null}
+      <div hidden={step === 'handover'}>
       <Form form={form} layout="vertical" requiredMark>
         <Form.Item
           name="leavingDate"
@@ -88,6 +150,7 @@ export default function EmployeeSeparationDialog({
             className="w-full"
             onChange={(value) => {
               setConfirmLocked(false);
+              setHandover(emptyHandoverState);
               setLeavingDate(value ? value.format('YYYY-MM-DD') : null);
             }}
           />
@@ -195,6 +258,7 @@ export default function EmployeeSeparationDialog({
           </p>
         </div>
       ) : null}
+      </div>
     </Modal>
   );
 }

@@ -111,6 +111,8 @@ export function countEntryFlags(
     MANUAL_OVERRIDE: 0,
     LEAVER_FINAL_MONTH: 0,
     LOGIN_DISABLED_STILL_EMPLOYED: 0,
+    INACTIVE_IN_MONTH: 0,
+    CONTRACT_ENDED_NOT_RENEWED: 0,
   };
   for (const entry of entries) {
     if (entry.flag !== 'NONE') {

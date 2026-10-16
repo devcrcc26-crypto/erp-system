@@ -20,14 +20,25 @@ describe('evaluateEarlyDeparture', () => {
   const weekdayEnd = '17:30';
   const saturdayEnd = '12:30';
 
-  it('17:00 → nothing (30-minute grace)', () => {
+  it('17:15 → nothing (15-minute grace)', () => {
     const r = evaluateEarlyDeparture({
-      clockOut: '17:00',
+      clockOut: '17:15',
       scheduledEnd: weekdayEnd,
       fieldMovement: 'NONE',
       mode: 'ENFORCED',
     });
     expect(r.band).toBe('NONE');
+    expect(r.appliedDeduction).toBe(0);
+  });
+
+  it('17:14 → flag only (just past the 15-minute grace)', () => {
+    const r = evaluateEarlyDeparture({
+      clockOut: '17:14',
+      scheduledEnd: weekdayEnd,
+      fieldMovement: 'NONE',
+      mode: 'ENFORCED',
+    });
+    expect(r.band).toBe('FLAG');
     expect(r.appliedDeduction).toBe(0);
   });
 
@@ -66,9 +77,9 @@ describe('evaluateEarlyDeparture', () => {
     expect(r.wouldDeduct).toBe(0.5);
   });
 
-  it('Saturday 12:00 → nothing (30-minute grace vs 12:30)', () => {
+  it('Saturday 12:15 → nothing (15-minute grace vs 12:30)', () => {
     const r = evaluateEarlyDeparture({
-      clockOut: '12:00',
+      clockOut: '12:15',
       scheduledEnd: saturdayEnd,
       fieldMovement: 'NONE',
       mode: 'ENFORCED',

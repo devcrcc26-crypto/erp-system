@@ -29,6 +29,13 @@ import EmployeeProfilePhoto from '@/components/modules/users/EmployeeProfilePhot
 import EmployeeRolesCard from '@/components/modules/users/EmployeeRolesCard';
 import EmployeeSeparationBanner from '@/components/modules/users/EmployeeSeparationBanner';
 import EmployeeSeparationDialog from '@/components/modules/users/EmployeeSeparationDialog';
+import {
+  EmployeeReactivateDialog,
+  EmployeeSetInactiveDialog,
+} from '@/components/modules/users/EmployeeInactiveDialogs';
+import EmployeeRehireDialog from '@/components/modules/users/EmployeeRehireDialog';
+import EmploymentHistorySection from '@/components/modules/users/EmploymentHistorySection';
+import EmploymentStatusTag from '@/components/modules/users/EmploymentStatusTag';
 import { useEmployment } from '@/lib/query/employment';
 import { MetaItem } from '@/components/modules/hr/shared/hr-page-chrome';
 import ConfirmDialog from '@/components/ui/ConfirmDialog/ConfirmDialog';
@@ -201,6 +208,9 @@ export default function EmployeeDetailPageContent({
   const employmentQuery = useEmployment(userId, canViewHr || canEditUsers);
   const employment = employmentQuery.data;
   const [separationOpen, setSeparationOpen] = useState(false);
+  const [employmentDialog, setEmploymentDialog] = useState<
+    'inactive' | 'reactivate' | 'rehire' | null
+  >(null);
 
   const activeTab = resolveProfileTab(searchParams.get('tab'));
   const isOwnProfile = currentUserQuery.data?.id === userId;
@@ -308,6 +318,11 @@ export default function EmployeeDetailPageContent({
   }
 
   const fullName = formatUserName(user);
+  // Employment actions: users.edit, HR-process employees only, never protected accounts.
+  const canManageEmployment = Boolean(
+    canEditUsers && showDestructiveActions && !user.excludedFromHrProcesses && employment,
+  );
+  const isSeparated = employment?.employmentStatus === 'SEPARATED';
   const emergencyContacts = user.emergencyContacts ?? [];
   const primaryRole =
     user.userRoles.find((assignment) => assignment.isPrimary)?.role.name ??
@@ -339,12 +354,25 @@ export default function EmployeeDetailPageContent({
                   : t('users.resendVerification')}
               </Button>
             ) : null}
-            {canEditUsers &&
-            showDestructiveActions &&
-            !user.excludedFromHrProcesses &&
-            employment &&
-            employment.employmentStatus !== 'SEPARATED' &&
-            !employment.separation ? (
+            {canManageEmployment && isSeparated ? (
+              <Button onClick={() => setEmploymentDialog('rehire')}>
+                {t('users.employment.rehire')}
+              </Button>
+            ) : null}
+            {canManageEmployment && !isSeparated && employment?.inactive ? (
+              <Button onClick={() => setEmploymentDialog('reactivate')}>
+                {t('users.employment.reactivate')}
+              </Button>
+            ) : null}
+            {canManageEmployment &&
+            !isSeparated &&
+            !employment?.inactive &&
+            !employment?.separation ? (
+              <Button onClick={() => setEmploymentDialog('inactive')}>
+                {t('users.employment.setInactive')}
+              </Button>
+            ) : null}
+            {canManageEmployment && !isSeparated && !employment?.separation ? (
               <Button danger onClick={() => setSeparationOpen(true)}>
                 {t('users.separation.action')}
               </Button>
@@ -388,6 +416,9 @@ export default function EmployeeDetailPageContent({
                 <span className="erp-users-id-chip">{user.employeeId}</span>
               ) : null}
               <UserStatusIndicator user={user} t={t} />
+              {employment && !user.excludedFromHrProcesses ? (
+                <EmploymentStatusTag employment={employment} />
+              ) : null}
               {user.excludedFromHrProcesses ? <ApproverOnlyTag /> : null}
               {primaryRole ? (
                 <Tag
@@ -429,6 +460,27 @@ export default function EmployeeDetailPageContent({
           userId={user.id}
           employeeName={fullName}
           onClose={() => setSeparationOpen(false)}
+        />
+        <EmployeeSetInactiveDialog
+          open={employmentDialog === 'inactive'}
+          userId={user.id}
+          employeeName={fullName}
+          onClose={() => setEmploymentDialog(null)}
+        />
+        {employment?.inactive ? (
+          <EmployeeReactivateDialog
+            open={employmentDialog === 'reactivate'}
+            userId={user.id}
+            employeeName={fullName}
+            inactive={employment.inactive}
+            onClose={() => setEmploymentDialog(null)}
+          />
+        ) : null}
+        <EmployeeRehireDialog
+          open={employmentDialog === 'rehire'}
+          userId={user.id}
+          employeeName={fullName}
+          onClose={() => setEmploymentDialog(null)}
         />
       </div>
 
@@ -849,6 +901,11 @@ export default function EmployeeDetailPageContent({
                 )}
               </DetailSection>
 
+              {employment && !user.excludedFromHrProcesses ? (
+                <DetailSection title={t('users.employment.historyTitle')}>
+                  <EmploymentHistorySection userId={user.id} employment={employment} />
+                </DetailSection>
+              ) : null}
               <DetailSection
                 title={t('users.form.profileDocuments')}
                 className="erp-employee-section--docs"

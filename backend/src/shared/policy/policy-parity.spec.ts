@@ -35,17 +35,17 @@ function legacyOtPay(basic: number, h: { normalHours: number; eveningHours: numb
   return { normal, evening, sunday, holiday };
 }
 
-describe('policy defaults = the constants they replace', () => {
-  it('matches every former hard-coded value', () => {
+describe('policy defaults = the agreed rules', () => {
+  it('matches every former hard-coded value, except the three agreed changes', () => {
     expect(POLICY_DEFAULTS).toMatchObject({
       lateGraceMinutes: 15, // LATE_ARRIVAL_GRACE_MINUTES
       lateDeductionMode: 'REPORT_ONLY', // lates were flag-only
-      earlyDepartureGraceMinutes: 30, // EARLY_DEPARTURE_GRACE_MINUTES
+      earlyDepartureGraceMinutes: 15, // agreed 2026-10-15 (was EARLY_DEPARTURE_GRACE_MINUTES = 30)
       earlyDepartureDeductMinutes: 60, // EARLY_DEPARTURE_DEDUCT_MINUTES
       earlyDepartureMode: 'REPORT_ONLY', // EARLY_DEPARTURE_DEDUCTION_MODE
-      enrolmentGraceWorkingDays: null, // grace was hire → day after first scan, uncapped
+      enrolmentGraceWorkingDays: 5, // agreed 2026-10-15: present until first scan, max 5 working days (was uncapped)
       forgotToClockFlagThreshold: 3, // FORGOT_TO_CLOCK_FLAG_THRESHOLD
-      unpaidLeaveCountsRestDays: true, // UNPAID_LEAVE_COUNTS_REST_DAYS
+      unpaidLeaveCountsRestDays: false, // agreed 2026-10-15: rest days inside unpaid leave stay paid (was true)
       monthDays: 30, // PAYROLL_MONTH_DAYS
       leaverAllowanceMode: 'PRORATED', // LEAVER_ALLOWANCE_MODE
       allowancesReducedByAbsence: false, // ALLOWANCES_REDUCED_BY_ABSENCE
@@ -199,7 +199,7 @@ describe('validation', () => {
   });
 
   it('cross-field: early-departure deduct threshold must exceed the grace', () => {
-    expect(validateAgainstSnapshot('earlyDepartureDeductMinutes', 30, POLICY_DEFAULTS as PolicyValues)).toMatch(/longer/);
+    expect(validateAgainstSnapshot('earlyDepartureDeductMinutes', 15, POLICY_DEFAULTS as PolicyValues)).toMatch(/longer/);
     expect(validateAgainstSnapshot('earlyDepartureGraceMinutes', 60, POLICY_DEFAULTS as PolicyValues)).toMatch(/shorter/);
     expect(validateAgainstSnapshot('earlyDepartureDeductMinutes', 90, POLICY_DEFAULTS as PolicyValues)).toBeNull();
   });
@@ -213,7 +213,7 @@ describe('attendance policies', () => {
     expect(lateArrivalDeduction(5, 'ENFORCED', 2)).toBe(1);
   });
 
-  it('enrolment grace cap: null keeps today\'s uncapped grace; N caps working days', () => {
+  it('enrolment grace cap: default 5 working days; null = uncapped; N caps working days', () => {
     const params = {
       hireDate: d(2026, 9, 1),
       firstScanDate: null,
@@ -223,9 +223,10 @@ describe('attendance policies', () => {
     const uncapped = enrolmentGraceDateKeys(params);
     expect(enrolmentGraceDateKeys({ ...params, maxWorkingDays: null })).toEqual(uncapped);
     expect(enrolmentGraceDateKeys({ ...params, maxWorkingDays: 3 }).size).toBe(3);
+    expect(enrolmentGraceDateKeys({ ...params, maxWorkingDays: POLICY_DEFAULTS.enrolmentGraceWorkingDays }).size).toBe(5);
   });
 
-  it('unpaid leave on a day off: counted by default, not counted when the policy is off', () => {
+  it('unpaid leave on a day off: stays a paid day off by default, counted when the policy is on', () => {
     const sunday = d(2026, 10, 11);
     const base: DayDeductionContext = {
       isPublicHoliday: () => false,
@@ -236,8 +237,8 @@ describe('attendance policies', () => {
       fieldMovementCoverage: () => 'NONE',
     };
     const day = { date: sunday, clockIn: null, clockOut: null, isLastExportDay: false, scheduledEnd: '17:30' };
-    expect(dayDeduction(sunday, day, base).status).toBe('UNPAID_LEAVE');
-    expect(dayDeduction(sunday, day, { ...base, unpaidLeaveCountsRestDays: false }).status).toBe('DAY_OFF');
+    expect(dayDeduction(sunday, day, base).status).toBe('DAY_OFF');
+    expect(dayDeduction(sunday, day, { ...base, unpaidLeaveCountsRestDays: true }).status).toBe('UNPAID_LEAVE');
   });
 
   it('early-departure thresholds come from the context policy', () => {

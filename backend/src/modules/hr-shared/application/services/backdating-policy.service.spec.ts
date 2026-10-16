@@ -13,7 +13,11 @@ const TODAY = new Date(Date.UTC(2026, 9, 10));
 
 describe('BackdatingPolicyService.validateSubmissionDates', () => {
   let service: BackdatingPolicyService;
-  let prisma: { payrollRun: { findMany: jest.Mock<() => Promise<unknown>> } };
+  let prisma: {
+    payrollRun: { findMany: jest.Mock<() => Promise<unknown>> };
+    user: { findUnique: jest.Mock<() => Promise<unknown>> };
+    employmentPeriod: { findMany: jest.Mock<() => Promise<unknown>> };
+  };
   let hrChain: {
     isHrOrFullAccessActor: jest.Mock<() => Promise<boolean>>;
   };
@@ -21,6 +25,14 @@ describe('BackdatingPolicyService.validateSubmissionDates', () => {
   beforeEach(() => {
     prisma = {
       payrollRun: {
+        findMany: jest.fn<() => Promise<unknown>>(async () => []),
+      },
+      user: {
+        findUnique: jest.fn<() => Promise<unknown>>(async () => ({
+          employmentDate: new Date(Date.UTC(2020, 0, 1)),
+        })),
+      },
+      employmentPeriod: {
         findMany: jest.fn<() => Promise<unknown>>(async () => []),
       },
     };
@@ -118,5 +130,22 @@ describe('BackdatingPolicyService.validateSubmissionDates', () => {
         today: TODAY,
       }),
     ).rejects.toThrow(/finalised/);
+  });
+
+  it('rejects dates after the last working day (field movement / WFH / site share this check)', async () => {
+    prisma.employmentPeriod.findMany.mockResolvedValue([
+      { startDate: new Date(Date.UTC(2020, 0, 1)), endDate: new Date(Date.UTC(2026, 9, 5)) },
+    ]);
+    hrChain.isHrOrFullAccessActor.mockResolvedValue(true);
+
+    await expect(
+      service.validateSubmissionDates({
+        companyId: COMPANY,
+        actorUserId: HR_USER,
+        targetEmployeeId: EMPLOYEE,
+        dates: [new Date(Date.UTC(2026, 9, 8))],
+        today: TODAY,
+      }),
+    ).rejects.toThrow('Outside employment period (last working day 2026-10-05)');
   });
 });

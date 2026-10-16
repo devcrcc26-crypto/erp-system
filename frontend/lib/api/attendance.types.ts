@@ -118,7 +118,8 @@ export interface AttendanceDailyLog {
     | 'UNPAID_LEAVE'
     | 'FIELD_MOVEMENT_PENDING'
     | 'ENROLMENT_GRACE'
-    | 'NOT_EMPLOYED';
+    | 'NOT_EMPLOYED'
+    | 'INACTIVE';
   dayDeduction?: number;
   siteAssignmentName?: string | null;
   corrections?: AttendanceDailyLogCorrection[];

@@ -11,6 +11,7 @@ import {
   Modal,
   Select,
   Skeleton,
+  Space,
   Switch,
   Table,
   Tabs,
@@ -170,13 +171,21 @@ function ValueEditor({
           {MULTIPLIER_KEYS.map((k) => (
             <label key={k} className="flex flex-col gap-1 text-sm">
               {t(`${P}.multiplier.${k}`)}
-              <InputNumber
-                min={1}
-                step={0.25}
-                value={m[k]}
-                onChange={(v) => onChange({ ...m, [k]: v ?? 1 })}
-                addonAfter="×"
-              />
+              <Space.Compact className="w-full">
+                <InputNumber
+                  className="w-full"
+                  min={1}
+                  step={0.25}
+                  value={m[k]}
+                  onChange={(v) => onChange({ ...m, [k]: v ?? 1 })}
+                />
+                <Input
+                  disabled
+                  value="×"
+                  aria-hidden
+                  style={{ width: 36, textAlign: 'center', pointerEvents: 'none' }}
+                />
+              </Space.Compact>
             </label>
           ))}
         </div>

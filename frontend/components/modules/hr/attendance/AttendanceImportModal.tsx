@@ -1390,7 +1390,7 @@ export default function AttendanceImportModal({
         },
       }}
       onClose={handleClose}
-      maskClosable={!busy}
+      mask={{ closable: !busy }}
       closable={!busy}
       destroyOnHidden
       footer={footer}

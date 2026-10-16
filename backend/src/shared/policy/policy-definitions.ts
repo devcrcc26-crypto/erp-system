@@ -44,7 +44,11 @@ export interface PolicyValues {
   multipliers: { regular: number; night: number; weekend: number; holiday: number };
   lunchCountsAsOvertime: boolean;
   // Separation (stored for phase 2; not used by calculations yet)
-  unusedLeavePayout: { enabled: boolean; dailyRateBase: 'basic/30' };
+  /**
+   * prorateCurrentYear: pay leave earned in the current leave year up to the
+   * leaving date (entitlement × elapsed share), not the full year's entitlement.
+   */
+  unusedLeavePayout: { enabled: boolean; dailyRateBase: 'basic/30'; prorateCurrentYear: boolean };
   severancePay: { enabled: boolean; parameters: Record<string, unknown> };
   noticePay: { enabled: boolean; days: number };
   // Inactive periods (attendance pay + login)
@@ -58,12 +62,12 @@ export const POLICY_DEFAULTS: Readonly<PolicyValues> = Object.freeze({
   lateGraceMinutes: 15,
   lateDeductionMode: 'REPORT_ONLY',
   latesPerHalfDay: 2,
-  earlyDepartureGraceMinutes: 30,
+  earlyDepartureGraceMinutes: 15,
   earlyDepartureDeductMinutes: 60,
   earlyDepartureMode: 'REPORT_ONLY',
-  enrolmentGraceWorkingDays: null,
+  enrolmentGraceWorkingDays: 5,
   forgotToClockFlagThreshold: 3,
-  unpaidLeaveCountsRestDays: true,
+  unpaidLeaveCountsRestDays: false,
   monthDays: 30,
   leaverAllowanceMode: 'PRORATED',
   allowancesReducedByAbsence: false,
@@ -83,7 +87,7 @@ export const POLICY_DEFAULTS: Readonly<PolicyValues> = Object.freeze({
   holidayHoursDivisor: 196,
   multipliers: { regular: 1.5, night: 1.75, weekend: 2, holiday: 2.5 },
   lunchCountsAsOvertime: false,
-  unusedLeavePayout: { enabled: false, dailyRateBase: 'basic/30' },
+  unusedLeavePayout: { enabled: false, dailyRateBase: 'basic/30', prorateCurrentYear: true },
   severancePay: { enabled: false, parameters: {} },
   noticePay: { enabled: false, days: 0 },
   inactivePaid: { SUSPENDED: false, LONG_LEAVE: false, OTHER: false },
@@ -255,6 +259,10 @@ export const POLICY_DEFINITIONS: readonly PolicyDefinition[] = [
       if (!isObject(v)) return 'Must be an object';
       if (typeof v.enabled !== 'boolean') return 'enabled must be true or false';
       if (v.dailyRateBase !== 'basic/30') return 'dailyRateBase must be "basic/30"';
+      // Optional for values saved before the field existed (treated as true).
+      if (v.prorateCurrentYear !== undefined && typeof v.prorateCurrentYear !== 'boolean') {
+        return 'prorateCurrentYear must be true or false';
+      }
       return null;
     },
   },

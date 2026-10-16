@@ -51,6 +51,45 @@ function finiteNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
+/** Annual-leave balance for the leave year containing the leaving date. */
+export interface LeaveYearBalance {
+  entitled: number;
+  broughtForward: number;
+  used: number;
+  pending: number;
+  remaining: number;
+  /** Leave-year bounds, YYYY-MM-DD. */
+  yearStart: string;
+  yearEnd: string;
+}
+
+/**
+ * Unused annual leave on the leaving date.
+ * - prorate = false: the ledger's remaining balance (full-year entitlement).
+ * - prorate = true: leave earned this year up to the leaving date
+ *   (entitled × elapsed days / leave-year days) + brought forward − used − pending.
+ *
+ * TODO(HR, before enabling unusedLeavePayout): confirm (1) whether pending
+ * requests are deducted, (2) rounding (2 decimals today vs. half days), and
+ * (3) whether brought-forward days are paid in full. The feature is off by default.
+ */
+export function unusedLeaveDaysAtLeaving(
+  balance: LeaveYearBalance,
+  leavingDate: Date,
+  prorate: boolean,
+): number {
+  if (!prorate) return Math.max(0, balance.remaining);
+  const start = Date.parse(`${balance.yearStart}T00:00:00Z`);
+  const end = Date.parse(`${balance.yearEnd}T00:00:00Z`);
+  const yearDays = Math.round((end - start) / DAY_MS) + 1;
+  const elapsed = Math.min(
+    yearDays,
+    Math.max(0, Math.round((leavingDate.getTime() - start) / DAY_MS) + 1),
+  );
+  const earned = yearDays > 0 ? (balance.entitled * elapsed) / yearDays : 0;
+  return round2(Math.max(0, balance.broughtForward + earned - balance.used - balance.pending));
+}
+
 /** Service years (fractional, 365.25-day years) from start to the leaving date inclusive. */
 export function serviceYears(start: Date | null, leavingDate: Date): number {
   if (!start) return 0;

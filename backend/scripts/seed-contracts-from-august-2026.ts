@@ -833,7 +833,7 @@ async function main(): Promise<void> {
     contractsToCreateActive: 0,
     contractsToCreateSuperseded: 0,
     contractsSoftDeleted: 0,
-    employmentDateField: 'User.employmentDate';
+    employmentDateField: 'User.employmentDate',
     fuzzyCandidates: [],
     unmatchedNames: [],
     correctedDates: [],

@@ -167,3 +167,56 @@ describe('EmployeeContractService leave ledger hook', () => {
     ).resolves.toEqual({ renewal: false, leaveYear: null });
   });
 });
+
+describe('EmployeeContractService convert to freelancer', () => {
+  it('new contract in the same employment period (no separation), pension 0 by default', async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const superseded: Array<Record<string, unknown>> = [];
+    const tx = {
+      employeeContract: {
+        update: jest.fn(async ({ data }: { data: Record<string, unknown> }) => superseded.push(data)),
+        create: jest.fn(async ({ data }: { data: Record<string, unknown> }) => created.push(data)),
+      },
+    };
+    // No employmentPeriod / user.update on the client: touching either would throw.
+    const prisma = {
+      user: { findFirst: jest.fn(async () => ({ id: 'emp-1', employeeType: 'FREELANCER' })) },
+      employeeContract: {
+        findFirst: jest.fn(async () => ({
+          id: 'k1',
+          contractNumber: 'EC-0001',
+          startDate: new Date(Date.UTC(2025, 0, 1)),
+        })),
+      },
+      $transaction: jest.fn(async (fn: (client: typeof tx) => Promise<void>) => fn(tx)),
+    };
+    const service = new EmployeeContractService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      { onContractActivated: jest.fn(), recomputeContractEntries: jest.fn() } as never,
+    );
+    const internals = service as unknown as Record<string, unknown>;
+    internals.assertCanManage = jest.fn(async () => undefined);
+    internals.nextContractNumber = jest.fn(async () => 'EC-0002');
+    internals.syncLeaveLedger = jest.fn(async () => undefined);
+    internals.getContract = jest.fn(async () => ({ id: 'k2' }));
+
+    await service.createContract(
+      {
+        employeeId: 'emp-1',
+        contractType: EmployeeContractType.FIXED_TERM,
+        signedAt: '2026-10-01',
+        startDate: '2026-10-01',
+        endDate: '2027-09-30',
+        basicSalary: 20000,
+      } as never,
+      'co-1',
+      'hr-1',
+    );
+
+    expect(superseded[0]).toMatchObject({ status: EmployeeContractStatus.SUPERSEDED });
+    expect(created[0]).toMatchObject({ pensionApplicable: false, status: EmployeeContractStatus.ACTIVE });
+  });
+});

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Alert, Button } from 'antd';
 import { CheckCircle2, Circle, Clock3 } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge/StatusBadge';
@@ -18,6 +19,15 @@ import {
 } from '@/lib/utils/approval-display';
 import { formatProjectDate } from '@/lib/utils/project-display';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
+import { useCanReassignApprovals } from '@/hooks/use-auth-capabilities';
+import ApprovalReassignDialog from '@/components/modules/approvals/ApprovalReassignDialog';
+
+/** Request statuses in which a pending tier can still be reassigned (matches the API). */
+const REASSIGNABLE_REQUEST_STATUSES: ReadonlyArray<ApprovalRequestDetail['status']> = [
+  'PENDING',
+  'SUBMITTED',
+  'IN_REVIEW',
+];
 
 function resolveWaitingMessage(
   status: ApprovalRequestDetail['status'],
@@ -83,6 +93,9 @@ export default function ApprovalDetailSidebar({
   const { t } = useEpcTranslation();
   const sorted = [...tiers].sort((a, b) => a.tierOrder - b.tierOrder);
   const activeCurrent = findCurrentTier(sorted, request.currentTier);
+  const canReassign =
+    useCanReassignApprovals() && REASSIGNABLE_REQUEST_STATUSES.includes(request.status);
+  const [reassignTier, setReassignTier] = useState<ApprovalTier | null>(null);
 
   return (
     <aside className="flex flex-col gap-3 lg:sticky lg:top-4">
@@ -157,6 +170,18 @@ export default function ApprovalDetailSidebar({
                         {formatApprovalUserName(tier.approver)}
                         {tier.resolver ? ` · ${tier.resolver}` : ''}
                       </p>
+                      {canReassign && tier.decision === 'PENDING' ? (
+                        <Button
+                          size="small"
+                          className="mt-1.5"
+                          onClick={() => setReassignTier(tier)}
+                          aria-label={t('pages.approvals.reassign.buttonAria', {
+                            label: tier.label,
+                          })}
+                        >
+                          {t('pages.approvals.reassign.button')}
+                        </Button>
+                      ) : null}
                       {tier.decidedAt ? (
                         <p className="erp-users-cell-sub m-0 mt-0.5 text-xs">
                           {t('pages.approvals.decidedOn', {
@@ -297,6 +322,13 @@ export default function ApprovalDetailSidebar({
           )}
         </div>
       </div>
+      <ApprovalReassignDialog
+        open={reassignTier != null}
+        requestId={request.id}
+        requesterId={request.requestedBy}
+        tier={reassignTier}
+        onClose={() => setReassignTier(null)}
+      />
     </aside>
   );
 }

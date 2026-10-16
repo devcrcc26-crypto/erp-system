@@ -47,8 +47,16 @@ import {
   loadInactiveSpansForMonth,
   type InactiveSpan,
 } from '../../../../shared/employment/inactive-period.util';
-import { resolveEmploymentEntryFlag } from '../utils/payroll-employment-flag.util';
-import { computeFinalSettlement } from '../utils/payroll-final-settlement.util';
+import {
+  employmentReviewFlag,
+  resolveEmploymentEntryFlag,
+  type EmploymentReviewFlag,
+} from '../utils/payroll-employment-flag.util';
+import { AuditService } from '../../../audit/application/services/audit.service';
+import {
+  computeFinalSettlement,
+  unusedLeaveDaysAtLeaving,
+} from '../utils/payroll-final-settlement.util';
 import { LeaveLedgerService } from '../../../leave-policy/application/services/leave-ledger.service';
 import { getPolicy, loadPolicySnapshot } from '../../../../shared/policy/policy-reader.util';
 import type { PolicyValues } from '../../../../shared/policy/policy-definitions';
@@ -79,6 +87,22 @@ interface GetRunOptions {
 
 interface SubmitRunOptions {
   acknowledgeFlags?: boolean;
+  /** Number of employment-flagged entries HR confirms having reviewed. */
+  confirmEmploymentReview?: number;
+}
+
+interface ApproveRunOptions {
+  /** Number of employment-flagged entries the approver confirms having reviewed. */
+  confirmEmploymentReview?: number;
+}
+
+export interface EmploymentReviewEntry {
+  entryId: string;
+  employeeId: string;
+  employeeCode: string | null;
+  employeeName: string;
+  flag: EmploymentReviewFlag;
+  flagNote: string | null;
 }
 
 interface CapturedTopUp {
@@ -216,7 +240,82 @@ export class PayrollRunService {
     private readonly notifications: NotificationService,
     private readonly workScheduleService: WorkScheduleService,
     private readonly leaveLedger: LeaveLedgerService,
+    private readonly audit: AuditService,
   ) {}
+
+  /**
+   * Entries HR must look at before the run moves on: contract ended without
+   * renewal, login disabled while employed, leaver final month, inactive in month.
+   */
+  async employmentReviewEntries(runId: string, companyId: string): Promise<EmploymentReviewEntry[]> {
+    await this.requireRun(runId, companyId);
+    const entries = await this.prisma.payrollEntry.findMany({
+      where: { runId, companyId },
+      select: {
+        id: true,
+        flag: true,
+        flagNote: true,
+        employee: { select: { id: true, employeeId: true, firstName: true, lastName: true } },
+      },
+      orderBy: { employee: { firstName: 'asc' } },
+    });
+    const result: EmploymentReviewEntry[] = [];
+    for (const entry of entries) {
+      const flag = employmentReviewFlag(entry);
+      if (!flag) continue;
+      result.push({
+        entryId: entry.id,
+        employeeId: entry.employee.id,
+        employeeCode: entry.employee.employeeId,
+        employeeName: `${entry.employee.firstName} ${entry.employee.lastName}`.trim(),
+        flag,
+        flagNote: entry.flagNote,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Blocks the transition until the actor confirms the current number of
+   * employment-flagged entries, then records the confirmation on the run.
+   */
+  private async assertEmploymentReviewConfirmed(
+    run: PayrollRun,
+    ctx: ServiceContext,
+    step: 'submit' | 'approve' | 'gm_approve',
+    confirmed: number | undefined,
+  ): Promise<void> {
+    const entries = await this.employmentReviewEntries(run.id, ctx.companyId);
+    if (entries.length === 0) return;
+    if (confirmed !== entries.length) {
+      throw new BadRequestException({
+        message: `Review the ${entries.length} employee(s) with employment flags and confirm before continuing`,
+        error: 'EMPLOYMENT_REVIEW_REQUIRED',
+        details: { code: 'EMPLOYMENT_REVIEW_REQUIRED', count: entries.length, entries },
+      });
+    }
+    await this.audit.create(
+      this.audit.buildFromRequestContext({
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        module: 'payroll',
+        action: 'employment_review_confirmed',
+        recordType: 'PayrollRun',
+        recordId: run.id,
+        recordReference: run.runNumber,
+        afterValue: {
+          step,
+          count: entries.length,
+          entries: entries.map((e) => ({
+            employeeId: e.employeeId,
+            employeeCode: e.employeeCode,
+            employeeName: e.employeeName,
+            flag: e.flag,
+          })),
+        },
+      }),
+    );
+  }
 
   /**
    * Creates a DRAFT payroll run for the month/year, or reuses a CANCELLED one.
@@ -846,12 +945,20 @@ export class PayrollRunService {
       for (const row of flagged) {
         flagCounts[row.flag] = row._count._all;
       }
+      // The exception filter forwards `error` (as the code) and `details` only.
       throw new BadRequestException({
         message:
           'Run has flagged entries; set acknowledgeFlags=true to submit anyway',
-        flagCounts,
+        error: 'FLAGS_NOT_ACKNOWLEDGED',
+        details: { flagCounts },
       });
     }
+    await this.assertEmploymentReviewConfirmed(
+      run,
+      ctx,
+      'submit',
+      options?.confirmEmploymentReview,
+    );
 
     const updated = await this.prisma.payrollRun.update({
       where: { id: runId },
@@ -881,7 +988,11 @@ export class PayrollRunService {
   /**
    * HR Manager / System Administrator: SUBMITTED → APPROVED.
    */
-  async approveRun(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
+  async approveRun(
+    runId: string,
+    ctx: ServiceContext,
+    options?: ApproveRunOptions,
+  ): Promise<PayrollRun> {
     await this.assertHasAnyRole(ctx, APPROVE_ROLES);
     const run = await this.requireRun(runId, ctx.companyId);
     if (run.status !== 'SUBMITTED') {
@@ -889,6 +1000,12 @@ export class PayrollRunService {
         `Run must be in SUBMITTED status to approve`,
       );
     }
+    await this.assertEmploymentReviewConfirmed(
+      run,
+      ctx,
+      'approve',
+      options?.confirmEmploymentReview,
+    );
 
     const updated = await this.prisma.payrollRun.update({
       where: { id: runId },
@@ -918,7 +1035,11 @@ export class PayrollRunService {
   /**
    * General Manager / System Administrator: APPROVED → GM_APPROVED.
    */
-  async gmApproveRun(runId: string, ctx: ServiceContext): Promise<PayrollRun> {
+  async gmApproveRun(
+    runId: string,
+    ctx: ServiceContext,
+    options?: ApproveRunOptions,
+  ): Promise<PayrollRun> {
     await this.assertHasAnyRole(ctx, GM_APPROVE_ROLES);
     const run = await this.requireRun(runId, ctx.companyId);
     if (run.status !== 'APPROVED') {
@@ -926,6 +1047,12 @@ export class PayrollRunService {
         `Run must be in APPROVED status for GM approval`,
       );
     }
+    await this.assertEmploymentReviewConfirmed(
+      run,
+      ctx,
+      'gm_approve',
+      options?.confirmEmploymentReview,
+    );
 
     const updated = await this.prisma.payrollRun.update({
       where: { id: runId },
@@ -1860,7 +1987,13 @@ export class PayrollRunService {
             leavingDate: window.end,
             employmentStart: window.start,
             unusedLeaveDays: policy.unusedLeavePayout.enabled
-              ? await this.unusedAnnualLeaveDays(employee.id, ctx.companyId, window.end)
+              ? await this.unusedAnnualLeaveDays(
+                  employee.id,
+                  ctx.companyId,
+                  window.end,
+                  // Values saved before the field existed count as true.
+                  policy.unusedLeavePayout.prorateCurrentYear !== false,
+                )
               : null,
             policy,
           })
@@ -2077,11 +2210,15 @@ export class PayrollRunService {
     return { note: parts.join('; '), unpaidDays };
   }
 
-  /** Remaining annual leave on the leaving date; null when the ledger cannot answer. */
+  /**
+   * Unused annual leave on the leaving date (prorated to the leaving date unless
+   * the policy says otherwise); null when the ledger cannot answer.
+   */
   private async unusedAnnualLeaveDays(
     employeeId: string,
     companyId: string,
     leavingDate: Date,
+    prorateCurrentYear: boolean,
   ): Promise<number | null> {
     try {
       const balance = await this.leaveLedger.getLeaveBalance(
@@ -2090,7 +2227,19 @@ export class PayrollRunService {
         'ANNUAL',
         leavingDate,
       );
-      return balance.remaining;
+      return unusedLeaveDaysAtLeaving(
+        {
+          entitled: balance.entitled,
+          broughtForward: balance.broughtForward,
+          used: balance.used,
+          pending: balance.pending,
+          remaining: balance.remaining,
+          yearStart: balance.year.start,
+          yearEnd: balance.year.end,
+        },
+        leavingDate,
+        prorateCurrentYear,
+      );
     } catch (error) {
       this.logger.warn(
         `Unused leave balance unavailable for ${employeeId}: ${(error as Error).message}`,

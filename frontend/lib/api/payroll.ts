@@ -7,9 +7,11 @@ import {
   downloadApiFile,
 } from '@/lib/api/client';
 import type {
+  ApprovePayrollRunPayload,
   CreatePayrollRunPayload,
   EmployeePayslip,
   PayrollCompanySettings,
+  PayrollEmploymentReviewEntry,
   PayrollEntryDetail,
   PayrollFreelancerOption,
   PayrollRunDetail,
@@ -84,14 +86,22 @@ export async function submitPayrollRun(
 
 export async function approvePayrollRun(
   runId: string,
+  payload: ApprovePayrollRunPayload = {},
 ): Promise<PayrollRunDetail> {
-  return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/approve`);
+  return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/approve`, payload);
 }
 
 export async function gmApprovePayrollRun(
   runId: string,
+  payload: ApprovePayrollRunPayload = {},
 ): Promise<PayrollRunDetail> {
-  return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/gm-approve`);
+  return apiPost<PayrollRunDetail>(`${BASE}/runs/${runId}/gm-approve`, payload);
+}
+
+export async function getPayrollEmploymentReview(
+  runId: string,
+): Promise<PayrollEmploymentReviewEntry[]> {
+  return apiGet<PayrollEmploymentReviewEntry[]>(`${BASE}/runs/${runId}/employment-review`);
 }
 
 export async function markPayrollRunPaid(

@@ -270,6 +270,9 @@ export default function UsersPageContent(): React.ReactNode {
   const [departmentFilter, setDepartmentFilter] = useState<string | undefined>();
   const [positionFilter, setPositionFilter] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<boolean | undefined>();
+  const [employmentStatusFilter, setEmploymentStatusFilter] = useState<
+    'ACTIVE' | 'INACTIVE' | 'SEPARATED' | undefined
+  >();
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState<
     EmployeeType | undefined
   >();
@@ -396,6 +399,12 @@ export default function UsersPageContent(): React.ReactNode {
       if (filterNoRole && (user.userRoles?.length ?? 0) > 0) {
         return false;
       }
+      if (
+        employmentStatusFilter &&
+        (user.employmentStatus ?? 'ACTIVE') !== employmentStatusFilter
+      ) {
+        return false;
+      }
       return true;
     });
   }, [
@@ -408,6 +417,7 @@ export default function UsersPageContent(): React.ReactNode {
     employeeTypeFilter,
     nationalityFilter,
     filterNoRole,
+    employmentStatusFilter,
     sortBy,
     sortOrder,
   ]);
@@ -425,6 +435,7 @@ export default function UsersPageContent(): React.ReactNode {
     setDepartmentFilter(undefined);
     setPositionFilter(undefined);
     setStatusFilter(undefined);
+    setEmploymentStatusFilter(undefined);
     setEmployeeTypeFilter(undefined);
     setNationalityFilter(undefined);
     setFilterNoRole(false);
@@ -451,6 +462,7 @@ export default function UsersPageContent(): React.ReactNode {
     appliedSearch ||
       departmentFilter ||
       statusFilter !== undefined ||
+      employmentStatusFilter !== undefined ||
       moreFilterCount > 0,
   );
 
@@ -816,6 +828,22 @@ export default function UsersPageContent(): React.ReactNode {
               resetPage();
             }}
             aria-label={t('common.status')}
+          />
+          <Select
+            placeholder={t('users.employment.filterEmploymentStatus')}
+            className="erp-users-filter-select"
+            allowClear
+            options={[
+              { label: t('users.employment.statusActive'), value: 'ACTIVE' },
+              { label: t('users.employment.statusInactiveShort'), value: 'INACTIVE' },
+              { label: t('users.employment.statusSeparatedShort'), value: 'SEPARATED' },
+            ]}
+            value={employmentStatusFilter}
+            onChange={(value?: 'ACTIVE' | 'INACTIVE' | 'SEPARATED') => {
+              setEmploymentStatusFilter(value);
+              resetPage();
+            }}
+            aria-label={t('users.employment.filterEmploymentStatus')}
           />
           <Checkbox
             checked={filterNoRole}

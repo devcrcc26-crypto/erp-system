@@ -636,7 +636,7 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
     expect(result.paidDays).toBe(29);
   });
 
-  it('unpaid leave Fri–Mon (incl. Sat/Sun rest) → 4 unpaid days', () => {
+  it('unpaid leave Fri–Mon: the Sunday rest day inside it stays paid (default) → 3 unpaid days', () => {
     // Fri 7 Aug … Mon 10 Aug 2026
     const keys = new Set([
       '2026-08-07',
@@ -659,9 +659,24 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
         isOnUnpaidLeave: (date) => keys.has(dateToYyyyMmDd(date)),
       }),
     });
-    expect(result.unpaidLeaveDays).toBe(4);
-    expect(result.byDate.get('2026-08-09')?.status).toBe('UNPAID_LEAVE'); // Sunday
-    expect(result.paidDays).toBe(26);
+    expect(result.unpaidLeaveDays).toBe(3);
+    expect(result.byDate.get('2026-08-09')?.status).toBe('DAY_OFF'); // Sunday
+    expect(result.paidDays).toBe(27);
+
+    // unpaidLeaveCountsRestDays = true: the Sunday counts as unpaid too.
+    const counted = summarizeMonthAbsence({
+      month: 8,
+      year: 2026,
+      contracts: [{ startDate: fullContractStart, endDate: null }],
+      dailyLogsByDate: daily,
+      context: emptyContext({
+        isOnUnpaidLeave: (date) => keys.has(dateToYyyyMmDd(date)),
+        unpaidLeaveCountsRestDays: true,
+      }),
+    });
+    expect(counted.unpaidLeaveDays).toBe(4);
+    expect(counted.byDate.get('2026-08-09')?.status).toBe('UNPAID_LEAVE');
+    expect(counted.paidDays).toBe(26);
   });
 
   it('full-month unpaid leave → paid 0', () => {
@@ -677,11 +692,15 @@ describe('dayDeduction / summarizeMonthAbsence', () => {
         isOnUnpaidLeave: () => true,
       }),
     });
+    // Rest days stay DAY_OFF, but every duty day is unpaid → fully-absent rule → 0.
     expect(result.paidDays).toBe(0);
     expect(result.fullyAbsentWorkingDays).toBe(true);
     expect(
-      [...result.byDate.values()].every((r) => r.status === 'UNPAID_LEAVE'),
+      [...result.byDate.values()].every(
+        (r) => r.status === 'UNPAID_LEAVE' || r.status === 'DAY_OFF',
+      ),
     ).toBe(true);
+    expect(result.byDate.get('2026-08-02')?.status).toBe('DAY_OFF'); // Sunday
   });
 
   it('unpaid leave Mon–Fri → absent 0, unpaid 5, paid 25 (never double-counted)', () => {

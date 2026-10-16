@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { EmploymentSeparationService } from './employment-separation.service';
 
 const COMPANY = 'company-1';
@@ -13,6 +13,10 @@ interface State {
   contract: { id: string; contractNumber: string; startDate: Date; endDate: Date | null; terminatedAt: Date | null; terminationReason: string | null; status: string; deletedAt: null };
   sessions: number;
   runs: Array<{ id: string; runNumber: string; month: number; year: number; status: string; createdBy: string; attendanceSnapshotStale: boolean; deletedAt: null }>;
+  /** Handover: pending tiers on the leaver, posts they lead, requests they submitted. */
+  tiers?: Array<{ id: string; label: string; request: { id: string; requestNumber: string; title: string } }>;
+  departments?: Array<{ id: string; name: string; leaderUserId?: string }>;
+  submitted?: Array<{ id: string; requestNumber: string; title: string; status: string }>;
 }
 
 function makeState(overrides: Partial<State> = {}): State {
@@ -78,10 +82,35 @@ function makePrisma(state: State) {
         state.runs.filter(runMatches(where)).forEach((r) => Object.assign(r, data));
       }),
     },
-    approvalTier: { count: jest.fn(async () => 3), findMany: jest.fn(async () => []) },
-    approvalRequest: { count: jest.fn(async () => 1), findMany: jest.fn(async () => []) },
-    userRole: { findMany: jest.fn(async () => [{ userId: 'hr-manager' }]) },
+    approvalTier: {
+      count: jest.fn(async () => 3),
+      findMany: jest.fn(async ({ where }: any) => (where?.approverId ? state.tiers ?? [] : [])),
+      findFirst: jest.fn(async () => ({ id: 'submitted-tier-1' })),
+    },
+    approvalRequest: {
+      count: jest.fn(async () => 1),
+      findMany: jest.fn(async ({ where }: any) => (where?.requestedBy ? state.submitted ?? [] : [])),
+    },
+    department: {
+      findMany: jest.fn(async () => state.departments ?? []),
+      updateMany: jest.fn(async ({ where, data }: any) => {
+        (state.departments ?? [])
+          .filter((dep) => dep.id === where.id)
+          .forEach((dep) => Object.assign(dep, data));
+      }),
+    },
+    discipline: { findMany: jest.fn(async () => []), updateMany: jest.fn() },
+    // Approver roles held by the leaver (none) vs. notification recipients.
+    userRole: {
+      findMany: jest.fn(async ({ where }: any) =>
+        where?.userId === EMP ? [] : [{ userId: 'hr-manager' }],
+      ),
+    },
+    inactivePeriod: { findFirst: jest.fn(async () => null) },
   };
+  prisma.user.findMany = jest.fn(async ({ where }: any) =>
+    (where?.id?.in ?? []).map((id: string) => ({ id, isActive: true, employmentStatus: 'ACTIVE' })),
+  );
   prisma.$transaction = jest.fn(async (fn: any) => fn(prisma));
   return prisma;
 }
@@ -90,8 +119,16 @@ function makeService(state: State) {
   const prisma = makePrisma(state);
   const audit = { create: jest.fn(async () => undefined), buildFromRequestContext: (x: any) => x };
   const notifications = { send: jest.fn(async () => ({ emailQueued: false })) };
-  const service = new EmploymentSeparationService(prisma, audit as any, notifications as any);
-  return { service, prisma, audit, notifications };
+  const reassignment = { reassignTier: jest.fn(async () => undefined) };
+  const approvals = { rejectTier: jest.fn(async () => undefined) };
+  const service = new EmploymentSeparationService(
+    prisma,
+    audit as any,
+    notifications as any,
+    reassignment as any,
+    approvals as any,
+  );
+  return { service, prisma, audit, notifications, reassignment, approvals };
 }
 
 const ctx = { companyId: COMPANY, userId: HR };
@@ -224,6 +261,94 @@ describe('EmploymentSeparationService', () => {
 
       const again = await service.processDueSeparations(new Date('2099-01-12T00:10:00+03:00'));
       expect(again.processed).toBe(0);
+    });
+  });
+
+  describe('handover', () => {
+    const handoverState = (): State =>
+      makeState({
+        tiers: [{ id: 'tier-1', label: 'Department Head', request: { id: 'req-1', requestNumber: 'AR-1', title: 'Leave' } }],
+        departments: [{ id: 'dep-1', name: 'Finance', leaderUserId: EMP }],
+        submitted: [{ id: 'req-9', requestNumber: 'AR-9', title: 'Overtime', status: 'IN_PROGRESS' }],
+      });
+    const input = { leavingDate: '2026-12-31', separationType: 'RESIGNATION' as const, reason: 'Moving abroad' };
+
+    it('preview lists every tier, leadership post and submitted request to decide', async () => {
+      const { service } = makeService(handoverState());
+      const preview = await service.preview(ctx, EMP, '2026-12-31');
+      expect(preview.handover.tiers.map((t) => t.tierId)).toEqual(['tier-1']);
+      expect(preview.handover.leadership).toEqual([{ kind: 'DEPARTMENT_LEADER', id: 'dep-1', name: 'Finance' }]);
+      expect(preview.handover.submittedRequests.map((r) => r.requestId)).toEqual(['req-9']);
+    });
+
+    it('confirm is refused until the handover is complete', async () => {
+      const state = handoverState();
+      const { service } = makeService(state);
+      const error = await service.separate(ctx, EMP, input).catch((e) => e);
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        error: 'HANDOVER_REQUIRED',
+        details: {
+          code: 'HANDOVER_REQUIRED',
+          missing: { tiers: ['tier-1'], leadership: ['DEPARTMENT_LEADER:dep-1'], submittedRequests: ['req-9'] },
+        },
+      });
+      expect(state.periods[0].endDate).toBeNull();
+
+      // A skip needs a real reason.
+      await expect(
+        service.separate(ctx, EMP, {
+          ...input,
+          handover: {
+            tiers: [{ id: 'tier-1', skipReason: 'x' }],
+            leadership: [{ kind: 'DEPARTMENT_LEADER', id: 'dep-1', replacementId: 'emp-2' }],
+            submittedRequests: [{ requestId: 'req-9', action: 'KEEP' }],
+          },
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('applies the handover: tier reassigned, leader replaced, request cancelled', async () => {
+      const state = handoverState();
+      const { service, reassignment, approvals } = makeService(state);
+      await service.separate(ctx, EMP, {
+        ...input,
+        handover: {
+          tiers: [{ id: 'tier-1', replacementId: 'emp-2' }],
+          leadership: [{ kind: 'DEPARTMENT_LEADER', id: 'dep-1', replacementId: 'emp-3' }],
+          submittedRequests: [{ requestId: 'req-9', action: 'CANCEL' }],
+        },
+      });
+      expect(reassignment.reassignTier).toHaveBeenCalledWith(
+        ctx,
+        'tier-1',
+        'emp-2',
+        expect.stringContaining('Handover'),
+        { skipPermissionCheck: true },
+      );
+      expect(state.departments![0].leaderUserId).toBe('emp-3');
+      expect(approvals.rejectTier).toHaveBeenCalledWith(
+        'req-9',
+        'submitted-tier-1',
+        HR,
+        expect.stringContaining('Cancelled at separation'),
+        { bypassApproverCheck: true },
+      );
+      expect(state.periods[0].endDate).toEqual(d(2026, 12, 31));
+    });
+
+    it('the leaver cannot be their own replacement', async () => {
+      const { service } = makeService(handoverState());
+      await expect(
+        service.separate(ctx, EMP, {
+          ...input,
+          handover: {
+            tiers: [{ id: 'tier-1', replacementId: EMP }],
+            leadership: [{ kind: 'DEPARTMENT_LEADER', id: 'dep-1', skipReason: 'Post is being abolished' }],
+            submittedRequests: [{ requestId: 'req-9', action: 'KEEP' }],
+          },
+        }),
+      ).rejects.toThrow('own replacement');
     });
   });
 });

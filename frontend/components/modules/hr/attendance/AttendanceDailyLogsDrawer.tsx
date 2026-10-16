@@ -75,11 +75,13 @@ const STATUS_CONFIG: Record<DayStatus, { color: string; labelKey: string }> = {
   },
   ENROLMENT_GRACE: { color: 'blue', labelKey: 'ENROLMENT_GRACE' },
   NOT_EMPLOYED: { color: 'default', labelKey: 'NOT_EMPLOYED' },
+  INACTIVE: { color: 'orange', labelKey: 'INACTIVE' },
 };
 
 /** Days where nobody is expected at the clock, so missing punches are not flagged. */
 const NO_PUNCH_EXPECTED = new Set<DayStatus>([
   'NOT_EMPLOYED',
+  'INACTIVE',
   'SUNDAY',
   'DAY_OFF',
   'WORKED_ON_DAY_OFF',

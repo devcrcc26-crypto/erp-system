@@ -333,7 +333,7 @@ type DailyLogFlagSource = {
 
 /**
  * Resolves the HR review flag for a single duty day from effective punch times.
- * Early leave uses the 30-minute grace (flag only when earlier than end − 30).
+ * Early leave uses the earlyDepartureGraceMinutes policy (default 15; flag only when earlier than end − grace).
  * Approved site / WFH / leave coverage suppresses missing-punch and early flags;
  * leave + any scan raises ON_LEAVE_BUT_SCANNED for HR (not Explain days).
  */

@@ -13,6 +13,7 @@ import {
   getPayrollCompanySettings,
   getPayrollRun,
   gmApprovePayrollRun,
+  getPayrollEmploymentReview,
   listEmployeePayslips,
   listMyPayslips,
   listPayrollRuns,
@@ -25,6 +26,7 @@ import {
   updatePayrollEntry,
 } from '@/lib/api/payroll';
 import type {
+  ApprovePayrollRunPayload,
   CreatePayrollRunPayload,
   SubmitPayrollRunPayload,
   UpdatePayrollCompanySettingsPayload,
@@ -35,6 +37,7 @@ export const payrollKeys = {
   all: ['payroll'] as const,
   runs: () => [...payrollKeys.all, 'runs'] as const,
   run: (id: string) => [...payrollKeys.all, 'run', id] as const,
+  employmentReview: (id: string) => [...payrollKeys.all, 'run', id, 'employment-review'] as const,
   companySettings: () => [...payrollKeys.all, 'company-settings'] as const,
   myPayslips: () => [...payrollKeys.all, 'my-payslips'] as const,
   employeePayslips: (employeeId: string) =>
@@ -135,7 +138,7 @@ export function useSubmitPayrollRun(runId: string) {
 export function useApprovePayrollRun(runId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => approvePayrollRun(runId),
+    mutationFn: (payload: ApprovePayrollRunPayload = {}) => approvePayrollRun(runId, payload),
     onSuccess: () => invalidateRun(queryClient, runId),
   });
 }
@@ -143,8 +146,17 @@ export function useApprovePayrollRun(runId: string) {
 export function useGmApprovePayrollRun(runId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => gmApprovePayrollRun(runId),
+    mutationFn: (payload: ApprovePayrollRunPayload = {}) => gmApprovePayrollRun(runId, payload),
     onSuccess: () => invalidateRun(queryClient, runId),
+  });
+}
+
+/** Employment-flagged entries to review before submit / approve (prefix of the run key). */
+export function usePayrollEmploymentReview(runId: string, enabled = true) {
+  return useQuery({
+    queryKey: payrollKeys.employmentReview(runId),
+    queryFn: () => getPayrollEmploymentReview(runId),
+    enabled: enabled && Boolean(runId),
   });
 }
 

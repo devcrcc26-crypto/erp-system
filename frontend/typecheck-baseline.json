@@ -1,5 +1,5 @@
 {
-  "count": 21,
+  "count": 20,
   "files": {
     "components/modules/approvals/detail/VehicleRefuelingDetail.tsx": {
       "count": 1,
@@ -74,12 +74,6 @@
         "TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'Record<FieldMovementFieldKey, FieldPresence>'."
       ]
     },
-    "lib/i18n/epc-messages.ts": {
-      "count": 1,
-      "errors": [
-        "TS2719: Type '{ nav: { dashboard: string; projects: string; kanbanBoard: string; users: string; auditLogs: string; teams: string; reports: string; messages: string; notifications: string; settings: string; profile: string; ... 26 more ...; hr: { ...; }; }; ... 24 more ...; announcements: { ...; }; }' is not assignable to type '{ nav: { dashboard: string; projects: string; kanbanBoard: string; users: string; auditLogs: string; teams: string; reports: string; messages: string; notifications: string; settings: string; profile: string; ... 26 more ...; hr: { ...; }; }; ... 24 more ...; announcements: { ...; }; }'. Two different types with this name exist, but they are unrelated."
-      ]
-    },
     "lib/utils/users-export-excel.test.ts": {
       "count": 2,
       "errors": [
@@ -88,5 +82,5 @@
       ]
     }
   },
-  "updatedAt": "2026-10-13T08:31:56.810Z"
+  "updatedAt": "2026-10-15T12:37:47.011Z"
 }

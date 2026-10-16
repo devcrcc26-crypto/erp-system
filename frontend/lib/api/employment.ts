@@ -201,11 +201,3 @@ export function reactivateEmployee(
 export function rehireEmployee(userId: string, payload: RehirePayload): Promise<RehireResult> {
   return apiPost<RehireResult>(`/users/${userId}/rehire`, payload);
 }
-
-export function reassignApprovalTier(
-  tierId: string,
-  newApproverId: string,
-  reason: string,
-): Promise<unknown> {
-  return apiPost<unknown>(`/approvals/tiers/${tierId}/reassign`, { newApproverId, reason });
-}

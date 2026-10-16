@@ -47,6 +47,26 @@ export class SubmitPayrollRunDto {
   @IsOptional()
   @IsBoolean()
   acknowledgeFlags?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Required when entries carry employment flags (contract ended, login disabled, leaver, inactive): the number of those employees reviewed',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  confirmEmploymentReview?: number;
+}
+
+export class ApprovePayrollRunDto {
+  @ApiPropertyOptional({
+    description:
+      'Required when entries carry employment flags (contract ended, login disabled, leaver, inactive): the number of those employees reviewed',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  confirmEmploymentReview?: number;
 }
 
 export class UpdatePayrollEntryDto {

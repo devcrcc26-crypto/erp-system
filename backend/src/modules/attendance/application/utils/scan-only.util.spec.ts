@@ -175,13 +175,34 @@ describe('SCAN_ONLY work schedule — dayDeduction', () => {
     ).toMatchObject({ status: 'PRESENT', deduction: 0 });
   });
 
-  it('no scan + approved unpaid leave → ABSENT 1', () => {
+  // Since 4438a06f approved unpaid leave has its own status (UNPAID_LEAVE, counted in
+  // unpaidLeaveDays, not absentDays). A plain no-scan duty day is still ABSENT.
+  it('no scan + approved unpaid leave → UNPAID_LEAVE 1', () => {
     const r = dayDeduction(
       MONDAY,
       scans(MONDAY, null, null),
       scanOnlyContext({ isOnUnpaidLeave: () => true }),
     );
-    expect(r).toMatchObject({ status: 'ABSENT', deduction: 1 });
+    expect(r).toMatchObject({ status: 'UNPAID_LEAVE', deduction: 1 });
+  });
+
+  it('no scan, no leave → ABSENT 1 (never UNPAID_LEAVE), on SCAN_ONLY and STANDARD schedules', () => {
+    expect(dayDeduction(MONDAY, scans(MONDAY, null, null), scanOnlyContext())).toMatchObject({
+      status: 'ABSENT',
+      deduction: 1,
+    });
+    expect(dayDeduction(MONDAY, scans(MONDAY, null, null), context())).toMatchObject({
+      status: 'ABSENT',
+      deduction: 1,
+    });
+    // Unpaid leave on another day does not relabel this one.
+    expect(
+      dayDeduction(
+        MONDAY,
+        scans(MONDAY, null, null),
+        context({ isOnUnpaidLeave: (date) => date.getTime() !== MONDAY.getTime() }),
+      ),
+    ).toMatchObject({ status: 'ABSENT', deduction: 1 });
   });
 
   it('Saturday follows the same rule (scan → present, late scan flagged, none → absent 1)', () => {

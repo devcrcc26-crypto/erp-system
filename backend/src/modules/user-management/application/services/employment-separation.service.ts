@@ -285,8 +285,9 @@ export class EmploymentSeparationService {
       throw new BadRequestException({
         message:
           'Complete the handover first: choose a replacement (or skip with a reason) for each approval and leadership role, and cancel or keep each pending request.',
-        code: 'HANDOVER_REQUIRED',
-        missing,
+        // The exception filter forwards `error` (as the code) and `details` only.
+        error: 'HANDOVER_REQUIRED',
+        details: { code: 'HANDOVER_REQUIRED', missing },
       });
     }
     await this.validateReplacements(ctx.companyId, userId, input.handover);
