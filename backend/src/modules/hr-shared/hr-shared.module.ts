@@ -5,6 +5,7 @@ import { HrExcelImportService } from './application/import-export/hr-excel-impor
 import { DayCoverageService } from './application/services/day-coverage.service';
 import { BackdatingPolicyService } from './application/services/backdating-policy.service';
 import { BackdatingPolicyController } from './presentation/backdating-policy.controller';
+import { DayCoverageController } from './presentation/day-coverage.controller';
 import { PermissionService } from '../../shared/permissions/permission.service';
 
 /**
@@ -13,7 +14,7 @@ import { PermissionService } from '../../shared/permissions/permission.service';
  */
 @Module({
   imports: [forwardRef(() => OnBehalfModule)],
-  controllers: [BackdatingPolicyController],
+  controllers: [BackdatingPolicyController, DayCoverageController],
   providers: [
     HrApprovalChainService,
     HrExcelImportService,

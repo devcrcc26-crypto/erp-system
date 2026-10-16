@@ -900,6 +900,7 @@ export default function OvertimeSheetDetailPageContent({
         sheetYear={sheet.year}
         employeeId={sheet.employeeId}
         editingEntry={editingEntry}
+        sheetEntries={sheet.entries}
         onClose={closeEntryDrawer}
       />
 

@@ -249,11 +249,12 @@ export class LeaveService
     const leaveDays = resolved.breakdown
       .filter((day) => day.weight > 0)
       .map((day) => ({ date: day.date, halfDay: halfDayKeys.has(coverDateKey(day.date)) }));
+    // Attendance is imported after month-end — never hard-block leave create on scans.
     await this.dayCoverage.assertUncovered(
       companyId,
       employeeId,
       leaveDays.filter((day) => !day.halfDay),
-      ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME', 'FIELD_MOVEMENT', 'ATTENDANCE'],
+      ['LEAVE', 'SITE_ASSIGNMENT', 'WORK_FROM_HOME', 'FIELD_MOVEMENT'],
     );
     await this.dayCoverage.assertUncovered(
       companyId,

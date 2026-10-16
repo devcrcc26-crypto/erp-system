@@ -1,11 +1,10 @@
-import { BadRequestException } from '@nestjs/common';
 import { describe, expect, it } from '@jest/globals';
 import {
   ATTENDANCE_NO_SCANS_MESSAGE,
   buildAttendanceWarning,
+  buildFullDayLeaveExcludedWindows,
   buildLeaveExcludedWindows,
   collectLeaveExcludedWindows,
-  FULL_DAY_LEAVE_MESSAGE,
   PAYROLL_LOCKED_MESSAGE,
 } from './overtime-entry-guards.util';
 
@@ -17,12 +16,6 @@ const WEEKDAY = {
 };
 
 describe('overtime-entry-guards.util', () => {
-  it('exports full-day leave rejection constant', () => {
-    expect(FULL_DAY_LEAVE_MESSAGE).toBe(
-      'Cannot record overtime on a day with approved full-day leave.',
-    );
-  });
-
   it('exports payroll lock message constant', () => {
     expect(PAYROLL_LOCKED_MESSAGE).toContain('payroll run is finalized');
   });
@@ -34,13 +27,24 @@ describe('overtime-entry-guards.util', () => {
     });
   });
 
-  it('collectLeaveExcludedWindows throws on FULL leave', () => {
-    expect(() =>
-      collectLeaveExcludedWindows([{ dayPortion: 'FULL' }], WEEKDAY),
-    ).toThrow(BadRequestException);
-    expect(() =>
-      collectLeaveExcludedWindows([{ dayPortion: 'FULL' }], WEEKDAY),
-    ).toThrow(FULL_DAY_LEAVE_MESSAGE);
+  it('full-day leave excludes duty hours only (morning start → afternoon end)', () => {
+    expect(buildFullDayLeaveExcludedWindows(WEEKDAY)).toEqual([
+      { start: '08:30', end: '17:30' },
+    ]);
+    expect(collectLeaveExcludedWindows([{ dayPortion: 'FULL' }], WEEKDAY)).toEqual([
+      { start: '08:30', end: '17:30' },
+    ]);
+  });
+
+  it('full-day leave on day-off schedule excludes nothing', () => {
+    expect(
+      buildFullDayLeaveExcludedWindows({
+        morningStart: null,
+        morningEnd: null,
+        afternoonStart: null,
+        afternoonEnd: null,
+      }),
+    ).toEqual([]);
   });
 
   describe('buildAttendanceWarning', () => {

@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import DayCoverageNotice from '@/components/modules/hr/shared/DayCoverageNotice';
 import StepperForm from '@/components/ui/StepperForm/StepperForm';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useSetHeaderExtra } from '@/hooks/use-set-header-extra';
@@ -462,6 +463,18 @@ export default function FieldMovementForm({
     [dayEntries],
   );
   const selectedCount = selectedDays.length;
+  const selectedCoverageSpan = useMemo(() => {
+    if (selectedDays.length === 0) {
+      return null;
+    }
+    const sorted = [...selectedDays].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+    return {
+      from: sorted[0].date,
+      to: sorted[sorted.length - 1].date,
+    };
+  }, [selectedDays]);
   const now = dayjs();
   const isBeforeCurrentMonth =
     month != null &&
@@ -1332,6 +1345,13 @@ export default function FieldMovementForm({
                   }. Track it under Approvals → My Requests.`}
             </Notice>
           ) : null}
+
+          <DayCoverageNotice
+            employeeId={effectiveEmployeeId}
+            from={selectedCoverageSpan?.from ?? null}
+            to={selectedCoverageSpan?.to ?? null}
+            focus="FIELD_MOVEMENT"
+          />
 
           {dayEntries.length > 0 ? (
             <ExplainDaysPanel

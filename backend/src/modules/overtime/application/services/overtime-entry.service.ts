@@ -35,8 +35,8 @@ import {
 } from '../utils/overtime-hours.util';
 import {
   buildAttendanceWarning,
+  buildFullDayLeaveExcludedWindows,
   buildLeaveExcludedWindows,
-  FULL_DAY_LEAVE_MESSAGE,
   type LeaveDayPortionInput,
   type WeekdayScheduleSlice,
 } from '../utils/overtime-entry-guards.util';
@@ -119,9 +119,6 @@ export class OvertimeEntryService {
       onDate,
       weekday,
     );
-    if (leaveResolved.hasFullDayLeave && !isOvernight) {
-      throw new BadRequestException(FULL_DAY_LEAVE_MESSAGE);
-    }
     const leaveWindowsStart = leaveResolved.excludedWindows;
     const lunchCountsAsOvertime = await getPolicy(
       this.prisma,
@@ -146,11 +143,9 @@ export class OvertimeEntryService {
         afternoonStart: context.afternoonStart,
         afternoonEnd: context.afternoonEnd,
         leaveExcludedWindows: leaveWindowsStart,
-        hasFullDayLeave: leaveResolved.hasFullDayLeave,
         lunchCountsAsOvertime,
       });
       if (
-        selectable.blockedReason === 'FULL_DAY_LEAVE' ||
         !isIntervalInsideSelectableWindows(
           startTime,
           endTime,
@@ -301,7 +296,6 @@ export class OvertimeEntryService {
       afternoonStart: context.afternoonStart,
       afternoonEnd: context.afternoonEnd,
       leaveExcludedWindows: leaveResolved.excludedWindows,
-      hasFullDayLeave: leaveResolved.hasFullDayLeave,
       lunchCountsAsOvertime,
     });
 
@@ -503,6 +497,7 @@ export class OvertimeEntryService {
     onDate: Date,
     weekday: WeekdayScheduleSlice | undefined,
   ): Promise<{
+    /** True when approved full-day leave applies (duty hours excluded only). */
     hasFullDayLeave: boolean;
     excludedWindows: Array<{ start: string; end: string }>;
   }> {
@@ -526,6 +521,7 @@ export class OvertimeEntryService {
       const portion = period.dayPortion as LeaveDayPortionInput;
       if (portion === 'FULL') {
         hasFullDayLeave = true;
+        excludedWindows.push(...buildFullDayLeaveExcludedWindows(weekday));
         continue;
       }
       if (portion === 'MORNING' || portion === 'AFTERNOON') {
