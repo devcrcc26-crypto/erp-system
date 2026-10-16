@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Button, Input, Upload } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
-import { SectionCard } from '@/components/modules/hr/shared/hr-page-chrome';
+import { FileOutlined } from '@ant-design/icons';
+import { RotateCcw, Send } from 'lucide-react';
 import { DocumentPreviewGroup } from '@/components/shared/preview';
 import { useAppMessage } from '@/hooks/use-app-message';
 import { useEpcTranslation } from '@/hooks/use-epc-translation';
@@ -12,6 +12,8 @@ import { useResubmitApprovalRequest } from '@/lib/query/approvals';
 import { notifyApiError } from '@/lib/utils/notify-api-error';
 import { formatDisplayDateTime } from '@/lib/utils/date-format';
 import { formatApprovalUserName } from '@/lib/utils/approval-display';
+
+import './approvals-v2.css';
 
 /**
  * Requester panel to resubmit a RETURNED approval with optional attachments.
@@ -44,23 +46,33 @@ export default function ResubmitPanel({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--color-primary,#F47B20)] bg-[var(--color-primary-light,#FEF0E6)]">
-      <div className="border-b border-[rgba(244,123,32,0.2)] px-4 py-3">
-        <h3 className="m-0 text-sm font-semibold text-[var(--color-text-primary)]">
-          {t('pages.approvals.resubmit.title')}
-        </h3>
-      </div>
-      <div className="flex flex-col gap-3 p-4">
-        {returnNote?.trim() ? (
-          <p className="m-0 text-sm leading-relaxed text-[var(--color-text-primary)]">
-            <span className="font-semibold">
-              {t('pages.approvals.resubmit.returnNote')}:{' '}
-            </span>
-            {returnNote.trim()}
+    <section className="erp-resubmit-card" aria-labelledby="erp-resubmit-title">
+      <div className="erp-resubmit-card-header">
+        <span className="erp-resubmit-card-icon" aria-hidden>
+          <RotateCcw size={18} strokeWidth={2} />
+        </span>
+        <div className="min-w-0">
+          <h3 id="erp-resubmit-title" className="erp-resubmit-card-title">
+            {t('pages.approvals.resubmit.title')}
+          </h3>
+          <p className="erp-resubmit-card-subtitle">
+            {t('pages.approvals.returnedHint')}
           </p>
+        </div>
+      </div>
+
+      <div className="erp-resubmit-card-body">
+        {returnNote?.trim() ? (
+          <div className="erp-resubmit-return-note">
+            <p className="erp-resubmit-return-note-label">
+              {t('pages.approvals.resubmit.returnNote')}
+            </p>
+            <p className="erp-resubmit-return-note-text">{returnNote.trim()}</p>
+          </div>
         ) : null}
-        <div>
-          <p className="erp-users-stat-label m-0 mb-1.5">
+
+        <div className="erp-resubmit-field">
+          <p className="erp-resubmit-field-label">
             {t('pages.approvals.resubmit.noteLabel')}
           </p>
           <Input.TextArea
@@ -70,38 +82,45 @@ export default function ResubmitPanel({
             maxLength={2000}
             showCount
             placeholder={t('pages.approvals.resubmit.notePlaceholder')}
+            className="erp-resubmit-textarea"
           />
         </div>
-        <Upload
-          multiple
-          beforeUpload={(file) => {
-            setFiles((prev) => [...prev, file]);
-            return false;
-          }}
-          onRemove={(file) => {
-            setFiles((prev) => prev.filter((f) => f.name !== file.name));
-          }}
-          fileList={files.map((f, i) => ({
-            uid: `${i}-${f.name}`,
-            name: f.name,
-            status: 'done' as const,
-          }))}
-        >
-          <Button icon={<UploadOutlined />}>
-            {t('pages.approvals.resubmit.attachFiles')}
-          </Button>
-        </Upload>
-        <div>
+
+        <div className="erp-resubmit-field">
+          <Upload
+            multiple
+            beforeUpload={(file) => {
+              setFiles((prev) => [...prev, file]);
+              return false;
+            }}
+            onRemove={(file) => {
+              setFiles((prev) => prev.filter((f) => f.name !== file.name));
+            }}
+            fileList={files.map((f, i) => ({
+              uid: `${i}-${f.name}`,
+              name: f.name,
+              status: 'done' as const,
+            }))}
+          >
+            <Button icon={<FileOutlined />} className="erp-resubmit-upload-btn">
+              {t('pages.approvals.resubmit.attachFiles')}
+            </Button>
+          </Upload>
+        </div>
+
+        <div className="erp-resubmit-actions">
           <Button
             type="primary"
+            icon={<Send size={14} strokeWidth={2.25} aria-hidden />}
             loading={resubmitMutation.isPending}
             onClick={() => void handleSubmit()}
+            className="erp-resubmit-submit"
           >
             {t('pages.approvals.resubmit.submit')}
           </Button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -120,31 +139,41 @@ export function ResponseHistory({
   }
 
   return (
-    <SectionCard title={t('pages.approvals.resubmit.historyTitle')}>
-      <div className="flex flex-col gap-3">
+    <section
+      className="erp-resubmit-history"
+      aria-labelledby="erp-resubmit-history-title"
+    >
+      <div className="erp-resubmit-history-header">
+        <h3 id="erp-resubmit-history-title" className="erp-resubmit-history-title">
+          {t('pages.approvals.resubmit.historyTitle')}
+        </h3>
+        <span className="erp-users-count-pill">
+          {responses.length.toLocaleString()}
+        </span>
+      </div>
+      <ul className="erp-resubmit-history-list">
         {responses.map((response) => (
-          <div
-            key={response.id}
-            className="rounded-xl border border-[#e8ebef] bg-[#f8fafc] p-3"
-          >
-            <p className="erp-users-cell-strong m-0 text-sm">
-              {response.responseType === 'RESUBMIT'
-                ? t('pages.approvals.resubmit.resubmitLabel')
-                : t('pages.approvals.resubmit.conditionResponse', {
-                    index: (response.conditionIndex ?? 0) + 1,
-                  })}
-            </p>
-            <p className="erp-users-cell-sub m-0 mt-1 text-xs">
-              {formatApprovalUserName(response.responder)} ·{' '}
-              {formatDisplayDateTime(response.createdAt)}
-            </p>
+          <li key={response.id} className="erp-resubmit-history-item">
+            <div className="erp-resubmit-history-item-top">
+              <p className="erp-resubmit-history-item-label">
+                {response.responseType === 'RESUBMIT'
+                  ? t('pages.approvals.resubmit.resubmitLabel')
+                  : t('pages.approvals.resubmit.conditionResponse', {
+                      index: (response.conditionIndex ?? 0) + 1,
+                    })}
+              </p>
+              <p className="erp-resubmit-history-item-meta">
+                {formatApprovalUserName(response.responder)} ·{' '}
+                {formatDisplayDateTime(response.createdAt)}
+              </p>
+            </div>
             {response.note?.trim() ? (
-              <p className="m-0 mt-2 text-sm leading-relaxed text-[var(--color-text-primary)]">
+              <p className="erp-resubmit-history-item-note">
                 {response.note}
               </p>
             ) : null}
             {(response.documents?.length ?? 0) > 0 ? (
-              <div className="mt-2">
+              <div className="erp-resubmit-history-item-docs">
                 <DocumentPreviewGroup
                   documents={response.documents?.map((link) => ({
                     id: link.documentId,
@@ -157,9 +186,9 @@ export function ResponseHistory({
                 />
               </div>
             ) : null}
-          </div>
+          </li>
         ))}
-      </div>
-    </SectionCard>
+      </ul>
+    </section>
   );
 }

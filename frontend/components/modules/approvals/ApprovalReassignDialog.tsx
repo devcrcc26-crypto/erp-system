@@ -1,5 +1,7 @@
 'use client';
 
+import './approvals-v2.css';
+
 import { Form, Input, Modal } from 'antd';
 import UserSelect from '@/components/ui/UserSelect/UserSelect';
 import { useAppMessage } from '@/hooks/use-app-message';
@@ -47,11 +49,15 @@ export default function ApprovalReassignDialog({
         newApproverId: values.newApproverId,
         reason: values.reason.trim(),
       });
-      messageApi.success(t('pages.approvals.reassign.saved', { label: tier.label }));
+      messageApi.success(
+        t('pages.approvals.reassign.saved', { label: tier.label }),
+      );
       close();
     } catch (error) {
       messageApi.error(
-        error instanceof ApiRequestError ? error.message : t('pages.approvals.reassign.error'),
+        error instanceof ApiRequestError
+          ? error.message
+          : t('pages.approvals.reassign.error'),
       );
     }
   }
@@ -65,24 +71,36 @@ export default function ApprovalReassignDialog({
       onOk={() => void submit()}
       onCancel={close}
       destroyOnHidden
+      centered
+      width={520}
+      rootClassName="erp-approval-modal"
+      className="erp-approval-modal"
     >
       {tier ? (
-        <p className="mt-0">
+        <p className="erp-approval-modal-hint">
           {t('pages.approvals.reassign.current', {
             name: formatApprovalUserName(tier.approver),
           })}
         </p>
       ) : null}
-      <Form form={form} layout="vertical" requiredMark>
+      <Form form={form} layout="vertical" requiredMark={false}>
         <Form.Item
           name="newApproverId"
           label={t('pages.approvals.reassign.newApprover')}
           extra={t('pages.approvals.reassign.newApproverHint')}
-          rules={[{ required: true, message: t('pages.approvals.reassign.newApproverRequired') }]}
+          rules={[
+            {
+              required: true,
+              message: t('pages.approvals.reassign.newApproverRequired'),
+            },
+          ]}
         >
           <UserSelect
             activeEmploymentOnly
-            excludeUserIds={[requesterId, ...(tier ? [tier.approverId] : [])]}
+            excludeUserIds={[
+              requesterId,
+              ...(tier ? [tier.approverId] : []),
+            ]}
             placeholder={t('pages.approvals.reassign.newApprover')}
           />
         </Form.Item>
@@ -90,7 +108,11 @@ export default function ApprovalReassignDialog({
           name="reason"
           label={t('pages.approvals.reassign.reason')}
           rules={[
-            { required: true, whitespace: true, message: t('pages.approvals.reassign.reasonRequired') },
+            {
+              required: true,
+              whitespace: true,
+              message: t('pages.approvals.reassign.reasonRequired'),
+            },
             { min: 3, message: t('pages.approvals.reassign.reasonRequired') },
             { max: 1000 },
           ]}

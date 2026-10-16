@@ -3646,8 +3646,10 @@ main::-webkit-scrollbar,
 .erp-confirm-dialog-content {
   padding: 0 !important;
   overflow: hidden !important;
-  border-radius: 14px !important;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 12px 32px rgba(16, 24, 40, 0.12),
+    0 2px 6px rgba(16, 24, 40, 0.06) !important;
 }
 
 .erp-confirm-dialog .ant-modal-body {
@@ -3663,15 +3665,41 @@ main::-webkit-scrollbar,
   text-align: center;
 }
 
+.erp-confirm-dialog--form .erp-confirm-dialog-body {
+  align-items: stretch;
+  text-align: left;
+  padding: 24px 24px 20px;
+}
+
+.erp-confirm-dialog--form .erp-confirm-dialog-icon {
+  align-self: flex-start;
+}
+
 .erp-confirm-dialog-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 14px;
   background: #fef0e6;
   color: #d4610a;
+  font-size: 20px;
+}
+
+.erp-confirm-dialog-icon--default {
+  background: #fef0e6;
+  color: #d4610a;
+}
+
+.erp-confirm-dialog-icon--success {
+  background: #e1f5ee;
+  color: #0f6e56;
+}
+
+.erp-confirm-dialog-icon--warning {
+  background: #fffaeb;
+  color: #b54708;
 }
 
 .erp-confirm-dialog-icon--danger {
@@ -3687,11 +3715,45 @@ main::-webkit-scrollbar,
   max-width: 100%;
 }
 
-.erp-confirm-dialog-copy .ant-input,
-.erp-confirm-dialog-copy .ant-input-textarea,
-.erp-confirm-dialog-copy textarea.ant-input {
+.erp-confirm-dialog-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.erp-confirm-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
   text-align: left;
+}
+
+.erp-confirm-dialog-field-label {
+  margin: 0;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.erp-confirm-dialog-field-hint {
+  margin: 0;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.erp-confirm-dialog-copy .ant-input,
+.erp-confirm-dialog-copy .ant-input-textarea,
+.erp-confirm-dialog-copy textarea.ant-input,
+.erp-confirm-dialog-fields .ant-input,
+.erp-confirm-dialog-fields .ant-input-textarea,
+.erp-confirm-dialog-fields textarea.ant-input {
+  width: 100%;
+  text-align: left;
+  border-radius: 10px !important;
 }
 
 .erp-confirm-dialog-title {
@@ -3706,7 +3768,7 @@ main::-webkit-scrollbar,
   margin: 0;
   font-size: calc(13px * var(--erp-font-scale));
   line-height: 1.5;
-  color: #64748b;
+  color: #4b5563;
 }
 
 .erp-confirm-dialog-description p {
@@ -3722,10 +3784,17 @@ main::-webkit-scrollbar,
   padding-top: 8px;
 }
 
+.erp-confirm-dialog--form .erp-confirm-dialog-actions {
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid #eef1f4;
+  margin-top: 4px;
+}
+
 .erp-confirm-dialog-btn.ant-btn {
   min-width: 108px;
-  height: 36px;
-  border-radius: 8px;
+  height: 38px;
+  border-radius: 10px;
   font-weight: 600;
 }
 
